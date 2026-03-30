@@ -58,22 +58,10 @@ export interface ChatToolbarProps extends React.ComponentProps<"div"> {
  * </ChatToolbar>
  * ```
  */
-export function ChatToolbar({
-  children,
-  className,
-  ...props
-}: ChatToolbarProps) {
+export function ChatToolbar({ children, className, ...props }: ChatToolbarProps) {
   return (
-    <div
-      className={cn("sticky bottom-0 p-2 pt-0 bg-background", className)}
-      {...props}
-    >
-      <div
-        className={cn(
-          "border rounded-md py-2 px-3",
-          "flex flex-wrap items-start gap-x-2",
-        )}
-      >
+    <div className={cn("sticky bottom-0 p-2 pt-0 bg-background", className)} {...props}>
+      <div className={cn("border rounded-md py-2 px-3", "flex flex-wrap items-start gap-x-2")}>
         {children}
       </div>
     </div>
@@ -83,9 +71,7 @@ export function ChatToolbar({
 /** Modifier key that allows inserting a new line instead of submitting */
 const NEWLINE_MODIFIER_KEY = "shiftKey" as const;
 
-export interface ChatToolbarTextareaProps extends React.ComponentProps<
-  typeof Textarea
-> {
+export interface ChatToolbarTextareaProps extends React.ComponentProps<typeof Textarea> {
   /** Called when the user presses Enter (without Shift). Use this to trigger message sending. */
   onSubmit?: () => void;
 }
@@ -135,7 +121,7 @@ export function ChatToolbarTextarea({
         className={cn(
           "h-fit min-h-10 max-h-30 px-1 @md/chat:text-base",
           "border-none shadow-none focus-visible:border-none focus-visible:ring-0 placeholder:whitespace-nowrap resize-none",
-          className,
+          className
         )}
         rows={1}
         onKeyDown={handleKeyDown}
@@ -197,7 +183,7 @@ export function ChatToolbarAddon({
       className={cn(
         "h-10 flex items-center gap-1.5",
         chatToolbarAddonAlignStyles[align],
-        className,
+        className
       )}
       {...props}
     >
@@ -206,9 +192,7 @@ export function ChatToolbarAddon({
   );
 }
 
-export interface ChatToolbarButtonProps extends React.ComponentProps<
-  typeof Button
-> {
+export interface ChatToolbarButtonProps extends React.ComponentProps<typeof Button> {
   children?: React.ReactNode;
 }
 
@@ -223,17 +207,13 @@ export interface ChatToolbarButtonProps extends React.ComponentProps<
  * </ChatToolbarButton>
  * ```
  */
-export function ChatToolbarButton({
-  children,
-  className,
-  ...props
-}: ChatToolbarButtonProps) {
+export function ChatToolbarButton({ children, className, ...props }: ChatToolbarButtonProps) {
   return (
     <Button
       variant="ghost"
       className={cn(
         "size-8 @md/chat:size-9 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='size-'])]:@md/chat:size-5 [&_svg]:stroke-[1.7px]",
-        className,
+        className
       )}
       {...props}
     >

@@ -5,10 +5,7 @@ import { syncTemplateSkills, previewAutoSyncSkills } from "@/lib/services/templa
 
 // POST /api/evaluation-templates/[id]/sync
 // Manually trigger skill sync for a template
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -70,19 +67,13 @@ export async function POST(
     });
   } catch (error) {
     console.error("Error syncing template skills:", error);
-    return NextResponse.json(
-      { error: "Failed to sync template skills" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to sync template skills" }, { status: 500 });
   }
 }
 
 // GET /api/evaluation-templates/[id]/sync
 // Preview what skills would be synced without making changes
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -136,9 +127,6 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error previewing sync:", error);
-    return NextResponse.json(
-      { error: "Failed to preview sync" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to preview sync" }, { status: 500 });
   }
 }

@@ -1,57 +1,57 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { ShineBorder } from "@/components/ui/shine-border"
-import { ChevronLeft, Loader2, CheckCircle2, Mail } from "lucide-react"
-import { useState } from "react"
-import { useSearchParams } from "next/navigation"
-import { UplifterLogo } from "@/components/uplifter-logo"
-import { toast } from "sonner"
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { ShineBorder } from "@/components/ui/shine-border";
+import { ChevronLeft, Loader2, CheckCircle2, Mail } from "lucide-react";
+import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { UplifterLogo } from "@/components/uplifter-logo";
+import { toast } from "sonner";
 
 export function ForgotPasswordForm() {
-  const searchParams = useSearchParams()
-  const [email, setEmail] = useState(searchParams.get("email") || "")
-  const [isLoading, setIsLoading] = useState(false)
-  const [isSuccess, setIsSuccess] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const searchParams = useSearchParams();
+  const [email, setEmail] = useState(searchParams.get("email") || "");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError(null)
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
 
     try {
       const response = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.toLowerCase().trim() }),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!response.ok) {
         if (response.status === 429) {
-          setError(data.message || "Too many requests. Please try again later.")
-          toast.error(data.message || "Too many requests. Please try again later.")
+          setError(data.message || "Too many requests. Please try again later.");
+          toast.error(data.message || "Too many requests. Please try again later.");
         } else {
-          setError(data.error || "An error occurred. Please try again.")
-          toast.error(data.error || "An error occurred. Please try again.")
+          setError(data.error || "An error occurred. Please try again.");
+          toast.error(data.error || "An error occurred. Please try again.");
         }
-        return
+        return;
       }
 
-      setIsSuccess(true)
+      setIsSuccess(true);
     } catch {
-      setError("An error occurred. Please try again.")
-      toast.error("An error occurred. Please try again.")
+      setError("An error occurred. Please try again.");
+      toast.error("An error occurred. Please try again.");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   // Success state - show confirmation message
   if (isSuccess) {
@@ -68,7 +68,7 @@ export function ForgotPasswordForm() {
             We&apos;ve sent password reset instructions to your email address.
           </p>
         </CardHeader>
-        
+
         <CardContent className="grid gap-4">
           <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
             <Mail className="h-5 w-5 text-muted-foreground flex-shrink-0" />
@@ -90,14 +90,17 @@ export function ForgotPasswordForm() {
             </button>
           </p>
           <div className="text-center text-sm">
-            <Link href={`/login?email=${encodeURIComponent(email)}`} className="flex items-center justify-center gap-2 text-muted-foreground hover:text-primary">
+            <Link
+              href={`/login?email=${encodeURIComponent(email)}`}
+              className="flex items-center justify-center gap-2 text-muted-foreground hover:text-primary"
+            >
               <ChevronLeft className="h-4 w-4" />
               Back to Login
             </Link>
           </div>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
@@ -106,11 +109,9 @@ export function ForgotPasswordForm() {
       <CardHeader className="items-center pb-2">
         <UplifterLogo width={180} height={36} className="h-9 mb-2" />
         <h1 className="text-2xl font-bold">Forgot Password</h1>
-        <p className="text-sm text-muted-foreground">
-          Enter your email to reset your password
-        </p>
+        <p className="text-sm text-muted-foreground">Enter your email to reset your password</p>
       </CardHeader>
-      
+
       <CardContent className="grid gap-4">
         <form onSubmit={handleSubmit} className="grid gap-4">
           <div className="grid gap-2 text-left">
@@ -122,8 +123,8 @@ export function ForgotPasswordForm() {
               required
               value={email}
               onChange={(e) => {
-                setEmail(e.target.value)
-                if (error) setError(null)
+                setEmail(e.target.value);
+                if (error) setError(null);
               }}
               disabled={isLoading}
             />
@@ -145,15 +146,15 @@ export function ForgotPasswordForm() {
           </Button>
         </form>
         <div className="text-center text-sm">
-          <Link href={`/login?email=${encodeURIComponent(email)}`} className="flex items-center justify-center gap-2 text-muted-foreground hover:text-primary">
+          <Link
+            href={`/login?email=${encodeURIComponent(email)}`}
+            className="flex items-center justify-center gap-2 text-muted-foreground hover:text-primary"
+          >
             <ChevronLeft className="h-4 w-4" />
             Back to Login
           </Link>
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
-
-
-

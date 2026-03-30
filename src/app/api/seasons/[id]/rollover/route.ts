@@ -4,10 +4,7 @@ import { getScopedDb } from "@/lib/db";
 import { checkFeatureGate } from "@/lib/feature-resolver";
 import { rolloverSingleSeason } from "@/lib/services/season-renewal";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getAuthSession();
     if (!session) {

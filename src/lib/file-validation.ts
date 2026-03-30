@@ -15,8 +15,17 @@ const MIME_CATEGORY_MAP: Record<string, string[]> = {
  * These must be validated by extension only.
  */
 const TEXT_BASED_EXTENSIONS = new Set([
-  ".svg", ".csv", ".tsv", ".txt", ".json", ".xml",
-  ".yaml", ".yml", ".html", ".md", ".rtf",
+  ".svg",
+  ".csv",
+  ".tsv",
+  ".txt",
+  ".json",
+  ".xml",
+  ".yaml",
+  ".yml",
+  ".html",
+  ".md",
+  ".rtf",
 ]);
 
 interface FileValidationResult {
@@ -88,7 +97,13 @@ export async function validateFileContent(
  * Allowed extensions for organization branding assets (/api/upload).
  */
 export const ALLOWED_ASSET_EXTENSIONS = new Set([
-  ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".webp",
+  ".svg",
+  ".ico",
 ]);
 
 export const MAX_ASSET_FILE_SIZE = 10 * 1024 * 1024; // 10 MB

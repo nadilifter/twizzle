@@ -35,7 +35,9 @@ export function useCustomInfoConfig(): UseCustomInfoConfigReturn {
     setError(null);
 
     try {
-      const response = await api.get<CustomInfoConfig>("/api/organization/custom-information/config");
+      const response = await api.get<CustomInfoConfig>(
+        "/api/organization/custom-information/config"
+      );
       setConfig(response);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch config";
@@ -46,23 +48,29 @@ export function useCustomInfoConfig(): UseCustomInfoConfigReturn {
     }
   }, []);
 
-  const updateConfig = useCallback(async (data: UpdateCustomInfoConfigPayload): Promise<boolean> => {
-    setIsSaving(true);
-    setError(null);
+  const updateConfig = useCallback(
+    async (data: UpdateCustomInfoConfigPayload): Promise<boolean> => {
+      setIsSaving(true);
+      setError(null);
 
-    try {
-      const response = await api.put<CustomInfoConfig>("/api/organization/custom-information/config", data);
-      setConfig(response);
-      return true;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to update config";
-      setError(message);
-      console.error("Error updating custom info config:", err);
-      return false;
-    } finally {
-      setIsSaving(false);
-    }
-  }, []);
+      try {
+        const response = await api.put<CustomInfoConfig>(
+          "/api/organization/custom-information/config",
+          data
+        );
+        setConfig(response);
+        return true;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to update config";
+        setError(message);
+        console.error("Error updating custom info config:", err);
+        return false;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    []
+  );
 
   const clearError = useCallback(() => setError(null), []);
 
@@ -84,7 +92,10 @@ interface UseCustomInfoQuestionsReturn {
   error: string | null;
   fetchQuestions: (includeInactive?: boolean) => Promise<void>;
   createQuestion: (data: CreateCustomInfoQuestionPayload) => Promise<CustomInfoQuestion | null>;
-  updateQuestion: (id: string, data: UpdateCustomInfoQuestionPayload) => Promise<CustomInfoQuestion | null>;
+  updateQuestion: (
+    id: string,
+    data: UpdateCustomInfoQuestionPayload
+  ) => Promise<CustomInfoQuestion | null>;
   deleteQuestion: (id: string) => Promise<boolean>;
   reorderQuestions: (questions: { id: string; displayOrder: number }[]) => Promise<boolean>;
   clearError: () => void;
@@ -101,9 +112,12 @@ export function useCustomInfoQuestions(): UseCustomInfoQuestionsReturn {
     setError(null);
 
     try {
-      const response = await api.get<CustomInfoQuestion[]>("/api/organization/custom-information/questions", {
-        includeInactive: includeInactive.toString(),
-      });
+      const response = await api.get<CustomInfoQuestion[]>(
+        "/api/organization/custom-information/questions",
+        {
+          includeInactive: includeInactive.toString(),
+        }
+      );
       setQuestions(response);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch questions";
@@ -114,43 +128,60 @@ export function useCustomInfoQuestions(): UseCustomInfoQuestionsReturn {
     }
   }, []);
 
-  const createQuestion = useCallback(async (data: CreateCustomInfoQuestionPayload): Promise<CustomInfoQuestion | null> => {
-    setIsSaving(true);
-    setError(null);
+  const createQuestion = useCallback(
+    async (data: CreateCustomInfoQuestionPayload): Promise<CustomInfoQuestion | null> => {
+      setIsSaving(true);
+      setError(null);
 
-    try {
-      const response = await api.post<CustomInfoQuestion>("/api/organization/custom-information/questions", data);
-      setQuestions((prev) => [...prev, response].sort((a, b) => a.displayOrder - b.displayOrder));
-      return response;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to create question";
-      setError(message);
-      console.error("Error creating custom info question:", err);
-      return null;
-    } finally {
-      setIsSaving(false);
-    }
-  }, []);
+      try {
+        const response = await api.post<CustomInfoQuestion>(
+          "/api/organization/custom-information/questions",
+          data
+        );
+        setQuestions((prev) => [...prev, response].sort((a, b) => a.displayOrder - b.displayOrder));
+        return response;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to create question";
+        setError(message);
+        console.error("Error creating custom info question:", err);
+        return null;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    []
+  );
 
-  const updateQuestion = useCallback(async (id: string, data: UpdateCustomInfoQuestionPayload): Promise<CustomInfoQuestion | null> => {
-    setIsSaving(true);
-    setError(null);
+  const updateQuestion = useCallback(
+    async (
+      id: string,
+      data: UpdateCustomInfoQuestionPayload
+    ): Promise<CustomInfoQuestion | null> => {
+      setIsSaving(true);
+      setError(null);
 
-    try {
-      const response = await api.patch<CustomInfoQuestion>("/api/organization/custom-information/questions", { id, ...data });
-      setQuestions((prev) =>
-        prev.map((q) => (q.id === id ? response : q)).sort((a, b) => a.displayOrder - b.displayOrder)
-      );
-      return response;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to update question";
-      setError(message);
-      console.error("Error updating custom info question:", err);
-      return null;
-    } finally {
-      setIsSaving(false);
-    }
-  }, []);
+      try {
+        const response = await api.patch<CustomInfoQuestion>(
+          "/api/organization/custom-information/questions",
+          { id, ...data }
+        );
+        setQuestions((prev) =>
+          prev
+            .map((q) => (q.id === id ? response : q))
+            .sort((a, b) => a.displayOrder - b.displayOrder)
+        );
+        return response;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to update question";
+        setError(message);
+        console.error("Error updating custom info question:", err);
+        return null;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    []
+  );
 
   const deleteQuestion = useCallback(async (id: string): Promise<boolean> => {
     setIsSaving(true);
@@ -170,25 +201,31 @@ export function useCustomInfoQuestions(): UseCustomInfoQuestionsReturn {
     }
   }, []);
 
-  const reorderQuestions = useCallback(async (orderedQuestions: { id: string; displayOrder: number }[]): Promise<boolean> => {
-    setIsSaving(true);
-    setError(null);
+  const reorderQuestions = useCallback(
+    async (orderedQuestions: { id: string; displayOrder: number }[]): Promise<boolean> => {
+      setIsSaving(true);
+      setError(null);
 
-    try {
-      const response = await api.patch<CustomInfoQuestion[]>("/api/organization/custom-information/questions", {
-        questions: orderedQuestions,
-      });
-      setQuestions(response);
-      return true;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to reorder questions";
-      setError(message);
-      console.error("Error reordering custom info questions:", err);
-      return false;
-    } finally {
-      setIsSaving(false);
-    }
-  }, []);
+      try {
+        const response = await api.patch<CustomInfoQuestion[]>(
+          "/api/organization/custom-information/questions",
+          {
+            questions: orderedQuestions,
+          }
+        );
+        setQuestions(response);
+        return true;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to reorder questions";
+        setError(message);
+        console.error("Error reordering custom info questions:", err);
+        return false;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    []
+  );
 
   const clearError = useCallback(() => setError(null), []);
 

@@ -72,10 +72,7 @@ export async function GET(
               },
             },
           },
-          orderBy: [
-            { status: "asc" },
-            { createdAt: "asc" },
-          ],
+          orderBy: [{ status: "asc" }, { createdAt: "asc" }],
         },
         attendances: {
           include: {
@@ -97,18 +94,12 @@ export async function GET(
     });
 
     if (!instance) {
-      return NextResponse.json(
-        { error: "Instance not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Instance not found" }, { status: 404 });
     }
 
     return NextResponse.json(instance);
   } catch (error) {
     console.error("Error fetching instance:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch instance" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch instance" }, { status: 500 });
   }
 }

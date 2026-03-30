@@ -55,71 +55,85 @@ export function useShifts(options: UseShiftsOptions = {}): UseShiftsReturn {
     setCurrentParamsState(params);
   }, []);
 
-  const fetchShifts = useCallback(async (params?: ShiftsQueryParams) => {
-    const queryParams = params ?? currentParamsRef.current;
+  const fetchShifts = useCallback(
+    async (params?: ShiftsQueryParams) => {
+      const queryParams = params ?? currentParamsRef.current;
 
-    if (JSON.stringify(queryParams) !== JSON.stringify(currentParamsRef.current)) {
-      setCurrentParams(queryParams);
-    }
-    currentParamsRef.current = queryParams;
+      if (JSON.stringify(queryParams) !== JSON.stringify(currentParamsRef.current)) {
+        setCurrentParams(queryParams);
+      }
+      currentParamsRef.current = queryParams;
 
-    setIsLoading(true);
-    setError(null);
+      setIsLoading(true);
+      setError(null);
 
-    try {
-      const response = await api.get<ShiftWithRelations[]>("/api/organization/shifts", queryParams);
-      setShifts(response);
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to fetch shifts";
-      setError(message);
-      console.error("Error fetching shifts:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [setCurrentParams]);
+      try {
+        const response = await api.get<ShiftWithRelations[]>(
+          "/api/organization/shifts",
+          queryParams
+        );
+        setShifts(response);
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to fetch shifts";
+        setError(message);
+        console.error("Error fetching shifts:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [setCurrentParams]
+  );
 
-  const createShift = useCallback(async (data: CreateShiftPayload): Promise<ShiftWithRelations | null> => {
-    setIsCreating(true);
-    setError(null);
+  const createShift = useCallback(
+    async (data: CreateShiftPayload): Promise<ShiftWithRelations | null> => {
+      setIsCreating(true);
+      setError(null);
 
-    try {
-      const newShift = await api.post<ShiftWithRelations>("/api/organization/shifts", data);
-      setShifts((prev) => [...prev, newShift].sort((a, b) => 
-        new Date(a.date).getTime() - new Date(b.date).getTime() || a.startTime.localeCompare(b.startTime)
-      ));
-      return newShift;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to create shift";
-      setError(message);
-      console.error("Error creating shift:", err);
-      return null;
-    } finally {
-      setIsCreating(false);
-    }
-  }, []);
+      try {
+        const newShift = await api.post<ShiftWithRelations>("/api/organization/shifts", data);
+        setShifts((prev) =>
+          [...prev, newShift].sort(
+            (a, b) =>
+              new Date(a.date).getTime() - new Date(b.date).getTime() ||
+              a.startTime.localeCompare(b.startTime)
+          )
+        );
+        return newShift;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to create shift";
+        setError(message);
+        console.error("Error creating shift:", err);
+        return null;
+      } finally {
+        setIsCreating(false);
+      }
+    },
+    []
+  );
 
-  const updateShift = useCallback(async (
-    id: string,
-    data: UpdateShiftPayload
-  ): Promise<ShiftWithRelations | null> => {
-    setIsUpdating(true);
-    setError(null);
+  const updateShift = useCallback(
+    async (id: string, data: UpdateShiftPayload): Promise<ShiftWithRelations | null> => {
+      setIsUpdating(true);
+      setError(null);
 
-    try {
-      const updatedShift = await api.patch<ShiftWithRelations>(`/api/organization/shifts/${id}`, data);
-      setShifts((prev) =>
-        prev.map((s) => (s.id === id ? updatedShift : s))
-      );
-      return updatedShift;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to update shift";
-      setError(message);
-      console.error("Error updating shift:", err);
-      return null;
-    } finally {
-      setIsUpdating(false);
-    }
-  }, []);
+      try {
+        const updatedShift = await api.patch<ShiftWithRelations>(
+          `/api/organization/shifts/${id}`,
+          data
+        );
+        setShifts((prev) => prev.map((s) => (s.id === id ? updatedShift : s)));
+        return updatedShift;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to update shift";
+        setError(message);
+        console.error("Error updating shift:", err);
+        return null;
+      } finally {
+        setIsUpdating(false);
+      }
+    },
+    []
+  );
 
   const deleteShift = useCallback(async (id: string): Promise<boolean> => {
     setIsDeleting(true);
@@ -188,15 +202,25 @@ interface UseScheduleTemplatesReturn {
   isGenerating: boolean;
   error: string | null;
   fetchTemplates: (isActive?: boolean) => Promise<void>;
-  createTemplate: (data: CreateScheduleTemplatePayload) => Promise<ScheduleTemplateWithEntries | null>;
-  updateTemplate: (id: string, data: UpdateScheduleTemplatePayload) => Promise<ScheduleTemplateWithEntries | null>;
+  createTemplate: (
+    data: CreateScheduleTemplatePayload
+  ) => Promise<ScheduleTemplateWithEntries | null>;
+  updateTemplate: (
+    id: string,
+    data: UpdateScheduleTemplatePayload
+  ) => Promise<ScheduleTemplateWithEntries | null>;
   deleteTemplate: (id: string) => Promise<boolean>;
-  generateShifts: (templateId: string, data: GenerateShiftsPayload) => Promise<GenerateShiftsResponse | null>;
+  generateShifts: (
+    templateId: string,
+    data: GenerateShiftsPayload
+  ) => Promise<GenerateShiftsResponse | null>;
   refresh: () => Promise<void>;
   clearError: () => void;
 }
 
-export function useScheduleTemplates(options: UseScheduleTemplatesOptions = {}): UseScheduleTemplatesReturn {
+export function useScheduleTemplates(
+  options: UseScheduleTemplatesOptions = {}
+): UseScheduleTemplatesReturn {
   const { autoFetch = true, isActive } = options;
 
   const [templates, setTemplates] = useState<ScheduleTemplateWithEntries[]>([]);
@@ -213,7 +237,10 @@ export function useScheduleTemplates(options: UseScheduleTemplatesOptions = {}):
 
     try {
       const params = activeFilter !== undefined ? { isActive: String(activeFilter) } : {};
-      const response = await api.get<ScheduleTemplateWithEntries[]>("/api/organization/schedule-templates", params);
+      const response = await api.get<ScheduleTemplateWithEntries[]>(
+        "/api/organization/schedule-templates",
+        params
+      );
       setTemplates(response);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch schedule templates";
@@ -224,46 +251,58 @@ export function useScheduleTemplates(options: UseScheduleTemplatesOptions = {}):
     }
   }, []);
 
-  const createTemplate = useCallback(async (data: CreateScheduleTemplatePayload): Promise<ScheduleTemplateWithEntries | null> => {
-    setIsCreating(true);
-    setError(null);
+  const createTemplate = useCallback(
+    async (data: CreateScheduleTemplatePayload): Promise<ScheduleTemplateWithEntries | null> => {
+      setIsCreating(true);
+      setError(null);
 
-    try {
-      const newTemplate = await api.post<ScheduleTemplateWithEntries>("/api/organization/schedule-templates", data);
-      setTemplates((prev) => [...prev, newTemplate]);
-      return newTemplate;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to create schedule template";
-      setError(message);
-      console.error("Error creating schedule template:", err);
-      return null;
-    } finally {
-      setIsCreating(false);
-    }
-  }, []);
+      try {
+        const newTemplate = await api.post<ScheduleTemplateWithEntries>(
+          "/api/organization/schedule-templates",
+          data
+        );
+        setTemplates((prev) => [...prev, newTemplate]);
+        return newTemplate;
+      } catch (err) {
+        const message =
+          err instanceof ApiError ? err.message : "Failed to create schedule template";
+        setError(message);
+        console.error("Error creating schedule template:", err);
+        return null;
+      } finally {
+        setIsCreating(false);
+      }
+    },
+    []
+  );
 
-  const updateTemplate = useCallback(async (
-    id: string,
-    data: UpdateScheduleTemplatePayload
-  ): Promise<ScheduleTemplateWithEntries | null> => {
-    setIsUpdating(true);
-    setError(null);
+  const updateTemplate = useCallback(
+    async (
+      id: string,
+      data: UpdateScheduleTemplatePayload
+    ): Promise<ScheduleTemplateWithEntries | null> => {
+      setIsUpdating(true);
+      setError(null);
 
-    try {
-      const updatedTemplate = await api.patch<ScheduleTemplateWithEntries>(`/api/organization/schedule-templates/${id}`, data);
-      setTemplates((prev) =>
-        prev.map((t) => (t.id === id ? updatedTemplate : t))
-      );
-      return updatedTemplate;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to update schedule template";
-      setError(message);
-      console.error("Error updating schedule template:", err);
-      return null;
-    } finally {
-      setIsUpdating(false);
-    }
-  }, []);
+      try {
+        const updatedTemplate = await api.patch<ScheduleTemplateWithEntries>(
+          `/api/organization/schedule-templates/${id}`,
+          data
+        );
+        setTemplates((prev) => prev.map((t) => (t.id === id ? updatedTemplate : t)));
+        return updatedTemplate;
+      } catch (err) {
+        const message =
+          err instanceof ApiError ? err.message : "Failed to update schedule template";
+        setError(message);
+        console.error("Error updating schedule template:", err);
+        return null;
+      } finally {
+        setIsUpdating(false);
+      }
+    },
+    []
+  );
 
   const deleteTemplate = useCallback(async (id: string): Promise<boolean> => {
     setIsDeleting(true);
@@ -283,28 +322,31 @@ export function useScheduleTemplates(options: UseScheduleTemplatesOptions = {}):
     }
   }, []);
 
-  const generateShifts = useCallback(async (
-    templateId: string,
-    data: GenerateShiftsPayload
-  ): Promise<GenerateShiftsResponse | null> => {
-    setIsGenerating(true);
-    setError(null);
+  const generateShifts = useCallback(
+    async (
+      templateId: string,
+      data: GenerateShiftsPayload
+    ): Promise<GenerateShiftsResponse | null> => {
+      setIsGenerating(true);
+      setError(null);
 
-    try {
-      const response = await api.post<GenerateShiftsResponse>(
-        `/api/organization/schedule-templates/${templateId}/generate`,
-        data
-      );
-      return response;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to generate shifts";
-      setError(message);
-      console.error("Error generating shifts:", err);
-      return null;
-    } finally {
-      setIsGenerating(false);
-    }
-  }, []);
+      try {
+        const response = await api.post<GenerateShiftsResponse>(
+          `/api/organization/schedule-templates/${templateId}/generate`,
+          data
+        );
+        return response;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to generate shifts";
+        setError(message);
+        console.error("Error generating shifts:", err);
+        return null;
+      } finally {
+        setIsGenerating(false);
+      }
+    },
+    []
+  );
 
   const refresh = useCallback(async () => {
     await fetchTemplates(isActive);

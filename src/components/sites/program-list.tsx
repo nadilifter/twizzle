@@ -97,15 +97,12 @@ export function ProgramList({ programs, slug }: ProgramListProps) {
     <div className="space-y-8">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {programs.map((program) => (
-          <ProgramCard
-            key={program.id}
-            program={program}
-          />
+          <ProgramCard key={program.id} program={program} />
         ))}
       </div>
-      
+
       <div className="text-center text-sm text-muted-foreground">
-        Showing {programs.length} program{programs.length !== 1 ? 's' : ''}
+        Showing {programs.length} program{programs.length !== 1 ? "s" : ""}
       </div>
     </div>
   );

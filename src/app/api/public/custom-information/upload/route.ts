@@ -11,7 +11,11 @@ import { writeFile, mkdir } from "fs/promises";
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf"]);
 const ALLOWED_MIMES = new Set([
-  "image/png", "image/jpeg", "image/gif", "image/webp", "application/pdf",
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+  "application/pdf",
 ]);
 
 /**
@@ -34,7 +38,10 @@ export async function POST(request: NextRequest) {
     const questionId = formData.get("questionId") as string | null;
 
     if (!file || !athleteId || !organizationId || !questionId) {
-      return NextResponse.json({ error: "file, athleteId, organizationId, and questionId are required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "file, athleteId, organizationId, and questionId are required" },
+        { status: 400 }
+      );
     }
 
     const enabled = await isFeatureEnabled(organizationId, "customInformation");
@@ -81,7 +88,10 @@ export async function POST(request: NextRequest) {
     let fileUrl: string;
     let savedStorageKey: string | null = null;
 
-    const useS3 = process.env.USE_S3_STORAGE === "true" || getCurrentEnvironment() !== "local" || !!process.env.S3_ENDPOINT;
+    const useS3 =
+      process.env.USE_S3_STORAGE === "true" ||
+      getCurrentEnvironment() !== "local" ||
+      !!process.env.S3_ENDPOINT;
 
     if (useS3) {
       await uploadFile("documents", storageKey, buffer, {

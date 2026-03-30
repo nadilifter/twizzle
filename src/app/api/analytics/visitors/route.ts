@@ -23,10 +23,10 @@ interface VisitorMetricsResponse {
 
 /**
  * GET /api/analytics/visitors
- * 
+ *
  * Fetch visitor metrics for the authenticated user's organization.
  * Returns daily breakdown by device type (mobile vs desktop).
- * 
+ *
  * Query parameters:
  * - startDate: YYYY-MM-DD (defaults to 7 days ago)
  * - endDate: YYYY-MM-DD (defaults to today)
@@ -37,26 +37,23 @@ export async function GET(request: NextRequest) {
     // Require authentication
     const session = await getAuthSession();
     if (!session?.user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Check if Redis is configured
     if (!redis) {
       return NextResponse.json(
-        { 
-          daily: [], 
+        {
+          daily: [],
           total: 0,
           totalDesktop: 0,
           totalMobile: 0,
           today: 0,
           todayDesktop: 0,
           todayMobile: 0,
-          yesterday: 0, 
+          yesterday: 0,
           percentChange: null,
-          error: "Analytics not configured" 
+          error: "Analytics not configured",
         },
         { status: 200 }
       );
@@ -65,18 +62,13 @@ export async function GET(request: NextRequest) {
     // Get organization ID from session or query params
     const searchParams = request.nextUrl.searchParams;
     const queryOrgId = searchParams.get("organizationId"); // tenant-isolation-ok: superadmin-only override, guarded by isSuperAdmin check below
-    
+
     // Allow super admins to query any org, otherwise use session org
-    const organizationId = 
-      (session.user.isSuperAdmin && queryOrgId) 
-        ? queryOrgId 
-        : session.user.organizationId;
+    const organizationId =
+      session.user.isSuperAdmin && queryOrgId ? queryOrgId : session.user.organizationId;
 
     if (!organizationId) {
-      return NextResponse.json(
-        { error: "No organization selected" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
     // Parse date range
@@ -89,17 +81,14 @@ export async function GET(request: NextRequest) {
 
     // Validate date formats
     if (!/^\d{4}-\d{2}-\d{2}$/.test(startDateStr) || !/^\d{4}-\d{2}-\d{2}$/.test(endDateStr)) {
-      return NextResponse.json(
-        { error: "Invalid date format. Use YYYY-MM-DD" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid date format. Use YYYY-MM-DD" }, { status: 400 });
     }
 
     // Generate list of dates in range
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
     const dates: string[] = [];
-    
+
     const current = new Date(startDate);
     while (current <= endDate) {
       dates.push(formatDateKey(current));
@@ -116,7 +105,7 @@ export async function GET(request: NextRequest) {
       // Also check legacy key (for backward compatibility with old data)
       pipeline.scard(visitorKeys.daily(organizationId, date));
     }
-    
+
     const results = await pipeline.exec();
 
     // Build response - results are in order: desktop, mobile, legacy for each date
@@ -125,10 +114,10 @@ export async function GET(request: NextRequest) {
       const desktop = (results[baseIndex] as number) || 0;
       const mobile = (results[baseIndex + 1] as number) || 0;
       const legacy = (results[baseIndex + 2] as number) || 0;
-      
+
       // If we have device-specific data, use it; otherwise fall back to legacy
       const hasDeviceData = desktop > 0 || mobile > 0;
-      
+
       if (hasDeviceData) {
         return {
           date,
@@ -150,18 +139,18 @@ export async function GET(request: NextRequest) {
     const total = daily.reduce((sum, d) => sum + d.total, 0);
     const totalDesktop = daily.reduce((sum, d) => sum + d.desktop, 0);
     const totalMobile = daily.reduce((sum, d) => sum + d.mobile, 0);
-    
+
     // Get today and yesterday counts for comparison
     const todayStr = formatDateKey(today);
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = formatDateKey(yesterday);
 
-    const todayData = daily.find(d => d.date === todayStr);
+    const todayData = daily.find((d) => d.date === todayStr);
     const todayCount = todayData?.total || 0;
     const todayDesktop = todayData?.desktop || 0;
     const todayMobile = todayData?.mobile || 0;
-    const yesterdayCount = daily.find(d => d.date === yesterdayStr)?.total || 0;
+    const yesterdayCount = daily.find((d) => d.date === yesterdayStr)?.total || 0;
 
     // Calculate percent change
     let percentChange: number | null = null;
@@ -186,9 +175,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response);
   } catch (error) {
     console.error("[Analytics Visitors] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch visitor metrics" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch visitor metrics" }, { status: 500 });
   }
 }

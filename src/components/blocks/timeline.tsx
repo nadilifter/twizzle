@@ -1,26 +1,26 @@
-import * as React from "react"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import { cn } from "@/lib/utils";
 
-type TimelineVariant = "default" | "secondary" | "outline" | "destructive"
+type TimelineVariant = "default" | "secondary" | "outline" | "destructive";
 
 interface TimelineProps {
-  orientation?: "vertical" | "horizontal"
-  noCards?: boolean
-  vertItemSpacing?: number
-  children: React.ReactNode
-  className?: string
+  orientation?: "vertical" | "horizontal";
+  noCards?: boolean;
+  vertItemSpacing?: number;
+  children: React.ReactNode;
+  className?: string;
 }
 
 interface TimelineItemProps {
-  variant?: TimelineVariant
-  hollow?: boolean
-  children: React.ReactNode
-  className?: string
+  variant?: TimelineVariant;
+  hollow?: boolean;
+  children: React.ReactNode;
+  className?: string;
 }
 
 interface TimelineItemChildProps {
-  children: React.ReactNode
-  className?: string
+  children: React.ReactNode;
+  className?: string;
 }
 
 const variantStyles: Record<TimelineVariant, { dot: string; line: string }> = {
@@ -40,14 +40,14 @@ const variantStyles: Record<TimelineVariant, { dot: string; line: string }> = {
     dot: "border-destructive bg-destructive",
     line: "bg-destructive/20",
   },
-}
+};
 
 const hollowStyles: Record<TimelineVariant, string> = {
   default: "border-primary bg-background",
   secondary: "border-secondary bg-background",
   outline: "border-muted-foreground bg-background",
   destructive: "border-destructive bg-background",
-}
+};
 
 function Timeline({
   orientation = "vertical",
@@ -56,7 +56,7 @@ function Timeline({
   children,
   className,
 }: TimelineProps) {
-  const items = React.Children.toArray(children)
+  const items = React.Children.toArray(children);
 
   if (orientation === "vertical") {
     return (
@@ -74,15 +74,16 @@ function Timeline({
             }
           >
             {idx < items.length - 1 && (
-              <div className="absolute left-[7px] top-[18px] bottom-[-24px] w-[2px] bg-border" style={
-                vertItemSpacing ? { bottom: -(vertItemSpacing - 0) } : undefined
-              } />
+              <div
+                className="absolute left-[7px] top-[18px] bottom-[-24px] w-[2px] bg-border"
+                style={vertItemSpacing ? { bottom: -(vertItemSpacing - 0) } : undefined}
+              />
             )}
             {child}
           </div>
         ))}
       </div>
-    )
+    );
   }
 
   return (
@@ -96,41 +97,38 @@ function Timeline({
         </div>
       ))}
     </div>
-  )
+  );
 }
 
-function TimelineItem({ variant = "default", hollow = false, children, className }: TimelineItemProps) {
-  const styles = variantStyles[variant]
-  const dotClass = hollow ? hollowStyles[variant] : styles.dot
+function TimelineItem({
+  variant = "default",
+  hollow = false,
+  children,
+  className,
+}: TimelineItemProps) {
+  const styles = variantStyles[variant];
+  const dotClass = hollow ? hollowStyles[variant] : styles.dot;
 
   return (
     <div className={cn("relative", className)}>
       <div
         className={cn(
           "absolute left-[-25px] top-[6px] h-4 w-4 rounded-full border-2 shrink-0",
-          dotClass,
+          dotClass
         )}
       />
       <div className="min-w-0">{children}</div>
     </div>
-  )
+  );
 }
 
 function TimelineItemDate({ children, className }: TimelineItemChildProps) {
-  return (
-    <p className={cn("text-xs text-muted-foreground", className)}>
-      {children}
-    </p>
-  )
+  return <p className={cn("text-xs text-muted-foreground", className)}>{children}</p>;
 }
 
 function TimelineItemTitle({ children, className }: TimelineItemChildProps) {
-  return (
-    <p className={cn("text-sm font-medium", className)}>
-      {children}
-    </p>
-  )
+  return <p className={cn("text-sm font-medium", className)}>{children}</p>;
 }
 
-export default Timeline
-export { Timeline, TimelineItem, TimelineItemDate, TimelineItemTitle }
+export default Timeline;
+export { Timeline, TimelineItem, TimelineItemDate, TimelineItemTitle };

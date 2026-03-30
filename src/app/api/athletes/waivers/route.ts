@@ -12,10 +12,7 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
     const userId =
@@ -27,10 +24,7 @@ export async function GET(request: NextRequest) {
     const athleteId = searchParams.get("athleteId");
 
     if (!athleteId) {
-      return NextResponse.json(
-        { error: "athleteId is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "athleteId is required" }, { status: 400 });
     }
 
     // Verify guardian access
@@ -39,10 +33,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!guardianLink) {
-      return NextResponse.json(
-        { error: "Access denied" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
     const acceptances = await db.waiverAcceptance.findMany({
@@ -68,9 +59,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data: acceptances });
   } catch (error) {
     console.error("Error fetching athlete waivers:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch waivers" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch waivers" }, { status: 500 });
   }
 }

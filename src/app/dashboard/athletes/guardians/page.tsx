@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   Plus,
   Search,
@@ -11,13 +11,13 @@ import {
   Users,
   Loader2,
   AlertCircle,
-} from "lucide-react"
-import Link from "next/link"
+} from "lucide-react";
+import Link from "next/link";
 
-import { formatPhoneNumberIntl } from "react-phone-number-input"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { formatPhoneNumberIntl } from "react-phone-number-input";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,7 +25,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -33,7 +33,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -41,64 +41,64 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 
 interface GuardianAthlete {
-  id: string
-  name: string
-  status: string
+  id: string;
+  name: string;
+  status: string;
 }
 
 interface Guardian {
-  id: string
-  name: string | null
-  email: string | null
-  phone: string | null
-  balance: number | string | null
-  status: string | null
-  athletes: GuardianAthlete[]
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  balance: number | string | null;
+  status: string | null;
+  athletes: GuardianAthlete[];
 }
 
 export default function GuardiansPage() {
-  const [searchTerm, setSearchTerm] = React.useState("")
-  const [guardians, setGuardians] = React.useState<Guardian[]>([])
-  const [isLoading, setIsLoading] = React.useState(true)
-  const [error, setError] = React.useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const [guardians, setGuardians] = React.useState<Guardian[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
-  const [dialogOpen, setDialogOpen] = React.useState(false)
-  const [inviteEmail, setInviteEmail] = React.useState("")
-  const [inviteName, setInviteName] = React.useState("")
-  const [isInviting, setIsInviting] = React.useState(false)
+  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [inviteEmail, setInviteEmail] = React.useState("");
+  const [inviteName, setInviteName] = React.useState("");
+  const [isInviting, setIsInviting] = React.useState(false);
 
   const fetchGuardians = React.useCallback(async (search?: string) => {
-    setIsLoading(true)
-    setError(null)
+    setIsLoading(true);
+    setError(null);
     try {
-      const params = new URLSearchParams()
-      if (search) params.set("search", search)
-      const res = await fetch(`/api/guardians?${params.toString()}`)
-      if (!res.ok) throw new Error("Failed to fetch guardians")
-      const json = await res.json()
-      setGuardians(json.data)
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      const res = await fetch(`/api/guardians?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to fetch guardians");
+      const json = await res.json();
+      setGuardians(json.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch guardians")
+      setError(err instanceof Error ? err.message : "Failed to fetch guardians");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [])
+  }, []);
 
   React.useEffect(() => {
     const timer = setTimeout(() => {
-      fetchGuardians(searchTerm)
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [searchTerm, fetchGuardians])
+      fetchGuardians(searchTerm);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm, fetchGuardians]);
 
   const handleInviteGuardian = async () => {
-    if (!inviteEmail) return
-    setIsInviting(true)
+    if (!inviteEmail) return;
+    setIsInviting(true);
     try {
       const res = await fetch("/api/users", {
         method: "POST",
@@ -108,21 +108,21 @@ export default function GuardiansPage() {
           email: inviteEmail,
           role: "PARENT",
         }),
-      })
+      });
       if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || "Failed to invite guardian")
+        const data = await res.json();
+        throw new Error(data.error || "Failed to invite guardian");
       }
-      setDialogOpen(false)
-      setInviteEmail("")
-      setInviteName("")
-      fetchGuardians(searchTerm)
+      setDialogOpen(false);
+      setInviteEmail("");
+      setInviteName("");
+      fetchGuardians(searchTerm);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to invite guardian")
+      toast.error(err instanceof Error ? err.message : "Failed to invite guardian");
     } finally {
-      setIsInviting(false)
+      setIsInviting(false);
     }
-  }
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -208,7 +208,10 @@ export default function GuardiansPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <Phone className="h-3 w-3" /> {guardian.phone ? (formatPhoneNumberIntl(guardian.phone) || guardian.phone) : "—"}
+                      <Phone className="h-3 w-3" />{" "}
+                      {guardian.phone
+                        ? formatPhoneNumberIntl(guardian.phone) || guardian.phone
+                        : "—"}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -276,8 +279,7 @@ export default function GuardiansPage() {
           <DialogHeader>
             <DialogTitle>Add Guardian</DialogTitle>
             <DialogDescription>
-              Invite a guardian by email. They will receive an invitation to
-              create their account.
+              Invite a guardian by email. They will receive an invitation to create their account.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -302,17 +304,10 @@ export default function GuardiansPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDialogOpen(false)}
-              disabled={isInviting}
-            >
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isInviting}>
               Cancel
             </Button>
-            <Button
-              onClick={handleInviteGuardian}
-              disabled={!inviteEmail || isInviting}
-            >
+            <Button onClick={handleInviteGuardian} disabled={!inviteEmail || isInviting}>
               {isInviting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -326,5 +321,5 @@ export default function GuardiansPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

@@ -1,123 +1,117 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Loader2, Eye, AlertCircle, CheckCircle2, Search, X } from "lucide-react"
+import { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Loader2, Eye, AlertCircle, CheckCircle2, Search, X } from "lucide-react";
 
 interface UserResult {
-  id: string
-  name: string | null
-  email: string
-  role: string | null
-  avatar: string | null
-  status: string
-  isSuperAdmin: boolean
+  id: string;
+  name: string | null;
+  email: string;
+  role: string | null;
+  avatar: string | null;
+  status: string;
+  isSuperAdmin: boolean;
 }
 
 export default function CoachViewAsUserPage() {
-  const { data: session, update: updateSession } = useSession()
-  const router = useRouter()
+  const { data: session, update: updateSession } = useSession();
+  const router = useRouter();
 
-  const [query, setQuery] = useState("")
-  const [users, setUsers] = useState<UserResult[]>([])
-  const [isSearching, setIsSearching] = useState(false)
-  const [isStartingView, setIsStartingView] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [query, setQuery] = useState("");
+  const [users, setUsers] = useState<UserResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isStartingView, setIsStartingView] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const isCurrentlyViewing = !!session?.user?.viewingAsUserId
+  const isCurrentlyViewing = !!session?.user?.viewingAsUserId;
 
   useEffect(() => {
     if (session && !session.user?.isSuperAdmin) {
-      router.push("/coach")
+      router.push("/coach");
     }
-  }, [session, router])
+  }, [session, router]);
 
   const searchUsers = useCallback(async (searchQuery: string) => {
     if (searchQuery.length < 2) {
-      setUsers([])
-      return
+      setUsers([]);
+      return;
     }
-    setIsSearching(true)
-    setError(null)
+    setIsSearching(true);
+    setError(null);
     try {
-      const res = await fetch(`/api/superadmin/users/search?q=${encodeURIComponent(searchQuery)}`)
-      if (!res.ok) throw new Error("Failed to search users")
-      const data = await res.json()
-      setUsers(data.users || [])
+      const res = await fetch(`/api/superadmin/users/search?q=${encodeURIComponent(searchQuery)}`);
+      if (!res.ok) throw new Error("Failed to search users");
+      const data = await res.json();
+      setUsers(data.users || []);
     } catch (err) {
-      setError("Failed to search users")
-      console.error(err)
+      setError("Failed to search users");
+      console.error(err);
     } finally {
-      setIsSearching(false)
+      setIsSearching(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      searchUsers(query)
-    }, 300)
-    return () => clearTimeout(timer)
-  }, [query, searchUsers])
+      searchUsers(query);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query, searchUsers]);
 
   const handleStartViewing = async (user: UserResult) => {
-    setIsStartingView(true)
-    setError(null)
+    setIsStartingView(true);
+    setError(null);
     try {
       await updateSession({
         viewingAsUserId: user.id,
         viewingAsUserName: user.name || user.email,
         viewingAsUserEmail: user.email,
-      })
-      router.push("/coach")
+      });
+      router.push("/coach");
     } catch (err) {
-      setError("Failed to start viewing as user")
-      console.error(err)
-      setIsStartingView(false)
+      setError("Failed to start viewing as user");
+      console.error(err);
+      setIsStartingView(false);
     }
-  }
+  };
 
   const handleStopViewing = async () => {
-    setIsStartingView(true)
+    setIsStartingView(true);
     try {
       await updateSession({
         viewingAsUserId: "",
         viewingAsUserName: "",
         viewingAsUserEmail: "",
-      })
-      router.refresh()
+      });
+      router.refresh();
     } catch (err) {
-      setError("Failed to stop viewing as user")
-      console.error(err)
+      setError("Failed to stop viewing as user");
+      console.error(err);
     } finally {
-      setIsStartingView(false)
+      setIsStartingView(false);
     }
-  }
+  };
 
   const getInitials = (name: string | null) => {
-    if (!name) return "?"
+    if (!name) return "?";
     return name
       .split(" ")
       .map((n) => n[0])
       .join("")
       .toUpperCase()
-      .slice(0, 2)
-  }
+      .slice(0, 2);
+  };
 
   if (!session?.user?.isSuperAdmin) {
-    return null
+    return null;
   }
 
   return (
@@ -125,8 +119,8 @@ export default function CoachViewAsUserPage() {
       <div>
         <h1 className="text-2xl font-bold">View as User</h1>
         <p className="text-muted-foreground">
-          Search for any user to view the coach portal from their perspective.
-          Useful for testing and troubleshooting.
+          Search for any user to view the coach portal from their perspective. Useful for testing
+          and troubleshooting.
         </p>
       </div>
 
@@ -144,11 +138,8 @@ export default function CoachViewAsUserPage() {
           <AlertTitle>Currently Viewing as User</AlertTitle>
           <AlertDescription className="flex flex-col gap-2">
             <span>
-              You are viewing the portal as{" "}
-              <strong>{session.user.viewingAsUserName}</strong>
-              {session.user.viewingAsUserEmail && (
-                <> ({session.user.viewingAsUserEmail})</>
-              )}
+              You are viewing the portal as <strong>{session.user.viewingAsUserName}</strong>
+              {session.user.viewingAsUserEmail && <> ({session.user.viewingAsUserEmail})</>}
             </span>
             <Button
               variant="outline"
@@ -213,9 +204,7 @@ export default function CoachViewAsUserPage() {
                 >
                   <Avatar className="h-9 w-9">
                     <AvatarImage src={user.avatar || undefined} />
-                    <AvatarFallback className="text-xs">
-                      {getInitials(user.name)}
-                    </AvatarFallback>
+                    <AvatarFallback className="text-xs">{getInitials(user.name)}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -233,9 +222,7 @@ export default function CoachViewAsUserPage() {
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {user.email}
-                    </p>
+                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                   </div>
                   <Button
                     size="sm"
@@ -260,5 +247,5 @@ export default function CoachViewAsUserPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

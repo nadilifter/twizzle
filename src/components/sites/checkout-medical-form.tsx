@@ -1,16 +1,29 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { useState, useEffect, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Loader2,
   ChevronRight,
@@ -26,27 +39,27 @@ import {
   Plus,
   X,
   Check,
-} from "lucide-react"
-import { PhoneInput } from "@/components/ui/phone-input"
-import { toast } from "sonner"
+} from "lucide-react";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { toast } from "sonner";
 import {
   COMMON_ALLERGIES,
   COMMON_CONDITIONS,
   DIETARY_RESTRICTIONS,
   EMERGENCY_CONTACT_RELATIONSHIPS,
-} from "@/types/medical"
+} from "@/types/medical";
 import type {
   MedicalFormConfig,
   CustomMedicalQuestion,
   AthleteMedicalInfoWithResponses,
   UpsertAthleteMedicalInfoPayload,
-} from "@/types/medical"
+} from "@/types/medical";
 
 // ============================================
 // Types
 // ============================================
 
-type MedicalCategory = "allergies" | "conditions" | "medications" | "dietary"
+type MedicalCategory = "allergies" | "conditions" | "medications" | "dietary";
 
 type MedicalSubStep =
   | "categories"
@@ -55,17 +68,17 @@ type MedicalSubStep =
   | "medications"
   | "dietary"
   | "emergency_insurance"
-  | "custom_questions"
+  | "custom_questions";
 
 interface CheckoutMedicalFormProps {
-  athleteId: string
-  athleteName: string
-  config: MedicalFormConfig
-  customQuestions: CustomMedicalQuestion[]
-  organizationId: string
-  email: string
-  onComplete: () => void
-  onBack: () => void
+  athleteId: string;
+  athleteName: string;
+  config: MedicalFormConfig;
+  customQuestions: CustomMedicalQuestion[];
+  organizationId: string;
+  email: string;
+  onComplete: () => void;
+  onBack: () => void;
 }
 
 // ============================================
@@ -77,11 +90,17 @@ function CategorySelector({
   selectedCategories,
   onToggle,
 }: {
-  config: MedicalFormConfig
-  selectedCategories: Set<MedicalCategory>
-  onToggle: (category: MedicalCategory) => void
+  config: MedicalFormConfig;
+  selectedCategories: Set<MedicalCategory>;
+  onToggle: (category: MedicalCategory) => void;
 }) {
-  const categories: { key: MedicalCategory; label: string; description: string; icon: React.ReactNode; configKey: keyof MedicalFormConfig }[] = [
+  const categories: {
+    key: MedicalCategory;
+    label: string;
+    description: string;
+    icon: React.ReactNode;
+    configKey: keyof MedicalFormConfig;
+  }[] = [
     {
       key: "allergies",
       label: "Allergies",
@@ -110,10 +129,10 @@ function CategorySelector({
       icon: <UtensilsCrossed className="h-5 w-5 text-orange-500" />,
       configKey: "collectDietaryRestrictions",
     },
-  ]
+  ];
 
   // Only show categories enabled in the org config
-  const enabledCategories = categories.filter((c) => config[c.configKey] === true)
+  const enabledCategories = categories.filter((c) => config[c.configKey] === true);
 
   return (
     <div className="space-y-3">
@@ -124,9 +143,7 @@ function CategorySelector({
         <label
           key={cat.key}
           className={`flex items-center gap-4 rounded-lg border p-4 cursor-pointer transition-colors ${
-            selectedCategories.has(cat.key)
-              ? "border-primary bg-primary/5"
-              : "hover:bg-muted/50"
+            selectedCategories.has(cat.key) ? "border-primary bg-primary/5" : "hover:bg-muted/50"
           }`}
         >
           <Checkbox
@@ -143,7 +160,7 @@ function CategorySelector({
         </label>
       ))}
     </div>
-  )
+  );
 }
 
 // ============================================
@@ -154,26 +171,26 @@ function AllergiesForm({
   allergies,
   onChange,
 }: {
-  allergies: string[]
-  onChange: (allergies: string[]) => void
+  allergies: string[];
+  onChange: (allergies: string[]) => void;
 }) {
-  const [customAllergy, setCustomAllergy] = useState("")
+  const [customAllergy, setCustomAllergy] = useState("");
 
   const toggleAllergy = (allergy: string) => {
     if (allergies.includes(allergy)) {
-      onChange(allergies.filter((a) => a !== allergy))
+      onChange(allergies.filter((a) => a !== allergy));
     } else {
-      onChange([...allergies, allergy])
+      onChange([...allergies, allergy]);
     }
-  }
+  };
 
   const addCustom = () => {
-    const trimmed = customAllergy.trim()
+    const trimmed = customAllergy.trim();
     if (trimmed && !allergies.includes(trimmed)) {
-      onChange([...allergies, trimmed])
-      setCustomAllergy("")
+      onChange([...allergies, trimmed]);
+      setCustomAllergy("");
     }
-  }
+  };
 
   return (
     <div className="space-y-4">
@@ -213,7 +230,8 @@ function AllergiesForm({
             <Plus className="h-4 w-4" />
           </Button>
         </div>
-        {allergies.filter((a) => !(COMMON_ALLERGIES as readonly string[]).includes(a)).length > 0 && (
+        {allergies.filter((a) => !(COMMON_ALLERGIES as readonly string[]).includes(a)).length >
+          0 && (
           <div className="flex flex-wrap gap-2 mt-2">
             {allergies
               .filter((a) => !(COMMON_ALLERGIES as readonly string[]).includes(a))
@@ -229,7 +247,7 @@ function AllergiesForm({
         )}
       </div>
     </div>
-  )
+  );
 }
 
 // ============================================
@@ -240,26 +258,26 @@ function ConditionsForm({
   conditions,
   onChange,
 }: {
-  conditions: string[]
-  onChange: (conditions: string[]) => void
+  conditions: string[];
+  onChange: (conditions: string[]) => void;
 }) {
-  const [customCondition, setCustomCondition] = useState("")
+  const [customCondition, setCustomCondition] = useState("");
 
   const toggleCondition = (condition: string) => {
     if (conditions.includes(condition)) {
-      onChange(conditions.filter((c) => c !== condition))
+      onChange(conditions.filter((c) => c !== condition));
     } else {
-      onChange([...conditions, condition])
+      onChange([...conditions, condition]);
     }
-  }
+  };
 
   const addCustom = () => {
-    const trimmed = customCondition.trim()
+    const trimmed = customCondition.trim();
     if (trimmed && !conditions.includes(trimmed)) {
-      onChange([...conditions, trimmed])
-      setCustomCondition("")
+      onChange([...conditions, trimmed]);
+      setCustomCondition("");
     }
-  }
+  };
 
   return (
     <div className="space-y-4">
@@ -299,7 +317,8 @@ function ConditionsForm({
             <Plus className="h-4 w-4" />
           </Button>
         </div>
-        {conditions.filter((c) => !(COMMON_CONDITIONS as readonly string[]).includes(c)).length > 0 && (
+        {conditions.filter((c) => !(COMMON_CONDITIONS as readonly string[]).includes(c)).length >
+          0 && (
           <div className="flex flex-wrap gap-2 mt-2">
             {conditions
               .filter((c) => !(COMMON_CONDITIONS as readonly string[]).includes(c))
@@ -315,7 +334,7 @@ function ConditionsForm({
         )}
       </div>
     </div>
-  )
+  );
 }
 
 // ============================================
@@ -326,22 +345,22 @@ function MedicationsForm({
   medications,
   onChange,
 }: {
-  medications: string[]
-  onChange: (medications: string[]) => void
+  medications: string[];
+  onChange: (medications: string[]) => void;
 }) {
-  const [newMedication, setNewMedication] = useState("")
+  const [newMedication, setNewMedication] = useState("");
 
   const addMedication = () => {
-    const trimmed = newMedication.trim()
+    const trimmed = newMedication.trim();
     if (trimmed && !medications.includes(trimmed)) {
-      onChange([...medications, trimmed])
-      setNewMedication("")
+      onChange([...medications, trimmed]);
+      setNewMedication("");
     }
-  }
+  };
 
   const removeMedication = (med: string) => {
-    onChange(medications.filter((m) => m !== med))
-  }
+    onChange(medications.filter((m) => m !== med));
+  };
 
   return (
     <div className="space-y-4">
@@ -367,7 +386,13 @@ function MedicationsForm({
           {medications.map((med, i) => (
             <div key={i} className="flex items-center justify-between rounded-md border px-3 py-2">
               <span className="text-sm">{med}</span>
-              <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeMedication(med)}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => removeMedication(med)}
+              >
                 <X className="h-3 w-3" />
               </Button>
             </div>
@@ -375,10 +400,12 @@ function MedicationsForm({
         </div>
       )}
       {medications.length === 0 && (
-        <p className="text-sm text-muted-foreground italic">No medications added. If there are none, you can skip this step.</p>
+        <p className="text-sm text-muted-foreground italic">
+          No medications added. If there are none, you can skip this step.
+        </p>
       )}
     </div>
-  )
+  );
 }
 
 // ============================================
@@ -389,16 +416,16 @@ function DietaryForm({
   restrictions,
   onChange,
 }: {
-  restrictions: string[]
-  onChange: (restrictions: string[]) => void
+  restrictions: string[];
+  onChange: (restrictions: string[]) => void;
 }) {
   const toggleRestriction = (restriction: string) => {
     if (restrictions.includes(restriction)) {
-      onChange(restrictions.filter((r) => r !== restriction))
+      onChange(restrictions.filter((r) => r !== restriction));
     } else {
-      onChange([...restrictions, restriction])
+      onChange([...restrictions, restriction]);
     }
-  }
+  };
 
   return (
     <div className="space-y-4">
@@ -425,7 +452,7 @@ function DietaryForm({
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 // ============================================
@@ -442,14 +469,14 @@ function EmergencyInsuranceForm({
   onChangeEmergency: onChangeEC,
   onChangeInsurance: onChangeIns,
 }: {
-  config: MedicalFormConfig
-  emergencyContactName: string
-  emergencyContactPhone: string
-  emergencyContactRelation: string
-  insuranceProvider: string
-  insurancePolicyNumber: string
-  onChangeEmergency: (field: string, value: string) => void
-  onChangeInsurance: (field: string, value: string) => void
+  config: MedicalFormConfig;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+  emergencyContactRelation: string;
+  insuranceProvider: string;
+  insurancePolicyNumber: string;
+  onChangeEmergency: (field: string, value: string) => void;
+  onChangeInsurance: (field: string, value: string) => void;
 }) {
   return (
     <div className="space-y-6">
@@ -461,7 +488,9 @@ function EmergencyInsuranceForm({
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="ecName">Contact Name <span className="text-destructive">*</span></Label>
+              <Label htmlFor="ecName">
+                Contact Name <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="ecName"
                 value={emergencyContactName}
@@ -470,7 +499,9 @@ function EmergencyInsuranceForm({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ecPhone">Phone Number <span className="text-destructive">*</span></Label>
+              <Label htmlFor="ecPhone">
+                Phone Number <span className="text-destructive">*</span>
+              </Label>
               <PhoneInput
                 defaultCountry="US"
                 value={emergencyContactPhone}
@@ -479,7 +510,9 @@ function EmergencyInsuranceForm({
               />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="ecRelation">Relationship <span className="text-destructive">*</span></Label>
+              <Label htmlFor="ecRelation">
+                Relationship <span className="text-destructive">*</span>
+              </Label>
               <Select
                 value={emergencyContactRelation}
                 onValueChange={(v) => onChangeEC("emergencyContactRelation", v)}
@@ -531,7 +564,7 @@ function EmergencyInsuranceForm({
         </div>
       )}
     </div>
-  )
+  );
 }
 
 // ============================================
@@ -543,11 +576,11 @@ function CustomQuestionsForm({
   responses,
   onChangeResponse,
 }: {
-  questions: CustomMedicalQuestion[]
-  responses: Record<string, string>
-  onChangeResponse: (questionId: string, value: string) => void
+  questions: CustomMedicalQuestion[];
+  responses: Record<string, string>;
+  onChangeResponse: (questionId: string, value: string) => void;
 }) {
-  if (questions.length === 0) return null
+  if (questions.length === 0) return null;
 
   return (
     <div className="space-y-6">
@@ -604,7 +637,7 @@ function CustomQuestionsForm({
           {q.questionType === "CHECKBOX" && q.options && (
             <div className="space-y-2">
               {(q.options as string[]).map((option) => {
-                const currentValues = (responses[q.id] || "").split(",").filter(Boolean)
+                const currentValues = (responses[q.id] || "").split(",").filter(Boolean);
                 return (
                   <label key={option} className="flex items-center space-x-2 cursor-pointer">
                     <Checkbox
@@ -612,20 +645,20 @@ function CustomQuestionsForm({
                       onCheckedChange={(checked) => {
                         const newValues = checked
                           ? [...currentValues, option]
-                          : currentValues.filter((v) => v !== option)
-                        onChangeResponse(q.id, newValues.join(","))
+                          : currentValues.filter((v) => v !== option);
+                        onChangeResponse(q.id, newValues.join(","));
                       }}
                     />
                     <span className="text-sm">{option}</span>
                   </label>
-                )
+                );
               })}
             </div>
           )}
         </div>
       ))}
     </div>
-  )
+  );
 }
 
 // ============================================
@@ -643,31 +676,31 @@ export function CheckoutMedicalForm({
   onBack,
 }: CheckoutMedicalFormProps) {
   // Sub-step navigation
-  const [subStep, setSubStep] = useState<MedicalSubStep>("categories")
+  const [subStep, setSubStep] = useState<MedicalSubStep>("categories");
   const [selectedCategories, setSelectedCategories] = useState<Set<MedicalCategory>>(() => {
-    const initial = new Set<MedicalCategory>()
-    if (config.collectAllergies) initial.add("allergies")
-    if (config.collectConditions) initial.add("conditions")
-    if (config.collectMedications) initial.add("medications")
-    if (config.collectDietaryRestrictions) initial.add("dietary")
-    return initial
-  })
+    const initial = new Set<MedicalCategory>();
+    if (config.collectAllergies) initial.add("allergies");
+    if (config.collectConditions) initial.add("conditions");
+    if (config.collectMedications) initial.add("medications");
+    if (config.collectDietaryRestrictions) initial.add("dietary");
+    return initial;
+  });
 
   // Form data
-  const [allergies, setAllergies] = useState<string[]>([])
-  const [conditions, setConditions] = useState<string[]>([])
-  const [medications, setMedications] = useState<string[]>([])
-  const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>([])
-  const [emergencyContactName, setEmergencyContactName] = useState("")
-  const [emergencyContactPhone, setEmergencyContactPhone] = useState("")
-  const [emergencyContactRelation, setEmergencyContactRelation] = useState("")
-  const [insuranceProvider, setInsuranceProvider] = useState("")
-  const [insurancePolicyNumber, setInsurancePolicyNumber] = useState("")
-  const [customResponses, setCustomResponses] = useState<Record<string, string>>({})
+  const [allergies, setAllergies] = useState<string[]>([]);
+  const [conditions, setConditions] = useState<string[]>([]);
+  const [medications, setMedications] = useState<string[]>([]);
+  const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>([]);
+  const [emergencyContactName, setEmergencyContactName] = useState("");
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState("");
+  const [emergencyContactRelation, setEmergencyContactRelation] = useState("");
+  const [insuranceProvider, setInsuranceProvider] = useState("");
+  const [insurancePolicyNumber, setInsurancePolicyNumber] = useState("");
+  const [customResponses, setCustomResponses] = useState<Record<string, string>>({});
 
   // Loading states
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Load existing medical info
   useEffect(() => {
@@ -675,182 +708,182 @@ export function CheckoutMedicalForm({
       try {
         const response = await fetch(
           `/api/public/athletes/${athleteId}/medical?organizationId=${organizationId}&email=${encodeURIComponent(email)}`
-        )
+        );
         if (response.ok) {
-          const data = await response.json()
-          const info = data.medicalInfo
+          const data = await response.json();
+          const info = data.medicalInfo;
           if (info && info.id) {
-            setAllergies(info.allergies || [])
-            setConditions(info.conditions || [])
-            setMedications(info.medications || [])
-            setDietaryRestrictions(info.dietaryRestrictions || [])
-            setEmergencyContactName(info.emergencyContactName || "")
-            setEmergencyContactPhone(info.emergencyContactPhone || "")
-            setEmergencyContactRelation(info.emergencyContactRelation || "")
-            setInsuranceProvider(info.insuranceProvider || "")
-            setInsurancePolicyNumber(info.insurancePolicyNumber || "")
+            setAllergies(info.allergies || []);
+            setConditions(info.conditions || []);
+            setMedications(info.medications || []);
+            setDietaryRestrictions(info.dietaryRestrictions || []);
+            setEmergencyContactName(info.emergencyContactName || "");
+            setEmergencyContactPhone(info.emergencyContactPhone || "");
+            setEmergencyContactRelation(info.emergencyContactRelation || "");
+            setInsuranceProvider(info.insuranceProvider || "");
+            setInsurancePolicyNumber(info.insurancePolicyNumber || "");
             if (info.customResponses) {
-              const responses: Record<string, string> = {}
+              const responses: Record<string, string> = {};
               info.customResponses.forEach((r: any) => {
-                responses[r.questionId] = r.response
-              })
-              setCustomResponses(responses)
+                responses[r.questionId] = r.response;
+              });
+              setCustomResponses(responses);
             }
           }
         }
       } catch (error) {
-        console.error("Error fetching existing medical info:", error)
+        console.error("Error fetching existing medical info:", error);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
-    fetchExisting()
-  }, [athleteId, organizationId, email])
+    };
+    fetchExisting();
+  }, [athleteId, organizationId, email]);
 
   // Build ordered list of steps
   const getStepOrder = useCallback((): MedicalSubStep[] => {
-    const steps: MedicalSubStep[] = ["categories"]
+    const steps: MedicalSubStep[] = ["categories"];
 
     // Add selected categories
-    const categoryOrder: MedicalCategory[] = ["allergies", "conditions", "medications", "dietary"]
+    const categoryOrder: MedicalCategory[] = ["allergies", "conditions", "medications", "dietary"];
     for (const cat of categoryOrder) {
       if (selectedCategories.has(cat)) {
-        steps.push(cat)
+        steps.push(cat);
       }
     }
 
     // Add emergency/insurance if enabled
     if (config.collectEmergencyContact || config.collectInsuranceInfo) {
-      steps.push("emergency_insurance")
+      steps.push("emergency_insurance");
     }
 
     // Add custom questions if any
     if (customQuestions.length > 0) {
-      steps.push("custom_questions")
+      steps.push("custom_questions");
     }
 
-    return steps
-  }, [selectedCategories, config, customQuestions])
+    return steps;
+  }, [selectedCategories, config, customQuestions]);
 
   // Save the current section's data progressively
   const saveCurrentSection = async (): Promise<boolean> => {
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       const payload: UpsertAthleteMedicalInfoPayload & { organizationId: string; email: string } = {
         organizationId,
         email,
-      }
+      };
 
       // Include all data we have so far
-      if (selectedCategories.has("allergies")) payload.allergies = allergies
-      if (selectedCategories.has("conditions")) payload.conditions = conditions
-      if (selectedCategories.has("medications")) payload.medications = medications
-      if (selectedCategories.has("dietary")) payload.dietaryRestrictions = dietaryRestrictions
+      if (selectedCategories.has("allergies")) payload.allergies = allergies;
+      if (selectedCategories.has("conditions")) payload.conditions = conditions;
+      if (selectedCategories.has("medications")) payload.medications = medications;
+      if (selectedCategories.has("dietary")) payload.dietaryRestrictions = dietaryRestrictions;
 
       // For non-selected categories, explicitly send empty arrays
-      if (!selectedCategories.has("allergies")) payload.allergies = []
-      if (!selectedCategories.has("conditions")) payload.conditions = []
-      if (!selectedCategories.has("medications")) payload.medications = []
-      if (!selectedCategories.has("dietary")) payload.dietaryRestrictions = []
+      if (!selectedCategories.has("allergies")) payload.allergies = [];
+      if (!selectedCategories.has("conditions")) payload.conditions = [];
+      if (!selectedCategories.has("medications")) payload.medications = [];
+      if (!selectedCategories.has("dietary")) payload.dietaryRestrictions = [];
 
       // Include emergency/insurance if on that step or past it
       if (config.collectEmergencyContact) {
-        payload.emergencyContactName = emergencyContactName || null
-        payload.emergencyContactPhone = emergencyContactPhone || null
-        payload.emergencyContactRelation = emergencyContactRelation || null
+        payload.emergencyContactName = emergencyContactName || null;
+        payload.emergencyContactPhone = emergencyContactPhone || null;
+        payload.emergencyContactRelation = emergencyContactRelation || null;
       }
       if (config.collectInsuranceInfo) {
-        payload.insuranceProvider = insuranceProvider || null
-        payload.insurancePolicyNumber = insurancePolicyNumber || null
+        payload.insuranceProvider = insuranceProvider || null;
+        payload.insurancePolicyNumber = insurancePolicyNumber || null;
       }
 
       // Include custom responses
       if (Object.keys(customResponses).length > 0) {
         payload.customResponses = Object.entries(customResponses)
           .filter(([, v]) => v.trim())
-          .map(([questionId, response]) => ({ questionId, response }))
+          .map(([questionId, response]) => ({ questionId, response }));
       }
 
       const response = await fetch(`/api/public/athletes/${athleteId}/medical`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to save medical info")
+        throw new Error("Failed to save medical info");
       }
 
-      return true
+      return true;
     } catch (error) {
-      console.error("Error saving medical info:", error)
-      toast.error("Failed to save medical information")
-      return false
+      console.error("Error saving medical info:", error);
+      toast.error("Failed to save medical information");
+      return false;
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const handleNext = async () => {
-    const steps = getStepOrder()
-    const currentIndex = steps.indexOf(subStep)
+    const steps = getStepOrder();
+    const currentIndex = steps.indexOf(subStep);
 
     if (subStep === "emergency_insurance" && config.collectEmergencyContact) {
       if (!emergencyContactName.trim()) {
-        toast.error("Emergency contact name is required")
-        return
+        toast.error("Emergency contact name is required");
+        return;
       }
       if (!emergencyContactPhone.trim()) {
-        toast.error("Emergency contact phone number is required")
-        return
+        toast.error("Emergency contact phone number is required");
+        return;
       }
       if (!emergencyContactRelation) {
-        toast.error("Emergency contact relationship is required")
-        return
+        toast.error("Emergency contact relationship is required");
+        return;
       }
     }
 
     // Save current section
-    const saved = await saveCurrentSection()
-    if (!saved) return
+    const saved = await saveCurrentSection();
+    if (!saved) return;
 
     if (currentIndex < steps.length - 1) {
-      setSubStep(steps[currentIndex + 1])
+      setSubStep(steps[currentIndex + 1]);
     } else {
       // All steps complete
-      toast.success(`Medical information saved for ${athleteName}`)
-      onComplete()
+      toast.success(`Medical information saved for ${athleteName}`);
+      onComplete();
     }
-  }
+  };
 
   const handlePrevious = () => {
-    const steps = getStepOrder()
-    const currentIndex = steps.indexOf(subStep)
+    const steps = getStepOrder();
+    const currentIndex = steps.indexOf(subStep);
 
     if (currentIndex > 0) {
-      setSubStep(steps[currentIndex - 1])
+      setSubStep(steps[currentIndex - 1]);
     } else {
-      onBack()
+      onBack();
     }
-  }
+  };
 
   const toggleCategory = (category: MedicalCategory) => {
     setSelectedCategories((prev) => {
-      const next = new Set(prev)
+      const next = new Set(prev);
       if (next.has(category)) {
-        next.delete(category)
+        next.delete(category);
       } else {
-        next.add(category)
+        next.add(category);
       }
-      return next
-    })
-  }
+      return next;
+    });
+  };
 
   // Compute step info for display
-  const steps = getStepOrder()
-  const currentStepIndex = steps.indexOf(subStep)
-  const totalSteps = steps.length
-  const isLastStep = currentStepIndex === totalSteps - 1
+  const steps = getStepOrder();
+  const currentStepIndex = steps.indexOf(subStep);
+  const totalSteps = steps.length;
+  const isLastStep = currentStepIndex === totalSteps - 1;
 
   // Step labels for display
   const stepLabels: Record<MedicalSubStep, string> = {
@@ -861,7 +894,7 @@ export function CheckoutMedicalForm({
     dietary: "Dietary Restrictions",
     emergency_insurance: "Emergency Contact & Insurance",
     custom_questions: "Additional Questions",
-  }
+  };
 
   const stepIcons: Record<MedicalSubStep, React.ReactNode> = {
     categories: <Heart className="h-5 w-5" />,
@@ -871,7 +904,7 @@ export function CheckoutMedicalForm({
     dietary: <UtensilsCrossed className="h-5 w-5 text-orange-500" />,
     emergency_insurance: <Phone className="h-5 w-5 text-green-500" />,
     custom_questions: <FileText className="h-5 w-5" />,
-  }
+  };
 
   if (isLoading) {
     return (
@@ -880,7 +913,7 @@ export function CheckoutMedicalForm({
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
@@ -923,9 +956,7 @@ export function CheckoutMedicalForm({
         )}
 
         {/* Category forms */}
-        {subStep === "allergies" && (
-          <AllergiesForm allergies={allergies} onChange={setAllergies} />
-        )}
+        {subStep === "allergies" && <AllergiesForm allergies={allergies} onChange={setAllergies} />}
 
         {subStep === "conditions" && (
           <ConditionsForm conditions={conditions} onChange={setConditions} />
@@ -949,13 +980,13 @@ export function CheckoutMedicalForm({
             insuranceProvider={insuranceProvider}
             insurancePolicyNumber={insurancePolicyNumber}
             onChangeEmergency={(field, value) => {
-              if (field === "emergencyContactName") setEmergencyContactName(value)
-              if (field === "emergencyContactPhone") setEmergencyContactPhone(value)
-              if (field === "emergencyContactRelation") setEmergencyContactRelation(value)
+              if (field === "emergencyContactName") setEmergencyContactName(value);
+              if (field === "emergencyContactPhone") setEmergencyContactPhone(value);
+              if (field === "emergencyContactRelation") setEmergencyContactRelation(value);
             }}
             onChangeInsurance={(field, value) => {
-              if (field === "insuranceProvider") setInsuranceProvider(value)
-              if (field === "insurancePolicyNumber") setInsurancePolicyNumber(value)
+              if (field === "insuranceProvider") setInsuranceProvider(value);
+              if (field === "insurancePolicyNumber") setInsurancePolicyNumber(value);
             }}
           />
         )}
@@ -966,7 +997,7 @@ export function CheckoutMedicalForm({
             questions={customQuestions}
             responses={customResponses}
             onChangeResponse={(questionId, value) => {
-              setCustomResponses((prev) => ({ ...prev, [questionId]: value }))
+              setCustomResponses((prev) => ({ ...prev, [questionId]: value }));
             }}
           />
         )}
@@ -992,5 +1023,5 @@ export function CheckoutMedicalForm({
         </Button>
       </CardFooter>
     </Card>
-  )
+  );
 }

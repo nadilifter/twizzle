@@ -20,10 +20,7 @@ const updateCertificationSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -77,10 +74,7 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {

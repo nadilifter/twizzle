@@ -1,144 +1,136 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { ProgressiveImage } from "@/components/ui/progressive-image"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
-import {
-  Search,
-  ShoppingBag,
-  ShoppingCart,
-  Package,
-  Loader2,
-  SearchX,
-  X,
-} from "lucide-react"
-import Link from "next/link"
-import { useCart } from "@/components/sites/cart-context"
-import { toast } from "sonner"
+import * as React from "react";
+import { ProgressiveImage } from "@/components/ui/progressive-image";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Search, ShoppingBag, ShoppingCart, Package, Loader2, SearchX, X } from "lucide-react";
+import Link from "next/link";
+import { useCart } from "@/components/sites/cart-context";
+import { toast } from "sonner";
 
 type ProductVariant = {
-  id: string
-  label: string
-  price: number | null
-  imageUrl: string | null
-  currentInventory: number | null
-  maxInventory: number | null
-}
+  id: string;
+  label: string;
+  price: number | null;
+  imageUrl: string | null;
+  currentInventory: number | null;
+  maxInventory: number | null;
+};
 
 type Product = {
-  id: string
-  name: string
-  description: string | null
-  category: string
-  price: number
-  imageUrl: string | null
-  currentInventory: number | null
-  maxInventory: number | null
-  typeName: string | null
-  variants: ProductVariant[]
-}
+  id: string;
+  name: string;
+  description: string | null;
+  category: string;
+  price: number;
+  imageUrl: string | null;
+  currentInventory: number | null;
+  maxInventory: number | null;
+  typeName: string | null;
+  variants: ProductVariant[];
+};
 
 interface StoreProductListProps {
-  organizationId: string
-  primaryColor?: string
+  organizationId: string;
+  primaryColor?: string;
 }
 
 function formatPrice(price: number): string {
-  if (price === 0) return "FREE"
+  if (price === 0) return "FREE";
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
-  }).format(price)
+  }).format(price);
 }
 
 export function StoreProductList({ organizationId }: StoreProductListProps) {
-  const [products, setProducts] = React.useState<Product[]>([])
-  const [categories, setCategories] = React.useState<string[]>([])
-  const [selectedCategory, setSelectedCategory] = React.useState("All")
-  const [searchQuery, setSearchQuery] = React.useState("")
-  const [isLoading, setIsLoading] = React.useState(true)
-  const [selectedVariants, setSelectedVariants] = React.useState<Record<string, string>>({})
-  const { items, addItem } = useCart()
+  const [products, setProducts] = React.useState<Product[]>([]);
+  const [categories, setCategories] = React.useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = React.useState("All");
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [selectedVariants, setSelectedVariants] = React.useState<Record<string, string>>({});
+  const { items, addItem } = useCart();
 
   React.useEffect(() => {
     async function fetchProducts() {
       try {
-        setIsLoading(true)
-        const res = await fetch(`/api/public/products?organizationId=${organizationId}`)
-        if (!res.ok) throw new Error("Failed to fetch")
-        const data = await res.json()
-        setProducts(data.data || [])
-        setCategories(data.categories || [])
+        setIsLoading(true);
+        const res = await fetch(`/api/public/products?organizationId=${organizationId}`);
+        if (!res.ok) throw new Error("Failed to fetch");
+        const data = await res.json();
+        setProducts(data.data || []);
+        setCategories(data.categories || []);
       } catch (error) {
-        console.error("Error fetching products:", error)
+        console.error("Error fetching products:", error);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
     }
-    fetchProducts()
-  }, [organizationId])
+    fetchProducts();
+  }, [organizationId]);
 
   const filteredProducts = products.filter((product) => {
-    const matchesCategory = selectedCategory === "All" || product.category === selectedCategory
+    const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
     const matchesSearch =
       searchQuery === "" ||
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesCategory && matchesSearch
-  })
+      product.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
   const getEffectivePrice = (product: Product, variantId?: string) => {
     if (variantId && product.variants.length > 0) {
-      const variant = product.variants.find(v => v.id === variantId)
+      const variant = product.variants.find((v) => v.id === variantId);
       if (variant?.price !== null && variant?.price !== undefined) {
-        return Number(variant.price)
+        return Number(variant.price);
       }
     }
-    return Number(product.price)
-  }
+    return Number(product.price);
+  };
 
   const getEffectiveInventory = (product: Product, variantId?: string) => {
     if (variantId && product.variants.length > 0) {
-      const variant = product.variants.find(v => v.id === variantId)
-      if (variant) return variant.currentInventory
+      const variant = product.variants.find((v) => v.id === variantId);
+      if (variant) return variant.currentInventory;
     }
-    return product.currentInventory
-  }
+    return product.currentInventory;
+  };
 
   const handleAddToCart = (product: Product) => {
-    const hasVariants = product.typeName && product.variants.length > 0
-    const variantId = hasVariants ? selectedVariants[product.id] : undefined
+    const hasVariants = product.typeName && product.variants.length > 0;
+    const variantId = hasVariants ? selectedVariants[product.id] : undefined;
 
     if (hasVariants && !variantId) {
-      toast.error(`Please select a ${product.typeName?.toLowerCase() || "type"}`)
-      return
+      toast.error(`Please select a ${product.typeName?.toLowerCase() || "type"}`);
+      return;
     }
 
-    const inventory = getEffectiveInventory(product, variantId)
+    const inventory = getEffectiveInventory(product, variantId);
     if (inventory !== null && inventory <= 0) {
-      toast.error("This product is out of stock")
-      return
+      toast.error("This product is out of stock");
+      return;
     }
 
-    const variant = variantId ? product.variants.find(v => v.id === variantId) : undefined
+    const variant = variantId ? product.variants.find((v) => v.id === variantId) : undefined;
     const existingItem = items.find(
       (item) =>
         item.referenceId === product.id &&
         (variantId ? item.details?.variantId === variantId : !item.details?.variantId)
-    )
+    );
     if (inventory !== null && existingItem) {
       if (existingItem.quantity >= inventory) {
-        toast.error(`Only ${inventory} available in stock`)
-        return
+        toast.error(`Only ${inventory} available in stock`);
+        return;
       }
     }
 
-    const effectivePrice = getEffectivePrice(product, variantId)
+    const effectivePrice = getEffectivePrice(product, variantId);
 
     addItem({
       referenceId: product.id,
@@ -154,73 +146,77 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
           ? { variantId, variantLabel: variant.label, typeName: product.typeName }
           : {}),
       },
-    })
+    });
 
-    toast.success(`${product.name}${variant ? ` (${variant.label})` : ""} added to cart`)
-  }
+    toast.success(`${product.name}${variant ? ` (${variant.label})` : ""} added to cart`);
+  };
 
   const getStockStatus = (product: Product) => {
-    const hasVariants = product.typeName && product.variants.length > 0
+    const hasVariants = product.typeName && product.variants.length > 0;
 
     if (hasVariants) {
-      const variantId = selectedVariants[product.id]
+      const variantId = selectedVariants[product.id];
       if (!variantId) {
-        const allOutOfStock = product.variants.every(v => v.currentInventory !== null && v.currentInventory <= 0)
+        const allOutOfStock = product.variants.every(
+          (v) => v.currentInventory !== null && v.currentInventory <= 0
+        );
         if (allOutOfStock) {
-          return { label: "Out of Stock", variant: "destructive" as const }
+          return { label: "Out of Stock", variant: "destructive" as const };
         }
-        return null
+        return null;
       }
-      const variant = product.variants.find(v => v.id === variantId)
-      if (!variant) return null
-      if (variant.maxInventory === null && variant.currentInventory === null) return null
+      const variant = product.variants.find((v) => v.id === variantId);
+      if (!variant) return null;
+      if (variant.maxInventory === null && variant.currentInventory === null) return null;
       if (variant.currentInventory === 0) {
-        return { label: "Out of Stock", variant: "destructive" as const }
+        return { label: "Out of Stock", variant: "destructive" as const };
       }
       if (variant.currentInventory !== null && variant.currentInventory <= 5) {
-        return { label: `Only ${variant.currentInventory} left!`, variant: "destructive" as const }
+        return { label: `Only ${variant.currentInventory} left!`, variant: "destructive" as const };
       }
-      return null
+      return null;
     }
 
     if (product.maxInventory === null && product.currentInventory === null) {
-      return null
+      return null;
     }
     if (product.currentInventory === 0) {
-      return { label: "Out of Stock", variant: "destructive" as const }
+      return { label: "Out of Stock", variant: "destructive" as const };
     }
     if (product.currentInventory !== null && product.currentInventory <= 5) {
-      return { label: `Only ${product.currentInventory} left!`, variant: "destructive" as const }
+      return { label: `Only ${product.currentInventory} left!`, variant: "destructive" as const };
     }
-    return null
-  }
+    return null;
+  };
 
   const isOutOfStock = (product: Product) => {
-    const hasVariants = product.typeName && product.variants.length > 0
+    const hasVariants = product.typeName && product.variants.length > 0;
     if (hasVariants) {
-      const variantId = selectedVariants[product.id]
+      const variantId = selectedVariants[product.id];
       if (!variantId) {
-        return product.variants.every(v => v.currentInventory !== null && v.currentInventory <= 0)
+        return product.variants.every(
+          (v) => v.currentInventory !== null && v.currentInventory <= 0
+        );
       }
-      const variant = product.variants.find(v => v.id === variantId)
-      return variant?.currentInventory !== null && (variant?.currentInventory ?? 0) <= 0
+      const variant = product.variants.find((v) => v.id === variantId);
+      return variant?.currentInventory !== null && (variant?.currentInventory ?? 0) <= 0;
     }
-    return product.currentInventory !== null && product.currentInventory <= 0
-  }
+    return product.currentInventory !== null && product.currentInventory <= 0;
+  };
 
-  const hasActiveFilters = selectedCategory !== "All" || searchQuery !== ""
+  const hasActiveFilters = selectedCategory !== "All" || searchQuery !== "";
 
   const clearFilters = () => {
-    setSelectedCategory("All")
-    setSearchQuery("")
-  }
+    setSelectedCategory("All");
+    setSearchQuery("");
+  };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-    )
+    );
   }
 
   if (products.length === 0) {
@@ -232,7 +228,7 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
           There are no products available at this time. Please check back later.
         </p>
       </div>
-    )
+    );
   }
 
   return (
@@ -286,15 +282,15 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
       {filteredProducts.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filteredProducts.map((product) => {
-            const stockStatus = getStockStatus(product)
-            const outOfStock = isOutOfStock(product)
-            const hasVariants = product.typeName && product.variants.length > 0
-            const currentVariantId = selectedVariants[product.id]
-            const effectivePrice = getEffectivePrice(product, currentVariantId)
+            const stockStatus = getStockStatus(product);
+            const outOfStock = isOutOfStock(product);
+            const hasVariants = product.typeName && product.variants.length > 0;
+            const currentVariantId = selectedVariants[product.id];
+            const effectivePrice = getEffectivePrice(product, currentVariantId);
             const selectedVariantImage = currentVariantId
               ? product.variants.find((v) => v.id === currentVariantId)?.imageUrl
-              : null
-            const displayImageUrl = selectedVariantImage || product.imageUrl
+              : null;
+            const displayImageUrl = selectedVariantImage || product.imageUrl;
 
             return (
               <Card
@@ -362,7 +358,10 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
                       <Package className="h-10 w-10 text-muted-foreground/30" />
                       {outOfStock && (
                         <div className="absolute inset-0 bg-background/60 flex items-center justify-center rounded-md">
-                          <Badge variant="destructive" className="text-xs px-2.5 py-0.5 font-semibold">
+                          <Badge
+                            variant="destructive"
+                            className="text-xs px-2.5 py-0.5 font-semibold"
+                          >
                             Sold Out
                           </Badge>
                         </div>
@@ -373,11 +372,14 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
                   {/* Variant selector */}
                   {hasVariants && (
                     <div className="mt-3 space-y-1.5">
-                      <p className="text-xs font-medium text-muted-foreground">{product.typeName} <span className="text-destructive">*</span></p>
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {product.typeName} <span className="text-destructive">*</span>
+                      </p>
                       <div className="flex flex-wrap gap-1.5">
                         {product.variants.map((variant) => {
-                          const variantOutOfStock = variant.currentInventory !== null && variant.currentInventory <= 0
-                          const isSelected = currentVariantId === variant.id
+                          const variantOutOfStock =
+                            variant.currentInventory !== null && variant.currentInventory <= 0;
+                          const isSelected = currentVariantId === variant.id;
                           return (
                             <Button
                               key={variant.id}
@@ -393,12 +395,16 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
                                 }))
                               }
                             >
-                              <span className={variantOutOfStock ? "line-through" : ""}>{variant.label}</span>
+                              <span className={variantOutOfStock ? "line-through" : ""}>
+                                {variant.label}
+                              </span>
                               {variantOutOfStock && (
-                                <span className="text-[10px] text-destructive font-normal no-underline">(Sold out)</span>
+                                <span className="text-[10px] text-destructive font-normal no-underline">
+                                  (Sold out)
+                                </span>
                               )}
                             </Button>
-                          )
+                          );
                         })}
                       </div>
                     </div>
@@ -420,7 +426,7 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
                   </Button>
                 </CardFooter>
               </Card>
-            )
+            );
           })}
         </div>
       ) : hasActiveFilters ? (
@@ -437,11 +443,9 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
         </div>
       ) : (
         <div className="text-center py-16 rounded-xl border bg-muted/30">
-          <p className="text-muted-foreground text-lg">
-            No products are currently available.
-          </p>
+          <p className="text-muted-foreground text-lg">No products are currently available.</p>
         </div>
       )}
     </div>
-  )
+  );
 }

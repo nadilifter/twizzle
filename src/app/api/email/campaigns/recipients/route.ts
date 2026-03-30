@@ -72,9 +72,6 @@ export async function POST(request: NextRequest) {
       );
     }
     console.error("Error fetching campaign recipients:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch recipients" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch recipients" }, { status: 500 });
   }
 }

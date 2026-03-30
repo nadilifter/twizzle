@@ -1,33 +1,29 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { formatDistanceToNow } from "date-fns"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
-import { ChevronDown, ChevronUp, Globe, Building2 } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { sanitizeHtml } from "@/lib/sanitize"
+import { useState } from "react";
+import { formatDistanceToNow } from "date-fns";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown, ChevronUp, Globe, Building2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 export interface AnnouncementItem {
-  id: string
-  title: string
-  content: string
-  priority: "LOW" | "NORMAL" | "HIGH" | "URGENT"
-  type: "system" | "org"
-  isRead: boolean
-  publishedAt: string
-  organizationName?: string
+  id: string;
+  title: string;
+  content: string;
+  priority: "LOW" | "NORMAL" | "HIGH" | "URGENT";
+  type: "system" | "org";
+  isRead: boolean;
+  publishedAt: string;
+  organizationName?: string;
 }
 
 interface AnnouncementCardProps {
-  announcement: AnnouncementItem
-  onMarkAsRead?: (id: string, type: "system" | "org") => void
+  announcement: AnnouncementItem;
+  onMarkAsRead?: (id: string, type: "system" | "org") => void;
 }
 
 const priorityConfig = {
@@ -51,27 +47,24 @@ const priorityConfig = {
     label: "Urgent",
     className: "",
   },
-}
+};
 
-export function AnnouncementCard({
-  announcement,
-  onMarkAsRead,
-}: AnnouncementCardProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const priority = priorityConfig[announcement.priority]
+export function AnnouncementCard({ announcement, onMarkAsRead }: AnnouncementCardProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const priority = priorityConfig[announcement.priority];
 
   const handleOpen = (open: boolean) => {
-    setIsOpen(open)
+    setIsOpen(open);
     if (open && !announcement.isRead && onMarkAsRead) {
-      onMarkAsRead(announcement.id, announcement.type)
+      onMarkAsRead(announcement.id, announcement.type);
     }
-  }
+  };
 
   // Strip HTML tags for preview
   const previewText = announcement.content
     .replace(/<[^>]*>/g, "")
     .slice(0, 100)
-    .trim()
+    .trim();
 
   return (
     <Collapsible open={isOpen} onOpenChange={handleOpen}>
@@ -86,12 +79,8 @@ export function AnnouncementCard({
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
-                  {!announcement.isRead && (
-                    <span className="h-2 w-2 rounded-full bg-primary" />
-                  )}
-                  <h4 className="text-sm font-semibold leading-none">
-                    {announcement.title}
-                  </h4>
+                  {!announcement.isRead && <span className="h-2 w-2 rounded-full bg-primary" />}
+                  <h4 className="text-sm font-semibold leading-none">{announcement.title}</h4>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   {announcement.type === "system" ? (
@@ -114,19 +103,12 @@ export function AnnouncementCard({
               </div>
               <div className="flex items-center gap-2">
                 {announcement.priority !== "NORMAL" && (
-                  <Badge
-                    variant={priority.variant}
-                    className={cn("text-xs", priority.className)}
-                  >
+                  <Badge variant={priority.variant} className={cn("text-xs", priority.className)}>
                     {priority.label}
                   </Badge>
                 )}
                 <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                  {isOpen ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
+                  {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 </Button>
               </div>
             </div>
@@ -149,5 +131,5 @@ export function AnnouncementCard({
         </CardContent>
       </Card>
     </Collapsible>
-  )
+  );
 }

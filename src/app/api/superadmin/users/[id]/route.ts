@@ -13,13 +13,10 @@ const updateUserSchema = z.object({
 
 /**
  * GET /api/superadmin/users/[id]
- * 
+ *
  * Get a specific user by ID. Requires superadmin access.
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.isSuperAdmin) {
@@ -65,23 +62,17 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error fetching user:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch user" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch user" }, { status: 500 });
   }
 }
 
 /**
  * PATCH /api/superadmin/users/[id]
- * 
+ *
  * Update a user's details. Requires superadmin access.
  * Superadmins can update any user, including name, email, role, status, and superadmin flag.
  */
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.isSuperAdmin) {
@@ -102,10 +93,7 @@ export async function PATCH(
     }
 
     // Prevent removing superadmin status from yourself
-    if (
-      id === session.user.id &&
-      validatedData.isSuperAdmin === false
-    ) {
+    if (id === session.user.id && validatedData.isSuperAdmin === false) {
       return NextResponse.json(
         { error: "You cannot remove your own superadmin status" },
         { status: 400 }
@@ -118,7 +106,8 @@ export async function PATCH(
     if (validatedData.email !== undefined) updateData.email = validatedData.email;
     if (validatedData.role !== undefined) updateData.role = validatedData.role;
     if (validatedData.status !== undefined) updateData.status = validatedData.status;
-    if (validatedData.isSuperAdmin !== undefined) updateData.isSuperAdmin = validatedData.isSuperAdmin;
+    if (validatedData.isSuperAdmin !== undefined)
+      updateData.isSuperAdmin = validatedData.isSuperAdmin;
 
     // Update user
     const updatedUser = await db.user.update({
@@ -155,22 +144,16 @@ export async function PATCH(
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error updating user:", error);
-    return NextResponse.json(
-      { error: "Failed to update user" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update user" }, { status: 500 });
   }
 }
 
 /**
  * DELETE /api/superadmin/users/[id]
- * 
+ *
  * Delete a user. Requires superadmin access.
  */
 export async function DELETE(
@@ -187,10 +170,7 @@ export async function DELETE(
 
     // Prevent self-deletion
     if (id === session.user.id) {
-      return NextResponse.json(
-        { error: "You cannot delete your own account" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "You cannot delete your own account" }, { status: 400 });
     }
 
     // Verify user exists
@@ -210,9 +190,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting user:", error);
-    return NextResponse.json(
-      { error: "Failed to delete user" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete user" }, { status: 500 });
   }
 }

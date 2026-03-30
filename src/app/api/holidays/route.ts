@@ -21,18 +21,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const yearParam = searchParams.get("year");
     if (!yearParam) {
-      return NextResponse.json(
-        { error: "year query parameter is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "year query parameter is required" }, { status: 400 });
     }
 
     const year = parseInt(yearParam);
     if (isNaN(year) || year < 2000 || year > 2100) {
-      return NextResponse.json(
-        { error: "Invalid year" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid year" }, { status: 400 });
     }
 
     const organizationId = session.user.organizationId!;
@@ -55,10 +49,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data: holidays });
   } catch (error) {
     console.error("Error fetching holidays:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch holidays" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch holidays" }, { status: 500 });
   }
 }
 
@@ -113,15 +104,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(holiday);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating holiday:", error);
-    return NextResponse.json(
-      { error: "Failed to create holiday" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create holiday" }, { status: 500 });
   }
 }

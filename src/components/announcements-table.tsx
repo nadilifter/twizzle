@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -14,23 +14,23 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table"
-import { MoreVerticalIcon } from "lucide-react"
-import { z } from "zod"
+} from "@tanstack/react-table";
+import { MoreVerticalIcon } from "lucide-react";
+import { z } from "zod";
 
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
-import { DataTablePagination } from "@/components/data-table/data-table-pagination"
-import { DataTableViewOptions } from "@/components/data-table/data-table-view-options"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -38,7 +38,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 
 export const announcementSchema = z.object({
   id: z.string(),
@@ -47,9 +47,9 @@ export const announcementSchema = z.object({
   audience: z.enum(["All Members", "Public", "Staff"]),
   date: z.string(),
   views: z.number(),
-})
+});
 
-export type Announcement = z.infer<typeof announcementSchema>
+export type Announcement = z.infer<typeof announcementSchema>;
 
 const columns: ColumnDef<Announcement>[] = [
   {
@@ -94,43 +94,37 @@ const columns: ColumnDef<Announcement>[] = [
     accessorKey: "status",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
     cell: ({ row }) => {
-      const status = row.original.status
-      let variant: "default" | "secondary" | "destructive" | "outline" = "secondary"
-      
-      if (status === "Published") variant = "default"
-      if (status === "Scheduled") variant = "outline"
-      if (status === "Draft") variant = "secondary"
-      
-      return (
-        <Badge variant={variant}>
-          {status}
-        </Badge>
-      )
+      const status = row.original.status;
+      let variant: "default" | "secondary" | "destructive" | "outline" = "secondary";
+
+      if (status === "Published") variant = "default";
+      if (status === "Scheduled") variant = "outline";
+      if (status === "Draft") variant = "secondary";
+
+      return <Badge variant={variant}>{status}</Badge>;
     },
   },
   {
     accessorKey: "audience",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Audience" />,
     cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm">
-        {row.original.audience}
-      </span>
+      <span className="text-muted-foreground text-sm">{row.original.audience}</span>
     ),
   },
   {
     accessorKey: "views",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Views" />,
     cell: ({ row }) => (
-      <div className="text-right font-medium">
-        {row.original.views.toLocaleString()}
-      </div>
+      <div className="text-right font-medium">{row.original.views.toLocaleString()}</div>
     ),
   },
   {
     accessorKey: "date",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Date" />,
     cell: ({ row }) => (
-      <div className="text-right text-muted-foreground text-sm whitespace-nowrap">{row.original.date}</div>
+      <div className="text-right text-muted-foreground text-sm whitespace-nowrap">
+        {row.original.date}
+      </div>
     ),
   },
   {
@@ -158,23 +152,20 @@ const columns: ColumnDef<Announcement>[] = [
       </div>
     ),
   },
-]
+];
 
 export function AnnouncementsTable({
   data: initialData,
   onAnnouncementClick,
 }: {
-  data: Announcement[]
-  onAnnouncementClick: (announcement: Announcement) => void
+  data: Announcement[];
+  onAnnouncementClick: (announcement: Announcement) => void;
 }) {
-  const [data] = React.useState(() => initialData)
-  const [rowSelection, setRowSelection] = React.useState({})
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  )
-  const [sorting, setSorting] = React.useState<SortingState>([])
+  const [data] = React.useState(() => initialData);
+  const [rowSelection, setRowSelection] = React.useState({});
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [sorting, setSorting] = React.useState<SortingState>([]);
 
   const table = useReactTable({
     data,
@@ -200,7 +191,7 @@ export function AnnouncementsTable({
     initialState: {
       pagination: { pageSize: 20 },
     },
-  })
+  });
 
   return (
     <div className="flex w-full flex-col gap-4">
@@ -209,7 +200,7 @@ export function AnnouncementsTable({
           <DataTableViewOptions table={table} />
         </div>
       </div>
-      
+
       <div className="relative flex flex-col gap-4 overflow-hidden px-4 lg:px-6">
         <div className="overflow-hidden rounded-md border">
           <Table>
@@ -221,12 +212,9 @@ export function AnnouncementsTable({
                       <TableHead key={header.id} colSpan={header.colSpan}>
                         {header.isPlaceholder
                           ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
+                          : flexRender(header.column.columnDef.header, header.getContext())}
                       </TableHead>
-                    )
+                    );
                   })}
                 </TableRow>
               ))}
@@ -249,10 +237,7 @@ export function AnnouncementsTable({
                 ))
               ) : (
                 <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
+                  <TableCell colSpan={columns.length} className="h-24 text-center">
                     No results.
                   </TableCell>
                 </TableRow>
@@ -263,5 +248,5 @@ export function AnnouncementsTable({
         <DataTablePagination table={table} pageSizeOptions={[10, 20, 30, 50]} />
       </div>
     </div>
-  )
+  );
 }

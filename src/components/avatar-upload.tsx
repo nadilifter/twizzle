@@ -50,34 +50,31 @@ export function AvatarUpload({
   const [cropDialogOpen, setCropDialogOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
-  const handleFileSelect = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-      if (!file.type.startsWith("image/")) {
-        toast.error("Please select an image file");
-        return;
-      }
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
 
-      const maxSize = 10 * 1024 * 1024; // 10MB
-      if (file.size > maxSize) {
-        toast.error("Image must be smaller than 10MB");
-        return;
-      }
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      toast.error("Image must be smaller than 10MB");
+      return;
+    }
 
-      const reader = new FileReader();
-      reader.onload = () => {
-        setImageSrc(reader.result as string);
-        setCropDialogOpen(true);
-      };
-      reader.readAsDataURL(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImageSrc(reader.result as string);
+      setCropDialogOpen(true);
+    };
+    reader.readAsDataURL(file);
 
-      // Reset input so the same file can be re-selected
-      e.target.value = "";
-    },
-    []
-  );
+    // Reset input so the same file can be re-selected
+    e.target.value = "";
+  }, []);
 
   const handleCropComplete = async (blob: Blob) => {
     setCropDialogOpen(false);
@@ -103,9 +100,7 @@ export function AvatarUpload({
       toast.success("Profile picture updated");
     } catch (error) {
       console.error("Avatar upload error:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to upload profile picture"
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to upload profile picture");
     } finally {
       setIsUploading(false);
     }

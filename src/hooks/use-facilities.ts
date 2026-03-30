@@ -51,21 +51,24 @@ export function useFacilities(): UseFacilitiesReturn {
     }
   }, []);
 
-  const createFacility = useCallback(async (data: CreateFacilityPayload): Promise<FacilityListItem | null> => {
-    setIsCreating(true);
-    setError(null);
-    try {
-      const created = await api.post<FacilityListItem>(BASE, data);
-      setFacilities((prev) => [...prev, created]);
-      return created;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to create facility";
-      setError(message);
-      return null;
-    } finally {
-      setIsCreating(false);
-    }
-  }, []);
+  const createFacility = useCallback(
+    async (data: CreateFacilityPayload): Promise<FacilityListItem | null> => {
+      setIsCreating(true);
+      setError(null);
+      try {
+        const created = await api.post<FacilityListItem>(BASE, data);
+        setFacilities((prev) => [...prev, created]);
+        return created;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to create facility";
+        setError(message);
+        return null;
+      } finally {
+        setIsCreating(false);
+      }
+    },
+    []
+  );
 
   const deleteFacility = useCallback(async (id: string): Promise<boolean> => {
     setError(null);
@@ -135,22 +138,25 @@ export function useFacility(facilityId: string | null): UseFacilityReturn {
     }
   }, [facilityId]);
 
-  const updateFacility = useCallback(async (data: UpdateFacilityPayload): Promise<FacilityDetail | null> => {
-    if (!facilityId) return null;
-    setIsUpdating(true);
-    setError(null);
-    try {
-      const updated = await api.patch<FacilityDetail>(`${BASE}/${facilityId}`, data);
-      setFacility(updated);
-      return updated;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to update facility";
-      setError(message);
-      return null;
-    } finally {
-      setIsUpdating(false);
-    }
-  }, [facilityId]);
+  const updateFacility = useCallback(
+    async (data: UpdateFacilityPayload): Promise<FacilityDetail | null> => {
+      if (!facilityId) return null;
+      setIsUpdating(true);
+      setError(null);
+      try {
+        const updated = await api.patch<FacilityDetail>(`${BASE}/${facilityId}`, data);
+        setFacility(updated);
+        return updated;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to update facility";
+        setError(message);
+        return null;
+      } finally {
+        setIsUpdating(false);
+      }
+    },
+    [facilityId]
+  );
 
   const clearError = useCallback(() => setError(null), []);
 
@@ -197,41 +203,52 @@ export function useFacilityNotes(facilityId: string | null): UseFacilityNotesRet
     }
   }, [facilityId]);
 
-  const createNote = useCallback(async (content: string): Promise<FacilityNote | null> => {
-    if (!facilityId) return null;
-    setIsCreating(true);
-    try {
-      const note = await api.post<FacilityNote>(`${BASE}/${facilityId}/notes`, { content });
-      setNotes((prev) => [note, ...prev]);
-      return note;
-    } catch {
-      return null;
-    } finally {
-      setIsCreating(false);
-    }
-  }, [facilityId]);
+  const createNote = useCallback(
+    async (content: string): Promise<FacilityNote | null> => {
+      if (!facilityId) return null;
+      setIsCreating(true);
+      try {
+        const note = await api.post<FacilityNote>(`${BASE}/${facilityId}/notes`, { content });
+        setNotes((prev) => [note, ...prev]);
+        return note;
+      } catch {
+        return null;
+      } finally {
+        setIsCreating(false);
+      }
+    },
+    [facilityId]
+  );
 
-  const updateNote = useCallback(async (noteId: string, content: string): Promise<FacilityNote | null> => {
-    if (!facilityId) return null;
-    try {
-      const updated = await api.patch<FacilityNote>(`${BASE}/${facilityId}/notes/${noteId}`, { content });
-      setNotes((prev) => prev.map((n) => (n.id === noteId ? updated : n)));
-      return updated;
-    } catch {
-      return null;
-    }
-  }, [facilityId]);
+  const updateNote = useCallback(
+    async (noteId: string, content: string): Promise<FacilityNote | null> => {
+      if (!facilityId) return null;
+      try {
+        const updated = await api.patch<FacilityNote>(`${BASE}/${facilityId}/notes/${noteId}`, {
+          content,
+        });
+        setNotes((prev) => prev.map((n) => (n.id === noteId ? updated : n)));
+        return updated;
+      } catch {
+        return null;
+      }
+    },
+    [facilityId]
+  );
 
-  const deleteNote = useCallback(async (noteId: string): Promise<boolean> => {
-    if (!facilityId) return false;
-    try {
-      await api.delete(`${BASE}/${facilityId}/notes/${noteId}`);
-      setNotes((prev) => prev.filter((n) => n.id !== noteId));
-      return true;
-    } catch {
-      return false;
-    }
-  }, [facilityId]);
+  const deleteNote = useCallback(
+    async (noteId: string): Promise<boolean> => {
+      if (!facilityId) return false;
+      try {
+        await api.delete(`${BASE}/${facilityId}/notes/${noteId}`);
+        setNotes((prev) => prev.filter((n) => n.id !== noteId));
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [facilityId]
+  );
 
   useEffect(() => {
     if (facilityId) fetchNotes();
@@ -261,7 +278,7 @@ interface UseFacilityActivityReturn {
 
 export function useFacilityActivity(
   facilityId: string | null,
-  query: FacilityActivityQuery,
+  query: FacilityActivityQuery
 ): UseFacilityActivityReturn {
   const [data, setData] = useState<FacilityActivityPage | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -282,10 +299,7 @@ export function useFacilityActivity(
       if (q) {
         params.q = q;
       }
-      const result = await api.get<FacilityActivityPage>(
-        `${BASE}/${facilityId}/activity`,
-        params,
-      );
+      const result = await api.get<FacilityActivityPage>(`${BASE}/${facilityId}/activity`, params);
       setData(result);
     } catch {
       setData(null);

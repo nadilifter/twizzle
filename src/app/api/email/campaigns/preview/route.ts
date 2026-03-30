@@ -95,10 +95,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check limits
-    const limits = await checkEmailUsageLimits(
-      session.user.organizationId,
-      recipientCount
-    );
+    const limits = await checkEmailUsageLimits(session.user.organizationId, recipientCount);
 
     return NextResponse.json({
       html,
@@ -121,9 +118,6 @@ export async function POST(request: NextRequest) {
       );
     }
     console.error("Error generating email preview:", error);
-    return NextResponse.json(
-      { error: "Failed to generate preview" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to generate preview" }, { status: 500 });
   }
 }

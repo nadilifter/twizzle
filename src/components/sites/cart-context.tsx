@@ -1,261 +1,268 @@
-"use client"
+"use client";
 
-import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from "react"
-import { useSession } from "next-auth/react"
-import { toast } from "sonner"
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 
 export type CartItem = {
-  id: string // Unique ID for the cart item instance
-  referenceId: string // ID of the actual product (programId, eventId, membershipInstanceId, etc.)
-  type: "program" | "event" | "item" | "membership" | "competition" | "pass"
-  name: string
-  description?: string
-  price: number
-  quantity: number
-  athleteId: string // ID of the athlete this item is for
-  athleteName: string // Display name of the athlete
-  details?: Record<string, any> // Additional details like size, color, requiredMemberships, etc.
-}
+  id: string; // Unique ID for the cart item instance
+  referenceId: string; // ID of the actual product (programId, eventId, membershipInstanceId, etc.)
+  type: "program" | "event" | "item" | "membership" | "competition" | "pass";
+  name: string;
+  description?: string;
+  price: number;
+  quantity: number;
+  athleteId: string; // ID of the athlete this item is for
+  athleteName: string; // Display name of the athlete
+  details?: Record<string, any>; // Additional details like size, color, requiredMemberships, etc.
+};
 
-export type CartItemsByAthlete = Map<string, { athleteName: string; items: CartItem[] }>
+export type CartItemsByAthlete = Map<string, { athleteName: string; items: CartItem[] }>;
 
-const REGISTRATION_TYPES: CartItem["type"][] = ["program", "event", "membership", "competition", "pass"]
+const REGISTRATION_TYPES: CartItem["type"][] = [
+  "program",
+  "event",
+  "membership",
+  "competition",
+  "pass",
+];
 
 export function isRegistrationType(type: CartItem["type"]): boolean {
-  return REGISTRATION_TYPES.includes(type)
+  return REGISTRATION_TYPES.includes(type);
 }
 
 function getCartKey(userId: string | undefined, organizationId?: string): string {
-  const orgSuffix = organizationId ? `-${organizationId}` : ""
-  if (userId) return `uplifter-cart-${userId}${orgSuffix}`
-  return `uplifter-cart-guest${orgSuffix}`
+  const orgSuffix = organizationId ? `-${organizationId}` : "";
+  if (userId) return `uplifter-cart-${userId}${orgSuffix}`;
+  return `uplifter-cart-guest${orgSuffix}`;
 }
 
 interface CartContextType {
-  items: CartItem[]
-  isOpen: boolean
-  setIsOpen: (open: boolean) => void
-  addItem: (item: Omit<CartItem, "id">) => void
-  removeItem: (id: string) => void
-  updateQuantity: (id: string, quantity: number) => void
-  clearCart: () => void
-  subtotal: number
-  totalItems: number
-  getDependentItems: (id: string) => CartItem[]
-  removeItemWithDependents: (id: string) => void
-  getItemsByAthlete: () => CartItemsByAthlete
+  items: CartItem[];
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  addItem: (item: Omit<CartItem, "id">) => void;
+  removeItem: (id: string) => void;
+  updateQuantity: (id: string, quantity: number) => void;
+  clearCart: () => void;
+  subtotal: number;
+  totalItems: number;
+  getDependentItems: (id: string) => CartItem[];
+  removeItemWithDependents: (id: string) => void;
+  getItemsByAthlete: () => CartItemsByAthlete;
 }
 
-const CartContext = createContext<CartContextType | undefined>(undefined)
+const CartContext = createContext<CartContextType | undefined>(undefined);
 
 async function validateCartItems(items: CartItem[], organizationId?: string): Promise<CartItem[]> {
   try {
-    const payload = items.map((i) => ({ referenceId: i.referenceId, type: i.type }))
+    const payload = items.map((i) => ({ referenceId: i.referenceId, type: i.type }));
     const res = await fetch("/api/cart/validate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ items: payload, organizationId }),
-    })
-    if (!res.ok) return items
-    const { valid } = (await res.json()) as { valid: string[] }
-    const validSet = new Set(valid)
-    return items.filter((i) => validSet.has(i.referenceId))
+    });
+    if (!res.ok) return items;
+    const { valid } = (await res.json()) as { valid: string[] };
+    const validSet = new Set(valid);
+    return items.filter((i) => validSet.has(i.referenceId));
   } catch {
-    return items
+    return items;
   }
 }
 
 interface CartProviderProps {
-  children: React.ReactNode
-  organizationId?: string
+  children: React.ReactNode;
+  organizationId?: string;
 }
 
 export function CartProvider({ children, organizationId }: CartProviderProps) {
-  const { data: session, status } = useSession()
-  const [items, setItems] = useState<CartItem[]>([])
-  const [isOpen, setIsOpen] = useState(false)
-  const [isInitialized, setIsInitialized] = useState(false)
-  const currentUserIdRef = useRef<string | undefined>(undefined)
+  const { data: session, status } = useSession();
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const currentUserIdRef = useRef<string | undefined>(undefined);
 
   // Load cart from localStorage, scoped to the current user and organization.
   // When a guest logs in, their guest cart migrates to the user-specific key.
   useEffect(() => {
-    if (status === "loading") return
+    if (status === "loading") return;
 
-    const userId = session?.user?.id
-    const cartKey = getCartKey(userId, organizationId)
+    const userId = session?.user?.id;
+    const cartKey = getCartKey(userId, organizationId);
 
     // Avoid re-loading when the user hasn't actually changed
-    if (isInitialized && currentUserIdRef.current === userId) return
-    currentUserIdRef.current = userId
+    if (isInitialized && currentUserIdRef.current === userId) return;
+    currentUserIdRef.current = userId;
 
-    let parsed: CartItem[] = []
+    let parsed: CartItem[] = [];
 
-    const saved = localStorage.getItem(cartKey)
+    const saved = localStorage.getItem(cartKey);
     if (saved) {
       try {
-        parsed = JSON.parse(saved)
+        parsed = JSON.parse(saved);
       } catch {
         // corrupt data — start fresh
       }
     }
 
     // One-time migration from the legacy global "uplifter-cart" key
-    const legacyCart = localStorage.getItem("uplifter-cart")
+    const legacyCart = localStorage.getItem("uplifter-cart");
     if (legacyCart) {
       try {
-        const legacyItems: CartItem[] = JSON.parse(legacyCart)
+        const legacyItems: CartItem[] = JSON.parse(legacyCart);
         if (legacyItems.length > 0 && parsed.length === 0) {
-          parsed = legacyItems
+          parsed = legacyItems;
         }
       } catch {
         // ignore
       }
-      localStorage.removeItem("uplifter-cart")
+      localStorage.removeItem("uplifter-cart");
     }
 
     // Migrate guest cart when a user logs in
     if (userId) {
-      const guestKey = getCartKey(undefined, organizationId)
-      const guestCart = localStorage.getItem(guestKey)
+      const guestKey = getCartKey(undefined, organizationId);
+      const guestCart = localStorage.getItem(guestKey);
       if (guestCart) {
         try {
-          const guestItems: CartItem[] = JSON.parse(guestCart)
+          const guestItems: CartItem[] = JSON.parse(guestCart);
           if (guestItems.length > 0) {
             // Merge: add guest items that aren't already in the user's cart
             const existingKeys = new Set(
               parsed.map((i) => `${i.referenceId}|${i.athleteId}|${JSON.stringify(i.details)}`)
-            )
+            );
             for (const gi of guestItems) {
-              const key = `${gi.referenceId}|${gi.athleteId}|${JSON.stringify(gi.details)}`
+              const key = `${gi.referenceId}|${gi.athleteId}|${JSON.stringify(gi.details)}`;
               if (!existingKeys.has(key)) {
-                parsed.push(gi)
+                parsed.push(gi);
               }
             }
           }
         } catch {
           // ignore corrupt guest data
         }
-        localStorage.removeItem(guestKey)
+        localStorage.removeItem(guestKey);
       }
     }
 
-    setItems(parsed)
-    setIsInitialized(true)
+    setItems(parsed);
+    setIsInitialized(true);
 
     // Validate cart items against the server and remove any that reference deleted entities
     if (parsed.length > 0) {
       validateCartItems(parsed, organizationId).then((validItems) => {
         if (validItems.length < parsed.length) {
-          setItems(validItems)
+          setItems(validItems);
         }
-      })
+      });
     }
-  }, [session?.user?.id, status, isInitialized, organizationId])
+  }, [session?.user?.id, status, isInitialized, organizationId]);
 
   // Save to localStorage on change, using the user+org-scoped key
   useEffect(() => {
-    if (!isInitialized) return
-    const cartKey = getCartKey(currentUserIdRef.current, organizationId)
-    localStorage.setItem(cartKey, JSON.stringify(items))
-  }, [items, isInitialized, organizationId])
+    if (!isInitialized) return;
+    const cartKey = getCartKey(currentUserIdRef.current, organizationId);
+    localStorage.setItem(cartKey, JSON.stringify(items));
+  }, [items, isInitialized, organizationId]);
 
   const addItem = (item: Omit<CartItem, "id">) => {
-    const registration = isRegistrationType(item.type)
-    const normalizedItem = registration ? { ...item, quantity: 1 } : item
+    const registration = isRegistrationType(item.type);
+    const normalizedItem = registration ? { ...item, quantity: 1 } : item;
 
     setItems((prev) => {
       // Check if item already exists with same referenceId, athleteId, and details
       const existingItemIndex = prev.findIndex(
-        (i) => i.referenceId === normalizedItem.referenceId && i.athleteId === normalizedItem.athleteId && JSON.stringify(i.details) === JSON.stringify(normalizedItem.details)
-      )
+        (i) =>
+          i.referenceId === normalizedItem.referenceId &&
+          i.athleteId === normalizedItem.athleteId &&
+          JSON.stringify(i.details) === JSON.stringify(normalizedItem.details)
+      );
 
       if (existingItemIndex > -1) {
         if (registration) {
-          toast.info("This is already in your cart")
-          return prev
+          toast.info("This is already in your cart");
+          return prev;
         }
         // Only increment quantity for products
-        const newItems = [...prev]
-        newItems[existingItemIndex].quantity += normalizedItem.quantity
-        toast.success("Item quantity updated in cart")
-        return newItems
+        const newItems = [...prev];
+        newItems[existingItemIndex].quantity += normalizedItem.quantity;
+        toast.success("Item quantity updated in cart");
+        return newItems;
       }
 
-      toast.success("Item added to cart")
-      return [...prev, { ...normalizedItem, id: Math.random().toString(36).substring(2, 9) }]
-    })
-    setIsOpen(true)
-  }
+      toast.success("Item added to cart");
+      return [...prev, { ...normalizedItem, id: Math.random().toString(36).substring(2, 9) }];
+    });
+    setIsOpen(true);
+  };
 
   const removeItem = (id: string) => {
-    setItems((prev) => prev.filter((item) => item.id !== id))
-    toast.success("Item removed from cart")
-  }
+    setItems((prev) => prev.filter((item) => item.id !== id));
+    toast.success("Item removed from cart");
+  };
 
   const updateQuantity = (id: string, quantity: number) => {
     if (quantity <= 0) {
-      removeItem(id)
-      return
+      removeItem(id);
+      return;
     }
-    setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, quantity } : item))
-    )
-  }
+    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, quantity } : item)));
+  };
 
   const clearCart = useCallback(() => {
-    setItems([])
-    const cartKey = getCartKey(currentUserIdRef.current, organizationId)
-    localStorage.removeItem(cartKey)
-  }, [organizationId])
+    setItems([]);
+    const cartKey = getCartKey(currentUserIdRef.current, organizationId);
+    localStorage.removeItem(cartKey);
+  }, [organizationId]);
 
   // Find items that depend on the given item (e.g., programs that require a membership)
   const getDependentItems = (id: string): CartItem[] => {
-    const itemToCheck = items.find((item) => item.id === id)
-    if (!itemToCheck) return []
+    const itemToCheck = items.find((item) => item.id === id);
+    if (!itemToCheck) return [];
 
     // If removing a membership, find programs that require it
     if (itemToCheck.type === "membership") {
-      const membershipReferenceId = itemToCheck.referenceId
+      const membershipReferenceId = itemToCheck.referenceId;
       return items.filter(
         (item) =>
           item.type === "program" &&
           item.details?.requiredMemberships?.includes(membershipReferenceId)
-      )
+      );
     }
 
-    return []
-  }
+    return [];
+  };
 
   // Remove an item and all items that depend on it
   const removeItemWithDependents = (id: string) => {
-    const dependents = getDependentItems(id)
-    const idsToRemove = new Set([id, ...dependents.map((d) => d.id)])
-    
-    setItems((prev) => prev.filter((item) => !idsToRemove.has(item.id)))
-    
-    const count = idsToRemove.size
+    const dependents = getDependentItems(id);
+    const idsToRemove = new Set([id, ...dependents.map((d) => d.id)]);
+
+    setItems((prev) => prev.filter((item) => !idsToRemove.has(item.id)));
+
+    const count = idsToRemove.size;
     if (count > 1) {
-      toast.success(`${count} items removed from cart`)
+      toast.success(`${count} items removed from cart`);
     } else {
-      toast.success("Item removed from cart")
+      toast.success("Item removed from cart");
     }
-  }
+  };
 
   const getItemsByAthlete = (): CartItemsByAthlete => {
-    const grouped = new Map<string, { athleteName: string; items: CartItem[] }>()
+    const grouped = new Map<string, { athleteName: string; items: CartItem[] }>();
     for (const item of items) {
-      const key = item.athleteId
+      const key = item.athleteId;
       if (!grouped.has(key)) {
-        grouped.set(key, { athleteName: item.athleteName, items: [] })
+        grouped.set(key, { athleteName: item.athleteName, items: [] });
       }
-      grouped.get(key)!.items.push(item)
+      grouped.get(key)!.items.push(item);
     }
-    return grouped
-  }
+    return grouped;
+  };
 
-  const subtotal = items.reduce((total, item) => total + item.price * item.quantity, 0)
-  const totalItems = items.reduce((total, item) => total + item.quantity, 0)
+  const subtotal = items.reduce((total, item) => total + item.price * item.quantity, 0);
+  const totalItems = items.reduce((total, item) => total + item.quantity, 0);
 
   return (
     <CartContext.Provider
@@ -276,13 +283,13 @@ export function CartProvider({ children, organizationId }: CartProviderProps) {
     >
       {children}
     </CartContext.Provider>
-  )
+  );
 }
 
 export function useCart() {
-  const context = useContext(CartContext)
+  const context = useContext(CartContext);
   if (context === undefined) {
-    throw new Error("useCart must be used within a CartProvider")
+    throw new Error("useCart must be used within a CartProvider");
   }
-  return context
+  return context;
 }

@@ -28,10 +28,7 @@ async function canAccessAthlete(session: any, athleteId: string): Promise<boolea
   const athlete = await db.athlete.findFirst({
     where: {
       id: athleteId,
-      OR: [
-        { guardians: { some: { userId: session.user.id } } },
-        { userId: session.user.id },
-      ],
+      OR: [{ guardians: { some: { userId: session.user.id } } }, { userId: session.user.id }],
     },
   });
   return !!athlete;
@@ -51,10 +48,7 @@ function isAdmin(session: any): boolean {
  *
  * Returns all custom info responses for the athlete in the current organization.
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -107,11 +101,13 @@ export async function GET(
 }
 
 const updateResponseSchema = z.object({
-  responses: z.array(z.object({
-    questionId: z.string(),
-    responseValue: z.string().nullable().optional(),
-    signatureData: z.string().nullable().optional(),
-  })),
+  responses: z.array(
+    z.object({
+      questionId: z.string(),
+      responseValue: z.string().nullable().optional(),
+      signatureData: z.string().nullable().optional(),
+    })
+  ),
 });
 
 /**
@@ -119,10 +115,7 @@ const updateResponseSchema = z.object({
  *
  * Admin-only: update custom info responses for an athlete.
  */
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {

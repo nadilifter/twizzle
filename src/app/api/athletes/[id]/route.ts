@@ -5,24 +5,24 @@ import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
 function getCategoryLabel(category: {
-  sportEvent?: { name: string; code: string } | null
-  ageCategory?: { name: string; code: string } | null
-  individualEntry?: { name: string } | null
+  sportEvent?: { name: string; code: string } | null;
+  ageCategory?: { name: string; code: string } | null;
+  individualEntry?: { name: string } | null;
   combinationEntry?: {
-    rowValue: { name: string }
-    colValue: { name: string }
-  } | null
+    rowValue: { name: string };
+    colValue: { name: string };
+  } | null;
 }): string {
   if (category.ageCategory && category.sportEvent) {
-    return `${category.ageCategory.code} ${category.sportEvent.name}`
+    return `${category.ageCategory.code} ${category.sportEvent.name}`;
   }
-  if (category.sportEvent) return category.sportEvent.name
-  if (category.ageCategory) return category.ageCategory.name
-  if (category.individualEntry?.name) return category.individualEntry.name
+  if (category.sportEvent) return category.sportEvent.name;
+  if (category.ageCategory) return category.ageCategory.name;
+  if (category.individualEntry?.name) return category.individualEntry.name;
   if (category.combinationEntry) {
-    return `${category.combinationEntry.rowValue.name} - ${category.combinationEntry.colValue.name}`
+    return `${category.combinationEntry.rowValue.name} - ${category.combinationEntry.colValue.name}`;
   }
-  return "Event"
+  return "Event";
 }
 
 const updateAthleteSchema = z.object({
@@ -40,10 +40,7 @@ const updateAthleteSchema = z.object({
 const STAFF_ONLY_FIELDS = ["level", "status", "guardianUserId"] as const;
 
 // GET /api/athletes/[id]
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -68,10 +65,7 @@ export async function GET(
         }
       : {
           id,
-          OR: [
-            { guardians: { some: { userId: session.user.id } } },
-            { userId: session.user.id },
-          ],
+          OR: [{ guardians: { some: { userId: session.user.id } } }, { userId: session.user.id }],
         };
 
     const athlete = await db.athlete.findFirst({
@@ -119,7 +113,10 @@ export async function GET(
           where: {
             OR: [
               { program: { organizationId: session.user.organizationId } },
-              { programId: null, coach: { memberships: { some: { organizationId: session.user.organizationId } } } },
+              {
+                programId: null,
+                coach: { memberships: { some: { organizationId: session.user.organizationId } } },
+              },
             ],
           },
           orderBy: { date: "desc" },
@@ -203,27 +200,26 @@ export async function GET(
       },
     });
 
-    const waiverSignatures = waiverAcceptances.length > 0
-      ? await db.waiverSignature.findMany({
-          where: {
-            athleteId: id,
-            waiverId: { in: waiverAcceptances.map((a) => a.waiverId) },
-          },
-          select: {
-            id: true,
-            waiverId: true,
-            waiverPageId: true,
-            signatureData: true,
-            signedByName: true,
-            signedByEmail: true,
-            signedAt: true,
-          },
-        })
-      : [];
+    const waiverSignatures =
+      waiverAcceptances.length > 0
+        ? await db.waiverSignature.findMany({
+            where: {
+              athleteId: id,
+              waiverId: { in: waiverAcceptances.map((a) => a.waiverId) },
+            },
+            select: {
+              id: true,
+              waiverId: true,
+              waiverPageId: true,
+              signatureData: true,
+              signedByName: true,
+              signedByEmail: true,
+              signedAt: true,
+            },
+          })
+        : [];
 
-    const signaturesByPage = new Map(
-      waiverSignatures.map((s) => [s.waiverPageId, s])
-    );
+    const signaturesByPage = new Map(waiverSignatures.map((s) => [s.waiverPageId, s]));
 
     const waivers = waiverAcceptances.map((a) => ({
       id: a.waiver.id,
@@ -308,7 +304,7 @@ export async function GET(
       select: { programInstanceId: true, status: true },
     });
     const attendanceByInstance = new Map(
-      instanceAttendances.map(a => [a.programInstanceId, a.status])
+      instanceAttendances.map((a) => [a.programInstanceId, a.status])
     );
 
     // Fetch medical info
@@ -335,19 +331,22 @@ export async function GET(
 
     // Build unified registrations timeline
     type RegistrationItem = {
-      id: string
-      type: "competition" | "program" | "membership" | "waiver"
-      name: string
-      detail: string | null
-      status: string
-      date: string
-      link: string | null
-    }
+      id: string;
+      type: "competition" | "program" | "membership" | "waiver";
+      name: string;
+      detail: string | null;
+      status: string;
+      date: string;
+      link: string | null;
+    };
 
-    const registrations: RegistrationItem[] = []
+    const registrations: RegistrationItem[] = [];
 
     const formatStatusLabel = (s: string) =>
-      s.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
+      s
+        .replace(/_/g, " ")
+        .toLowerCase()
+        .replace(/\b\w/g, (c) => c.toUpperCase());
 
     for (const entry of competitionEntries) {
       registrations.push({
@@ -358,7 +357,7 @@ export async function GET(
         status: formatStatusLabel(entry.status),
         date: entry.createdAt.toISOString(),
         link: `/dashboard/competitions/${entry.competition.id}/athletes/${id}`,
-      })
+      });
     }
 
     for (const enrollment of athlete.enrollments) {
@@ -370,7 +369,7 @@ export async function GET(
         status: formatStatusLabel(enrollment.status),
         date: enrollment.createdAt.toISOString(),
         link: null,
-      })
+      });
     }
 
     for (const m of athleteMemberships) {
@@ -382,7 +381,7 @@ export async function GET(
         status: formatStatusLabel(m.status),
         date: m.createdAt.toISOString(),
         link: null,
-      })
+      });
     }
 
     for (const a of waiverAcceptances) {
@@ -394,10 +393,10 @@ export async function GET(
         status: "Signed",
         date: a.completedAt.toISOString(),
         link: null,
-      })
+      });
     }
 
-    registrations.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    registrations.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     // Transform competition entries for frontend
     const competitionEntriesFormatted = competitionEntries.map((entry) => ({
@@ -409,13 +408,15 @@ export async function GET(
       competitionStartTime: entry.competition.startTime,
       competitionEndTime: entry.competition.endTime,
       competitionStatus: entry.competition.status,
-      location: [entry.competition.city, entry.competition.stateProvince].filter(Boolean).join(", ") || null,
+      location:
+        [entry.competition.city, entry.competition.stateProvince].filter(Boolean).join(", ") ||
+        null,
       facilityName: (entry.competition as any).facility?.name ?? null,
       category: getCategoryLabel(entry.category),
       status: entry.status,
       createdAt: entry.createdAt.toISOString(),
       link: `/dashboard/competitions/${entry.competitionId}/athletes/${id}`,
-    }))
+    }));
 
     // Transform instance registrations for frontend
     const eventRegistrations = instanceRegistrations.map((reg) => ({
@@ -431,7 +432,7 @@ export async function GET(
       status: reg.status,
       attendanceStatus: attendanceByInstance.get(reg.programInstanceId) ?? null,
       createdAt: reg.createdAt.toISOString(),
-    }))
+    }));
 
     const { organizationAthletes: _oa, ...athleteRest } = athlete;
     return NextResponse.json({
@@ -465,18 +466,12 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error fetching athlete:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch athlete" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch athlete" }, { status: 500 });
   }
 }
 
 // PATCH /api/athletes/[id]
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -486,9 +481,7 @@ export async function PATCH(
     const permissions = session.user.permissions ?? [];
     const isSuperAdmin = session.user.isSuperAdmin === true;
     const hasStaffAccess =
-      isSuperAdmin ||
-      permissions.includes("*") ||
-      permissions.includes("athletes.edit");
+      isSuperAdmin || permissions.includes("*") || permissions.includes("athletes.edit");
 
     const { id } = await params;
     const body = await request.json();
@@ -526,10 +519,7 @@ export async function PATCH(
         }
       : {
           id,
-          OR: [
-            { guardians: { some: { userId: session.user.id } } },
-            { userId: session.user.id },
-          ],
+          OR: [{ guardians: { some: { userId: session.user.id } } }, { userId: session.user.id }],
         };
 
     const existing = await db.athlete.findFirst({
@@ -560,7 +550,9 @@ export async function PATCH(
         return NextResponse.json({ error: "Guardian user not found" }, { status: 404 });
       }
 
-      const existingGuardian = existing.guardians.find(g => g.userId === validatedData.guardianUserId);
+      const existingGuardian = existing.guardians.find(
+        (g) => g.userId === validatedData.guardianUserId
+      );
 
       if (existingGuardian) {
         await db.$transaction([
@@ -574,7 +566,7 @@ export async function PATCH(
           }),
         ]);
       } else {
-        const currentPrimary = existing.guardians.find(g => g.isPrimary) || existing.guardians[0];
+        const currentPrimary = existing.guardians.find((g) => g.isPrimary) || existing.guardians[0];
         if (currentPrimary) {
           await db.athleteGuardian.update({
             where: { id: currentPrimary.id },
@@ -593,7 +585,8 @@ export async function PATCH(
       }
     }
 
-    const { birthDate, guardianUserId, level, status, firstName, lastName, gender, ...otherData } = validatedData;
+    const { birthDate, guardianUserId, level, status, firstName, lastName, gender, ...otherData } =
+      validatedData;
 
     // Auto-compose deprecated `name` field when firstName/lastName are provided
     const nameUpdate: Record<string, unknown> = {};
@@ -666,16 +659,10 @@ export async function PATCH(
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error updating athlete:", error);
-    return NextResponse.json(
-      { error: "Failed to update athlete" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update athlete" }, { status: 500 });
   }
 }
 
@@ -693,11 +680,7 @@ export async function DELETE(
     // Super admins bypass permission checks
     const permissions = session.user.permissions ?? [];
     const isSuperAdmin = session.user.isSuperAdmin === true;
-    if (
-      !isSuperAdmin &&
-      !permissions.includes("*") &&
-      !permissions.includes("athletes.delete")
-    ) {
+    if (!isSuperAdmin && !permissions.includes("*") && !permissions.includes("athletes.delete")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -721,9 +704,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting athlete:", error);
-    return NextResponse.json(
-      { error: "Failed to delete athlete" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete athlete" }, { status: 500 });
   }
 }

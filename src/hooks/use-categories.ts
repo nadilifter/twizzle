@@ -97,46 +97,47 @@ export function useCategories(options: UseCategoriesOptions = {}): UseCategories
     }
   }, []);
 
-  const createCategory = useCallback(async (data: CreateCategoryPayload): Promise<Category | null> => {
-    setIsCreating(true);
-    setError(null);
+  const createCategory = useCallback(
+    async (data: CreateCategoryPayload): Promise<Category | null> => {
+      setIsCreating(true);
+      setError(null);
 
-    try {
-      const newCategory = await api.post<Category>("/api/categories", data);
-      setCategories((prev) => [...prev, newCategory]);
-      return newCategory;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to create category";
-      setError(message);
-      console.error("Error creating category:", err);
-      return null;
-    } finally {
-      setIsCreating(false);
-    }
-  }, []);
+      try {
+        const newCategory = await api.post<Category>("/api/categories", data);
+        setCategories((prev) => [...prev, newCategory]);
+        return newCategory;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to create category";
+        setError(message);
+        console.error("Error creating category:", err);
+        return null;
+      } finally {
+        setIsCreating(false);
+      }
+    },
+    []
+  );
 
-  const updateCategory = useCallback(async (
-    id: string,
-    data: UpdateCategoryPayload
-  ): Promise<Category | null> => {
-    setIsUpdating(true);
-    setError(null);
+  const updateCategory = useCallback(
+    async (id: string, data: UpdateCategoryPayload): Promise<Category | null> => {
+      setIsUpdating(true);
+      setError(null);
 
-    try {
-      const updatedCategory = await api.patch<Category>(`/api/categories/${id}`, data);
-      setCategories((prev) =>
-        prev.map((cat) => (cat.id === id ? updatedCategory : cat))
-      );
-      return updatedCategory;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to update category";
-      setError(message);
-      console.error("Error updating category:", err);
-      return null;
-    } finally {
-      setIsUpdating(false);
-    }
-  }, []);
+      try {
+        const updatedCategory = await api.patch<Category>(`/api/categories/${id}`, data);
+        setCategories((prev) => prev.map((cat) => (cat.id === id ? updatedCategory : cat)));
+        return updatedCategory;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to update category";
+        setError(message);
+        console.error("Error updating category:", err);
+        return null;
+      } finally {
+        setIsUpdating(false);
+      }
+    },
+    []
+  );
 
   const deleteCategory = useCallback(async (id: string): Promise<boolean> => {
     setIsDeleting(true);

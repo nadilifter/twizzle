@@ -75,16 +75,16 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
       },
     },
   });
-  
+
   // Sync content if value changes externally (e.g. initial load)
   useEffect(() => {
     if (editor && value) {
-        const currentContent = editor.getHTML();
-        // Simple check to avoid loops, though HTML comparison is flaky.
-        // We only set it if the editor is empty, which handles the initial load case.
-        if (editor.isEmpty && value !== "<p></p>") {
-             editor.commands.setContent(value);
-        }
+      const currentContent = editor.getHTML();
+      // Simple check to avoid loops, though HTML comparison is flaky.
+      // We only set it if the editor is empty, which handles the initial load case.
+      if (editor.isEmpty && value !== "<p></p>") {
+        editor.commands.setContent(value);
+      }
     }
   }, [value, editor]);
 
@@ -135,32 +135,32 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
         >
           <UnderlineIcon className="w-4 h-4" />
         </Button>
-        
+
         <div className="w-px h-4 bg-border mx-1" />
-        
+
         <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => editor.chain().focus().setTextAlign('left').run()}
-            className={cn("h-8 w-8 p-0", editor.isActive({ textAlign: 'left' }) && "bg-muted")}
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().setTextAlign("left").run()}
+          className={cn("h-8 w-8 p-0", editor.isActive({ textAlign: "left" }) && "bg-muted")}
         >
-            <AlignLeft className="w-4 h-4" />
+          <AlignLeft className="w-4 h-4" />
         </Button>
         <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => editor.chain().focus().setTextAlign('center').run()}
-            className={cn("h-8 w-8 p-0", editor.isActive({ textAlign: 'center' }) && "bg-muted")}
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().setTextAlign("center").run()}
+          className={cn("h-8 w-8 p-0", editor.isActive({ textAlign: "center" }) && "bg-muted")}
         >
-            <AlignCenter className="w-4 h-4" />
+          <AlignCenter className="w-4 h-4" />
         </Button>
         <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => editor.chain().focus().setTextAlign('right').run()}
-            className={cn("h-8 w-8 p-0", editor.isActive({ textAlign: 'right' }) && "bg-muted")}
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().setTextAlign("right").run()}
+          className={cn("h-8 w-8 p-0", editor.isActive({ textAlign: "right" }) && "bg-muted")}
         >
-            <AlignRight className="w-4 h-4" />
+          <AlignRight className="w-4 h-4" />
         </Button>
 
         <div className="w-px h-4 bg-border mx-1" />
@@ -181,51 +181,54 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
         >
           <ListOrdered className="w-4 h-4" />
         </Button>
-        
+
         <div className="w-px h-4 bg-border mx-1" />
 
-        <Dialog open={isLinkDialogOpen} onOpenChange={(open) => {
+        <Dialog
+          open={isLinkDialogOpen}
+          onOpenChange={(open) => {
             setIsLinkDialogOpen(open);
             if (open && editor) {
               const previousUrl = editor.getAttributes("link").href;
               setLinkUrl(previousUrl || "");
             }
-          }}>
-            <DialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn("h-8 w-8 p-0", editor.isActive("link") && "bg-muted")}
-              >
-                <LinkIcon className="w-4 h-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>Insert Link</DialogTitle>
-                <DialogDescription>
-                  Enter the URL for the link.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="url" className="text-right">
-                    URL
-                  </Label>
-                  <Input
-                    id="url"
-                    value={linkUrl}
-                    onChange={(e) => setLinkUrl(e.target.value)}
-                    placeholder="https://example.com"
-                    className="col-span-3"
-                  />
-                </div>
+          }}
+        >
+          <DialogTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn("h-8 w-8 p-0", editor.isActive("link") && "bg-muted")}
+            >
+              <LinkIcon className="w-4 h-4" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Insert Link</DialogTitle>
+              <DialogDescription>Enter the URL for the link.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="url" className="text-right">
+                  URL
+                </Label>
+                <Input
+                  id="url"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  placeholder="https://example.com"
+                  className="col-span-3"
+                />
               </div>
-              <DialogFooter>
-                <Button type="submit" onClick={handleSaveLink}>Save changes</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+            </div>
+            <DialogFooter>
+              <Button type="submit" onClick={handleSaveLink}>
+                Save changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <EditorContent editor={editor} />

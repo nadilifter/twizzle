@@ -35,10 +35,7 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
     const userId =
@@ -160,11 +157,7 @@ export async function GET(request: NextRequest) {
       const athlete = link.athlete;
       const athleteName = `${athlete.firstName} ${athlete.lastName}`.trim();
       for (const oa of athlete.organizationAthletes) {
-        upsertOrg(
-          oa.organization,
-          { type: "athlete", detail: athleteName },
-          false
-        );
+        upsertOrg(oa.organization, { type: "athlete", detail: athleteName }, false);
       }
     }
 
@@ -186,11 +179,7 @@ export async function GET(request: NextRequest) {
     for (const athlete of selfAthletes) {
       const athleteName = `${athlete.firstName} ${athlete.lastName}`.trim();
       for (const oa of athlete.organizationAthletes) {
-        upsertOrg(
-          oa.organization,
-          { type: "athlete", detail: athleteName },
-          false
-        );
+        upsertOrg(oa.organization, { type: "athlete", detail: athleteName }, false);
       }
     }
 
@@ -208,9 +197,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ organizations });
   } catch (error) {
     console.error("GET /api/athletes/my-organizations error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch organizations" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch organizations" }, { status: 500 });
   }
 }

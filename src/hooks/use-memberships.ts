@@ -19,15 +19,15 @@ interface UseMembershipsReturn {
   // Data
   memberships: MembershipGroup[];
   total: number;
-  
+
   // Loading states
   isLoading: boolean;
   isCreating: boolean;
   isDeleting: boolean;
-  
+
   // Error state
   error: string | null;
-  
+
   // Actions
   fetchMemberships: (params?: MembershipsQueryParams) => Promise<void>;
   createMembershipGroup: (data: CreateMembershipGroupPayload) => Promise<MembershipGroup | null>;
@@ -72,25 +72,28 @@ export function useMemberships(options: UseMembershipsOptions = {}): UseMembersh
   }, []);
 
   // Create membership group
-  const createMembershipGroup = useCallback(async (data: CreateMembershipGroupPayload): Promise<MembershipGroup | null> => {
-    setIsCreating(true);
-    setError(null);
+  const createMembershipGroup = useCallback(
+    async (data: CreateMembershipGroupPayload): Promise<MembershipGroup | null> => {
+      setIsCreating(true);
+      setError(null);
 
-    try {
-      const newMembership = await api.post<MembershipGroup>("/api/memberships", data);
-      // Add to local state
-      setMemberships((prev) => [...prev, newMembership]);
-      setTotal((prev) => prev + 1);
-      return newMembership;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to create membership group";
-      setError(message);
-      console.error("Error creating membership group:", err);
-      return null;
-    } finally {
-      setIsCreating(false);
-    }
-  }, []);
+      try {
+        const newMembership = await api.post<MembershipGroup>("/api/memberships", data);
+        // Add to local state
+        setMemberships((prev) => [...prev, newMembership]);
+        setTotal((prev) => prev + 1);
+        return newMembership;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to create membership group";
+        setError(message);
+        console.error("Error creating membership group:", err);
+        return null;
+      } finally {
+        setIsCreating(false);
+      }
+    },
+    []
+  );
 
   // Delete membership group
   const deleteMembershipGroup = useCallback(async (id: string): Promise<boolean> => {

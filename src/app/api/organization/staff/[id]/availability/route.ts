@@ -13,10 +13,7 @@ const availabilityEntrySchema = z.object({
 const updateAvailabilitySchema = z.array(availabilityEntrySchema);
 
 // GET - Get staff availability
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -52,10 +49,7 @@ export async function GET(
 }
 
 // PUT - Update staff availability (replace all entries)
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -81,9 +75,11 @@ export async function PUT(
 
     // Allow staff to edit own availability, or require admin permission
     const isOwnProfile = member.userId === session.user.id;
-    if (!isOwnProfile && 
-        !session.user.permissions.includes("*") &&
-        !session.user.permissions.includes("staff.edit")) {
+    if (
+      !isOwnProfile &&
+      !session.user.permissions.includes("*") &&
+      !session.user.permissions.includes("staff.edit")
+    ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

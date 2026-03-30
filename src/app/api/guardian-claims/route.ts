@@ -12,10 +12,7 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
     const userId = session.user.id;
@@ -59,9 +56,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ claims });
   } catch (error) {
     console.error("Fetch guardian claims error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch claims" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch claims" }, { status: 500 });
   }
 }

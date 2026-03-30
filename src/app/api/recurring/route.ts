@@ -168,10 +168,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching recurring charges:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch recurring charges" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch recurring charges" }, { status: 500 });
   }
 }
 
@@ -250,16 +247,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(charge);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating recurring charge:", error);
-    return NextResponse.json(
-      { error: "Failed to create recurring charge" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create recurring charge" }, { status: 500 });
   }
 }
 
@@ -343,9 +334,10 @@ export async function PATCH(request: NextRequest) {
           const result = await executeRecurringCharge(charge, charge.organizationId);
 
           if (result.success) {
-            const nextDate = charge.frequency === "YEARLY"
-              ? normalizeToNoonUTC(addYears(charge.nextChargeDate, 1))!
-              : normalizeToNoonUTC(addMonths(charge.nextChargeDate, 1))!;
+            const nextDate =
+              charge.frequency === "YEARLY"
+                ? normalizeToNoonUTC(addYears(charge.nextChargeDate, 1))!
+                : normalizeToNoonUTC(addMonths(charge.nextChargeDate, 1))!;
 
             await scopedDb.recurringCharge.update({
               where: { id: charge.id },
@@ -393,8 +385,12 @@ export async function PATCH(request: NextRequest) {
           ...(validatedData.description && { description: validatedData.description }),
           ...(validatedData.amount && { amount: validatedData.amount }),
           ...(validatedData.frequency && { frequency: validatedData.frequency }),
-          ...(validatedData.nextChargeDate && { nextChargeDate: parseDateOnly(validatedData.nextChargeDate)! }),
-          ...(validatedData.paymentMethodId !== undefined && { paymentMethodId: validatedData.paymentMethodId }),
+          ...(validatedData.nextChargeDate && {
+            nextChargeDate: parseDateOnly(validatedData.nextChargeDate)!,
+          }),
+          ...(validatedData.paymentMethodId !== undefined && {
+            paymentMethodId: validatedData.paymentMethodId,
+          }),
           ...(validatedData.status && { status: validatedData.status }),
         },
         include: {
@@ -409,15 +405,9 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error updating recurring charge:", error);
-    return NextResponse.json(
-      { error: "Failed to update recurring charge" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update recurring charge" }, { status: 500 });
   }
 }

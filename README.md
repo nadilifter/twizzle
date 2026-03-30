@@ -8,56 +8,52 @@ This repository is for our app focused on US gymnastics. It is intentionally opi
 
 ## What This Repo Is
 
-* A long-lived **monorepo foundation** for our vertical SaaS business focused on US gymnastics
-* Designed based on standard B2B software practices
-* Built to handle high transaction volume, burst traffic, and evolving product needs
+- A long-lived **monorepo foundation** for our vertical SaaS business focused on US gymnastics
+- Designed based on standard B2B software practices
+- Built to handle high transaction volume, burst traffic, and evolving product needs
 
 ## What This Repo Is Not
 
-* Not an open-source starter
-* Not intended for one-off experiments
-* Not designed to avoid complexity at the cost of future scale
+- Not an open-source starter
+- Not intended for one-off experiments
+- Not designed to avoid complexity at the cost of future scale
 
 ---
 
 ## Core Principles
 
 1. **Modern by Default**
-
-   * We use current, well-supported frameworks and tooling.
-   * If something becomes obsolete, we replace it.
+   - We use current, well-supported frameworks and tooling.
+   - If something becomes obsolete, we replace it.
 
 2. **Integration First**
-
-   * External, best-in-class services are preferred over internal builds.
-   * Payments, UI primitives, infrastructure, and tooling should be integrated, not reinvented.
+   - External, best-in-class services are preferred over internal builds.
+   - Payments, UI primitives, infrastructure, and tooling should be integrated, not reinvented.
 
 3. **Built Fast, Scales Hard**
-
-   * Early velocity matters.
-   * Architectural decisions must still support:
-
-     * Hundreds of millions of dollars in transactions
-     * Tens of thousands of concurrent users
-     * Large, time-sensitive traffic spikes
+   - Early velocity matters.
+   - Architectural decisions must still support:
+     - Hundreds of millions of dollars in transactions
+     - Tens of thousands of concurrent users
+     - Large, time-sensitive traffic spikes
 
 ---
 
 ## Technology Stack
 
-* **Language**: TypeScript (100%)
-* **Frontend Framework**: Next.js 14+ (App Router)
-* **UI System**: Shadcn UI + Tailwind CSS
-* **Database**: PostgreSQL 16 (RDS in cloud, Docker locally)
-* **Caching**: Redis (ElastiCache in cloud, Docker locally)
-* **Payments**: Adyen
-* **SMS**: Twilio
-* **Email**: Amazon SES (cloud), MailHog (local)
-* **Storage**: S3 (cloud), MinIO (local)
-* **Authentication**: NextAuth.js with Google OAuth
-* **Containers**: Docker, ECS Fargate, EKS
-* **Infrastructure**: Terraform, Helm, ArgoCD (planned)
-* **Environment**: Linux / WSL-first development
+- **Language**: TypeScript (100%)
+- **Frontend Framework**: Next.js 14+ (App Router)
+- **UI System**: Shadcn UI + Tailwind CSS
+- **Database**: PostgreSQL 16 (RDS in cloud, Docker locally)
+- **Caching**: Redis (ElastiCache in cloud, Docker locally)
+- **Payments**: Adyen
+- **SMS**: Twilio
+- **Email**: Amazon SES (cloud), MailHog (local)
+- **Storage**: S3 (cloud), MinIO (local)
+- **Authentication**: NextAuth.js with Google OAuth
+- **Containers**: Docker, ECS Fargate, EKS
+- **Infrastructure**: Terraform, Helm, ArgoCD (planned)
+- **Environment**: Linux / WSL-first development
 
 ---
 
@@ -65,12 +61,12 @@ This repository is for our app focused on US gymnastics. It is intentionally opi
 
 The platform operates across four distinct environments:
 
-| Environment   | Domain                    | Purpose                         |
-|---------------|---------------------------|---------------------------------|
-| Production    | `uplifterinc.com`        | Live customer traffic           |
-| Staging       | `upliftergymnastics.com` | QA/UAT testing                  |
-| Development   | `uplifterdev.com`        | Development testing             |
-| Local         | `*.localhost:3000`       | Local development               |
+| Environment | Domain                   | Purpose               |
+| ----------- | ------------------------ | --------------------- |
+| Production  | `uplifterinc.com`        | Live customer traffic |
+| Staging     | `upliftergymnastics.com` | QA/UAT testing        |
+| Development | `uplifterdev.com`        | Development testing   |
+| Local       | `*.localhost:3000`       | Local development     |
 
 ### Environment Configuration
 
@@ -85,12 +81,12 @@ APP_ENVIRONMENT=production
 
 ### Key Configuration Files
 
-| File | Purpose |
-|------|---------|
-| `src/lib/env-domains.ts` | Domain configuration per environment |
-| `src/lib/storage.ts` | S3/MinIO storage abstraction |
-| `src/lib/email.ts` | SES/MailHog email service |
-| `src/lib/services-config.ts` | External service configuration |
+| File                         | Purpose                              |
+| ---------------------------- | ------------------------------------ |
+| `src/lib/env-domains.ts`     | Domain configuration per environment |
+| `src/lib/storage.ts`         | S3/MinIO storage abstraction         |
+| `src/lib/email.ts`           | SES/MailHog email service            |
+| `src/lib/services-config.ts` | External service configuration       |
 
 ---
 
@@ -98,69 +94,69 @@ APP_ENVIRONMENT=production
 
 ### Application Code
 
-* `src/app/` - Next.js App Router pages and API routes
-  * `dashboard/` - Admin portal pages
-  * `superadmin/` - Super admin portal
-  * `sites/[slug]/` - Tenant marketing sites
-  * `api/` - API routes including webhooks
+- `src/app/` - Next.js App Router pages and API routes
+  - `dashboard/` - Admin portal pages
+  - `superadmin/` - Super admin portal
+  - `sites/[slug]/` - Tenant marketing sites
+  - `api/` - API routes including webhooks
 
-* `src/lib/` - Shared libraries and utilities
-  * `env-domains.ts` - Environment configuration
-  * `storage.ts` - S3/MinIO abstraction
-  * `email.ts` - SES/MailHog email service
-  * `services-config.ts` - External service config
-  * `webhooks.ts` - Webhook URL management
-  * `auth.ts` - NextAuth configuration
-  * `db.ts` - Prisma database client
+- `src/lib/` - Shared libraries and utilities
+  - `env-domains.ts` - Environment configuration
+  - `storage.ts` - S3/MinIO abstraction
+  - `email.ts` - SES/MailHog email service
+  - `services-config.ts` - External service config
+  - `webhooks.ts` - Webhook URL management
+  - `auth.ts` - NextAuth configuration
+  - `db.ts` - Prisma database client
 
-* `src/components/` - Shared React components (Shadcn UI)
+- `src/components/` - Shared React components (Shadcn UI)
 
 ### Infrastructure
 
-* `infrastructure/` - Terraform modules and environments
-  * `modules/` - Reusable Terraform modules
-    * `vpc/` - VPC, subnets, NAT gateways
-    * `rds/` - PostgreSQL with read replicas
-    * `elasticache/` - Redis cluster
-    * `s3/` - Assets and documents buckets
-    * `cloudfront/` - CDN distribution
-    * `alb/` - Application load balancer
-    * `ecs/` - ECS Fargate cluster
-    * `eks/` - EKS cluster with ArgoCD
-  * `environments/` - Per-environment configurations
-    * `production/`
-    * `staging/`
-    * `development/`
+- `infrastructure/` - Terraform modules and environments
+  - `modules/` - Reusable Terraform modules
+    - `vpc/` - VPC, subnets, NAT gateways
+    - `rds/` - PostgreSQL with read replicas
+    - `elasticache/` - Redis cluster
+    - `s3/` - Assets and documents buckets
+    - `cloudfront/` - CDN distribution
+    - `alb/` - Application load balancer
+    - `ecs/` - ECS Fargate cluster
+    - `eks/` - EKS cluster with ArgoCD
+  - `environments/` - Per-environment configurations
+    - `production/`
+    - `staging/`
+    - `development/`
 
-* `charts/uplifter/` - Helm chart for Kubernetes
-  * `values.yaml` - Default values
-  * `values-production.yaml`
-  * `values-staging.yaml`
-  * `values-development.yaml`
+- `charts/uplifter/` - Helm chart for Kubernetes
+  - `values.yaml` - Default values
+  - `values-production.yaml`
+  - `values-staging.yaml`
+  - `values-development.yaml`
 
-* `gitops/` - ArgoCD application definitions
-  * `apps/production/`
-  * `apps/staging/`
-  * `apps/development/`
+- `gitops/` - ArgoCD application definitions
+  - `apps/production/`
+  - `apps/staging/`
+  - `apps/development/`
 
 ### Database
 
-* `prisma/` - Database schema and migrations
-  * `schema.prisma` - Prisma schema
-  * `migrations/` - Database migrations
-  * `seed.ts` - Database seeding
+- `prisma/` - Database schema and migrations
+  - `schema.prisma` - Prisma schema
+  - `migrations/` - Database migrations
+  - `seed.ts` - Database seeding
 
 ### Scripts and Tooling
 
-* `scripts/` - Developer utility scripts
-  * `check-schema-drift.sh` - Detects schema/migration drift (see below)
-  * `deploy-staging.sh` - Staging deployment helper
-  * `secrets-decrypt.sh` / `secrets-encrypt.sh` / `secrets-edit.sh` - Secrets management
-  * `provision-adyen.ts` - Provisions Adyen API credentials, webhooks, and HMAC keys for any environment via the Management API (run with `npx tsx scripts/provision-adyen.ts --env staging`)
-  * `provision-adyen-staging.ts` - (Legacy) Staging-only Adyen webhook provisioning; use `provision-adyen.ts` instead
-  * `migrate-states.ts` - One-time migration that converts full state/province names (e.g. "Virginia") to 2-letter ISO codes (e.g. "VA") across all address tables
-* `.husky/` - Git hooks
-  * `pre-commit` - Blocks commits that modify `schema.prisma` without a corresponding migration
+- `scripts/` - Developer utility scripts
+  - `check-schema-drift.sh` - Detects schema/migration drift (see below)
+  - `deploy-staging.sh` - Staging deployment helper
+  - `secrets-decrypt.sh` / `secrets-encrypt.sh` / `secrets-edit.sh` - Secrets management
+  - `provision-adyen.ts` - Provisions Adyen API credentials, webhooks, and HMAC keys for any environment via the Management API (run with `npx tsx scripts/provision-adyen.ts --env staging`)
+  - `provision-adyen-staging.ts` - (Legacy) Staging-only Adyen webhook provisioning; use `provision-adyen.ts` instead
+  - `migrate-states.ts` - One-time migration that converts full state/province names (e.g. "Virginia") to 2-letter ISO codes (e.g. "VA") across all address tables
+- `.husky/` - Git hooks
+  - `pre-commit` - Blocks commits that modify `schema.prisma` without a corresponding migration
 
 ---
 
@@ -194,8 +190,8 @@ This uses `prisma migrate diff` under the hood and exits non-zero if there is un
 
 ### Common Pitfalls
 
-* **PostgreSQL enum values**: Adding a new value to a Prisma enum and referencing it in a `DEFAULT` clause in the same migration will fail. PostgreSQL requires `ALTER TYPE ... ADD VALUE` to be committed before the new value can be used. Split the `ADD VALUE` into its own prior migration.
-* **`db:push` is for local experimentation only**: It syncs the schema without creating migration files and should never be used as part of the deploy pipeline. The dev Docker container and all deployed environments use `prisma migrate dev` / `prisma migrate deploy`.
+- **PostgreSQL enum values**: Adding a new value to a Prisma enum and referencing it in a `DEFAULT` clause in the same migration will fail. PostgreSQL requires `ALTER TYPE ... ADD VALUE` to be committed before the new value can be used. Split the `ADD VALUE` into its own prior migration.
+- **`db:push` is for local experimentation only**: It syncs the schema without creating migration files and should never be used as part of the deploy pipeline. The dev Docker container and all deployed environments use `prisma migrate dev` / `prisma migrate deploy`.
 
 ---
 
@@ -209,11 +205,11 @@ The platform is multi-tenant: every organization's data must be isolated from ev
 
 ### Key Rules
 
-* **Never trust client-provided `organizationId`** — always use `session.user.organizationId`
-* **Mutations must be scoped**, not just reads — do not check ownership then mutate by `{ id }` alone
-* **Models without a direct `organizationId`** (e.g. `Payment`, `Enrollment`) must be filtered through their relation chain (e.g. `invoice: { organizationId }`)
-* **`AthleteMedicalInfo`** is intentionally shared across organizations as athletes often participate in multiple organizations
-* **Platform-level models** (`OrganizationSubscription`, `OrganizationFeatureOverride`, `OrganizationPaymentMethod`, `AdyenPlatformAccount`, `OrganizationStatusLog`) are managed by superadmins and excluded from tenant scoping
+- **Never trust client-provided `organizationId`** — always use `session.user.organizationId`
+- **Mutations must be scoped**, not just reads — do not check ownership then mutate by `{ id }` alone
+- **Models without a direct `organizationId`** (e.g. `Payment`, `Enrollment`) must be filtered through their relation chain (e.g. `invoice: { organizationId }`)
+- **`AthleteMedicalInfo`** is intentionally shared across organizations as athletes often participate in multiple organizations
+- **Platform-level models** (`OrganizationSubscription`, `OrganizationFeatureOverride`, `OrganizationPaymentMethod`, `AdyenPlatformAccount`, `OrganizationStatusLog`) are managed by superadmins and excluded from tenant scoping
 
 See `src/app/api/README.md` for detailed API development conventions and scoping patterns.
 
@@ -223,10 +219,10 @@ See `src/app/api/README.md` for detailed API development conventions and scoping
 
 ### Prerequisites
 
-* Node.js (LTS)
-* pnpm (Use `corepack enable` or `npm i -g pnpm`)
-* Docker and Docker Compose
-* Linux or WSL environment
+- Node.js (LTS)
+- pnpm (Use `corepack enable` or `npm i -g pnpm`)
+- Docker and Docker Compose
+- Linux or WSL environment
 
 ### Quick Start
 
@@ -237,7 +233,7 @@ pnpm install
 # Start local services (PostgreSQL, Redis, MinIO, MailHog)
 docker compose up -d db redis minio mailhog
 
-# For the lazy developer: 
+# For the lazy developer:
 docker compose up -d db redis minio mailhog && pnpm dev
 
 # Run database migrations
@@ -273,14 +269,14 @@ pnpm db:push      # Push schema directly (local experimentation only)
 
 ### Local Services (docker-compose)
 
-| Service   | Port  | Purpose                          |
-|-----------|-------|----------------------------------|
-| PostgreSQL| 5434  | Database                         |
-| Redis     | 6379  | Caching                          |
-| MinIO     | 9000  | S3-compatible storage (API)      |
-| MinIO     | 9001  | MinIO Console                    |
-| MailHog   | 1025  | SMTP server                      |
-| MailHog   | 8025  | Email web UI                     |
+| Service    | Port | Purpose                     |
+| ---------- | ---- | --------------------------- |
+| PostgreSQL | 5434 | Database                    |
+| Redis      | 6379 | Caching                     |
+| MinIO      | 9000 | S3-compatible storage (API) |
+| MinIO      | 9001 | MinIO Console               |
+| MailHog    | 1025 | SMTP server                 |
+| MailHog    | 8025 | Email web UI                |
 
 ```bash
 # Start all local services
@@ -298,6 +294,7 @@ open http://localhost:9001  # Login: minioadmin/minioadmin
 To develop locally with the multi-portal architecture, you must update your `/etc/hosts` file (Linux/macOS) or `hosts` file (Windows) to map the subdomains to localhost.
 
 **Add these lines:**
+
 ```
 127.0.0.1   uplifterinc.localhost
 127.0.0.1   login.uplifterinc.localhost
@@ -315,31 +312,34 @@ To develop locally with the multi-portal architecture, you must update your `/et
 ```
 
 **Access Points:**
--   **Login Portal**: `http://login.uplifterinc.localhost:3000` - Centralized authentication
--   **Organization Startup**: `http://startup.uplifterinc.localhost:3000` - New organization registration (supports URL parameters for partner referrals)
--   **Super Admin**: `http://superadmin.uplifterinc.localhost:3000`
--   **Business Dashboard**: `http://admin.uplifterinc.localhost:3000`
--   **Coach Portal**: `http://coach.uplifterinc.localhost:3000`
--   **Athlete Portal**: `http://athletes.uplifterinc.localhost:3000`
--   **POS**: `http://pos.uplifterinc.localhost:3000`
--   **Feedback**: `http://feedback.uplifterinc.localhost:3000`
--   **Events Portal**: `http://events.uplifterinc.localhost:3000` - Day-of-event operations (QR check-in, athlete search, schedule)
--   **Competitions Portal**: `http://competitions.uplifterinc.localhost:3000` - Competition browsing and management (planned)
--   **Results Portal**: `http://results.uplifterinc.localhost:3000` - Competition results and scores (planned)
--   **Tenant Site 1**: `http://demo-gym.uplifterinc.localhost:3000`
--   **Tenant Site 2**: `http://londonwestern.uplifterinc.localhost:3000`
+
+- **Login Portal**: `http://login.uplifterinc.localhost:3000` - Centralized authentication
+- **Organization Startup**: `http://startup.uplifterinc.localhost:3000` - New organization registration (supports URL parameters for partner referrals)
+- **Super Admin**: `http://superadmin.uplifterinc.localhost:3000`
+- **Business Dashboard**: `http://admin.uplifterinc.localhost:3000`
+- **Coach Portal**: `http://coach.uplifterinc.localhost:3000`
+- **Athlete Portal**: `http://athletes.uplifterinc.localhost:3000`
+- **POS**: `http://pos.uplifterinc.localhost:3000`
+- **Feedback**: `http://feedback.uplifterinc.localhost:3000`
+- **Events Portal**: `http://events.uplifterinc.localhost:3000` - Day-of-event operations (QR check-in, athlete search, schedule)
+- **Competitions Portal**: `http://competitions.uplifterinc.localhost:3000` - Competition browsing and management (planned)
+- **Results Portal**: `http://results.uplifterinc.localhost:3000` - Competition results and scores (planned)
+- **Tenant Site 1**: `http://demo-gym.uplifterinc.localhost:3000`
+- **Tenant Site 2**: `http://londonwestern.uplifterinc.localhost:3000`
 
 ### Authentication Architecture
 
 Authentication is centralized at `login.uplifterinc.com` (production) or `login.uplifterinc.localhost:3000` (local).
 
 **How it works:**
+
 1. All protected portals redirect unauthenticated users to the login portal
 2. After successful login, users are redirected back to the original portal via `callbackUrl`
 3. Session cookies are shared across all subdomains via the `.uplifterinc.com` cookie domain
 
 **Google OAuth (Local Development):**
 Google doesn't allow subdomains on localhost (e.g., `login.uplifterinc.localhost`) as OAuth redirect URIs. To work around this:
+
 1. OAuth callbacks go through `localhost:3000` (which Google accepts)
 2. The `oauth-bridge` endpoint creates a signed bridge token
 3. The `session-bridge` endpoint sets the session cookie on the correct domain
@@ -347,6 +347,7 @@ Google doesn't allow subdomains on localhost (e.g., `login.uplifterinc.localhost
 
 **Google OAuth (Production):**
 Configure these redirect URIs in Google Cloud Console:
+
 - `https://login.uplifterinc.com/api/auth/callback/google`
 
 Turborepo task filtering should be used sparingly and intentionally. Default workflows should remain simple.
@@ -375,6 +376,7 @@ terraform apply -var-file="terraform.tfvars"
 ### Container Deployment
 
 **Phase 2 - ECS Fargate** (Current)
+
 ```bash
 # Build and push Docker image
 docker build -t uplifter .
@@ -386,6 +388,7 @@ aws ecs update-service --cluster production-cluster --service production-uplifte
 ```
 
 **Phase 3 - EKS with ArgoCD** (Target)
+
 ```bash
 # Update kubeconfig
 aws eks update-kubeconfig --region us-east-1 --name production-cluster
@@ -405,6 +408,7 @@ argocd app sync uplifter-production
 ### Environment-Specific Configurations
 
 Each environment has:
+
 - Separate RDS database instance
 - Separate ElastiCache Redis cluster
 - Separate S3 buckets
@@ -416,14 +420,15 @@ Each environment has:
 
 ### Payment Processing (Adyen)
 
-| Environment | Mode | Portal |
-|-------------|------|--------|
-| Production | LIVE | ca-live.adyen.com |
-| Others | TEST | ca-test.adyen.com |
+| Environment | Mode | Portal            |
+| ----------- | ---- | ----------------- |
+| Production  | LIVE | ca-live.adyen.com |
+| Others      | TEST | ca-test.adyen.com |
 
 Set `ADYEN_ENVIRONMENT=TEST` for non-production environments.
 
 **Balance Platform model**: The platform uses Adyen's Balance Platform (marketplace model) for onboarding, payouts, and fund management. Each onboarded organization gets:
+
 - A Legal Entity, Account Holder, and Balance Account in Adyen
 - A daily sweep that automatically transfers collected funds to the org's bank account
 - Webhook-driven payout tracking (status updates, bank account details, estimated arrival times)
@@ -439,28 +444,28 @@ See `docs/adyen-platform/README.md` for the full integration spec and phase brea
 
 ### SMS (Twilio)
 
-| Environment | Mode | Notes |
-|-------------|------|-------|
-| Production | LIVE | Real SMS delivery |
-| Others | TEST | Use test phone numbers |
-| Local | Mock | Console logging only |
+| Environment | Mode | Notes                  |
+| ----------- | ---- | ---------------------- |
+| Production  | LIVE | Real SMS delivery      |
+| Others      | TEST | Use test phone numbers |
+| Local       | Mock | Console logging only   |
 
 ### Email (SES)
 
-| Environment | Mode | Notes |
-|-------------|------|-------|
-| Production | Production | Any recipient |
-| Staging/Dev | Sandbox | Verified recipients only |
-| Local | MailHog | View at localhost:8025 |
+| Environment | Mode       | Notes                    |
+| ----------- | ---------- | ------------------------ |
+| Production  | Production | Any recipient            |
+| Staging/Dev | Sandbox    | Verified recipients only |
+| Local       | MailHog    | View at localhost:8025   |
 
 ### Storage (S3)
 
-| Environment | Bucket | CDN |
-|-------------|--------|-----|
-| Production | uplifter-assets-prod | cdn.uplifterinc.com |
-| Staging | uplifter-gymnastics-assets | assets.upliftergymnastics.com |
-| Development | uplifter-assets-dev | None |
-| Local | MinIO (localhost:9000) | None |
+| Environment | Bucket                     | CDN                           |
+| ----------- | -------------------------- | ----------------------------- |
+| Production  | uplifter-assets-prod       | cdn.uplifterinc.com           |
+| Staging     | uplifter-gymnastics-assets | assets.upliftergymnastics.com |
+| Development | uplifter-assets-dev        | None                          |
+| Local       | MinIO (localhost:9000)     | None                          |
 
 ---
 
@@ -507,11 +512,11 @@ This creates `.env` from the encrypted file. You're ready to develop.
 
 ### Ongoing Workflow
 
-| Command | What it does |
-|---|---|
+| Command                | What it does                                          |
+| ---------------------- | ----------------------------------------------------- |
 | `pnpm secrets:decrypt` | Decrypt `.env.enc` → `.env` (overwrites local `.env`) |
-| `pnpm secrets:encrypt` | Encrypt `.env` → `.env.enc` (commit this) |
-| `pnpm secrets:edit` | Edit encrypted file in-place |
+| `pnpm secrets:encrypt` | Encrypt `.env` → `.env.enc` (commit this)             |
+| `pnpm secrets:edit`    | Edit encrypted file in-place                          |
 
 When you add or change a secret in `.env`, run `pnpm secrets:encrypt` and commit `.env.enc` so the team gets the update.
 
@@ -519,9 +524,9 @@ When you add or change a secret in `.env`, run `pnpm secrets:encrypt` and commit
 
 ## Long-Term Vision
 
-* High-volume payments
-* Reliable infrastructure (EKS with auto-scaling)
-* Clean, modern UI
-* Strong defaults
-* Minimal reinvention
-* Multi-environment parity
+- High-volume payments
+- Reliable infrastructure (EKS with auto-scaling)
+- Clean, modern UI
+- Strong defaults
+- Minimal reinvention
+- Multi-environment parity

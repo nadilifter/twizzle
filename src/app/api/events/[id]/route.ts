@@ -6,24 +6,33 @@ import { z } from "zod";
 
 const updateEventSchema = z.object({
   title: z.string().min(1).optional(),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color").optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color")
+    .optional(),
   date: z.string().optional(),
   startTime: z.string().optional(),
   endTime: z.string().optional(),
   type: z.enum(["CLASS", "CLINIC", "PARTY", "TRYOUT", "MEETING", "OTHER"]).optional(),
   description: z.string().optional().nullable(),
   meetingLink: z.string().optional().nullable(),
-  location: z.object({
-    lat: z.number().optional(),
-    lng: z.number().optional(),
-    address: z.string().optional(),
-    name: z.string().optional(),
-  }).optional().nullable(),
-  details: z.object({
-    whatToBring: z.array(z.string()).optional(),
-    whatToExpect: z.string().optional(),
-    requirements: z.string().optional(),
-  }).optional().nullable(),
+  location: z
+    .object({
+      lat: z.number().optional(),
+      lng: z.number().optional(),
+      address: z.string().optional(),
+      name: z.string().optional(),
+    })
+    .optional()
+    .nullable(),
+  details: z
+    .object({
+      whatToBring: z.array(z.string()).optional(),
+      whatToExpect: z.string().optional(),
+      requirements: z.string().optional(),
+    })
+    .optional()
+    .nullable(),
   programId: z.string().optional().nullable(),
   coachId: z.string().optional().nullable(),
   hasGenderRestriction: z.boolean().optional(),
@@ -35,10 +44,7 @@ const updateEventSchema = z.object({
 });
 
 // GET /api/events/[id]
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -137,18 +143,12 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error fetching event:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch event" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch event" }, { status: 500 });
   }
 }
 
 // PATCH /api/events/[id]
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -156,10 +156,7 @@ export async function PATCH(
     }
 
     const permissions = session.user.permissions || [];
-    if (
-      !permissions.includes("*") &&
-      !permissions.includes("events.edit")
-    ) {
+    if (!permissions.includes("*") && !permissions.includes("events.edit")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -189,7 +186,11 @@ export async function PATCH(
 
     if (validatedData.coachId) {
       const coach = await db.organizationMember.findFirst({
-        where: { userId: validatedData.coachId, organizationId: session.user.organizationId, status: "ACTIVE" },
+        where: {
+          userId: validatedData.coachId,
+          organizationId: session.user.organizationId,
+          status: "ACTIVE",
+        },
         select: { id: true },
       });
       if (!coach) {
@@ -204,7 +205,10 @@ export async function PATCH(
       }
     }
     if (validatedData.categoryId) {
-      const cat = await scopedDb.category.findUnique({ where: { id: validatedData.categoryId }, select: { id: true } });
+      const cat = await scopedDb.category.findUnique({
+        where: { id: validatedData.categoryId },
+        select: { id: true },
+      });
       if (!cat) return NextResponse.json({ error: "Category not found" }, { status: 404 });
     }
 
@@ -222,13 +226,19 @@ export async function PATCH(
         details: validatedData.details ?? undefined,
         programId: validatedData.programId,
         coachId: validatedData.coachId,
-        date: validatedData.date ? parseDateOnly(validatedData.date) ?? undefined : undefined,
+        date: validatedData.date ? (parseDateOnly(validatedData.date) ?? undefined) : undefined,
         ...(validatedData.hasGenderRestriction !== undefined && {
           hasGenderRestriction: validatedData.hasGenderRestriction,
-          allowedGenders: validatedData.hasGenderRestriction ? (validatedData.allowedGenders ?? []) : [],
+          allowedGenders: validatedData.hasGenderRestriction
+            ? (validatedData.allowedGenders ?? [])
+            : [],
         }),
-        ...(validatedData.hasFileRequirement !== undefined && { hasFileRequirement: validatedData.hasFileRequirement }),
-        ...(validatedData.fileRequirementConfig !== undefined && { fileRequirementConfig: validatedData.fileRequirementConfig }),
+        ...(validatedData.hasFileRequirement !== undefined && {
+          hasFileRequirement: validatedData.hasFileRequirement,
+        }),
+        ...(validatedData.fileRequirementConfig !== undefined && {
+          fileRequirementConfig: validatedData.fileRequirementConfig,
+        }),
         ...(validatedData.categoryId !== undefined && { categoryId: validatedData.categoryId }),
       },
       include: {
@@ -240,16 +250,10 @@ export async function PATCH(
     return NextResponse.json(event);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error updating event:", error);
-    return NextResponse.json(
-      { error: "Failed to update event" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update event" }, { status: 500 });
   }
 }
 
@@ -265,10 +269,7 @@ export async function DELETE(
     }
 
     const permissions = session.user.permissions || [];
-    if (
-      !permissions.includes("*") &&
-      !permissions.includes("events.delete")
-    ) {
+    if (!permissions.includes("*") && !permissions.includes("events.delete")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -291,7 +292,10 @@ export async function DELETE(
 
     if (linkedLineItems > 0) {
       return NextResponse.json(
-        { error: "Cannot delete an event that has associated invoice line items. Remove the line items first." },
+        {
+          error:
+            "Cannot delete an event that has associated invoice line items. Remove the line items first.",
+        },
         { status: 400 }
       );
     }
@@ -302,9 +306,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting event:", error);
-    return NextResponse.json(
-      { error: "Failed to delete event" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete event" }, { status: 500 });
   }
 }

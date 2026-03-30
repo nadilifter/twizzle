@@ -38,7 +38,7 @@ erDiagram
 
     Family ||--o{ AthleteGuardian : guardians
     Athlete ||--o{ AthleteGuardian : has
-    
+
     Family ||--o{ Invoice : receives
     Family ||--o{ Payment : makes
     Family ||--o{ Enrollment : manages
@@ -52,15 +52,15 @@ erDiagram
     Event ||--o{ Attendance : tracks
     Event }o--o| Facility : hosted_at
     Event ||--o{ EventStaff : staffed_by
-    
+
     Facility ||--o{ Space : contains
     Facility ||--o{ Equipment : houses
     Facility ||--o{ FacilityAssignment : staffed_by
     Facility ||--o{ Shift : location_for
     Space ||--o{ Equipment : optionally_contains
-    
+
     ScheduleTemplate ||--o{ ScheduleTemplateEntry : contains
-    
+
     Invoice ||--o{ LineItem : contains
     Invoice ||--o{ Payment : settles
 
@@ -242,6 +242,7 @@ classDiagram
 ```
 
 **MedicalQuestionType enum values:**
+
 - `TEXT` - Free-form text response
 - `YES_NO` - Yes/No radio buttons
 - `MULTIPLE_CHOICE` - Single selection from options
@@ -742,23 +743,23 @@ flowchart TD
 
 ## Enum Reference
 
-| Enum | Values |
-|------|--------|
-| Role | ADMIN, COACH, VOLUNTEER, ACCOUNTANT, CUSTOM, PARENT, STAFF |
-| AthleteStatus | ACTIVE, INACTIVE, TRIAL, GRADUATED |
-| ProgramStatus | ACTIVE, INACTIVE, ARCHIVED |
-| EventType | CLASS, CLINIC, PARTY, TRYOUT, MEETING, OTHER |
-| AttendanceStatus | REGISTERED, PRESENT, ABSENT, LATE, EXCUSED |
-| InvoiceStatus | DRAFT, SENT, PAID, OVERDUE, CANCELLED, PARTIAL |
-| PaymentStatus | PENDING, COMPLETED, FAILED, REFUNDED |
-| TransactionStatus | AUTHORISED, CAPTURED, SETTLED, REFUSED, CANCELLED, ERROR, PENDING |
-| MembershipStatus | ACTIVE, EXPIRED, CANCELLED, ARCHIVED |
-| BillingInterval | MONTHLY, YEARLY, SESSION |
-| SubscriptionStatus | ACTIVE, TRIALING, PAST_DUE, CANCELLED, PAUSED |
-| FacilityStatus | ACTIVE, INACTIVE, MAINTENANCE |
-| SpaceStatus | OPEN, CLOSED, MAINTENANCE |
-| EquipmentCondition | EXCELLENT, GOOD, FAIR, POOR, UNSAFE |
-| EquipmentStatus | ACTIVE, RETIRED, MAINTENANCE |
-| EmploymentType | FULL_TIME, PART_TIME, CONTRACTOR, VOLUNTEER |
-| ShiftStatus | SCHEDULED, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED, NO_SHOW |
-| EventStaffRole | LEAD, ASSISTANT, VOLUNTEER, OBSERVER |
+| Enum               | Values                                                            |
+| ------------------ | ----------------------------------------------------------------- |
+| Role               | ADMIN, COACH, VOLUNTEER, ACCOUNTANT, CUSTOM, PARENT, STAFF        |
+| AthleteStatus      | ACTIVE, INACTIVE, TRIAL, GRADUATED                                |
+| ProgramStatus      | ACTIVE, INACTIVE, ARCHIVED                                        |
+| EventType          | CLASS, CLINIC, PARTY, TRYOUT, MEETING, OTHER                      |
+| AttendanceStatus   | REGISTERED, PRESENT, ABSENT, LATE, EXCUSED                        |
+| InvoiceStatus      | DRAFT, SENT, PAID, OVERDUE, CANCELLED, PARTIAL                    |
+| PaymentStatus      | PENDING, COMPLETED, FAILED, REFUNDED                              |
+| TransactionStatus  | AUTHORISED, CAPTURED, SETTLED, REFUSED, CANCELLED, ERROR, PENDING |
+| MembershipStatus   | ACTIVE, EXPIRED, CANCELLED, ARCHIVED                              |
+| BillingInterval    | MONTHLY, YEARLY, SESSION                                          |
+| SubscriptionStatus | ACTIVE, TRIALING, PAST_DUE, CANCELLED, PAUSED                     |
+| FacilityStatus     | ACTIVE, INACTIVE, MAINTENANCE                                     |
+| SpaceStatus        | OPEN, CLOSED, MAINTENANCE                                         |
+| EquipmentCondition | EXCELLENT, GOOD, FAIR, POOR, UNSAFE                               |
+| EquipmentStatus    | ACTIVE, RETIRED, MAINTENANCE                                      |
+| EmploymentType     | FULL_TIME, PART_TIME, CONTRACTOR, VOLUNTEER                       |
+| ShiftStatus        | SCHEDULED, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED, NO_SHOW  |
+| EventStaffRole     | LEAD, ASSISTANT, VOLUNTEER, OBSERVER                              |

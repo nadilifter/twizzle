@@ -80,10 +80,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching media:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch media" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch media" }, { status: 500 });
   }
 }
 
@@ -100,7 +97,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    
+
     let validatedData;
     try {
       validatedData = createMediaSchema.parse(body);
@@ -148,15 +145,15 @@ export async function POST(request: NextRequest) {
         where: { id: session.user.organizationId },
         include: {
           subscription: {
-            include: { plan: true }
-          }
-        }
+            include: { plan: true },
+          },
+        },
       });
 
       if (organization?.subscription?.plan?.maxStorageMB) {
         const maxStorageMB = organization.subscription.plan.maxStorageMB;
         const fileSizeMB = validatedData.fileSize / (1024 * 1024);
-        
+
         // Get current storage usage
         const storageUsage = await db.media.aggregate({
           where: { organizationId: session.user.organizationId },
@@ -164,13 +161,16 @@ export async function POST(request: NextRequest) {
         });
         const currentStorageBytes = storageUsage._sum.fileSize || 0;
         const currentStorageMB = currentStorageBytes / (1024 * 1024);
-        
+
         // Check if adding this file would exceed the limit
         if (currentStorageMB + fileSizeMB > maxStorageMB) {
           const remainingMB = Math.max(0, maxStorageMB - currentStorageMB);
-          return NextResponse.json({ 
-            error: `Storage limit exceeded. Your plan allows ${maxStorageMB >= 1000 ? `${maxStorageMB / 1000} GB` : `${maxStorageMB} MB`} of storage. You have ${remainingMB.toFixed(1)} MB remaining, but this file is ${fileSizeMB.toFixed(1)} MB.` 
-          }, { status: 400 });
+          return NextResponse.json(
+            {
+              error: `Storage limit exceeded. Your plan allows ${maxStorageMB >= 1000 ? `${maxStorageMB / 1000} GB` : `${maxStorageMB} MB`} of storage. You have ${remainingMB.toFixed(1)} MB remaining, but this file is ${fileSizeMB.toFixed(1)} MB.`,
+            },
+            { status: 400 }
+          );
         }
       }
     }
@@ -212,9 +212,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(media);
   } catch (error) {
     console.error("Error creating media:", error);
-    return NextResponse.json(
-      { error: "Failed to create media" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create media" }, { status: 500 });
   }
 }

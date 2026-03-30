@@ -68,7 +68,8 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
 /** Descriptions shown to admins */
 export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
   events: "Event management, calendar, and check-in via the Events portal",
-  competitions: "Competition management with categories, results tracking, and large-scale participant registration",
+  competitions:
+    "Competition management with categories, results tracking, and large-scale participant registration",
   sms: "SMS campaigns, conversations, and messaging via Twilio",
   emailCampaigns: "Email campaign creation and delivery",
   customDomains: "Custom domain configuration for your marketing site",
@@ -81,7 +82,8 @@ export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
   seasons: "Recurring season groupings for programs, memberships, and competitions",
   liveSupport: "Live chat support from Uplifter via Zendesk",
   customInformation: "Collect custom information from athletes during registration",
-  analytics: "Organization-wide analytics dashboard with athlete demographics, enrollment trends, and program insights",
+  analytics:
+    "Organization-wide analytics dashboard with athlete demographics, enrollment trends, and program insights",
 };
 
 /**
@@ -209,12 +211,7 @@ export const FEATURE_API_ROUTES: Record<FeatureKey, string[]> = {
   emailCampaigns: ["/api/email/campaigns"],
   customDomains: [], // Handled inline in website route
   accountingIntegrations: ["/api/integrations"],
-  training: [
-    "/api/skills",
-    "/api/levels",
-    "/api/evaluation-templates",
-    "/api/evaluations",
-  ],
+  training: ["/api/skills", "/api/levels", "/api/evaluation-templates", "/api/evaluations"],
   store: ["/api/pos", "/api/orders"],
   memberships: ["/api/memberships", "/api/public/memberships"],
   waitlists: [],
@@ -236,9 +233,7 @@ export const LEGACY_KEY_MAP: Record<string, FeatureKey> = {
   pointOfSale: "store",
 };
 
-export function parseFeatureToggles(
-  raw: unknown
-): FeatureToggles {
+export function parseFeatureToggles(raw: unknown): FeatureToggles {
   const result = { ...DEFAULT_FEATURE_TOGGLES };
   if (raw && typeof raw === "object" && !Array.isArray(raw)) {
     const obj = raw as Record<string, unknown>;

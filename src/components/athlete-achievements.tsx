@@ -1,54 +1,54 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Trophy, Star, Target, Calendar } from "lucide-react"
-import { format } from "date-fns"
-import { api } from "@/lib/api-client"
-import { toast } from "sonner"
-import type { AthleteAchievementsResponse } from "@/types/evaluations"
+import { useState, useEffect, useCallback } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Trophy, Star, Target, Calendar } from "lucide-react";
+import { format } from "date-fns";
+import { api } from "@/lib/api-client";
+import { toast } from "sonner";
+import type { AthleteAchievementsResponse } from "@/types/evaluations";
 
 interface AthleteAchievementsProps {
-  athleteId: string
-  showEarnedOnly?: boolean
-  compact?: boolean
+  athleteId: string;
+  showEarnedOnly?: boolean;
+  compact?: boolean;
 }
 
-export function AthleteAchievements({ 
-  athleteId, 
+export function AthleteAchievements({
+  athleteId,
   showEarnedOnly = false,
   compact = false,
 }: AthleteAchievementsProps) {
-  const [data, setData] = useState<AthleteAchievementsResponse | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [data, setData] = useState<AthleteAchievementsResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchAchievements = useCallback(async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      const params: Record<string, string> = {}
+      const params: Record<string, string> = {};
       if (showEarnedOnly) {
-        params.earnedOnly = "true"
+        params.earnedOnly = "true";
       }
-      
+
       const response = await api.get<AthleteAchievementsResponse>(
         `/api/athletes/${athleteId}/achievements`,
         params
-      )
-      setData(response)
+      );
+      setData(response);
     } catch (error) {
-      console.error("Error fetching achievements:", error)
-      toast.error("Failed to load achievements")
+      console.error("Error fetching achievements:", error);
+      toast.error("Failed to load achievements");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [athleteId, showEarnedOnly])
+  }, [athleteId, showEarnedOnly]);
 
   useEffect(() => {
-    fetchAchievements()
-  }, [fetchAchievements])
+    fetchAchievements();
+  }, [fetchAchievements]);
 
   if (isLoading) {
     return (
@@ -70,12 +70,12 @@ export function AthleteAchievements({
           </>
         )}
       </div>
-    )
+    );
   }
 
   if (!data || data.achievements.length === 0) {
-    if (compact) return null
-    
+    if (compact) return null;
+
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-8">
@@ -86,16 +86,16 @@ export function AthleteAchievements({
           </p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
-  const earnedAchievements = data.achievements.filter((a) => a.earned)
-  const inProgressAchievements = data.achievements.filter((a) => !a.earned)
+  const earnedAchievements = data.achievements.filter((a) => a.earned);
+  const inProgressAchievements = data.achievements.filter((a) => !a.earned);
 
   // Compact view - just show earned badges
   if (compact) {
-    if (earnedAchievements.length === 0) return null
-    
+    if (earnedAchievements.length === 0) return null;
+
     return (
       <div className="flex flex-wrap gap-2">
         {earnedAchievements.slice(0, 5).map((achievement) => (
@@ -114,7 +114,7 @@ export function AthleteAchievements({
           </span>
         )}
       </div>
-    )
+    );
   }
 
   return (
@@ -142,12 +142,15 @@ export function AthleteAchievements({
           </h3>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {earnedAchievements.map((achievement) => (
-              <Card key={achievement.id} className="bg-gradient-to-br from-yellow-500/5 to-orange-500/5 border-yellow-500/20">
+              <Card
+                key={achievement.id}
+                className="bg-gradient-to-br from-yellow-500/5 to-orange-500/5 border-yellow-500/20"
+              >
                 <CardHeader className="pb-2">
                   <div className="flex items-start gap-3">
                     {achievement.badgeImageUrl ? (
-                      <img 
-                        src={achievement.badgeImageUrl} 
+                      <img
+                        src={achievement.badgeImageUrl}
                         alt={achievement.name}
                         className="h-12 w-12 rounded-lg object-cover"
                       />
@@ -167,9 +170,16 @@ export function AthleteAchievements({
                 <CardContent className="pt-0">
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     {achievement.templateLevel && (
-                      <Badge 
+                      <Badge
                         className="text-xs"
-                        style={achievement.templateLevel.color ? { backgroundColor: `${achievement.templateLevel.color}20`, color: achievement.templateLevel.color } : undefined}
+                        style={
+                          achievement.templateLevel.color
+                            ? {
+                                backgroundColor: `${achievement.templateLevel.color}20`,
+                                color: achievement.templateLevel.color,
+                              }
+                            : undefined
+                        }
                         variant={achievement.templateLevel.color ? "outline" : "secondary"}
                       >
                         {achievement.templateLevel.name}
@@ -207,8 +217,8 @@ export function AthleteAchievements({
                 <CardHeader className="pb-2">
                   <div className="flex items-start gap-3">
                     {achievement.badgeImageUrl ? (
-                      <img 
-                        src={achievement.badgeImageUrl} 
+                      <img
+                        src={achievement.badgeImageUrl}
                         alt={achievement.name}
                         className="h-12 w-12 rounded-lg object-cover opacity-50"
                       />
@@ -227,9 +237,16 @@ export function AthleteAchievements({
                 </CardHeader>
                 <CardContent className="pt-0 space-y-2">
                   {achievement.templateLevel && (
-                    <Badge 
+                    <Badge
                       className="text-xs"
-                      style={achievement.templateLevel.color ? { backgroundColor: `${achievement.templateLevel.color}20`, color: achievement.templateLevel.color } : undefined}
+                      style={
+                        achievement.templateLevel.color
+                          ? {
+                              backgroundColor: `${achievement.templateLevel.color}20`,
+                              color: achievement.templateLevel.color,
+                            }
+                          : undefined
+                      }
                       variant={achievement.templateLevel.color ? "outline" : "secondary"}
                     >
                       {achievement.templateLevel.name}
@@ -239,7 +256,8 @@ export function AthleteAchievements({
                     <div className="space-y-1">
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-muted-foreground">
-                          {achievement.progress.passedCount} / {achievement.progress.requiredCount} skills
+                          {achievement.progress.passedCount} / {achievement.progress.requiredCount}{" "}
+                          skills
                         </span>
                         <span className="font-medium">
                           {Math.round(achievement.progress.percentage)}%
@@ -260,10 +278,10 @@ export function AthleteAchievements({
         </div>
       )}
     </div>
-  )
+  );
 }
 
 // Simple badge display for inline use
 export function AthleteAchievementsBadges({ athleteId }: { athleteId: string }) {
-  return <AthleteAchievements athleteId={athleteId} showEarnedOnly compact />
+  return <AthleteAchievements athleteId={athleteId} showEarnedOnly compact />;
 }

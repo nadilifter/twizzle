@@ -8,10 +8,7 @@ import {
 } from "@/lib/conversation-service";
 
 // GET /api/chat/conversations/[id] - Get conversation detail
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.organizationId) {
@@ -36,10 +33,7 @@ export async function GET(
     return NextResponse.json(conversation);
   } catch (error) {
     console.error("Error fetching conversation:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch conversation" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch conversation" }, { status: 500 });
   }
 }
 
@@ -49,10 +43,7 @@ const updateSchema = z.object({
 });
 
 // PATCH /api/chat/conversations/[id] - Update conversation (mark read, close, archive)
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.organizationId) {
@@ -93,9 +84,6 @@ export async function PATCH(
       );
     }
     console.error("Error updating conversation:", error);
-    return NextResponse.json(
-      { error: "Failed to update conversation" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update conversation" }, { status: 500 });
   }
 }

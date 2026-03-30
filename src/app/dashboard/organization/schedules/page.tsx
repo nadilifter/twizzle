@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
+import { useState, useEffect } from "react";
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -13,21 +13,21 @@ import {
   ChevronLeft,
   ChevronRight,
   List,
-  Grid3X3
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
-import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
+  Grid3X3,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter
-} from "@/components/ui/card"
+  CardFooter,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -35,8 +35,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
   SheetClose,
@@ -46,14 +46,14 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet"
+} from "@/components/ui/sheet";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,7 +61,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -71,25 +71,25 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Checkbox } from "@/components/ui/checkbox"
-import { useStaff, useMemberAvailability } from "@/hooks/use-staff"
-import { useShifts } from "@/hooks/use-shifts"
-import { api } from "@/lib/api-client"
-import { format } from "date-fns"
-import { cn } from "@/lib/utils"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import type { 
-  ShiftWithRelations, 
-  ShiftStatus, 
+} from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useStaff, useMemberAvailability } from "@/hooks/use-staff";
+import { useShifts } from "@/hooks/use-shifts";
+import { api } from "@/lib/api-client";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import type {
+  ShiftWithRelations,
+  ShiftStatus,
   MemberWithUser,
-  AvailabilityEntry 
-} from "@/types/staff"
+  AvailabilityEntry,
+} from "@/types/staff";
 
-const DAYS_OF_WEEK = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+const DAYS_OF_WEEK = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 const SHIFT_STATUS_COLORS: Record<ShiftStatus, string> = {
   SCHEDULED: "bg-blue-100 text-blue-800",
@@ -98,11 +98,11 @@ const SHIFT_STATUS_COLORS: Record<ShiftStatus, string> = {
   COMPLETED: "bg-gray-100 text-gray-800",
   CANCELLED: "bg-red-100 text-red-800",
   NO_SHOW: "bg-orange-100 text-orange-800",
-}
+};
 
 interface Facility {
-  id: string
-  name: string
+  id: string;
+  name: string;
 }
 
 function getInitials(name: string): string {
@@ -111,105 +111,107 @@ function getInitials(name: string): string {
     .map((n) => n[0])
     .join("")
     .toUpperCase()
-    .slice(0, 2)
+    .slice(0, 2);
 }
 
 function formatDate(dateStr: string): string {
-  const date = new Date(dateStr)
-  return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
 export default function SchedulesPage() {
-  const [activeTab, setActiveTab] = useState("assignments")
-  const [viewMode, setViewMode] = useState<"table" | "calendar">("table")
+  const [activeTab, setActiveTab] = useState("assignments");
+  const [viewMode, setViewMode] = useState<"table" | "calendar">("table");
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
-    const today = new Date()
-    const dayOfWeek = today.getDay()
-    const diff = today.getDate() - dayOfWeek // Start on Sunday
-    return new Date(today.setDate(diff))
-  })
-  
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const diff = today.getDate() - dayOfWeek; // Start on Sunday
+    return new Date(today.setDate(diff));
+  });
+
   // Staff and Shifts data
-  const { staff, isLoading: loadingStaff } = useStaff()
-  const { 
-    shifts, 
-    isLoading: loadingShifts, 
-    isCreating, 
-    isUpdating, 
+  const { staff, isLoading: loadingStaff } = useStaff();
+  const {
+    shifts,
+    isLoading: loadingShifts,
+    isCreating,
+    isUpdating,
     isDeleting,
     error: shiftsError,
-    createShift, 
-    updateShift, 
+    createShift,
+    updateShift,
     deleteShift,
     refresh: refreshShifts,
-    clearError 
-  } = useShifts()
-  
+    clearError,
+  } = useShifts();
+
   // Facilities
-  const [facilities, setFacilities] = useState<Facility[]>([])
-  const [loadingFacilities, setLoadingFacilities] = useState(false)
-  
+  const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [loadingFacilities, setLoadingFacilities] = useState(false);
+
   // Shift form state
-  const [shiftSheetOpen, setShiftSheetOpen] = useState(false)
-  const [editingShift, setEditingShift] = useState<ShiftWithRelations | null>(null)
-  const [formMemberId, setFormMemberId] = useState("")
-  const [formFacilityId, setFormFacilityId] = useState("")
-  const [formDate, setFormDate] = useState("")
-  const [formStartTime, setFormStartTime] = useState("09:00")
-  const [formEndTime, setFormEndTime] = useState("17:00")
-  const [formShiftType, setFormShiftType] = useState("")
-  const [formNotes, setFormNotes] = useState("")
-  
+  const [shiftSheetOpen, setShiftSheetOpen] = useState(false);
+  const [editingShift, setEditingShift] = useState<ShiftWithRelations | null>(null);
+  const [formMemberId, setFormMemberId] = useState("");
+  const [formFacilityId, setFormFacilityId] = useState("");
+  const [formDate, setFormDate] = useState("");
+  const [formStartTime, setFormStartTime] = useState("09:00");
+  const [formEndTime, setFormEndTime] = useState("17:00");
+  const [formShiftType, setFormShiftType] = useState("");
+  const [formNotes, setFormNotes] = useState("");
+
   // Delete confirmation
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [shiftToDelete, setShiftToDelete] = useState<ShiftWithRelations | null>(null)
-  
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [shiftToDelete, setShiftToDelete] = useState<ShiftWithRelations | null>(null);
+
   // Availability editing
-  const [editingAvailabilityMember, setEditingAvailabilityMember] = useState<MemberWithUser | null>(null)
-  const [availabilitySheetOpen, setAvailabilitySheetOpen] = useState(false)
+  const [editingAvailabilityMember, setEditingAvailabilityMember] = useState<MemberWithUser | null>(
+    null
+  );
+  const [availabilitySheetOpen, setAvailabilitySheetOpen] = useState(false);
 
   // Fetch facilities
   useEffect(() => {
-    fetchFacilities()
-  }, [])
+    fetchFacilities();
+  }, []);
 
   const fetchFacilities = async () => {
-    setLoadingFacilities(true)
+    setLoadingFacilities(true);
     try {
-      const data = await api.get<Facility[]>("/api/organization/facilities")
-      setFacilities(data)
+      const data = await api.get<Facility[]>("/api/organization/facilities");
+      setFacilities(data);
     } catch (err) {
-      console.error("Failed to fetch facilities:", err)
+      console.error("Failed to fetch facilities:", err);
     } finally {
-      setLoadingFacilities(false)
+      setLoadingFacilities(false);
     }
-  }
+  };
 
   const resetShiftForm = () => {
-    setFormMemberId("")
-    setFormFacilityId("")
-    setFormDate("")
-    setFormStartTime("09:00")
-    setFormEndTime("17:00")
-    setFormShiftType("")
-    setFormNotes("")
-    setEditingShift(null)
-  }
+    setFormMemberId("");
+    setFormFacilityId("");
+    setFormDate("");
+    setFormStartTime("09:00");
+    setFormEndTime("17:00");
+    setFormShiftType("");
+    setFormNotes("");
+    setEditingShift(null);
+  };
 
   const openEditShift = (shift: ShiftWithRelations) => {
-    setEditingShift(shift)
-    setFormMemberId(shift.memberId)
-    setFormFacilityId(shift.facilityId || "")
-    setFormDate(new Date(shift.date).toISOString().split("T")[0])
-    setFormStartTime(shift.startTime)
-    setFormEndTime(shift.endTime)
-    setFormShiftType(shift.shiftType)
-    setFormNotes(shift.notes || "")
-    setShiftSheetOpen(true)
-  }
+    setEditingShift(shift);
+    setFormMemberId(shift.memberId);
+    setFormFacilityId(shift.facilityId || "");
+    setFormDate(new Date(shift.date).toISOString().split("T")[0]);
+    setFormStartTime(shift.startTime);
+    setFormEndTime(shift.endTime);
+    setFormShiftType(shift.shiftType);
+    setFormNotes(shift.notes || "");
+    setShiftSheetOpen(true);
+  };
 
   const handleSubmitShift = async () => {
-    if (!formMemberId || !formDate || !formShiftType) return
+    if (!formMemberId || !formDate || !formShiftType) return;
 
     if (editingShift) {
       const result = await updateShift(editingShift.id, {
@@ -220,10 +222,10 @@ export default function SchedulesPage() {
         endTime: formEndTime,
         shiftType: formShiftType,
         notes: formNotes || null,
-      })
+      });
       if (result) {
-        setShiftSheetOpen(false)
-        resetShiftForm()
+        setShiftSheetOpen(false);
+        resetShiftForm();
       }
     } else {
       const result = await createShift({
@@ -234,22 +236,22 @@ export default function SchedulesPage() {
         endTime: formEndTime,
         shiftType: formShiftType,
         notes: formNotes || null,
-      })
+      });
       if (result) {
-        setShiftSheetOpen(false)
-        resetShiftForm()
+        setShiftSheetOpen(false);
+        resetShiftForm();
       }
     }
-  }
+  };
 
   const handleDeleteShift = async () => {
-    if (!shiftToDelete) return
-    const success = await deleteShift(shiftToDelete.id)
+    if (!shiftToDelete) return;
+    const success = await deleteShift(shiftToDelete.id);
     if (success) {
-      setDeleteConfirmOpen(false)
-      setShiftToDelete(null)
+      setDeleteConfirmOpen(false);
+      setShiftToDelete(null);
     }
-  }
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -261,7 +263,7 @@ export default function SchedulesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button 
+          <Button
             variant={viewMode === "table" ? "outline" : "default"}
             size="sm"
             onClick={() => setViewMode(viewMode === "table" ? "calendar" : "table")}
@@ -308,10 +310,13 @@ export default function SchedulesPage() {
                 <Filter className="h-4 w-4" />
               </Button>
             </div>
-            <Sheet open={shiftSheetOpen} onOpenChange={(open) => {
-              setShiftSheetOpen(open)
-              if (!open) resetShiftForm()
-            }}>
+            <Sheet
+              open={shiftSheetOpen}
+              onOpenChange={(open) => {
+                setShiftSheetOpen(open);
+                if (!open) resetShiftForm();
+              }}
+            >
               <SheetTrigger asChild>
                 <Button>
                   <Plus className="mr-2 h-4 w-4" /> Create Shift
@@ -320,7 +325,9 @@ export default function SchedulesPage() {
               <SheetContent>
                 <SheetHeader>
                   <SheetTitle>{editingShift ? "Edit Shift" : "Create New Shift"}</SheetTitle>
-                  <SheetDescription>Assign an employee to a specific role and time.</SheetDescription>
+                  <SheetDescription>
+                    Assign an employee to a specific role and time.
+                  </SheetDescription>
                 </SheetHeader>
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
@@ -331,15 +338,17 @@ export default function SchedulesPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {staff.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>{s.user.name}</SelectItem>
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.user.name}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="shiftType">Shift Type / Role</Label>
-                    <Input 
-                      id="shiftType" 
+                    <Input
+                      id="shiftType"
                       placeholder="e.g. Opening Manager, Coach, Front Desk"
                       value={formShiftType}
                       onChange={(e) => setFormShiftType(e.target.value)}
@@ -352,10 +361,15 @@ export default function SchedulesPage() {
                         <Button
                           type="button"
                           variant="outline"
-                          className={cn("w-full justify-start text-left font-normal", !formDate && "text-muted-foreground")}
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !formDate && "text-muted-foreground"
+                          )}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {formDate ? format(new Date(formDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                          {formDate
+                            ? format(new Date(formDate + "T12:00:00Z"), "PPP")
+                            : "Pick a date"}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
@@ -371,18 +385,18 @@ export default function SchedulesPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="start-time">Start Time</Label>
-                      <Input 
-                        id="start-time" 
-                        type="time" 
+                      <Input
+                        id="start-time"
+                        type="time"
                         value={formStartTime}
                         onChange={(e) => setFormStartTime(e.target.value)}
                       />
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="end-time">End Time</Label>
-                      <Input 
-                        id="end-time" 
-                        type="time" 
+                      <Input
+                        id="end-time"
+                        type="time"
                         value={formEndTime}
                         onChange={(e) => setFormEndTime(e.target.value)}
                       />
@@ -390,22 +404,27 @@ export default function SchedulesPage() {
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="facility">Location (Optional)</Label>
-                    <Select value={formFacilityId || "none"} onValueChange={(v) => setFormFacilityId(v === "none" ? "" : v)}>
+                    <Select
+                      value={formFacilityId || "none"}
+                      onValueChange={(v) => setFormFacilityId(v === "none" ? "" : v)}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select facility" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">No specific location</SelectItem>
                         {facilities.map((f) => (
-                          <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                          <SelectItem key={f.id} value={f.id}>
+                            {f.name}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="notes">Notes</Label>
-                    <Input 
-                      id="notes" 
+                    <Input
+                      id="notes"
                       placeholder="Optional notes..."
                       value={formNotes}
                       onChange={(e) => setFormNotes(e.target.value)}
@@ -413,11 +432,15 @@ export default function SchedulesPage() {
                   </div>
                 </div>
                 <SheetFooter>
-                  <Button 
+                  <Button
                     onClick={handleSubmitShift}
-                    disabled={!formMemberId || !formDate || !formShiftType || isCreating || isUpdating}
+                    disabled={
+                      !formMemberId || !formDate || !formShiftType || isCreating || isUpdating
+                    }
                   >
-                    {(isCreating || isUpdating) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {(isCreating || isUpdating) && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
                     {editingShift ? "Save Changes" : "Create Shift"}
                   </Button>
                 </SheetFooter>
@@ -456,10 +479,10 @@ export default function SchedulesPage() {
                   ) : (
                     shifts.map((shift) => (
                       <TableRow key={shift.id}>
-                        <TableCell className="font-medium">
-                          {formatDate(shift.date)}
+                        <TableCell className="font-medium">{formatDate(shift.date)}</TableCell>
+                        <TableCell>
+                          {shift.startTime} - {shift.endTime}
                         </TableCell>
-                        <TableCell>{shift.startTime} - {shift.endTime}</TableCell>
                         <TableCell>
                           <Badge variant="outline">{shift.shiftType}</Badge>
                         </TableCell>
@@ -491,18 +514,22 @@ export default function SchedulesPage() {
                               <DropdownMenuItem onClick={() => openEditShift(shift)}>
                                 Edit Shift
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => updateShift(shift.id, { status: "CONFIRMED" })}>
+                              <DropdownMenuItem
+                                onClick={() => updateShift(shift.id, { status: "CONFIRMED" })}
+                              >
                                 Mark Confirmed
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => updateShift(shift.id, { status: "COMPLETED" })}>
+                              <DropdownMenuItem
+                                onClick={() => updateShift(shift.id, { status: "COMPLETED" })}
+                              >
                                 Mark Completed
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 className="text-red-600"
                                 onClick={() => {
-                                  setShiftToDelete(shift)
-                                  setDeleteConfirmOpen(true)
+                                  setShiftToDelete(shift);
+                                  setDeleteConfirmOpen(true);
                                 }}
                               >
                                 Delete Shift
@@ -517,14 +544,14 @@ export default function SchedulesPage() {
               </Table>
             </div>
           ) : (
-            <WeeklyCalendarView 
+            <WeeklyCalendarView
               shifts={shifts}
               currentWeekStart={currentWeekStart}
               onWeekChange={setCurrentWeekStart}
               onEditShift={openEditShift}
               onDeleteShift={(shift) => {
-                setShiftToDelete(shift)
-                setDeleteConfirmOpen(true)
+                setShiftToDelete(shift);
+                setDeleteConfirmOpen(true);
               }}
               isLoading={loadingShifts}
             />
@@ -547,25 +574,25 @@ export default function SchedulesPage() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {staff.map((staffMember) => (
-                <StaffAvailabilityCard 
-                  key={staffMember.id} 
+                <StaffAvailabilityCard
+                  key={staffMember.id}
                   staffMember={staffMember}
                   onEdit={() => {
-                    setEditingAvailabilityMember(staffMember)
-                    setAvailabilitySheetOpen(true)
+                    setEditingAvailabilityMember(staffMember);
+                    setAvailabilitySheetOpen(true);
                   }}
                 />
               ))}
             </div>
           )}
-          
+
           {/* Availability Edit Sheet */}
           <AvailabilityEditSheet
             staffMember={editingAvailabilityMember}
             open={availabilitySheetOpen}
             onOpenChange={(open) => {
-              setAvailabilitySheetOpen(open)
-              if (!open) setEditingAvailabilityMember(null)
+              setAvailabilitySheetOpen(open);
+              if (!open) setEditingAvailabilityMember(null);
             }}
           />
         </TabsContent>
@@ -586,10 +613,10 @@ export default function SchedulesPage() {
           ) : (
             <div className="grid gap-6">
               {facilities.map((facility) => (
-                <FacilityUsageCard 
-                  key={facility.id} 
+                <FacilityUsageCard
+                  key={facility.id}
                   facility={facility}
-                  shifts={shifts.filter(s => s.facilityId === facility.id)}
+                  shifts={shifts.filter((s) => s.facilityId === facility.id)}
                 />
               ))}
             </div>
@@ -608,7 +635,7 @@ export default function SchedulesPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleDeleteShift}
               className="bg-red-600 hover:bg-red-700"
               disabled={isDeleting}
@@ -620,18 +647,18 @@ export default function SchedulesPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
+  );
 }
 
 // Staff Availability Card Component
-function StaffAvailabilityCard({ 
-  staffMember, 
-  onEdit 
-}: { 
-  staffMember: MemberWithUser
-  onEdit: () => void 
+function StaffAvailabilityCard({
+  staffMember,
+  onEdit,
+}: {
+  staffMember: MemberWithUser;
+  onEdit: () => void;
 }) {
-  const { availability, isLoading } = useMemberAvailability(staffMember.id)
+  const { availability, isLoading } = useMemberAvailability(staffMember.id);
 
   return (
     <Card>
@@ -655,21 +682,21 @@ function StaffAvailabilityCard({
             <div className="text-sm font-medium">Weekly Availability</div>
             <div className="grid grid-cols-2 gap-2 text-sm">
               {DAYS_OF_WEEK.map((day, index) => {
-                const dayAvail = availability.find(a => a.dayOfWeek === index)
-                const isAvailable = dayAvail?.isAvailable ?? false
+                const dayAvail = availability.find((a) => a.dayOfWeek === index);
+                const isAvailable = dayAvail?.isAvailable ?? false;
                 return (
                   <div key={day} className="flex items-center gap-2">
-                    <div className={`h-2 w-2 rounded-full ${
-                      isAvailable ? "bg-green-500" : "bg-red-500"
-                    }`} />
+                    <div
+                      className={`h-2 w-2 rounded-full ${
+                        isAvailable ? "bg-green-500" : "bg-red-500"
+                      }`}
+                    />
                     <span>
-                      {day.slice(0, 3)}: {dayAvail 
-                        ? `${dayAvail.startTime}-${dayAvail.endTime}` 
-                        : "Unavailable"
-                      }
+                      {day.slice(0, 3)}:{" "}
+                      {dayAvail ? `${dayAvail.startTime}-${dayAvail.endTime}` : "Unavailable"}
                     </span>
                   </div>
-                )
+                );
               })}
             </div>
           </div>
@@ -681,7 +708,7 @@ function StaffAvailabilityCard({
         </Button>
       </CardFooter>
     </Card>
-  )
+  );
 }
 
 // Availability Edit Sheet Component
@@ -690,57 +717,53 @@ function AvailabilityEditSheet({
   open,
   onOpenChange,
 }: {
-  staffMember: MemberWithUser | null
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  staffMember: MemberWithUser | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
-  const { availability, saveAvailability, isSaving } = useMemberAvailability(staffMember?.id || null)
-  const [formAvailability, setFormAvailability] = useState<AvailabilityEntry[]>([])
+  const { availability, saveAvailability, isSaving } = useMemberAvailability(
+    staffMember?.id || null
+  );
+  const [formAvailability, setFormAvailability] = useState<AvailabilityEntry[]>([]);
 
   useEffect(() => {
     if (open && availability) {
       // Initialize form with existing availability or defaults
       const entries = DAYS_OF_WEEK.map((_, index) => {
-        const existing = availability.find(a => a.dayOfWeek === index)
+        const existing = availability.find((a) => a.dayOfWeek === index);
         return {
           dayOfWeek: index,
           startTime: existing?.startTime || "09:00",
           endTime: existing?.endTime || "17:00",
           isAvailable: existing?.isAvailable ?? (index !== 0 && index !== 6), // Default weekdays available
-        }
-      })
-      setFormAvailability(entries)
+        };
+      });
+      setFormAvailability(entries);
     }
-  }, [open, availability])
+  }, [open, availability]);
 
   const toggleDay = (dayIndex: number) => {
-    setFormAvailability(prev => 
-      prev.map(entry => 
-        entry.dayOfWeek === dayIndex 
-          ? { ...entry, isAvailable: !entry.isAvailable }
-          : entry
+    setFormAvailability((prev) =>
+      prev.map((entry) =>
+        entry.dayOfWeek === dayIndex ? { ...entry, isAvailable: !entry.isAvailable } : entry
       )
-    )
-  }
+    );
+  };
 
   const updateTime = (dayIndex: number, field: "startTime" | "endTime", value: string) => {
-    setFormAvailability(prev =>
-      prev.map(entry =>
-        entry.dayOfWeek === dayIndex
-          ? { ...entry, [field]: value }
-          : entry
-      )
-    )
-  }
+    setFormAvailability((prev) =>
+      prev.map((entry) => (entry.dayOfWeek === dayIndex ? { ...entry, [field]: value } : entry))
+    );
+  };
 
   const handleSave = async () => {
     // Only save available days
-    const toSave = formAvailability.filter(e => e.isAvailable)
-    const success = await saveAvailability(toSave)
+    const toSave = formAvailability.filter((e) => e.isAvailable);
+    const success = await saveAvailability(toSave);
     if (success) {
-      onOpenChange(false)
+      onOpenChange(false);
     }
-  }
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -751,36 +774,36 @@ function AvailabilityEditSheet({
         </SheetHeader>
         <div className="grid gap-4 py-4">
           {DAYS_OF_WEEK.map((day, index) => {
-            const entry = formAvailability.find(e => e.dayOfWeek === index)
+            const entry = formAvailability.find((e) => e.dayOfWeek === index);
             return (
               <div key={day} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Checkbox 
-                    id={`avail-${day}`} 
+                  <Checkbox
+                    id={`avail-${day}`}
                     checked={entry?.isAvailable ?? false}
                     onCheckedChange={() => toggleDay(index)}
                   />
                   <Label htmlFor={`avail-${day}`}>{day}</Label>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Input 
-                    type="time" 
-                    className="w-24 h-8" 
+                  <Input
+                    type="time"
+                    className="w-24 h-8"
                     value={entry?.startTime || "09:00"}
                     onChange={(e) => updateTime(index, "startTime", e.target.value)}
                     disabled={!entry?.isAvailable}
                   />
                   <span>-</span>
-                  <Input 
-                    type="time" 
-                    className="w-24 h-8" 
+                  <Input
+                    type="time"
+                    className="w-24 h-8"
                     value={entry?.endTime || "17:00"}
                     onChange={(e) => updateTime(index, "endTime", e.target.value)}
                     disabled={!entry?.isAvailable}
                   />
                 </div>
               </div>
-            )
+            );
           })}
         </div>
         <SheetFooter>
@@ -791,20 +814,20 @@ function AvailabilityEditSheet({
         </SheetFooter>
       </SheetContent>
     </Sheet>
-  )
+  );
 }
 
 // Facility Usage Card Component
-function FacilityUsageCard({ 
-  facility, 
-  shifts 
-}: { 
-  facility: Facility
-  shifts: ShiftWithRelations[] 
+function FacilityUsageCard({
+  facility,
+  shifts,
+}: {
+  facility: Facility;
+  shifts: ShiftWithRelations[];
 }) {
   // Group shifts by day for today's view
-  const today = new Date().toISOString().split("T")[0]
-  const todayShifts = shifts.filter(s => s.date.startsWith(today))
+  const today = new Date().toISOString().split("T")[0];
+  const todayShifts = shifts.filter((s) => s.date.startsWith(today));
 
   return (
     <Card>
@@ -824,17 +847,22 @@ function FacilityUsageCard({
         ) : (
           <div className="space-y-2">
             {todayShifts.map((shift) => (
-              <div 
-                key={shift.id} 
+              <div
+                key={shift.id}
                 className="flex items-center justify-between p-2 rounded-md bg-muted"
               >
                 <div className="flex items-center gap-2">
                   <Avatar className="h-6 w-6">
-                    <AvatarImage src={shift.member.user.avatar || undefined} alt={shift.member.user.name} />
+                    <AvatarImage
+                      src={shift.member.user.avatar || undefined}
+                      alt={shift.member.user.name}
+                    />
                     <AvatarFallback>{getInitials(shift.member.user.name)}</AvatarFallback>
                   </Avatar>
                   <span className="text-sm font-medium">{shift.member.user.name}</span>
-                  <Badge variant="outline" className="text-xs">{shift.shiftType}</Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {shift.shiftType}
+                  </Badge>
                 </div>
                 <span className="text-sm text-muted-foreground">
                   {shift.startTime} - {shift.endTime}
@@ -845,7 +873,7 @@ function FacilityUsageCard({
         )}
       </CardContent>
     </Card>
-  )
+  );
 }
 
 // Weekly Calendar View Component
@@ -857,58 +885,61 @@ function WeeklyCalendarView({
   onDeleteShift,
   isLoading,
 }: {
-  shifts: ShiftWithRelations[]
-  currentWeekStart: Date
-  onWeekChange: (date: Date) => void
-  onEditShift: (shift: ShiftWithRelations) => void
-  onDeleteShift: (shift: ShiftWithRelations) => void
-  isLoading: boolean
+  shifts: ShiftWithRelations[];
+  currentWeekStart: Date;
+  onWeekChange: (date: Date) => void;
+  onEditShift: (shift: ShiftWithRelations) => void;
+  onDeleteShift: (shift: ShiftWithRelations) => void;
+  isLoading: boolean;
 }) {
   // Generate array of 7 days for the week
   const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date(currentWeekStart)
-    date.setDate(currentWeekStart.getDate() + i)
-    return date
-  })
+    const date = new Date(currentWeekStart);
+    date.setDate(currentWeekStart.getDate() + i);
+    return date;
+  });
 
   const navigateWeek = (direction: "prev" | "next") => {
-    const newDate = new Date(currentWeekStart)
-    newDate.setDate(currentWeekStart.getDate() + (direction === "next" ? 7 : -7))
-    onWeekChange(newDate)
-  }
+    const newDate = new Date(currentWeekStart);
+    newDate.setDate(currentWeekStart.getDate() + (direction === "next" ? 7 : -7));
+    onWeekChange(newDate);
+  };
 
   const goToToday = () => {
-    const today = new Date()
-    const dayOfWeek = today.getDay()
-    const diff = today.getDate() - dayOfWeek
-    onWeekChange(new Date(today.setDate(diff)))
-  }
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const diff = today.getDate() - dayOfWeek;
+    onWeekChange(new Date(today.setDate(diff)));
+  };
 
   // Group shifts by date
-  const shiftsByDate = shifts.reduce((acc, shift) => {
-    const dateKey = new Date(shift.date).toISOString().split("T")[0]
-    if (!acc[dateKey]) acc[dateKey] = []
-    acc[dateKey].push(shift)
-    return acc
-  }, {} as Record<string, ShiftWithRelations[]>)
+  const shiftsByDate = shifts.reduce(
+    (acc, shift) => {
+      const dateKey = new Date(shift.date).toISOString().split("T")[0];
+      if (!acc[dateKey]) acc[dateKey] = [];
+      acc[dateKey].push(shift);
+      return acc;
+    },
+    {} as Record<string, ShiftWithRelations[]>
+  );
 
   const formatWeekRange = () => {
-    const startMonth = weekDays[0].toLocaleDateString("en-US", { month: "short" })
-    const endMonth = weekDays[6].toLocaleDateString("en-US", { month: "short" })
-    const startDay = weekDays[0].getDate()
-    const endDay = weekDays[6].getDate()
-    const year = weekDays[0].getFullYear()
-    
+    const startMonth = weekDays[0].toLocaleDateString("en-US", { month: "short" });
+    const endMonth = weekDays[6].toLocaleDateString("en-US", { month: "short" });
+    const startDay = weekDays[0].getDate();
+    const endDay = weekDays[6].getDate();
+    const year = weekDays[0].getFullYear();
+
     if (startMonth === endMonth) {
-      return `${startMonth} ${startDay} - ${endDay}, ${year}`
+      return `${startMonth} ${startDay} - ${endDay}, ${year}`;
     }
-    return `${startMonth} ${startDay} - ${endMonth} ${endDay}, ${year}`
-  }
+    return `${startMonth} ${startDay} - ${endMonth} ${endDay}, ${year}`;
+  };
 
   const isToday = (date: Date) => {
-    const today = new Date()
-    return date.toDateString() === today.toDateString()
-  }
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+  };
 
   if (isLoading) {
     return (
@@ -916,7 +947,7 @@ function WeeklyCalendarView({
         <Loader2 className="h-8 w-8 animate-spin" />
         <p className="ml-2 text-muted-foreground">Loading calendar...</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -942,7 +973,7 @@ function WeeklyCalendarView({
       <div className="grid grid-cols-7 gap-2">
         {/* Day Headers */}
         {weekDays.map((date, index) => (
-          <div 
+          <div
             key={index}
             className={`text-center p-2 rounded-t-lg border-b-2 ${
               isToday(date) ? "bg-primary/10 border-primary" : "bg-muted border-transparent"
@@ -959,12 +990,14 @@ function WeeklyCalendarView({
 
         {/* Day Columns with Shifts */}
         {weekDays.map((date, index) => {
-          const dateKey = date.toISOString().split("T")[0]
-          const dayShifts = shiftsByDate[dateKey] || []
-          const sortedShifts = [...dayShifts].sort((a, b) => a.startTime.localeCompare(b.startTime))
+          const dateKey = date.toISOString().split("T")[0];
+          const dayShifts = shiftsByDate[dateKey] || [];
+          const sortedShifts = [...dayShifts].sort((a, b) =>
+            a.startTime.localeCompare(b.startTime)
+          );
 
           return (
-            <div 
+            <div
               key={index}
               className={`min-h-[200px] border rounded-b-lg p-1 ${
                 isToday(date) ? "bg-primary/5 border-primary/30" : "bg-background"
@@ -989,22 +1022,23 @@ function WeeklyCalendarView({
                       </div>
                       <div className="flex items-center gap-1 mt-1">
                         <Avatar className="h-4 w-4">
-                          <AvatarImage src={shift.member.user.avatar || undefined} alt={shift.member.user.name} />
+                          <AvatarImage
+                            src={shift.member.user.avatar || undefined}
+                            alt={shift.member.user.name}
+                          />
                           <AvatarFallback className="text-[8px]">
                             {getInitials(shift.member.user.name)}
                           </AvatarFallback>
                         </Avatar>
                         <span className="truncate">{shift.member.user.name.split(" ")[0]}</span>
                       </div>
-                      <div className="mt-1 truncate text-[10px] opacity-75">
-                        {shift.shiftType}
-                      </div>
+                      <div className="mt-1 truncate text-[10px] opacity-75">{shift.shiftType}</div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-          )
+          );
         })}
       </div>
 
@@ -1019,5 +1053,5 @@ function WeeklyCalendarView({
         ))}
       </div>
     </div>
-  )
+  );
 }

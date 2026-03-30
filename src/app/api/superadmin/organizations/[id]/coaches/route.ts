@@ -5,13 +5,10 @@ import { ROLE_PERMISSIONS } from "@/lib/permissions";
 
 // GET /api/superadmin/organizations/[id]/coaches
 // Returns users with coaching permissions in the organization for superadmin impersonation
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
-    
+
     if (!session?.user?.isSuperAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -34,10 +31,7 @@ export async function GET(
         },
         permissions: true,
       },
-      orderBy: [
-        { role: "asc" },
-        { user: { name: "asc" } },
-      ],
+      orderBy: [{ role: "asc" }, { user: { name: "asc" } }],
     });
 
     // Filter to members who have coaching.portal permission
@@ -69,9 +63,6 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error fetching organization coaches:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch coaches" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch coaches" }, { status: 500 });
   }
 }

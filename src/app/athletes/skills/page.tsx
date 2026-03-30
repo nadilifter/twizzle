@@ -4,28 +4,20 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Target,
-  CheckCircle2,
-  Circle,
-  XCircle,
-  TrendingUp,
-  Award,
-  Dumbbell,
-} from "lucide-react";
+import { Target, CheckCircle2, Circle, XCircle, TrendingUp, Award, Dumbbell } from "lucide-react";
 import { format } from "date-fns";
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
-import type { 
+import type {
   AthleteSkillProgress as AthleteSkillProgressType,
   SkillAttemptStatus,
 } from "@/types/evaluations";
@@ -44,12 +36,15 @@ interface SkillProgressResponse {
     attempted: number;
     succeeded: number;
   };
-  byCategory: Record<string, {
-    total: number;
-    notAttempted: number;
-    attempted: number;
-    succeeded: number;
-  }>;
+  byCategory: Record<
+    string,
+    {
+      total: number;
+      notAttempted: number;
+      attempted: number;
+      succeeded: number;
+    }
+  >;
 }
 
 const attemptStatusIcons: Record<SkillAttemptStatus, typeof CheckCircle2> = {
@@ -69,7 +64,6 @@ const attemptStatusLabels: Record<SkillAttemptStatus, string> = {
   ATTEMPTED: "In Progress",
   SUCCEEDED: "Mastered",
 };
-
 
 export default function AthleteSkillsPage() {
   const [athletes, setAthletes] = useState<Athlete[]>([]);
@@ -105,7 +99,7 @@ export default function AthleteSkillsPage() {
   // Fetch skill progress for selected athlete
   const fetchSkillProgress = useCallback(async () => {
     if (!selectedAthleteId) return;
-    
+
     setIsLoadingSkills(true);
     try {
       const response = await api.get<SkillProgressResponse>(
@@ -130,15 +124,16 @@ export default function AthleteSkillsPage() {
   const categories = Object.keys(byCategory);
 
   // Filter skills by category
-  const filteredSkills = selectedCategory === "all"
-    ? skillProgress
-    : skillProgress.filter(sp => sp.skill.category === selectedCategory);
+  const filteredSkills =
+    selectedCategory === "all"
+      ? skillProgress
+      : skillProgress.filter((sp) => sp.skill.category === selectedCategory);
 
   // Group skills by status for display
   const skillsByStatus = {
-    succeeded: filteredSkills.filter(sp => sp.bestStatus === "SUCCEEDED"),
-    attempted: filteredSkills.filter(sp => sp.bestStatus === "ATTEMPTED"),
-    notAttempted: filteredSkills.filter(sp => sp.bestStatus === "NOT_ATTEMPTED"),
+    succeeded: filteredSkills.filter((sp) => sp.bestStatus === "SUCCEEDED"),
+    attempted: filteredSkills.filter((sp) => sp.bestStatus === "ATTEMPTED"),
+    notAttempted: filteredSkills.filter((sp) => sp.bestStatus === "NOT_ATTEMPTED"),
   };
 
   if (isLoading) {
@@ -160,14 +155,12 @@ export default function AthleteSkillsPage() {
       <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-6">
         <Target className="h-12 w-12 text-muted-foreground mb-4" />
         <h2 className="text-xl font-semibold mb-2">No Athletes Found</h2>
-        <p className="text-muted-foreground">
-          You don&apos;t have any athletes registered yet.
-        </p>
+        <p className="text-muted-foreground">You don&apos;t have any athletes registered yet.</p>
       </div>
     );
   }
 
-  const overallProgress = summary 
+  const overallProgress = summary
     ? Math.round((summary.succeeded / Math.max(summary.total, 1)) * 100)
     : 0;
 
@@ -179,7 +172,7 @@ export default function AthleteSkillsPage() {
           <h1 className="text-2xl font-bold">Skill Progress</h1>
           <p className="text-muted-foreground">Track skills and progression</p>
         </div>
-        
+
         {athletes.length > 1 && (
           <Select value={selectedAthleteId} onValueChange={setSelectedAthleteId}>
             <SelectTrigger className="w-[200px]">
@@ -238,12 +231,14 @@ export default function AthleteSkillsPage() {
             const catData = byCategory[category];
             const catProgress = Math.round((catData.succeeded / Math.max(catData.total, 1)) * 100);
             return (
-              <Card 
+              <Card
                 key={category}
                 className={`cursor-pointer transition-colors ${
                   selectedCategory === category ? "border-primary" : ""
                 }`}
-                onClick={() => setSelectedCategory(selectedCategory === category ? "all" : category)}
+                onClick={() =>
+                  setSelectedCategory(selectedCategory === category ? "all" : category)
+                }
               >
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-2">
@@ -277,14 +272,14 @@ export default function AthleteSkillsPage() {
               Not Started ({skillsByStatus.notAttempted.length})
             </TabsTrigger>
           </TabsList>
-          
+
           {selectedCategory !== "all" && (
-            <Badge 
-              variant="outline" 
+            <Badge
+              variant="outline"
               className="cursor-pointer"
               onClick={() => setSelectedCategory("all")}
             >
-              {selectedCategory} × 
+              {selectedCategory} ×
             </Badge>
           )}
         </div>
@@ -307,7 +302,10 @@ export default function AthleteSkillsPage() {
               <SkillsGrid skills={skillsByStatus.attempted} emptyMessage="No skills in progress" />
             </TabsContent>
             <TabsContent value="notstarted">
-              <SkillsGrid skills={skillsByStatus.notAttempted} emptyMessage="All skills have been attempted!" />
+              <SkillsGrid
+                skills={skillsByStatus.notAttempted}
+                emptyMessage="All skills have been attempted!"
+              />
             </TabsContent>
           </>
         )}
@@ -317,11 +315,11 @@ export default function AthleteSkillsPage() {
 }
 
 // Skills Grid Component
-function SkillsGrid({ 
-  skills, 
-  emptyMessage = "No skills found" 
-}: { 
-  skills: AthleteSkillProgressType[]; 
+function SkillsGrid({
+  skills,
+  emptyMessage = "No skills found",
+}: {
+  skills: AthleteSkillProgressType[];
   emptyMessage?: string;
 }) {
   if (skills.length === 0) {
@@ -351,11 +349,18 @@ function SkillsGrid({
                   <Icon className="h-5 w-5" />
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-2 mb-3">
                 {sp.skill.skillLevel && (
                   <Badge
-                    style={sp.skill.skillLevel.color ? { backgroundColor: `${sp.skill.skillLevel.color}20`, color: sp.skill.skillLevel.color } : undefined}
+                    style={
+                      sp.skill.skillLevel.color
+                        ? {
+                            backgroundColor: `${sp.skill.skillLevel.color}20`,
+                            color: sp.skill.skillLevel.color,
+                          }
+                        : undefined
+                    }
                     variant={sp.skill.skillLevel.color ? "outline" : "secondary"}
                   >
                     {sp.skill.skillLevel.name}

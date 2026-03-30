@@ -104,7 +104,9 @@ async function main() {
     for (const c of certs) {
       const certId = certIdMap.get(`${member.organizationId}:${c.name}`);
       if (!certId) {
-        console.warn(`  ⚠ No certification ID found for "${c.name}" in org ${member.organizationId}`);
+        console.warn(
+          `  ⚠ No certification ID found for "${c.name}" in org ${member.organizationId}`
+        );
         continue;
       }
 
@@ -135,7 +137,9 @@ async function main() {
     }
   }
 
-  console.log(`\nCreated ${memberCertsCreated} member certifications (${memberCertsSkipped} skipped as duplicates)`);
+  console.log(
+    `\nCreated ${memberCertsCreated} member certifications (${memberCertsSkipped} skipped as duplicates)`
+  );
   console.log("\n✅ Migration complete!");
   console.log("Note: The JSON 'certifications' field on OrganizationMember has NOT been removed.");
   console.log("After verifying the migration, remove it in a future schema change.");

@@ -23,11 +23,11 @@ export function SubmitFeatureDialog({ open, onOpenChange, onSubmit }: SubmitFeat
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !description) return;
-    
+
     setSubmitting(true);
     try {
       await onSubmit({
@@ -35,7 +35,7 @@ export function SubmitFeatureDialog({ open, onOpenChange, onSubmit }: SubmitFeat
         description,
         categories: [], // Categories are assigned by superadmins during review
       });
-      
+
       // Reset form
       setTitle("");
       setDescription("");
@@ -51,7 +51,8 @@ export function SubmitFeatureDialog({ open, onOpenChange, onSubmit }: SubmitFeat
           <DialogHeader>
             <DialogTitle>Submit Feature Request</DialogTitle>
             <DialogDescription>
-              Suggest a new feature for the platform. Our team will review your submission and categorize it appropriately.
+              Suggest a new feature for the platform. Our team will review your submission and
+              categorize it appropriately.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -90,7 +91,10 @@ export function SubmitFeatureDialog({ open, onOpenChange, onSubmit }: SubmitFeat
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!title || !description || description.length < 10 || submitting}>
+            <Button
+              type="submit"
+              disabled={!title || !description || description.length < 10 || submitting}
+            >
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Submit Request
             </Button>

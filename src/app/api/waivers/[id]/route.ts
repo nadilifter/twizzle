@@ -6,19 +6,20 @@ import { z } from "zod";
 const updateWaiverSchema = z.object({
   title: z.string().min(1).optional(),
   status: z.enum(["DRAFT", "ACTIVE", "ARCHIVED"]).optional(),
-  pages: z.array(z.object({
-    id: z.string().optional(), // Existing page ID
-    pageNumber: z.number().int().min(1),
-    title: z.string().optional().nullable(),
-    content: z.string().min(1, "Page content is required"),
-  })).optional(),
+  pages: z
+    .array(
+      z.object({
+        id: z.string().optional(), // Existing page ID
+        pageNumber: z.number().int().min(1),
+        title: z.string().optional().nullable(),
+        content: z.string().min(1, "Page content is required"),
+      })
+    )
+    .optional(),
 });
 
 // GET /api/waivers/[id] - Get a single waiver with pages
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -51,18 +52,12 @@ export async function GET(
     return NextResponse.json(waiver);
   } catch (error) {
     console.error("Error fetching waiver:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch waiver" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch waiver" }, { status: 500 });
   }
 }
 
 // PUT /api/waivers/[id] - Update a waiver and its pages
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -144,16 +139,10 @@ export async function PUT(
     return NextResponse.json(waiver);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error updating waiver:", error);
-    return NextResponse.json(
-      { error: "Failed to update waiver" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update waiver" }, { status: 500 });
   }
 }
 
@@ -193,9 +182,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting waiver:", error);
-    return NextResponse.json(
-      { error: "Failed to delete waiver" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete waiver" }, { status: 500 });
   }
 }

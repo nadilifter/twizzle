@@ -85,9 +85,9 @@ export function isImpersonating(session: Session | null): boolean {
  * Get all organization memberships where the user has coaching.portal permission.
  * Returns memberId + organizationId pairs for multi-org coach queries.
  */
-export async function getCoachingMemberships(session: Session | null): Promise<
-  Array<{ memberId: string; organizationId: string; organizationName: string }>
-> {
+export async function getCoachingMemberships(
+  session: Session | null
+): Promise<Array<{ memberId: string; organizationId: string; organizationName: string }>> {
   const effective = await getEffectiveUser(session);
   if (!effective) return [];
 
@@ -119,7 +119,10 @@ export async function getCoachingMemberships(session: Session | null): Promise<
       if (explicit.includes("*") || explicit.includes("coaching.portal")) return true;
       if (explicit.length === 0) {
         const rolePerms = ROLE_PERMISSIONS[m.role] || [];
-        return (rolePerms as string[]).includes("*") || (rolePerms as string[]).includes("coaching.portal");
+        return (
+          (rolePerms as string[]).includes("*") ||
+          (rolePerms as string[]).includes("coaching.portal")
+        );
       }
       return false;
     })

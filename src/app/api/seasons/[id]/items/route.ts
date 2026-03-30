@@ -10,10 +10,7 @@ const itemSchema = z.object({
 });
 
 // POST /api/seasons/[id]/items — link an item to a season
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -39,7 +36,10 @@ export async function POST(
     } else if (type === "membership") {
       const item = await scopedDb.membershipGroup.findUnique({ where: { id: itemId } });
       if (!item) return NextResponse.json({ error: "Membership not found" }, { status: 404 });
-      await scopedDb.membershipGroup.update({ where: { id: itemId }, data: { seasonId: params.id } });
+      await scopedDb.membershipGroup.update({
+        where: { id: itemId },
+        data: { seasonId: params.id },
+      });
     } else if (type === "competition") {
       const compGate = await checkFeatureGate(session.user.organizationId, "competitions");
       if (compGate) return compGate;
@@ -59,10 +59,7 @@ export async function POST(
 }
 
 // DELETE /api/seasons/[id]/items — unlink an item from a season
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -84,17 +81,29 @@ export async function DELETE(
     if (type === "program") {
       const item = await scopedDb.program.findUnique({ where: { id: itemId } });
       if (!item) return NextResponse.json({ error: "Program not found" }, { status: 404 });
-      if (item.seasonId !== params.id) return NextResponse.json({ error: "Program is not linked to this season" }, { status: 400 });
+      if (item.seasonId !== params.id)
+        return NextResponse.json(
+          { error: "Program is not linked to this season" },
+          { status: 400 }
+        );
       await scopedDb.program.update({ where: { id: itemId }, data: { seasonId: null } });
     } else if (type === "membership") {
       const item = await scopedDb.membershipGroup.findUnique({ where: { id: itemId } });
       if (!item) return NextResponse.json({ error: "Membership not found" }, { status: 404 });
-      if (item.seasonId !== params.id) return NextResponse.json({ error: "Membership is not linked to this season" }, { status: 400 });
+      if (item.seasonId !== params.id)
+        return NextResponse.json(
+          { error: "Membership is not linked to this season" },
+          { status: 400 }
+        );
       await scopedDb.membershipGroup.update({ where: { id: itemId }, data: { seasonId: null } });
     } else if (type === "competition") {
       const item = await scopedDb.competition.findUnique({ where: { id: itemId } });
       if (!item) return NextResponse.json({ error: "Competition not found" }, { status: 404 });
-      if (item.seasonId !== params.id) return NextResponse.json({ error: "Competition is not linked to this season" }, { status: 400 });
+      if (item.seasonId !== params.id)
+        return NextResponse.json(
+          { error: "Competition is not linked to this season" },
+          { status: 400 }
+        );
       await scopedDb.competition.update({ where: { id: itemId }, data: { seasonId: null } });
     }
 

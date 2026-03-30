@@ -68,7 +68,7 @@ import {
 function formatTime12h(time24: string, compact: boolean = false): string {
   const [hoursStr, minutes] = time24.split(":");
   const hours = parseInt(hoursStr, 10);
-  const period = hours >= 12 ? (compact ? "p" : "PM") : (compact ? "a" : "AM");
+  const period = hours >= 12 ? (compact ? "p" : "PM") : compact ? "a" : "AM";
   const hours12 = hours % 12 || 12;
   return compact ? `${hours12}:${minutes}${period}` : `${hours12}:${minutes} ${period}`;
 }
@@ -229,7 +229,8 @@ export default function CalendarPage() {
     setSelectedCategory("");
   };
 
-  const hasActiveFilters = selectedFacility || selectedProgram || selectedStatus || selectedCategory;
+  const hasActiveFilters =
+    selectedFacility || selectedProgram || selectedStatus || selectedCategory;
 
   // Generate calendar days for month view
   const calendarDays = useMemo(() => {
@@ -259,15 +260,15 @@ export default function CalendarPage() {
       viewMode === "month"
         ? startOfWeek(startOfMonth(currentDate), { weekStartsOn: 0 })
         : viewMode === "week"
-        ? startOfWeek(currentDate, { weekStartsOn: 0 })
-        : startOfDay(currentDate);
+          ? startOfWeek(currentDate, { weekStartsOn: 0 })
+          : startOfDay(currentDate);
 
     const calendarEnd =
       viewMode === "month"
         ? endOfWeek(endOfMonth(currentDate), { weekStartsOn: 0 })
         : viewMode === "week"
-        ? endOfWeek(currentDate, { weekStartsOn: 0 })
-        : endOfDay(currentDate);
+          ? endOfWeek(currentDate, { weekStartsOn: 0 })
+          : endOfDay(currentDate);
 
     return events.filter((event) => {
       try {
@@ -337,9 +338,7 @@ export default function CalendarPage() {
       >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span
-              className={cn("font-medium truncate", isCancelled && "line-through")}
-            >
+            <span className={cn("font-medium truncate", isCancelled && "line-through")}>
               {event.title}
             </span>
             {event.levelName && (
@@ -384,13 +383,19 @@ export default function CalendarPage() {
   };
 
   // Deterministic pattern for skeleton event counts (avoids hydration mismatch)
-  const skeletonPattern = [2, 0, 1, 0, 2, 1, 0, 1, 2, 0, 1, 0, 2, 1, 0, 1, 2, 0, 1, 0, 2, 2, 0, 1, 2, 0, 1, 0, 1, 0, 2, 1, 0, 2, 1];
+  const skeletonPattern = [
+    2, 0, 1, 0, 2, 1, 0, 1, 2, 0, 1, 0, 2, 1, 0, 1, 2, 0, 1, 0, 2, 2, 0, 1, 2, 0, 1, 0, 1, 0, 2, 1,
+    0, 2, 1,
+  ];
 
   const renderMonthSkeleton = () => (
     <div className="flex flex-col h-full">
       <div className="hidden md:grid grid-cols-7 border-b divide-x divide-border bg-muted/50">
         {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-          <div key={day} className="px-2 py-2 text-center text-xs font-medium text-muted-foreground">
+          <div
+            key={day}
+            className="px-2 py-2 text-center text-xs font-medium text-muted-foreground"
+          >
             {day}
           </div>
         ))}
@@ -432,9 +437,7 @@ export default function CalendarPage() {
           Program Schedule
         </h1>
         <div className="flex items-center gap-2">
-          {loading && (
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          )}
+          {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
 
           <Sheet>
             <SheetTrigger asChild>
@@ -443,7 +446,11 @@ export default function CalendarPage() {
                 <span className="hidden sm:inline">Filters</span>
                 {hasActiveFilters && (
                   <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">
-                    {[selectedFacility, selectedProgram, selectedStatus, selectedCategory].filter(Boolean).length}
+                    {
+                      [selectedFacility, selectedProgram, selectedStatus, selectedCategory].filter(
+                        Boolean
+                      ).length
+                    }
                   </Badge>
                 )}
               </Button>
@@ -550,12 +557,7 @@ export default function CalendarPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-2 sm:gap-4">
               <div className="flex items-center">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={navigatePrev}
-                >
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={navigatePrev}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <Button
@@ -566,12 +568,7 @@ export default function CalendarPage() {
                 >
                   Today
                 </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={navigateNext}
-                >
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={navigateNext}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -579,8 +576,8 @@ export default function CalendarPage() {
                 {viewMode === "day"
                   ? format(currentDate, "EEE, MMM d, yyyy")
                   : viewMode === "week"
-                  ? `${format(weekDays[0], "MMM d")} - ${format(weekDays[6], "MMM d, yyyy")}`
-                  : format(currentDate, "MMMM yyyy")}
+                    ? `${format(weekDays[0], "MMM d")} - ${format(weekDays[6], "MMM d, yyyy")}`
+                    : format(currentDate, "MMMM yyyy")}
               </CardTitle>
             </div>
             <Select value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
@@ -723,20 +720,12 @@ export default function CalendarPage() {
                   return (
                     <div
                       key={day.toISOString()}
-                      className={cn(
-                        "px-2 py-2 text-center",
-                        isTodayDate && "bg-primary/10"
-                      )}
+                      className={cn("px-2 py-2 text-center", isTodayDate && "bg-primary/10")}
                     >
                       <div className="text-xs font-medium text-muted-foreground">
                         {format(day, "EEE")}
                       </div>
-                      <div
-                        className={cn(
-                          "text-lg",
-                          isTodayDate && "font-bold text-primary"
-                        )}
-                      >
+                      <div className={cn("text-lg", isTodayDate && "font-bold text-primary")}>
                         {format(day, "d")}
                       </div>
                     </div>
@@ -753,10 +742,7 @@ export default function CalendarPage() {
                   return (
                     <div
                       key={day.toISOString()}
-                      className={cn(
-                        "p-2 space-y-1",
-                        isTodayDate && "bg-primary/5"
-                      )}
+                      className={cn("p-2 space-y-1", isTodayDate && "bg-primary/5")}
                     >
                       {dayEvents.map((event) => renderEvent(event))}
                       {dayEvents.length === 0 && (
@@ -798,9 +784,7 @@ export default function CalendarPage() {
                           {dayEvents.length > 0 ? (
                             dayEvents.map((event) => renderEventCard(event))
                           ) : (
-                            <p className="text-xs text-muted-foreground">
-                              No sessions
-                            </p>
+                            <p className="text-xs text-muted-foreground">No sessions</p>
                           )}
                         </div>
                       </div>

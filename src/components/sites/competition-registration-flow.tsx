@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react"
-import { useSession, signIn } from "next-auth/react"
-import { toast } from "sonner"
-import { sanitizeHtml } from "@/lib/sanitize"
-import { calculateAge, isAgeEligible } from "@/lib/age-utils"
-import { useCart } from "@/components/sites/cart-context"
-import { getClientSubdomainUrl } from "@/lib/client-domains"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useSession, signIn } from "next-auth/react";
+import { toast } from "sonner";
+import { sanitizeHtml } from "@/lib/sanitize";
+import { calculateAge, isAgeEligible } from "@/lib/age-utils";
+import { useCart } from "@/components/sites/cart-context";
+import { getClientSubdomainUrl } from "@/lib/client-domains";
 import {
   defineStepper,
   StepperNav,
@@ -15,27 +15,34 @@ import {
   StepperSeparator,
   StepperTitle,
   getStepStatus,
-} from "@/components/ui/stepper"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/stepper";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { SignaturePad, type SignaturePadRef } from "@/components/ui/signature-pad"
-import { CheckoutMedicalForm } from "@/components/sites/checkout-medical-form"
-import { FileUploadStep } from "@/components/sites/file-upload-step"
-import { CustomInformationForm } from "@/components/sites/custom-information-form"
-import type { MedicalFormConfig, CustomMedicalQuestion } from "@/types/medical"
-import type { CustomInfoQuestion, CustomInfoResponse } from "@/types/custom-information"
-import type { FileRequirementConfig } from "@/types/file-requirements"
+} from "@/components/ui/select";
+import { SignaturePad, type SignaturePadRef } from "@/components/ui/signature-pad";
+import { CheckoutMedicalForm } from "@/components/sites/checkout-medical-form";
+import { FileUploadStep } from "@/components/sites/file-upload-step";
+import { CustomInformationForm } from "@/components/sites/custom-information-form";
+import type { MedicalFormConfig, CustomMedicalQuestion } from "@/types/medical";
+import type { CustomInfoQuestion, CustomInfoResponse } from "@/types/custom-information";
+import type { FileRequirementConfig } from "@/types/file-requirements";
 import {
   User,
   Calendar,
@@ -54,127 +61,132 @@ import {
   Heart,
   Gauge,
   ExternalLink,
-} from "lucide-react"
-import { format } from "date-fns"
-import { cn } from "@/lib/utils"
-import { Calendar as CalendarPicker } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+} from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 // ---------- Types ----------
 
 interface SportEvent {
-  id: string
-  name: string
-  code: string
-  eventGroup: string | null
+  id: string;
+  name: string;
+  code: string;
+  eventGroup: string | null;
 }
 
 interface AgeCategory {
-  id: string
-  name: string
-  code: string
-  minAge: number
-  maxAge: number | null
+  id: string;
+  name: string;
+  code: string;
+  minAge: number;
+  maxAge: number | null;
 }
 
 interface CompetitionCategory {
-  id: string
-  sportEvent: SportEvent | null
-  ageCategory: AgeCategory | null
-  isTeamEvent: boolean
-  price: number | null
-  displayOrder: number
-  seedMarkRequired: boolean
-  submissionMode: "NONE" | "VERIFIED_RESULT" | "MANUAL_ENTRY"
-  resultType: "TIME" | "DISTANCE" | "HEIGHT" | "SCORE" | "PLACEMENT"
-  precision: number
-  qualifyingMark: number | null
+  id: string;
+  sportEvent: SportEvent | null;
+  ageCategory: AgeCategory | null;
+  isTeamEvent: boolean;
+  price: number | null;
+  displayOrder: number;
+  seedMarkRequired: boolean;
+  submissionMode: "NONE" | "VERIFIED_RESULT" | "MANUAL_ENTRY";
+  resultType: "TIME" | "DISTANCE" | "HEIGHT" | "SCORE" | "PLACEMENT";
+  precision: number;
+  qualifyingMark: number | null;
 }
 
 interface PricingTier {
-  id: string
-  minEvents: number
-  maxEvents: number | null
-  pricePerEvent: number
-  displayOrder: number
+  id: string;
+  minEvents: number;
+  maxEvents: number | null;
+  pricePerEvent: number;
+  displayOrder: number;
 }
 
 interface CompetitionData {
-  id: string
-  name: string
-  competitionType: string
-  startDate: string
-  endDate: string
-  startTime: string
-  endTime: string
-  city?: string | null
-  stateProvince?: string | null
-  facility?: { id: string; name: string; city?: string | null; stateProvince?: string | null } | null
-  pricingMode: string
-  entryFee: number | null
-  hasAgeRestriction: boolean
-  minAge: number | null
-  maxAge: number | null
-  hasLevelRestriction: boolean
-  levelRequirementIds: string[]
-  hasCapacityRestriction: boolean
-  capacity: number | null
-  hasMembershipRestriction: boolean
-  membershipRequirementIds: string[]
-  hasWaiverRestriction: boolean
-  waiverRequirementIds: string[]
-  hasMedicalRequirement: boolean
-  hasFileRequirement: boolean
-  fileRequirementConfig: FileRequirementConfig | null
-  organizationId: string
-  categories: CompetitionCategory[]
-  pricingTiers: PricingTier[]
+  id: string;
+  name: string;
+  competitionType: string;
+  startDate: string;
+  endDate: string;
+  startTime: string;
+  endTime: string;
+  city?: string | null;
+  stateProvince?: string | null;
+  facility?: {
+    id: string;
+    name: string;
+    city?: string | null;
+    stateProvince?: string | null;
+  } | null;
+  pricingMode: string;
+  entryFee: number | null;
+  hasAgeRestriction: boolean;
+  minAge: number | null;
+  maxAge: number | null;
+  hasLevelRestriction: boolean;
+  levelRequirementIds: string[];
+  hasCapacityRestriction: boolean;
+  capacity: number | null;
+  hasMembershipRestriction: boolean;
+  membershipRequirementIds: string[];
+  hasWaiverRestriction: boolean;
+  waiverRequirementIds: string[];
+  hasMedicalRequirement: boolean;
+  hasFileRequirement: boolean;
+  fileRequirementConfig: FileRequirementConfig | null;
+  organizationId: string;
+  categories: CompetitionCategory[];
+  pricingTiers: PricingTier[];
 }
 
 interface WaiverToSign {
-  waiverId: string
-  waiverTitle: string
-  isSigned: boolean
+  waiverId: string;
+  waiverTitle: string;
+  isSigned: boolean;
 }
 
 interface WaiverPage {
-  id: string
-  pageNumber: number
-  title: string | null
-  content: string
+  id: string;
+  pageNumber: number;
+  title: string | null;
+  content: string;
 }
 
 interface AthleteOption {
-  id: string
-  firstName: string
-  lastName: string
-  name: string
-  birthDate: string | null
-  gender: string | null
+  id: string;
+  firstName: string;
+  lastName: string;
+  name: string;
+  birthDate: string | null;
+  gender: string | null;
 }
 
 interface AvailableMembership {
-  id: string
-  name: string
-  price: number
-  billingInterval: string
-  groupId: string
-  groupName: string
+  id: string;
+  name: string;
+  price: number;
+  billingInterval: string;
+  groupId: string;
+  groupName: string;
 }
 
 interface EligibilityResult {
-  eligible: boolean
-  reasons: string[]
-  eligibleCategoryIds: string[]
-  requiresMembershipPurchase: boolean
-  availableMemberships: AvailableMembership[]
+  eligible: boolean;
+  reasons: string[];
+  eligibleCategoryIds: string[];
+  requiresMembershipPurchase: boolean;
+  availableMemberships: AvailableMembership[];
 }
 
 interface CompetitionRegistrationFlowProps {
-  competition: CompetitionData
-  slug: string
-  primaryColor?: string
-  earlyAccessCode?: string | null
+  competition: CompetitionData;
+  slug: string;
+  primaryColor?: string;
+  earlyAccessCode?: string | null;
 }
 
 // ---------- Stepper definition ----------
@@ -188,7 +200,7 @@ const { useStepper } = defineStepper(
   { id: "medical", title: "Medical Info" },
   { id: "files", title: "File Upload" },
   { id: "review", title: "Review & Add to Cart" }
-)
+);
 
 // ---------- Helpers ----------
 
@@ -197,88 +209,98 @@ const GENDER_LABELS: Record<string, string> = {
   FEMALE: "Female",
   OTHER: "Other",
   PREFER_NOT_TO_SAY: "Prefer Not to Say",
-}
+};
 
 function formatPrice(price: number): string {
-  if (price === 0) return "Free"
+  if (price === 0) return "Free";
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
-  }).format(price)
+  }).format(price);
 }
 
 function getCategoryLabel(cat: CompetitionCategory): string {
-  const parts: string[] = []
-  if (cat.sportEvent) parts.push(cat.sportEvent.name)
-  if (cat.ageCategory) parts.push(cat.ageCategory.name)
-  return parts.join(" – ") || `Category ${cat.displayOrder + 1}`
+  const parts: string[] = [];
+  if (cat.sportEvent) parts.push(cat.sportEvent.name);
+  if (cat.ageCategory) parts.push(cat.ageCategory.name);
+  return parts.join(" – ") || `Category ${cat.displayOrder + 1}`;
 }
 
 type SeedMarkValue =
-  | { type: "TIME"; hours: string; minutes: string; seconds: string; ms: string; handTimed: boolean }
+  | {
+      type: "TIME";
+      hours: string;
+      minutes: string;
+      seconds: string;
+      ms: string;
+      handTimed: boolean;
+    }
   | { type: "DISTANCE" | "HEIGHT"; value: string }
   | { type: "SCORE"; value: string }
-  | { type: "PLACEMENT"; value: string }
+  | { type: "PLACEMENT"; value: string };
 
 function defaultSeedMark(resultType: CompetitionCategory["resultType"]): SeedMarkValue {
   switch (resultType) {
     case "TIME":
-      return { type: "TIME", hours: "", minutes: "", seconds: "", ms: "", handTimed: false }
+      return { type: "TIME", hours: "", minutes: "", seconds: "", ms: "", handTimed: false };
     case "DISTANCE":
     case "HEIGHT":
-      return { type: resultType, value: "" }
+      return { type: resultType, value: "" };
     case "SCORE":
-      return { type: "SCORE", value: "" }
+      return { type: "SCORE", value: "" };
     case "PLACEMENT":
-      return { type: "PLACEMENT", value: "" }
+      return { type: "PLACEMENT", value: "" };
     default:
-      return { type: "SCORE", value: "" }
+      return { type: "SCORE", value: "" };
   }
 }
 
 function getSeedMarkMeta(resultType: CompetitionCategory["resultType"]): {
-  label: string
-  placeholder: string
-  unit: string
-  step: string
+  label: string;
+  placeholder: string;
+  unit: string;
+  step: string;
 } {
   switch (resultType) {
     case "TIME":
-      return { label: "Time", placeholder: "", unit: "", step: "1" }
+      return { label: "Time", placeholder: "", unit: "", step: "1" };
     case "DISTANCE":
-      return { label: "Distance", placeholder: "e.g. 70.88", unit: "m", step: "0.01" }
+      return { label: "Distance", placeholder: "e.g. 70.88", unit: "m", step: "0.01" };
     case "HEIGHT":
-      return { label: "Height", placeholder: "e.g. 2.01", unit: "m", step: "0.01" }
+      return { label: "Height", placeholder: "e.g. 2.01", unit: "m", step: "0.01" };
     case "SCORE":
-      return { label: "Score", placeholder: "e.g. 8000", unit: "pts", step: "1" }
+      return { label: "Score", placeholder: "e.g. 8000", unit: "pts", step: "1" };
     case "PLACEMENT":
-      return { label: "Placement", placeholder: "e.g. 1 or 3h5", unit: "", step: "" }
+      return { label: "Placement", placeholder: "e.g. 1 or 3h5", unit: "", step: "" };
     default:
-      return { label: "Mark", placeholder: "Enter value", unit: "", step: "0.001" }
+      return { label: "Mark", placeholder: "Enter value", unit: "", step: "0.001" };
   }
 }
 
-function formatSeedMarkDisplay(value: number, resultType: CompetitionCategory["resultType"]): string {
+function formatSeedMarkDisplay(
+  value: number,
+  resultType: CompetitionCategory["resultType"]
+): string {
   switch (resultType) {
     case "TIME": {
-      const totalMs = Math.round(value)
-      const m = Math.floor(totalMs / 60000)
-      const s = Math.floor((totalMs % 60000) / 1000)
-      const cs = Math.floor((totalMs % 1000) / 10)
-      if (m > 0) return `${m}:${s.toString().padStart(2, "0")}.${cs.toString().padStart(2, "0")}`
-      return `${s}.${cs.toString().padStart(2, "0")}`
+      const totalMs = Math.round(value);
+      const m = Math.floor(totalMs / 60000);
+      const s = Math.floor((totalMs % 60000) / 1000);
+      const cs = Math.floor((totalMs % 1000) / 10);
+      if (m > 0) return `${m}:${s.toString().padStart(2, "0")}.${cs.toString().padStart(2, "0")}`;
+      return `${s}.${cs.toString().padStart(2, "0")}`;
     }
     case "DISTANCE":
     case "HEIGHT":
-      return `${Number(value).toFixed(2)}m`
+      return `${Number(value).toFixed(2)}m`;
     case "SCORE":
-      return `${value} pts`
+      return `${value} pts`;
     case "PLACEMENT":
-      return String(value)
+      return String(value);
     default:
-      return String(value)
+      return String(value);
   }
 }
 
@@ -288,17 +310,17 @@ function isSeedMarkValid(mark: SeedMarkValue): boolean {
       const hasAnyTimeValue =
         (mark.seconds !== "" && !isNaN(Number(mark.seconds))) ||
         (mark.minutes !== "" && !isNaN(Number(mark.minutes))) ||
-        (mark.hours !== "" && !isNaN(Number(mark.hours)))
-      return hasAnyTimeValue
+        (mark.hours !== "" && !isNaN(Number(mark.hours)));
+      return hasAnyTimeValue;
     }
     case "DISTANCE":
     case "HEIGHT":
     case "SCORE":
-      return mark.value !== "" && !isNaN(Number(mark.value))
+      return mark.value !== "" && !isNaN(Number(mark.value));
     case "PLACEMENT":
-      return /^\d+$|^\d+h\d+$/.test(mark.value.trim())
+      return /^\d+$|^\d+h\d+$/.test(mark.value.trim());
     default:
-      return false
+      return false;
   }
 }
 
@@ -311,21 +333,21 @@ function seedMarkToApiFields(mark: SeedMarkValue): Record<string, unknown> {
         seedSeconds: mark.seconds !== "" ? Number(mark.seconds) : null,
         seedMs: mark.ms !== "" ? Number(mark.ms) : null,
         seedHandTimed: mark.handTimed,
-      }
+      };
     case "DISTANCE":
     case "HEIGHT":
-      return { seedDistance: mark.value !== "" ? Number(mark.value) : null }
+      return { seedDistance: mark.value !== "" ? Number(mark.value) : null };
     case "SCORE":
-      return { seedPoints: mark.value !== "" ? Number(mark.value) : null }
+      return { seedPoints: mark.value !== "" ? Number(mark.value) : null };
     case "PLACEMENT":
-      return { seedPlacement: mark.value.trim() || null }
+      return { seedPlacement: mark.value.trim() || null };
     default:
-      return {}
+      return {};
   }
 }
 
 function categoryNeedsSeedMark(cat: CompetitionCategory): boolean {
-  return cat.seedMarkRequired && cat.submissionMode !== "NONE"
+  return cat.seedMarkRequired && cat.submissionMode !== "NONE";
 }
 
 // ---------- Main Component ----------
@@ -336,166 +358,167 @@ export function CompetitionRegistrationFlow({
   primaryColor,
   earlyAccessCode,
 }: CompetitionRegistrationFlowProps) {
-  const { data: session } = useSession()
-  const { addItem } = useCart()
-  const stepper = useStepper()
+  const { data: session } = useSession();
+  const { addItem } = useCart();
+  const stepper = useStepper();
 
   // State
-  const [athletes, setAthletes] = useState<AthleteOption[]>([])
-  const [isLoadingAthletes, setIsLoadingAthletes] = useState(false)
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const [isCreatingAthlete, setIsCreatingAthlete] = useState(false)
+  const [athletes, setAthletes] = useState<AthleteOption[]>([]);
+  const [isLoadingAthletes, setIsLoadingAthletes] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [isCreatingAthlete, setIsCreatingAthlete] = useState(false);
   const [newAthlete, setNewAthlete] = useState({
     firstName: "",
     lastName: "",
     birthDate: "",
     gender: "",
-  })
+  });
 
-  const [selectedAthlete, setSelectedAthlete] = useState<AthleteOption | null>(null)
-  const [isCheckingEligibility, setIsCheckingEligibility] = useState(false)
-  const [eligibilityResult, setEligibilityResult] = useState<EligibilityResult | null>(null)
+  const [selectedAthlete, setSelectedAthlete] = useState<AthleteOption | null>(null);
+  const [isCheckingEligibility, setIsCheckingEligibility] = useState(false);
+  const [eligibilityResult, setEligibilityResult] = useState<EligibilityResult | null>(null);
 
-  const [selectedMembership, setSelectedMembership] = useState<AvailableMembership | null>(null)
+  const [selectedMembership, setSelectedMembership] = useState<AvailableMembership | null>(null);
 
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<string>>(new Set())
-  const [seedMarks, setSeedMarks] = useState<Record<string, SeedMarkValue>>({})
-  const [isAddingToCart, setIsAddingToCart] = useState(false)
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<string>>(new Set());
+  const [seedMarks, setSeedMarks] = useState<Record<string, SeedMarkValue>>({});
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   // Waiver state
-  const [requiredWaivers, setRequiredWaivers] = useState<WaiverToSign[]>([])
-  const [currentWaiverIndex, setCurrentWaiverIndex] = useState(0)
-  const [currentWaiverPages, setCurrentWaiverPages] = useState<WaiverPage[]>([])
-  const [currentPageIndex, setCurrentPageIndex] = useState(0)
-  const [isLoadingWaiver, setIsLoadingWaiver] = useState(false)
-  const [isSigningWaiver, setIsSigningWaiver] = useState(false)
-  const [signatureEmpty, setSignatureEmpty] = useState(true)
-  const [signAllMode, setSignAllMode] = useState(false)
-  const [userId, setUserId] = useState<string | null>(null)
-  const [isCheckingWaivers, setIsCheckingWaivers] = useState(false)
-  const signaturePadRef = useRef<SignaturePadRef>(null)
+  const [requiredWaivers, setRequiredWaivers] = useState<WaiverToSign[]>([]);
+  const [currentWaiverIndex, setCurrentWaiverIndex] = useState(0);
+  const [currentWaiverPages, setCurrentWaiverPages] = useState<WaiverPage[]>([]);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [isLoadingWaiver, setIsLoadingWaiver] = useState(false);
+  const [isSigningWaiver, setIsSigningWaiver] = useState(false);
+  const [signatureEmpty, setSignatureEmpty] = useState(true);
+  const [signAllMode, setSignAllMode] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isCheckingWaivers, setIsCheckingWaivers] = useState(false);
+  const signaturePadRef = useRef<SignaturePadRef>(null);
 
   // Medical state
-  const [medicalConfig, setMedicalConfig] = useState<MedicalFormConfig | null>(null)
-  const [medicalCustomQuestions, setMedicalCustomQuestions] = useState<CustomMedicalQuestion[]>([])
-  const [isLoadingMedicalConfig, setIsLoadingMedicalConfig] = useState(false)
-  const [needsMedical, setNeedsMedical] = useState(false)
+  const [medicalConfig, setMedicalConfig] = useState<MedicalFormConfig | null>(null);
+  const [medicalCustomQuestions, setMedicalCustomQuestions] = useState<CustomMedicalQuestion[]>([]);
+  const [isLoadingMedicalConfig, setIsLoadingMedicalConfig] = useState(false);
+  const [needsMedical, setNeedsMedical] = useState(false);
 
   // Custom info state
-  const [customInfoQuestions, setCustomInfoQuestions] = useState<CustomInfoQuestion[]>([])
-  const [customInfoResponses, setCustomInfoResponses] = useState<CustomInfoResponse[]>([])
-  const [needsCustomInfo, setNeedsCustomInfo] = useState(false)
-  const [isLoadingCustomInfo, setIsLoadingCustomInfo] = useState(false)
+  const [customInfoQuestions, setCustomInfoQuestions] = useState<CustomInfoQuestion[]>([]);
+  const [customInfoResponses, setCustomInfoResponses] = useState<CustomInfoResponse[]>([]);
+  const [needsCustomInfo, setNeedsCustomInfo] = useState(false);
+  const [isLoadingCustomInfo, setIsLoadingCustomInfo] = useState(false);
 
   // File upload state
-  const [uploadedFileId, setUploadedFileId] = useState<string | null>(null)
+  const [uploadedFileId, setUploadedFileId] = useState<string | null>(null);
 
   // Navigation direction: only auto-skip completed steps on the first forward pass
-  const isNavigatingBackRef = useRef(false)
+  const isNavigatingBackRef = useRef(false);
 
   // Determine which steps are visible based on competition settings
-  const needsWaivers = competition.hasWaiverRestriction && competition.waiverRequirementIds.length > 0
-  const needsMedicalStep = competition.hasMedicalRequirement
-  const needsFiles = competition.hasFileRequirement && !!competition.fileRequirementConfig
+  const needsWaivers =
+    competition.hasWaiverRestriction && competition.waiverRequirementIds.length > 0;
+  const needsMedicalStep = competition.hasMedicalRequirement;
+  const needsFiles = competition.hasFileRequirement && !!competition.fileRequirementConfig;
 
   const needsSeedMarks = useMemo(() => {
     return competition.categories.some(
       (cat) => selectedCategoryIds.has(cat.id) && categoryNeedsSeedMark(cat)
-    )
-  }, [competition.categories, selectedCategoryIds])
+    );
+  }, [competition.categories, selectedCategoryIds]);
 
   // Ordered step IDs with conditional inclusion
   const visibleStepIds = useMemo(() => {
-    const ids = ["athlete", "categories"]
-    if (needsSeedMarks) ids.push("seedMarks")
-    if (needsWaivers) ids.push("waivers")
-    ids.push("customInfo")
-    if (needsMedicalStep) ids.push("medical")
-    if (needsFiles) ids.push("files")
-    ids.push("review")
-    return ids
-  }, [needsSeedMarks, needsWaivers, needsMedicalStep, needsFiles])
+    const ids = ["athlete", "categories"];
+    if (needsSeedMarks) ids.push("seedMarks");
+    if (needsWaivers) ids.push("waivers");
+    ids.push("customInfo");
+    if (needsMedicalStep) ids.push("medical");
+    if (needsFiles) ids.push("files");
+    ids.push("review");
+    return ids;
+  }, [needsSeedMarks, needsWaivers, needsMedicalStep, needsFiles]);
 
   // Navigation helpers that skip invisible steps
   const getNextStepId = useCallback(
     (currentId: string): string | null => {
-      isNavigatingBackRef.current = false
-      const idx = visibleStepIds.indexOf(currentId)
-      if (idx === -1 || idx >= visibleStepIds.length - 1) return null
-      return visibleStepIds[idx + 1]
+      isNavigatingBackRef.current = false;
+      const idx = visibleStepIds.indexOf(currentId);
+      if (idx === -1 || idx >= visibleStepIds.length - 1) return null;
+      return visibleStepIds[idx + 1];
     },
     [visibleStepIds]
-  )
+  );
 
   const getPreviousStepId = useCallback(
     (currentId: string): string | null => {
-      isNavigatingBackRef.current = true
-      const idx = visibleStepIds.indexOf(currentId)
-      if (idx <= 0) return null
-      return visibleStepIds[idx - 1]
+      isNavigatingBackRef.current = true;
+      const idx = visibleStepIds.indexOf(currentId);
+      if (idx <= 0) return null;
+      return visibleStepIds[idx - 1];
     },
     [visibleStepIds]
-  )
+  );
 
   // Fetch athletes on mount (if signed in)
   useEffect(() => {
     if (session?.user) {
-      fetchAthletes()
+      fetchAthletes();
     }
-  }, [session?.user, slug])
+  }, [session?.user, slug]);
 
   const fetchAthletes = async () => {
-    setIsLoadingAthletes(true)
+    setIsLoadingAthletes(true);
     try {
-      const response = await fetch(`/api/sites/${slug}/athletes`)
+      const response = await fetch(`/api/sites/${slug}/athletes`);
       if (response.ok) {
-        const data = await response.json()
-        setAthletes(data.athletes || [])
+        const data = await response.json();
+        setAthletes(data.athletes || []);
       }
     } catch (error) {
-      console.error("Error fetching athletes:", error)
+      console.error("Error fetching athletes:", error);
     } finally {
-      setIsLoadingAthletes(false)
+      setIsLoadingAthletes(false);
     }
-  }
+  };
 
   const handleCreateAthlete = async () => {
     if (!newAthlete.firstName.trim()) {
-      toast.error("First name is required")
-      return
+      toast.error("First name is required");
+      return;
     }
     if (!newAthlete.lastName.trim()) {
-      toast.error("Last name is required")
-      return
+      toast.error("Last name is required");
+      return;
     }
     if (!newAthlete.birthDate) {
-      toast.error("Date of birth is required")
-      return
+      toast.error("Date of birth is required");
+      return;
     }
     if (!newAthlete.gender) {
-      toast.error("Gender declaration is required")
-      return
+      toast.error("Gender declaration is required");
+      return;
     }
 
-    setIsCreatingAthlete(true)
+    setIsCreatingAthlete(true);
     try {
       const response = await fetch(`/api/sites/${slug}/athletes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newAthlete),
-      })
+      });
 
       if (!response.ok) {
-        const errData = await response.json()
-        throw new Error(errData.error || "Failed to create athlete")
+        const errData = await response.json();
+        throw new Error(errData.error || "Failed to create athlete");
       }
 
-      const data = await response.json()
-      const created = data.athlete
-      toast.success(`${created.firstName} ${created.lastName} added successfully`)
-      await fetchAthletes()
-      setShowCreateForm(false)
-      setNewAthlete({ firstName: "", lastName: "", birthDate: "", gender: "" })
+      const data = await response.json();
+      const created = data.athlete;
+      toast.success(`${created.firstName} ${created.lastName} added successfully`);
+      await fetchAthletes();
+      setShowCreateForm(false);
+      setNewAthlete({ firstName: "", lastName: "", birthDate: "", gender: "" });
 
       // Auto-select and check eligibility for the newly created athlete
       const athleteOption: AthleteOption = {
@@ -505,22 +528,22 @@ export function CompetitionRegistrationFlow({
         name: `${created.firstName} ${created.lastName}`,
         birthDate: created.birthDate,
         gender: created.gender,
-      }
-      await handleSelectAthlete(athleteOption)
+      };
+      await handleSelectAthlete(athleteOption);
     } catch (error: any) {
-      toast.error(error.message || "Failed to create athlete")
+      toast.error(error.message || "Failed to create athlete");
     } finally {
-      setIsCreatingAthlete(false)
+      setIsCreatingAthlete(false);
     }
-  }
+  };
 
   const handleSelectAthlete = async (athlete: AthleteOption) => {
-    setSelectedAthlete(athlete)
-    setEligibilityResult(null)
-    setSelectedMembership(null)
-    setSelectedCategoryIds(new Set())
-    setSeedMarks({})
-    setIsCheckingEligibility(true)
+    setSelectedAthlete(athlete);
+    setEligibilityResult(null);
+    setSelectedMembership(null);
+    setSelectedCategoryIds(new Set());
+    setSeedMarks({});
+    setIsCheckingEligibility(true);
 
     try {
       const response = await fetch(
@@ -530,147 +553,145 @@ export function CompetitionRegistrationFlow({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ athleteId: athlete.id }),
         }
-      )
+      );
 
       if (!response.ok) {
-        throw new Error("Failed to check eligibility")
+        throw new Error("Failed to check eligibility");
       }
 
-      const result: EligibilityResult = await response.json()
-      setEligibilityResult(result)
+      const result: EligibilityResult = await response.json();
+      setEligibilityResult(result);
 
       if (result.eligible) {
         // Auto-select membership if only one option
         if (result.requiresMembershipPurchase && result.availableMemberships.length === 1) {
-          setSelectedMembership(result.availableMemberships[0])
+          setSelectedMembership(result.availableMemberships[0]);
         }
 
         toast.success(
           `${athlete.firstName} is eligible! ${result.eligibleCategoryIds.length} event${result.eligibleCategoryIds.length !== 1 ? "s" : ""} available.`
-        )
+        );
       }
     } catch (error) {
-      toast.error("Failed to check eligibility. Please try again.")
-      setSelectedAthlete(null)
+      toast.error("Failed to check eligibility. Please try again.");
+      setSelectedAthlete(null);
     } finally {
-      setIsCheckingEligibility(false)
+      setIsCheckingEligibility(false);
     }
-  }
+  };
 
   // Split athletes into competition-level eligible and ineligible
   const { eligibleAthletes, ineligibleAthletes } = useMemo(() => {
     if (!competition.hasAgeRestriction) {
-      return { eligibleAthletes: athletes, ineligibleAthletes: [] as AthleteOption[] }
+      return { eligibleAthletes: athletes, ineligibleAthletes: [] as AthleteOption[] };
     }
-    const eligible: AthleteOption[] = []
-    const ineligible: AthleteOption[] = []
+    const eligible: AthleteOption[] = [];
+    const ineligible: AthleteOption[] = [];
     for (const athlete of athletes) {
-      const age = calculateAge(athlete.birthDate)
+      const age = calculateAge(athlete.birthDate);
       if (isAgeEligible(age, competition.minAge, competition.maxAge)) {
-        eligible.push(athlete)
+        eligible.push(athlete);
       } else {
-        ineligible.push(athlete)
+        ineligible.push(athlete);
       }
     }
-    return { eligibleAthletes: eligible, ineligibleAthletes: ineligible }
-  }, [athletes, competition.hasAgeRestriction, competition.minAge, competition.maxAge])
+    return { eligibleAthletes: eligible, ineligibleAthletes: ineligible };
+  }, [athletes, competition.hasAgeRestriction, competition.minAge, competition.maxAge]);
 
   // Filter categories to only show eligible ones
   const eligibleCategories = useMemo(() => {
-    if (!eligibilityResult) return []
+    if (!eligibilityResult) return [];
     return competition.categories.filter((cat) =>
       eligibilityResult.eligibleCategoryIds.includes(cat.id)
-    )
-  }, [competition.categories, eligibilityResult])
+    );
+  }, [competition.categories, eligibilityResult]);
 
   // Group eligible categories by event group (for display)
   const categoriesByGroup = useMemo(() => {
-    const groups = new Map<string, CompetitionCategory[]>()
+    const groups = new Map<string, CompetitionCategory[]>();
     for (const cat of eligibleCategories) {
-      const group = cat.sportEvent?.eventGroup || "Other"
+      const group = cat.sportEvent?.eventGroup || "Other";
       if (!groups.has(group)) {
-        groups.set(group, [])
+        groups.set(group, []);
       }
-      groups.get(group)!.push(cat)
+      groups.get(group)!.push(cat);
     }
-    return groups
-  }, [eligibleCategories])
+    return groups;
+  }, [eligibleCategories]);
 
   // Calculate price
   const calculatedPrice = useMemo(() => {
-    const count = selectedCategoryIds.size
-    if (count === 0) return 0
+    const count = selectedCategoryIds.size;
+    if (count === 0) return 0;
 
     switch (competition.pricingMode) {
       case "FREE":
-        return 0
+        return 0;
       case "PER_COMPETITION":
-        return competition.entryFee || 0
+        return competition.entryFee || 0;
       case "PER_EVENT":
-        return (competition.entryFee || 0) * count
+        return (competition.entryFee || 0) * count;
       case "TIERED": {
-        const tiers = [...competition.pricingTiers].sort(
-          (a, b) => a.minEvents - b.minEvents
-        )
-        let applicableTier = tiers[0]
+        const tiers = [...competition.pricingTiers].sort((a, b) => a.minEvents - b.minEvents);
+        let applicableTier = tiers[0];
         for (const tier of tiers) {
           if (count >= tier.minEvents && (tier.maxEvents === null || count <= tier.maxEvents)) {
-            applicableTier = tier
+            applicableTier = tier;
           }
         }
-        return applicableTier ? applicableTier.pricePerEvent * count : 0
+        return applicableTier ? applicableTier.pricePerEvent * count : 0;
       }
       case "PER_CATEGORY": {
-        let total = 0
+        let total = 0;
         Array.from(selectedCategoryIds).forEach((catId) => {
-          const cat = competition.categories.find((c) => c.id === catId)
-          if (cat?.price != null) total += cat.price
-        })
-        return total
+          const cat = competition.categories.find((c) => c.id === catId);
+          if (cat?.price != null) total += cat.price;
+        });
+        return total;
       }
       default:
-        return 0
+        return 0;
     }
-  }, [selectedCategoryIds, competition])
+  }, [selectedCategoryIds, competition]);
 
   const toggleCategory = useCallback((categoryId: string) => {
     setSelectedCategoryIds((prev) => {
-      const next = new Set(prev)
+      const next = new Set(prev);
       if (next.has(categoryId)) {
-        next.delete(categoryId)
+        next.delete(categoryId);
       } else {
-        next.add(categoryId)
+        next.add(categoryId);
       }
-      return next
-    })
-  }, [])
+      return next;
+    });
+  }, []);
 
   // ---------- Waiver helpers ----------
 
   const loadWaiverContent = useCallback(
     async (waiverId: string) => {
-      setIsLoadingWaiver(true)
+      setIsLoadingWaiver(true);
       try {
         const response = await fetch(
           `/api/public/waivers/${waiverId}?organizationId=${competition.organizationId}`
-        )
+        );
         if (response.ok) {
-          const data = await response.json()
-          setCurrentWaiverPages(data.pages || [])
-          setCurrentPageIndex(0)
+          const data = await response.json();
+          setCurrentWaiverPages(data.pages || []);
+          setCurrentPageIndex(0);
         }
       } catch (error) {
-        console.error("Failed to load waiver:", error)
+        console.error("Failed to load waiver:", error);
       } finally {
-        setIsLoadingWaiver(false)
+        setIsLoadingWaiver(false);
       }
     },
     [competition.organizationId]
-  )
+  );
 
   const handleEnterWaiversStep = useCallback(async () => {
-    if (!selectedAthlete || !session?.user?.email) return
-    setIsCheckingWaivers(true)
+    if (!selectedAthlete || !session?.user?.email) return;
+    setIsCheckingWaivers(true);
 
     try {
       const checkResponse = await fetch("/api/public/waivers/check", {
@@ -682,36 +703,36 @@ export function CompetitionRegistrationFlow({
           organizationId: competition.organizationId,
           athleteId: selectedAthlete.id,
         }),
-      })
+      });
 
-      if (!checkResponse.ok) throw new Error("Failed to check waiver status")
+      if (!checkResponse.ok) throw new Error("Failed to check waiver status");
 
-      const checkData = await checkResponse.json()
-      setUserId(checkData.userId)
+      const checkData = await checkResponse.json();
+      setUserId(checkData.userId);
 
       const stillUnsigned: WaiverToSign[] = (checkData.data || []).filter(
         (w: WaiverToSign) => !w.isSigned
-      )
+      );
 
       if (stillUnsigned.length === 0) {
         if (!isNavigatingBackRef.current) {
-          const nextId = getNextStepId("waivers")
-          if (nextId) stepper.navigation.goTo(nextId as any)
+          const nextId = getNextStepId("waivers");
+          if (nextId) stepper.navigation.goTo(nextId as any);
         }
-        return
+        return;
       }
 
-      setRequiredWaivers(stillUnsigned)
-      setCurrentWaiverIndex(0)
-      setSignAllMode(false)
-      signaturePadRef.current?.clear()
-      setSignatureEmpty(true)
-      await loadWaiverContent(stillUnsigned[0].waiverId)
+      setRequiredWaivers(stillUnsigned);
+      setCurrentWaiverIndex(0);
+      setSignAllMode(false);
+      signaturePadRef.current?.clear();
+      setSignatureEmpty(true);
+      await loadWaiverContent(stillUnsigned[0].waiverId);
     } catch (error) {
-      console.error("Failed to check waivers:", error)
-      toast.error("Failed to check waiver requirements. Please try again.")
+      console.error("Failed to check waivers:", error);
+      toast.error("Failed to check waiver requirements. Please try again.");
     } finally {
-      setIsCheckingWaivers(false)
+      setIsCheckingWaivers(false);
     }
   }, [
     selectedAthlete,
@@ -721,19 +742,19 @@ export function CompetitionRegistrationFlow({
     getNextStepId,
     loadWaiverContent,
     stepper.navigation,
-  ])
+  ]);
 
   const handleSignCurrentPage = useCallback(async () => {
     if (signaturePadRef.current?.isEmpty()) {
-      toast.error("Please provide your signature")
-      return
+      toast.error("Please provide your signature");
+      return;
     }
 
-    const signatureData = signaturePadRef.current!.toDataURL()
-    setIsSigningWaiver(true)
+    const signatureData = signaturePadRef.current!.toDataURL();
+    setIsSigningWaiver(true);
 
     try {
-      const currentWaiver = requiredWaivers[currentWaiverIndex]
+      const currentWaiver = requiredWaivers[currentWaiverIndex];
 
       const pagesToSign = signAllMode
         ? currentWaiverPages.map((page) => ({
@@ -745,55 +766,52 @@ export function CompetitionRegistrationFlow({
               waiverPageId: currentWaiverPages[currentPageIndex].id,
               signatureData,
             },
-          ]
+          ];
 
-      const response = await fetch(
-        `/api/public/waivers/${currentWaiver.waiverId}/sign`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            organizationId: competition.organizationId,
-            userId,
-            athleteId: selectedAthlete?.id || null,
-            email: session?.user?.email,
-            name: session?.user?.name || "",
-            signatures: pagesToSign,
-          }),
-        }
-      )
+      const response = await fetch(`/api/public/waivers/${currentWaiver.waiverId}/sign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          organizationId: competition.organizationId,
+          userId,
+          athleteId: selectedAthlete?.id || null,
+          email: session?.user?.email,
+          name: session?.user?.name || "",
+          signatures: pagesToSign,
+        }),
+      });
 
-      if (!response.ok) throw new Error("Failed to sign waiver")
+      if (!response.ok) throw new Error("Failed to sign waiver");
 
-      const result = await response.json()
-      setUserId(result.userId)
+      const result = await response.json();
+      setUserId(result.userId);
 
       if (result.allPagesSigned || signAllMode) {
-        toast.success(`"${currentWaiver.waiverTitle}" signed successfully`)
+        toast.success(`"${currentWaiver.waiverTitle}" signed successfully`);
 
         if (currentWaiverIndex < requiredWaivers.length - 1) {
-          const nextIndex = currentWaiverIndex + 1
-          setCurrentWaiverIndex(nextIndex)
-          setSignAllMode(false)
-          signaturePadRef.current?.clear()
-          setSignatureEmpty(true)
-          await loadWaiverContent(requiredWaivers[nextIndex].waiverId)
+          const nextIndex = currentWaiverIndex + 1;
+          setCurrentWaiverIndex(nextIndex);
+          setSignAllMode(false);
+          signaturePadRef.current?.clear();
+          setSignatureEmpty(true);
+          await loadWaiverContent(requiredWaivers[nextIndex].waiverId);
         } else {
           // All waivers signed -- advance to next step
-          const nextId = getNextStepId("waivers")
-          if (nextId) stepper.navigation.goTo(nextId as any)
+          const nextId = getNextStepId("waivers");
+          if (nextId) stepper.navigation.goTo(nextId as any);
         }
       } else {
         // More pages to sign for this waiver
-        setCurrentPageIndex((prev) => prev + 1)
-        signaturePadRef.current?.clear()
-        setSignatureEmpty(true)
+        setCurrentPageIndex((prev) => prev + 1);
+        signaturePadRef.current?.clear();
+        setSignatureEmpty(true);
       }
     } catch (error: any) {
-      console.error("Failed to sign waiver:", error)
-      toast.error(error.message || "Failed to sign waiver")
+      console.error("Failed to sign waiver:", error);
+      toast.error(error.message || "Failed to sign waiver");
     } finally {
-      setIsSigningWaiver(false)
+      setIsSigningWaiver(false);
     }
   }, [
     requiredWaivers,
@@ -809,108 +827,115 @@ export function CompetitionRegistrationFlow({
     getNextStepId,
     loadWaiverContent,
     stepper.navigation,
-  ])
+  ]);
 
   // ---------- Custom info helpers ----------
 
   const handleEnterCustomInfoStep = useCallback(async () => {
-    if (!selectedAthlete) return
-    setIsLoadingCustomInfo(true)
+    if (!selectedAthlete) return;
+    setIsLoadingCustomInfo(true);
 
     try {
       const params = new URLSearchParams({
         organizationId: competition.organizationId,
         competitionIds: competition.id,
-      })
+      });
 
-      const questionsRes = await fetch(`/api/public/custom-information?${params}`)
+      const questionsRes = await fetch(`/api/public/custom-information?${params}`);
       if (!questionsRes.ok) {
-        setNeedsCustomInfo(false)
+        setNeedsCustomInfo(false);
         if (!isNavigatingBackRef.current) {
-          const nextId = getNextStepId("customInfo")
-          if (nextId) stepper.navigation.goTo(nextId as any)
+          const nextId = getNextStepId("customInfo");
+          if (nextId) stepper.navigation.goTo(nextId as any);
         }
-        return
+        return;
       }
 
-      const { questions } = await questionsRes.json()
+      const { questions } = await questionsRes.json();
       if (!questions || questions.length === 0) {
-        setNeedsCustomInfo(false)
+        setNeedsCustomInfo(false);
         if (!isNavigatingBackRef.current) {
-          const nextId = getNextStepId("customInfo")
-          if (nextId) stepper.navigation.goTo(nextId as any)
+          const nextId = getNextStepId("customInfo");
+          if (nextId) stepper.navigation.goTo(nextId as any);
         }
-        return
+        return;
       }
 
       const responsesRes = await fetch(
         `/api/public/athletes/${selectedAthlete.id}/custom-information?organizationId=${competition.organizationId}&email=${encodeURIComponent(session?.user?.email || "")}`
-      )
+      );
       if (responsesRes.ok) {
-        const { responses, isCurrent } = await responsesRes.json()
+        const { responses, isCurrent } = await responsesRes.json();
         if (isCurrent && responses.length >= questions.length) {
-          setNeedsCustomInfo(false)
+          setNeedsCustomInfo(false);
           if (!isNavigatingBackRef.current) {
-            const nextId = getNextStepId("customInfo")
-            if (nextId) stepper.navigation.goTo(nextId as any)
+            const nextId = getNextStepId("customInfo");
+            if (nextId) stepper.navigation.goTo(nextId as any);
           }
-          return
+          return;
         }
-        setCustomInfoResponses(responses || [])
+        setCustomInfoResponses(responses || []);
       }
 
-      setCustomInfoQuestions(questions)
-      setNeedsCustomInfo(true)
+      setCustomInfoQuestions(questions);
+      setNeedsCustomInfo(true);
     } catch (error) {
-      console.error("Failed to load custom info:", error)
-      setNeedsCustomInfo(false)
+      console.error("Failed to load custom info:", error);
+      setNeedsCustomInfo(false);
       if (!isNavigatingBackRef.current) {
-        const nextId = getNextStepId("customInfo")
-        if (nextId) stepper.navigation.goTo(nextId as any)
+        const nextId = getNextStepId("customInfo");
+        if (nextId) stepper.navigation.goTo(nextId as any);
       }
     } finally {
-      setIsLoadingCustomInfo(false)
+      setIsLoadingCustomInfo(false);
     }
-  }, [selectedAthlete, competition.organizationId, competition.id, session?.user?.email, getNextStepId, stepper.navigation])
+  }, [
+    selectedAthlete,
+    competition.organizationId,
+    competition.id,
+    session?.user?.email,
+    getNextStepId,
+    stepper.navigation,
+  ]);
 
   // ---------- Medical helpers ----------
 
   const handleEnterMedicalStep = useCallback(async () => {
-    if (!selectedAthlete) return
-    setIsLoadingMedicalConfig(true)
+    if (!selectedAthlete) return;
+    setIsLoadingMedicalConfig(true);
 
     try {
       const medicalCheckResponse = await fetch(
         `/api/public/athletes/${selectedAthlete.id}/medical?organizationId=${competition.organizationId}&email=${encodeURIComponent(session?.user?.email || "")}`
-      )
+      );
 
       if (medicalCheckResponse.ok) {
-        const data = await medicalCheckResponse.json()
+        const data = await medicalCheckResponse.json();
         if (data.isCurrent) {
-          setNeedsMedical(false)
+          setNeedsMedical(false);
           if (!isNavigatingBackRef.current) {
-            const nextId = getNextStepId("medical")
-            if (nextId) stepper.navigation.goTo(nextId as any)
+            const nextId = getNextStepId("medical");
+            if (nextId) stepper.navigation.goTo(nextId as any);
           }
-          return
+          return;
         }
       }
 
       const configResponse = await fetch(
         `/api/public/medical-config?organizationId=${competition.organizationId}`
-      )
+      );
 
       if (configResponse.ok) {
-        const configData = await configResponse.json()
-        setMedicalConfig(configData.config)
-        setMedicalCustomQuestions(configData.customQuestions || [])
-        setNeedsMedical(true)
+        const configData = await configResponse.json();
+        setMedicalConfig(configData.config);
+        setMedicalCustomQuestions(configData.customQuestions || []);
+        setNeedsMedical(true);
       }
     } catch (error) {
-      console.error("Failed to load medical config:", error)
-      toast.error("Failed to load medical form. Please try again.")
+      console.error("Failed to load medical config:", error);
+      toast.error("Failed to load medical form. Please try again.");
     } finally {
-      setIsLoadingMedicalConfig(false)
+      setIsLoadingMedicalConfig(false);
     }
   }, [
     selectedAthlete,
@@ -918,51 +943,52 @@ export function CompetitionRegistrationFlow({
     session?.user?.email,
     getNextStepId,
     stepper.navigation,
-  ])
+  ]);
 
   // ---------- Step transition: categories -> next ----------
 
   const handleProceedFromCategories = useCallback(async () => {
-    const nextId = getNextStepId("categories")
-    if (!nextId) return
-    stepper.navigation.goTo(nextId as any)
-  }, [getNextStepId, stepper.navigation])
+    const nextId = getNextStepId("categories");
+    if (!nextId) return;
+    stepper.navigation.goTo(nextId as any);
+  }, [getNextStepId, stepper.navigation]);
 
   // ---------- Step transition: seedMarks -> next ----------
 
   const handleProceedFromSeedMarks = useCallback(async () => {
-    const nextId = getNextStepId("seedMarks")
-    if (!nextId) return
-    stepper.navigation.goTo(nextId as any)
-  }, [getNextStepId, stepper.navigation])
+    const nextId = getNextStepId("seedMarks");
+    if (!nextId) return;
+    stepper.navigation.goTo(nextId as any);
+  }, [getNextStepId, stepper.navigation]);
 
   // Categories that require seed mark input from the user
   const categoriesNeedingSeedMark = useMemo(() => {
     return competition.categories.filter(
       (cat) => selectedCategoryIds.has(cat.id) && categoryNeedsSeedMark(cat)
-    )
-  }, [competition.categories, selectedCategoryIds])
+    );
+  }, [competition.categories, selectedCategoryIds]);
 
   const canProceedFromSeedMarks = useMemo(() => {
     return categoriesNeedingSeedMark.every((cat) => {
-      const mark = seedMarks[cat.id]
-      return mark !== undefined && isSeedMarkValid(mark)
-    })
-  }, [categoriesNeedingSeedMark, seedMarks])
+      const mark = seedMarks[cat.id];
+      return mark !== undefined && isSeedMarkValid(mark);
+    });
+  }, [categoriesNeedingSeedMark, seedMarks]);
 
   // Membership price for the review/total
-  const membershipPrice = eligibilityResult?.requiresMembershipPurchase && selectedMembership
-    ? selectedMembership.price
-    : 0
+  const membershipPrice =
+    eligibilityResult?.requiresMembershipPurchase && selectedMembership
+      ? selectedMembership.price
+      : 0;
 
-  const combinedTotal = calculatedPrice + membershipPrice
+  const combinedTotal = calculatedPrice + membershipPrice;
 
   const handleAddToCart = () => {
-    if (!selectedAthlete || selectedCategoryIds.size === 0) return
+    if (!selectedAthlete || selectedCategoryIds.size === 0) return;
 
-    setIsAddingToCart(true)
+    setIsAddingToCart(true);
 
-    const athleteName = `${selectedAthlete.firstName} ${selectedAthlete.lastName}`.trim()
+    const athleteName = `${selectedAthlete.firstName} ${selectedAthlete.lastName}`.trim();
 
     // Add membership to cart first if required
     if (eligibilityResult?.requiresMembershipPurchase && selectedMembership) {
@@ -981,21 +1007,17 @@ export function CompetitionRegistrationFlow({
           groupName: selectedMembership.groupName,
           billingInterval: selectedMembership.billingInterval,
         },
-      })
+      });
     }
 
-    const selectedCats = competition.categories.filter((c) =>
-      selectedCategoryIds.has(c.id)
-    )
-    const eventSummary = selectedCats
-      .map((c) => getCategoryLabel(c))
-      .join(", ")
+    const selectedCats = competition.categories.filter((c) => selectedCategoryIds.has(c.id));
+    const eventSummary = selectedCats.map((c) => getCategoryLabel(c)).join(", ");
 
     // Convert structured seed marks to API-ready objects
-    const structuredSeedMarks: Record<string, Record<string, unknown>> = {}
+    const structuredSeedMarks: Record<string, Record<string, unknown>> = {};
     for (const [catId, mark] of Object.entries(seedMarks)) {
       if (selectedCategoryIds.has(catId) && isSeedMarkValid(mark)) {
-        structuredSeedMarks[catId] = seedMarkToApiFields(mark)
+        structuredSeedMarks[catId] = seedMarkToApiFields(mark);
       }
     }
 
@@ -1019,18 +1041,18 @@ export function CompetitionRegistrationFlow({
         ...(uploadedFileId && { fileUploadId: uploadedFileId }),
         ...(earlyAccessCode && { earlyAccessCode }),
       },
-    })
+    });
 
-    setIsAddingToCart(false)
+    setIsAddingToCart(false);
 
     // Reset for another registration
-    setSelectedAthlete(null)
-    setEligibilityResult(null)
-    setSelectedMembership(null)
-    setSelectedCategoryIds(new Set())
-    setSeedMarks({})
-    stepper.navigation.goTo("athlete")
-  }
+    setSelectedAthlete(null);
+    setEligibilityResult(null);
+    setSelectedMembership(null);
+    setSelectedCategoryIds(new Set());
+    setSeedMarks({});
+    stepper.navigation.goTo("athlete");
+  };
 
   // ---------- Auth gate ----------
 
@@ -1048,59 +1070,51 @@ export function CompetitionRegistrationFlow({
           </Button>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   // ---------- Stepper rendering ----------
 
-  const allSteps = stepper.state.all
-  const currentStepId = stepper.state.current.data.id
+  const allSteps = stepper.state.all;
+  const currentStepId = stepper.state.current.data.id;
 
   // Only show steps that are relevant to this competition
-  const visibleSteps = allSteps.filter((s: { id: string }) => visibleStepIds.includes(s.id))
-  const currentVisibleIndex = visibleSteps.findIndex((s: { id: string }) => s.id === currentStepId)
+  const visibleSteps = allSteps.filter((s: { id: string }) => visibleStepIds.includes(s.id));
+  const currentVisibleIndex = visibleSteps.findIndex((s: { id: string }) => s.id === currentStepId);
 
   const canProceedToCategories =
     selectedAthlete !== null &&
     eligibilityResult?.eligible === true &&
-    (!eligibilityResult?.requiresMembershipPurchase || selectedMembership !== null)
+    (!eligibilityResult?.requiresMembershipPurchase || selectedMembership !== null);
 
-  const canProceedToReview = selectedCategoryIds.size > 0
+  const canProceedToReview = selectedCategoryIds.size > 0;
 
   const ageLabel =
     competition.hasAgeRestriction && (competition.minAge != null || competition.maxAge != null)
       ? competition.minAge != null && competition.maxAge != null
         ? `Ages ${competition.minAge}–${competition.maxAge}`
         : competition.minAge != null
-        ? `Ages ${competition.minAge}+`
-        : `Up to age ${competition.maxAge}`
-      : null
+          ? `Ages ${competition.minAge}+`
+          : `Up to age ${competition.maxAge}`
+      : null;
 
   return (
     <div className="space-y-8">
       {/* Stepper Navigation */}
       <StepperNav>
         {visibleSteps.map((step: { id: string; title: string }, index: number) => {
-          const status = getStepStatus(index, currentVisibleIndex)
+          const status = getStepStatus(index, currentVisibleIndex);
           return (
             <div key={step.id} className="flex items-center flex-1 last:flex-initial">
               <StepperItem status={status}>
-                <StepperIndicator
-                  status={status}
-                  step={index + 1}
-                />
-                <StepperTitle status={status}>
-                  {step.title}
-                </StepperTitle>
+                <StepperIndicator status={status} step={index + 1} />
+                <StepperTitle status={status}>{step.title}</StepperTitle>
               </StepperItem>
               {index < visibleSteps.length - 1 && (
-                <StepperSeparator
-                  status={status}
-                  className="mx-2"
-                />
+                <StepperSeparator status={status} className="mx-2" />
               )}
             </div>
-          )
+          );
         })}
       </StepperNav>
 
@@ -1156,17 +1170,31 @@ export function CompetitionRegistrationFlow({
                         type="button"
                         variant="outline"
                         disabled={isCreatingAthlete}
-                        className={cn("w-full justify-start text-left font-normal", !newAthlete.birthDate && "text-muted-foreground")}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !newAthlete.birthDate && "text-muted-foreground"
+                        )}
                       >
                         <Calendar className="mr-2 h-4 w-4" />
-                        {newAthlete.birthDate ? format(new Date(newAthlete.birthDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                        {newAthlete.birthDate
+                          ? format(new Date(newAthlete.birthDate + "T12:00:00Z"), "PPP")
+                          : "Pick a date"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                       <CalendarPicker
                         mode="single"
-                        selected={newAthlete.birthDate ? new Date(newAthlete.birthDate + "T12:00:00Z") : undefined}
-                        onSelect={(date) => setNewAthlete((prev) => ({ ...prev, birthDate: date ? format(date, "yyyy-MM-dd") : "" }))}
+                        selected={
+                          newAthlete.birthDate
+                            ? new Date(newAthlete.birthDate + "T12:00:00Z")
+                            : undefined
+                        }
+                        onSelect={(date) =>
+                          setNewAthlete((prev) => ({
+                            ...prev,
+                            birthDate: date ? format(date, "yyyy-MM-dd") : "",
+                          }))
+                        }
                         captionLayout="dropdown"
                         fromYear={1940}
                         toYear={new Date().getFullYear()}
@@ -1180,9 +1208,7 @@ export function CompetitionRegistrationFlow({
                   <Label htmlFor="comp-athlete-gender">Gender Declaration</Label>
                   <Select
                     value={newAthlete.gender}
-                    onValueChange={(value) =>
-                      setNewAthlete((prev) => ({ ...prev, gender: value }))
-                    }
+                    onValueChange={(value) => setNewAthlete((prev) => ({ ...prev, gender: value }))}
                     disabled={isCreatingAthlete}
                   >
                     <SelectTrigger id="comp-athlete-gender">
@@ -1272,10 +1298,10 @@ export function CompetitionRegistrationFlow({
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        setSelectedAthlete(null)
-                        setEligibilityResult(null)
-                        setSelectedMembership(null)
-                        setSelectedCategoryIds(new Set())
+                        setSelectedAthlete(null);
+                        setEligibilityResult(null);
+                        setSelectedMembership(null);
+                        setSelectedCategoryIds(new Set());
                       }}
                     >
                       Change
@@ -1284,50 +1310,52 @@ export function CompetitionRegistrationFlow({
                 )}
 
                 {/* Membership purchase banner */}
-                {selectedAthlete && eligibilityResult?.eligible && eligibilityResult.requiresMembershipPurchase && (
-                  <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-2">
-                    <div className="flex items-center gap-2 text-sm font-medium text-amber-800 dark:text-amber-300">
-                      <Shield className="h-4 w-4 shrink-0" />
-                      Membership Required
+                {selectedAthlete &&
+                  eligibilityResult?.eligible &&
+                  eligibilityResult.requiresMembershipPurchase && (
+                    <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-amber-800 dark:text-amber-300">
+                        <Shield className="h-4 w-4 shrink-0" />
+                        Membership Required
+                      </div>
+                      {eligibilityResult.availableMemberships.length === 1 ? (
+                        <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400">
+                          <CreditCard className="h-3.5 w-3.5 shrink-0" />
+                          <span>
+                            <strong>{eligibilityResult.availableMemberships[0].name}</strong> (
+                            {formatPrice(eligibilityResult.availableMemberships[0].price)}) will be
+                            added to your cart.
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <p className="text-xs text-amber-700 dark:text-amber-400">
+                            Select a membership to continue:
+                          </p>
+                          <Select
+                            value={selectedMembership?.id ?? ""}
+                            onValueChange={(value) => {
+                              const membership = eligibilityResult.availableMemberships.find(
+                                (m) => m.id === value
+                              );
+                              setSelectedMembership(membership ?? null);
+                            }}
+                          >
+                            <SelectTrigger className="bg-white dark:bg-background">
+                              <SelectValue placeholder="Choose a membership" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {eligibilityResult.availableMemberships.map((m) => (
+                                <SelectItem key={m.id} value={m.id}>
+                                  {m.name} – {formatPrice(m.price)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                     </div>
-                    {eligibilityResult.availableMemberships.length === 1 ? (
-                      <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400">
-                        <CreditCard className="h-3.5 w-3.5 shrink-0" />
-                        <span>
-                          <strong>{eligibilityResult.availableMemberships[0].name}</strong>{" "}
-                          ({formatPrice(eligibilityResult.availableMemberships[0].price)}) will be
-                          added to your cart.
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <p className="text-xs text-amber-700 dark:text-amber-400">
-                          Select a membership to continue:
-                        </p>
-                        <Select
-                          value={selectedMembership?.id ?? ""}
-                          onValueChange={(value) => {
-                            const membership = eligibilityResult.availableMemberships.find(
-                              (m) => m.id === value
-                            )
-                            setSelectedMembership(membership ?? null)
-                          }}
-                        >
-                          <SelectTrigger className="bg-white dark:bg-background">
-                            <SelectValue placeholder="Choose a membership" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {eligibilityResult.availableMemberships.map((m) => (
-                              <SelectItem key={m.id} value={m.id}>
-                                {m.name} – {formatPrice(m.price)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </div>
-                )}
+                  )}
 
                 {/* Athlete list (only show if no athlete selected or eligibility failed) */}
                 {(!selectedAthlete || (eligibilityResult && !eligibilityResult.eligible)) && (
@@ -1335,17 +1363,17 @@ export function CompetitionRegistrationFlow({
                     {athletes.length > 0 && (
                       <div className="space-y-2 max-h-[300px] overflow-y-auto">
                         {eligibleAthletes.map((athlete) => {
-                          const displayName = `${athlete.firstName} ${athlete.lastName}`.trim()
+                          const displayName = `${athlete.firstName} ${athlete.lastName}`.trim();
                           const birthLabel = athlete.birthDate
                             ? new Date(athlete.birthDate).toLocaleDateString("en-US", {
                                 month: "short",
                                 day: "numeric",
                                 year: "numeric",
                               })
-                            : null
+                            : null;
                           const genderLabel = athlete.gender
                             ? GENDER_LABELS[athlete.gender] || athlete.gender
-                            : null
+                            : null;
 
                           return (
                             <button
@@ -1358,9 +1386,7 @@ export function CompetitionRegistrationFlow({
                                 <User className="h-5 w-5" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="font-medium text-sm truncate">
-                                  {displayName}
-                                </div>
+                                <div className="font-medium text-sm truncate">{displayName}</div>
                                 <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                                   {birthLabel && (
                                     <span className="flex items-center gap-1">
@@ -1372,7 +1398,7 @@ export function CompetitionRegistrationFlow({
                                 </div>
                               </div>
                             </button>
-                          )
+                          );
                         })}
 
                         {ineligibleAthletes.length > 0 && (
@@ -1383,8 +1409,8 @@ export function CompetitionRegistrationFlow({
                               </p>
                             </div>
                             {ineligibleAthletes.map((athlete) => {
-                              const displayName = `${athlete.firstName} ${athlete.lastName}`.trim()
-                              const age = calculateAge(athlete.birthDate)
+                              const displayName = `${athlete.firstName} ${athlete.lastName}`.trim();
+                              const age = calculateAge(athlete.birthDate);
 
                               return (
                                 <div
@@ -1403,7 +1429,7 @@ export function CompetitionRegistrationFlow({
                                     </div>
                                   </div>
                                 </div>
-                              )
+                              );
                             })}
                           </>
                         )}
@@ -1469,10 +1495,10 @@ export function CompetitionRegistrationFlow({
                     </h3>
                     <div className="space-y-2">
                       {cats.map((cat) => {
-                        const isSelected = selectedCategoryIds.has(cat.id)
-                        const label = getCategoryLabel(cat)
+                        const isSelected = selectedCategoryIds.has(cat.id);
+                        const label = getCategoryLabel(cat);
                         const showPrice =
-                          competition.pricingMode === "PER_CATEGORY" && cat.price != null
+                          competition.pricingMode === "PER_CATEGORY" && cat.price != null;
 
                         return (
                           <label
@@ -1501,7 +1527,7 @@ export function CompetitionRegistrationFlow({
                               </span>
                             )}
                           </label>
-                        )
+                        );
                       })}
                     </div>
                   </div>
@@ -1514,16 +1540,13 @@ export function CompetitionRegistrationFlow({
                       {selectedCategoryIds.size} event{selectedCategoryIds.size !== 1 ? "s" : ""}{" "}
                       selected
                     </span>
-                    <span className="text-lg font-bold">
-                      {formatPrice(calculatedPrice)}
-                    </span>
+                    <span className="text-lg font-bold">{formatPrice(calculatedPrice)}</span>
                   </div>
-                  {competition.pricingMode === "TIERED" &&
-                    competition.pricingTiers.length > 0 && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Tiered pricing applies – more events may lower your per-event cost
-                      </p>
-                    )}
+                  {competition.pricingMode === "TIERED" && competition.pricingTiers.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Tiered pricing applies – more events may lower your per-event cost
+                    </p>
+                  )}
                 </div>
 
                 {/* Navigation */}
@@ -1560,27 +1583,26 @@ export function CompetitionRegistrationFlow({
               Enter Seed Marks
             </CardTitle>
             <CardDescription>
-              Provide qualifying marks for the selected events. These will be reviewed by the competition organizer.
+              Provide qualifying marks for the selected events. These will be reviewed by the
+              competition organizer.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
               {categoriesNeedingSeedMark.map((cat) => {
-                const meta = getSeedMarkMeta(cat.resultType)
-                const mark = seedMarks[cat.id] ?? defaultSeedMark(cat.resultType)
+                const meta = getSeedMarkMeta(cat.resultType);
+                const mark = seedMarks[cat.id] ?? defaultSeedMark(cat.resultType);
 
                 const updateMark = (updater: (prev: SeedMarkValue) => SeedMarkValue) => {
                   setSeedMarks((prev) => ({
                     ...prev,
                     [cat.id]: updater(prev[cat.id] ?? defaultSeedMark(cat.resultType)),
-                  }))
-                }
+                  }));
+                };
 
                 return (
                   <div key={cat.id} className="space-y-2">
-                    <Label className="text-sm font-medium">
-                      {getCategoryLabel(cat)}
-                    </Label>
+                    <Label className="text-sm font-medium">{getCategoryLabel(cat)}</Label>
 
                     {cat.resultType === "TIME" && mark.type === "TIME" ? (
                       <div className="space-y-2">
@@ -1700,7 +1722,7 @@ export function CompetitionRegistrationFlow({
                       </p>
                     )}
                   </div>
-                )
+                );
               })}
 
               {/* Navigation */}
@@ -1708,8 +1730,8 @@ export function CompetitionRegistrationFlow({
                 <Button
                   variant="outline"
                   onClick={() => {
-                    const prevId = getPreviousStepId("seedMarks")
-                    if (prevId) stepper.navigation.goTo(prevId as any)
+                    const prevId = getPreviousStepId("seedMarks");
+                    if (prevId) stepper.navigation.goTo(prevId as any);
                   }}
                   className="gap-2"
                 >
@@ -1749,12 +1771,12 @@ export function CompetitionRegistrationFlow({
           onSetSignAllMode={setSignAllMode}
           onSetSignatureEmpty={setSignatureEmpty}
           onBack={() => {
-            const prevId = getPreviousStepId("waivers")
-            if (prevId) stepper.navigation.goTo(prevId as any)
+            const prevId = getPreviousStepId("waivers");
+            if (prevId) stepper.navigation.goTo(prevId as any);
           }}
           onContinue={() => {
-            const nextId = getNextStepId("waivers")
-            if (nextId) stepper.navigation.goTo(nextId as any)
+            const nextId = getNextStepId("waivers");
+            if (nextId) stepper.navigation.goTo(nextId as any);
           }}
         />
       )}
@@ -1770,12 +1792,12 @@ export function CompetitionRegistrationFlow({
           organizationId={competition.organizationId}
           onEnterStep={handleEnterCustomInfoStep}
           onComplete={() => {
-            const nextId = getNextStepId("customInfo")
-            if (nextId) stepper.navigation.goTo(nextId as any)
+            const nextId = getNextStepId("customInfo");
+            if (nextId) stepper.navigation.goTo(nextId as any);
           }}
           onBack={() => {
-            const prevId = getPreviousStepId("customInfo")
-            if (prevId) stepper.navigation.goTo(prevId as any)
+            const prevId = getPreviousStepId("customInfo");
+            if (prevId) stepper.navigation.goTo(prevId as any);
           }}
         />
       )}
@@ -1793,12 +1815,12 @@ export function CompetitionRegistrationFlow({
           email={session?.user?.email || ""}
           onEnterStep={handleEnterMedicalStep}
           onComplete={() => {
-            const nextId = getNextStepId("medical")
-            if (nextId) stepper.navigation.goTo(nextId as any)
+            const nextId = getNextStepId("medical");
+            if (nextId) stepper.navigation.goTo(nextId as any);
           }}
           onBack={() => {
-            const prevId = getPreviousStepId("medical")
-            if (prevId) stepper.navigation.goTo(prevId as any)
+            const prevId = getPreviousStepId("medical");
+            if (prevId) stepper.navigation.goTo(prevId as any);
           }}
         />
       )}
@@ -1811,13 +1833,13 @@ export function CompetitionRegistrationFlow({
           athleteId={selectedAthlete?.id || ""}
           competitionId={competition.id}
           onComplete={(fileId) => {
-            setUploadedFileId(fileId)
-            const nextId = getNextStepId("files")
-            if (nextId) stepper.navigation.goTo(nextId as any)
+            setUploadedFileId(fileId);
+            const nextId = getNextStepId("files");
+            if (nextId) stepper.navigation.goTo(nextId as any);
           }}
           onBack={() => {
-            const prevId = getPreviousStepId("files")
-            if (prevId) stepper.navigation.goTo(prevId as any)
+            const prevId = getPreviousStepId("files");
+            if (prevId) stepper.navigation.goTo(prevId as any);
           }}
         />
       )}
@@ -1857,8 +1879,9 @@ export function CompetitionRegistrationFlow({
                   {competition.categories
                     .filter((c) => selectedCategoryIds.has(c.id))
                     .map((cat) => {
-                      const seedVal = seedMarks[cat.id]
-                      const hasSeedMark = categoryNeedsSeedMark(cat) && seedVal && !isNaN(Number(seedVal))
+                      const seedVal = seedMarks[cat.id];
+                      const hasSeedMark =
+                        categoryNeedsSeedMark(cat) && seedVal && !isNaN(Number(seedVal));
 
                       return (
                         <div
@@ -1879,7 +1902,7 @@ export function CompetitionRegistrationFlow({
                             </span>
                           )}
                         </div>
-                      )
+                      );
                     })}
                 </div>
               </div>
@@ -1909,12 +1932,12 @@ export function CompetitionRegistrationFlow({
                     {competition.pricingMode === "FREE"
                       ? "Free Entry"
                       : competition.pricingMode === "PER_COMPETITION"
-                      ? "Competition Entry Fee"
-                      : competition.pricingMode === "PER_EVENT"
-                      ? `${selectedCategoryIds.size} event${selectedCategoryIds.size !== 1 ? "s" : ""} × ${formatPrice(competition.entryFee || 0)}`
-                      : competition.pricingMode === "TIERED"
-                      ? `${selectedCategoryIds.size} event${selectedCategoryIds.size !== 1 ? "s" : ""} (tiered pricing)`
-                      : `${selectedCategoryIds.size} event${selectedCategoryIds.size !== 1 ? "s" : ""}`}
+                        ? "Competition Entry Fee"
+                        : competition.pricingMode === "PER_EVENT"
+                          ? `${selectedCategoryIds.size} event${selectedCategoryIds.size !== 1 ? "s" : ""} × ${formatPrice(competition.entryFee || 0)}`
+                          : competition.pricingMode === "TIERED"
+                            ? `${selectedCategoryIds.size} event${selectedCategoryIds.size !== 1 ? "s" : ""} (tiered pricing)`
+                            : `${selectedCategoryIds.size} event${selectedCategoryIds.size !== 1 ? "s" : ""}`}
                   </span>
                   <span className="font-medium">{formatPrice(calculatedPrice)}</span>
                 </div>
@@ -1923,9 +1946,7 @@ export function CompetitionRegistrationFlow({
                     <span className="text-muted-foreground">
                       {selectedMembership.name} (Membership)
                     </span>
-                    <span className="font-medium">
-                      {formatPrice(selectedMembership.price)}
-                    </span>
+                    <span className="font-medium">{formatPrice(selectedMembership.price)}</span>
                   </div>
                 )}
                 <div className="border-t pt-2 flex items-center justify-between">
@@ -1939,8 +1960,8 @@ export function CompetitionRegistrationFlow({
                 <Button
                   variant="outline"
                   onClick={() => {
-                    const prevId = getPreviousStepId("review")
-                    if (prevId) stepper.navigation.goTo(prevId as any)
+                    const prevId = getPreviousStepId("review");
+                    if (prevId) stepper.navigation.goTo(prevId as any);
                   }}
                   className="gap-2"
                 >
@@ -1965,7 +1986,7 @@ export function CompetitionRegistrationFlow({
         </Card>
       )}
     </div>
-  )
+  );
 }
 
 // ---------- Waiver Step Sub-component ----------
@@ -1989,27 +2010,27 @@ function WaiverStep({
   onBack,
   onContinue,
 }: {
-  isCheckingWaivers: boolean
-  isLoadingWaiver: boolean
-  isSigningWaiver: boolean
-  requiredWaivers: WaiverToSign[]
-  currentWaiverIndex: number
-  currentWaiverPages: WaiverPage[]
-  currentPageIndex: number
-  signAllMode: boolean
-  signatureEmpty: boolean
-  signaturePadRef: React.RefObject<SignaturePadRef>
-  selectedAthleteName: string
-  onEnterStep: () => void
-  onSign: () => void
-  onSetSignAllMode: (v: boolean) => void
-  onSetSignatureEmpty: (v: boolean) => void
-  onBack: () => void
-  onContinue: () => void
+  isCheckingWaivers: boolean;
+  isLoadingWaiver: boolean;
+  isSigningWaiver: boolean;
+  requiredWaivers: WaiverToSign[];
+  currentWaiverIndex: number;
+  currentWaiverPages: WaiverPage[];
+  currentPageIndex: number;
+  signAllMode: boolean;
+  signatureEmpty: boolean;
+  signaturePadRef: React.RefObject<SignaturePadRef>;
+  selectedAthleteName: string;
+  onEnterStep: () => void;
+  onSign: () => void;
+  onSetSignAllMode: (v: boolean) => void;
+  onSetSignatureEmpty: (v: boolean) => void;
+  onBack: () => void;
+  onContinue: () => void;
 }) {
   useEffect(() => {
-    onEnterStep()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    onEnterStep();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isCheckingWaivers) {
     return (
@@ -2019,7 +2040,7 @@ function WaiverStep({
           <p className="text-sm text-muted-foreground">Checking waiver requirements...</p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   if (requiredWaivers.length === 0) {
@@ -2050,7 +2071,7 @@ function WaiverStep({
           </Button>
         </CardFooter>
       </Card>
-    )
+    );
   }
 
   return (
@@ -2111,8 +2132,7 @@ function WaiverStep({
                   className="rounded border-border"
                 />
                 <span className="text-sm">
-                  Sign all {currentWaiverPages.length} pages at once with a single
-                  signature
+                  Sign all {currentWaiverPages.length} pages at once with a single signature
                 </span>
               </label>
             )}
@@ -2121,8 +2141,7 @@ function WaiverStep({
             <div className="space-y-2">
               <Label>Your Signature</Label>
               <p className="text-sm text-muted-foreground">
-                By signing below, I acknowledge that I have read and agree to the
-                terms above.
+                By signing below, I acknowledge that I have read and agree to the terms above.
               </p>
               <SignaturePad
                 ref={signaturePadRef}
@@ -2138,23 +2157,20 @@ function WaiverStep({
           <ChevronLeft className="mr-1 h-4 w-4" />
           Back
         </Button>
-        <Button
-          onClick={onSign}
-          disabled={isSigningWaiver || signatureEmpty || isLoadingWaiver}
-        >
+        <Button onClick={onSign} disabled={isSigningWaiver || signatureEmpty || isLoadingWaiver}>
           {isSigningWaiver && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {signAllMode
             ? "Sign All Pages & Continue"
             : currentPageIndex < currentWaiverPages.length - 1
-            ? "Sign & Next Page"
-            : currentWaiverIndex < requiredWaivers.length - 1
-            ? "Sign & Next Waiver"
-            : "Sign & Continue"}
+              ? "Sign & Next Page"
+              : currentWaiverIndex < requiredWaivers.length - 1
+                ? "Sign & Next Waiver"
+                : "Sign & Continue"}
           <ChevronRight className="ml-1 h-4 w-4" />
         </Button>
       </CardFooter>
     </Card>
-  )
+  );
 }
 
 // ---------- Custom Info Step Sub-component ----------
@@ -2170,19 +2186,19 @@ function CustomInfoStepComp({
   onComplete,
   onBack,
 }: {
-  isLoading: boolean
-  needsCustomInfo: boolean
-  questions: CustomInfoQuestion[]
-  existingResponses: CustomInfoResponse[]
-  athleteId: string
-  organizationId: string
-  onEnterStep: () => void
-  onComplete: () => void
-  onBack: () => void
+  isLoading: boolean;
+  needsCustomInfo: boolean;
+  questions: CustomInfoQuestion[];
+  existingResponses: CustomInfoResponse[];
+  athleteId: string;
+  organizationId: string;
+  onEnterStep: () => void;
+  onComplete: () => void;
+  onBack: () => void;
 }) {
   useEffect(() => {
-    onEnterStep()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    onEnterStep();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isLoading) {
     return (
@@ -2192,11 +2208,11 @@ function CustomInfoStepComp({
           <p className="text-sm text-muted-foreground">Loading...</p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   if (!needsCustomInfo || questions.length === 0) {
-    return null
+    return null;
   }
 
   return (
@@ -2212,7 +2228,7 @@ function CustomInfoStepComp({
         />
       </CardContent>
     </Card>
-  )
+  );
 }
 
 // ---------- Medical Step Sub-component ----------
@@ -2230,21 +2246,21 @@ function MedicalStep({
   onComplete,
   onBack,
 }: {
-  isLoadingConfig: boolean
-  needsMedical: boolean
-  medicalConfig: MedicalFormConfig | null
-  medicalCustomQuestions: CustomMedicalQuestion[]
-  organizationId: string
-  athleteId: string
-  athleteName: string
-  email: string
-  onEnterStep: () => void
-  onComplete: () => void
-  onBack: () => void
+  isLoadingConfig: boolean;
+  needsMedical: boolean;
+  medicalConfig: MedicalFormConfig | null;
+  medicalCustomQuestions: CustomMedicalQuestion[];
+  organizationId: string;
+  athleteId: string;
+  athleteName: string;
+  email: string;
+  onEnterStep: () => void;
+  onComplete: () => void;
+  onBack: () => void;
 }) {
   useEffect(() => {
-    onEnterStep()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    onEnterStep();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isLoadingConfig) {
     return (
@@ -2254,7 +2270,7 @@ function MedicalStep({
           <p className="text-sm text-muted-foreground">Loading medical form...</p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   if (!needsMedical || !medicalConfig) {
@@ -2285,7 +2301,7 @@ function MedicalStep({
           </Button>
         </CardFooter>
       </Card>
-    )
+    );
   }
 
   return (
@@ -2300,5 +2316,5 @@ function MedicalStep({
       onComplete={onComplete}
       onBack={onBack}
     />
-  )
+  );
 }

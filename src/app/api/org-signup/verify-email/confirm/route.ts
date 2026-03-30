@@ -1,17 +1,17 @@
-import { NextRequest, NextResponse } from "next/server"
-import { checkRateLimit, getClientIp, RATE_LIMITS, rateLimitHeaders } from "@/lib/rate-limit"
-import { validateVerificationCode } from "@/lib/mfa"
-import { z } from "zod"
+import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, getClientIp, RATE_LIMITS, rateLimitHeaders } from "@/lib/rate-limit";
+import { validateVerificationCode } from "@/lib/mfa";
+import { z } from "zod";
 
 const confirmSchema = z.object({
   email: z.string().email(),
   code: z.string().min(1, "Code is required"),
-})
+});
 
 export async function POST(request: NextRequest) {
   try {
-    const ip = getClientIp(request)
-    const rateLimit = await checkRateLimit(ip, "signup-verify-confirm", RATE_LIMITS.auth)
+    const ip = getClientIp(request);
+    const rateLimit = await checkRateLimit(ip, "signup-verify-confirm", RATE_LIMITS.auth);
 
     if (!rateLimit.success) {
       return NextResponse.json(
@@ -28,34 +28,24 @@ export async function POST(request: NextRequest) {
             ...rateLimitHeaders(rateLimit),
           },
         }
-      )
+      );
     }
 
-    const body = await request.json()
-    const validated = confirmSchema.parse(body)
-    const email = validated.email.toLowerCase().trim()
+    const body = await request.json();
+    const validated = confirmSchema.parse(body);
+    const email = validated.email.toLowerCase().trim();
 
-    const verified = await validateVerificationCode(
-      email,
-      validated.code,
-      "SIGNUP_VERIFICATION"
-    )
+    const verified = await validateVerificationCode(email, validated.code, "SIGNUP_VERIFICATION");
 
-    return NextResponse.json(
-      { verified },
-      { headers: rateLimitHeaders(rateLimit) }
-    )
+    return NextResponse.json({ verified }, { headers: rateLimitHeaders(rateLimit) });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    console.error("Signup verification confirm error:", error)
+    console.error("Signup verification confirm error:", error);
     return NextResponse.json(
       { error: "An error occurred. Please try again later." },
       { status: 500 }
-    )
+    );
   }
 }

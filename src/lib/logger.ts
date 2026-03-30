@@ -1,13 +1,13 @@
 /**
  * Structured Logging Utility
- * 
+ *
  * Provides consistent, structured logging for the application.
  * In production, logs are formatted as JSON for easy parsing by log aggregation services.
  * In development, logs are formatted for human readability.
- * 
+ *
  * Usage:
  *   import { logger } from "@/lib/logger";
- *   
+ *
  *   logger.info("User logged in", { userId: "123", method: "google" });
  *   logger.error("Payment failed", { orderId: "456", error: err.message });
  *   logger.warn("Rate limit approaching", { ip: "1.2.3.4", remaining: 5 });
@@ -67,25 +67,19 @@ function formatLogEntry(entry: LogEntry): string {
     // JSON format for production - easier to parse with log aggregators
     return JSON.stringify(entry);
   }
-  
+
   // Human-readable format for development
   const timestamp = entry.timestamp.split("T")[1].split(".")[0]; // Just HH:MM:SS
   const levelBadge = `[${entry.level.toUpperCase()}]`.padEnd(7);
-  const contextStr = entry.context 
-    ? ` ${JSON.stringify(entry.context)}`
-    : "";
-  
+  const contextStr = entry.context ? ` ${JSON.stringify(entry.context)}` : "";
+
   return `${timestamp} ${levelBadge} ${entry.message}${contextStr}`;
 }
 
 /**
  * Create a log entry with common fields
  */
-function createLogEntry(
-  level: LogLevel,
-  message: string,
-  context?: LogContext
-): LogEntry {
+function createLogEntry(level: LogLevel, message: string, context?: LogContext): LogEntry {
   return {
     timestamp: new Date().toISOString(),
     level,
@@ -100,7 +94,7 @@ function createLogEntry(
  */
 function outputLog(level: LogLevel, entry: LogEntry): void {
   const formatted = formatLogEntry(entry);
-  
+
   switch (level) {
     case "debug":
       console.debug(formatted);
@@ -172,12 +166,15 @@ export const logger: Logger = {
    */
   exception(message: string, error: Error, context?: LogContext): void {
     if (shouldLog("error")) {
-      outputLog("error", createLogEntry("error", message, {
-        ...context,
-        errorName: error.name,
-        errorMessage: error.message,
-        errorStack: error.stack,
-      }));
+      outputLog(
+        "error",
+        createLogEntry("error", message, {
+          ...context,
+          errorName: error.name,
+          errorMessage: error.message,
+          errorStack: error.stack,
+        })
+      );
     }
   },
 
@@ -187,17 +184,17 @@ export const logger: Logger = {
    */
   child(baseContext: LogContext): typeof logger {
     return {
-      debug: (message: string, context?: LogContext) => 
+      debug: (message: string, context?: LogContext) =>
         logger.debug(message, { ...baseContext, ...context }),
-      info: (message: string, context?: LogContext) => 
+      info: (message: string, context?: LogContext) =>
         logger.info(message, { ...baseContext, ...context }),
-      warn: (message: string, context?: LogContext) => 
+      warn: (message: string, context?: LogContext) =>
         logger.warn(message, { ...baseContext, ...context }),
-      error: (message: string, context?: LogContext) => 
+      error: (message: string, context?: LogContext) =>
         logger.error(message, { ...baseContext, ...context }),
-      exception: (message: string, error: Error, context?: LogContext) => 
+      exception: (message: string, error: Error, context?: LogContext) =>
         logger.exception(message, error, { ...baseContext, ...context }),
-      child: (additionalContext: LogContext) => 
+      child: (additionalContext: LogContext) =>
         logger.child({ ...baseContext, ...additionalContext }),
     };
   },
@@ -207,12 +204,12 @@ export const logger: Logger = {
  * Create a request-scoped logger with request metadata
  */
 export function createRequestLogger(request: Request): typeof logger {
-  const requestId = request.headers.get("x-request-id") || 
-    Math.random().toString(36).substring(2, 15);
-  
+  const requestId =
+    request.headers.get("x-request-id") || Math.random().toString(36).substring(2, 15);
+
   const forwardedFor = request.headers.get("x-forwarded-for");
   const ip = forwardedFor?.split(",")[0].trim() || "unknown";
-  
+
   return logger.child({
     requestId,
     ip,

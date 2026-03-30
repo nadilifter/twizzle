@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   DndContext,
   KeyboardSensor,
@@ -11,15 +11,15 @@ import {
   useSensors,
   type DragEndEvent,
   type UniqueIdentifier,
-} from "@dnd-kit/core"
-import { restrictToVerticalAxis } from "@dnd-kit/modifiers"
+} from "@dnd-kit/core";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
   SortableContext,
   arrayMove,
   useSortable,
   verticalListSortingStrategy,
-} from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -34,7 +34,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table"
+} from "@tanstack/react-table";
 import {
   ChevronDownIcon,
   ChevronLeftIcon,
@@ -44,12 +44,12 @@ import {
   ColumnsIcon,
   GripVerticalIcon,
   MoreVerticalIcon,
-} from "lucide-react"
-import { z } from "zod"
+} from "lucide-react";
+import { z } from "zod";
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -57,15 +57,15 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/dropdown-menu";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -73,7 +73,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 
 // Schema for Email Messages
 export const emailSchema = z.object({
@@ -85,15 +85,15 @@ export const emailSchema = z.object({
   opened: z.number(),
   clicked: z.number(),
   date: z.string(),
-})
+});
 
-export type Email = z.infer<typeof emailSchema>
+export type Email = z.infer<typeof emailSchema>;
 
 // Drag Handle Component
 function DragHandle({ id }: { id: number }) {
   const { attributes, listeners } = useSortable({
     id,
-  })
+  });
 
   return (
     <Button
@@ -106,7 +106,7 @@ function DragHandle({ id }: { id: number }) {
       <GripVerticalIcon className="size-3 text-muted-foreground" />
       <span className="sr-only">Drag to reorder</span>
     </Button>
-  )
+  );
 }
 
 // Table Columns Definition
@@ -158,27 +158,25 @@ const columns: ColumnDef<Email>[] = [
     accessorKey: "status",
     header: () => <span className="hidden md:block">Status</span>,
     cell: ({ row }) => {
-      const status = row.original.status
-      let variant: "default" | "secondary" | "destructive" | "outline" = "secondary"
-      
-      if (status === "Sent") variant = "secondary"
-      if (status === "Scheduled") variant = "outline"
-      if (status === "Draft") variant = "default"
-      
+      const status = row.original.status;
+      let variant: "default" | "secondary" | "destructive" | "outline" = "secondary";
+
+      if (status === "Sent") variant = "secondary";
+      if (status === "Scheduled") variant = "outline";
+      if (status === "Draft") variant = "default";
+
       return (
         <Badge variant={variant} className="hidden md:inline-flex">
           {status}
         </Badge>
-      )
+      );
     },
   },
   {
     accessorKey: "audience",
     header: () => <span className="hidden md:block">Audience</span>,
     cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm hidden md:block">
-        {row.original.audience}
-      </span>
+      <span className="text-muted-foreground text-sm hidden md:block">{row.original.audience}</span>
     ),
   },
   {
@@ -194,31 +192,25 @@ const columns: ColumnDef<Email>[] = [
     accessorKey: "opened",
     header: () => <div className="text-right hidden lg:block">Open Rate</div>,
     cell: ({ row }) => {
-      const rate = row.original.sent > 0 ? (row.original.opened / row.original.sent) * 100 : 0
-      return (
-        <div className="text-right hidden lg:block">
-          {rate.toFixed(1)}%
-        </div>
-      )
+      const rate = row.original.sent > 0 ? (row.original.opened / row.original.sent) * 100 : 0;
+      return <div className="text-right hidden lg:block">{rate.toFixed(1)}%</div>;
     },
   },
   {
     accessorKey: "clicked",
     header: () => <div className="text-right hidden lg:block">Click Rate</div>,
     cell: ({ row }) => {
-      const rate = row.original.sent > 0 ? (row.original.clicked / row.original.sent) * 100 : 0
-      return (
-        <div className="text-right hidden lg:block">
-          {rate.toFixed(1)}%
-        </div>
-      )
+      const rate = row.original.sent > 0 ? (row.original.clicked / row.original.sent) * 100 : 0;
+      return <div className="text-right hidden lg:block">{rate.toFixed(1)}%</div>;
     },
   },
   {
     accessorKey: "date",
     header: () => <div className="text-right">Date</div>,
     cell: ({ row }) => (
-      <div className="text-right text-muted-foreground text-sm whitespace-nowrap">{row.original.date}</div>
+      <div className="text-right text-muted-foreground text-sm whitespace-nowrap">
+        {row.original.date}
+      </div>
     ),
   },
   {
@@ -246,12 +238,12 @@ const columns: ColumnDef<Email>[] = [
       </div>
     ),
   },
-]
+];
 
 function DraggableRow({ row, onClick }: { row: Row<Email>; onClick: () => void }) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
     id: row.original.id,
-  })
+  });
 
   return (
     <TableRow
@@ -271,39 +263,33 @@ function DraggableRow({ row, onClick }: { row: Row<Email>; onClick: () => void }
         </TableCell>
       ))}
     </TableRow>
-  )
+  );
 }
 
 export function EmailsTable({
   data: initialData,
   onEmailClick,
 }: {
-  data: Email[]
-  onEmailClick: (email: Email) => void
+  data: Email[];
+  onEmailClick: (email: Email) => void;
 }) {
-  const [data, setData] = React.useState(() => initialData)
-  const [rowSelection, setRowSelection] = React.useState({})
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  )
-  const [sorting, setSorting] = React.useState<SortingState>([])
+  const [data, setData] = React.useState(() => initialData);
+  const [rowSelection, setRowSelection] = React.useState({});
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [sorting, setSorting] = React.useState<SortingState>([]);
   const [pagination, setPagination] = React.useState({
     pageIndex: 0,
     pageSize: 10,
-  })
-  const sortableId = React.useId()
+  });
+  const sortableId = React.useId();
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
     useSensor(TouchSensor, {}),
     useSensor(KeyboardSensor, {})
-  )
+  );
 
-  const dataIds = React.useMemo<UniqueIdentifier[]>(
-    () => data?.map(({ id }) => id) || [],
-    [data]
-  )
+  const dataIds = React.useMemo<UniqueIdentifier[]>(() => data?.map(({ id }) => id) || [], [data]);
 
   const table = useReactTable({
     data,
@@ -328,16 +314,16 @@ export function EmailsTable({
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
-  })
+  });
 
   function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
+    const { active, over } = event;
     if (active && over && active.id !== over.id) {
       setData((data) => {
-        const oldIndex = dataIds.indexOf(active.id)
-        const newIndex = dataIds.indexOf(over.id)
-        return arrayMove(data, oldIndex, newIndex)
-      })
+        const oldIndex = dataIds.indexOf(active.id);
+        const newIndex = dataIds.indexOf(over.id);
+        return arrayMove(data, oldIndex, newIndex);
+      });
     }
   }
 
@@ -357,30 +343,24 @@ export function EmailsTable({
             <DropdownMenuContent align="end" className="w-56">
               {table
                 .getAllColumns()
-                .filter(
-                  (column) =>
-                    typeof column.accessorFn !== "undefined" &&
-                    column.getCanHide()
-                )
+                .filter((column) => typeof column.accessorFn !== "undefined" && column.getCanHide())
                 .map((column) => {
                   return (
                     <DropdownMenuCheckboxItem
                       key={column.id}
                       className="capitalize"
                       checked={column.getIsVisible()}
-                      onCheckedChange={(value) =>
-                        column.toggleVisibility(!!value)
-                      }
+                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
                     >
                       {column.id}
                     </DropdownMenuCheckboxItem>
-                  )
+                  );
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
-      
+
       <div className="relative flex flex-col gap-4 overflow-hidden px-4 lg:px-6">
         <div className="overflow-auto rounded-lg border">
           <DndContext
@@ -399,36 +379,27 @@ export function EmailsTable({
                         <TableHead key={header.id} colSpan={header.colSpan}>
                           {header.isPlaceholder
                             ? null
-                            : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
+                            : flexRender(header.column.columnDef.header, header.getContext())}
                         </TableHead>
-                      )
+                      );
                     })}
                   </TableRow>
                 ))}
               </TableHeader>
               <TableBody className="**:data-[slot=table-cell]:first:w-8">
                 {table.getRowModel().rows?.length ? (
-                  <SortableContext
-                    items={dataIds}
-                    strategy={verticalListSortingStrategy}
-                  >
+                  <SortableContext items={dataIds} strategy={verticalListSortingStrategy}>
                     {table.getRowModel().rows.map((row) => (
-                      <DraggableRow 
-                        key={row.id} 
-                        row={row} 
+                      <DraggableRow
+                        key={row.id}
+                        row={row}
                         onClick={() => onEmailClick(row.original)}
                       />
                     ))}
                   </SortableContext>
                 ) : (
                   <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="h-24 text-center"
-                    >
+                    <TableCell colSpan={columns.length} className="h-24 text-center">
                       No results.
                     </TableCell>
                   </TableRow>
@@ -450,13 +421,11 @@ export function EmailsTable({
               <Select
                 value={`${table.getState().pagination.pageSize}`}
                 onValueChange={(value) => {
-                  table.setPageSize(Number(value))
+                  table.setPageSize(Number(value));
                 }}
               >
                 <SelectTrigger className="w-20" id="rows-per-page">
-                  <SelectValue
-                    placeholder={table.getState().pagination.pageSize}
-                  />
+                  <SelectValue placeholder={table.getState().pagination.pageSize} />
                 </SelectTrigger>
                 <SelectContent side="top">
                   {[10, 20, 30, 40, 50].map((pageSize) => (
@@ -468,8 +437,7 @@ export function EmailsTable({
               </Select>
             </div>
             <div className="flex w-fit items-center justify-center text-sm font-medium">
-              Page {table.getState().pagination.pageIndex + 1} of{" "}
-              {table.getPageCount()}
+              Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
             </div>
             <div className="ml-auto flex items-center gap-2 lg:ml-0">
               <Button
@@ -516,7 +484,5 @@ export function EmailsTable({
         </div>
       </div>
     </div>
-  )
+  );
 }
-
-

@@ -20,23 +20,14 @@ export async function POST() {
     });
 
     if (!connection || !connection.isActive) {
-      return NextResponse.json(
-        { error: "No active Xero connection" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "No active Xero connection" }, { status: 404 });
     }
 
-    const suggestions = await autoSuggestXeroMappings(
-      connection.id,
-      session.user.organizationId
-    );
+    const suggestions = await autoSuggestXeroMappings(connection.id, session.user.organizationId);
 
     return NextResponse.json(suggestions);
   } catch (error) {
     console.error("[Xero Auto-Suggest] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to generate mapping suggestions" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to generate mapping suggestions" }, { status: 500 });
   }
 }

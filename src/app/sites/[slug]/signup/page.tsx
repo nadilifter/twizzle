@@ -228,7 +228,10 @@ export default function MarketingSiteSignupPage() {
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium mb-1 text-foreground">
+            <label
+              htmlFor="confirmPassword"
+              className="block text-sm font-medium mb-1 text-foreground"
+            >
               Confirm Password
             </label>
             <input

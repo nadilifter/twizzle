@@ -1,7 +1,7 @@
-export const dynamic = "force-dynamic"
+export const dynamic = "force-dynamic";
 
-import { db } from "@/lib/db"
-import Link from "next/link"
+import { db } from "@/lib/db";
+import Link from "next/link";
 import {
   Table,
   TableBody,
@@ -9,9 +9,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/table";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   DollarSign,
   AlertTriangle,
@@ -23,17 +23,17 @@ import {
   BarChart3,
   ShieldCheck,
   RotateCcw,
-} from "lucide-react"
-import { InvoiceActions } from "./invoice-actions"
+} from "lucide-react";
+import { InvoiceActions } from "./invoice-actions";
 
 export default async function SubscriptionBillingPage() {
-  const now = new Date()
-  const firstOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 12))
-  const firstOfLastMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1, 12))
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+  const now = new Date();
+  const firstOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 12));
+  const firstOfLastMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1, 12));
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   // Build 12-month lookback window for trend data
-  const twelveMonthsAgo = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1, 12))
+  const twelveMonthsAgo = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1, 12));
 
   const [
     invoices,
@@ -180,7 +180,7 @@ export default async function SubscriptionBillingPage() {
       },
       orderBy: { deactivatedAt: "desc" },
     }),
-  ])
+  ]);
 
   // ── Computed metrics ──
 
@@ -189,47 +189,40 @@ export default async function SubscriptionBillingPage() {
     const price =
       sub.billingCycle === "YEARLY"
         ? Number(sub.plan.yearlyPrice ?? sub.plan.monthlyPrice) / 12
-        : Number(sub.plan.monthlyPrice)
-    return sum + price
-  }, 0)
-  const arr = mrr * 12
+        : Number(sub.plan.monthlyPrice);
+    return sum + price;
+  }, 0);
+  const arr = mrr * 12;
 
   // ARPU
-  const arpu = activeSubscriptions > 0 ? mrr / activeSubscriptions : 0
+  const arpu = activeSubscriptions > 0 ? mrr / activeSubscriptions : 0;
 
   // Collection rate
-  const paidCount = allPaidResult._count
-  const collectionRate =
-    allInvoiceCount > 0 ? ((paidCount / allInvoiceCount) * 100) : 0
+  const paidCount = allPaidResult._count;
+  const collectionRate = allInvoiceCount > 0 ? (paidCount / allInvoiceCount) * 100 : 0;
 
   // Dunning recovery rate: recovered / (recovered + still failed)
-  const dunningTotal = recoveredInvoiceCount + totalFailedCount
-  const dunningRecoveryRate =
-    dunningTotal > 0 ? ((recoveredInvoiceCount / dunningTotal) * 100) : 0
+  const dunningTotal = recoveredInvoiceCount + totalFailedCount;
+  const dunningRecoveryRate = dunningTotal > 0 ? (recoveredInvoiceCount / dunningTotal) * 100 : 0;
 
   // MoM revenue change
-  const thisMonthRevenue = Number(paidThisMonth._sum.amount ?? 0)
-  const lastMonthRevenue = Number(paidLastMonth._sum.amount ?? 0)
+  const thisMonthRevenue = Number(paidThisMonth._sum.amount ?? 0);
+  const lastMonthRevenue = Number(paidLastMonth._sum.amount ?? 0);
   const momChange =
-    lastMonthRevenue > 0
-      ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
-      : 0
+    lastMonthRevenue > 0 ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 : 0;
 
   // Revenue by plan with names
-  const planIds = revenueByPlanRaw.map((r) => r.planId)
+  const planIds = revenueByPlanRaw.map((r) => r.planId);
   const plans = await db.subscriptionPlan.findMany({
     where: { id: { in: planIds } },
     select: { id: true, name: true, monthlyPrice: true },
-  })
-  const planMap = new Map(plans.map((p) => [p.id, p]))
+  });
+  const planMap = new Map(plans.map((p) => [p.id, p]));
 
-  const activeCountByPlan = activeSubsWithPlan.reduce<Record<string, number>>(
-    (acc, sub) => {
-      acc[sub.planId] = (acc[sub.planId] || 0) + 1
-      return acc
-    },
-    {}
-  )
+  const activeCountByPlan = activeSubsWithPlan.reduce<Record<string, number>>((acc, sub) => {
+    acc[sub.planId] = (acc[sub.planId] || 0) + 1;
+    return acc;
+  }, {});
 
   const revenueByPlan = revenueByPlanRaw
     .map((r) => ({
@@ -239,37 +232,41 @@ export default async function SubscriptionBillingPage() {
       invoiceCount: r._count,
       activeSubscribers: activeCountByPlan[r.planId] ?? 0,
       mrrContribution:
-        (activeCountByPlan[r.planId] ?? 0) *
-        Number(planMap.get(r.planId)?.monthlyPrice ?? 0),
+        (activeCountByPlan[r.planId] ?? 0) * Number(planMap.get(r.planId)?.monthlyPrice ?? 0),
     }))
-    .sort((a, b) => b.mrrContribution - a.mrrContribution)
+    .sort((a, b) => b.mrrContribution - a.mrrContribution);
 
   // Monthly trend: aggregate by month
-  const monthlyTrend = buildMonthlyTrend(monthlyInvoices, now)
+  const monthlyTrend = buildMonthlyTrend(monthlyInvoices, now);
 
   // Churned MRR
   const churnedMRR = recentChurns.reduce((sum, org) => {
-    return sum + Number(org.subscription?.plan?.monthlyPrice ?? 0)
-  }, 0)
+    return sum + Number(org.subscription?.plan?.monthlyPrice ?? 0);
+  }, 0);
 
-  const totalRevenue = Number(allPaidResult._sum.amount ?? 0)
+  const totalRevenue = Number(allPaidResult._sum.amount ?? 0);
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount)
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
 
-  const formatPercent = (value: number) =>
-    `${value >= 0 ? "" : ""}${value.toFixed(1)}%`
+  const formatPercent = (value: number) => `${value >= 0 ? "" : ""}${value.toFixed(1)}%`;
 
   const getStatusVariant = (status: string) => {
     switch (status) {
-      case "PAID": return "default"
-      case "FAILED": return "destructive"
-      case "PROCESSING": return "outline"
-      case "PENDING": return "secondary"
-      case "VOID": return "secondary"
-      default: return "outline"
+      case "PAID":
+        return "default";
+      case "FAILED":
+        return "destructive";
+      case "PROCESSING":
+        return "outline";
+      case "PENDING":
+        return "secondary";
+      case "VOID":
+        return "secondary";
+      default:
+        return "outline";
     }
-  }
+  };
 
   return (
     <div className="flex flex-col gap-6 p-4">
@@ -289,9 +286,7 @@ export default async function SubscriptionBillingPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(mrr)}</div>
-            <p className="text-xs text-muted-foreground">
-              ARR: {formatCurrency(arr)}
-            </p>
+            <p className="text-xs text-muted-foreground">ARR: {formatCurrency(arr)}</p>
           </CardContent>
         </Card>
 
@@ -329,9 +324,7 @@ export default async function SubscriptionBillingPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{activeSubscriptions}</div>
-            <p className="text-xs text-muted-foreground">
-              ARPU: {formatCurrency(arpu)}/mo
-            </p>
+            <p className="text-xs text-muted-foreground">ARPU: {formatCurrency(arpu)}/mo</p>
           </CardContent>
         </Card>
 
@@ -342,9 +335,7 @@ export default async function SubscriptionBillingPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{formatCurrency(totalRevenue)}</div>
-            <p className="text-xs text-muted-foreground">
-              {paidCount} invoices collected
-            </p>
+            <p className="text-xs text-muted-foreground">{paidCount} invoices collected</p>
           </CardContent>
         </Card>
       </div>
@@ -357,7 +348,9 @@ export default async function SubscriptionBillingPage() {
             <ShieldCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${collectionRate >= 95 ? "text-green-600" : collectionRate >= 85 ? "text-amber-600" : "text-red-600"}`}>
+            <div
+              className={`text-2xl font-bold ${collectionRate >= 95 ? "text-green-600" : collectionRate >= 85 ? "text-amber-600" : "text-red-600"}`}
+            >
               {formatPercent(collectionRate)}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -372,7 +365,9 @@ export default async function SubscriptionBillingPage() {
             <RotateCcw className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${dunningRecoveryRate >= 70 ? "text-green-600" : dunningRecoveryRate >= 40 ? "text-amber-600" : "text-red-600"}`}>
+            <div
+              className={`text-2xl font-bold ${dunningRecoveryRate >= 70 ? "text-green-600" : dunningRecoveryRate >= 40 ? "text-amber-600" : "text-red-600"}`}
+            >
               {dunningTotal > 0 ? formatPercent(dunningRecoveryRate) : "N/A"}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -425,9 +420,7 @@ export default async function SubscriptionBillingPage() {
           </CardHeader>
           <CardContent>
             {revenueByPlan.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No revenue data yet
-              </p>
+              <p className="text-sm text-muted-foreground text-center py-4">No revenue data yet</p>
             ) : (
               <Table>
                 <TableHeader>
@@ -444,11 +437,15 @@ export default async function SubscriptionBillingPage() {
                     <TableRow key={plan.planId}>
                       <TableCell className="font-medium">{plan.planName}</TableCell>
                       <TableCell className="text-right">{plan.activeSubscribers}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(plan.mrrContribution)}</TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(plan.mrrContribution)}
+                      </TableCell>
                       <TableCell className="text-right text-muted-foreground">
                         {mrr > 0 ? formatPercent((plan.mrrContribution / mrr) * 100) : "—"}
                       </TableCell>
-                      <TableCell className="text-right">{formatCurrency(plan.totalRevenue)}</TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(plan.totalRevenue)}
+                      </TableCell>
                     </TableRow>
                   ))}
                   {revenueByPlan.length > 1 && (
@@ -473,9 +470,7 @@ export default async function SubscriptionBillingPage() {
               <TrendingUp className="h-5 w-5" />
               <CardTitle>Monthly Revenue Trend</CardTitle>
             </div>
-            <CardDescription>
-              Collected vs failed revenue over the last 12 months
-            </CardDescription>
+            <CardDescription>Collected vs failed revenue over the last 12 months</CardDescription>
           </CardHeader>
           <CardContent>
             {monthlyTrend.length === 0 ? (
@@ -542,7 +537,7 @@ export default async function SubscriptionBillingPage() {
                 const daysRemaining = Math.ceil(
                   (new Date(org.scheduledDeactivationDate!).getTime() - now.getTime()) /
                     (1000 * 60 * 60 * 24)
-                )
+                );
                 return (
                   <div
                     key={org.id}
@@ -572,7 +567,7 @@ export default async function SubscriptionBillingPage() {
                       </Link>
                     </div>
                   </div>
-                )
+                );
               })}
             </div>
           </CardContent>
@@ -587,9 +582,7 @@ export default async function SubscriptionBillingPage() {
               <TrendingDown className="h-5 w-5 text-red-600" />
               <CardTitle>Recent Churns (Last 30 Days)</CardTitle>
             </div>
-            <CardDescription>
-              Organizations deactivated due to non-payment
-            </CardDescription>
+            <CardDescription>Organizations deactivated due to non-payment</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -606,8 +599,8 @@ export default async function SubscriptionBillingPage() {
                       {org.name}
                     </Link>
                     <p className="text-sm text-muted-foreground">
-                      {org.subscription?.plan?.name ?? "Unknown plan"} •
-                      Deactivated {org.deactivatedAt?.toLocaleDateString() ?? "N/A"}
+                      {org.subscription?.plan?.name ?? "Unknown plan"} • Deactivated{" "}
+                      {org.deactivatedAt?.toLocaleDateString() ?? "N/A"}
                     </p>
                   </div>
                   <span className="text-sm font-medium text-red-600">
@@ -735,7 +728,7 @@ export default async function SubscriptionBillingPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
 
 /**
@@ -746,40 +739,40 @@ function buildMonthlyTrend(
   invoices: { periodStart: Date; amount: unknown; status: string }[],
   now: Date
 ) {
-  const buckets = new Map<string, { collected: number; failed: number; total: number }>()
+  const buckets = new Map<string, { collected: number; failed: number; total: number }>();
 
   // Pre-populate the last 12 months
   for (let i = 11; i >= 0; i--) {
-    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1))
-    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`
-    buckets.set(key, { collected: 0, failed: 0, total: 0 })
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+    buckets.set(key, { collected: 0, failed: 0, total: 0 });
   }
 
   for (const inv of invoices) {
-    const d = new Date(inv.periodStart)
-    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`
-    const bucket = buckets.get(key)
-    if (!bucket) continue
+    const d = new Date(inv.periodStart);
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+    const bucket = buckets.get(key);
+    if (!bucket) continue;
 
-    const amount = Number(inv.amount)
-    bucket.total += amount
+    const amount = Number(inv.amount);
+    bucket.total += amount;
 
     if (inv.status === "PAID") {
-      bucket.collected += amount
+      bucket.collected += amount;
     } else if (inv.status === "FAILED") {
-      bucket.failed += amount
+      bucket.failed += amount;
     }
   }
 
   return Array.from(buckets.entries())
     .sort((a, b) => b[0].localeCompare(a[0]))
     .map(([key, data]) => {
-      const [year, month] = key.split("-")
-      const d = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, 1))
+      const [year, month] = key.split("-");
+      const d = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, 1));
       return {
         label: d.toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" }),
         ...data,
         rate: data.total > 0 ? (data.collected / data.total) * 100 : 0,
-      }
-    })
+      };
+    });
 }

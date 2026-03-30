@@ -1,7 +1,7 @@
-import { db } from "@/lib/db"
-import Link from "next/link"
-import { notFound } from "next/navigation"
-import { Metadata } from "next"
+import { db } from "@/lib/db";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Metadata } from "next";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -9,7 +9,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
+} from "@/components/ui/breadcrumb";
 import {
   Table,
   TableBody,
@@ -17,29 +17,33 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/table";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const { slug } = await params
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
   const organization = await db.organization.findUnique({
     where: { slug },
-    select: { name: true }
-  })
-  
+    select: { name: true },
+  });
+
   return {
-    title: organization ? `${organization.name} - Invoices | Superadmin` : 'Invoices | Superadmin'
-  }
+    title: organization ? `${organization.name} - Invoices | Superadmin` : "Invoices | Superadmin",
+  };
 }
 
 interface Props {
-  params: Promise<{ slug: string }>
+  params: Promise<{ slug: string }>;
 }
 
 export default async function OrganizationInvoicesPage({ params }: Props) {
-  const { slug } = await params
-  
+  const { slug } = await params;
+
   const organization = await db.organization.findUnique({
     where: { slug },
     include: {
@@ -47,52 +51,51 @@ export default async function OrganizationInvoicesPage({ params }: Props) {
         include: {
           user: { select: { id: true, name: true, email: true } },
           _count: {
-            select: { lineItems: true, payments: true }
-          }
+            select: { lineItems: true, payments: true },
+          },
         },
-        orderBy: { createdAt: 'desc' }
-      }
-    }
-  })
+        orderBy: { createdAt: "desc" },
+      },
+    },
+  });
 
   if (!organization) {
-    notFound()
+    notFound();
   }
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case 'PAID':
-        return 'default'
-      case 'OVERDUE':
-        return 'destructive'
-      case 'SENT':
-        return 'outline'
-      case 'PARTIAL':
-        return 'secondary'
-      case 'CANCELLED':
-        return 'secondary'
+      case "PAID":
+        return "default";
+      case "OVERDUE":
+        return "destructive";
+      case "SENT":
+        return "outline";
+      case "PARTIAL":
+        return "secondary";
+      case "CANCELLED":
+        return "secondary";
       default:
-        return 'outline'
+        return "outline";
     }
-  }
+  };
 
   const formatCurrency = (amount: unknown) => {
-    const num = typeof amount === 'object' && amount !== null 
-      ? Number(amount.toString()) 
-      : Number(amount)
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(num)
-  }
+    const num =
+      typeof amount === "object" && amount !== null ? Number(amount.toString()) : Number(amount);
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(num);
+  };
 
   // Calculate totals
-  const totalInvoices = organization.invoices.length
-  const paidInvoices = organization.invoices.filter(i => i.status === 'PAID').length
-  const overdueInvoices = organization.invoices.filter(i => i.status === 'OVERDUE').length
+  const totalInvoices = organization.invoices.length;
+  const paidInvoices = organization.invoices.filter((i) => i.status === "PAID").length;
+  const overdueInvoices = organization.invoices.filter((i) => i.status === "OVERDUE").length;
   const totalRevenue = organization.invoices
-    .filter(i => i.status === 'PAID')
-    .reduce((sum, i) => sum + Number(i.total), 0)
+    .filter((i) => i.status === "PAID")
+    .reduce((sum, i) => sum + Number(i.total), 0);
 
   return (
     <div className="flex flex-col gap-6 p-4">
@@ -124,9 +127,7 @@ export default async function OrganizationInvoicesPage({ params }: Props) {
 
       <div>
         <h1 className="text-2xl font-bold">Invoices</h1>
-        <p className="text-muted-foreground">
-          All invoices for {organization.name}
-        </p>
+        <p className="text-muted-foreground">All invoices for {organization.name}</p>
       </div>
 
       {/* Summary Cards */}
@@ -168,9 +169,7 @@ export default async function OrganizationInvoicesPage({ params }: Props) {
       <Card>
         <CardHeader>
           <CardTitle>All Invoices ({totalInvoices})</CardTitle>
-          <CardDescription>
-            Invoice history for this organization
-          </CardDescription>
+          <CardDescription>Invoice history for this organization</CardDescription>
         </CardHeader>
         <CardContent>
           {organization.invoices.length === 0 ? (
@@ -194,9 +193,17 @@ export default async function OrganizationInvoicesPage({ params }: Props) {
                 {organization.invoices.map((invoice) => (
                   <TableRow key={invoice.id}>
                     <TableCell className="font-medium">{invoice.reference}</TableCell>
-                    <TableCell>{invoice.user?.name ?? 'N/A'}</TableCell>
+                    <TableCell>{invoice.user?.name ?? "N/A"}</TableCell>
                     <TableCell>
-                      <Badge variant={getStatusBadgeVariant(invoice.status) as "default" | "destructive" | "secondary" | "outline"}>
+                      <Badge
+                        variant={
+                          getStatusBadgeVariant(invoice.status) as
+                            | "default"
+                            | "destructive"
+                            | "secondary"
+                            | "outline"
+                        }
+                      >
                         {invoice.status}
                       </Badge>
                     </TableCell>
@@ -214,5 +221,5 @@ export default async function OrganizationInvoicesPage({ params }: Props) {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

@@ -8,7 +8,9 @@ const LEGACY_SALT = "uplifter-accounting-token-salt";
 function getSecret(): string {
   const secret = process.env.ACCOUNTING_ENCRYPTION_KEY;
   if (!secret) {
-    throw new Error("ACCOUNTING_ENCRYPTION_KEY environment variable is required for token encryption");
+    throw new Error(
+      "ACCOUNTING_ENCRYPTION_KEY environment variable is required for token encryption"
+    );
   }
   return secret;
 }
@@ -56,7 +58,12 @@ export function decrypt(encryptedValue: string): string {
   throw new Error("Invalid encrypted value format");
 }
 
-function decryptWithKey(key: Buffer, ivHex: string, authTagHex: string, ciphertext: string): string {
+function decryptWithKey(
+  key: Buffer,
+  ivHex: string,
+  authTagHex: string,
+  ciphertext: string
+): string {
   if (!ivHex || !authTagHex || !ciphertext) {
     throw new Error("Invalid encrypted value format");
   }

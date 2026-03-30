@@ -1,13 +1,16 @@
-"use client"
-
-import { LogOutIcon, MoreVerticalIcon, ShieldAlertIcon, ShieldIcon, UserIcon, UsersIcon } from "lucide-react"
-import { useSession } from "next-auth/react"
+"use client";
 
 import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar"
+  LogOutIcon,
+  MoreVerticalIcon,
+  ShieldAlertIcon,
+  ShieldIcon,
+  UserIcon,
+  UsersIcon,
+} from "lucide-react";
+import { useSession } from "next-auth/react";
+
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,45 +18,44 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/components/ui/sidebar"
-import { logout } from "@/lib/logout"
-import { getClientSubdomainUrl } from "@/lib/client-domains"
+} from "@/components/ui/sidebar";
+import { logout } from "@/lib/logout";
+import { getClientSubdomainUrl } from "@/lib/client-domains";
 
 export function NavUser({
   user,
   accountUrl,
 }: {
   user: {
-    name: string
-    email: string
-    avatar?: string | null
-  }
-  accountUrl?: string
+    name: string;
+    email: string;
+    avatar?: string | null;
+  };
+  accountUrl?: string;
 }) {
-  const { isMobile } = useSidebar()
-  const { data: session } = useSession()
+  const { isMobile } = useSidebar();
+  const { data: session } = useSession();
 
-  const isSuperAdmin = session?.user?.isSuperAdmin === true
-  const showAdminLink =
-    isSuperAdmin || session?.user?.permissions?.includes("*") === true
+  const isSuperAdmin = session?.user?.isSuperAdmin === true;
+  const showAdminLink = isSuperAdmin || session?.user?.permissions?.includes("*") === true;
   const getInitials = (name: string) => {
     return name
       .split(" ")
       .map((part) => part[0])
       .join("")
       .toUpperCase()
-      .slice(0, 2)
-  }
+      .slice(0, 2);
+  };
 
   const handleSignOut = () => {
-    logout("/login")
-  }
+    logout("/login");
+  };
 
   return (
     <SidebarMenu>
@@ -70,9 +72,7 @@ export function NavUser({
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
-                <span className="truncate text-xs text-muted-foreground">
-                  {user.email}
-                </span>
+                <span className="truncate text-xs text-muted-foreground">{user.email}</span>
               </div>
               <MoreVerticalIcon className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -91,9 +91,7 @@ export function NavUser({
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user.name}</span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    {user.email}
-                  </span>
+                  <span className="truncate text-xs text-muted-foreground">{user.email}</span>
                 </div>
               </div>
             </DropdownMenuLabel>
@@ -137,5 +135,5 @@ export function NavUser({
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
-  )
+  );
 }

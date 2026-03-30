@@ -46,44 +46,45 @@ flowchart TD
 
 ## Phase Index
 
-| Phase | Spec | Type | Effort | Risk |
-|---|---|---|---|---|
-| 0 | [Prerequisites](phase-0-prerequisites.md) | Admin/config (no code) | 1-2 days | None |
-| 1 | [Schema + API Client](phase-1-schema-and-api-client.md) | Backend foundation | 1-2 days | None |
-| 2 | [Webhooks](phase-2-webhooks.md) | Backend (new + extend) | 1-2 days | Low |
-| 3 | [Onboarding](phase-3-onboarding.md) | Backend + frontend | 3-5 days | None |
-| 4 | [Refunds](phase-4-refunds.md) | Backend (new) | 1-2 days | Low |
-| 5 | [Recurring Charges](phase-5-recurring-charges.md) | Backend (new + modify) | 2-3 days | Medium |
-| 6 | [Negative Balance](phase-6-negative-balance.md) | Backend (new) | 1-2 days | None |
-| 7 | [Reporting](phase-7-reporting.md) | Backend + frontend | 3-5 days | Low |
-| 8 | [Payouts](phase-8-payouts.md) | Backend + frontend + DevOps | 3-5 days | Low |
+| Phase | Spec                                                    | Type                        | Effort   | Risk   |
+| ----- | ------------------------------------------------------- | --------------------------- | -------- | ------ |
+| 0     | [Prerequisites](phase-0-prerequisites.md)               | Admin/config (no code)      | 1-2 days | None   |
+| 1     | [Schema + API Client](phase-1-schema-and-api-client.md) | Backend foundation          | 1-2 days | None   |
+| 2     | [Webhooks](phase-2-webhooks.md)                         | Backend (new + extend)      | 1-2 days | Low    |
+| 3     | [Onboarding](phase-3-onboarding.md)                     | Backend + frontend          | 3-5 days | None   |
+| 4     | [Refunds](phase-4-refunds.md)                           | Backend (new)               | 1-2 days | Low    |
+| 5     | [Recurring Charges](phase-5-recurring-charges.md)       | Backend (new + modify)      | 2-3 days | Medium |
+| 6     | [Negative Balance](phase-6-negative-balance.md)         | Backend (new)               | 1-2 days | None   |
+| 7     | [Reporting](phase-7-reporting.md)                       | Backend + frontend          | 3-5 days | Low    |
+| 8     | [Payouts](phase-8-payouts.md)                           | Backend + frontend + DevOps | 3-5 days | Low    |
 
 **Total estimated effort**: 16-27 days
 
 ## Key Files
 
-| File | Role | Modified In |
-|---|---|---|
-| `prisma/schema.prisma` | Database schema | Phase 1, 5, 6 |
-| `src/lib/adyen.ts` | Existing Adyen checkout integration | Phase 5 |
-| `src/lib/adyen-platform.ts` | New platform API client | Phase 1, 4, 6 |
-| `src/lib/webhooks.ts` | Webhook URL management | Phase 2 |
-| `src/lib/services-config.ts` | Service configuration | Phase 2 |
-| `src/app/api/webhooks/adyen/route.ts` | Payment webhook | Phase 2 |
-| `src/app/api/webhooks/adyen-balance-platform/route.ts` | New balance platform webhook | Phase 2, 6 |
-| `src/app/api/organization/adyen-onboarding/route.ts` | New onboarding API | Phase 3 |
-| `src/app/api/recurring/route.ts` | Recurring charge batch | Phase 5 |
-| `src/app/dashboard/financials/onboarding/page.tsx` | Onboarding dashboard | Phase 3 |
-| `src/app/dashboard/financials/page.tsx` | Financial dashboard | Phase 7 |
-| `src/app/api/payouts/route.ts` | Payouts list/create API | Phase 8 |
-| `src/app/api/payouts/[id]/route.ts` | Payout detail API | Phase 8 |
-| `src/app/dashboard/financials/payouts/page.tsx` | Payouts list page | Phase 8 |
-| `src/app/dashboard/financials/payouts/[id]/page.tsx` | Payout detail page | Phase 8 |
-| `scripts/provision-adyen.ts` | Multi-env Adyen provisioning | Phase 8 |
+| File                                                   | Role                                | Modified In   |
+| ------------------------------------------------------ | ----------------------------------- | ------------- |
+| `prisma/schema.prisma`                                 | Database schema                     | Phase 1, 5, 6 |
+| `src/lib/adyen.ts`                                     | Existing Adyen checkout integration | Phase 5       |
+| `src/lib/adyen-platform.ts`                            | New platform API client             | Phase 1, 4, 6 |
+| `src/lib/webhooks.ts`                                  | Webhook URL management              | Phase 2       |
+| `src/lib/services-config.ts`                           | Service configuration               | Phase 2       |
+| `src/app/api/webhooks/adyen/route.ts`                  | Payment webhook                     | Phase 2       |
+| `src/app/api/webhooks/adyen-balance-platform/route.ts` | New balance platform webhook        | Phase 2, 6    |
+| `src/app/api/organization/adyen-onboarding/route.ts`   | New onboarding API                  | Phase 3       |
+| `src/app/api/recurring/route.ts`                       | Recurring charge batch              | Phase 5       |
+| `src/app/dashboard/financials/onboarding/page.tsx`     | Onboarding dashboard                | Phase 3       |
+| `src/app/dashboard/financials/page.tsx`                | Financial dashboard                 | Phase 7       |
+| `src/app/api/payouts/route.ts`                         | Payouts list/create API             | Phase 8       |
+| `src/app/api/payouts/[id]/route.ts`                    | Payout detail API                   | Phase 8       |
+| `src/app/dashboard/financials/payouts/page.tsx`        | Payouts list page                   | Phase 8       |
+| `src/app/dashboard/financials/payouts/[id]/page.tsx`   | Payout detail page                  | Phase 8       |
+| `scripts/provision-adyen.ts`                           | Multi-env Adyen provisioning        | Phase 8       |
 
 ## Environment Variables
 
 New variables (added in Phase 0):
+
 - `ADYEN_BALANCE_PLATFORM` = `UplifterLLC` -- balance platform ID
 - `ADYEN_PLATFORM_MERCHANT_ACCOUNT` = `KirraCapital_Leapfrog_TEST` -- platform merchant account
 - `ADYEN_ONBOARDING_THEME_ID` (optional) -- hosted onboarding theme; omit to use Adyen default
@@ -94,6 +95,7 @@ New variables (added in Phase 0):
 - `ADYEN_LEM_API_KEY` -- Company-scoped key for Legal Entity Management API
 
 Existing variables (unchanged):
+
 - `ADYEN_API_KEY` -- Company-scoped checkout/payments key (`ws_396907@Company.KirraCapital`)
 - `ADYEN_MERCHANT_ACCOUNT` = `KirraCapital_Leapfrog_TEST`
 - `ADYEN_ENVIRONMENT` = `TEST`
@@ -108,11 +110,11 @@ Existing variables (unchanged):
 
 **API credentials** (triple-key setup):
 
-| Credential | Env Var | Username | Scope | Used For |
-|---|---|---|---|---|
-| Checkout | `ADYEN_API_KEY` | `ws_396907@Company.KirraCapital` | Company | Checkout, Payment Links, Recurring, webhooks |
-| Platform | `ADYEN_PLATFORM_API_KEY` | `ws_508000@BalancePlatform.UplifterLLC` | BalancePlatform | Configuration API, Transfers API |
-| LEM | `ADYEN_LEM_API_KEY` | `ws_236609@Scope.Company_KirraCapital` | Company | Legal Entity Management API |
+| Credential | Env Var                  | Username                                | Scope           | Used For                                     |
+| ---------- | ------------------------ | --------------------------------------- | --------------- | -------------------------------------------- |
+| Checkout   | `ADYEN_API_KEY`          | `ws_396907@Company.KirraCapital`        | Company         | Checkout, Payment Links, Recurring, webhooks |
+| Platform   | `ADYEN_PLATFORM_API_KEY` | `ws_508000@BalancePlatform.UplifterLLC` | BalancePlatform | Configuration API, Transfers API             |
+| LEM        | `ADYEN_LEM_API_KEY`      | `ws_236609@Scope.Company_KirraCapital`  | Company         | Legal Entity Management API                  |
 
 ## Local Development Setup
 
@@ -149,13 +151,13 @@ Without the `\`, everything after `$` is treated as a variable reference and the
 
 When testing the Adyen hosted onboarding flow in the `TEST` environment, use these placeholder values:
 
-| Field | Test Value |
-|---|---|
-| EIN (Tax ID) | `123456789` |
-| SSN (last 4) | `1234` |
-| Bank routing number | `121000248` |
-| Bank account number | `123456789` |
-| Document uploads | Any valid image/PDF (Adyen auto-approves in TEST) |
+| Field               | Test Value                                        |
+| ------------------- | ------------------------------------------------- |
+| EIN (Tax ID)        | `123456789`                                       |
+| SSN (last 4)        | `1234`                                            |
+| Bank routing number | `121000248`                                       |
+| Bank account number | `123456789`                                       |
+| Document uploads    | Any valid image/PDF (Adyen auto-approves in TEST) |
 
 ## Staging / Production Provisioning
 
@@ -178,6 +180,7 @@ npx tsx scripts/provision-adyen.ts --env production --output .env.adyen
 ```
 
 The script:
+
 1. Discovers the Company ID from the Management API using your local `ADYEN_API_KEY`
 2. Creates or finds 3 API credentials (checkout, platform, LEM) and generates API keys
 3. Creates 4 webhook subscriptions (1 standard payment + 3 balance platform) pointing to the environment's admin URL
@@ -185,6 +188,7 @@ The script:
 5. Outputs all keys as a `.env` fragment (optionally writes to file or deploys via SSH)
 
 After running, redeploy to pick up the new environment variables:
+
 ```bash
 ./scripts/deploy-staging.sh
 ```
@@ -194,6 +198,7 @@ After running, redeploy to pick up the new environment variables:
 ### Manual alternative
 
 If the script is not available or you need to create webhooks manually:
+
 1. Go to [Adyen Customer Area](https://ca-test.adyen.com) → Developers → Webhooks
 2. Create a standard webhook pointing to `https://admin.upliftergymnastics.com/api/webhooks/adyen`
 3. Go to Balance Platforms → UplifterLLC → Webhooks
@@ -215,10 +220,10 @@ Adyen's client-side checkout SDK requires each origin that loads the Drop-in or 
 
 ### How it works
 
-| Event | Action | File |
-|---|---|---|
-| Org signup | `registerAllowedOrigin(subdomain)` called fire-and-forget | `src/app/api/org-signup/route.ts` |
-| Org deactivated | `removeAllowedOrigin(subdomain)` called fire-and-forget | `src/app/api/superadmin/organizations/[id]/status/route.ts` |
+| Event           | Action                                                    | File                                                        |
+| --------------- | --------------------------------------------------------- | ----------------------------------------------------------- |
+| Org signup      | `registerAllowedOrigin(subdomain)` called fire-and-forget | `src/app/api/org-signup/route.ts`                           |
+| Org deactivated | `removeAllowedOrigin(subdomain)` called fire-and-forget   | `src/app/api/superadmin/organizations/[id]/status/route.ts` |
 | Org reactivated | `registerAllowedOrigin(subdomain)` called fire-and-forget | `src/app/api/superadmin/organizations/[id]/status/route.ts` |
 
 Both helpers live in `src/lib/adyen-platform.ts` and use the `MyAPICredentialApi` (part of the Management API). They are:

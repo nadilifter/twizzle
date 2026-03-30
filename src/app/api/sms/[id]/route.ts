@@ -4,10 +4,7 @@ import { checkFeatureGate } from "@/lib/feature-resolver";
 import { db } from "@/lib/db";
 
 // GET /api/sms/[id] - Get SMS message details
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.organizationId) {
@@ -55,9 +52,6 @@ export async function GET(
     return NextResponse.json(message);
   } catch (error) {
     console.error("Error fetching SMS message:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch message" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch message" }, { status: 500 });
   }
 }

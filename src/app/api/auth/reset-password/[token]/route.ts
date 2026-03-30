@@ -4,17 +4,19 @@ import { hashPassword } from "@/lib/auth";
 import { z } from "zod";
 import { passwordSchema } from "@/lib/password";
 
-const resetPasswordSchema = z.object({
-  password: passwordSchema,
-  confirmPassword: z.string(),
-}).refine(
-  (data) => data.password === data.confirmPassword,
-  { message: "Passwords do not match", path: ["confirmPassword"] }
-);
+const resetPasswordSchema = z
+  .object({
+    password: passwordSchema,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
 /**
  * GET /api/auth/reset-password/[token]
- * 
+ *
  * Validate a password reset token and return basic info.
  */
 export async function GET(
@@ -31,10 +33,10 @@ export async function GET(
 
     if (!resetToken) {
       return NextResponse.json(
-        { 
-          valid: false, 
+        {
+          valid: false,
           error: "Invalid or expired reset link. Please request a new password reset.",
-          errorCode: "INVALID_TOKEN"
+          errorCode: "INVALID_TOKEN",
         },
         { status: 404 }
       );
@@ -43,10 +45,10 @@ export async function GET(
     // Check if already used
     if (resetToken.usedAt) {
       return NextResponse.json(
-        { 
-          valid: false, 
+        {
+          valid: false,
           error: "This reset link has already been used. Please request a new password reset.",
-          errorCode: "TOKEN_USED"
+          errorCode: "TOKEN_USED",
         },
         { status: 400 }
       );
@@ -55,10 +57,10 @@ export async function GET(
     // Check if expired
     if (resetToken.expiresAt < new Date()) {
       return NextResponse.json(
-        { 
-          valid: false, 
+        {
+          valid: false,
           error: "This reset link has expired. Please request a new password reset.",
-          errorCode: "TOKEN_EXPIRED"
+          errorCode: "TOKEN_EXPIRED",
         },
         { status: 400 }
       );
@@ -83,7 +85,7 @@ export async function GET(
 
 /**
  * POST /api/auth/reset-password/[token]
- * 
+ *
  * Reset the user's password using a valid token.
  */
 export async function POST(
@@ -132,10 +134,7 @@ export async function POST(
 
     if (!user) {
       // This shouldn't happen, but handle it gracefully
-      return NextResponse.json(
-        { success: false, error: "Account not found." },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: "Account not found." }, { status: 404 });
     }
 
     // Hash the new password
@@ -155,14 +154,12 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: "Your password has been reset successfully. You can now log in with your new password.",
+      message:
+        "Your password has been reset successfully. You can now log in with your new password.",
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { success: false, error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error resetting password:", error);
     return NextResponse.json(
@@ -178,14 +175,10 @@ export async function POST(
 function maskEmail(email: string): string {
   const [localPart, domain] = email.split("@");
   const [domainName, ...tld] = domain.split(".");
-  
-  const maskedLocal = localPart.length > 2 
-    ? localPart[0] + "***" 
-    : localPart[0] + "*";
-    
-  const maskedDomain = domainName.length > 2 
-    ? domainName[0] + "***" 
-    : domainName[0] + "*";
-    
+
+  const maskedLocal = localPart.length > 2 ? localPart[0] + "***" : localPart[0] + "*";
+
+  const maskedDomain = domainName.length > 2 ? domainName[0] + "***" : domainName[0] + "*";
+
   return `${maskedLocal}@${maskedDomain}.${tld.join(".")}`;
 }

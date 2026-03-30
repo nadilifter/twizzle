@@ -116,10 +116,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching SMS messages:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch messages" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch messages" }, { status: 500 });
   }
 }
 
@@ -173,9 +170,6 @@ export async function POST(request: NextRequest) {
       );
     }
     console.error("Error sending SMS:", error);
-    return NextResponse.json(
-      { error: "Failed to send message" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to send message" }, { status: 500 });
   }
 }

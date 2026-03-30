@@ -45,19 +45,9 @@ export interface ChatMessagesProps extends React.ComponentProps<"div"> {}
  * </ChatMessages>
  * ```
  */
-export function ChatMessages({
-  children,
-  className,
-  ...props
-}: ChatMessagesProps) {
+export function ChatMessages({ children, className, ...props }: ChatMessagesProps) {
   return (
-    <div
-      className={cn(
-        "flex-1 flex flex-col-reverse overflow-auto py-2",
-        className,
-      )}
-      {...props}
-    >
+    <div className={cn("flex-1 flex flex-col-reverse overflow-auto py-2", className)} {...props}>
       {children}
     </div>
   );

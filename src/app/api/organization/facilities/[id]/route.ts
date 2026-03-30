@@ -12,7 +12,11 @@ const updateFacilitySchema = z.object({
   stateProvince: z.string().optional().nullable(),
   postalCode: z.string().optional().nullable(),
   country: z.string().optional().nullable(),
-  phone: z.string().refine((val) => !val || isValidPhoneNumber(val), "Please enter a valid phone number").optional().nullable(),
+  phone: z
+    .string()
+    .refine((val) => !val || isValidPhoneNumber(val), "Please enter a valid phone number")
+    .optional()
+    .nullable(),
   email: z.string().email().optional().nullable(),
   squareFootage: z.number().optional().nullable(),
   maxCapacity: z.number().optional().nullable(),
@@ -22,10 +26,7 @@ const updateFacilitySchema = z.object({
 });
 
 // GET - Get a single facility by ID
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -90,10 +91,7 @@ export async function GET(
 }
 
 // PATCH - Update a facility
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -127,9 +125,7 @@ export async function PATCH(
     }
 
     let geoUpdate: { latitude: number | null; longitude: number | null } | undefined;
-    if (
-      hasAddressChanged(validatedData, existingFacility)
-    ) {
+    if (hasAddressChanged(validatedData, existingFacility)) {
       const coords = await geocodeAddress({
         street: validatedData.street ?? existingFacility.street,
         city: validatedData.city ?? existingFacility.city,

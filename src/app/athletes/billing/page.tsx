@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { formatPhoneNumberIntl, isValidPhoneNumber } from "react-phone-number-input"
-import { Loader2, Plus, Pencil, Trash2, Star, MapPin, Phone, User, CreditCard } from "lucide-react"
-import { toast } from "sonner"
+import { useState, useEffect } from "react";
+import { formatPhoneNumberIntl, isValidPhoneNumber } from "react-phone-number-input";
+import { Loader2, Plus, Pencil, Trash2, Star, MapPin, Phone, User, CreditCard } from "lucide-react";
+import { toast } from "sonner";
 
-import { COUNTRIES, getRegionsForCountry, isValidPostalCode } from "@/lib/location-data"
-import { Button } from "@/components/ui/button"
+import { COUNTRIES, getRegionsForCountry, isValidPostalCode } from "@/lib/location-data";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -14,20 +14,20 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
-import { PhoneInput } from "@/components/ui/phone-input"
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PhoneInput } from "@/components/ui/phone-input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { StateProvinceCombobox } from "@/components/ui/state-province-combobox"
+} from "@/components/ui/select";
+import { StateProvinceCombobox } from "@/components/ui/state-province-combobox";
 import {
   Dialog,
   DialogContent,
@@ -36,7 +36,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,36 +47,36 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 
 interface UserContact {
-  id: string
-  firstName: string
-  lastName: string
-  email: string
-  phone: string
-  relationship: string | null
-  isPrimary: boolean
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  relationship: string | null;
+  isPrimary: boolean;
 }
 
 interface UserBillingAddress {
-  id: string
-  label: string | null
-  street: string
-  city: string
-  stateProvince: string | null
-  postalCode: string
-  country: string
-  isPrimary: boolean
+  id: string;
+  label: string | null;
+  street: string;
+  city: string;
+  stateProvince: string | null;
+  postalCode: string;
+  country: string;
+  isPrimary: boolean;
 }
 
 interface SavedPaymentMethod {
-  id: string
-  type: string
-  brand: string | null
-  last4: string
-  expiry: string | null
-  isDefault: boolean
+  id: string;
+  type: string;
+  brand: string | null;
+  last4: string;
+  expiry: string | null;
+  isDefault: boolean;
 }
 
 const emptyContact = {
@@ -85,7 +85,7 @@ const emptyContact = {
   email: "",
   phone: "",
   relationship: "",
-}
+};
 
 const emptyAddress = {
   label: "",
@@ -94,7 +94,7 @@ const emptyAddress = {
   city: "",
   stateProvince: "",
   postalCode: "",
-}
+};
 
 const BRAND_LABELS: Record<string, string> = {
   visa: "Visa",
@@ -105,78 +105,78 @@ const BRAND_LABELS: Record<string, string> = {
   jcb: "JCB",
   maestro: "Maestro",
   cup: "UnionPay",
-}
+};
 
 function formatBrand(brand: string | null): string {
-  if (!brand) return "Card"
-  return BRAND_LABELS[brand.toLowerCase()] || brand.charAt(0).toUpperCase() + brand.slice(1)
+  if (!brand) return "Card";
+  return BRAND_LABELS[brand.toLowerCase()] || brand.charAt(0).toUpperCase() + brand.slice(1);
 }
 
 export default function BillingPage() {
-  const [contacts, setContacts] = useState<UserContact[]>([])
-  const [addresses, setAddresses] = useState<UserBillingAddress[]>([])
-  const [paymentMethods, setPaymentMethods] = useState<SavedPaymentMethod[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [contacts, setContacts] = useState<UserContact[]>([]);
+  const [addresses, setAddresses] = useState<UserBillingAddress[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<SavedPaymentMethod[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [contactDialogOpen, setContactDialogOpen] = useState(false)
-  const [editingContact, setEditingContact] = useState<UserContact | null>(null)
-  const [contactForm, setContactForm] = useState(emptyContact)
-  const [isSavingContact, setIsSavingContact] = useState(false)
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState<UserContact | null>(null);
+  const [contactForm, setContactForm] = useState(emptyContact);
+  const [isSavingContact, setIsSavingContact] = useState(false);
 
-  const [addressDialogOpen, setAddressDialogOpen] = useState(false)
-  const [editingAddress, setEditingAddress] = useState<UserBillingAddress | null>(null)
-  const [addressForm, setAddressForm] = useState(emptyAddress)
-  const [isSavingAddress, setIsSavingAddress] = useState(false)
+  const [addressDialogOpen, setAddressDialogOpen] = useState(false);
+  const [editingAddress, setEditingAddress] = useState<UserBillingAddress | null>(null);
+  const [addressForm, setAddressForm] = useState(emptyAddress);
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true)
+      setIsLoading(true);
       try {
         const [contactsRes, addressesRes, pmRes] = await Promise.all([
           fetch("/api/user/contacts"),
           fetch("/api/user/billing-addresses"),
           fetch("/api/user/payment-methods"),
-        ])
+        ]);
         if (contactsRes.ok) {
-          const data = await contactsRes.json()
-          setContacts(data.contacts || [])
+          const data = await contactsRes.json();
+          setContacts(data.contacts || []);
         }
         if (addressesRes.ok) {
-          const data = await addressesRes.json()
-          setAddresses(data.addresses || [])
+          const data = await addressesRes.json();
+          setAddresses(data.addresses || []);
         }
         if (pmRes.ok) {
-          const data = await pmRes.json()
-          setPaymentMethods(data.paymentMethods || [])
+          const data = await pmRes.json();
+          setPaymentMethods(data.paymentMethods || []);
         }
       } catch {
-        toast.error("Failed to load billing details")
+        toast.error("Failed to load billing details");
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
-    fetchData()
-  }, [])
+    };
+    fetchData();
+  }, []);
 
   // ---- Contact CRUD ----
 
   const openNewContact = () => {
-    setEditingContact(null)
-    setContactForm(emptyContact)
-    setContactDialogOpen(true)
-  }
+    setEditingContact(null);
+    setContactForm(emptyContact);
+    setContactDialogOpen(true);
+  };
 
   const openEditContact = (contact: UserContact) => {
-    setEditingContact(contact)
+    setEditingContact(contact);
     setContactForm({
       firstName: contact.firstName,
       lastName: contact.lastName,
       email: contact.email,
       phone: contact.phone,
       relationship: contact.relationship || "",
-    })
-    setContactDialogOpen(true)
-  }
+    });
+    setContactDialogOpen(true);
+  };
 
   const saveContact = async () => {
     if (
@@ -185,54 +185,54 @@ export default function BillingPage() {
       !contactForm.email ||
       !contactForm.phone
     ) {
-      toast.error("Please fill in all required fields")
-      return
+      toast.error("Please fill in all required fields");
+      return;
     }
     if (!isValidPhoneNumber(contactForm.phone)) {
-      toast.error("Please enter a valid phone number")
-      return
+      toast.error("Please enter a valid phone number");
+      return;
     }
-    setIsSavingContact(true)
+    setIsSavingContact(true);
     try {
       if (editingContact) {
         const res = await fetch(`/api/user/contacts/${editingContact.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(contactForm),
-        })
-        if (!res.ok) throw new Error("Failed to update contact")
-        const { contact } = await res.json()
-        setContacts((prev) => prev.map((c) => (c.id === contact.id ? contact : c)))
-        toast.success("Contact updated")
+        });
+        if (!res.ok) throw new Error("Failed to update contact");
+        const { contact } = await res.json();
+        setContacts((prev) => prev.map((c) => (c.id === contact.id ? contact : c)));
+        toast.success("Contact updated");
       } else {
         const res = await fetch("/api/user/contacts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...contactForm, isPrimary: contacts.length === 0 }),
-        })
-        if (!res.ok) throw new Error("Failed to create contact")
-        const { contact } = await res.json()
-        setContacts((prev) => [...prev, contact])
-        toast.success("Contact added")
+        });
+        if (!res.ok) throw new Error("Failed to create contact");
+        const { contact } = await res.json();
+        setContacts((prev) => [...prev, contact]);
+        toast.success("Contact added");
       }
-      setContactDialogOpen(false)
+      setContactDialogOpen(false);
     } catch {
-      toast.error("Failed to save contact")
+      toast.error("Failed to save contact");
     } finally {
-      setIsSavingContact(false)
+      setIsSavingContact(false);
     }
-  }
+  };
 
   const deleteContact = async (contactId: string) => {
     try {
-      const res = await fetch(`/api/user/contacts/${contactId}`, { method: "DELETE" })
-      if (!res.ok) throw new Error("Failed to delete")
-      setContacts((prev) => prev.filter((c) => c.id !== contactId))
-      toast.success("Contact removed")
+      const res = await fetch(`/api/user/contacts/${contactId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
+      setContacts((prev) => prev.filter((c) => c.id !== contactId));
+      toast.success("Contact removed");
     } catch {
-      toast.error("Failed to delete contact")
+      toast.error("Failed to delete contact");
     }
-  }
+  };
 
   const setPrimaryContact = async (contactId: string) => {
     try {
@@ -240,25 +240,25 @@ export default function BillingPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isPrimary: true }),
-      })
-      if (!res.ok) throw new Error("Failed to update")
-      setContacts((prev) => prev.map((c) => ({ ...c, isPrimary: c.id === contactId })))
-      toast.success("Primary contact updated")
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      setContacts((prev) => prev.map((c) => ({ ...c, isPrimary: c.id === contactId })));
+      toast.success("Primary contact updated");
     } catch {
-      toast.error("Failed to set primary contact")
+      toast.error("Failed to set primary contact");
     }
-  }
+  };
 
   // ---- Address CRUD ----
 
   const openNewAddress = () => {
-    setEditingAddress(null)
-    setAddressForm(emptyAddress)
-    setAddressDialogOpen(true)
-  }
+    setEditingAddress(null);
+    setAddressForm(emptyAddress);
+    setAddressDialogOpen(true);
+  };
 
   const openEditAddress = (address: UserBillingAddress) => {
-    setEditingAddress(address)
+    setEditingAddress(address);
     setAddressForm({
       label: address.label || "",
       country: address.country || "US",
@@ -266,75 +266,78 @@ export default function BillingPage() {
       city: address.city,
       stateProvince: address.stateProvince || "",
       postalCode: address.postalCode,
-    })
-    setAddressDialogOpen(true)
-  }
+    });
+    setAddressDialogOpen(true);
+  };
 
   const saveAddress = async () => {
     if (!addressForm.country) {
-      toast.error("Please select a country")
-      return
+      toast.error("Please select a country");
+      return;
     }
     if (!addressForm.street || !addressForm.city || !addressForm.postalCode) {
-      toast.error("Please fill in street, city, and postal code")
-      return
+      toast.error("Please fill in street, city, and postal code");
+      return;
     }
-    const regions = getRegionsForCountry(addressForm.country)
+    const regions = getRegionsForCountry(addressForm.country);
     if (regions.length > 0 && !addressForm.stateProvince) {
-      toast.error(`Please select a ${addressForm.country === "CA" ? "province" : "state"}`)
-      return
+      toast.error(`Please select a ${addressForm.country === "CA" ? "province" : "state"}`);
+      return;
     }
-    if ((addressForm.country === "US" || addressForm.country === "CA") && !isValidPostalCode(addressForm.postalCode, addressForm.country)) {
+    if (
+      (addressForm.country === "US" || addressForm.country === "CA") &&
+      !isValidPostalCode(addressForm.postalCode, addressForm.country)
+    ) {
       toast.error(
         addressForm.country === "US"
           ? "Enter a valid ZIP code (e.g. 12345 or 12345-6789)"
           : "Enter a valid postal code (e.g. A1A 1A1)"
-      )
-      return
+      );
+      return;
     }
-    setIsSavingAddress(true)
+    setIsSavingAddress(true);
     try {
       if (editingAddress) {
         const res = await fetch(`/api/user/billing-addresses/${editingAddress.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(addressForm),
-        })
-        if (!res.ok) throw new Error("Failed to update address")
-        const { address } = await res.json()
-        setAddresses((prev) => prev.map((a) => (a.id === address.id ? address : a)))
-        toast.success("Address updated")
+        });
+        if (!res.ok) throw new Error("Failed to update address");
+        const { address } = await res.json();
+        setAddresses((prev) => prev.map((a) => (a.id === address.id ? address : a)));
+        toast.success("Address updated");
       } else {
         const res = await fetch("/api/user/billing-addresses", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...addressForm, isPrimary: addresses.length === 0 }),
-        })
-        if (!res.ok) throw new Error("Failed to create address")
-        const { address } = await res.json()
-        setAddresses((prev) => [...prev, address])
-        toast.success("Address added")
+        });
+        if (!res.ok) throw new Error("Failed to create address");
+        const { address } = await res.json();
+        setAddresses((prev) => [...prev, address]);
+        toast.success("Address added");
       }
-      setAddressDialogOpen(false)
+      setAddressDialogOpen(false);
     } catch {
-      toast.error("Failed to save address")
+      toast.error("Failed to save address");
     } finally {
-      setIsSavingAddress(false)
+      setIsSavingAddress(false);
     }
-  }
+  };
 
   const deleteAddress = async (addressId: string) => {
     try {
       const res = await fetch(`/api/user/billing-addresses/${addressId}`, {
         method: "DELETE",
-      })
-      if (!res.ok) throw new Error("Failed to delete")
-      setAddresses((prev) => prev.filter((a) => a.id !== addressId))
-      toast.success("Address removed")
+      });
+      if (!res.ok) throw new Error("Failed to delete");
+      setAddresses((prev) => prev.filter((a) => a.id !== addressId));
+      toast.success("Address removed");
     } catch {
-      toast.error("Failed to delete address")
+      toast.error("Failed to delete address");
     }
-  }
+  };
 
   const setPrimaryAddress = async (addressId: string) => {
     try {
@@ -342,34 +345,34 @@ export default function BillingPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isPrimary: true }),
-      })
-      if (!res.ok) throw new Error("Failed to update")
-      setAddresses((prev) => prev.map((a) => ({ ...a, isPrimary: a.id === addressId })))
-      toast.success("Primary address updated")
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      setAddresses((prev) => prev.map((a) => ({ ...a, isPrimary: a.id === addressId })));
+      toast.success("Primary address updated");
     } catch {
-      toast.error("Failed to set primary address")
+      toast.error("Failed to set primary address");
     }
-  }
+  };
 
   // ---- Payment Method Actions ----
 
   const deletePaymentMethod = async (pmId: string) => {
     try {
-      const res = await fetch(`/api/user/payment-methods/${pmId}`, { method: "DELETE" })
-      if (!res.ok) throw new Error("Failed to delete")
+      const res = await fetch(`/api/user/payment-methods/${pmId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
       setPaymentMethods((prev) => {
-        const remaining = prev.filter((pm) => pm.id !== pmId)
-        const deleted = prev.find((pm) => pm.id === pmId)
+        const remaining = prev.filter((pm) => pm.id !== pmId);
+        const deleted = prev.find((pm) => pm.id === pmId);
         if (deleted?.isDefault && remaining.length > 0) {
-          remaining[0] = { ...remaining[0], isDefault: true }
+          remaining[0] = { ...remaining[0], isDefault: true };
         }
-        return remaining
-      })
-      toast.success("Payment method removed")
+        return remaining;
+      });
+      toast.success("Payment method removed");
     } catch {
-      toast.error("Failed to remove payment method")
+      toast.error("Failed to remove payment method");
     }
-  }
+  };
 
   const setDefaultPaymentMethod = async (pmId: string) => {
     try {
@@ -377,14 +380,14 @@ export default function BillingPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isDefault: true }),
-      })
-      if (!res.ok) throw new Error("Failed to update")
-      setPaymentMethods((prev) => prev.map((pm) => ({ ...pm, isDefault: pm.id === pmId })))
-      toast.success("Default payment method updated")
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      setPaymentMethods((prev) => prev.map((pm) => ({ ...pm, isDefault: pm.id === pmId })));
+      toast.success("Default payment method updated");
     } catch {
-      toast.error("Failed to set default payment method")
+      toast.error("Failed to set default payment method");
     }
-  }
+  };
 
   if (isLoading) {
     return (
@@ -422,7 +425,7 @@ export default function BillingPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -430,7 +433,8 @@ export default function BillingPage() {
       <div>
         <h1 className="text-2xl font-bold">Billing Details</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Manage your saved contacts, payment methods, and billing addresses. These are pre-filled during checkout on any site.
+          Manage your saved contacts, payment methods, and billing addresses. These are pre-filled
+          during checkout on any site.
         </p>
       </div>
 
@@ -450,9 +454,7 @@ export default function BillingPage() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>
-                  {editingContact ? "Edit Contact" : "Add Contact"}
-                </DialogTitle>
+                <DialogTitle>{editingContact ? "Edit Contact" : "Add Contact"}</DialogTitle>
                 <DialogDescription>
                   {editingContact
                     ? "Update this contact's information."
@@ -467,9 +469,7 @@ export default function BillingPage() {
                       id="contact-firstName"
                       autoComplete="given-name"
                       value={contactForm.firstName}
-                      onChange={(e) =>
-                        setContactForm((f) => ({ ...f, firstName: e.target.value }))
-                      }
+                      onChange={(e) => setContactForm((f) => ({ ...f, firstName: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-2">
@@ -478,9 +478,7 @@ export default function BillingPage() {
                       id="contact-lastName"
                       autoComplete="family-name"
                       value={contactForm.lastName}
-                      onChange={(e) =>
-                        setContactForm((f) => ({ ...f, lastName: e.target.value }))
-                      }
+                      onChange={(e) => setContactForm((f) => ({ ...f, lastName: e.target.value }))}
                     />
                   </div>
                 </div>
@@ -491,9 +489,7 @@ export default function BillingPage() {
                     type="email"
                     autoComplete="email"
                     value={contactForm.email}
-                    onChange={(e) =>
-                      setContactForm((f) => ({ ...f, email: e.target.value }))
-                    }
+                    onChange={(e) => setContactForm((f) => ({ ...f, email: e.target.value }))}
                   />
                 </div>
                 <div className="space-y-2">
@@ -502,9 +498,7 @@ export default function BillingPage() {
                     id="contact-phone"
                     defaultCountry="US"
                     value={contactForm.phone}
-                    onChange={(value) =>
-                      setContactForm((f) => ({ ...f, phone: value || "" }))
-                    }
+                    onChange={(value) => setContactForm((f) => ({ ...f, phone: value || "" }))}
                   />
                 </div>
                 <div className="space-y-2">
@@ -520,16 +514,11 @@ export default function BillingPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setContactDialogOpen(false)}
-                >
+                <Button variant="outline" onClick={() => setContactDialogOpen(false)}>
                   Cancel
                 </Button>
                 <Button onClick={saveContact} disabled={isSavingContact}>
-                  {isSavingContact && (
-                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                  )}
+                  {isSavingContact && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
                   {editingContact ? "Save Changes" : "Add Contact"}
                 </Button>
               </DialogFooter>
@@ -542,9 +531,7 @@ export default function BillingPage() {
             <CardContent className="py-10 text-center text-muted-foreground">
               <User className="h-10 w-10 mx-auto mb-3 opacity-40" />
               <p className="font-medium">No contacts saved yet</p>
-              <p className="text-sm mt-1">
-                Add a contact to speed up checkout across all sites.
-              </p>
+              <p className="text-sm mt-1">Add a contact to speed up checkout across all sites.</p>
             </CardContent>
           </Card>
         ) : (
@@ -577,20 +564,12 @@ export default function BillingPage() {
                   </p>
                 </CardContent>
                 <CardFooter className="gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => openEditContact(contact)}
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => openEditContact(contact)}>
                     <Pencil className="h-3 w-3 mr-1" />
                     Edit
                   </Button>
                   {!contact.isPrimary && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setPrimaryContact(contact.id)}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => setPrimaryContact(contact.id)}>
                       <Star className="h-3 w-3 mr-1" />
                       Set Primary
                     </Button>
@@ -610,8 +589,8 @@ export default function BillingPage() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Remove contact?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will remove {contact.firstName} {contact.lastName} from
-                          your saved contacts. This cannot be undone.
+                          This will remove {contact.firstName} {contact.lastName} from your saved
+                          contacts. This cannot be undone.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -670,7 +649,10 @@ export default function BillingPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="pb-3 text-sm text-muted-foreground space-y-1">
-                  <p className="font-mono">&bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; {pm.last4}</p>
+                  <p className="font-mono">
+                    &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull;{" "}
+                    {pm.last4}
+                  </p>
                   {pm.expiry && <p>Expires {pm.expiry}</p>}
                 </CardContent>
                 <CardFooter className="gap-2">
@@ -699,8 +681,8 @@ export default function BillingPage() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Remove payment method?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will remove {formatBrand(pm.brand)} ending in {pm.last4} from
-                          your saved payment methods. This cannot be undone.
+                          This will remove {formatBrand(pm.brand)} ending in {pm.last4} from your
+                          saved payment methods. This cannot be undone.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -737,9 +719,7 @@ export default function BillingPage() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>
-                  {editingAddress ? "Edit Address" : "Add Address"}
-                </DialogTitle>
+                <DialogTitle>{editingAddress ? "Edit Address" : "Add Address"}</DialogTitle>
                 <DialogDescription>
                   {editingAddress
                     ? "Update this billing address."
@@ -753,9 +733,7 @@ export default function BillingPage() {
                     id="address-label"
                     placeholder="e.g. Home, Work"
                     value={addressForm.label}
-                    onChange={(e) =>
-                      setAddressForm((f) => ({ ...f, label: e.target.value }))
-                    }
+                    onChange={(e) => setAddressForm((f) => ({ ...f, label: e.target.value }))}
                   />
                 </div>
                 <div className="space-y-2">
@@ -789,9 +767,7 @@ export default function BillingPage() {
                     placeholder="e.g. 123 Main St"
                     autoComplete="street-address"
                     value={addressForm.street}
-                    onChange={(e) =>
-                      setAddressForm((f) => ({ ...f, street: e.target.value }))
-                    }
+                    onChange={(e) => setAddressForm((f) => ({ ...f, street: e.target.value }))}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -801,9 +777,7 @@ export default function BillingPage() {
                       id="address-city"
                       autoComplete="address-level2"
                       value={addressForm.city}
-                      onChange={(e) =>
-                        setAddressForm((f) => ({ ...f, city: e.target.value }))
-                      }
+                      onChange={(e) => setAddressForm((f) => ({ ...f, city: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-2">
@@ -827,23 +801,16 @@ export default function BillingPage() {
                     autoComplete="postal-code"
                     placeholder={addressForm.country === "CA" ? "A1A 1A1" : "12345"}
                     value={addressForm.postalCode}
-                    onChange={(e) =>
-                      setAddressForm((f) => ({ ...f, postalCode: e.target.value }))
-                    }
+                    onChange={(e) => setAddressForm((f) => ({ ...f, postalCode: e.target.value }))}
                   />
                 </div>
               </div>
               <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setAddressDialogOpen(false)}
-                >
+                <Button variant="outline" onClick={() => setAddressDialogOpen(false)}>
                   Cancel
                 </Button>
                 <Button onClick={saveAddress} disabled={isSavingAddress}>
-                  {isSavingAddress && (
-                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                  )}
+                  {isSavingAddress && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
                   {editingAddress ? "Save Changes" : "Add Address"}
                 </Button>
               </DialogFooter>
@@ -856,9 +823,7 @@ export default function BillingPage() {
             <CardContent className="py-10 text-center text-muted-foreground">
               <MapPin className="h-10 w-10 mx-auto mb-3 opacity-40" />
               <p className="font-medium">No billing addresses saved yet</p>
-              <p className="text-sm mt-1">
-                Add an address to speed up checkout across all sites.
-              </p>
+              <p className="text-sm mt-1">Add an address to speed up checkout across all sites.</p>
             </CardContent>
           </Card>
         ) : (
@@ -887,23 +852,17 @@ export default function BillingPage() {
                       : ""}{" "}
                     {address.postalCode}
                   </p>
-                  <p>{COUNTRIES.find((c) => c.code === address.country)?.name ?? address.country}</p>
+                  <p>
+                    {COUNTRIES.find((c) => c.code === address.country)?.name ?? address.country}
+                  </p>
                 </CardContent>
                 <CardFooter className="gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => openEditAddress(address)}
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => openEditAddress(address)}>
                     <Pencil className="h-3 w-3 mr-1" />
                     Edit
                   </Button>
                   {!address.isPrimary && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setPrimaryAddress(address.id)}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => setPrimaryAddress(address.id)}>
                       <Star className="h-3 w-3 mr-1" />
                       Set Primary
                     </Button>
@@ -945,5 +904,5 @@ export default function BillingPage() {
         )}
       </div>
     </div>
-  )
+  );
 }

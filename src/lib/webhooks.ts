@@ -1,13 +1,13 @@
 /**
  * Webhook Management Utilities
- * 
+ *
  * This module provides environment-aware webhook URL management and
  * signature verification utilities for external service webhooks.
  */
 
-import { getEnvConfig, getCurrentEnvironment } from './env-domains';
-import crypto from 'crypto';
-import { logger } from './logger';
+import { getEnvConfig, getCurrentEnvironment } from "./env-domains";
+import crypto from "crypto";
+import { logger } from "./logger";
 
 /**
  * Get the base URL for webhooks in the current environment
@@ -16,13 +16,13 @@ export function getWebhookBaseUrl(): string {
   const config = getEnvConfig();
   const currentEnv = getCurrentEnvironment();
 
-  if (currentEnv === 'local') {
+  if (currentEnv === "local") {
     // Use ngrok tunnel URL for local development if configured
-    return process.env.WEBHOOK_TUNNEL_URL || 'http://localhost:3000';
+    return process.env.WEBHOOK_TUNNEL_URL || "http://localhost:3000";
   }
 
   // For cloud environments, use the admin subdomain
-  const protocol = config.useHttps ? 'https' : 'http';
+  const protocol = config.useHttps ? "https" : "http";
   return `${protocol}://admin.${config.baseDomain}`;
 }
 
@@ -35,16 +35,16 @@ export const WEBHOOK_ENDPOINTS = {
 
   /** Adyen balance platform webhook endpoint */
   adyenBalancePlatform: () => `${getWebhookBaseUrl()}/api/webhooks/adyen-balance-platform`,
-  
+
   /** Twilio SMS/messaging webhook endpoint */
   twilio: () => `${getWebhookBaseUrl()}/api/twilio/webhook`,
-  
+
   /** Stripe payment webhook endpoint */
   stripe: () => `${getWebhookBaseUrl()}/api/webhooks/stripe`,
-  
+
   /** SES bounce/complaint notification endpoint */
   sesBounce: () => `${getWebhookBaseUrl()}/api/webhooks/ses-bounce`,
-  
+
   /** Twilio status callback endpoint */
   twilioStatus: () => `${getWebhookBaseUrl()}/api/twilio/webhook`,
 } as const;
@@ -58,24 +58,23 @@ export function verifyAdyenSignature(
   hmacKey?: string
 ): boolean {
   const key = hmacKey || process.env.ADYEN_WEBHOOK_HMAC_KEY;
-  
+
   if (!key) {
-    logger.warn('[WEBHOOK] Adyen HMAC key not configured');
+    logger.warn("[WEBHOOK] Adyen HMAC key not configured");
     return false;
   }
 
   try {
     const expectedSignature = crypto
-      .createHmac('sha256', Buffer.from(key, 'hex'))
-      .update(payload, 'utf-8')
-      .digest('base64');
+      .createHmac("sha256", Buffer.from(key, "hex"))
+      .update(payload, "utf-8")
+      .digest("base64");
 
-    return crypto.timingSafeEqual(
-      Buffer.from(signature),
-      Buffer.from(expectedSignature)
-    );
+    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
   } catch (error) {
-    logger.error('[WEBHOOK] Adyen signature verification failed', { error: error instanceof Error ? error.message : String(error) });
+    logger.error("[WEBHOOK] Adyen signature verification failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return false;
   }
 }
@@ -90,9 +89,9 @@ export function verifyTwilioSignature(
   authToken?: string
 ): boolean {
   const token = authToken || process.env.TWILIO_AUTH_TOKEN;
-  
+
   if (!token) {
-    logger.warn('[WEBHOOK] Twilio auth token not configured');
+    logger.warn("[WEBHOOK] Twilio auth token not configured");
     return false;
   }
 
@@ -100,19 +99,18 @@ export function verifyTwilioSignature(
     // Sort parameters alphabetically and concatenate
     const sortedParams = Object.keys(params)
       .sort()
-      .reduce((acc, key) => acc + key + params[key], '');
+      .reduce((acc, key) => acc + key + params[key], "");
 
     const expectedSignature = crypto
-      .createHmac('sha1', token)
+      .createHmac("sha1", token)
       .update(url + sortedParams)
-      .digest('base64');
+      .digest("base64");
 
-    return crypto.timingSafeEqual(
-      Buffer.from(signature),
-      Buffer.from(expectedSignature)
-    );
+    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
   } catch (error) {
-    logger.error('[WEBHOOK] Twilio signature verification failed', { error: error instanceof Error ? error.message : String(error) });
+    logger.error("[WEBHOOK] Twilio signature verification failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return false;
   }
 }
@@ -126,22 +124,25 @@ export function verifyStripeSignature(
   secret?: string
 ): boolean {
   const webhookSecret = secret || process.env.STRIPE_WEBHOOK_SECRET;
-  
+
   if (!webhookSecret) {
-    logger.warn('[WEBHOOK] Stripe webhook secret not configured');
+    logger.warn("[WEBHOOK] Stripe webhook secret not configured");
     return false;
   }
 
   try {
     // Parse the signature header
-    const sigParts = signature.split(',').reduce((acc, part) => {
-      const [key, value] = part.split('=');
-      acc[key] = value;
-      return acc;
-    }, {} as Record<string, string>);
+    const sigParts = signature.split(",").reduce(
+      (acc, part) => {
+        const [key, value] = part.split("=");
+        acc[key] = value;
+        return acc;
+      },
+      {} as Record<string, string>
+    );
 
-    const timestamp = sigParts['t'];
-    const expectedSignature = sigParts['v1'];
+    const timestamp = sigParts["t"];
+    const expectedSignature = sigParts["v1"];
 
     if (!timestamp || !expectedSignature) {
       return false;
@@ -150,23 +151,22 @@ export function verifyStripeSignature(
     // Check timestamp is within tolerance (5 minutes)
     const timestampAge = Math.floor(Date.now() / 1000) - parseInt(timestamp, 10);
     if (timestampAge > 300) {
-      logger.warn('[WEBHOOK] Stripe webhook timestamp too old', { timestampAge });
+      logger.warn("[WEBHOOK] Stripe webhook timestamp too old", { timestampAge });
       return false;
     }
 
     // Calculate expected signature
     const signedPayload = `${timestamp}.${payload}`;
     const computedSignature = crypto
-      .createHmac('sha256', webhookSecret)
+      .createHmac("sha256", webhookSecret)
       .update(signedPayload)
-      .digest('hex');
+      .digest("hex");
 
-    return crypto.timingSafeEqual(
-      Buffer.from(expectedSignature),
-      Buffer.from(computedSignature)
-    );
+    return crypto.timingSafeEqual(Buffer.from(expectedSignature), Buffer.from(computedSignature));
   } catch (error) {
-    logger.error('[WEBHOOK] Stripe signature verification failed', { error: error instanceof Error ? error.message : String(error) });
+    logger.error("[WEBHOOK] Stripe signature verification failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return false;
   }
 }
@@ -199,14 +199,17 @@ export function logWebhookEvent(
  * Get configuration instructions for setting up webhooks
  * Useful for displaying in admin UI
  */
-export function getWebhookSetupInstructions(): Record<string, { url: string; instructions: string }> {
+export function getWebhookSetupInstructions(): Record<
+  string,
+  { url: string; instructions: string }
+> {
   const currentEnv = getCurrentEnvironment();
-  
+
   return {
     adyen: {
       url: WEBHOOK_ENDPOINTS.adyen(),
       instructions: `
-1. Go to Adyen Customer Area (${currentEnv === 'production' ? 'ca-live' : 'ca-test'}.adyen.com)
+1. Go to Adyen Customer Area (${currentEnv === "production" ? "ca-live" : "ca-test"}.adyen.com)
 2. Navigate to Developers > Webhooks
 3. Create a new webhook with URL: ${WEBHOOK_ENDPOINTS.adyen()}
 4. Set up HMAC signature verification
@@ -216,7 +219,7 @@ export function getWebhookSetupInstructions(): Record<string, { url: string; ins
     adyenBalancePlatform: {
       url: WEBHOOK_ENDPOINTS.adyenBalancePlatform(),
       instructions: `
-1. Go to Adyen Customer Area (${currentEnv === 'production' ? 'ca-live' : 'ca-test'}.adyen.com)
+1. Go to Adyen Customer Area (${currentEnv === "production" ? "ca-live" : "ca-test"}.adyen.com)
 2. Navigate to Balance Platforms > UplifterLLC > Webhooks
 3. Create Configuration, Transfer, and Negative Balance Compensation Warning webhooks
 4. Set URL for all three: ${WEBHOOK_ENDPOINTS.adyenBalancePlatform()}

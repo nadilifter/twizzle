@@ -8,23 +8,18 @@ import { db } from "@/lib/db";
  * Returns guardians for an athlete.
  * Only accessible if the current user is a guardian of the athlete.
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
     const { id: athleteId } = await params;
-    const userId = (session.user.isSuperAdmin && session.user.viewingAsUserId)
-      ? session.user.viewingAsUserId
-      : session.user.id;
+    const userId =
+      session.user.isSuperAdmin && session.user.viewingAsUserId
+        ? session.user.viewingAsUserId
+        : session.user.id;
 
     const userGuardianLink = await db.athleteGuardian.findFirst({
       where: {
@@ -74,9 +69,6 @@ export async function GET(
     return NextResponse.json({ guardians: result });
   } catch (error) {
     console.error("GET /api/athletes/[id]/guardians error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch guardians" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch guardians" }, { status: 500 });
   }
 }

@@ -94,10 +94,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching lesson plans:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch lesson plans" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch lesson plans" }, { status: 500 });
   }
 }
 
@@ -133,7 +130,7 @@ export async function POST(request: NextRequest) {
 
     const scopedDb = getScopedDb(session.user.organizationId);
     if (validatedData.rotations?.length) {
-      const allSkillIds = validatedData.rotations.flatMap(r => r.skillIds || []);
+      const allSkillIds = validatedData.rotations.flatMap((r) => r.skillIds || []);
       if (allSkillIds.length > 0) {
         const uniqueSkillIds = [...new Set(allSkillIds)];
         const validSkills = await scopedDb.skill.findMany({
@@ -156,19 +153,23 @@ export async function POST(request: NextRequest) {
         theme: validatedData.theme,
         notes: validatedData.notes,
         organizationId: session.user.organizationId,
-        rotations: validatedData.rotations ? {
-          create: validatedData.rotations.map((rotation, index) => ({
-            name: rotation.name,
-            description: rotation.description,
-            order: rotation.order ?? index,
-            media: rotation.media || [],
-            skills: rotation.skillIds ? {
-              create: rotation.skillIds.map((skillId) => ({
-                skillId,
+        rotations: validatedData.rotations
+          ? {
+              create: validatedData.rotations.map((rotation, index) => ({
+                name: rotation.name,
+                description: rotation.description,
+                order: rotation.order ?? index,
+                media: rotation.media || [],
+                skills: rotation.skillIds
+                  ? {
+                      create: rotation.skillIds.map((skillId) => ({
+                        skillId,
+                      })),
+                    }
+                  : undefined,
               })),
-            } : undefined,
-          })),
-        } : undefined,
+            }
+          : undefined,
       },
       include: {
         program: true,
@@ -188,15 +189,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(lessonPlan);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating lesson plan:", error);
-    return NextResponse.json(
-      { error: "Failed to create lesson plan" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create lesson plan" }, { status: 500 });
   }
 }

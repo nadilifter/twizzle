@@ -1,19 +1,19 @@
-"use client"
+"use client";
 
-import { useEffect, useRef } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
-import { Loader2, Clock, Users, CheckCircle, XCircle, AlertCircle } from "lucide-react"
-import { useQueue } from "@/components/sites/queue-context"
+import { useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Loader2, Clock, Users, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { useQueue } from "@/components/sites/queue-context";
 
 export default function QueuePage() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const programId = searchParams.get("programId")
-  const returnUrl = searchParams.get("returnUrl") || "/register"
-  const hasEnteredRef = useRef(false)
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const programId = searchParams.get("programId");
+  const returnUrl = searchParams.get("returnUrl") || "/register";
+  const hasEnteredRef = useRef(false);
 
   const {
     sessionToken,
@@ -29,22 +29,22 @@ export default function QueuePage() {
     error,
     enterQueue,
     abandonQueue,
-  } = useQueue()
+  } = useQueue();
 
   useEffect(() => {
-    if (hasEnteredRef.current) return
-    hasEnteredRef.current = true
+    if (hasEnteredRef.current) return;
+    hasEnteredRef.current = true;
 
     if (!sessionToken) {
-      enterQueue(programId)
+      enterQueue(programId);
     }
-  }, [sessionToken, programId, enterQueue])
+  }, [sessionToken, programId, enterQueue]);
 
   useEffect(() => {
     if (canProceed) {
-      router.push(returnUrl)
+      router.push(returnUrl);
     }
-  }, [canProceed, router, returnUrl])
+  }, [canProceed, router, returnUrl]);
 
   if (isEntering) {
     return (
@@ -54,7 +54,7 @@ export default function QueuePage() {
           <p className="text-muted-foreground">Checking queue status...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -69,13 +69,11 @@ export default function QueuePage() {
             <CardDescription>{error}</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
-            <Button onClick={() => router.push("/")}>
-              Return to Home
-            </Button>
+            <Button onClick={() => router.push("/")}>Return to Home</Button>
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   if (!isInQueue && !canProceed && !reservation) {
@@ -86,7 +84,7 @@ export default function QueuePage() {
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (queueStatus === "ADMITTED" && reservation) {
@@ -103,8 +101,7 @@ export default function QueuePage() {
           <CardContent className="space-y-6">
             <div className="text-center">
               <div className="text-4xl font-bold mb-1">
-                {Math.floor(remainingSeconds / 60)}:
-                {String(remainingSeconds % 60).padStart(2, "0")}
+                {Math.floor(remainingSeconds / 60)}:{String(remainingSeconds % 60).padStart(2, "0")}
               </div>
               <p className="text-sm text-muted-foreground">remaining to complete registration</p>
             </div>
@@ -114,7 +111,7 @@ export default function QueuePage() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -131,17 +128,13 @@ export default function QueuePage() {
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="text-center">
-            <div className="text-6xl font-bold text-primary mb-2">
-              #{position}
-            </div>
+            <div className="text-6xl font-bold text-primary mb-2">#{position}</div>
             <p className="text-muted-foreground">Your position in line</p>
           </div>
 
           {totalWaiting && (
             <div className="space-y-2">
-              <Progress 
-                value={((totalWaiting - (position || 0)) / totalWaiting) * 100} 
-              />
+              <Progress value={((totalWaiting - (position || 0)) / totalWaiting) * 100} />
               <p className="text-xs text-center text-muted-foreground">
                 {totalWaiting} people waiting
               </p>
@@ -152,24 +145,25 @@ export default function QueuePage() {
             <div className="flex items-center justify-center gap-2 text-muted-foreground">
               <Clock className="h-4 w-4" />
               <span>
-                Estimated wait: ~{estimatedWaitMinutes} minute{estimatedWaitMinutes !== 1 ? "s" : ""}
+                Estimated wait: ~{estimatedWaitMinutes} minute
+                {estimatedWaitMinutes !== 1 ? "s" : ""}
               </span>
             </div>
           )}
 
           <div className="bg-muted/50 rounded-lg p-4 text-sm text-center">
             <p>
-              When it&apos;s your turn, you&apos;ll have{" "}
-              <strong>10 minutes</strong> to complete your registration.
+              When it&apos;s your turn, you&apos;ll have <strong>10 minutes</strong> to complete
+              your registration.
             </p>
           </div>
 
-          <Button 
-            variant="outline" 
-            className="w-full" 
+          <Button
+            variant="outline"
+            className="w-full"
             onClick={() => {
-              abandonQueue()
-              router.push("/")
+              abandonQueue();
+              router.push("/");
             }}
           >
             <XCircle className="h-4 w-4 mr-2" />
@@ -183,5 +177,5 @@ export default function QueuePage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

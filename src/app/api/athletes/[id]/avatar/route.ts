@@ -10,14 +10,14 @@ import { db } from "@/lib/db"; // tenant-isolation-ok: Athlete is not a tenant m
 
 async function verifyAthleteAccess(
   athleteId: string,
-  session: { user: { id: string; organizationId: string; permissions?: string[]; isSuperAdmin?: boolean } }
+  session: {
+    user: { id: string; organizationId: string; permissions?: string[]; isSuperAdmin?: boolean };
+  }
 ): Promise<boolean> {
   const permissions = session.user.permissions ?? [];
   const isSuperAdmin = session.user.isSuperAdmin === true;
   const hasStaffAccess =
-    isSuperAdmin ||
-    permissions.includes("*") ||
-    permissions.includes("athletes.edit");
+    isSuperAdmin || permissions.includes("*") || permissions.includes("athletes.edit");
 
   if (hasStaffAccess) {
     const athlete = await db.athlete.findFirst({
@@ -36,21 +36,19 @@ async function verifyAthleteAccess(
   const athlete = await db.athlete.findFirst({
     where: {
       id: athleteId,
-      OR: [
-        { guardians: { some: { userId: session.user.id } } },
-        { userId: session.user.id },
-      ],
+      OR: [{ guardians: { some: { userId: session.user.id } } }, { userId: session.user.id }],
     },
     select: { id: true },
   });
   return !!athlete;
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const rateLimitResponse = await checkApiRateLimit(request, "athlete-avatar-upload", RATE_LIMITS.sensitive);
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const rateLimitResponse = await checkApiRateLimit(
+    request,
+    "athlete-avatar-upload",
+    RATE_LIMITS.sensitive
+  );
   if (rateLimitResponse) return rateLimitResponse;
 
   try {
@@ -148,7 +146,11 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const rateLimitResponse = await checkApiRateLimit(request, "athlete-avatar-delete", RATE_LIMITS.sensitive);
+  const rateLimitResponse = await checkApiRateLimit(
+    request,
+    "athlete-avatar-delete",
+    RATE_LIMITS.sensitive
+  );
   if (rateLimitResponse) return rateLimitResponse;
 
   try {

@@ -46,16 +46,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating payment link:", error);
-    return NextResponse.json(
-      { error: "Failed to create payment link" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create payment link" }, { status: 500 });
   }
 }
 
@@ -85,9 +79,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error getting payment link:", error);
-    return NextResponse.json(
-      { error: "Failed to get payment link status" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to get payment link status" }, { status: 500 });
   }
 }

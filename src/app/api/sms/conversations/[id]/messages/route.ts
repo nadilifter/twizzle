@@ -10,10 +10,7 @@ import {
 } from "@/lib/conversation-service";
 
 // GET /api/sms/conversations/[id]/messages - Get messages for a conversation
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.organizationId) {
@@ -54,10 +51,7 @@ export async function GET(
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error fetching conversation messages:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch messages" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch messages" }, { status: 500 });
   }
 }
 
@@ -66,10 +60,7 @@ const sendMessageSchema = z.object({
 });
 
 // POST /api/sms/conversations/[id]/messages - Send a message in a conversation
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.organizationId) {
@@ -96,7 +87,12 @@ export async function POST(
     const reqBody = await request.json();
     const { body } = sendMessageSchema.parse(reqBody);
 
-    const result = await sendConversationMessage(id, body, session.user.organizationId, session.user.id);
+    const result = await sendConversationMessage(
+      id,
+      body,
+      session.user.organizationId,
+      session.user.id
+    );
 
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 });
@@ -114,9 +110,6 @@ export async function POST(
       );
     }
     console.error("Error sending conversation message:", error);
-    return NextResponse.json(
-      { error: "Failed to send message" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to send message" }, { status: 500 });
   }
 }

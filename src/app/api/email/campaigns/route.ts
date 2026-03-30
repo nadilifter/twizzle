@@ -8,10 +8,7 @@ import {
   checkEmailUsageLimits,
   getExpandedCampaignRecipients,
 } from "@/lib/email-campaign-service";
-import {
-  renderCampaignEmail,
-  getOrganizationBranding,
-} from "@/lib/email-template-renderer";
+import { renderCampaignEmail, getOrganizationBranding } from "@/lib/email-template-renderer";
 import type { EmailTargetType } from "@prisma/client";
 
 const createCampaignSchema = z.object({
@@ -126,10 +123,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching email campaigns:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch campaigns" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch campaigns" }, { status: 500 });
   }
 }
 
@@ -158,16 +152,22 @@ export async function POST(request: NextRequest) {
     // Validate targeting foreign keys belong to this org
     const scopedDb = getScopedDb(session.user.organizationId);
     if (validatedData.targetProgramId) {
-      const program = await scopedDb.program.findUnique({ where: { id: validatedData.targetProgramId } });
-      if (!program) return NextResponse.json({ error: "Target program not found" }, { status: 404 });
+      const program = await scopedDb.program.findUnique({
+        where: { id: validatedData.targetProgramId },
+      });
+      if (!program)
+        return NextResponse.json({ error: "Target program not found" }, { status: 404 });
     }
     if (validatedData.targetEventId) {
       const event = await scopedDb.event.findUnique({ where: { id: validatedData.targetEventId } });
       if (!event) return NextResponse.json({ error: "Target event not found" }, { status: 404 });
     }
     if (validatedData.targetProgramInstanceId) {
-      const instance = await scopedDb.programInstance.findUnique({ where: { id: validatedData.targetProgramInstanceId } });
-      if (!instance) return NextResponse.json({ error: "Target program instance not found" }, { status: 404 });
+      const instance = await scopedDb.programInstance.findUnique({
+        where: { id: validatedData.targetProgramInstanceId },
+      });
+      if (!instance)
+        return NextResponse.json({ error: "Target program instance not found" }, { status: 404 });
     }
     if (validatedData.targetMembershipGroupIds?.length) {
       const valid = await scopedDb.membershipGroup.findMany({
@@ -175,7 +175,10 @@ export async function POST(request: NextRequest) {
         select: { id: true },
       });
       if (valid.length !== validatedData.targetMembershipGroupIds.length) {
-        return NextResponse.json({ error: "One or more target membership groups not found" }, { status: 404 });
+        return NextResponse.json(
+          { error: "One or more target membership groups not found" },
+          { status: 404 }
+        );
       }
     }
 
@@ -203,7 +206,8 @@ export async function POST(request: NextRequest) {
 
     if (
       validatedData.targetType === "MEMBERSHIP_HOLDERS" &&
-      (!validatedData.targetMembershipGroupIds || validatedData.targetMembershipGroupIds.length === 0)
+      (!validatedData.targetMembershipGroupIds ||
+        validatedData.targetMembershipGroupIds.length === 0)
     ) {
       return NextResponse.json(
         { error: "At least one membership group is required for membership-targeted campaigns" },
@@ -254,10 +258,7 @@ export async function POST(request: NextRequest) {
     // Check usage limits
     const limits = await checkEmailUsageLimits(session.user.organizationId, recipients.length);
     if (!limits.allowed) {
-      return NextResponse.json(
-        { error: limits.error || "Email limit reached" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: limits.error || "Email limit reached" }, { status: 400 });
     }
 
     // Create campaign with new targeting fields
@@ -279,9 +280,7 @@ export async function POST(request: NextRequest) {
         totalRecipients: recipients.length,
         createdById: session.user.id,
         status: validatedData.scheduledAt ? "SCHEDULED" : "DRAFT",
-        scheduledAt: validatedData.scheduledAt
-          ? new Date(validatedData.scheduledAt)
-          : undefined,
+        scheduledAt: validatedData.scheduledAt ? new Date(validatedData.scheduledAt) : undefined,
       },
     });
 
@@ -305,9 +304,6 @@ export async function POST(request: NextRequest) {
       );
     }
     console.error("Error creating email campaign:", error);
-    return NextResponse.json(
-      { error: "Failed to create campaign" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create campaign" }, { status: 500 });
   }
 }

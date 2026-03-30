@@ -32,7 +32,10 @@ export async function POST(request: NextRequest) {
     const { label, street, city, stateProvince, postalCode, country } = body;
 
     if (!street || !city || !postalCode) {
-      return NextResponse.json({ error: "street, city, and postalCode are required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "street, city, and postalCode are required" },
+        { status: 400 }
+      );
     }
 
     const existingCount = await db.userBillingAddress.count({ where: { userId: session.user.id } });

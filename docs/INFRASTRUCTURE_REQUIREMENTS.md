@@ -27,12 +27,12 @@ This document outlines all the information, credentials, and decisions needed fr
 
 ### Required Information
 
-| Item | Description | Example |
-|------|-------------|---------|
-| AWS Account ID | 12-digit account number | `123456789012` |
-| AWS Region (Primary) | Region for all services | `us-east-1` |
-| AWS Region (Secondary) | DR region (optional) | `us-west-2` |
-| IAM Admin User | User for Terraform | Create new or use existing |
+| Item                   | Description             | Example                    |
+| ---------------------- | ----------------------- | -------------------------- |
+| AWS Account ID         | 12-digit account number | `123456789012`             |
+| AWS Region (Primary)   | Region for all services | `us-east-1`                |
+| AWS Region (Secondary) | DR region (optional)    | `us-west-2`                |
+| IAM Admin User         | User for Terraform      | Create new or use existing |
 
 ### Decisions Needed
 
@@ -59,11 +59,11 @@ Or preferably, IAM role ARN for assumed role access.
 
 ### Required Information
 
-| Environment | Domain | Status |
-|-------------|--------|--------|
-| Production | `uplifterinc.com` | ☐ Owned? ☐ DNS managed where? |
-| Staging | `upliftergymnastics.com` | ☐ Owned? ☐ DNS managed where? |
-| Development | `uplifterdev.com` | ☐ Owned? ☐ DNS managed where? |
+| Environment | Domain                   | Status                        |
+| ----------- | ------------------------ | ----------------------------- |
+| Production  | `uplifterinc.com`        | ☐ Owned? ☐ DNS managed where? |
+| Staging     | `upliftergymnastics.com` | ☐ Owned? ☐ DNS managed where? |
+| Development | `uplifterdev.com`        | ☐ Owned? ☐ DNS managed where? |
 
 ### Decisions Needed
 
@@ -71,24 +71,25 @@ Or preferably, IAM role ARN for assumed role access.
   - [ ] Route 53 (preferred - easiest integration)
   - [ ] Cloudflare
   - [ ] GoDaddy
-  - [ ] Other: ___________
+  - [ ] Other: \***\*\_\_\_\*\***
 
 - [ ] **Transfer to Route 53?**: Should we migrate DNS to Route 53 for easier ACM/CloudFront integration?
 
 ### Actions Required
 
 For each domain, provide:
+
 1. Domain registrar login credentials OR
 2. Ability to add NS records to point to Route 53 OR
 3. Access to create DNS records manually
 
 ### Route 53 Information Needed (if using)
 
-| Domain | Route 53 Hosted Zone ID |
-|--------|------------------------|
-| uplifterinc.com | (will be created) |
-| upliftergymnastics.com | (will be created) |
-| uplifterdev.com | (will be created) |
+| Domain                 | Route 53 Hosted Zone ID |
+| ---------------------- | ----------------------- |
+| uplifterinc.com        | (will be created)       |
+| upliftergymnastics.com | (will be created)       |
+| uplifterdev.com        | (will be created)       |
 
 ---
 
@@ -100,13 +101,13 @@ AWS Certificate Manager (ACM) will be used for SSL certificates. Certificates ar
 
 ### Certificates Needed
 
-| Domain | Certificate Type | Region |
-|--------|-----------------|--------|
-| `*.uplifterinc.com` | Wildcard | us-east-1 (CloudFront) |
-| `uplifterinc.com` | Root | us-east-1 (CloudFront) |
-| `*.uplifterinc.com` | Wildcard | Primary region (ALB) |
-| `*.upliftergymnastics.com` | Wildcard | us-east-1 + Primary |
-| `*.uplifterdev.com` | Wildcard | us-east-1 + Primary |
+| Domain                     | Certificate Type | Region                 |
+| -------------------------- | ---------------- | ---------------------- |
+| `*.uplifterinc.com`        | Wildcard         | us-east-1 (CloudFront) |
+| `uplifterinc.com`          | Root             | us-east-1 (CloudFront) |
+| `*.uplifterinc.com`        | Wildcard         | Primary region (ALB)   |
+| `*.upliftergymnastics.com` | Wildcard         | us-east-1 + Primary    |
+| `*.uplifterdev.com`        | Wildcard         | us-east-1 + Primary    |
 
 ### Decisions Needed
 
@@ -120,19 +121,19 @@ AWS Certificate Manager (ACM) will be used for SSL certificates. Certificates ar
 
 ### Required Information
 
-| Item | Production | Staging | Development |
-|------|------------|---------|-------------|
+| Item           | Production     | Staging        | Development    |
+| -------------- | -------------- | -------------- | -------------- |
 | Instance Class | `db.r6g.large` | `db.t4g.small` | `db.t4g.micro` |
-| Storage (GB) | 100 | 20 | 20 |
-| Multi-AZ | Yes | No | No |
-| Read Replica | Yes | No | No |
+| Storage (GB)   | 100            | 20             | 20             |
+| Multi-AZ       | Yes            | No             | No             |
+| Read Replica   | Yes            | No             | No             |
 
 ### Credentials Needed
 
-| Environment | Master Username | Master Password |
-|-------------|-----------------|-----------------|
-| Production | `uplifter_admin` | (generate secure) |
-| Staging | `uplifter_admin` | (generate secure) |
+| Environment | Master Username  | Master Password   |
+| ----------- | ---------------- | ----------------- |
+| Production  | `uplifter_admin` | (generate secure) |
+| Staging     | `uplifter_admin` | (generate secure) |
 | Development | `uplifter_admin` | (generate secure) |
 
 ### Decisions Needed
@@ -142,9 +143,9 @@ AWS Certificate Manager (ACM) will be used for SSL certificates. Certificates ar
   - [ ] We generate and store in Secrets Manager
 
 - [ ] **Backup Retention**:
-  - Production: ___ days (recommend: 30)
-  - Staging: ___ days (recommend: 7)
-  - Development: ___ days (recommend: 1)
+  - Production: \_\_\_ days (recommend: 30)
+  - Staging: \_\_\_ days (recommend: 7)
+  - Development: \_\_\_ days (recommend: 1)
 
 ---
 
@@ -152,19 +153,19 @@ AWS Certificate Manager (ACM) will be used for SSL certificates. Certificates ar
 
 ### Bucket Names Needed
 
-| Environment | Assets Bucket | Documents Bucket |
-|-------------|---------------|------------------|
-| Production | `uplifter-assets-prod` | `uplifter-documents-prod` |
-| Staging | `uplifter-gymnastics-assets` | `uplifter-gymnastics-docs` |
-| Development | `uplifter-assets-dev` | `uplifter-documents-dev` |
+| Environment | Assets Bucket                | Documents Bucket           |
+| ----------- | ---------------------------- | -------------------------- |
+| Production  | `uplifter-assets-prod`       | `uplifter-documents-prod`  |
+| Staging     | `uplifter-gymnastics-assets` | `uplifter-gymnastics-docs` |
+| Development | `uplifter-assets-dev`        | `uplifter-documents-dev`   |
 
 **Note**: S3 bucket names must be globally unique. If these names are taken, provide alternatives.
 
 ### Decisions Needed
 
 - [ ] **Lifecycle Policies**:
-  - Staging assets: Delete after ___ days? (recommend: 30)
-  - Development assets: Delete after ___ days? (recommend: 7)
+  - Staging assets: Delete after \_\_\_ days? (recommend: 30)
+  - Development assets: Delete after \_\_\_ days? (recommend: 7)
 
 - [ ] **Cross-Region Replication**: Enable for production? (adds cost but improves DR)
 
@@ -176,24 +177,24 @@ AWS Certificate Manager (ACM) will be used for SSL certificates. Certificates ar
 
 #### Production (LIVE)
 
-| Item | Value |
-|------|-------|
-| Merchant Account | |
-| API Key | |
-| Client Key | |
-| Webhook HMAC Key | |
+| Item                     | Value                                              |
+| ------------------------ | -------------------------------------------------- |
+| Merchant Account         |                                                    |
+| API Key                  |                                                    |
+| Client Key               |                                                    |
+| Webhook HMAC Key         |                                                    |
 | Webhook URL to configure | `https://admin.uplifterinc.com/api/webhooks/adyen` |
 
 #### Test Environment (for Staging/Dev/Local)
 
-| Item | Value |
-|------|-------|
-| Test Merchant Account | |
-| Test API Key | |
-| Test Client Key | |
-| Test Webhook HMAC Key | |
+| Item                  | Value                                                     |
+| --------------------- | --------------------------------------------------------- |
+| Test Merchant Account |                                                           |
+| Test API Key          |                                                           |
+| Test Client Key       |                                                           |
+| Test Webhook HMAC Key |                                                           |
 | Webhook URL (Staging) | `https://admin.upliftergymnastics.com/api/webhooks/adyen` |
-| Webhook URL (Dev) | `https://admin.uplifterdev.com/api/webhooks/adyen` |
+| Webhook URL (Dev)     | `https://admin.uplifterdev.com/api/webhooks/adyen`        |
 
 ### Actions Required in Adyen Customer Area
 
@@ -207,11 +208,11 @@ AWS Certificate Manager (ACM) will be used for SSL certificates. Certificates ar
 
 ### Required Information
 
-| Item | Value |
-|------|-------|
-| Account SID | |
-| Auth Token | |
-| Messaging Service SID | |
+| Item                        | Value               |
+| --------------------------- | ------------------- |
+| Account SID                 |                     |
+| Auth Token                  |                     |
+| Messaging Service SID       |                     |
 | Phone Number (E.164 format) | e.g., `+1234567890` |
 
 ### Decisions Needed
@@ -224,11 +225,11 @@ AWS Certificate Manager (ACM) will be used for SSL certificates. Certificates ar
 
 ### Webhook URLs to Configure in Twilio
 
-| Environment | Webhook URL |
-|-------------|------------|
-| Production | `https://admin.uplifterinc.com/api/twilio/webhook` |
-| Staging | `https://admin.upliftergymnastics.com/api/twilio/webhook` |
-| Development | `https://admin.uplifterdev.com/api/twilio/webhook` |
+| Environment | Webhook URL                                               |
+| ----------- | --------------------------------------------------------- |
+| Production  | `https://admin.uplifterinc.com/api/twilio/webhook`        |
+| Staging     | `https://admin.upliftergymnastics.com/api/twilio/webhook` |
+| Development | `https://admin.uplifterdev.com/api/twilio/webhook`        |
 
 ---
 
@@ -236,10 +237,10 @@ AWS Certificate Manager (ACM) will be used for SSL certificates. Certificates ar
 
 ### Required Information
 
-| Item | Production | Staging | Development |
-|------|------------|---------|-------------|
-| From Email | `noreply@uplifterinc.com` | `noreply@upliftergymnastics.com` | `noreply@uplifterdev.com` |
-| Reply-To Email | | | |
+| Item           | Production                | Staging                          | Development               |
+| -------------- | ------------------------- | -------------------------------- | ------------------------- |
+| From Email     | `noreply@uplifterinc.com` | `noreply@upliftergymnastics.com` | `noreply@uplifterdev.com` |
+| Reply-To Email |                           |                                  |                           |
 
 ### Actions Required
 
@@ -277,35 +278,35 @@ You need **4 separate OAuth 2.0 Client IDs** (one per environment) because each 
 
 #### Production OAuth App
 
-| Item | Value |
-|------|-------|
-| Client ID | |
-| Client Secret | |
-| Redirect URI | `https://login.uplifterinc.com/api/auth/callback/google` |
+| Item          | Value                                                    |
+| ------------- | -------------------------------------------------------- |
+| Client ID     |                                                          |
+| Client Secret |                                                          |
+| Redirect URI  | `https://login.uplifterinc.com/api/auth/callback/google` |
 
 #### Staging OAuth App
 
-| Item | Value |
-|------|-------|
-| Client ID | |
-| Client Secret | |
-| Redirect URI | `https://login.upliftergymnastics.com/api/auth/callback/google` |
+| Item          | Value                                                           |
+| ------------- | --------------------------------------------------------------- |
+| Client ID     |                                                                 |
+| Client Secret |                                                                 |
+| Redirect URI  | `https://login.upliftergymnastics.com/api/auth/callback/google` |
 
 #### Development OAuth App
 
-| Item | Value |
-|------|-------|
-| Client ID | |
-| Client Secret | |
-| Redirect URI | `https://login.uplifterdev.com/api/auth/callback/google` |
+| Item          | Value                                                    |
+| ------------- | -------------------------------------------------------- |
+| Client ID     |                                                          |
+| Client Secret |                                                          |
+| Redirect URI  | `https://login.uplifterdev.com/api/auth/callback/google` |
 
 #### Local OAuth App
 
-| Item | Value |
-|------|-------|
-| Client ID | |
-| Client Secret | |
-| Redirect URI | `http://localhost:3000/api/auth/callback/google` |
+| Item          | Value                                            |
+| ------------- | ------------------------------------------------ |
+| Client ID     |                                                  |
+| Client Secret |                                                  |
+| Redirect URI  | `http://localhost:3000/api/auth/callback/google` |
 
 ### Actions Required in Google Cloud Console
 
@@ -320,11 +321,11 @@ You need **4 separate OAuth 2.0 Client IDs** (one per environment) because each 
 
 ### Required Information
 
-| Item | Value |
-|------|-------|
-| Repository Name | `uplifter` |
-| Image Scanning | Enable on push? (recommended) |
-| Lifecycle Policy | Keep last ___ images (recommend: 30) |
+| Item             | Value                                   |
+| ---------------- | --------------------------------------- |
+| Repository Name  | `uplifter`                              |
+| Image Scanning   | Enable on push? (recommended)           |
+| Lifecycle Policy | Keep last \_\_\_ images (recommend: 30) |
 
 ### Decisions Needed
 
@@ -338,17 +339,17 @@ You need **4 separate OAuth 2.0 Client IDs** (one per environment) because each 
 
 All sensitive values should be stored in AWS Secrets Manager:
 
-| Secret Name | Contains |
-|-------------|----------|
-| `uplifter/{env}/database` | `DATABASE_URL`, `DB_PASSWORD` |
-| `uplifter/{env}/auth` | `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |
-| `uplifter/{env}/adyen` | `ADYEN_API_KEY`, `ADYEN_WEBHOOK_HMAC_KEY`, `NEXT_PUBLIC_ADYEN_CLIENT_KEY` |
-| `uplifter/{env}/twilio` | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` |
+| Secret Name               | Contains                                                                  |
+| ------------------------- | ------------------------------------------------------------------------- |
+| `uplifter/{env}/database` | `DATABASE_URL`, `DB_PASSWORD`                                             |
+| `uplifter/{env}/auth`     | `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`             |
+| `uplifter/{env}/adyen`    | `ADYEN_API_KEY`, `ADYEN_WEBHOOK_HMAC_KEY`, `NEXT_PUBLIC_ADYEN_CLIENT_KEY` |
+| `uplifter/{env}/twilio`   | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`                                 |
 
 ### Decisions Needed
 
 - [ ] **Secret Rotation**: Enable automatic rotation for database passwords?
-- [ ] **Access Pattern**: 
+- [ ] **Access Pattern**:
   - [ ] ECS Task retrieves secrets at startup
   - [ ] External Secrets Operator syncs to Kubernetes (for EKS)
 
@@ -358,24 +359,24 @@ All sensitive values should be stored in AWS Secrets Manager:
 
 ### Groundcover (for EKS - Phase 3)
 
-| Item | Value |
-|------|-------|
+| Item                | Value                        |
+| ------------------- | ---------------------------- |
 | Groundcover API Key | (sign up at groundcover.com) |
-| Cluster Name | `uplifter-production` |
+| Cluster Name        | `uplifter-production`        |
 
 ### CloudWatch (for ECS - Phase 2)
 
-| Item | Value |
-|------|-------|
-| Log Retention | ___ days (recommend: 30 for prod, 7 for others) |
-| Alarm SNS Topic | Email address for alerts: |
+| Item            | Value                                              |
+| --------------- | -------------------------------------------------- |
+| Log Retention   | \_\_\_ days (recommend: 30 for prod, 7 for others) |
+| Alarm SNS Topic | Email address for alerts:                          |
 
 ### Decisions Needed
 
 - [ ] **Alert Recipients**: Who receives infrastructure alerts?
-  - Email: ___________
-  - Slack webhook (optional): ___________
-  - PagerDuty (optional): ___________
+  - Email: \***\*\_\_\_\*\***
+  - Slack webhook (optional): \***\*\_\_\_\*\***
+  - PagerDuty (optional): \***\*\_\_\_\*\***
 
 ---
 
@@ -383,19 +384,19 @@ All sensitive values should be stored in AWS Secrets Manager:
 
 ### GitHub Actions
 
-| Item | Value |
-|------|-------|
-| Repository | `github.com/___/uplifter` |
+| Item            | Value                                        |
+| --------------- | -------------------------------------------- |
+| Repository      | `github.com/___/uplifter`                    |
 | Branch Strategy | `main` → production, `develop` → development |
 
 ### Secrets Needed in GitHub
 
-| Secret Name | Purpose |
-|-------------|---------|
-| `AWS_ACCESS_KEY_ID` | ECR push, ECS deploy |
+| Secret Name             | Purpose              |
+| ----------------------- | -------------------- |
+| `AWS_ACCESS_KEY_ID`     | ECR push, ECS deploy |
 | `AWS_SECRET_ACCESS_KEY` | ECR push, ECS deploy |
-| `AWS_REGION` | Target region |
-| `ECR_REPOSITORY` | ECR repository URI |
+| `AWS_REGION`            | Target region        |
+| `ECR_REPOSITORY`        | ECR repository URI   |
 
 ### Required CI Steps
 
@@ -429,15 +430,15 @@ Each deployment environment must run `prisma migrate deploy` before starting the
 
 ### Estimated Monthly Costs
 
-| Component | Production | Staging | Development | Total |
-|-----------|------------|---------|-------------|-------|
-| ECS/EKS | $200-800 | $50-100 | $20-50 | |
-| RDS | $150-300 | $30-50 | $15-25 | |
-| ElastiCache | $50-150 | $15-30 | $0 (Upstash) | |
-| S3 + CloudFront | $50-150 | $10-20 | $5-10 | |
-| NAT Gateway | $90 | $45 | $45 | |
-| Other (Secrets, Logs) | $20-50 | $10-20 | $5-10 | |
-| **Estimated Total** | **$560-1,540** | **$160-265** | **$90-140** | **$810-1,945** |
+| Component             | Production     | Staging      | Development  | Total          |
+| --------------------- | -------------- | ------------ | ------------ | -------------- |
+| ECS/EKS               | $200-800       | $50-100      | $20-50       |                |
+| RDS                   | $150-300       | $30-50       | $15-25       |                |
+| ElastiCache           | $50-150        | $15-30       | $0 (Upstash) |                |
+| S3 + CloudFront       | $50-150        | $10-20       | $5-10        |                |
+| NAT Gateway           | $90            | $45          | $45          |                |
+| Other (Secrets, Logs) | $20-50         | $10-20       | $5-10        |                |
+| **Estimated Total**   | **$560-1,540** | **$160-265** | **$90-140**  | **$810-1,945** |
 
 ### Decisions Needed
 

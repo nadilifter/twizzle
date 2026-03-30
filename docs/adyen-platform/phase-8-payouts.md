@@ -25,6 +25,7 @@ Adyen Balance Platform
 ```
 
 The sweep is configured during onboarding finalization (`POST /api/organization/adyen-onboarding/finalize`) with:
+
 - `type: "push"` -- push funds out of the balance account
 - `schedule: { type: "daily" }` -- runs daily
 - `priorities: ["regular"]` -- standard bank transfer speed
@@ -118,6 +119,7 @@ Replace incorrect `adyenPlatformAccount.count({ where: { onboardingStatus: "VERI
 ### File: `src/app/dashboard/financials/payouts/[id]/page.tsx` (new)
 
 Payout detail page showing:
+
 - Summary cards: gross, fees, net, bank account
 - Timeline: created, scheduled, estimated arrival, paid dates
 - Included transactions table with PSP reference, type, method, amount, settled date
@@ -175,15 +177,15 @@ Replaces the older `scripts/provision-adyen-staging.ts` (kept for backward compa
 
 ## Key Files
 
-| File | Role |
-|------|------|
-| `prisma/schema.prisma` | Transaction.payoutId FK, Payout.estimatedArrivalTime |
-| `src/lib/adyen-platform.ts` | `getTransferInstrumentLast4()` helper |
-| `src/app/api/webhooks/adyen-balance-platform/route.ts` | Enhanced bank transfer handler |
-| `src/app/api/payouts/route.ts` | Payouts list/create API (tenant-isolated) |
-| `src/app/api/payouts/[id]/route.ts` | Payout detail API |
-| `src/app/api/financials/overview/route.ts` | Fixed nextScheduled |
-| `src/lib/settlement-reporting.ts` | Fixed orgsWithNegativeBalance |
-| `src/app/dashboard/financials/payouts/page.tsx` | Enhanced payouts list page |
-| `src/app/dashboard/financials/payouts/[id]/page.tsx` | Payout detail page |
-| `scripts/provision-adyen.ts` | Multi-environment provisioning |
+| File                                                   | Role                                                 |
+| ------------------------------------------------------ | ---------------------------------------------------- |
+| `prisma/schema.prisma`                                 | Transaction.payoutId FK, Payout.estimatedArrivalTime |
+| `src/lib/adyen-platform.ts`                            | `getTransferInstrumentLast4()` helper                |
+| `src/app/api/webhooks/adyen-balance-platform/route.ts` | Enhanced bank transfer handler                       |
+| `src/app/api/payouts/route.ts`                         | Payouts list/create API (tenant-isolated)            |
+| `src/app/api/payouts/[id]/route.ts`                    | Payout detail API                                    |
+| `src/app/api/financials/overview/route.ts`             | Fixed nextScheduled                                  |
+| `src/lib/settlement-reporting.ts`                      | Fixed orgsWithNegativeBalance                        |
+| `src/app/dashboard/financials/payouts/page.tsx`        | Enhanced payouts list page                           |
+| `src/app/dashboard/financials/payouts/[id]/page.tsx`   | Payout detail page                                   |
+| `scripts/provision-adyen.ts`                           | Multi-environment provisioning                       |

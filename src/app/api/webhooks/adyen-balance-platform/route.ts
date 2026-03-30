@@ -1,12 +1,9 @@
-import { NextRequest, NextResponse } from "next/server"
-import { db } from "@/lib/db"
-import { logger } from "@/lib/logger"
-import crypto from "crypto"
-import { getTransferInstrumentLast4 } from "@/lib/adyen-platform"
-import {
-  deriveOnboardingStatus,
-  summarizeVerification,
-} from "@/lib/adyen-onboarding-status"
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { logger } from "@/lib/logger";
+import crypto from "crypto";
+import { getTransferInstrumentLast4 } from "@/lib/adyen-platform";
+import { deriveOnboardingStatus, summarizeVerification } from "@/lib/adyen-onboarding-status";
 
 // ---------------------------------------------------------------------------
 // HMAC verification (multi-key: one per webhook subscription)
@@ -17,29 +14,29 @@ function getBpHmacKeys(): string[] {
     process.env.ADYEN_BP_CONFIG_WEBHOOK_HMAC_KEY,
     process.env.ADYEN_BP_TRANSFER_WEBHOOK_HMAC_KEY,
     process.env.ADYEN_BP_NEGBAL_WEBHOOK_HMAC_KEY,
-  ].filter(Boolean) as string[]
+  ].filter(Boolean) as string[];
 }
 
 function verifyHmac(rawBody: string, signature: string): boolean {
-  const hmacKeys = getBpHmacKeys()
+  const hmacKeys = getBpHmacKeys();
   for (const hmacKey of hmacKeys) {
     try {
       const expected = crypto
         .createHmac("sha256", Buffer.from(hmacKey, "hex"))
         .update(rawBody, "utf-8")
-        .digest("base64")
+        .digest("base64");
 
       if (
         signature.length === expected.length &&
         crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
       ) {
-        return true
+        return true;
       }
     } catch {
-      continue
+      continue;
     }
   }
-  return false
+  return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -47,65 +44,63 @@ function verifyHmac(rawBody: string, signature: string): boolean {
 // ---------------------------------------------------------------------------
 
 export async function POST(request: NextRequest) {
-  const body = await request.text()
+  const body = await request.text();
 
   // Adyen sends HMAC in the "Hmacsignature" header (no hyphen)
   const hmacSignature =
-    request.headers.get("hmacsignature") ||
-    request.headers.get("hmac-signature") ||
-    ""
-  const hmacKeys = getBpHmacKeys()
+    request.headers.get("hmacsignature") || request.headers.get("hmac-signature") || "";
+  const hmacKeys = getBpHmacKeys();
 
   if (hmacKeys.length === 0) {
-    logger.error("[BP-WEBHOOK] No HMAC keys configured (ADYEN_BP_*_WEBHOOK_HMAC_KEY)")
-    return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 })
+    logger.error("[BP-WEBHOOK] No HMAC keys configured (ADYEN_BP_*_WEBHOOK_HMAC_KEY)");
+    return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
   }
 
   if (!hmacSignature) {
-    logger.warn("[BP-WEBHOOK] Missing HMAC signature header")
-    return NextResponse.json({ error: "Missing signature" }, { status: 401 })
+    logger.warn("[BP-WEBHOOK] Missing HMAC signature header");
+    return NextResponse.json({ error: "Missing signature" }, { status: 401 });
   }
 
   if (!verifyHmac(body, hmacSignature)) {
-    logger.warn("[BP-WEBHOOK] HMAC verification failed")
-    return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
+    logger.warn("[BP-WEBHOOK] HMAC verification failed");
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
   try {
-    const event = JSON.parse(body)
-    const eventType = event.type as string
+    const event = JSON.parse(body);
+    const eventType = event.type as string;
 
-    logger.info("[BP-WEBHOOK] Event received", { type: eventType })
+    logger.info("[BP-WEBHOOK] Event received", { type: eventType });
 
     switch (eventType) {
       case "balancePlatform.accountHolder.created":
-        await handleAccountHolderCreated(event.data)
-        break
+        await handleAccountHolderCreated(event.data);
+        break;
       case "balancePlatform.accountHolder.updated":
-        await handleAccountHolderUpdated(event.data)
-        break
+        await handleAccountHolderUpdated(event.data);
+        break;
       case "balancePlatform.balanceAccount.created":
       case "balancePlatform.balanceAccount.updated":
-        await handleBalanceAccountEvent(event.data, eventType)
-        break
+        await handleBalanceAccountEvent(event.data, eventType);
+        break;
       case "balancePlatform.transfer.created":
       case "balancePlatform.transfer.updated":
-        await handleTransferEvent(event.data, eventType)
-        break
+        await handleTransferEvent(event.data, eventType);
+        break;
       case "balancePlatform.negativeBalanceCompensationWarning.scheduled":
-        await handleNegativeBalanceWarning(event.data)
-        break
+        await handleNegativeBalanceWarning(event.data);
+        break;
       default:
-        logger.info("[BP-WEBHOOK] Unhandled event type", { type: eventType })
+        logger.info("[BP-WEBHOOK] Unhandled event type", { type: eventType });
     }
   } catch (error) {
     logger.error("[BP-WEBHOOK] Processing error", {
       error: error instanceof Error ? error.message : String(error),
-    })
+    });
   }
 
   // Always return accepted to prevent Adyen retries
-  return NextResponse.json({ notificationResponse: "[accepted]" })
+  return NextResponse.json({ notificationResponse: "[accepted]" });
 }
 
 // ---------------------------------------------------------------------------
@@ -113,50 +108,50 @@ export async function POST(request: NextRequest) {
 // ---------------------------------------------------------------------------
 
 async function handleAccountHolderCreated(data: any) {
-  const accountHolderId = data?.accountHolder?.id || data?.id
+  const accountHolderId = data?.accountHolder?.id || data?.id;
   if (!accountHolderId) {
-    logger.warn("[BP-WEBHOOK] accountHolder.created missing ID")
-    return
+    logger.warn("[BP-WEBHOOK] accountHolder.created missing ID");
+    return;
   }
 
   const account = await db.adyenPlatformAccount.findFirst({
     where: { accountHolderId },
-  })
+  });
 
   if (account) {
     logger.info("[BP-WEBHOOK] accountHolder.created confirmed", {
       accountHolderId,
       organizationId: account.organizationId,
-    })
+    });
   } else {
     logger.info("[BP-WEBHOOK] accountHolder.created for unknown account", {
       accountHolderId,
-    })
+    });
   }
 }
 
 async function handleAccountHolderUpdated(data: any) {
-  const accountHolder = data?.accountHolder || data
-  const accountHolderId = accountHolder?.id
+  const accountHolder = data?.accountHolder || data;
+  const accountHolderId = accountHolder?.id;
   if (!accountHolderId) {
-    logger.warn("[BP-WEBHOOK] accountHolder.updated missing ID")
-    return
+    logger.warn("[BP-WEBHOOK] accountHolder.updated missing ID");
+    return;
   }
 
   const account = await db.adyenPlatformAccount.findFirst({
     where: { accountHolderId },
-  })
+  });
 
   if (!account) {
     logger.info("[BP-WEBHOOK] accountHolder.updated for unknown account", {
       accountHolderId,
-    })
-    return
+    });
+    return;
   }
 
-  const capabilities = accountHolder.capabilities || {}
-  const onboardingStatus = deriveOnboardingStatus(accountHolder)
-  const verificationStatus = summarizeVerification(accountHolder)
+  const capabilities = accountHolder.capabilities || {};
+  const onboardingStatus = deriveOnboardingStatus(accountHolder);
+  const verificationStatus = summarizeVerification(accountHolder);
 
   await db.adyenPlatformAccount.update({
     where: { id: account.id },
@@ -165,14 +160,14 @@ async function handleAccountHolderUpdated(data: any) {
       onboardingStatus,
       verificationStatus,
     },
-  })
+  });
 
   logger.info("[BP-WEBHOOK] accountHolder.updated processed", {
     accountHolderId,
     organizationId: account.organizationId,
     onboardingStatus,
     verificationStatus,
-  })
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -180,23 +175,23 @@ async function handleAccountHolderUpdated(data: any) {
 // ---------------------------------------------------------------------------
 
 async function handleBalanceAccountEvent(data: any, eventType: string) {
-  const balanceAccountId = data?.balanceAccount?.id || data?.id
+  const balanceAccountId = data?.balanceAccount?.id || data?.id;
   logger.info("[BP-WEBHOOK] Balance account event", {
     type: eventType,
     balanceAccountId,
-  })
+  });
 
-  if (!balanceAccountId) return
+  if (!balanceAccountId) return;
 
   const account = await db.adyenPlatformAccount.findFirst({
     where: { balanceAccountId },
-  })
+  });
 
   if (account) {
     logger.info("[BP-WEBHOOK] Balance account matched to org", {
       balanceAccountId,
       organizationId: account.organizationId,
-    })
+    });
   }
 }
 
@@ -205,11 +200,11 @@ async function handleBalanceAccountEvent(data: any, eventType: string) {
 // ---------------------------------------------------------------------------
 
 async function handleTransferEvent(data: any, eventType: string) {
-  const transfer = data?.transfer || data
-  const transferId = transfer?.id
-  const category = transfer?.category
-  const status = transfer?.status?.statusCode || transfer?.status
-  const amount = transfer?.amount
+  const transfer = data?.transfer || data;
+  const transferId = transfer?.id;
+  const category = transfer?.category;
+  const status = transfer?.status?.statusCode || transfer?.status;
+  const amount = transfer?.amount;
 
   logger.info("[BP-WEBHOOK] Transfer event", {
     type: eventType,
@@ -217,45 +212,41 @@ async function handleTransferEvent(data: any, eventType: string) {
     category,
     status,
     amount,
-  })
+  });
 
   if (category === "bank") {
-    await handleBankTransfer(transfer)
+    await handleBankTransfer(transfer);
   }
   // Other categories (platformPayment, internalTransfer) logged for now;
   // detailed handling added in Phase 8
 }
 
 async function handleBankTransfer(transfer: any) {
-  const balanceAccountId =
-    transfer?.counterparty?.balanceAccountId ||
-    transfer?.balanceAccount?.id
+  const balanceAccountId = transfer?.counterparty?.balanceAccountId || transfer?.balanceAccount?.id;
 
   if (!balanceAccountId) {
     logger.info("[BP-WEBHOOK] Bank transfer without balance account ID", {
       transferId: transfer?.id,
-    })
-    return
+    });
+    return;
   }
 
   const account = await db.adyenPlatformAccount.findFirst({
     where: { balanceAccountId },
     select: { organizationId: true },
-  })
+  });
 
   if (!account) {
     logger.info("[BP-WEBHOOK] Bank transfer for unknown balance account", {
       balanceAccountId,
-    })
-    return
+    });
+    return;
   }
 
-  const transferId = transfer.id
-  const amount = transfer.amount?.value
-    ? Number(transfer.amount.value) / 100
-    : 0
-  const currency = transfer.amount?.currency || "USD"
-  const status = transfer.status?.statusCode || transfer.status
+  const transferId = transfer.id;
+  const amount = transfer.amount?.value ? Number(transfer.amount.value) / 100 : 0;
+  const currency = transfer.amount?.currency || "USD";
+  const status = transfer.status?.statusCode || transfer.status;
 
   const payoutStatus =
     status === "booked"
@@ -264,45 +255,40 @@ async function handleBankTransfer(transfer: any) {
         ? "SCHEDULED"
         : status === "failed" || status === "refused" || status === "returned"
           ? "FAILED"
-          : "PENDING"
+          : "PENDING";
 
   const estimatedArrivalTime =
-    transfer?.tracking?.estimatedArrivalTime ||
-    extractEstimatedArrival(transfer?.events)
+    transfer?.tracking?.estimatedArrivalTime || extractEstimatedArrival(transfer?.events);
 
   const existingPayout = await db.payout.findFirst({
     where: { reference: transferId },
-  })
+  });
 
   // Resolve bank account last 4 digits (only on first creation or if missing)
-  let bankAccount: string | null = existingPayout?.bankAccount || null
+  let bankAccount: string | null = existingPayout?.bankAccount || null;
   if (!bankAccount && transfer?.counterparty?.transferInstrumentId) {
-    bankAccount = await getTransferInstrumentLast4(
-      transfer.counterparty.transferInstrumentId
-    )
+    bankAccount = await getTransferInstrumentLast4(transfer.counterparty.transferInstrumentId);
   }
 
   const updateData: Record<string, any> = {
     status: payoutStatus as any,
     ...(payoutStatus === "PAID" ? { paidAt: new Date() } : {}),
     ...(bankAccount ? { bankAccount } : {}),
-    ...(estimatedArrivalTime
-      ? { estimatedArrivalTime: new Date(estimatedArrivalTime) }
-      : {}),
-  }
+    ...(estimatedArrivalTime ? { estimatedArrivalTime: new Date(estimatedArrivalTime) } : {}),
+  };
 
-  let payoutId: string
+  let payoutId: string;
 
   if (existingPayout) {
     await db.payout.update({
       where: { id: existingPayout.id },
       data: updateData,
-    })
-    payoutId = existingPayout.id
+    });
+    payoutId = existingPayout.id;
     logger.info("[BP-WEBHOOK] Payout updated", {
       payoutId,
       status: payoutStatus,
-    })
+    });
   } else {
     const created = await db.payout.create({
       data: {
@@ -315,25 +301,21 @@ async function handleBankTransfer(transfer: any) {
         status: payoutStatus as any,
         bankAccount,
         ...(payoutStatus === "PAID" ? { paidAt: new Date() } : {}),
-        ...(payoutStatus === "SCHEDULED"
-          ? { scheduledAt: new Date() }
-          : {}),
-        ...(estimatedArrivalTime
-          ? { estimatedArrivalTime: new Date(estimatedArrivalTime) }
-          : {}),
+        ...(payoutStatus === "SCHEDULED" ? { scheduledAt: new Date() } : {}),
+        ...(estimatedArrivalTime ? { estimatedArrivalTime: new Date(estimatedArrivalTime) } : {}),
       },
-    })
-    payoutId = created.id
+    });
+    payoutId = created.id;
     logger.info("[BP-WEBHOOK] Payout created", {
       transferId,
       organizationId: account.organizationId,
       status: payoutStatus,
-    })
+    });
   }
 
   // Link settled transactions to this payout when it reaches PAID status
   if (payoutStatus === "PAID") {
-    await linkTransactionsToPayout(payoutId, account.organizationId)
+    await linkTransactionsToPayout(payoutId, account.organizationId);
   }
 }
 
@@ -342,16 +324,16 @@ async function handleBankTransfer(transfer: any) {
  * Adyen includes this in tracking events with type "tracking".
  */
 function extractEstimatedArrival(events: any[] | undefined): string | null {
-  if (!events) return null
+  if (!events) return null;
   for (const event of events) {
     if (event.type === "tracking" && event.trackingData?.estimatedArrivalTime) {
-      return event.trackingData.estimatedArrivalTime
+      return event.trackingData.estimatedArrivalTime;
     }
     if (event.estimatedArrivalTime) {
-      return event.estimatedArrivalTime
+      return event.estimatedArrivalTime;
     }
   }
-  return null
+  return null;
 }
 
 /**
@@ -359,16 +341,13 @@ function extractEstimatedArrival(events: any[] | undefined): string | null {
  * Uses the payout's createdAt as a cutoff -- any transaction settled before
  * the payout was created belongs to it.
  */
-async function linkTransactionsToPayout(
-  payoutId: string,
-  organizationId: string
-) {
+async function linkTransactionsToPayout(payoutId: string, organizationId: string) {
   try {
     const payout = await db.payout.findUnique({
       where: { id: payoutId },
       select: { createdAt: true },
-    })
-    if (!payout) return
+    });
+    if (!payout) return;
 
     const result = await db.transaction.updateMany({
       where: {
@@ -378,22 +357,22 @@ async function linkTransactionsToPayout(
         settledAt: { lte: payout.createdAt },
       },
       data: { payoutId },
-    })
+    });
 
     if (result.count > 0) {
       logger.info("[BP-WEBHOOK] Linked transactions to payout", {
         payoutId,
         transactionCount: result.count,
-      })
+      });
 
       // Calculate platform fees for linked transactions
-      await calculatePayoutFees(payoutId, organizationId)
+      await calculatePayoutFees(payoutId, organizationId);
     }
   } catch (error) {
     logger.error("[BP-WEBHOOK] Failed to link transactions to payout", {
       payoutId,
       error: error instanceof Error ? error.message : String(error),
-    })
+    });
   }
 }
 
@@ -419,50 +398,50 @@ async function calculatePayoutFees(payoutId: string, organizationId: string) {
           },
         },
       }),
-    ])
+    ]);
 
-    const plan = org?.subscription?.plan
-    if (!plan || transactions.length === 0) return
+    const plan = org?.subscription?.plan;
+    if (!plan || transactions.length === 0) return;
 
     // Fallback rates for transactions created before fee snapshot was added
-    const fallbackRate = Number(plan.transactionFee)
-    const fallbackFixed = Number(plan.perTransactionFee)
+    const fallbackRate = Number(plan.transactionFee);
+    const fallbackFixed = Number(plan.perTransactionFee);
 
-    let totalFeesMinor = 0
+    let totalFeesMinor = 0;
     for (const txn of transactions) {
-      const amount = Number(txn.amount)
-      const rate = txn.feeRate != null ? Number(txn.feeRate) : fallbackRate
-      const fixed = txn.feeFixed != null ? Number(txn.feeFixed) : fallbackFixed
-      const txnFee = Math.round((amount * rate + fixed) * 100)
-      totalFeesMinor += txnFee
+      const amount = Number(txn.amount);
+      const rate = txn.feeRate != null ? Number(txn.feeRate) : fallbackRate;
+      const fixed = txn.feeFixed != null ? Number(txn.feeFixed) : fallbackFixed;
+      const txnFee = Math.round((amount * rate + fixed) * 100);
+      totalFeesMinor += txnFee;
     }
-    const totalFees = totalFeesMinor / 100
+    const totalFees = totalFeesMinor / 100;
 
     const payoutRecord = await db.payout.findUnique({
       where: { id: payoutId },
       select: { amount: true },
-    })
-    if (!payoutRecord) return
+    });
+    if (!payoutRecord) return;
 
-    const payoutAmount = Number(payoutRecord.amount)
-    const net = Math.round((payoutAmount - totalFees) * 100) / 100
+    const payoutAmount = Number(payoutRecord.amount);
+    const net = Math.round((payoutAmount - totalFees) * 100) / 100;
 
     await db.payout.update({
       where: { id: payoutId },
       data: { fees: totalFees, net },
-    })
+    });
 
     logger.info("[BP-WEBHOOK] Calculated platform fees for payout", {
       payoutId,
       fees: totalFees,
       net,
       transactionCount: transactions.length,
-    })
+    });
   } catch (error) {
     logger.error("[BP-WEBHOOK] Failed to calculate payout fees", {
       payoutId,
       error: error instanceof Error ? error.message : String(error),
-    })
+    });
   }
 }
 
@@ -471,26 +450,23 @@ async function calculatePayoutFees(payoutId: string, organizationId: string) {
 // ---------------------------------------------------------------------------
 
 async function handleNegativeBalanceWarning(data: any) {
-  const balanceAccountId = data?.balanceAccountId || data?.id
+  const balanceAccountId = data?.balanceAccountId || data?.id;
   logger.warn("[BP-WEBHOOK] Negative balance compensation warning", {
     balanceAccountId,
-  })
+  });
 
-  if (!balanceAccountId) return
+  if (!balanceAccountId) return;
 
   const account = await db.adyenPlatformAccount.findFirst({
     where: { balanceAccountId },
     select: { organizationId: true },
-  })
+  });
 
   if (account) {
-    logger.warn(
-      "[BP-WEBHOOK] Negative balance warning for organization",
-      {
-        balanceAccountId,
-        organizationId: account.organizationId,
-      }
-    )
+    logger.warn("[BP-WEBHOOK] Negative balance warning for organization", {
+      balanceAccountId,
+      organizationId: account.organizationId,
+    });
     // Phase 7 will add: store negative balance state, trigger notifications
   }
 }

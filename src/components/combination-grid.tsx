@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   Table,
   TableBody,
@@ -8,62 +8,57 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Badge } from "@/components/ui/badge"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 interface AxisValueRestrictions {
-  minAge?: number | null
-  maxAge?: number | null
-  allowedGenders?: string[]
+  minAge?: number | null;
+  maxAge?: number | null;
+  allowedGenders?: string[];
 }
 
 interface AxisValue {
-  id: string
-  name: string
-  restrictions?: AxisValueRestrictions
+  id: string;
+  name: string;
+  restrictions?: AxisValueRestrictions;
 }
 
 interface CombinationEntry {
-  rowId: string
-  colId: string
-  isActive: boolean
+  rowId: string;
+  colId: string;
+  isActive: boolean;
 }
 
 interface CombinationGridProps {
-  rows: AxisValue[]
-  columns: AxisValue[]
-  entries: CombinationEntry[]
-  rowAxisLabel?: string
-  columnAxisLabel?: string
-  readOnly?: boolean
-  onToggleEntry?: (rowId: string, colId: string, isActive: boolean) => void
+  rows: AxisValue[];
+  columns: AxisValue[];
+  entries: CombinationEntry[];
+  rowAxisLabel?: string;
+  columnAxisLabel?: string;
+  readOnly?: boolean;
+  onToggleEntry?: (rowId: string, colId: string, isActive: boolean) => void;
 }
 
 function formatRestrictions(restrictions?: AxisValueRestrictions): string | null {
-  if (!restrictions) return null
-  const parts: string[] = []
+  if (!restrictions) return null;
+  const parts: string[] = [];
   if (restrictions.minAge != null || restrictions.maxAge != null) {
     if (restrictions.minAge != null && restrictions.maxAge != null) {
-      parts.push(`Ages ${restrictions.minAge}-${restrictions.maxAge}`)
+      parts.push(`Ages ${restrictions.minAge}-${restrictions.maxAge}`);
     } else if (restrictions.minAge != null) {
-      parts.push(`Ages ${restrictions.minAge}+`)
+      parts.push(`Ages ${restrictions.minAge}+`);
     } else {
-      parts.push(`Ages up to ${restrictions.maxAge}`)
+      parts.push(`Ages up to ${restrictions.maxAge}`);
     }
   }
   if (restrictions.allowedGenders && restrictions.allowedGenders.length > 0) {
-    parts.push(restrictions.allowedGenders.join(", "))
+    parts.push(restrictions.allowedGenders.join(", "));
   }
-  return parts.length > 0 ? parts.join(" · ") : null
+  return parts.length > 0 ? parts.join(" · ") : null;
 }
 
 export function CombinationGrid({
@@ -76,19 +71,19 @@ export function CombinationGrid({
   onToggleEntry,
 }: CombinationGridProps) {
   const entryMap = React.useMemo(() => {
-    const map = new Map<string, boolean>()
+    const map = new Map<string, boolean>();
     for (const entry of entries) {
-      map.set(`${entry.rowId}:${entry.colId}`, entry.isActive)
+      map.set(`${entry.rowId}:${entry.colId}`, entry.isActive);
     }
-    return map
-  }, [entries])
+    return map;
+  }, [entries]);
 
   const isActive = (rowId: string, colId: string): boolean => {
-    return entryMap.get(`${rowId}:${colId}`) ?? true
-  }
+    return entryMap.get(`${rowId}:${colId}`) ?? true;
+  };
 
-  const activeCount = entries.filter((e) => e.isActive).length
-  const totalCount = rows.length * columns.length
+  const activeCount = entries.filter((e) => e.isActive).length;
+  const totalCount = rows.length * columns.length;
 
   if (rows.length === 0 || columns.length === 0) {
     return (
@@ -99,7 +94,7 @@ export function CombinationGrid({
             ? "Add row values to see the combination grid."
             : "Add column values to see the combination grid."}
       </div>
-    )
+    );
   }
 
   return (
@@ -125,7 +120,10 @@ export function CombinationGrid({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div className="flex flex-col items-center gap-1">
-                            <Badge variant="outline" className="text-xs font-medium whitespace-nowrap">
+                            <Badge
+                              variant="outline"
+                              className="text-xs font-medium whitespace-nowrap"
+                            >
                               {col.name}
                             </Badge>
                           </div>
@@ -160,15 +158,12 @@ export function CombinationGrid({
                       </Tooltip>
                     </TableCell>
                     {columns.map((col) => {
-                      const active = isActive(row.id, col.id)
-                      const label = `${row.name} - ${col.name}`
+                      const active = isActive(row.id, col.id);
+                      const label = `${row.name} - ${col.name}`;
                       return (
                         <TableCell
                           key={col.id}
-                          className={cn(
-                            "text-center",
-                            !active && "bg-muted/30"
-                          )}
+                          className={cn("text-center", !active && "bg-muted/30")}
                         >
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -178,7 +173,7 @@ export function CombinationGrid({
                                   disabled={readOnly}
                                   onCheckedChange={(checked) => {
                                     if (!readOnly && onToggleEntry) {
-                                      onToggleEntry(row.id, col.id, !!checked)
+                                      onToggleEntry(row.id, col.id, !!checked);
                                     }
                                   }}
                                   aria-label={label}
@@ -192,7 +187,7 @@ export function CombinationGrid({
                             </TooltipContent>
                           </Tooltip>
                         </TableCell>
-                      )
+                      );
                     })}
                   </TableRow>
                 ))}
@@ -203,5 +198,5 @@ export function CombinationGrid({
         </ScrollArea>
       </div>
     </TooltipProvider>
-  )
+  );
 }

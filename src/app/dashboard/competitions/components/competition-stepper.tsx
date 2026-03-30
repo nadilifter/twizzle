@@ -1,16 +1,29 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/components/ui/switch"
-import { Checkbox } from "@/components/ui/checkbox"
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   defineStepper,
   StepperNav,
@@ -19,7 +32,7 @@ import {
   StepperSeparator,
   StepperTitle,
   getStepStatus,
-} from "@/components/ui/stepper"
+} from "@/components/ui/stepper";
 import {
   ArrowLeft,
   ArrowRight,
@@ -46,111 +59,111 @@ import {
   Link2,
   KeyRound,
   RefreshCw,
-} from "lucide-react"
-import { toast } from "sonner"
-import { GLCodeSelector } from "@/components/gl-code-selector"
-import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-config"
-import type { FileRequirementConfig } from "@/types/file-requirements"
-import { useFeatures } from "@/components/feature-context"
-import { useMemberships } from "@/hooks/use-memberships"
-import { useSeasons } from "@/hooks/use-seasons"
-import { SeasonDateWarning } from "@/components/season-date-warning"
-import { cn } from "@/lib/utils"
-import { CopySettingsDialog } from "@/components/copy-settings-dialog"
-import { ColorSelector } from "@/components/color-selector"
-import { useCategories } from "@/hooks/use-categories"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { format } from "date-fns"
-import { COUNTRIES, getRegionsForCountry, isValidPostalCode } from "@/lib/location-data"
+} from "lucide-react";
+import { toast } from "sonner";
+import { GLCodeSelector } from "@/components/gl-code-selector";
+import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-config";
+import type { FileRequirementConfig } from "@/types/file-requirements";
+import { useFeatures } from "@/components/feature-context";
+import { useMemberships } from "@/hooks/use-memberships";
+import { useSeasons } from "@/hooks/use-seasons";
+import { SeasonDateWarning } from "@/components/season-date-warning";
+import { cn } from "@/lib/utils";
+import { CopySettingsDialog } from "@/components/copy-settings-dialog";
+import { ColorSelector } from "@/components/color-selector";
+import { useCategories } from "@/hooks/use-categories";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { format } from "date-fns";
+import { COUNTRIES, getRegionsForCountry, isValidPostalCode } from "@/lib/location-data";
 
 interface OrgSport {
-  id: string
-  name: string
-  slug: string
+  id: string;
+  name: string;
+  slug: string;
 }
 
 /** Convert a sport slug like "track-and-field" to a competition type string like "TRACK_AND_FIELD" */
 function sportSlugToCompetitionType(slug: string): string {
-  return slug.toUpperCase().replace(/-/g, "_")
+  return slug.toUpperCase().replace(/-/g, "_");
 }
 
-type PublishStatus = "LIVE" | "DRAFT" | "SCHEDULED"
+type PublishStatus = "LIVE" | "DRAFT" | "SCHEDULED";
 
 interface Level {
-  id: string
-  name: string
-  color: string | null
-  order: number
+  id: string;
+  name: string;
+  color: string | null;
+  order: number;
 }
 
 interface Facility {
-  id: string
-  name: string
-  street: string | null
-  city: string | null
-  stateProvince: string | null
-  postalCode: string | null
-  country: string | null
+  id: string;
+  name: string;
+  street: string | null;
+  city: string | null;
+  stateProvince: string | null;
+  postalCode: string | null;
+  country: string | null;
 }
 
 interface MembershipInstance {
-  id: string
-  name: string
-  price: number
-  groupName: string
+  id: string;
+  name: string;
+  price: number;
+  groupName: string;
 }
 
-type ResultType = "TIME" | "DISTANCE" | "HEIGHT" | "SCORE" | "PLACEMENT"
-type SortDir = "ASC" | "DESC"
-type SubMode = "NONE" | "VERIFIED_RESULT" | "MANUAL_ENTRY"
+type ResultType = "TIME" | "DISTANCE" | "HEIGHT" | "SCORE" | "PLACEMENT";
+type SortDir = "ASC" | "DESC";
+type SubMode = "NONE" | "VERIFIED_RESULT" | "MANUAL_ENTRY";
 
 interface CategoryResultConfig {
-  combinationEntryId: string | null
-  individualEntryId: string | null
-  sportEventId: string | null
-  ageCategoryId: string | null
-  label: string
-  resultType: ResultType
-  sortDirection: SortDir
-  precision: number
-  seedMarkRequired: boolean
-  submissionMode: SubMode
-  qualifyingMark: number | null
-  isTeamEvent: boolean
-  teamSize: number | null
-  collectResults: boolean
+  combinationEntryId: string | null;
+  individualEntryId: string | null;
+  sportEventId: string | null;
+  ageCategoryId: string | null;
+  label: string;
+  resultType: ResultType;
+  sortDirection: SortDir;
+  precision: number;
+  seedMarkRequired: boolean;
+  submissionMode: SubMode;
+  qualifyingMark: number | null;
+  isTeamEvent: boolean;
+  teamSize: number | null;
+  collectResults: boolean;
 }
 
 interface SportEventEntry {
-  id: string
-  code: string
-  name: string
-  eventGroup: string
-  eventType: string
-  resultType: ResultType
-  sortDirection: SortDir
-  defaultPrecision: number
-  isActive: boolean
-  displayOrder: number
+  id: string;
+  code: string;
+  name: string;
+  eventGroup: string;
+  eventType: string;
+  resultType: ResultType;
+  sortDirection: SortDir;
+  defaultPrecision: number;
+  isActive: boolean;
+  displayOrder: number;
   eligibility?: Array<{
-    id: string
-    sportEventId: string
-    ageCategoryId: string
-    isEnabled: boolean
-    ageCategory: { id: string; code: string; name: string }
-  }>
+    id: string;
+    sportEventId: string;
+    ageCategoryId: string;
+    isEnabled: boolean;
+    ageCategory: { id: string; code: string; name: string };
+  }>;
 }
 
 interface SportAgeCategoryEntry {
-  id: string
-  code: string
-  name: string
-  minAge: number
-  maxAge: number | null
-  isActive: boolean
-  displayOrder: number
+  id: string;
+  code: string;
+  name: string;
+  minAge: number;
+  maxAge: number | null;
+  isActive: boolean;
+  displayOrder: number;
 }
 
 const EVENT_GROUP_LABELS: Record<string, string> = {
@@ -164,83 +177,82 @@ const EVENT_GROUP_LABELS: Record<string, string> = {
   combined: "Combined Events",
   racewalk: "Race Walk",
   road: "Road",
-}
+};
 
 interface CompetitionFormData {
   // Season (optional first step)
-  seasonId: string | null
+  seasonId: string | null;
 
   // Category
-  categoryId: string | null
+  categoryId: string | null;
 
   // Step 1: General
-  name: string
-  color: string
-  competitionType: string | null
-  facilityId: string | null
-  country: string
-  stateProvince: string
-  city: string
-  streetAddress: string
-  postalCode: string
-  startDate: Date | null
-  endDate: Date | null
-  startTime: string
-  endTime: string
+  name: string;
+  color: string;
+  competitionType: string | null;
+  facilityId: string | null;
+  country: string;
+  stateProvince: string;
+  city: string;
+  streetAddress: string;
+  postalCode: string;
+  startDate: Date | null;
+  endDate: Date | null;
+  startTime: string;
+  endTime: string;
 
   // Step 2: Categories
-  categoryMode: "ALL" | "SPECIFIC"
-  selectedCategoryIds: string[]
+  categoryMode: "ALL" | "SPECIFIC";
+  selectedCategoryIds: string[];
 
   // Step 3: Restrictions
-  hasLevelRestriction: boolean
-  levelRequirementIds: string[]
-  hasCapacityRestriction: boolean
-  capacity: number | null
-  hasAgeRestriction: boolean
-  minAge: number | null
-  maxAge: number | null
-  hasMembershipRestriction: boolean
-  membershipRequirementIds: string[]
-  hasWaiverRestriction: boolean
-  waiverRequirementIds: string[]
-  hasMedicalRequirement: boolean
-  hasFileRequirement: boolean
-  fileRequirementConfig: FileRequirementConfig | null
+  hasLevelRestriction: boolean;
+  levelRequirementIds: string[];
+  hasCapacityRestriction: boolean;
+  capacity: number | null;
+  hasAgeRestriction: boolean;
+  minAge: number | null;
+  maxAge: number | null;
+  hasMembershipRestriction: boolean;
+  membershipRequirementIds: string[];
+  hasWaiverRestriction: boolean;
+  waiverRequirementIds: string[];
+  hasMedicalRequirement: boolean;
+  hasFileRequirement: boolean;
+  fileRequirementConfig: FileRequirementConfig | null;
 
   // Step 4: Results
-  categoryResults: CategoryResultConfig[]
+  categoryResults: CategoryResultConfig[];
 
   // Step 5: Pricing
-  pricingMode: "FREE" | "PER_COMPETITION" | "PER_EVENT" | "TIERED" | "PER_CATEGORY"
-  entryFee: number | null
-  pricingTiers: Array<{ minEvents: number; maxEvents: number | null; pricePerEvent: number }>
-  categoryPrices: Record<string, number>
+  pricingMode: "FREE" | "PER_COMPETITION" | "PER_EVENT" | "TIERED" | "PER_CATEGORY";
+  entryFee: number | null;
+  pricingTiers: Array<{ minEvents: number; maxEvents: number | null; pricePerEvent: number }>;
+  categoryPrices: Record<string, number>;
 
   // Step 6: Confirmation
-  publishStatus: PublishStatus
-  scheduledGoLiveDate: Date | null
-  scheduledGoLiveTime: string
+  publishStatus: PublishStatus;
+  scheduledGoLiveDate: Date | null;
+  scheduledGoLiveTime: string;
 
   // Registration
-  registrationOpen: boolean
-  registrationStartDate: Date | null
-  registrationStartTime: string
-  registrationEndDate: Date | null
-  registrationEndTime: string
-  earlyAccessCode: string | null
+  registrationOpen: boolean;
+  registrationStartDate: Date | null;
+  registrationStartTime: string;
+  registrationEndDate: Date | null;
+  registrationEndTime: string;
+  earlyAccessCode: string | null;
 
   // GL Code
-  glCodeId: string | null
+  glCodeId: string | null;
 }
 
 interface CompetitionStepperProps {
-  competitionId?: string | null
-  embedded?: boolean
-  onSaved?: (competition: any) => void
-  onCancel?: () => void
+  competitionId?: string | null;
+  embedded?: boolean;
+  onSaved?: (competition: any) => void;
+  onCancel?: () => void;
 }
-
 
 const { useStepper } = defineStepper(
   { id: "season", title: "Season" },
@@ -250,49 +262,58 @@ const { useStepper } = defineStepper(
   { id: "results", title: "Results" },
   { id: "pricing", title: "Pricing" },
   { id: "registration", title: "Registration" },
-  { id: "confirmation", title: "Confirmation" },
-)
+  { id: "confirmation", title: "Confirmation" }
+);
 
-export function CompetitionStepper({ competitionId, embedded = false, onSaved, onCancel }: CompetitionStepperProps) {
-  const router = useRouter()
-  const isEditing = !!competitionId
-  const { isFeatureEnabled } = useFeatures()
-  const trainingEnabled = isFeatureEnabled("training")
-  const membershipsEnabled = isFeatureEnabled("memberships")
-  const seasonsEnabled = isFeatureEnabled("seasons")
+export function CompetitionStepper({
+  competitionId,
+  embedded = false,
+  onSaved,
+  onCancel,
+}: CompetitionStepperProps) {
+  const router = useRouter();
+  const isEditing = !!competitionId;
+  const { isFeatureEnabled } = useFeatures();
+  const trainingEnabled = isFeatureEnabled("training");
+  const membershipsEnabled = isFeatureEnabled("memberships");
+  const seasonsEnabled = isFeatureEnabled("seasons");
 
-  const { memberships, isLoading: loadingMemberships } = useMemberships({ initialParams: { include: "instances" } })
-  const { seasons, isLoading: seasonsLoading } = useSeasons({ autoFetch: seasonsEnabled })
-  const { categories, isLoading: categoriesLoading } = useCategories()
+  const { memberships, isLoading: loadingMemberships } = useMemberships({
+    initialParams: { include: "instances" },
+  });
+  const { seasons, isLoading: seasonsLoading } = useSeasons({ autoFetch: seasonsEnabled });
+  const { categories, isLoading: categoriesLoading } = useCategories();
 
   // Levels state
-  const [levels, setLevels] = React.useState<Level[]>([])
-  const [loadingLevels, setLoadingLevels] = React.useState(true)
+  const [levels, setLevels] = React.useState<Level[]>([]);
+  const [loadingLevels, setLoadingLevels] = React.useState(true);
 
   // Facilities state
-  const [facilities, setFacilities] = React.useState<Facility[]>([])
-  const [loadingFacilities, setLoadingFacilities] = React.useState(true)
+  const [facilities, setFacilities] = React.useState<Facility[]>([]);
+  const [loadingFacilities, setLoadingFacilities] = React.useState(true);
 
   // Waivers state
-  const [waivers, setWaivers] = React.useState<Array<{ id: string; title: string; status: string }>>([])
-  const [loadingWaivers, setLoadingWaivers] = React.useState(true)
+  const [waivers, setWaivers] = React.useState<
+    Array<{ id: string; title: string; status: string }>
+  >([]);
+  const [loadingWaivers, setLoadingWaivers] = React.useState(true);
 
   // Organization sports state
-  const [orgSports, setOrgSports] = React.useState<OrgSport[]>([])
+  const [orgSports, setOrgSports] = React.useState<OrgSport[]>([]);
 
   // Sport-specific structured data for categories step
-  const [sportEvents, setSportEvents] = React.useState<SportEventEntry[]>([])
-  const [sportAgeCategories, setSportAgeCategories] = React.useState<SportAgeCategoryEntry[]>([])
-  const [eligibilitySet, setEligibilitySet] = React.useState<Set<string>>(new Set())
-  const [loadingSportData, setLoadingSportData] = React.useState(false)
-  const [hasSportSpecificData, setHasSportSpecificData] = React.useState(false)
+  const [sportEvents, setSportEvents] = React.useState<SportEventEntry[]>([]);
+  const [sportAgeCategories, setSportAgeCategories] = React.useState<SportAgeCategoryEntry[]>([]);
+  const [eligibilitySet, setEligibilitySet] = React.useState<Set<string>>(new Set());
+  const [loadingSportData, setLoadingSportData] = React.useState(false);
+  const [hasSportSpecificData, setHasSportSpecificData] = React.useState(false);
 
   // selectedCombos: Set of "eventId:ageCategoryId" keys the user picked
-  const [selectedCombos, setSelectedCombos] = React.useState<Set<string>>(new Set())
+  const [selectedCombos, setSelectedCombos] = React.useState<Set<string>>(new Set());
 
   // Location field validation errors
-  const [locationErrors, setLocationErrors] = React.useState<Record<string, string>>({})
-  const [stateProvinceOpen, setStateProvinceOpen] = React.useState(false)
+  const [locationErrors, setLocationErrors] = React.useState<Record<string, string>>({});
+  const [stateProvinceOpen, setStateProvinceOpen] = React.useState(false);
 
   // Form state
   const [formData, setFormData] = React.useState<CompetitionFormData>({
@@ -343,7 +364,10 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
     // Step 5: Pricing
     pricingMode: "FREE",
     entryFee: null,
-    pricingTiers: [{ minEvents: 1, maxEvents: 3, pricePerEvent: 20 }, { minEvents: 4, maxEvents: null, pricePerEvent: 15 }],
+    pricingTiers: [
+      { minEvents: 1, maxEvents: 3, pricePerEvent: 20 },
+      { minEvents: 4, maxEvents: null, pricePerEvent: 15 },
+    ],
     categoryPrices: {},
 
     // Registration
@@ -361,24 +385,24 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
 
     // GL Code
     glCodeId: null,
-  })
+  });
 
-  const showSeasonStep = seasonsEnabled && (seasons.length > 0 || seasonsLoading)
+  const showSeasonStep = seasonsEnabled && (seasons.length > 0 || seasonsLoading);
   const selectedSeason = React.useMemo(() => {
-    if (!formData.seasonId) return null
-    return seasons.find((s) => s.id === formData.seasonId) ?? null
-  }, [formData.seasonId, seasons])
+    if (!formData.seasonId) return null;
+    return seasons.find((s) => s.id === formData.seasonId) ?? null;
+  }, [formData.seasonId, seasons]);
 
-  const [isSaving, setIsSaving] = React.useState(false)
-  const [loadingCompetition, setLoadingCompetition] = React.useState(!!competitionId)
-  const [copyDialogOpen, setCopyDialogOpen] = React.useState(false)
-  const stepper = useStepper()
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [loadingCompetition, setLoadingCompetition] = React.useState(!!competitionId);
+  const [copyDialogOpen, setCopyDialogOpen] = React.useState(false);
+  const stepper = useStepper();
 
   const handleCopyFromCompetition = React.useCallback(async (sourceId: string) => {
     try {
-      const response = await fetch(`/api/competitions/${sourceId}`)
-      if (!response.ok) throw new Error("Failed to fetch competition")
-      const data = await response.json()
+      const response = await fetch(`/api/competitions/${sourceId}`);
+      if (!response.ok) throw new Error("Failed to fetch competition");
+      const data = await response.json();
 
       const categoryResults: CategoryResultConfig[] = (data.categories || []).map((cat: any) => ({
         combinationEntryId: cat.combinationEntryId || null,
@@ -395,37 +419,43 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
         isTeamEvent: cat.isTeamEvent ?? false,
         teamSize: cat.teamSize ?? null,
         collectResults: true,
-      }))
+      }));
 
-      const combos = new Set<string>()
+      const combos = new Set<string>();
       for (const cat of data.categories || []) {
         if (cat.sportEventId && cat.ageCategoryId) {
-          combos.add(`${cat.sportEventId}:${cat.ageCategoryId}`)
+          combos.add(`${cat.sportEventId}:${cat.ageCategoryId}`);
         }
       }
-      setSelectedCombos(combos)
+      setSelectedCombos(combos);
 
-      const pricingTiers = (data.pricingTiers || []).length > 0
-        ? data.pricingTiers.map((t: any) => ({
-            minEvents: t.minEvents,
-            maxEvents: t.maxEvents ?? null,
-            pricePerEvent: typeof t.pricePerEvent === "string" ? parseFloat(t.pricePerEvent) : t.pricePerEvent,
-          }))
-        : [{ minEvents: 1, maxEvents: 3, pricePerEvent: 20 }, { minEvents: 4, maxEvents: null, pricePerEvent: 15 }]
+      const pricingTiers =
+        (data.pricingTiers || []).length > 0
+          ? data.pricingTiers.map((t: any) => ({
+              minEvents: t.minEvents,
+              maxEvents: t.maxEvents ?? null,
+              pricePerEvent:
+                typeof t.pricePerEvent === "string" ? parseFloat(t.pricePerEvent) : t.pricePerEvent,
+            }))
+          : [
+              { minEvents: 1, maxEvents: 3, pricePerEvent: 20 },
+              { minEvents: 4, maxEvents: null, pricePerEvent: 15 },
+            ];
 
-      const categoryPrices: Record<string, number> = {}
+      const categoryPrices: Record<string, number> = {};
       for (const cat of data.categories || []) {
         if (cat.price != null) {
-          const key = cat.sportEventId && cat.ageCategoryId
-            ? `${cat.sportEventId}:${cat.ageCategoryId}`
-            : cat.combinationEntryId || cat.individualEntryId || ""
+          const key =
+            cat.sportEventId && cat.ageCategoryId
+              ? `${cat.sportEventId}:${cat.ageCategoryId}`
+              : cat.combinationEntryId || cat.individualEntryId || "";
           if (key) {
-            categoryPrices[key] = typeof cat.price === "string" ? parseFloat(cat.price) : cat.price
+            categoryPrices[key] = typeof cat.price === "string" ? parseFloat(cat.price) : cat.price;
           }
         }
       }
 
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         color: data.color || "#3b82f6",
         competitionType: data.competitionType || null,
@@ -457,11 +487,18 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
         fileRequirementConfig: data.fileRequirementConfig ?? null,
         categoryResults,
         pricingMode: data.pricingMode || "FREE",
-        entryFee: data.entryFee != null ? (typeof data.entryFee === "string" ? parseFloat(data.entryFee) : data.entryFee) : null,
+        entryFee:
+          data.entryFee != null
+            ? typeof data.entryFee === "string"
+              ? parseFloat(data.entryFee)
+              : data.entryFee
+            : null,
         pricingTiers,
         categoryPrices,
         registrationOpen: data.registrationOpen ?? true,
-        registrationStartDate: data.registrationStartDate ? new Date(data.registrationStartDate) : null,
+        registrationStartDate: data.registrationStartDate
+          ? new Date(data.registrationStartDate)
+          : null,
         registrationStartTime: data.registrationStartTime || "09:00",
         registrationEndDate: data.registrationEndDate ? new Date(data.registrationEndDate) : null,
         registrationEndTime: data.registrationEndTime || "23:59",
@@ -470,27 +507,27 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
         scheduledGoLiveDate: null,
         scheduledGoLiveTime: "09:00",
         seasonId: data.seasonId || null,
-      }))
+      }));
 
-      toast.success(`Settings copied from "${data.name}"`)
+      toast.success(`Settings copied from "${data.name}"`);
     } catch (error) {
-      console.error("Failed to copy competition settings:", error)
-      toast.error("Failed to copy competition settings")
-      throw error
+      console.error("Failed to copy competition settings:", error);
+      toast.error("Failed to copy competition settings");
+      throw error;
     }
-  }, [])
+  }, []);
 
   // Fetch existing competition data when editing
   React.useEffect(() => {
-    if (!competitionId) return
+    if (!competitionId) return;
     const fetchCompetition = async () => {
       try {
-        const response = await fetch(`/api/competitions/${competitionId}`)
+        const response = await fetch(`/api/competitions/${competitionId}`);
         if (!response.ok) {
-          toast.error("Failed to load competition")
-          return
+          toast.error("Failed to load competition");
+          return;
         }
-        const data = await response.json()
+        const data = await response.json();
 
         // Build categoryResults from the API categories
         const categoryResults: CategoryResultConfig[] = (data.categories || []).map((cat: any) => ({
@@ -498,7 +535,8 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
           individualEntryId: cat.individualEntryId || null,
           sportEventId: cat.sportEventId || null,
           ageCategoryId: cat.ageCategoryId || null,
-          label: [cat.sportEvent?.name, cat.ageCategory?.code].filter(Boolean).join(" - ") || cat.id,
+          label:
+            [cat.sportEvent?.name, cat.ageCategory?.code].filter(Boolean).join(" - ") || cat.id,
           resultType: cat.resultType || "TIME",
           sortDirection: cat.sortDirection || "ASC",
           precision: cat.precision ?? 3,
@@ -508,35 +546,44 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
           isTeamEvent: cat.isTeamEvent ?? false,
           teamSize: cat.teamSize ?? null,
           collectResults: true,
-        }))
+        }));
 
         // Rebuild selectedCombos from categories
-        const combos = new Set<string>()
+        const combos = new Set<string>();
         for (const cat of data.categories || []) {
           if (cat.sportEventId && cat.ageCategoryId) {
-            combos.add(`${cat.sportEventId}:${cat.ageCategoryId}`)
+            combos.add(`${cat.sportEventId}:${cat.ageCategoryId}`);
           }
         }
-        setSelectedCombos(combos)
+        setSelectedCombos(combos);
 
         // Build pricing tiers
-        const pricingTiers = (data.pricingTiers || []).length > 0
-          ? data.pricingTiers.map((t: any) => ({
-              minEvents: t.minEvents,
-              maxEvents: t.maxEvents ?? null,
-              pricePerEvent: typeof t.pricePerEvent === "string" ? parseFloat(t.pricePerEvent) : t.pricePerEvent,
-            }))
-          : [{ minEvents: 1, maxEvents: 3, pricePerEvent: 20 }, { minEvents: 4, maxEvents: null, pricePerEvent: 15 }]
+        const pricingTiers =
+          (data.pricingTiers || []).length > 0
+            ? data.pricingTiers.map((t: any) => ({
+                minEvents: t.minEvents,
+                maxEvents: t.maxEvents ?? null,
+                pricePerEvent:
+                  typeof t.pricePerEvent === "string"
+                    ? parseFloat(t.pricePerEvent)
+                    : t.pricePerEvent,
+              }))
+            : [
+                { minEvents: 1, maxEvents: 3, pricePerEvent: 20 },
+                { minEvents: 4, maxEvents: null, pricePerEvent: 15 },
+              ];
 
         // Build per-category prices from categories that have a price
-        const categoryPrices: Record<string, number> = {}
+        const categoryPrices: Record<string, number> = {};
         for (const cat of data.categories || []) {
           if (cat.price != null) {
-            const key = cat.sportEventId && cat.ageCategoryId
-              ? `${cat.sportEventId}:${cat.ageCategoryId}`
-              : cat.combinationEntryId || cat.individualEntryId || ""
+            const key =
+              cat.sportEventId && cat.ageCategoryId
+                ? `${cat.sportEventId}:${cat.ageCategoryId}`
+                : cat.combinationEntryId || cat.individualEntryId || "";
             if (key) {
-              categoryPrices[key] = typeof cat.price === "string" ? parseFloat(cat.price) : cat.price
+              categoryPrices[key] =
+                typeof cat.price === "string" ? parseFloat(cat.price) : cat.price;
             }
           }
         }
@@ -578,12 +625,19 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
           categoryResults,
 
           pricingMode: data.pricingMode || "FREE",
-          entryFee: data.entryFee != null ? (typeof data.entryFee === "string" ? parseFloat(data.entryFee) : data.entryFee) : null,
+          entryFee:
+            data.entryFee != null
+              ? typeof data.entryFee === "string"
+                ? parseFloat(data.entryFee)
+                : data.entryFee
+              : null,
           pricingTiers,
           categoryPrices,
 
           registrationOpen: data.registrationOpen ?? true,
-          registrationStartDate: data.registrationStartDate ? new Date(data.registrationStartDate) : null,
+          registrationStartDate: data.registrationStartDate
+            ? new Date(data.registrationStartDate)
+            : null,
           registrationStartTime: data.registrationStartTime || "09:00",
           registrationEndDate: data.registrationEndDate ? new Date(data.registrationEndDate) : null,
           registrationEndTime: data.registrationEndTime || "23:59",
@@ -594,134 +648,134 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
           scheduledGoLiveTime: data.scheduledGoLiveTime || "09:00",
           glCodeId: data.glCodeId || null,
           categoryId: data.categoryId || null,
-        })
+        });
       } catch (error) {
-        console.error("Failed to load competition:", error)
-        toast.error("Failed to load competition data")
+        console.error("Failed to load competition:", error);
+        toast.error("Failed to load competition data");
       } finally {
-        setLoadingCompetition(false)
+        setLoadingCompetition(false);
       }
-    }
-    fetchCompetition()
-  }, [competitionId])
+    };
+    fetchCompetition();
+  }, [competitionId]);
 
   // Fetch levels
   React.useEffect(() => {
     const fetchLevels = async () => {
       try {
-        const response = await fetch("/api/levels")
+        const response = await fetch("/api/levels");
         if (response.ok) {
-          const data = await response.json()
-          setLevels(data)
+          const data = await response.json();
+          setLevels(data);
         }
       } catch (error) {
-        console.error("Failed to fetch levels:", error)
+        console.error("Failed to fetch levels:", error);
       } finally {
-        setLoadingLevels(false)
+        setLoadingLevels(false);
       }
-    }
-    if (trainingEnabled) fetchLevels()
-    else setLoadingLevels(false)
-  }, [trainingEnabled])
+    };
+    if (trainingEnabled) fetchLevels();
+    else setLoadingLevels(false);
+  }, [trainingEnabled]);
 
   // Fetch facilities
   React.useEffect(() => {
     const fetchFacilities = async () => {
       try {
-        const response = await fetch("/api/organization/facilities")
+        const response = await fetch("/api/organization/facilities");
         if (response.ok) {
-          const data = await response.json()
-          setFacilities(Array.isArray(data) ? data : data.facilities || [])
+          const data = await response.json();
+          setFacilities(Array.isArray(data) ? data : data.facilities || []);
         }
       } catch (error) {
-        console.error("Failed to fetch facilities:", error)
+        console.error("Failed to fetch facilities:", error);
       } finally {
-        setLoadingFacilities(false)
+        setLoadingFacilities(false);
       }
-    }
-    fetchFacilities()
-  }, [])
+    };
+    fetchFacilities();
+  }, []);
 
   // Fetch waivers
   React.useEffect(() => {
     const fetchWaivers = async () => {
       try {
-        const response = await fetch("/api/waivers?status=ACTIVE")
+        const response = await fetch("/api/waivers?status=ACTIVE");
         if (response.ok) {
-          const data = await response.json()
-          setWaivers(data.data || [])
+          const data = await response.json();
+          setWaivers(data.data || []);
         }
       } catch (error) {
-        console.error("Failed to fetch waivers:", error)
+        console.error("Failed to fetch waivers:", error);
       } finally {
-        setLoadingWaivers(false)
+        setLoadingWaivers(false);
       }
-    }
-    fetchWaivers()
-  }, [])
+    };
+    fetchWaivers();
+  }, []);
 
   // Fetch organization sports
   React.useEffect(() => {
     const fetchOrgSports = async () => {
       try {
-        const response = await fetch("/api/organization/sports")
+        const response = await fetch("/api/organization/sports");
         if (response.ok) {
-          const data: OrgSport[] = await response.json()
-          setOrgSports(data)
+          const data: OrgSport[] = await response.json();
+          setOrgSports(data);
 
           // If org has exactly one sport, auto-select it as the competition type
           if (data.length === 1) {
             setFormData((prev) => ({
               ...prev,
               competitionType: sportSlugToCompetitionType(data[0].slug),
-            }))
+            }));
           }
         }
       } catch (error) {
-        console.error("Failed to fetch org sports:", error)
+        console.error("Failed to fetch org sports:", error);
       }
-    }
-    fetchOrgSports()
-  }, [])
+    };
+    fetchOrgSports();
+  }, []);
 
   // Fetch sport-specific structured data for the categories step
   const fetchSportData = React.useCallback(async () => {
-    if (!formData.competitionType || orgSports.length === 0) return
+    if (!formData.competitionType || orgSports.length === 0) return;
 
     // Find the sport matching this competition type
     const matchingSport = orgSports.find(
       (s) => sportSlugToCompetitionType(s.slug) === formData.competitionType
-    )
+    );
     if (!matchingSport) {
-      setHasSportSpecificData(false)
-      return
+      setHasSportSpecificData(false);
+      return;
     }
 
-    setLoadingSportData(true)
+    setLoadingSportData(true);
     try {
-      const res = await fetch(`/api/sports/${matchingSport.id}/events`)
+      const res = await fetch(`/api/sports/${matchingSport.id}/events`);
       if (!res.ok) {
-        setHasSportSpecificData(false)
-        return
+        setHasSportSpecificData(false);
+        return;
       }
-      const data = await res.json()
-      const events: SportEventEntry[] = data.events || []
+      const data = await res.json();
+      const events: SportEventEntry[] = data.events || [];
 
       if (events.length === 0) {
-        setHasSportSpecificData(false)
-        return
+        setHasSportSpecificData(false);
+        return;
       }
 
-      setSportEvents(events)
-      setHasSportSpecificData(true)
+      setSportEvents(events);
+      setHasSportSpecificData(true);
 
       // Extract age categories from eligibility data
-      const ageCatMap = new Map<string, SportAgeCategoryEntry>()
-      const eligKeys = new Set<string>()
+      const ageCatMap = new Map<string, SportAgeCategoryEntry>();
+      const eligKeys = new Set<string>();
       for (const evt of events) {
         for (const elig of evt.eligibility || []) {
           if (elig.isEnabled !== false) {
-            eligKeys.add(`${evt.id}:${elig.ageCategory.id}`)
+            eligKeys.add(`${evt.id}:${elig.ageCategory.id}`);
             if (!ageCatMap.has(elig.ageCategory.id)) {
               ageCatMap.set(elig.ageCategory.id, {
                 id: elig.ageCategory.id,
@@ -731,35 +785,34 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                 maxAge: null,
                 isActive: true,
                 displayOrder: 0,
-              })
+              });
             }
           }
         }
       }
-      setEligibilitySet(eligKeys)
+      setEligibilitySet(eligKeys);
 
       // Also fetch age categories with full data
-      const ageCatRes = await fetch(`/api/sports/${matchingSport.id}/age-categories`)
+      const ageCatRes = await fetch(`/api/sports/${matchingSport.id}/age-categories`);
       if (ageCatRes.ok) {
-        const ageCatData = await ageCatRes.json()
-        setSportAgeCategories(ageCatData.ageCategories || [])
+        const ageCatData = await ageCatRes.json();
+        setSportAgeCategories(ageCatData.ageCategories || []);
       } else {
-        setSportAgeCategories(Array.from(ageCatMap.values()))
+        setSportAgeCategories(Array.from(ageCatMap.values()));
       }
     } catch (error) {
-      console.error("Failed to fetch sport data:", error)
-      setHasSportSpecificData(false)
+      console.error("Failed to fetch sport data:", error);
+      setHasSportSpecificData(false);
     } finally {
-      setLoadingSportData(false)
+      setLoadingSportData(false);
     }
-  }, [formData.competitionType, orgSports])
-
+  }, [formData.competitionType, orgSports]);
 
   // Handle facility selection to auto-fill address
   const handleFacilityChange = (facilityId: string) => {
-    setLocationErrors({})
+    setLocationErrors({});
     if (facilityId === "__manual__") {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         facilityId: null,
         country: "",
@@ -767,12 +820,12 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
         city: "",
         streetAddress: "",
         postalCode: "",
-      }))
-      return
+      }));
+      return;
     }
-    const facility = facilities.find(f => f.id === facilityId)
+    const facility = facilities.find((f) => f.id === facilityId);
     if (facility) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         facilityId: facility.id,
         country: facility.country || "",
@@ -780,13 +833,13 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
         city: facility.city || "",
         streetAddress: facility.street || "",
         postalCode: facility.postalCode || "",
-      }))
+      }));
     }
-  }
+  };
 
   // Flatten membership instances for the restriction picker
   const membershipInstances: MembershipInstance[] = React.useMemo(() => {
-    if (!memberships) return []
+    if (!memberships) return [];
     return memberships.flatMap((group: any) =>
       (group.instances || []).map((inst: any) => ({
         id: inst.id,
@@ -794,132 +847,147 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
         price: inst.price ? Number(inst.price) : 0,
         groupName: group.name,
       }))
-    )
-  }, [memberships])
+    );
+  }, [memberships]);
 
   // Step validation
   const validateStep = (stepId: string): boolean => {
     switch (stepId) {
       case "general":
         if (!formData.name.trim()) {
-          toast.error("Please enter a competition name")
-          return false
+          toast.error("Please enter a competition name");
+          return false;
         }
         if (!formData.competitionType) {
-          toast.error("Please select a competition type")
-          return false
+          toast.error("Please select a competition type");
+          return false;
         }
         if (!formData.startDate) {
-          toast.error("Please select a start date")
-          return false
+          toast.error("Please select a start date");
+          return false;
         }
         if (!formData.endDate) {
-          toast.error("Please select an end date")
-          return false
+          toast.error("Please select an end date");
+          return false;
         }
         if (!formData.facilityId) {
-          const locErrors: Record<string, string> = {}
-          if (!formData.country) locErrors.country = "Country is required"
-          if (!formData.stateProvince) locErrors.stateProvince = formData.country === "CA" ? "Province is required" : "State is required"
-          if (!formData.city.trim()) locErrors.city = "City is required"
-          if (!formData.streetAddress.trim()) locErrors.streetAddress = "Street address is required"
+          const locErrors: Record<string, string> = {};
+          if (!formData.country) locErrors.country = "Country is required";
+          if (!formData.stateProvince)
+            locErrors.stateProvince =
+              formData.country === "CA" ? "Province is required" : "State is required";
+          if (!formData.city.trim()) locErrors.city = "City is required";
+          if (!formData.streetAddress.trim())
+            locErrors.streetAddress = "Street address is required";
           if (!formData.postalCode.trim()) {
-            locErrors.postalCode = formData.country === "CA" ? "Postal code is required" : "ZIP code is required"
-          } else if (formData.country && !isValidPostalCode(formData.postalCode, formData.country)) {
-            locErrors.postalCode = formData.country === "US"
-              ? "Enter a valid ZIP code (e.g. 12345 or 12345-6789)"
-              : "Enter a valid postal code (e.g. A1A 1A1)"
+            locErrors.postalCode =
+              formData.country === "CA" ? "Postal code is required" : "ZIP code is required";
+          } else if (
+            formData.country &&
+            !isValidPostalCode(formData.postalCode, formData.country)
+          ) {
+            locErrors.postalCode =
+              formData.country === "US"
+                ? "Enter a valid ZIP code (e.g. 12345 or 12345-6789)"
+                : "Enter a valid postal code (e.g. A1A 1A1)";
           }
           if (Object.keys(locErrors).length > 0) {
-            setLocationErrors(locErrors)
-            toast.error("Please fill in all required location fields")
-            return false
+            setLocationErrors(locErrors);
+            toast.error("Please fill in all required location fields");
+            return false;
           }
         }
-        setLocationErrors({})
-        return true
+        setLocationErrors({});
+        return true;
       case "categories":
-        return true
+        return true;
       case "restrictions":
         if (formData.hasAgeRestriction && !formData.minAge && !formData.maxAge) {
-          toast.error("Please set at least a minimum or maximum age")
-          return false
+          toast.error("Please set at least a minimum or maximum age");
+          return false;
         }
         if (formData.hasCapacityRestriction && (!formData.capacity || formData.capacity <= 0)) {
-          toast.error("Please set a valid capacity")
-          return false
+          toast.error("Please set a valid capacity");
+          return false;
         }
         if (formData.hasLevelRestriction && formData.levelRequirementIds.length === 0) {
-          toast.error("Please select at least one level")
-          return false
+          toast.error("Please select at least one level");
+          return false;
         }
         if (formData.hasMembershipRestriction && formData.membershipRequirementIds.length === 0) {
-          toast.error("Please select at least one membership")
-          return false
+          toast.error("Please select at least one membership");
+          return false;
         }
         if (formData.hasWaiverRestriction && formData.waiverRequirementIds.length === 0) {
-          toast.error("Please select at least one waiver")
-          return false
+          toast.error("Please select at least one waiver");
+          return false;
         }
-        return true
+        return true;
       case "results":
-        return true
+        return true;
       case "pricing":
-        return true
+        return true;
       case "registration":
         if (!formData.registrationOpen) {
           if (!formData.registrationStartDate) {
-            toast.error("Please select a registration start date")
-            return false
+            toast.error("Please select a registration start date");
+            return false;
           }
           if (formData.startDate && formData.registrationStartDate > formData.startDate) {
-            toast.error("Registration start date cannot be later than the first day of the competition")
-            return false
+            toast.error(
+              "Registration start date cannot be later than the first day of the competition"
+            );
+            return false;
           }
         }
-        if (formData.registrationEndDate && formData.registrationStartDate && !formData.registrationOpen) {
+        if (
+          formData.registrationEndDate &&
+          formData.registrationStartDate &&
+          !formData.registrationOpen
+        ) {
           if (formData.registrationEndDate < formData.registrationStartDate) {
-            toast.error("Registration end date cannot be before registration start date")
-            return false
+            toast.error("Registration end date cannot be before registration start date");
+            return false;
           }
         }
-        return true
+        return true;
       case "confirmation":
         if (formData.publishStatus === "SCHEDULED" && !formData.scheduledGoLiveDate) {
-          toast.error("Please select a scheduled go-live date")
-          return false
+          toast.error("Please select a scheduled go-live date");
+          return false;
         }
-        return true
+        return true;
       default:
-        return true
+        return true;
     }
-  }
+  };
 
   const handleNext = () => {
     if (validateStep(stepper.state.current.data.id)) {
-      const currentStepId = stepper.state.current.data.id
-      const nextStepIndex = stepper.state.all.findIndex(s => s.id === currentStepId) + 1
-      const nextStepId = nextStepIndex < stepper.state.all.length ? stepper.state.all[nextStepIndex].id : null
+      const currentStepId = stepper.state.current.data.id;
+      const nextStepIndex = stepper.state.all.findIndex((s) => s.id === currentStepId) + 1;
+      const nextStepId =
+        nextStepIndex < stepper.state.all.length ? stepper.state.all[nextStepIndex].id : null;
 
       // Fetch sport-specific data when entering the categories step
       if (nextStepId === "categories" && sportEvents.length === 0) {
-        fetchSportData()
+        fetchSportData();
       }
 
       // Build categoryResults from selection when leaving the categories step
       if (currentStepId === "categories" && hasSportSpecificData) {
-        const combos = formData.categoryMode === "ALL" ? eligibilitySet : selectedCombos
-        const comboKeys = Array.from(combos)
-        const results: CategoryResultConfig[] = []
+        const combos = formData.categoryMode === "ALL" ? eligibilitySet : selectedCombos;
+        const comboKeys = Array.from(combos);
+        const results: CategoryResultConfig[] = [];
         for (const key of comboKeys) {
-          const [eventId, ageCatId] = key.split(":")
-          const evt = sportEvents.find((e) => e.id === eventId)
-          const ageCat = sportAgeCategories.find((c) => c.id === ageCatId)
-          if (!evt || !ageCat) continue
+          const [eventId, ageCatId] = key.split(":");
+          const evt = sportEvents.find((e) => e.id === eventId);
+          const ageCat = sportAgeCategories.find((c) => c.id === ageCatId);
+          if (!evt || !ageCat) continue;
 
           const existing = formData.categoryResults.find(
             (c) => c.sportEventId === eventId && c.ageCategoryId === ageCatId
-          )
+          );
 
           results.push({
             combinationEntryId: null,
@@ -936,35 +1004,35 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
             isTeamEvent: evt.eventType === "relay",
             teamSize: evt.eventType === "relay" ? 4 : null,
             collectResults: existing?.collectResults ?? true,
-          })
+          });
         }
 
         results.sort((a, b) => {
-          const evtA = sportEvents.find((e) => e.id === a.sportEventId)
-          const evtB = sportEvents.find((e) => e.id === b.sportEventId)
-          const ageCatA = sportAgeCategories.find((c) => c.id === a.ageCategoryId)
-          const ageCatB = sportAgeCategories.find((c) => c.id === b.ageCategoryId)
-          const evtOrder = (evtA?.displayOrder ?? 0) - (evtB?.displayOrder ?? 0)
-          if (evtOrder !== 0) return evtOrder
-          return (ageCatA?.displayOrder ?? 0) - (ageCatB?.displayOrder ?? 0)
-        })
+          const evtA = sportEvents.find((e) => e.id === a.sportEventId);
+          const evtB = sportEvents.find((e) => e.id === b.sportEventId);
+          const ageCatA = sportAgeCategories.find((c) => c.id === a.ageCategoryId);
+          const ageCatB = sportAgeCategories.find((c) => c.id === b.ageCategoryId);
+          const evtOrder = (evtA?.displayOrder ?? 0) - (evtB?.displayOrder ?? 0);
+          if (evtOrder !== 0) return evtOrder;
+          return (ageCatA?.displayOrder ?? 0) - (ageCatB?.displayOrder ?? 0);
+        });
 
-        setFormData((prev) => ({ ...prev, categoryResults: results }))
+        setFormData((prev) => ({ ...prev, categoryResults: results }));
       }
 
-      const nextVisibleIndex = currentVisibleIndex + 1
+      const nextVisibleIndex = currentVisibleIndex + 1;
       if (nextVisibleIndex < visibleSteps.length) {
-        stepper.navigation.goTo(visibleSteps[nextVisibleIndex].id)
+        stepper.navigation.goTo(visibleSteps[nextVisibleIndex].id);
       }
     }
-  }
+  };
 
   const handlePrev = () => {
-    const prevVisibleIndex = currentVisibleIndex - 1
+    const prevVisibleIndex = currentVisibleIndex - 1;
     if (prevVisibleIndex >= 0) {
-      stepper.navigation.goTo(visibleSteps[prevVisibleIndex].id)
+      stepper.navigation.goTo(visibleSteps[prevVisibleIndex].id);
     }
-  }
+  };
 
   const handleSubmit = async () => {
     if (
@@ -976,10 +1044,10 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
       !validateStep("registration") ||
       !validateStep("confirmation")
     ) {
-      return
+      return;
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       const payload = {
         name: formData.name,
@@ -1035,7 +1103,9 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
         scheduledGoLiveDate: formData.scheduledGoLiveDate?.toISOString(),
         scheduledGoLiveTime: formData.scheduledGoLiveTime,
         registrationOpen: formData.registrationOpen,
-        registrationStartDate: !formData.registrationOpen ? formData.registrationStartDate?.toISOString() : null,
+        registrationStartDate: !formData.registrationOpen
+          ? formData.registrationStartDate?.toISOString()
+          : null,
         registrationStartTime: !formData.registrationOpen ? formData.registrationStartTime : null,
         registrationEndDate: formData.registrationEndDate?.toISOString() ?? null,
         registrationEndTime: formData.registrationEndTime || null,
@@ -1043,76 +1113,86 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
         glCodeId: formData.glCodeId,
         seasonId: formData.seasonId,
         categoryId: formData.categoryId,
-      }
+      };
 
-      const url = isEditing ? `/api/competitions/${competitionId}` : "/api/competitions"
-      const method = isEditing ? "PATCH" : "POST"
+      const url = isEditing ? `/api/competitions/${competitionId}` : "/api/competitions";
+      const method = isEditing ? "PATCH" : "POST";
 
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      })
+      });
 
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || "Failed to save competition")
+        const data = await response.json();
+        throw new Error(data.error || "Failed to save competition");
       }
 
-      const savedCompetition = await response.json()
-      toast.success(isEditing ? "Competition updated!" : "Competition created!")
+      const savedCompetition = await response.json();
+      toast.success(isEditing ? "Competition updated!" : "Competition created!");
       if (onSaved) {
-        onSaved(savedCompetition)
+        onSaved(savedCompetition);
       } else {
-        router.push("/dashboard/competitions")
+        router.push("/dashboard/competitions");
       }
     } catch (error) {
-      console.error("Failed to save competition:", error)
-      toast.error(error instanceof Error ? error.message : "Failed to save competition. Please try again.")
+      console.error("Failed to save competition:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to save competition. Please try again."
+      );
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const visibleStepIds = React.useMemo(() => {
-    const ids: string[] = []
-    if (showSeasonStep) ids.push("season")
-    ids.push("general", "categories", "restrictions", "results", "pricing", "registration", "confirmation")
-    return ids
-  }, [showSeasonStep])
+    const ids: string[] = [];
+    if (showSeasonStep) ids.push("season");
+    ids.push(
+      "general",
+      "categories",
+      "restrictions",
+      "results",
+      "pricing",
+      "registration",
+      "confirmation"
+    );
+    return ids;
+  }, [showSeasonStep]);
 
   React.useEffect(() => {
     if (!visibleStepIds.includes(stepper.state.current.data.id)) {
-      stepper.navigation.goTo(visibleStepIds[0] as "general")
+      stepper.navigation.goTo(visibleStepIds[0] as "general");
     }
-  }, [visibleStepIds, stepper.state.current.data.id, stepper.navigation])
+  }, [visibleStepIds, stepper.state.current.data.id, stepper.navigation]);
 
   React.useEffect(() => {
     if (stepper.state.current.data.id === "registration") {
-      setFormData(prev => {
-        const updates: Partial<CompetitionFormData> = {}
+      setFormData((prev) => {
+        const updates: Partial<CompetitionFormData> = {};
         if (!prev.registrationStartDate && prev.startDate) {
-          updates.registrationStartDate = prev.startDate
+          updates.registrationStartDate = prev.startDate;
         }
         if (!prev.registrationEndDate && prev.endDate) {
-          updates.registrationEndDate = prev.endDate
+          updates.registrationEndDate = prev.endDate;
         }
-        if (Object.keys(updates).length === 0) return prev
-        return { ...prev, ...updates }
-      })
+        if (Object.keys(updates).length === 0) return prev;
+        return { ...prev, ...updates };
+      });
     }
-  }, [stepper.state.current.data.id])
+  }, [stepper.state.current.data.id]);
 
-  const visibleSteps = stepper.state.all.filter(s => visibleStepIds.includes(s.id))
-  const currentVisibleIndex = visibleSteps.findIndex(s => s.id === stepper.state.current.data.id)
-  const currentIndex = stepper.state.all.findIndex(s => s.id === stepper.state.current.data.id)
+  const visibleSteps = stepper.state.all.filter((s) => visibleStepIds.includes(s.id));
+  const currentVisibleIndex = visibleSteps.findIndex((s) => s.id === stepper.state.current.data.id);
+  const currentIndex = stepper.state.all.findIndex((s) => s.id === stepper.state.current.data.id);
 
   if (loadingCompetition) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-    )
+    );
   }
 
   return (
@@ -1121,7 +1201,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
         {/* Step Navigation */}
         <StepperNav className="mb-4">
           {visibleSteps.map((step, index) => {
-            const status = getStepStatus(index, currentVisibleIndex)
+            const status = getStepStatus(index, currentVisibleIndex);
             return (
               <React.Fragment key={step.id}>
                 <StepperItem status={status}>
@@ -1129,16 +1209,18 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                     status={status}
                     step={index + 1}
                     onClick={() => {
-                      if (index < currentVisibleIndex) stepper.navigation.goTo(step.id)
+                      if (index < currentVisibleIndex) stepper.navigation.goTo(step.id);
                     }}
                   />
-                  <StepperTitle status={status} className="hidden sm:block">{step.title}</StepperTitle>
+                  <StepperTitle status={status} className="hidden sm:block">
+                    {step.title}
+                  </StepperTitle>
                 </StepperItem>
                 {index < visibleSteps.length - 1 && (
                   <StepperSeparator status={status} className="hidden sm:block" />
                 )}
               </React.Fragment>
-            )
+            );
           })}
         </StepperNav>
 
@@ -1154,15 +1236,22 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                 <Label>Season</Label>
                 <Select
                   value={formData.seasonId || "none"}
-                  onValueChange={(val) => setFormData(prev => ({ ...prev, seasonId: val === "none" ? null : val }))}
+                  onValueChange={(val) =>
+                    setFormData((prev) => ({ ...prev, seasonId: val === "none" ? null : val }))
+                  }
                 >
-                  <SelectTrigger><SelectValue placeholder="Select a season" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a season" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
                     {seasons.map((s) => (
                       <SelectItem key={s.id} value={s.id}>
                         <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                          <div
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: s.color }}
+                          />
                           {s.name}
                         </div>
                       </SelectItem>
@@ -1173,12 +1262,18 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
               {selectedSeason && (
                 <div className="rounded-lg border p-4 space-y-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: selectedSeason.color }} />
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: selectedSeason.color }}
+                    />
                     <span className="font-medium">{selectedSeason.name}</span>
-                    <Badge variant="outline" className="text-xs">{selectedSeason.status}</Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {selectedSeason.status}
+                    </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {format(new Date(selectedSeason.startDate), "MMM d, yyyy")} – {format(new Date(selectedSeason.endDate), "MMM d, yyyy")}
+                    {format(new Date(selectedSeason.startDate), "MMM d, yyyy")} –{" "}
+                    {format(new Date(selectedSeason.endDate), "MMM d, yyyy")}
                   </p>
                 </div>
               )}
@@ -1238,13 +1333,13 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                   id="name"
                   placeholder="e.g., Spring Invitational Meet 2026"
                   value={formData.name}
-                  onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                 />
               </div>
 
               <ColorSelector
                 value={formData.color}
-                onChange={(color) => setFormData(prev => ({ ...prev, color }))}
+                onChange={(color) => setFormData((prev) => ({ ...prev, color }))}
               />
 
               {/* Category */}
@@ -1253,7 +1348,9 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                   <Label>Category</Label>
                   <Select
                     value={formData.categoryId || "none"}
-                    onValueChange={(val) => setFormData(prev => ({ ...prev, categoryId: val === "none" ? null : val }))}
+                    onValueChange={(val) =>
+                      setFormData((prev) => ({ ...prev, categoryId: val === "none" ? null : val }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="No Category" />
@@ -1261,7 +1358,9 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                     <SelectContent>
                       <SelectItem value="none">No Category</SelectItem>
                       {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -1274,20 +1373,25 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                 const availableTypes = orgSports.map((sport) => ({
                   value: sportSlugToCompetitionType(sport.slug),
                   label: sport.name,
-                }))
+                }));
 
                 // If only one type available and it's already auto-selected, just show info
-                if (availableTypes.length === 1 && formData.competitionType === availableTypes[0].value) {
+                if (
+                  availableTypes.length === 1 &&
+                  formData.competitionType === availableTypes[0].value
+                ) {
                   return (
                     <div className="space-y-2">
                       <Label className="text-base font-medium">Competition Type</Label>
                       <div className="flex items-center gap-2 rounded-lg border p-4 bg-muted/30">
                         <Trophy className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">{availableTypes[0].label}</span>
-                        <Badge variant="secondary" className="ml-auto text-xs">Auto-selected</Badge>
+                        <Badge variant="secondary" className="ml-auto text-xs">
+                          Auto-selected
+                        </Badge>
                       </div>
                     </div>
-                  )
+                  );
                 }
 
                 if (availableTypes.length === 0) {
@@ -1296,10 +1400,16 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                       <Label className="text-base font-medium">Competition Type *</Label>
                       <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
                         No sports configured. Please add sports in your{" "}
-                        <a href="/dashboard/organization/overview" className="underline text-primary">organization settings</a>.
+                        <a
+                          href="/dashboard/organization/overview"
+                          className="underline text-primary"
+                        >
+                          organization settings
+                        </a>
+                        .
                       </div>
                     </div>
-                  )
+                  );
                 }
 
                 return (
@@ -1308,7 +1418,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                     <RadioGroup
                       value={formData.competitionType || ""}
                       onValueChange={(value: string) =>
-                        setFormData(prev => ({ ...prev, competitionType: value }))
+                        setFormData((prev) => ({ ...prev, competitionType: value }))
                       }
                       className="grid grid-cols-1 md:grid-cols-2 gap-4"
                     >
@@ -1333,7 +1443,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                       ))}
                     </RadioGroup>
                   </div>
-                )
+                );
               })()}
 
               {/* Location */}
@@ -1349,13 +1459,18 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                     disabled={loadingFacilities}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder={loadingFacilities ? "Loading facilities..." : "Enter address manually"} />
+                      <SelectValue
+                        placeholder={
+                          loadingFacilities ? "Loading facilities..." : "Enter address manually"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__manual__">Enter address manually</SelectItem>
-                      {facilities.map(facility => (
+                      {facilities.map((facility) => (
                         <SelectItem key={facility.id} value={facility.id}>
-                          {facility.name}{facility.city ? ` - ${facility.city}` : ""}
+                          {facility.name}
+                          {facility.city ? ` - ${facility.city}` : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1375,13 +1490,15 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                     <Select
                       value={formData.country || undefined}
                       onValueChange={(value) => {
-                        setFormData(prev => ({
+                        setFormData((prev) => ({
                           ...prev,
                           country: value,
                           stateProvince: prev.country !== value ? "" : prev.stateProvince,
-                        }))
-                        if (locationErrors.country) setLocationErrors(prev => ({ ...prev, country: "" }))
-                        if (locationErrors.postalCode) setLocationErrors(prev => ({ ...prev, postalCode: "" }))
+                        }));
+                        if (locationErrors.country)
+                          setLocationErrors((prev) => ({ ...prev, country: "" }));
+                        if (locationErrors.postalCode)
+                          setLocationErrors((prev) => ({ ...prev, postalCode: "" }));
                       }}
                       disabled={!!formData.facilityId}
                     >
@@ -1389,12 +1506,16 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                         <SelectValue placeholder="Select country" />
                       </SelectTrigger>
                       <SelectContent>
-                        {COUNTRIES.map(c => (
-                          <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+                        {COUNTRIES.map((c) => (
+                          <SelectItem key={c.code} value={c.code}>
+                            {c.name}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    {locationErrors.country && <p className="text-sm text-destructive">{locationErrors.country}</p>}
+                    {locationErrors.country && (
+                      <p className="text-sm text-destructive">{locationErrors.country}</p>
+                    )}
                   </div>
 
                   {/* State / Province */}
@@ -1414,28 +1535,48 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                           )}
                         >
                           {formData.stateProvince
-                            ? getRegionsForCountry(formData.country).find(r => r.code === formData.stateProvince)?.name ?? formData.stateProvince
-                            : formData.country ? `Select ${formData.country === "CA" ? "province" : "state"}...` : "Select country first"}
+                            ? (getRegionsForCountry(formData.country).find(
+                                (r) => r.code === formData.stateProvince
+                              )?.name ?? formData.stateProvince)
+                            : formData.country
+                              ? `Select ${formData.country === "CA" ? "province" : "state"}...`
+                              : "Select country first"}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <PopoverContent
+                        className="w-[--radix-popover-trigger-width] p-0"
+                        align="start"
+                      >
                         <Command>
-                          <CommandInput placeholder={`Search ${formData.country === "CA" ? "provinces" : "states"}...`} />
+                          <CommandInput
+                            placeholder={`Search ${formData.country === "CA" ? "provinces" : "states"}...`}
+                          />
                           <CommandList>
                             <CommandEmpty>No results found.</CommandEmpty>
                             <CommandGroup>
-                              {getRegionsForCountry(formData.country).map(region => (
+                              {getRegionsForCountry(formData.country).map((region) => (
                                 <CommandItem
                                   key={region.code}
                                   value={region.name}
                                   onSelect={() => {
-                                    setFormData(prev => ({ ...prev, stateProvince: region.code }))
-                                    setStateProvinceOpen(false)
-                                    if (locationErrors.stateProvince) setLocationErrors(prev => ({ ...prev, stateProvince: "" }))
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      stateProvince: region.code,
+                                    }));
+                                    setStateProvinceOpen(false);
+                                    if (locationErrors.stateProvince)
+                                      setLocationErrors((prev) => ({ ...prev, stateProvince: "" }));
                                   }}
                                 >
-                                  <Check className={cn("mr-2 h-4 w-4", formData.stateProvince === region.code ? "opacity-100" : "opacity-0")} />
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      formData.stateProvince === region.code
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
                                   {region.name}
                                 </CommandItem>
                               ))}
@@ -1444,7 +1585,9 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                         </Command>
                       </PopoverContent>
                     </Popover>
-                    {locationErrors.stateProvince && <p className="text-sm text-destructive">{locationErrors.stateProvince}</p>}
+                    {locationErrors.stateProvince && (
+                      <p className="text-sm text-destructive">{locationErrors.stateProvince}</p>
+                    )}
                   </div>
 
                   {/* City */}
@@ -1455,13 +1598,16 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                       placeholder="e.g., Toronto"
                       value={formData.city}
                       disabled={!!formData.facilityId}
-                      onChange={e => {
-                        setFormData(prev => ({ ...prev, city: e.target.value }))
-                        if (locationErrors.city) setLocationErrors(prev => ({ ...prev, city: "" }))
+                      onChange={(e) => {
+                        setFormData((prev) => ({ ...prev, city: e.target.value }));
+                        if (locationErrors.city)
+                          setLocationErrors((prev) => ({ ...prev, city: "" }));
                       }}
                       className={locationErrors.city ? "border-destructive" : ""}
                     />
-                    {locationErrors.city && <p className="text-sm text-destructive">{locationErrors.city}</p>}
+                    {locationErrors.city && (
+                      <p className="text-sm text-destructive">{locationErrors.city}</p>
+                    )}
                   </div>
 
                   {/* Street Address */}
@@ -1472,30 +1618,38 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                       placeholder="e.g., 123 Main St"
                       value={formData.streetAddress}
                       disabled={!!formData.facilityId}
-                      onChange={e => {
-                        setFormData(prev => ({ ...prev, streetAddress: e.target.value }))
-                        if (locationErrors.streetAddress) setLocationErrors(prev => ({ ...prev, streetAddress: "" }))
+                      onChange={(e) => {
+                        setFormData((prev) => ({ ...prev, streetAddress: e.target.value }));
+                        if (locationErrors.streetAddress)
+                          setLocationErrors((prev) => ({ ...prev, streetAddress: "" }));
                       }}
                       className={locationErrors.streetAddress ? "border-destructive" : ""}
                     />
-                    {locationErrors.streetAddress && <p className="text-sm text-destructive">{locationErrors.streetAddress}</p>}
+                    {locationErrors.streetAddress && (
+                      <p className="text-sm text-destructive">{locationErrors.streetAddress}</p>
+                    )}
                   </div>
 
                   {/* Postal Code / ZIP Code */}
                   <div className="space-y-2">
-                    <Label htmlFor="postalCode">{formData.country === "CA" ? "Postal Code" : "ZIP Code"} *</Label>
+                    <Label htmlFor="postalCode">
+                      {formData.country === "CA" ? "Postal Code" : "ZIP Code"} *
+                    </Label>
                     <Input
                       id="postalCode"
                       placeholder={formData.country === "CA" ? "A1A 1A1" : "12345"}
                       value={formData.postalCode}
                       disabled={!!formData.facilityId}
-                      onChange={e => {
-                        setFormData(prev => ({ ...prev, postalCode: e.target.value }))
-                        if (locationErrors.postalCode) setLocationErrors(prev => ({ ...prev, postalCode: "" }))
+                      onChange={(e) => {
+                        setFormData((prev) => ({ ...prev, postalCode: e.target.value }));
+                        if (locationErrors.postalCode)
+                          setLocationErrors((prev) => ({ ...prev, postalCode: "" }));
                       }}
                       className={locationErrors.postalCode ? "border-destructive" : ""}
                     />
-                    {locationErrors.postalCode && <p className="text-sm text-destructive">{locationErrors.postalCode}</p>}
+                    {locationErrors.postalCode && (
+                      <p className="text-sm text-destructive">{locationErrors.postalCode}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1517,9 +1671,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                           )}
                         >
                           <CalendarDays className="mr-2 h-4 w-4" />
-                          {formData.startDate
-                            ? format(formData.startDate, "PPP")
-                            : "Pick a date"}
+                          {formData.startDate ? format(formData.startDate, "PPP") : "Pick a date"}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
@@ -1527,10 +1679,11 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                           mode="single"
                           selected={formData.startDate || undefined}
                           onSelect={(date) =>
-                            setFormData(prev => ({
+                            setFormData((prev) => ({
                               ...prev,
                               startDate: date || null,
-                              endDate: prev.endDate && date && prev.endDate < date ? date : prev.endDate,
+                              endDate:
+                                prev.endDate && date && prev.endDate < date ? date : prev.endDate,
                             }))
                           }
                           initialFocus
@@ -1552,9 +1705,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                           )}
                         >
                           <CalendarDays className="mr-2 h-4 w-4" />
-                          {formData.endDate
-                            ? format(formData.endDate, "PPP")
-                            : "Pick a date"}
+                          {formData.endDate ? format(formData.endDate, "PPP") : "Pick a date"}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
@@ -1562,7 +1713,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                           mode="single"
                           selected={formData.endDate || undefined}
                           onSelect={(date) =>
-                            setFormData(prev => ({ ...prev, endDate: date || null }))
+                            setFormData((prev) => ({ ...prev, endDate: date || null }))
                           }
                           disabled={(date) =>
                             formData.startDate ? date < formData.startDate : false
@@ -1582,7 +1733,9 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                         id="startTime"
                         type="time"
                         value={formData.startTime}
-                        onChange={e => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, startTime: e.target.value }))
+                        }
                         className="pl-10"
                       />
                     </div>
@@ -1597,7 +1750,9 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                         id="endTime"
                         type="time"
                         value={formData.endTime}
-                        onChange={e => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, endTime: e.target.value }))
+                        }
                         className="pl-10"
                       />
                     </div>
@@ -1625,14 +1780,14 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
               <RadioGroup
                 value={formData.categoryMode}
                 onValueChange={(value: "ALL" | "SPECIFIC") => {
-                  setFormData(prev => ({
+                  setFormData((prev) => ({
                     ...prev,
                     categoryMode: value,
                     selectedCategoryIds: value === "ALL" ? [] : prev.selectedCategoryIds,
-                  }))
+                  }));
                   if (value === "ALL" && hasSportSpecificData) {
                     // Select all eligible combos
-                    setSelectedCombos(new Set(eligibilitySet))
+                    setSelectedCombos(new Set(eligibilitySet));
                   }
                 }}
                 className="space-y-4"
@@ -1707,9 +1862,14 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                         <table className="w-full text-sm">
                           <thead>
                             <tr className="border-b bg-muted/50">
-                              <th className="text-left py-2.5 px-3 font-medium min-w-[180px] sticky left-0 bg-muted/50 z-10">Event</th>
+                              <th className="text-left py-2.5 px-3 font-medium min-w-[180px] sticky left-0 bg-muted/50 z-10">
+                                Event
+                              </th>
                               {sportAgeCategories.map((cat) => (
-                                <th key={cat.id} className="text-center py-2.5 px-1 font-medium min-w-[60px]">
+                                <th
+                                  key={cat.id}
+                                  className="text-center py-2.5 px-1 font-medium min-w-[60px]"
+                                >
                                   <div className="flex flex-col items-center gap-0.5">
                                     <span className="text-xs font-semibold">{cat.code}</span>
                                     <span className="text-[10px] font-normal text-muted-foreground">
@@ -1722,11 +1882,14 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                           </thead>
                           <tbody>
                             {(() => {
-                              const grouped = sportEvents.reduce<Record<string, SportEventEntry[]>>((acc, evt) => {
-                                if (!acc[evt.eventGroup]) acc[evt.eventGroup] = []
-                                acc[evt.eventGroup].push(evt)
-                                return acc
-                              }, {})
+                              const grouped = sportEvents.reduce<Record<string, SportEventEntry[]>>(
+                                (acc, evt) => {
+                                  if (!acc[evt.eventGroup]) acc[evt.eventGroup] = [];
+                                  acc[evt.eventGroup].push(evt);
+                                  return acc;
+                                },
+                                {}
+                              );
 
                               return Object.entries(grouped).map(([group, events]) => (
                                 <React.Fragment key={group}>
@@ -1747,18 +1910,22 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                                           onClick={() => {
                                             const groupKeys = events.flatMap((evt) =>
                                               sportAgeCategories
-                                                .filter((cat) => eligibilitySet.has(`${evt.id}:${cat.id}`))
+                                                .filter((cat) =>
+                                                  eligibilitySet.has(`${evt.id}:${cat.id}`)
+                                                )
                                                 .map((cat) => `${evt.id}:${cat.id}`)
-                                            )
-                                            const allSelected = groupKeys.every((k) => selectedCombos.has(k))
+                                            );
+                                            const allSelected = groupKeys.every((k) =>
+                                              selectedCombos.has(k)
+                                            );
                                             setSelectedCombos((prev) => {
-                                              const next = new Set(prev)
+                                              const next = new Set(prev);
                                               for (const k of groupKeys) {
-                                                if (allSelected) next.delete(k)
-                                                else next.add(k)
+                                                if (allSelected) next.delete(k);
+                                                else next.add(k);
                                               }
-                                              return next
-                                            })
+                                              return next;
+                                            });
                                           }}
                                         >
                                           Toggle group
@@ -1767,19 +1934,25 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                                     </td>
                                   </tr>
                                   {events.map((evt) => (
-                                    <tr key={evt.id} className="border-b border-border/40 hover:bg-muted/20">
+                                    <tr
+                                      key={evt.id}
+                                      className="border-b border-border/40 hover:bg-muted/20"
+                                    >
                                       <td className="py-1.5 px-3 sticky left-0 bg-background z-10">
                                         <div className="flex items-center gap-2">
                                           <span className="font-medium text-sm">{evt.name}</span>
-                                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
+                                          <Badge
+                                            variant="outline"
+                                            className="text-[10px] px-1.5 py-0 shrink-0"
+                                          >
                                             {evt.resultType}
                                           </Badge>
                                         </div>
                                       </td>
                                       {sportAgeCategories.map((cat) => {
-                                        const key = `${evt.id}:${cat.id}`
-                                        const eligible = eligibilitySet.has(key)
-                                        const selected = selectedCombos.has(key)
+                                        const key = `${evt.id}:${cat.id}`;
+                                        const eligible = eligibilitySet.has(key);
+                                        const selected = selectedCombos.has(key);
                                         return (
                                           <td key={cat.id} className="py-1.5 px-1">
                                             <div className="flex items-center justify-center">
@@ -1788,24 +1961,26 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                                                   checked={selected}
                                                   onCheckedChange={(checked) => {
                                                     setSelectedCombos((prev) => {
-                                                      const next = new Set(prev)
-                                                      if (checked) next.add(key)
-                                                      else next.delete(key)
-                                                      return next
-                                                    })
+                                                      const next = new Set(prev);
+                                                      if (checked) next.add(key);
+                                                      else next.delete(key);
+                                                      return next;
+                                                    });
                                                   }}
                                                 />
                                               ) : (
-                                                <span className="text-muted-foreground/20 text-xs">&mdash;</span>
+                                                <span className="text-muted-foreground/20 text-xs">
+                                                  &mdash;
+                                                </span>
                                               )}
                                             </div>
                                           </td>
-                                        )
+                                        );
                                       })}
                                     </tr>
                                   ))}
                                 </React.Fragment>
-                              ))
+                              ));
                             })()}
                           </tbody>
                         </table>
@@ -1841,7 +2016,8 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                 Requirements & Restrictions
               </CardTitle>
               <CardDescription>
-                Configure who can register for this competition. Toggle on the restrictions you want to apply.
+                Configure who can register for this competition. Toggle on the restrictions you want
+                to apply.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -1857,11 +2033,13 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                     </div>
                     <Switch
                       checked={formData.hasLevelRestriction}
-                      onCheckedChange={checked => setFormData(prev => ({
-                        ...prev,
-                        hasLevelRestriction: checked,
-                        levelRequirementIds: checked ? prev.levelRequirementIds : [],
-                      }))}
+                      onCheckedChange={(checked) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          hasLevelRestriction: checked,
+                          levelRequirementIds: checked ? prev.levelRequirementIds : [],
+                        }))
+                      }
                     />
                   </div>
 
@@ -1875,11 +2053,14 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                       ) : levels.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
                           No levels configured.{" "}
-                          <a href="/dashboard/training/levels" className="text-primary underline">Create levels</a> first.
+                          <a href="/dashboard/training/levels" className="text-primary underline">
+                            Create levels
+                          </a>{" "}
+                          first.
                         </p>
                       ) : (
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                          {levels.map(level => (
+                          {levels.map((level) => (
                             <label
                               key={level.id}
                               className={cn(
@@ -1891,13 +2072,13 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                             >
                               <Checkbox
                                 checked={formData.levelRequirementIds.includes(level.id)}
-                                onCheckedChange={checked => {
-                                  setFormData(prev => ({
+                                onCheckedChange={(checked) => {
+                                  setFormData((prev) => ({
                                     ...prev,
                                     levelRequirementIds: checked
                                       ? [...prev.levelRequirementIds, level.id]
-                                      : prev.levelRequirementIds.filter(id => id !== level.id),
-                                  }))
+                                      : prev.levelRequirementIds.filter((id) => id !== level.id),
+                                  }));
                                 }}
                               />
                               <div className="flex items-center gap-2">
@@ -1929,11 +2110,13 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                   </div>
                   <Switch
                     checked={formData.hasCapacityRestriction}
-                    onCheckedChange={checked => setFormData(prev => ({
-                      ...prev,
-                      hasCapacityRestriction: checked,
-                      capacity: checked ? prev.capacity : null,
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        hasCapacityRestriction: checked,
+                        capacity: checked ? prev.capacity : null,
+                      }))
+                    }
                   />
                 </div>
 
@@ -1946,10 +2129,12 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                       min={1}
                       placeholder="e.g., 200"
                       value={formData.capacity ?? ""}
-                      onChange={e => setFormData(prev => ({
-                        ...prev,
-                        capacity: e.target.value ? parseInt(e.target.value, 10) : null,
-                      }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          capacity: e.target.value ? parseInt(e.target.value, 10) : null,
+                        }))
+                      }
                       className="mt-2 max-w-xs"
                     />
                   </div>
@@ -1967,12 +2152,14 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                   </div>
                   <Switch
                     checked={formData.hasAgeRestriction}
-                    onCheckedChange={checked => setFormData(prev => ({
-                      ...prev,
-                      hasAgeRestriction: checked,
-                      minAge: checked ? prev.minAge : null,
-                      maxAge: checked ? prev.maxAge : null,
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        hasAgeRestriction: checked,
+                        minAge: checked ? prev.minAge : null,
+                        maxAge: checked ? prev.maxAge : null,
+                      }))
+                    }
                   />
                 </div>
 
@@ -1987,10 +2174,12 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                           min={0}
                           placeholder="e.g., 6"
                           value={formData.minAge ?? ""}
-                          onChange={e => setFormData(prev => ({
-                            ...prev,
-                            minAge: e.target.value ? parseInt(e.target.value, 10) : null,
-                          }))}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              minAge: e.target.value ? parseInt(e.target.value, 10) : null,
+                            }))
+                          }
                         />
                       </div>
                       <div className="space-y-2">
@@ -2001,10 +2190,12 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                           min={0}
                           placeholder="e.g., 18"
                           value={formData.maxAge ?? ""}
-                          onChange={e => setFormData(prev => ({
-                            ...prev,
-                            maxAge: e.target.value ? parseInt(e.target.value, 10) : null,
-                          }))}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              maxAge: e.target.value ? parseInt(e.target.value, 10) : null,
+                            }))
+                          }
                         />
                       </div>
                     </div>
@@ -2026,11 +2217,13 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                     </div>
                     <Switch
                       checked={formData.hasMembershipRestriction}
-                      onCheckedChange={checked => setFormData(prev => ({
-                        ...prev,
-                        hasMembershipRestriction: checked,
-                        membershipRequirementIds: checked ? prev.membershipRequirementIds : [],
-                      }))}
+                      onCheckedChange={(checked) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          hasMembershipRestriction: checked,
+                          membershipRequirementIds: checked ? prev.membershipRequirementIds : [],
+                        }))
+                      }
                     />
                   </div>
 
@@ -2044,11 +2237,17 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                       ) : membershipInstances.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
                           No memberships configured.{" "}
-                          <a href="/dashboard/athletes/memberships" className="text-primary underline">Create memberships</a> first.
+                          <a
+                            href="/dashboard/athletes/memberships"
+                            className="text-primary underline"
+                          >
+                            Create memberships
+                          </a>{" "}
+                          first.
                         </p>
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {membershipInstances.map(instance => (
+                          {membershipInstances.map((instance) => (
                             <label
                               key={instance.id}
                               className={cn(
@@ -2060,18 +2259,22 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                             >
                               <Checkbox
                                 checked={formData.membershipRequirementIds.includes(instance.id)}
-                                onCheckedChange={checked => {
-                                  setFormData(prev => ({
+                                onCheckedChange={(checked) => {
+                                  setFormData((prev) => ({
                                     ...prev,
                                     membershipRequirementIds: checked
                                       ? [...prev.membershipRequirementIds, instance.id]
-                                      : prev.membershipRequirementIds.filter(id => id !== instance.id),
-                                  }))
+                                      : prev.membershipRequirementIds.filter(
+                                          (id) => id !== instance.id
+                                        ),
+                                  }));
                                 }}
                               />
                               <div>
                                 <span className="text-sm font-medium">{instance.name}</span>
-                                <span className="text-xs text-muted-foreground ml-1">({instance.groupName})</span>
+                                <span className="text-xs text-muted-foreground ml-1">
+                                  ({instance.groupName})
+                                </span>
                               </div>
                             </label>
                           ))}
@@ -2093,11 +2296,13 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                   </div>
                   <Switch
                     checked={formData.hasWaiverRestriction}
-                    onCheckedChange={checked => setFormData(prev => ({
-                      ...prev,
-                      hasWaiverRestriction: checked,
-                      waiverRequirementIds: checked ? prev.waiverRequirementIds : [],
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        hasWaiverRestriction: checked,
+                        waiverRequirementIds: checked ? prev.waiverRequirementIds : [],
+                      }))
+                    }
                   />
                 </div>
 
@@ -2111,11 +2316,14 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                     ) : waivers.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
                         No active waivers found.{" "}
-                        <a href="/dashboard/athletes/waivers" className="text-primary underline">Create a waiver</a> first.
+                        <a href="/dashboard/athletes/waivers" className="text-primary underline">
+                          Create a waiver
+                        </a>{" "}
+                        first.
                       </p>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {waivers.map(waiver => (
+                        {waivers.map((waiver) => (
                           <label
                             key={waiver.id}
                             className={cn(
@@ -2127,13 +2335,13 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                           >
                             <Checkbox
                               checked={formData.waiverRequirementIds.includes(waiver.id)}
-                              onCheckedChange={checked => {
-                                setFormData(prev => ({
+                              onCheckedChange={(checked) => {
+                                setFormData((prev) => ({
                                   ...prev,
                                   waiverRequirementIds: checked
                                     ? [...prev.waiverRequirementIds, waiver.id]
-                                    : prev.waiverRequirementIds.filter(id => id !== waiver.id),
-                                }))
+                                    : prev.waiverRequirementIds.filter((id) => id !== waiver.id),
+                                }));
                               }}
                             />
                             <span className="text-sm font-medium">{waiver.title}</span>
@@ -2156,10 +2364,12 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                   </div>
                   <Switch
                     checked={formData.hasMedicalRequirement}
-                    onCheckedChange={checked => setFormData(prev => ({
-                      ...prev,
-                      hasMedicalRequirement: checked,
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        hasMedicalRequirement: checked,
+                      }))
+                    }
                   />
                 </div>
 
@@ -2188,13 +2398,16 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                 </div>
                 <Switch
                   checked={formData.hasFileRequirement}
-                  onCheckedChange={checked => setFormData(prev => ({
-                    ...prev,
-                    hasFileRequirement: checked,
-                    fileRequirementConfig: checked && !prev.fileRequirementConfig
-                      ? { label: "", acceptedPresets: [], acceptedExtensions: [] }
-                      : prev.fileRequirementConfig,
-                  }))}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      hasFileRequirement: checked,
+                      fileRequirementConfig:
+                        checked && !prev.fileRequirementConfig
+                          ? { label: "", acceptedPresets: [], acceptedExtensions: [] }
+                          : prev.fileRequirementConfig,
+                    }))
+                  }
                 />
               </div>
 
@@ -2202,7 +2415,9 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                 <div className="pt-2 border-t">
                   <FileRequirementConfigEditor
                     config={formData.fileRequirementConfig}
-                    onChange={(config) => setFormData(prev => ({ ...prev, fileRequirementConfig: config }))}
+                    onChange={(config) =>
+                      setFormData((prev) => ({ ...prev, fileRequirementConfig: config }))
+                    }
                   />
                 </div>
               )}
@@ -2219,7 +2434,8 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                 Results Configuration
               </CardTitle>
               <CardDescription>
-                Choose which events require seed marks during registration, and which events will have results recorded.
+                Choose which events require seed marks during registration, and which events will
+                have results recorded.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -2299,7 +2515,9 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                                     ? {
                                         ...c,
                                         seedMarkRequired: !!checked,
-                                        submissionMode: checked ? "MANUAL_ENTRY" as SubMode : "NONE" as SubMode,
+                                        submissionMode: checked
+                                          ? ("MANUAL_ENTRY" as SubMode)
+                                          : ("NONE" as SubMode),
                                       }
                                     : c
                                 ),
@@ -2392,9 +2610,14 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                   {/* Summary */}
                   <div className="rounded-lg bg-muted/30 p-3 text-xs text-muted-foreground">
                     <p>
-                      <strong>{formData.categoryResults.filter((c) => c.seedMarkRequired).length}</strong> events will collect seed marks during registration.
-                      {" "}
-                      <strong>{formData.categoryResults.filter((c) => c.collectResults).length}</strong> events will record results.
+                      <strong>
+                        {formData.categoryResults.filter((c) => c.seedMarkRequired).length}
+                      </strong>{" "}
+                      events will collect seed marks during registration.{" "}
+                      <strong>
+                        {formData.categoryResults.filter((c) => c.collectResults).length}
+                      </strong>{" "}
+                      events will record results.
                     </p>
                   </div>
                 </>
@@ -2411,9 +2634,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                 <CreditCard className="h-5 w-5" />
                 Pricing
               </CardTitle>
-              <CardDescription>
-                Set registration fees for this competition
-              </CardDescription>
+              <CardDescription>Set registration fees for this competition</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Pricing Mode Selector */}
@@ -2436,9 +2657,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                   <RadioGroupItem value="FREE" className="mt-1" />
                   <div className="flex-1 space-y-1">
                     <span className="font-medium">Free</span>
-                    <p className="text-sm text-muted-foreground">
-                      No registration fee
-                    </p>
+                    <p className="text-sm text-muted-foreground">No registration fee</p>
                   </div>
                 </label>
 
@@ -2455,7 +2674,8 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                   <div className="flex-1 space-y-1">
                     <span className="font-medium">Flat Fee</span>
                     <p className="text-sm text-muted-foreground">
-                      One price to participate in the competition, regardless of how many events entered
+                      One price to participate in the competition, regardless of how many events
+                      entered
                     </p>
                   </div>
                 </label>
@@ -2491,7 +2711,8 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                   <div className="flex-1 space-y-1">
                     <span className="font-medium">Tiered</span>
                     <p className="text-sm text-muted-foreground">
-                      Discounts for entering multiple events (e.g., 1-3 events at $20/ea, 4+ at $15/ea)
+                      Discounts for entering multiple events (e.g., 1-3 events at $20/ea, 4+ at
+                      $15/ea)
                     </p>
                   </div>
                 </label>
@@ -2516,10 +2737,13 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
               </RadioGroup>
 
               {/* Flat Fee / Per Event input */}
-              {(formData.pricingMode === "PER_COMPETITION" || formData.pricingMode === "PER_EVENT") && (
+              {(formData.pricingMode === "PER_COMPETITION" ||
+                formData.pricingMode === "PER_EVENT") && (
                 <div className="rounded-lg border p-4 space-y-3">
                   <Label className="text-sm font-medium">
-                    {formData.pricingMode === "PER_COMPETITION" ? "Competition Entry Fee" : "Price Per Event"}
+                    {formData.pricingMode === "PER_COMPETITION"
+                      ? "Competition Entry Fee"
+                      : "Price Per Event"}
                   </Label>
                   <div className="relative max-w-[200px]">
                     <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -2555,15 +2779,19 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        const lastTier = formData.pricingTiers[formData.pricingTiers.length - 1]
-                        const nextMin = lastTier ? (lastTier.maxEvents ? lastTier.maxEvents + 1 : lastTier.minEvents + 1) : 1
+                        const lastTier = formData.pricingTiers[formData.pricingTiers.length - 1];
+                        const nextMin = lastTier
+                          ? lastTier.maxEvents
+                            ? lastTier.maxEvents + 1
+                            : lastTier.minEvents + 1
+                          : 1;
                         setFormData((prev) => ({
                           ...prev,
                           pricingTiers: [
                             ...prev.pricingTiers,
                             { minEvents: nextMin, maxEvents: null, pricePerEvent: 0 },
                           ],
-                        }))
+                        }));
                       }}
                     >
                       <Plus className="h-3 w-3 mr-1" />
@@ -2578,7 +2806,10 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                   ) : (
                     <div className="space-y-3">
                       {formData.pricingTiers.map((tier, index) => (
-                        <div key={index} className="flex items-center gap-3 rounded-lg bg-muted/30 p-3">
+                        <div
+                          key={index}
+                          className="flex items-center gap-3 rounded-lg bg-muted/30 p-3"
+                        >
                           <div className="flex items-center gap-2 flex-1">
                             <div className="space-y-1">
                               <Label className="text-xs">Min Events</Label>
@@ -2590,7 +2821,9 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                                   setFormData((prev) => ({
                                     ...prev,
                                     pricingTiers: prev.pricingTiers.map((t, i) =>
-                                      i === index ? { ...t, minEvents: parseInt(e.target.value) || 1 } : t
+                                      i === index
+                                        ? { ...t, minEvents: parseInt(e.target.value) || 1 }
+                                        : t
                                     ),
                                   }))
                                 }
@@ -2609,7 +2842,12 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                                     ...prev,
                                     pricingTiers: prev.pricingTiers.map((t, i) =>
                                       i === index
-                                        ? { ...t, maxEvents: e.target.value ? parseInt(e.target.value) : null }
+                                        ? {
+                                            ...t,
+                                            maxEvents: e.target.value
+                                              ? parseInt(e.target.value)
+                                              : null,
+                                          }
                                         : t
                                     ),
                                   }))
@@ -2660,8 +2898,8 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                   )}
 
                   <p className="text-xs text-muted-foreground">
-                    Athletes are charged the per-event price from the tier matching their total number of events.
-                    Leave &quot;Max Events&quot; empty for unlimited.
+                    Athletes are charged the per-event price from the tier matching their total
+                    number of events. Leave &quot;Max Events&quot; empty for unlimited.
                   </p>
                 </div>
               )}
@@ -2683,16 +2921,17 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                             placeholder="0.00"
                             className="h-7 w-24 pl-6 text-xs"
                             onBlur={(e) => {
-                              const val = parseFloat(e.target.value)
-                              if (isNaN(val)) return
-                              const prices: Record<string, number> = {}
+                              const val = parseFloat(e.target.value);
+                              if (isNaN(val)) return;
+                              const prices: Record<string, number> = {};
                               for (const cat of formData.categoryResults) {
-                                const key = cat.sportEventId && cat.ageCategoryId
-                                  ? `${cat.sportEventId}:${cat.ageCategoryId}`
-                                  : ""
-                                if (key) prices[key] = val
+                                const key =
+                                  cat.sportEventId && cat.ageCategoryId
+                                    ? `${cat.sportEventId}:${cat.ageCategoryId}`
+                                    : "";
+                                if (key) prices[key] = val;
                               }
-                              setFormData((prev) => ({ ...prev, categoryPrices: prices }))
+                              setFormData((prev) => ({ ...prev, categoryPrices: prices }));
                             }}
                           />
                         </div>
@@ -2707,9 +2946,10 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                   ) : (
                     <div className="rounded-lg border divide-y max-h-[400px] overflow-y-auto">
                       {formData.categoryResults.map((cat, index) => {
-                        const key = cat.sportEventId && cat.ageCategoryId
-                          ? `${cat.sportEventId}:${cat.ageCategoryId}`
-                          : `cat-${index}`
+                        const key =
+                          cat.sportEventId && cat.ageCategoryId
+                            ? `${cat.sportEventId}:${cat.ageCategoryId}`
+                            : `cat-${index}`;
                         return (
                           <div key={key} className="flex items-center gap-3 px-3 py-2">
                             <span className="text-sm flex-1">{cat.label}</span>
@@ -2737,7 +2977,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                               />
                             </div>
                           </div>
-                        )
+                        );
                       })}
                     </div>
                   )}
@@ -2751,7 +2991,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
               {/* GL Code */}
               <GLCodeSelector
                 value={formData.glCodeId}
-                onChange={(v) => setFormData(prev => ({ ...prev, glCodeId: v }))}
+                onChange={(v) => setFormData((prev) => ({ ...prev, glCodeId: v }))}
                 entityType="COMPETITION"
               />
             </CardContent>
@@ -2777,12 +3017,12 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                 <RadioGroup
                   value={formData.registrationOpen ? "now" : "scheduled"}
                   onValueChange={(value) => {
-                    const isNow = value === "now"
-                    setFormData(prev => ({
+                    const isNow = value === "now";
+                    setFormData((prev) => ({
                       ...prev,
                       registrationOpen: isNow,
                       registrationStartDate: isNow ? null : prev.registrationStartDate,
-                    }))
+                    }));
                   }}
                   className="space-y-3"
                 >
@@ -2824,66 +3064,77 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
 
               {/* Registration Opens */}
               {!formData.registrationOpen && (
-              <div className="space-y-4">
-                <Label className="text-base font-medium">Registration Opens</Label>
-                <p className="text-sm text-muted-foreground">
-                  Set when registration becomes available. Must be on or before the first day of the competition{formData.startDate ? ` (${format(formData.startDate, "PPP")})` : ""}.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Open Date</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !formData.registrationStartDate && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarDays className="mr-2 h-4 w-4" />
-                          {formData.registrationStartDate
-                            ? format(formData.registrationStartDate, "PPP")
-                            : "Pick a date"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarComponent
-                          mode="single"
-                          selected={formData.registrationStartDate || undefined}
-                          onSelect={(date) =>
-                            setFormData(prev => ({ ...prev, registrationStartDate: date || null }))
+                <div className="space-y-4">
+                  <Label className="text-base font-medium">Registration Opens</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Set when registration becomes available. Must be on or before the first day of
+                    the competition
+                    {formData.startDate ? ` (${format(formData.startDate, "PPP")})` : ""}.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Open Date</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !formData.registrationStartDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarDays className="mr-2 h-4 w-4" />
+                            {formData.registrationStartDate
+                              ? format(formData.registrationStartDate, "PPP")
+                              : "Pick a date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={formData.registrationStartDate || undefined}
+                            onSelect={(date) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                registrationStartDate: date || null,
+                              }))
+                            }
+                            disabled={(date) => {
+                              if (formData.startDate && date > formData.startDate) return true;
+                              return false;
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Open Time</Label>
+                      <div className="relative">
+                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="time"
+                          value={formData.registrationStartTime}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              registrationStartTime: e.target.value,
+                            }))
                           }
-                          disabled={(date) => {
-                            if (formData.startDate && date > formData.startDate) return true
-                            return false
-                          }}
-                          initialFocus
+                          className="pl-10"
                         />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Open Time</Label>
-                    <div className="relative">
-                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        type="time"
-                        value={formData.registrationStartTime}
-                        onChange={e => setFormData(prev => ({ ...prev, registrationStartTime: e.target.value }))}
-                        className="pl-10"
-                      />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
               )}
 
               {/* Registration End Date */}
               <div className="space-y-4">
                 <Label className="text-base font-medium">Registration Closes</Label>
                 <p className="text-sm text-muted-foreground">
-                  Set when registration closes. Defaults to the competition end date if not specified.
+                  Set when registration closes. Defaults to the competition end date if not
+                  specified.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -2901,8 +3152,8 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                           {formData.registrationEndDate
                             ? format(formData.registrationEndDate, "PPP")
                             : formData.endDate
-                            ? `Competition end: ${format(formData.endDate, "PPP")}`
-                            : "Pick a date"}
+                              ? `Competition end: ${format(formData.endDate, "PPP")}`
+                              : "Pick a date"}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
@@ -2910,14 +3161,15 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                           mode="single"
                           selected={formData.registrationEndDate || undefined}
                           onSelect={(date) =>
-                            setFormData(prev => ({ ...prev, registrationEndDate: date || null }))
+                            setFormData((prev) => ({ ...prev, registrationEndDate: date || null }))
                           }
                           disabled={(date) => {
-                            const earliest = !formData.registrationOpen && formData.registrationStartDate
-                              ? formData.registrationStartDate
-                              : new Date()
-                            if (date < earliest) return true
-                            return false
+                            const earliest =
+                              !formData.registrationOpen && formData.registrationStartDate
+                                ? formData.registrationStartDate
+                                : new Date();
+                            if (date < earliest) return true;
+                            return false;
                           }}
                           initialFocus
                         />
@@ -2931,7 +3183,9 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                       <Input
                         type="time"
                         value={formData.registrationEndTime}
-                        onChange={e => setFormData(prev => ({ ...prev, registrationEndTime: e.target.value }))}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, registrationEndTime: e.target.value }))
+                        }
                         className="pl-10"
                       />
                     </div>
@@ -2946,21 +3200,24 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                   Early Access Code
                 </Label>
                 <p className="text-sm text-muted-foreground">
-                  Generate or enter a code that allows registration before the registration window opens
+                  Generate or enter a code that allows registration before the registration window
+                  opens
                 </p>
                 <div className="flex items-center gap-2">
                   <Input
                     placeholder="Enter or generate a code"
                     value={formData.earlyAccessCode || ""}
-                    onChange={e => setFormData(prev => ({ ...prev, earlyAccessCode: e.target.value || null }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, earlyAccessCode: e.target.value || null }))
+                    }
                     className="max-w-[300px]"
                   />
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => {
-                      const code = crypto.randomUUID().slice(0, 8).toUpperCase()
-                      setFormData(prev => ({ ...prev, earlyAccessCode: code }))
+                      const code = crypto.randomUUID().slice(0, 8).toUpperCase();
+                      setFormData((prev) => ({ ...prev, earlyAccessCode: code }));
                     }}
                   >
                     <RefreshCw className="h-4 w-4 mr-2" />
@@ -2976,16 +3233,17 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                     </Label>
                     <div className="flex items-center gap-2">
                       <code className="flex-1 text-sm bg-background px-3 py-2 rounded border break-all">
-                        {typeof window !== "undefined" ? `${window.location.origin}` : ""}/competitions/{competitionId}?code={formData.earlyAccessCode}
+                        {typeof window !== "undefined" ? `${window.location.origin}` : ""}
+                        /competitions/{competitionId}?code={formData.earlyAccessCode}
                       </code>
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          const url = `${window.location.origin}/competitions/${competitionId}?code=${formData.earlyAccessCode}`
-                          navigator.clipboard.writeText(url)
-                          toast.success("Link copied to clipboard")
+                          const url = `${window.location.origin}/competitions/${competitionId}?code=${formData.earlyAccessCode}`;
+                          navigator.clipboard.writeText(url);
+                          toast.success("Link copied to clipboard");
                         }}
                       >
                         <Copy className="h-4 w-4" />
@@ -3020,7 +3278,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                 <RadioGroup
                   value={formData.publishStatus}
                   onValueChange={(value: PublishStatus) =>
-                    setFormData(prev => ({
+                    setFormData((prev) => ({
                       ...prev,
                       publishStatus: value,
                       scheduledGoLiveDate: value === "SCHEDULED" ? prev.scheduledGoLiveDate : null,
@@ -3105,7 +3363,10 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                             mode="single"
                             selected={formData.scheduledGoLiveDate || undefined}
                             onSelect={(date) =>
-                              setFormData(prev => ({ ...prev, scheduledGoLiveDate: date || null }))
+                              setFormData((prev) => ({
+                                ...prev,
+                                scheduledGoLiveDate: date || null,
+                              }))
                             }
                             disabled={(date) => date < new Date()}
                             initialFocus
@@ -3121,7 +3382,12 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                           id="scheduledTime"
                           type="time"
                           value={formData.scheduledGoLiveTime}
-                          onChange={e => setFormData(prev => ({ ...prev, scheduledGoLiveTime: e.target.value }))}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              scheduledGoLiveTime: e.target.value,
+                            }))
+                          }
                           className="pl-10"
                         />
                       </div>
@@ -3153,14 +3419,16 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                   <div className="space-y-1">
                     {formData.pricingTiers.map((t, i) => (
                       <p key={i} className="text-sm text-muted-foreground">
-                        {t.minEvents}–{t.maxEvents ?? "∞"} events: ${t.pricePerEvent.toFixed(2)}/event
+                        {t.minEvents}–{t.maxEvents ?? "∞"} events: ${t.pricePerEvent.toFixed(2)}
+                        /event
                       </p>
                     ))}
                   </div>
                 )}
                 {formData.pricingMode === "PER_CATEGORY" && (
                   <p className="text-sm text-muted-foreground">
-                    Per-category pricing — {Object.keys(formData.categoryPrices).length} categories configured
+                    Per-category pricing — {Object.keys(formData.categoryPrices).length} categories
+                    configured
                   </p>
                 )}
               </div>
@@ -3175,10 +3443,10 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
             variant="outline"
             onClick={() => {
               if (onCancel) {
-                onCancel()
-                return
+                onCancel();
+                return;
               }
-              router.push("/dashboard/competitions")
+              router.push("/dashboard/competitions");
             }}
           >
             {embedded ? "Close" : "Cancel"}
@@ -3186,11 +3454,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
 
           <div className="flex items-center gap-2">
             {currentVisibleIndex > 0 && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handlePrev}
-              >
+              <Button type="button" variant="outline" onClick={handlePrev}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Previous
               </Button>
@@ -3202,11 +3466,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             ) : (
-              <Button
-                type="button"
-                onClick={handleSubmit}
-                disabled={isSaving}
-              >
+              <Button type="button" onClick={handleSubmit} disabled={isSaving}>
                 {isSaving ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -3224,5 +3484,5 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
         </div>
       </div>
     </div>
-  )
+  );
 }

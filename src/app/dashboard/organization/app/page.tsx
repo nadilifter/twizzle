@@ -1,25 +1,53 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Upload, Smartphone, MapPin, CalendarCheck, MessageSquare, Bell, FileText, Globe, Palette, Users, BookOpen, Calendar, Trophy, ShoppingBag } from "lucide-react"
+import { useState } from "react";
+import {
+  Upload,
+  Smartphone,
+  MapPin,
+  CalendarCheck,
+  MessageSquare,
+  Bell,
+  FileText,
+  Globe,
+  Palette,
+  Users,
+  BookOpen,
+  Calendar,
+  Trophy,
+  ShoppingBag,
+} from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function AppPage() {
-  const [primaryColor, setPrimaryColor] = useState("#000000")
-  const [secondaryColor, setSecondaryColor] = useState("#ffffff")
-  const [appName, setAppName] = useState("My Organization App")
-  const [buttonStyle, setButtonStyle] = useState("rounded")
-  const [fontFamily, setFontFamily] = useState("sans")
-  
+  const [primaryColor, setPrimaryColor] = useState("#000000");
+  const [secondaryColor, setSecondaryColor] = useState("#ffffff");
+  const [appName, setAppName] = useState("My Organization App");
+  const [buttonStyle, setButtonStyle] = useState("rounded");
+  const [fontFamily, setFontFamily] = useState("sans");
+
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex items-center justify-between">
@@ -41,21 +69,21 @@ export default function AppPage() {
           <Card>
             <CardHeader>
               <CardTitle>Branding & Identity</CardTitle>
-              <CardDescription>
-                Set your app&apos;s name, logo, and visual style.
-              </CardDescription>
+              <CardDescription>Set your app&apos;s name, logo, and visual style.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="app-name">App Name</Label>
-                  <Input 
-                    id="app-name" 
-                    placeholder="e.g. Acme Athletics" 
+                  <Input
+                    id="app-name"
+                    placeholder="e.g. Acme Athletics"
                     value={appName}
                     onChange={(e) => setAppName(e.target.value)}
                   />
-                  <p className="text-xs text-muted-foreground">This name will appear in app stores and on the device home screen.</p>
+                  <p className="text-xs text-muted-foreground">
+                    This name will appear in app stores and on the device home screen.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="domain">Custom Domain</Label>
@@ -63,9 +91,15 @@ export default function AppPage() {
                     <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">
                       https://
                     </span>
-                    <Input id="domain" className="rounded-l-none" placeholder="app.yourdomain.com" />
+                    <Input
+                      id="domain"
+                      className="rounded-l-none"
+                      placeholder="app.yourdomain.com"
+                    />
                   </div>
-                  <p className="text-xs text-muted-foreground">Used for deep links and email communications.</p>
+                  <p className="text-xs text-muted-foreground">
+                    Used for deep links and email communications.
+                  </p>
                 </div>
               </div>
 
@@ -96,15 +130,15 @@ export default function AppPage() {
                 <div className="space-y-2">
                   <Label htmlFor="primary-color">Primary Color</Label>
                   <div className="flex gap-2">
-                    <Input 
-                      id="primary-color" 
-                      type="color" 
-                      className="w-12 p-1 h-10" 
+                    <Input
+                      id="primary-color"
+                      type="color"
+                      className="w-12 p-1 h-10"
                       value={primaryColor}
                       onChange={(e) => setPrimaryColor(e.target.value)}
                     />
-                    <Input 
-                      value={primaryColor} 
+                    <Input
+                      value={primaryColor}
                       onChange={(e) => setPrimaryColor(e.target.value)}
                       className="font-mono"
                     />
@@ -113,15 +147,15 @@ export default function AppPage() {
                 <div className="space-y-2">
                   <Label htmlFor="secondary-color">Secondary / Accent Color</Label>
                   <div className="flex gap-2">
-                    <Input 
-                      id="secondary-color" 
-                      type="color" 
-                      className="w-12 p-1 h-10" 
+                    <Input
+                      id="secondary-color"
+                      type="color"
+                      className="w-12 p-1 h-10"
                       value={secondaryColor}
                       onChange={(e) => setSecondaryColor(e.target.value)}
                     />
-                    <Input 
-                      value={secondaryColor} 
+                    <Input
+                      value={secondaryColor}
                       onChange={(e) => setSecondaryColor(e.target.value)}
                       className="font-mono"
                     />
@@ -132,7 +166,7 @@ export default function AppPage() {
               <Separator />
 
               <div className="grid gap-4 sm:grid-cols-2">
-                 <div className="space-y-2">
+                <div className="space-y-2">
                   <Label htmlFor="button-style">Button Style</Label>
                   <Select value={buttonStyle} onValueChange={setButtonStyle}>
                     <SelectTrigger id="button-style">
@@ -173,8 +207,10 @@ export default function AppPage() {
               <div className="flex items-center justify-between space-x-2">
                 <div className="flex flex-col space-y-1">
                   <div className="flex items-center gap-2">
-                     <MapPin className="w-4 h-4 text-primary" />
-                     <Label htmlFor="gps-tracking" className="font-medium">GPS Tracking</Label>
+                    <MapPin className="w-4 h-4 text-primary" />
+                    <Label htmlFor="gps-tracking" className="font-medium">
+                      GPS Tracking
+                    </Label>
                   </div>
                   <span className="text-sm text-muted-foreground pl-6">
                     Allow tracking of users or assets during events.
@@ -186,8 +222,10 @@ export default function AppPage() {
               <div className="flex items-center justify-between space-x-2">
                 <div className="flex flex-col space-y-1">
                   <div className="flex items-center gap-2">
-                     <CalendarCheck className="w-4 h-4 text-primary" />
-                     <Label htmlFor="event-checkin" className="font-medium">Event Check-ins</Label>
+                    <CalendarCheck className="w-4 h-4 text-primary" />
+                    <Label htmlFor="event-checkin" className="font-medium">
+                      Event Check-ins
+                    </Label>
                   </div>
                   <span className="text-sm text-muted-foreground pl-6">
                     Enable QR code or location-based check-ins for events.
@@ -199,8 +237,10 @@ export default function AppPage() {
               <div className="flex items-center justify-between space-x-2">
                 <div className="flex flex-col space-y-1">
                   <div className="flex items-center gap-2">
-                     <MessageSquare className="w-4 h-4 text-primary" />
-                     <Label htmlFor="direct-comms" className="font-medium">Direct Communication</Label>
+                    <MessageSquare className="w-4 h-4 text-primary" />
+                    <Label htmlFor="direct-comms" className="font-medium">
+                      Direct Communication
+                    </Label>
                   </div>
                   <span className="text-sm text-muted-foreground pl-6">
                     Allow staff to chat directly with members via the app.
@@ -209,11 +249,13 @@ export default function AppPage() {
                 <Switch id="direct-comms" defaultChecked />
               </div>
               <Separator />
-               <div className="flex items-center justify-between space-x-2">
+              <div className="flex items-center justify-between space-x-2">
                 <div className="flex flex-col space-y-1">
                   <div className="flex items-center gap-2">
-                     <Bell className="w-4 h-4 text-primary" />
-                     <Label htmlFor="push-notifs" className="font-medium">Push Notifications</Label>
+                    <Bell className="w-4 h-4 text-primary" />
+                    <Label htmlFor="push-notifs" className="font-medium">
+                      Push Notifications
+                    </Label>
                   </div>
                   <span className="text-sm text-muted-foreground pl-6">
                     Send alerts and updates directly to user devices.
@@ -221,12 +263,14 @@ export default function AppPage() {
                 </div>
                 <Switch id="push-notifs" defaultChecked />
               </div>
-               <Separator />
-               <div className="flex items-center justify-between space-x-2">
+              <Separator />
+              <div className="flex items-center justify-between space-x-2">
                 <div className="flex flex-col space-y-1">
                   <div className="flex items-center gap-2">
-                     <Users className="w-4 h-4 text-primary" />
-                     <Label htmlFor="member-directory" className="font-medium">Member Directory</Label>
+                    <Users className="w-4 h-4 text-primary" />
+                    <Label htmlFor="member-directory" className="font-medium">
+                      Member Directory
+                    </Label>
                   </div>
                   <span className="text-sm text-muted-foreground pl-6">
                     Allow members to view and contact other members.
@@ -234,12 +278,14 @@ export default function AppPage() {
                 </div>
                 <Switch id="member-directory" />
               </div>
-               <Separator />
-               <div className="flex items-center justify-between space-x-2">
+              <Separator />
+              <div className="flex items-center justify-between space-x-2">
                 <div className="flex flex-col space-y-1">
                   <div className="flex items-center gap-2">
-                     <BookOpen className="w-4 h-4 text-primary" />
-                     <Label htmlFor="resource-library" className="font-medium">Resource Library</Label>
+                    <BookOpen className="w-4 h-4 text-primary" />
+                    <Label htmlFor="resource-library" className="font-medium">
+                      Resource Library
+                    </Label>
                   </div>
                   <span className="text-sm text-muted-foreground pl-6">
                     Host documents, videos, and guides for your members.
@@ -256,79 +302,97 @@ export default function AppPage() {
           <Card className="sticky top-6">
             <CardHeader>
               <CardTitle>Live Preview</CardTitle>
-              <CardDescription>
-                Approximate representation of your app home screen.
-              </CardDescription>
+              <CardDescription>Approximate representation of your app home screen.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className={`border-4 border-slate-800 rounded-[2.5rem] overflow-hidden h-[600px] w-full bg-background relative shadow-xl mx-auto max-w-[300px] font-${fontFamily}`}>
+              <div
+                className={`border-4 border-slate-800 rounded-[2.5rem] overflow-hidden h-[600px] w-full bg-background relative shadow-xl mx-auto max-w-[300px] font-${fontFamily}`}
+              >
                 {/* Status Bar Mock */}
                 <div className="h-6 bg-slate-800 w-full absolute top-0 z-20 flex justify-between px-4 items-center">
-                    <div className="w-10 h-3 rounded-full bg-slate-700/50"></div>
-                    <div className="flex gap-1">
-                        <div className="w-3 h-3 rounded-full bg-slate-700/50"></div>
-                        <div className="w-3 h-3 rounded-full bg-slate-700/50"></div>
-                    </div>
+                  <div className="w-10 h-3 rounded-full bg-slate-700/50"></div>
+                  <div className="flex gap-1">
+                    <div className="w-3 h-3 rounded-full bg-slate-700/50"></div>
+                    <div className="w-3 h-3 rounded-full bg-slate-700/50"></div>
+                  </div>
                 </div>
-                
+
                 {/* App Header */}
-                <div 
+                <div
                   className="pt-10 pb-4 px-4 text-white relative z-10"
                   style={{ backgroundColor: primaryColor }}
                 >
-                    <div className="flex items-center justify-between">
-                        <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                            <Smartphone className="w-4 h-4" />
-                        </div>
-                        <div className="w-8 h-8 bg-white/20 rounded-full"></div>
+                  <div className="flex items-center justify-between">
+                    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                      <Smartphone className="w-4 h-4" />
                     </div>
-                    <div className="mt-4">
-                        <h3 className="font-bold text-lg">{appName || "Your App Name"}</h3>
-                        <p className="text-white/80 text-xs">Welcome back, Andrew!</p>
-                    </div>
+                    <div className="w-8 h-8 bg-white/20 rounded-full"></div>
+                  </div>
+                  <div className="mt-4">
+                    <h3 className="font-bold text-lg">{appName || "Your App Name"}</h3>
+                    <p className="text-white/80 text-xs">Welcome back, Andrew!</p>
+                  </div>
                 </div>
 
                 {/* App Body */}
                 <div className="p-4 space-y-4 bg-slate-50 h-full overflow-hidden">
-                    {/* Quick Action Cards */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className={`bg-white p-3 shadow-sm border border-slate-100 flex flex-col items-center justify-center gap-2 aspect-square ${
-                            buttonStyle === 'pill' ? 'rounded-[1.5rem]' : buttonStyle === 'rounded' ? 'rounded-xl' : 'rounded-none'
-                        }`}>
-                            <div 
-                                className="w-10 h-10 rounded-full flex items-center justify-center"
-                                style={{ backgroundColor: `${secondaryColor}20`, color: secondaryColor }}
-                            >
-                                <CalendarCheck className="w-5 h-5" />
-                            </div>
-                            <span className="text-xs font-medium text-slate-600">Check In</span>
-                        </div>
-                        <div className={`bg-white p-3 shadow-sm border border-slate-100 flex flex-col items-center justify-center gap-2 aspect-square ${
-                            buttonStyle === 'pill' ? 'rounded-[1.5rem]' : buttonStyle === 'rounded' ? 'rounded-xl' : 'rounded-none'
-                        }`}>
-                             <div 
-                                className="w-10 h-10 rounded-full flex items-center justify-center"
-                                style={{ backgroundColor: `${secondaryColor}20`, color: secondaryColor }}
-                            >
-                                <MessageSquare className="w-5 h-5" />
-                            </div>
-                            <span className="text-xs font-medium text-slate-600">Messages</span>
-                        </div>
+                  {/* Quick Action Cards */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div
+                      className={`bg-white p-3 shadow-sm border border-slate-100 flex flex-col items-center justify-center gap-2 aspect-square ${
+                        buttonStyle === "pill"
+                          ? "rounded-[1.5rem]"
+                          : buttonStyle === "rounded"
+                            ? "rounded-xl"
+                            : "rounded-none"
+                      }`}
+                    >
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center"
+                        style={{ backgroundColor: `${secondaryColor}20`, color: secondaryColor }}
+                      >
+                        <CalendarCheck className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-medium text-slate-600">Check In</span>
                     </div>
+                    <div
+                      className={`bg-white p-3 shadow-sm border border-slate-100 flex flex-col items-center justify-center gap-2 aspect-square ${
+                        buttonStyle === "pill"
+                          ? "rounded-[1.5rem]"
+                          : buttonStyle === "rounded"
+                            ? "rounded-xl"
+                            : "rounded-none"
+                      }`}
+                    >
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center"
+                        style={{ backgroundColor: `${secondaryColor}20`, color: secondaryColor }}
+                      >
+                        <MessageSquare className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-medium text-slate-600">Messages</span>
+                    </div>
+                  </div>
 
-                    {/* Feed Item */}
-                    <div className={`bg-white p-4 shadow-sm border border-slate-100 space-y-3 ${
-                        buttonStyle === 'pill' ? 'rounded-[1.5rem]' : buttonStyle === 'rounded' ? 'rounded-xl' : 'rounded-none'
-                    }`}>
-                        <div className="flex gap-3 items-center">
-                            <div className="w-10 h-10 rounded-full bg-slate-100"></div>
-                            <div>
-                                <div className="h-2 w-24 bg-slate-200 rounded mb-1"></div>
-                                <div className="h-2 w-16 bg-slate-100 rounded"></div>
-                            </div>
-                        </div>
-                        <div className="h-20 bg-slate-100 rounded-lg w-full"></div>
+                  {/* Feed Item */}
+                  <div
+                    className={`bg-white p-4 shadow-sm border border-slate-100 space-y-3 ${
+                      buttonStyle === "pill"
+                        ? "rounded-[1.5rem]"
+                        : buttonStyle === "rounded"
+                          ? "rounded-xl"
+                          : "rounded-none"
+                    }`}
+                  >
+                    <div className="flex gap-3 items-center">
+                      <div className="w-10 h-10 rounded-full bg-slate-100"></div>
+                      <div>
+                        <div className="h-2 w-24 bg-slate-200 rounded mb-1"></div>
+                        <div className="h-2 w-16 bg-slate-100 rounded"></div>
+                      </div>
                     </div>
+                    <div className="h-20 bg-slate-100 rounded-lg w-full"></div>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -336,5 +400,5 @@ export default function AppPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

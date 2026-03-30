@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Check, Copy, AlertCircle, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useState } from "react";
+import { Check, Copy, AlertCircle, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -10,36 +10,38 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 export function EmailSettings() {
-  const [domain, setDomain] = useState("gymstar.com")
-  const [isVerifying, setIsVerifying] = useState(false)
-  const [verificationStatus, setVerificationStatus] = useState<"unverified" | "pending" | "verified">("unverified")
-  const [senderName, setSenderName] = useState("Uplifter Gym")
-  const [senderEmail, setSenderEmail] = useState("info@gymstar.com")
-  const [isSaved, setIsSaved] = useState(false)
+  const [domain, setDomain] = useState("gymstar.com");
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<
+    "unverified" | "pending" | "verified"
+  >("unverified");
+  const [senderName, setSenderName] = useState("Uplifter Gym");
+  const [senderEmail, setSenderEmail] = useState("info@gymstar.com");
+  const [isSaved, setIsSaved] = useState(false);
 
   const handleVerify = () => {
-    if (!domain) return
-    setIsVerifying(true)
+    if (!domain) return;
+    setIsVerifying(true);
     // Simulate API call
     setTimeout(() => {
-      setIsVerifying(false)
-      setVerificationStatus("pending")
-    }, 1500)
-  }
+      setIsVerifying(false);
+      setVerificationStatus("pending");
+    }, 1500);
+  };
 
   const handleSaveSender = () => {
-    setIsSaved(true)
-    setTimeout(() => setIsSaved(false), 2000)
-  }
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 2000);
+  };
 
   const dnsRecords = [
     {
@@ -57,7 +59,7 @@ export function EmailSettings() {
       name: `56745674567._domainkey.${domain}`,
       value: "56745674567.dkim.amazonses.com",
     },
-  ]
+  ];
 
   return (
     <div className="grid gap-6">
@@ -66,7 +68,8 @@ export function EmailSettings() {
         <CardHeader>
           <CardTitle>Domain Authentication</CardTitle>
           <CardDescription>
-            Authenticate your domain to improve email deliverability and send on behalf of <strong>{domain || "your domain"}</strong>.
+            Authenticate your domain to improve email deliverability and send on behalf of{" "}
+            <strong>{domain || "your domain"}</strong>.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -78,8 +81,8 @@ export function EmailSettings() {
                 placeholder="e.g. example.com"
                 value={domain}
                 onChange={(e) => {
-                  setDomain(e.target.value)
-                  setVerificationStatus("unverified")
+                  setDomain(e.target.value);
+                  setVerificationStatus("unverified");
                 }}
                 disabled={verificationStatus !== "unverified"}
               />
@@ -102,7 +105,8 @@ export function EmailSettings() {
                 <AlertCircle className="h-4 w-4 text-amber-900" />
                 <AlertTitle>Verification Pending</AlertTitle>
                 <AlertDescription>
-                  Add the following CNAME records to your DNS provider to verify ownership. It may take up to 72 hours to propagate.
+                  Add the following CNAME records to your DNS provider to verify ownership. It may
+                  take up to 72 hours to propagate.
                 </AlertDescription>
               </Alert>
 
@@ -114,10 +118,17 @@ export function EmailSettings() {
                   <div></div>
                 </div>
                 {dnsRecords.map((record, i) => (
-                  <div key={i} className="grid grid-cols-[1fr_2fr_2fr_auto] gap-4 p-4 text-sm items-center border-b last:border-0">
+                  <div
+                    key={i}
+                    className="grid grid-cols-[1fr_2fr_2fr_auto] gap-4 p-4 text-sm items-center border-b last:border-0"
+                  >
                     <Badge variant="outline">{record.type}</Badge>
-                    <div className="font-mono text-xs truncate" title={record.name}>{record.name}</div>
-                    <div className="font-mono text-xs truncate" title={record.value}>{record.value}</div>
+                    <div className="font-mono text-xs truncate" title={record.name}>
+                      {record.name}
+                    </div>
+                    <div className="font-mono text-xs truncate" title={record.value}>
+                      {record.value}
+                    </div>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
                       <Copy className="h-4 w-4" />
                     </Button>
@@ -128,7 +139,7 @@ export function EmailSettings() {
           )}
 
           {verificationStatus === "verified" && (
-             <Alert className="bg-green-50 text-green-900 border-green-200">
+            <Alert className="bg-green-50 text-green-900 border-green-200">
               <Check className="h-4 w-4 text-green-900" />
               <AlertTitle>Domain Verified</AlertTitle>
               <AlertDescription>
@@ -150,19 +161,19 @@ export function EmailSettings() {
         <CardContent className="space-y-4">
           <div className="grid gap-2">
             <Label htmlFor="sender-name">From Name</Label>
-            <Input 
-              id="sender-name" 
-              value={senderName} 
-              onChange={(e) => setSenderName(e.target.value)} 
+            <Input
+              id="sender-name"
+              value={senderName}
+              onChange={(e) => setSenderName(e.target.value)}
               placeholder="e.g. Uplifter Gym"
             />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="sender-email">From Email</Label>
-            <Input 
-              id="sender-email" 
-              value={senderEmail} 
-              onChange={(e) => setSenderEmail(e.target.value)} 
+            <Input
+              id="sender-email"
+              value={senderEmail}
+              onChange={(e) => setSenderEmail(e.target.value)}
               placeholder="e.g. info@gymstar.com"
             />
             <p className="text-[0.8rem] text-muted-foreground">
@@ -184,7 +195,5 @@ export function EmailSettings() {
         </CardFooter>
       </Card>
     </div>
-  )
+  );
 }
-
-

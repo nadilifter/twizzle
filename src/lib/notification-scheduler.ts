@@ -1,9 +1,9 @@
 /**
  * Notification Scheduler Service
- * 
+ *
  * Automated scheduler for processing notification rules based on timing configuration.
  * This service is called by a cron job to evaluate rules and send notifications.
- * 
+ *
  * Key responsibilities:
  * - Iterate through all organizations with active notification rules
  * - Evaluate each rule's timing against current date
@@ -104,7 +104,7 @@ export async function processAllOrganizations(): Promise<SchedulerResult> {
     for (const org of organizations) {
       try {
         const orgResult = await processOrganizationNotifications(org.id);
-        
+
         result.organizationsProcessed++;
         result.rulesEvaluated += orgResult.rulesEvaluated;
         result.notificationsSent += orgResult.notificationsSent;
@@ -245,12 +245,12 @@ export async function processOrganizationNotifications(
 
 /**
  * Check if a rule should trigger based on its timing configuration
- * 
+ *
  * Rules define:
  * - timingValue: number (e.g., 3)
  * - timingUnit: MINUTES | HOURS | DAYS | WEEKS | MONTHS
  * - timingDirection: BEFORE | AFTER | AT
- * 
+ *
  * Example: "3 DAYS BEFORE" membership expiry
  * This means we send the notification when membership expires in exactly 3 days
  */
@@ -258,7 +258,7 @@ export function shouldTriggerRule(rule: NotificationRule): boolean {
   // For "AT" direction, we process based on the trigger type's natural timing
   // For "BEFORE" or "AFTER", we've already calculated the target date in findMatchingEntities
   // Here we just verify the rule is in a valid state to process
-  
+
   // Rules with no template can't be processed
   if (!rule.triggerType) {
     return false;
@@ -269,7 +269,7 @@ export function shouldTriggerRule(rule: NotificationRule): boolean {
 
 /**
  * Calculate the date offset based on timing configuration
- * 
+ *
  * For minute/hour granularity: Uses current time as base with narrow windows
  * For day/week/month granularity: Uses start of day as base with full-day windows
  */
@@ -279,11 +279,11 @@ export function calculateDateOffset(
   timingDirection: NotificationTimingDirection
 ): { startDate: Date; endDate: Date } {
   const now = new Date();
-  
+
   // For fine-grained timing (minutes/hours), use current time as base
   // For coarse timing (days+), use start of day as base
   const useFinePrecision = timingUnit === "MINUTES" || timingUnit === "HOURS";
-  
+
   // Calculate offset in milliseconds
   let offsetMs = 0;
   switch (timingUnit) {
@@ -308,12 +308,12 @@ export function calculateDateOffset(
   let targetDate: Date;
   let startDate: Date;
   let endDate: Date;
-  
+
   if (useFinePrecision) {
     // For minutes/hours: Calculate from current time with a narrow window
     // Window size matches cron frequency (5 minutes) to ensure we catch events
     const CRON_WINDOW_MS = 5 * 60 * 1000; // 5 minutes - matches cron schedule
-    
+
     if (timingDirection === "BEFORE") {
       // Looking for events happening in `timingValue` units from now
       // Window: [now + offset, now + offset + CRON_WINDOW)
@@ -334,7 +334,7 @@ export function calculateDateOffset(
   } else {
     // For days/weeks/months: Use full-day windows
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
+
     if (timingDirection === "BEFORE") {
       targetDate = new Date(today.getTime() + offsetMs);
     } else if (timingDirection === "AFTER") {
@@ -345,7 +345,15 @@ export function calculateDateOffset(
 
     // Return a date range for the target day (start of day to end of day)
     startDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
-    endDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59, 999);
+    endDate = new Date(
+      targetDate.getFullYear(),
+      targetDate.getMonth(),
+      targetDate.getDate(),
+      23,
+      59,
+      59,
+      999
+    );
   }
 
   return { startDate, endDate };
@@ -371,31 +379,31 @@ export async function findMatchingEntities(
   switch (rule.triggerType) {
     case "MEMBERSHIP_EXPIRY":
       return findExpiringMemberships(organizationId, startDate, endDate, false);
-    
+
     case "MEMBERSHIP_EXPIRED":
       return findExpiringMemberships(organizationId, startDate, endDate, true);
-    
+
     case "PAYMENT_DUE":
       return findDueInvoices(organizationId, startDate, endDate, false);
-    
+
     case "PAYMENT_OVERDUE":
       return findDueInvoices(organizationId, startDate, endDate, true);
-    
+
     case "PAYMENT_RECEIVED":
       return findRecentPayments(organizationId, startDate, endDate);
-    
+
     case "PROGRAM_REMINDER":
       return findUpcomingProgramSessions(organizationId, startDate, endDate);
-    
+
     case "EVENT_REMINDER":
       return findUpcomingEvents(organizationId, startDate, endDate);
-    
+
     case "BIRTHDAY":
       return findBirthdays(organizationId, startDate, endDate);
-    
+
     case "EVALUATION_DUE":
       return findDueEvaluations(organizationId, startDate, endDate);
-    
+
     case "SKILL_ACHIEVED":
       return findRecentSkillAchievements(organizationId, startDate, endDate);
 
@@ -443,7 +451,7 @@ async function findExpiringMemberships(
   });
 
   const entities: EntityMatch[] = [];
-  
+
   for (const membership of memberships) {
     for (const guardian of membership.athlete.guardians) {
       if (!guardian.user?.id) continue;
@@ -470,7 +478,7 @@ async function findDueInvoices(
   overdue: boolean
 ): Promise<EntityMatch[]> {
   const now = new Date();
-  
+
   const invoices = await db.invoice.findMany({
     where: {
       organizationId,
@@ -560,10 +568,10 @@ async function findUpcomingProgramSessions(
   });
 
   const entities: EntityMatch[] = [];
-  
+
   for (const event of events) {
     if (!event.program) continue;
-    
+
     for (const enrollment of event.program.enrollments) {
       for (const guardian of enrollment.athlete.guardians) {
         if (!guardian.user?.id) continue;
@@ -617,7 +625,7 @@ async function findUpcomingEvents(
   });
 
   const entities: EntityMatch[] = [];
-  
+
   for (const event of events) {
     for (const attendance of event.attendances) {
       for (const guardian of attendance.athlete.guardians) {
@@ -674,7 +682,7 @@ async function findBirthdays(
   });
 
   const entities: EntityMatch[] = [];
-  
+
   for (const athlete of birthdayAthletes) {
     for (const guardian of athlete.guardians) {
       if (!guardian.user?.id) continue;
@@ -721,7 +729,7 @@ async function findDueEvaluations(
   });
 
   const entities: EntityMatch[] = [];
-  
+
   for (const evaluation of evaluations) {
     for (const guardian of evaluation.athlete.guardians) {
       if (!guardian.user?.id) continue;
@@ -768,7 +776,7 @@ async function findRecentSkillAchievements(
   });
 
   const entities: EntityMatch[] = [];
-  
+
   for (const achievement of achievements) {
     for (const guardian of achievement.athlete.guardians) {
       if (!guardian.user?.id) continue;
@@ -820,9 +828,7 @@ async function findRegistrationWindowPrograms(
     },
   });
 
-  const uniqueUserIds = [...new Set(
-    guardians.filter((g) => g.user?.id).map((g) => g.user!.id)
-  )];
+  const uniqueUserIds = [...new Set(guardians.filter((g) => g.user?.id).map((g) => g.user!.id))];
 
   const entities: EntityMatch[] = [];
   for (const program of programs) {

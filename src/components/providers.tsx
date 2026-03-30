@@ -12,12 +12,7 @@ interface ProvidersProps {
 export function Providers({ children, session }: ProvidersProps) {
   return (
     <SessionProvider session={session} refetchOnWindowFocus={false}>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="system"
-        enableSystem
-        disableTransitionOnChange
-      >
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
         {children}
       </ThemeProvider>
     </SessionProvider>

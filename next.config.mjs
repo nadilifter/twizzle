@@ -2,34 +2,34 @@
 
 /**
  * Environment Configuration for CSP Headers
- * 
+ *
  * APP_ENVIRONMENT can be: production, staging, development, local
  * Each environment has its own domain configuration
  */
 const ENV_CONFIG = {
   production: {
-    baseDomain: 'uplifterinc.com',
+    baseDomain: "uplifterinc.com",
     useHttps: true,
-    cdnDomain: 'cdn.uplifterinc.com',
-    s3Bucket: 'uplifter-assets-prod',
+    cdnDomain: "cdn.uplifterinc.com",
+    s3Bucket: "uplifter-assets-prod",
   },
   staging: {
-    baseDomain: 'upliftergymnastics.com',
+    baseDomain: "upliftergymnastics.com",
     useHttps: true,
-    cdnDomain: 'assets.upliftergymnastics.com',
-    s3Bucket: 'uplifter-gymnastics-assets',
+    cdnDomain: "assets.upliftergymnastics.com",
+    s3Bucket: "uplifter-gymnastics-assets",
   },
   development: {
-    baseDomain: 'uplifterdev.com',
+    baseDomain: "uplifterdev.com",
     useHttps: true,
     cdnDomain: null,
-    s3Bucket: 'uplifter-assets-dev',
+    s3Bucket: "uplifter-assets-dev",
   },
   local: {
-    baseDomain: 'uplifterinc.localhost:3000',
+    baseDomain: "uplifterinc.localhost:3000",
     useHttps: false,
     cdnDomain: null,
-    s3Bucket: 'local-assets',
+    s3Bucket: "local-assets",
   },
 };
 
@@ -39,16 +39,16 @@ const getCurrentEnvironment = () => {
   if (env && env in ENV_CONFIG) {
     return env;
   }
-  if (process.env.NODE_ENV === 'production') {
-    return 'production';
+  if (process.env.NODE_ENV === "production") {
+    return "production";
   }
-  return 'local';
+  return "local";
 };
 
 const currentEnv = getCurrentEnvironment();
 const envConfig = ENV_CONFIG[currentEnv];
-const isLocal = currentEnv === 'local';
-const protocol = envConfig.useHttps ? 'https' : 'http';
+const isLocal = currentEnv === "local";
+const protocol = envConfig.useHttps ? "https" : "http";
 
 // Determine CSP directives based on environment
 // In local dev, we need to allow connections/forms to localhost:3000 for OAuth
@@ -62,89 +62,88 @@ const getFormActionCsp = () => {
 };
 
 const getConnectSrcCsp = () => {
-  const base = "'self' https://*.adyen.com https://*.upstash.io wss: https://google.com https://pay.google.com https://*.zendesk.com https://*.zopim.com";
-  
+  const base =
+    "'self' https://*.adyen.com https://*.upstash.io wss: https://google.com https://pay.google.com https://*.zendesk.com https://*.zopim.com";
+
   // Add CDN domain if configured
-  const cdnSrc = envConfig.cdnDomain ? ` https://${envConfig.cdnDomain}` : '';
-  
+  const cdnSrc = envConfig.cdnDomain ? ` https://${envConfig.cdnDomain}` : "";
+
   // Add S3 for cloud environments
   // Only *.s3.amazonaws.com (global endpoint) is valid CSP; *.s3.*.amazonaws.com has a
   // wildcard in a non-leftmost label which violates the CSP spec. Use *.amazonaws.com
   // to also cover regional endpoints like bucket.s3.us-east-1.amazonaws.com.
-  const s3Src = !isLocal ? ' https://*.s3.amazonaws.com https://*.amazonaws.com' : '';
-  
+  const s3Src = !isLocal ? " https://*.s3.amazonaws.com https://*.amazonaws.com" : "";
+
   // Add MinIO for local environment
-  const minioSrc = isLocal ? ' http://localhost:9000' : '';
-  
+  const minioSrc = isLocal ? " http://localhost:9000" : "";
+
   if (isLocal) {
     // Local: allow fetching CSRF token from localhost:3000 and MinIO
     return `connect-src ${base}${cdnSrc}${minioSrc} http://localhost:3000`;
   }
-  
+
   return `connect-src ${base}${cdnSrc}${s3Src}`;
 };
 
 const getImgSrcCsp = () => {
   const base = "'self' data: blob: https:";
-  
+
   // Add MinIO for local environment
   if (isLocal) {
     return `img-src ${base} http://localhost:9000`;
   }
-  
+
   return `img-src ${base}`;
 };
 
 // Build remote patterns for Next.js Image component
 const getImageRemotePatterns = () => {
   const patterns = [];
-  
+
   // Add patterns for all environments to support development/preview
-  Object.values(ENV_CONFIG).forEach(config => {
+  Object.values(ENV_CONFIG).forEach((config) => {
     // CDN domain
     if (config.cdnDomain) {
       patterns.push({
-        protocol: 'https',
+        protocol: "https",
         hostname: config.cdnDomain,
-        pathname: '/**',
+        pathname: "/**",
       });
     }
-    
+
     // S3 bucket (direct access pattern)
     if (config.s3Bucket) {
       patterns.push({
-        protocol: 'https',
+        protocol: "https",
         hostname: `${config.s3Bucket}.s3.*.amazonaws.com`,
-        pathname: '/**',
+        pathname: "/**",
       });
       patterns.push({
-        protocol: 'https',
+        protocol: "https",
         hostname: `${config.s3Bucket}.s3.amazonaws.com`,
-        pathname: '/**',
+        pathname: "/**",
       });
     }
   });
-  
+
   // Local MinIO for development
   patterns.push({
-    protocol: 'http',
-    hostname: 'localhost',
-    port: '9000',
-    pathname: '/**',
+    protocol: "http",
+    hostname: "localhost",
+    port: "9000",
+    pathname: "/**",
   });
-  
+
   return patterns;
 };
 
 // Extract just the hostname for allowedDevOrigins (strip port if present)
-const localHostname = isLocal ? envConfig.baseDomain.split(':')[0] : null;
+const localHostname = isLocal ? envConfig.baseDomain.split(":")[0] : null;
 
 const nextConfig = {
   reactStrictMode: false,
   output: "standalone",
-  allowedDevOrigins: isLocal
-    ? [`*.${localHostname}`]
-    : [],
+  allowedDevOrigins: isLocal ? [`*.${localHostname}`] : [],
   typescript: {
     ignoreBuildErrors: false,
   },
@@ -185,27 +184,27 @@ const nextConfig = {
       "@radix-ui/react-tooltip",
       "lucide-react",
       "date-fns",
-      "recharts"
+      "recharts",
     ],
   },
   async redirects() {
     return [
       {
-        source: '/dashboard/organization/website/team',
-        destination: '/dashboard/website/team',
+        source: "/dashboard/organization/website/team",
+        destination: "/dashboard/website/team",
         permanent: true,
       },
       {
-        source: '/dashboard/organization/website',
-        destination: '/dashboard/website',
+        source: "/dashboard/organization/website",
+        destination: "/dashboard/website",
         permanent: true,
       },
       {
-        source: '/dashboard/competitions/marketing',
-        destination: '/dashboard/website/competitions',
+        source: "/dashboard/competitions/marketing",
+        destination: "/dashboard/website/competitions",
         permanent: true,
       },
-    ]
+    ];
   },
   async headers() {
     // Security headers for all routes
@@ -264,7 +263,7 @@ const nextConfig = {
         : []),
       // Prevent search engine indexing for non-production environments
       // Staging, development, and local should never be indexed
-      ...(currentEnv !== 'production'
+      ...(currentEnv !== "production"
         ? [
             {
               key: "X-Robots-Tag",

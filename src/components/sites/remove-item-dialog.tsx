@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   Dialog,
@@ -7,18 +7,18 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { AlertTriangle, Trash2 } from "lucide-react"
-import { CartItem } from "@/components/sites/cart-context"
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { AlertTriangle, Trash2 } from "lucide-react";
+import { CartItem } from "@/components/sites/cart-context";
 
 interface RemoveItemDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  itemToRemove: CartItem | null
-  dependentItems: CartItem[]
-  onCancel: () => void
-  onConfirmRemove: () => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  itemToRemove: CartItem | null;
+  dependentItems: CartItem[];
+  onCancel: () => void;
+  onConfirmRemove: () => void;
 }
 
 export function RemoveItemDialog({
@@ -29,16 +29,16 @@ export function RemoveItemDialog({
   onCancel,
   onConfirmRemove,
 }: RemoveItemDialogProps) {
-  if (!itemToRemove) return null
+  if (!itemToRemove) return null;
 
-  const totalItemsToRemove = 1 + dependentItems.length
+  const totalItemsToRemove = 1 + dependentItems.length;
 
   const formatPrice = (price: number) => {
     return price.toLocaleString("en-US", {
       style: "currency",
       currency: "USD",
-    })
-  }
+    });
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -49,10 +49,11 @@ export function RemoveItemDialog({
             Remove Required Item?
           </DialogTitle>
           <DialogDescription>
-            Removing <strong>{itemToRemove.name}</strong> will also remove the following items that require it:
+            Removing <strong>{itemToRemove.name}</strong> will also remove the following items that
+            require it:
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="py-4 space-y-3">
           {/* Item being removed */}
           <div className="border rounded-lg p-3 bg-destructive/5 border-destructive/20">
@@ -64,7 +65,9 @@ export function RemoveItemDialog({
                   <p className="text-xs text-muted-foreground capitalize">{itemToRemove.type}</p>
                 </div>
               </div>
-              <span className="text-sm font-medium">{formatPrice(itemToRemove.price * itemToRemove.quantity)}</span>
+              <span className="text-sm font-medium">
+                {formatPrice(itemToRemove.price * itemToRemove.quantity)}
+              </span>
             </div>
           </div>
 
@@ -84,7 +87,9 @@ export function RemoveItemDialog({
                         <p className="text-xs text-muted-foreground capitalize">{item.type}</p>
                       </div>
                     </div>
-                    <span className="text-sm font-medium">{formatPrice(item.price * item.quantity)}</span>
+                    <span className="text-sm font-medium">
+                      {formatPrice(item.price * item.quantity)}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -96,15 +101,11 @@ export function RemoveItemDialog({
           <Button variant="outline" onClick={onCancel} className="w-full sm:w-auto">
             Cancel
           </Button>
-          <Button 
-            variant="destructive"
-            onClick={onConfirmRemove}
-            className="w-full sm:w-auto"
-          >
+          <Button variant="destructive" onClick={onConfirmRemove} className="w-full sm:w-auto">
             Remove {totalItemsToRemove} {totalItemsToRemove === 1 ? "Item" : "Items"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

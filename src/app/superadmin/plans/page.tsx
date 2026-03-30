@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   DndContext,
   KeyboardSensor,
@@ -10,19 +10,19 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
-} from "@dnd-kit/core"
-import { restrictToVerticalAxis } from "@dnd-kit/modifiers"
+} from "@dnd-kit/core";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
   SortableContext,
   arrayMove,
   useSortable,
   verticalListSortingStrategy,
-} from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
-import { 
-  Plus, 
-  Pencil, 
-  Trash2, 
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
+  Plus,
+  Pencil,
+  Trash2,
   MoreHorizontal,
   Check,
   Star,
@@ -36,19 +36,13 @@ import {
   Tag,
   GripVertical,
   ArrowUpDown,
-  BookOpen
-} from "lucide-react"
-import { toast } from "sonner"
+  BookOpen,
+} from "lucide-react";
+import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -56,70 +50,72 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
-import { Separator } from "@/components/ui/separator"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 
-import { FEATURE_KEYS, FEATURE_LABELS, DEFAULT_FEATURE_TOGGLES, parseFeatureToggles, type FeatureToggles, type FeatureKey } from "@/lib/feature-toggles"
+import {
+  FEATURE_KEYS,
+  FEATURE_LABELS,
+  DEFAULT_FEATURE_TOGGLES,
+  parseFeatureToggles,
+  type FeatureToggles,
+  type FeatureKey,
+} from "@/lib/feature-toggles";
 
 interface SubscriptionPlan {
-  id: string
-  name: string
-  slug: string
-  description: string | null
-  monthlyPrice: string
-  yearlyPrice: string | null
-  transactionFee: string
-  perTransactionFee: string
-  maxAthletes: number | null
-  maxUsers: number | null
-  maxPrograms: number | null
-  maxEvents: number | null
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  monthlyPrice: string;
+  yearlyPrice: string | null;
+  transactionFee: string;
+  perTransactionFee: string;
+  maxAthletes: number | null;
+  maxUsers: number | null;
+  maxPrograms: number | null;
+  maxEvents: number | null;
   // SMS Limits
-  smsIncluded: number | null
-  smsOverageRate: string | null
+  smsIncluded: number | null;
+  smsOverageRate: string | null;
   // Email Limits
-  emailIncluded: number | null
-  emailOverageRate: string | null
+  emailIncluded: number | null;
+  emailOverageRate: string | null;
   // Storage Limits
-  maxStorageMB: number | null
+  maxStorageMB: number | null;
   // Membership Limits
-  maxMembershipTypes: number | null
-  features: string[]
-  featureToggles: FeatureToggles
-  isPopular: boolean
-  displayOrder: number
-  isActive: boolean
-  isPublic: boolean
+  maxMembershipTypes: number | null;
+  features: string[];
+  featureToggles: FeatureToggles;
+  isPopular: boolean;
+  displayOrder: number;
+  isActive: boolean;
+  isPublic: boolean;
   _count?: {
-    subscriptions: number
-  }
+    subscriptions: number;
+  };
 }
 
 // Sortable Plan Item for reorder dialog
 function SortablePlanItem({ plan }: { plan: SubscriptionPlan }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: plan.id })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: plan.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-  }
+  };
 
   return (
     <div
@@ -145,7 +141,9 @@ function SortablePlanItem({ plan }: { plan: SubscriptionPlan }) {
             </Badge>
           )}
           {!plan.isActive && (
-            <Badge variant="outline" className="text-xs">Inactive</Badge>
+            <Badge variant="outline" className="text-xs">
+              Inactive
+            </Badge>
           )}
         </div>
         <span className="text-sm text-muted-foreground">{plan.slug}</span>
@@ -154,25 +152,25 @@ function SortablePlanItem({ plan }: { plan: SubscriptionPlan }) {
         ${Number(plan.monthlyPrice).toFixed(2)}/mo
       </span>
     </div>
-  )
+  );
 }
 
 export default function PlansPage() {
-  const [plans, setPlans] = React.useState<SubscriptionPlan[]>([])
-  const [isLoading, setIsLoading] = React.useState(true)
-  const [isDialogOpen, setIsDialogOpen] = React.useState(false)
-  const [isReorderDialogOpen, setIsReorderDialogOpen] = React.useState(false)
-  const [reorderPlans, setReorderPlans] = React.useState<SubscriptionPlan[]>([])
-  const [isSavingOrder, setIsSavingOrder] = React.useState(false)
-  const [editingPlan, setEditingPlan] = React.useState<SubscriptionPlan | null>(null)
-  const [isSaving, setIsSaving] = React.useState(false)
+  const [plans, setPlans] = React.useState<SubscriptionPlan[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [isReorderDialogOpen, setIsReorderDialogOpen] = React.useState(false);
+  const [reorderPlans, setReorderPlans] = React.useState<SubscriptionPlan[]>([]);
+  const [isSavingOrder, setIsSavingOrder] = React.useState(false);
+  const [editingPlan, setEditingPlan] = React.useState<SubscriptionPlan | null>(null);
+  const [isSaving, setIsSaving] = React.useState(false);
 
   // DnD sensors
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
     useSensor(TouchSensor, {}),
     useSensor(KeyboardSensor, {})
-  )
+  );
 
   // Form state
   const [formData, setFormData] = React.useState({
@@ -202,28 +200,28 @@ export default function PlansPage() {
     isPopular: false,
     isActive: true,
     isPublic: true,
-  })
+  });
 
   React.useEffect(() => {
-    fetchPlans()
-  }, [])
+    fetchPlans();
+  }, []);
 
   const fetchPlans = async () => {
     try {
-      setIsLoading(true)
-      const response = await fetch("/api/superadmin/plans")
-      if (!response.ok) throw new Error("Failed to fetch plans")
-      const data = await response.json()
-      setPlans(data)
+      setIsLoading(true);
+      const response = await fetch("/api/superadmin/plans");
+      if (!response.ok) throw new Error("Failed to fetch plans");
+      const data = await response.json();
+      setPlans(data);
     } catch (error) {
-      toast.error("Failed to load plans")
+      toast.error("Failed to load plans");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleOpenCreate = () => {
-    setEditingPlan(null)
+    setEditingPlan(null);
     setFormData({
       name: "",
       slug: "",
@@ -247,12 +245,12 @@ export default function PlansPage() {
       isPopular: false,
       isActive: true,
       isPublic: true,
-    })
-    setIsDialogOpen(true)
-  }
+    });
+    setIsDialogOpen(true);
+  };
 
   const handleOpenEdit = (plan: SubscriptionPlan) => {
-    setEditingPlan(plan)
+    setEditingPlan(plan);
     setFormData({
       name: plan.name,
       slug: plan.slug,
@@ -276,12 +274,12 @@ export default function PlansPage() {
       isPopular: plan.isPopular,
       isActive: plan.isActive,
       isPublic: plan.isPublic,
-    })
-    setIsDialogOpen(true)
-  }
+    });
+    setIsDialogOpen(true);
+  };
 
   const handleSave = async () => {
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       const payload = {
         name: formData.name,
@@ -300,62 +298,65 @@ export default function PlansPage() {
         emailIncluded: formData.emailIncluded ? parseInt(formData.emailIncluded) : null,
         emailOverageRate: formData.emailOverageRate ? parseFloat(formData.emailOverageRate) : null,
         maxStorageMB: formData.maxStorageMB ? parseInt(formData.maxStorageMB) : null,
-        maxMembershipTypes: formData.maxMembershipTypes ? parseInt(formData.maxMembershipTypes) : null,
-        features: formData.features.split("\n").map(f => f.trim()).filter(Boolean),
+        maxMembershipTypes: formData.maxMembershipTypes
+          ? parseInt(formData.maxMembershipTypes)
+          : null,
+        features: formData.features
+          .split("\n")
+          .map((f) => f.trim())
+          .filter(Boolean),
         featureToggles: formData.featureToggles,
         isPopular: formData.isPopular,
         // Auto-assign display order for new plans (add to end)
         ...(editingPlan ? {} : { displayOrder: plans.length }),
         isActive: formData.isActive,
         isPublic: formData.isPublic,
-      }
+      };
 
-      const url = editingPlan 
-        ? `/api/superadmin/plans/${editingPlan.id}`
-        : "/api/superadmin/plans"
-      
+      const url = editingPlan ? `/api/superadmin/plans/${editingPlan.id}` : "/api/superadmin/plans";
+
       const response = await fetch(url, {
         method: editingPlan ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      })
+      });
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to save plan")
+        const error = await response.json();
+        throw new Error(error.error || "Failed to save plan");
       }
 
-      toast.success(editingPlan ? "Plan updated" : "Plan created")
-      setIsDialogOpen(false)
-      fetchPlans()
+      toast.success(editingPlan ? "Plan updated" : "Plan created");
+      setIsDialogOpen(false);
+      fetchPlans();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save plan")
+      toast.error(error instanceof Error ? error.message : "Failed to save plan");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const handleDelete = async (plan: SubscriptionPlan) => {
     if (!confirm(`Are you sure you want to delete "${plan.name}"? This cannot be undone.`)) {
-      return
+      return;
     }
 
     try {
       const response = await fetch(`/api/superadmin/plans/${plan.id}`, {
         method: "DELETE",
-      })
+      });
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to delete plan")
+        const error = await response.json();
+        throw new Error(error.error || "Failed to delete plan");
       }
 
-      toast.success("Plan deleted")
-      fetchPlans()
+      toast.success("Plan deleted");
+      fetchPlans();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete plan")
+      toast.error(error instanceof Error ? error.message : "Failed to delete plan");
     }
-  }
+  };
 
   const handleToggleActive = async (plan: SubscriptionPlan) => {
     try {
@@ -363,73 +364,73 @@ export default function PlansPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: !plan.isActive }),
-      })
+      });
 
-      if (!response.ok) throw new Error("Failed to update plan")
-      
-      toast.success(plan.isActive ? "Plan deactivated" : "Plan activated")
-      fetchPlans()
+      if (!response.ok) throw new Error("Failed to update plan");
+
+      toast.success(plan.isActive ? "Plan deactivated" : "Plan activated");
+      fetchPlans();
     } catch (error) {
-      toast.error("Failed to update plan")
+      toast.error("Failed to update plan");
     }
-  }
+  };
 
   const handleOpenReorder = () => {
-    setReorderPlans([...plans])
-    setIsReorderDialogOpen(true)
-  }
+    setReorderPlans([...plans]);
+    setIsReorderDialogOpen(true);
+  };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
+    const { active, over } = event;
     if (over && active.id !== over.id) {
       setReorderPlans((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id)
-        const newIndex = items.findIndex((item) => item.id === over.id)
-        return arrayMove(items, oldIndex, newIndex)
-      })
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
     }
-  }
+  };
 
   const handleSaveOrder = async () => {
-    setIsSavingOrder(true)
+    setIsSavingOrder(true);
     try {
       // Update each plan's displayOrder
       const updates = reorderPlans.map((plan, index) => ({
         id: plan.id,
         displayOrder: index,
-      }))
+      }));
 
       const response = await fetch("/api/superadmin/plans/reorder", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plans: updates }),
-      })
+      });
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to save order")
+        const error = await response.json();
+        throw new Error(error.error || "Failed to save order");
       }
 
-      toast.success("Plan order updated")
-      setIsReorderDialogOpen(false)
-      fetchPlans()
+      toast.success("Plan order updated");
+      setIsReorderDialogOpen(false);
+      fetchPlans();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save order")
+      toast.error(error instanceof Error ? error.message : "Failed to save order");
     } finally {
-      setIsSavingOrder(false)
+      setIsSavingOrder(false);
     }
-  }
+  };
 
   const formatCurrency = (amount: string | number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
-    }).format(Number(amount))
-  }
+    }).format(Number(amount));
+  };
 
   const formatPercent = (amount: string | number) => {
-    return `${(Number(amount) * 100).toFixed(1)}%`
-  }
+    return `${(Number(amount) * 100).toFixed(1)}%`;
+  };
 
   return (
     <div className="flex flex-col gap-6 p-4">
@@ -483,9 +484,7 @@ export default function PlansPage() {
                         </Badge>
                       )}
                     </div>
-                    <CardDescription className="mt-1">
-                      {plan.slug}
-                    </CardDescription>
+                    <CardDescription className="mt-1">{plan.slug}</CardDescription>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -501,7 +500,7 @@ export default function PlansPage() {
                       <DropdownMenuItem onClick={() => handleToggleActive(plan)}>
                         {plan.isActive ? "Deactivate" : "Activate"}
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         className="text-destructive"
                         onClick={() => handleDelete(plan)}
                       >
@@ -528,7 +527,10 @@ export default function PlansPage() {
                 <div className="text-sm space-y-1">
                   <p>
                     <span className="text-muted-foreground">Transaction fee:</span>{" "}
-                    <strong>{formatPercent(plan.transactionFee)} + {formatCurrency(plan.perTransactionFee)}</strong>
+                    <strong>
+                      {formatPercent(plan.transactionFee)} +{" "}
+                      {formatCurrency(plan.perTransactionFee)}
+                    </strong>
                   </p>
                 </div>
 
@@ -570,7 +572,11 @@ export default function PlansPage() {
                   </div>
                   <div>
                     <HardDrive className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-                    <p className="font-medium">{plan.maxStorageMB ? `${plan.maxStorageMB >= 1000 ? `${plan.maxStorageMB / 1000}GB` : `${plan.maxStorageMB}MB`}` : "∞"}</p>
+                    <p className="font-medium">
+                      {plan.maxStorageMB
+                        ? `${plan.maxStorageMB >= 1000 ? `${plan.maxStorageMB / 1000}GB` : `${plan.maxStorageMB}MB`}`
+                        : "∞"}
+                    </p>
                     <p className="text-xs text-muted-foreground">Storage</p>
                   </div>
                   <div>
@@ -583,10 +589,12 @@ export default function PlansPage() {
                 <Separator />
 
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Modules</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Modules
+                  </p>
                   <div className="flex flex-wrap gap-1">
                     {FEATURE_KEYS.map((key) => {
-                      const enabled = parseFeatureToggles(plan.featureToggles)[key]
+                      const enabled = parseFeatureToggles(plan.featureToggles)[key];
                       return (
                         <Badge
                           key={key}
@@ -595,7 +603,7 @@ export default function PlansPage() {
                         >
                           {FEATURE_LABELS[key]}
                         </Badge>
-                      )
+                      );
                     })}
                   </div>
                 </div>
@@ -640,291 +648,302 @@ export default function PlansPage() {
           </DialogHeader>
 
           <div className="grid gap-6 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Plan Name</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g., Gold"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="slug">Slug</Label>
-                  <Input
-                    id="slug"
-                    value={formData.slug}
-                    onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, "-") })}
-                    placeholder="e.g., gold"
-                  />
-                </div>
-              </div>
-
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Brief description of this plan"
-                  rows={2}
+                <Label htmlFor="name">Plan Name</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="e.g., Gold"
                 />
               </div>
-
-              <Separator />
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="monthlyPrice">Monthly Price ($)</Label>
-                  <Input
-                    id="monthlyPrice"
-                    type="number"
-                    step="0.01"
-                    value={formData.monthlyPrice}
-                    onChange={(e) => setFormData({ ...formData, monthlyPrice: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="yearlyPrice">Yearly Price ($) (optional)</Label>
-                  <Input
-                    id="yearlyPrice"
-                    type="number"
-                    step="0.01"
-                    value={formData.yearlyPrice}
-                    onChange={(e) => setFormData({ ...formData, yearlyPrice: e.target.value })}
-                    placeholder="Leave blank for no yearly option"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="transactionFee">Transaction Fee (%)</Label>
-                  <Input
-                    id="transactionFee"
-                    type="number"
-                    step="0.001"
-                    value={formData.transactionFee}
-                    onChange={(e) => setFormData({ ...formData, transactionFee: e.target.value })}
-                    placeholder="e.g., 0.029 for 2.9%"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="perTransactionFee">Per Transaction Fee ($)</Label>
-                  <Input
-                    id="perTransactionFee"
-                    type="number"
-                    step="0.01"
-                    value={formData.perTransactionFee}
-                    onChange={(e) => setFormData({ ...formData, perTransactionFee: e.target.value })}
-                    placeholder="e.g., 0.30"
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="maxAthletes">Max Athletes</Label>
-                  <Input
-                    id="maxAthletes"
-                    type="number"
-                    value={formData.maxAthletes}
-                    onChange={(e) => setFormData({ ...formData, maxAthletes: e.target.value })}
-                    placeholder="Unlimited"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="maxUsers">Max Users</Label>
-                  <Input
-                    id="maxUsers"
-                    type="number"
-                    value={formData.maxUsers}
-                    onChange={(e) => setFormData({ ...formData, maxUsers: e.target.value })}
-                    placeholder="Unlimited"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="maxPrograms">Max Programs</Label>
-                  <Input
-                    id="maxPrograms"
-                    type="number"
-                    value={formData.maxPrograms}
-                    onChange={(e) => setFormData({ ...formData, maxPrograms: e.target.value })}
-                    placeholder="Unlimited"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="maxEvents">Max Events</Label>
-                  <Input
-                    id="maxEvents"
-                    type="number"
-                    value={formData.maxEvents}
-                    onChange={(e) => setFormData({ ...formData, maxEvents: e.target.value })}
-                    placeholder="Unlimited"
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
               <div className="space-y-2">
-                <h4 className="font-medium">Usage Limits</h4>
-                <p className="text-sm text-muted-foreground">Set monthly quotas and overage rates</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="smsIncluded">SMS Included (per month)</Label>
-                  <Input
-                    id="smsIncluded"
-                    type="number"
-                    value={formData.smsIncluded}
-                    onChange={(e) => setFormData({ ...formData, smsIncluded: e.target.value })}
-                    placeholder="No SMS"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="smsOverageRate">SMS Overage Rate ($)</Label>
-                  <Input
-                    id="smsOverageRate"
-                    type="number"
-                    step="0.01"
-                    value={formData.smsOverageRate}
-                    onChange={(e) => setFormData({ ...formData, smsOverageRate: e.target.value })}
-                    placeholder="e.g., 0.05"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="emailIncluded">Emails Included (per month)</Label>
-                  <Input
-                    id="emailIncluded"
-                    type="number"
-                    value={formData.emailIncluded}
-                    onChange={(e) => setFormData({ ...formData, emailIncluded: e.target.value })}
-                    placeholder="No emails"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="emailOverageRate">Email Overage Rate ($)</Label>
-                  <Input
-                    id="emailOverageRate"
-                    type="number"
-                    step="0.001"
-                    value={formData.emailOverageRate}
-                    onChange={(e) => setFormData({ ...formData, emailOverageRate: e.target.value })}
-                    placeholder="e.g., 0.005"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="maxStorageMB">Max Storage (MB)</Label>
-                  <Input
-                    id="maxStorageMB"
-                    type="number"
-                    value={formData.maxStorageMB}
-                    onChange={(e) => setFormData({ ...formData, maxStorageMB: e.target.value })}
-                    placeholder="Unlimited"
-                  />
-                  <p className="text-xs text-muted-foreground">1000 MB = 1 GB</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="maxMembershipTypes">Max Membership Types</Label>
-                  <Input
-                    id="maxMembershipTypes"
-                    type="number"
-                    value={formData.maxMembershipTypes}
-                    onChange={(e) => setFormData({ ...formData, maxMembershipTypes: e.target.value })}
-                    placeholder="Unlimited"
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <h4 className="font-medium">Module Access</h4>
-                <p className="text-sm text-muted-foreground">Toggle which modules organizations on this plan can access</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                {FEATURE_KEYS.map((key) => (
-                  <div key={key} className="flex items-center justify-between rounded-lg border p-3">
-                    <Label htmlFor={`toggle-${key}`} className="cursor-pointer">
-                      {FEATURE_LABELS[key]}
-                    </Label>
-                    <Switch
-                      id={`toggle-${key}`}
-                      checked={formData.featureToggles[key]}
-                      onCheckedChange={(checked) =>
-                        setFormData({
-                          ...formData,
-                          featureToggles: { ...formData.featureToggles, [key]: checked },
-                        })
-                      }
-                    />
-                  </div>
-                ))}
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <Label htmlFor="features">Features (one per line)</Label>
-                <Textarea
-                  id="features"
-                  value={formData.features}
-                  onChange={(e) => setFormData({ ...formData, features: e.target.value })}
-                  placeholder="Full Club Management Suite&#10;Unlimited Athletes&#10;Priority Support"
-                  rows={5}
+                <Label htmlFor="slug">Slug</Label>
+                <Input
+                  id="slug"
+                  value={formData.slug}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      slug: e.target.value.toLowerCase().replace(/\s+/g, "-"),
+                    })
+                  }
+                  placeholder="e.g., gold"
                 />
-                <p className="text-xs text-muted-foreground">Display-only feature list shown on pricing pages</p>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Mark as Popular</Label>
-                    <p className="text-sm text-muted-foreground">Highlight this plan for users</p>
-                  </div>
-                  <Switch
-                    checked={formData.isPopular}
-                    onCheckedChange={(checked) => setFormData({ ...formData, isPopular: checked })}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Active</Label>
-                    <p className="text-sm text-muted-foreground">Can be assigned to organizations</p>
-                  </div>
-                  <Switch
-                    checked={formData.isActive}
-                    onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Public</Label>
-                    <p className="text-sm text-muted-foreground">Organizations can self-select this plan</p>
-                  </div>
-                  <Switch
-                    checked={formData.isPublic}
-                    onCheckedChange={(checked) => setFormData({ ...formData, isPublic: checked })}
-                  />
-                </div>
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Brief description of this plan"
+                rows={2}
+              />
+            </div>
+
+            <Separator />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="monthlyPrice">Monthly Price ($)</Label>
+                <Input
+                  id="monthlyPrice"
+                  type="number"
+                  step="0.01"
+                  value={formData.monthlyPrice}
+                  onChange={(e) => setFormData({ ...formData, monthlyPrice: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="yearlyPrice">Yearly Price ($) (optional)</Label>
+                <Input
+                  id="yearlyPrice"
+                  type="number"
+                  step="0.01"
+                  value={formData.yearlyPrice}
+                  onChange={(e) => setFormData({ ...formData, yearlyPrice: e.target.value })}
+                  placeholder="Leave blank for no yearly option"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="transactionFee">Transaction Fee (%)</Label>
+                <Input
+                  id="transactionFee"
+                  type="number"
+                  step="0.001"
+                  value={formData.transactionFee}
+                  onChange={(e) => setFormData({ ...formData, transactionFee: e.target.value })}
+                  placeholder="e.g., 0.029 for 2.9%"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="perTransactionFee">Per Transaction Fee ($)</Label>
+                <Input
+                  id="perTransactionFee"
+                  type="number"
+                  step="0.01"
+                  value={formData.perTransactionFee}
+                  onChange={(e) => setFormData({ ...formData, perTransactionFee: e.target.value })}
+                  placeholder="e.g., 0.30"
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="maxAthletes">Max Athletes</Label>
+                <Input
+                  id="maxAthletes"
+                  type="number"
+                  value={formData.maxAthletes}
+                  onChange={(e) => setFormData({ ...formData, maxAthletes: e.target.value })}
+                  placeholder="Unlimited"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="maxUsers">Max Users</Label>
+                <Input
+                  id="maxUsers"
+                  type="number"
+                  value={formData.maxUsers}
+                  onChange={(e) => setFormData({ ...formData, maxUsers: e.target.value })}
+                  placeholder="Unlimited"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="maxPrograms">Max Programs</Label>
+                <Input
+                  id="maxPrograms"
+                  type="number"
+                  value={formData.maxPrograms}
+                  onChange={(e) => setFormData({ ...formData, maxPrograms: e.target.value })}
+                  placeholder="Unlimited"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="maxEvents">Max Events</Label>
+                <Input
+                  id="maxEvents"
+                  type="number"
+                  value={formData.maxEvents}
+                  onChange={(e) => setFormData({ ...formData, maxEvents: e.target.value })}
+                  placeholder="Unlimited"
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-2">
+              <h4 className="font-medium">Usage Limits</h4>
+              <p className="text-sm text-muted-foreground">Set monthly quotas and overage rates</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="smsIncluded">SMS Included (per month)</Label>
+                <Input
+                  id="smsIncluded"
+                  type="number"
+                  value={formData.smsIncluded}
+                  onChange={(e) => setFormData({ ...formData, smsIncluded: e.target.value })}
+                  placeholder="No SMS"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="smsOverageRate">SMS Overage Rate ($)</Label>
+                <Input
+                  id="smsOverageRate"
+                  type="number"
+                  step="0.01"
+                  value={formData.smsOverageRate}
+                  onChange={(e) => setFormData({ ...formData, smsOverageRate: e.target.value })}
+                  placeholder="e.g., 0.05"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="emailIncluded">Emails Included (per month)</Label>
+                <Input
+                  id="emailIncluded"
+                  type="number"
+                  value={formData.emailIncluded}
+                  onChange={(e) => setFormData({ ...formData, emailIncluded: e.target.value })}
+                  placeholder="No emails"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="emailOverageRate">Email Overage Rate ($)</Label>
+                <Input
+                  id="emailOverageRate"
+                  type="number"
+                  step="0.001"
+                  value={formData.emailOverageRate}
+                  onChange={(e) => setFormData({ ...formData, emailOverageRate: e.target.value })}
+                  placeholder="e.g., 0.005"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="maxStorageMB">Max Storage (MB)</Label>
+                <Input
+                  id="maxStorageMB"
+                  type="number"
+                  value={formData.maxStorageMB}
+                  onChange={(e) => setFormData({ ...formData, maxStorageMB: e.target.value })}
+                  placeholder="Unlimited"
+                />
+                <p className="text-xs text-muted-foreground">1000 MB = 1 GB</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="maxMembershipTypes">Max Membership Types</Label>
+                <Input
+                  id="maxMembershipTypes"
+                  type="number"
+                  value={formData.maxMembershipTypes}
+                  onChange={(e) => setFormData({ ...formData, maxMembershipTypes: e.target.value })}
+                  placeholder="Unlimited"
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-2">
+              <h4 className="font-medium">Module Access</h4>
+              <p className="text-sm text-muted-foreground">
+                Toggle which modules organizations on this plan can access
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {FEATURE_KEYS.map((key) => (
+                <div key={key} className="flex items-center justify-between rounded-lg border p-3">
+                  <Label htmlFor={`toggle-${key}`} className="cursor-pointer">
+                    {FEATURE_LABELS[key]}
+                  </Label>
+                  <Switch
+                    id={`toggle-${key}`}
+                    checked={formData.featureToggles[key]}
+                    onCheckedChange={(checked) =>
+                      setFormData({
+                        ...formData,
+                        featureToggles: { ...formData.featureToggles, [key]: checked },
+                      })
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+
+            <Separator />
+
+            <div className="space-y-2">
+              <Label htmlFor="features">Features (one per line)</Label>
+              <Textarea
+                id="features"
+                value={formData.features}
+                onChange={(e) => setFormData({ ...formData, features: e.target.value })}
+                placeholder="Full Club Management Suite&#10;Unlimited Athletes&#10;Priority Support"
+                rows={5}
+              />
+              <p className="text-xs text-muted-foreground">
+                Display-only feature list shown on pricing pages
+              </p>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Mark as Popular</Label>
+                  <p className="text-sm text-muted-foreground">Highlight this plan for users</p>
+                </div>
+                <Switch
+                  checked={formData.isPopular}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isPopular: checked })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Active</Label>
+                  <p className="text-sm text-muted-foreground">Can be assigned to organizations</p>
+                </div>
+                <Switch
+                  checked={formData.isActive}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Public</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Organizations can self-select this plan
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.isPublic}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isPublic: checked })}
+                />
+              </div>
+            </div>
+          </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
@@ -956,7 +975,7 @@ export default function PlansPage() {
               onDragEnd={handleDragEnd}
             >
               <SortableContext
-                items={reorderPlans.map(p => p.id)}
+                items={reorderPlans.map((p) => p.id)}
                 strategy={verticalListSortingStrategy}
               >
                 <div className="flex flex-col gap-2">
@@ -980,5 +999,5 @@ export default function PlansPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

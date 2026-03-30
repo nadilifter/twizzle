@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from "react"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Search,
   Send,
@@ -17,65 +17,62 @@ import {
   Globe,
   Phone,
   Mail,
-} from "lucide-react"
-import { toast } from "sonner"
-import DOMPurify from "dompurify"
-import { cn } from "@/lib/utils"
+} from "lucide-react";
+import { toast } from "sonner";
+import DOMPurify from "dompurify";
+import { cn } from "@/lib/utils";
 
-import { Chat } from "@/components/chat/chat"
+import { Chat } from "@/components/chat/chat";
 import {
   ChatHeader,
   ChatHeaderMain,
   ChatHeaderAddon,
   ChatHeaderAvatar,
-} from "@/components/chat/chat-header"
-import { ChatMessages } from "@/components/chat/chat-messages"
+} from "@/components/chat/chat-header";
+import { ChatMessages } from "@/components/chat/chat-messages";
 import {
   ChatToolbar,
   ChatToolbarTextarea,
   ChatToolbarAddon,
   ChatToolbarButton,
-} from "@/components/chat/chat-toolbar"
-import {
-  ChatEvent,
-  ChatEventTime,
-} from "@/components/chat/chat-event"
+} from "@/components/chat/chat-toolbar";
+import { ChatEvent, ChatEventTime } from "@/components/chat/chat-event";
 
 // ============================================
 // Types
 // ============================================
 
-type ConversationChannel = "WEB_ONLY" | "WEB_SMS" | "WEB_EMAIL"
+type ConversationChannel = "WEB_ONLY" | "WEB_SMS" | "WEB_EMAIL";
 
 interface Conversation {
-  id: string
-  organizationId: string
-  organizationName: string
-  organizationLogo: string | null
-  coachId: string | null
-  coachName: string | null
-  coachAvatar: string | null
-  channel: ConversationChannel
-  status: "OPEN" | "CLOSED" | "ARCHIVED"
-  lastMessageAt: string | null
-  lastMessageBody: string | null
-  unreadCount: number
-  createdAt: string
+  id: string;
+  organizationId: string;
+  organizationName: string;
+  organizationLogo: string | null;
+  coachId: string | null;
+  coachName: string | null;
+  coachAvatar: string | null;
+  channel: ConversationChannel;
+  status: "OPEN" | "CLOSED" | "ARCHIVED";
+  lastMessageAt: string | null;
+  lastMessageBody: string | null;
+  unreadCount: number;
+  createdAt: string;
 }
 
 interface Message {
-  id: string
-  body: string
-  channel: string
-  direction: "INBOUND" | "OUTBOUND"
-  twilioStatus: string
-  createdAt: string
-  sentAt: string | null
-  deliveredAt: string | null
-  failedAt: string | null
-  errorMessage: string | null
-  emailSubject: string | null
-  htmlBody: string | null
+  id: string;
+  body: string;
+  channel: string;
+  direction: "INBOUND" | "OUTBOUND";
+  twilioStatus: string;
+  createdAt: string;
+  sentAt: string | null;
+  deliveredAt: string | null;
+  failedAt: string | null;
+  errorMessage: string | null;
+  emailSubject: string | null;
+  htmlBody: string | null;
 }
 
 // ============================================
@@ -86,28 +83,28 @@ const channelIcons = {
   WEB_ONLY: Globe,
   WEB_SMS: Phone,
   WEB_EMAIL: Mail,
-} as const
+} as const;
 
 const messageChannelIcon = {
   WEB: Globe,
   SMS: Phone,
   EMAIL: Mail,
-} as const
+} as const;
 
 const channelColors = {
   WEB_ONLY: "text-blue-500",
   WEB_SMS: "text-green-500",
   WEB_EMAIL: "text-purple-500",
-} as const
+} as const;
 
 // ============================================
 // Email Message Card
 // ============================================
 
 function EmailMessageCard({ htmlBody, subject }: { htmlBody: string; subject: string | null }) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(false);
 
-  const sanitizedHtml = DOMPurify.sanitize(htmlBody, { USE_PROFILES: { html: true } })
+  const sanitizedHtml = DOMPurify.sanitize(htmlBody, { USE_PROFILES: { html: true } });
 
   return (
     <div className="border rounded-lg overflow-hidden bg-background">
@@ -120,7 +117,10 @@ function EmailMessageCard({ htmlBody, subject }: { htmlBody: string; subject: st
       <div
         className={cn("px-3 py-2 text-sm", !expanded && "max-h-[120px] overflow-hidden relative")}
       >
-        <div dangerouslySetInnerHTML={{ __html: sanitizedHtml }} className="prose prose-sm max-w-none" />
+        <div
+          dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+          className="prose prose-sm max-w-none"
+        />
         {!expanded && (
           <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent" />
         )}
@@ -132,7 +132,7 @@ function EmailMessageCard({ htmlBody, subject }: { htmlBody: string; subject: st
         {expanded ? "Show less" : "Show more"}
       </button>
     </div>
-  )
+  );
 }
 
 // ============================================
@@ -147,12 +147,12 @@ function ConversationSidebar({
   onSearchChange,
   isLoading,
 }: {
-  conversations: Conversation[]
-  selectedId: string | null
-  onSelect: (id: string) => void
-  searchQuery: string
-  onSearchChange: (query: string) => void
-  isLoading: boolean
+  conversations: Conversation[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+  isLoading: boolean;
 }) {
   return (
     <div className="flex flex-col h-full border-r">
@@ -186,11 +186,11 @@ function ConversationSidebar({
         ) : (
           <div className="divide-y">
             {conversations.map((conv) => {
-              const ChanIcon = channelIcons[conv.channel] || Globe
-              const chanColor = channelColors[conv.channel] || "text-muted-foreground"
-              const isCoach = !!conv.coachId
-              const displayName = isCoach ? (conv.coachName || "Coach") : conv.organizationName
-              const AvatarIcon = isCoach ? User : Building2
+              const ChanIcon = channelIcons[conv.channel] || Globe;
+              const chanColor = channelColors[conv.channel] || "text-muted-foreground";
+              const isCoach = !!conv.coachId;
+              const displayName = isCoach ? conv.coachName || "Coach" : conv.organizationName;
+              const AvatarIcon = isCoach ? User : Building2;
               return (
                 <button
                   key={conv.id}
@@ -229,13 +229,13 @@ function ConversationSidebar({
                     </div>
                   </div>
                 </button>
-              )
+              );
             })}
           </div>
         )}
       </ScrollArea>
     </div>
-  )
+  );
 }
 
 // ============================================
@@ -243,17 +243,17 @@ function ConversationSidebar({
 // ============================================
 
 function formatRelativeTime(date: Date): string {
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMs / 3600000)
-  const diffDays = Math.floor(diffMs / 86400000)
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return "just now"
-  if (diffMins < 60) return `${diffMins}m ago`
-  if (diffHours < 24) return `${diffHours}h ago`
-  if (diffDays < 7) return `${diffDays}d ago`
-  return date.toLocaleDateString()
+  if (diffMins < 1) return "just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
 }
 
 function getInitials(name: string): string {
@@ -262,7 +262,7 @@ function getInitials(name: string): string {
     .map((n) => n[0])
     .join("")
     .substring(0, 2)
-    .toUpperCase()
+    .toUpperCase();
 }
 
 // ============================================
@@ -270,25 +270,25 @@ function getInitials(name: string): string {
 // ============================================
 
 export default function AthleteChatPage() {
-  const [conversations, setConversations] = useState<Conversation[]>([])
-  const [isLoadingConversations, setIsLoadingConversations] = useState(true)
-  const [conversationSearch, setConversationSearch] = useState("")
-  const [debouncedSearch, setDebouncedSearch] = useState("")
-  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null)
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
+  const [conversationSearch, setConversationSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
 
-  const [messages, setMessages] = useState<Message[]>([])
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false)
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
-  const [newMessage, setNewMessage] = useState("")
-  const [isSending, setIsSending] = useState(false)
+  const [newMessage, setNewMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
 
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
-  const messagesPollRef = useRef<NodeJS.Timeout | null>(null)
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const messagesPollRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(conversationSearch), 300)
-    return () => clearTimeout(timer)
-  }, [conversationSearch])
+    const timer = setTimeout(() => setDebouncedSearch(conversationSearch), 300);
+    return () => clearTimeout(timer);
+  }, [conversationSearch]);
 
   // ============================================
   // Data fetching
@@ -296,98 +296,114 @@ export default function AthleteChatPage() {
 
   const fetchConversations = useCallback(async () => {
     try {
-      const params = new URLSearchParams()
-      if (debouncedSearch) params.set("search", debouncedSearch)
-      const response = await fetch(`/api/athletes/chat/conversations?${params}`)
-      if (!response.ok) throw new Error("Failed to fetch")
-      const data = await response.json()
-      setConversations(data.conversations || [])
+      const params = new URLSearchParams();
+      if (debouncedSearch) params.set("search", debouncedSearch);
+      const response = await fetch(`/api/athletes/chat/conversations?${params}`);
+      if (!response.ok) throw new Error("Failed to fetch");
+      const data = await response.json();
+      setConversations(data.conversations || []);
     } catch (error) {
-      console.error("Error fetching conversations:", error)
+      console.error("Error fetching conversations:", error);
     } finally {
-      setIsLoadingConversations(false)
+      setIsLoadingConversations(false);
     }
-  }, [debouncedSearch])
+  }, [debouncedSearch]);
 
   useEffect(() => {
-    fetchConversations()
+    fetchConversations();
 
     const startPoll = () => {
-      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
-      pollIntervalRef.current = setInterval(fetchConversations, 10000)
-    }
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = setInterval(fetchConversations, 10000);
+    };
     const stopPoll = () => {
-      if (pollIntervalRef.current) { clearInterval(pollIntervalRef.current); pollIntervalRef.current = null }
-    }
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    };
 
-    startPoll()
+    startPoll();
 
     const onVisibility = () => {
-      if (document.hidden) { stopPoll() } else { fetchConversations(); startPoll() }
-    }
-    document.addEventListener("visibilitychange", onVisibility)
+      if (document.hidden) {
+        stopPoll();
+      } else {
+        fetchConversations();
+        startPoll();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
-      stopPoll()
-      document.removeEventListener("visibilitychange", onVisibility)
-    }
-  }, [fetchConversations])
+      stopPoll();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [fetchConversations]);
 
   const fetchMessages = useCallback(async (convId: string) => {
     try {
-      const response = await fetch(`/api/athletes/chat/conversations/${convId}/messages?limit=100`)
-      if (!response.ok) throw new Error("Failed to fetch")
-      const data = await response.json()
-      setMessages(data.messages || [])
+      const response = await fetch(`/api/athletes/chat/conversations/${convId}/messages?limit=100`);
+      if (!response.ok) throw new Error("Failed to fetch");
+      const data = await response.json();
+      setMessages(data.messages || []);
     } catch (error) {
-      console.error("Error fetching messages:", error)
+      console.error("Error fetching messages:", error);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
     if (!selectedConversationId) {
-      setMessages([])
-      return
+      setMessages([]);
+      return;
     }
 
-    setIsLoadingMessages(true)
-    fetchMessages(selectedConversationId).finally(() => setIsLoadingMessages(false))
+    setIsLoadingMessages(true);
+    fetchMessages(selectedConversationId).finally(() => setIsLoadingMessages(false));
 
     fetch(`/api/athletes/chat/conversations/${selectedConversationId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ markRead: true }),
-    }).catch((err) => console.error("Failed to mark conversation as read:", err))
+    }).catch((err) => console.error("Failed to mark conversation as read:", err));
 
     const startPoll = () => {
-      if (messagesPollRef.current) clearInterval(messagesPollRef.current)
-      messagesPollRef.current = setInterval(() => fetchMessages(selectedConversationId), 10000)
-    }
+      if (messagesPollRef.current) clearInterval(messagesPollRef.current);
+      messagesPollRef.current = setInterval(() => fetchMessages(selectedConversationId), 10000);
+    };
     const stopPoll = () => {
-      if (messagesPollRef.current) { clearInterval(messagesPollRef.current); messagesPollRef.current = null }
-    }
+      if (messagesPollRef.current) {
+        clearInterval(messagesPollRef.current);
+        messagesPollRef.current = null;
+      }
+    };
 
-    startPoll()
+    startPoll();
 
     const onVisibility = () => {
-      if (document.hidden) { stopPoll() } else { fetchMessages(selectedConversationId); startPoll() }
-    }
-    document.addEventListener("visibilitychange", onVisibility)
+      if (document.hidden) {
+        stopPoll();
+      } else {
+        fetchMessages(selectedConversationId);
+        startPoll();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
-      stopPoll()
-      document.removeEventListener("visibilitychange", onVisibility)
-    }
-  }, [selectedConversationId, fetchMessages])
+      stopPoll();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [selectedConversationId, fetchMessages]);
 
   // ============================================
   // Actions
   // ============================================
 
   const handleSendMessage = useCallback(async () => {
-    if (!newMessage.trim() || !selectedConversationId || isSending) return
+    if (!newMessage.trim() || !selectedConversationId || isSending) return;
 
-    setIsSending(true)
+    setIsSending(true);
     try {
       const response = await fetch(
         `/api/athletes/chat/conversations/${selectedConversationId}/messages`,
@@ -396,24 +412,24 @@ export default function AthleteChatPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ body: newMessage }),
         }
-      )
+      );
 
       if (response.ok) {
-        setNewMessage("")
-        await fetchMessages(selectedConversationId)
-        fetchConversations()
+        setNewMessage("");
+        await fetchMessages(selectedConversationId);
+        fetchConversations();
       } else {
-        const data = await response.json()
-        toast.error(data.error || "Failed to send message")
+        const data = await response.json();
+        toast.error(data.error || "Failed to send message");
       }
     } catch {
-      toast.error("Failed to send message")
+      toast.error("Failed to send message");
     } finally {
-      setIsSending(false)
+      setIsSending(false);
     }
-  }, [newMessage, selectedConversationId, isSending, fetchMessages, fetchConversations])
+  }, [newMessage, selectedConversationId, isSending, fetchMessages, fetchConversations]);
 
-  const selectedConversation = conversations.find((c) => c.id === selectedConversationId)
+  const selectedConversation = conversations.find((c) => c.id === selectedConversationId);
 
   // ============================================
   // Render
@@ -440,10 +456,12 @@ export default function AthleteChatPage() {
             {!selectedConversationId ? (
               <div className="flex flex-col items-center justify-center h-full text-center px-8">
                 <MessageSquare className="h-16 w-16 text-muted-foreground/30 mb-4" />
-                <h2 className="text-lg font-semibold text-muted-foreground">Select a Conversation</h2>
+                <h2 className="text-lg font-semibold text-muted-foreground">
+                  Select a Conversation
+                </h2>
                 <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-                  Choose a conversation from the sidebar to view messages.
-                  Organizations you communicate with will appear here.
+                  Choose a conversation from the sidebar to view messages. Organizations you
+                  communicate with will appear here.
                 </p>
               </div>
             ) : (
@@ -452,19 +470,23 @@ export default function AthleteChatPage() {
                 <ChatHeader className="border-b px-4">
                   <ChatHeaderAddon>
                     <ChatHeaderAvatar
-                      fallback={selectedConversation
-                        ? getInitials(selectedConversation.coachId
-                          ? (selectedConversation.coachName || "Coach")
-                          : selectedConversation.organizationName)
-                        : "?"}
+                      fallback={
+                        selectedConversation
+                          ? getInitials(
+                              selectedConversation.coachId
+                                ? selectedConversation.coachName || "Coach"
+                                : selectedConversation.organizationName
+                            )
+                          : "?"
+                      }
                     />
                   </ChatHeaderAddon>
                   <ChatHeaderMain>
                     <div className="flex flex-col">
                       <span className="font-medium text-sm">
                         {selectedConversation?.coachId
-                          ? (selectedConversation.coachName || "Coach")
-                          : (selectedConversation?.organizationName || "Loading...")}
+                          ? selectedConversation.coachName || "Coach"
+                          : selectedConversation?.organizationName || "Loading..."}
                       </span>
                     </div>
                   </ChatHeaderMain>
@@ -484,9 +506,14 @@ export default function AthleteChatPage() {
                   ) : (
                     <div className="flex flex-col gap-1">
                       {messages.map((msg, idx) => {
-                        const isFromMe = msg.direction === "INBOUND"
-                        const showDateSep = idx === 0 || new Date(msg.createdAt).toDateString() !== new Date(messages[idx - 1].createdAt).toDateString()
-                        const MsgChanIcon = messageChannelIcon[msg.channel as keyof typeof messageChannelIcon] || Globe
+                        const isFromMe = msg.direction === "INBOUND";
+                        const showDateSep =
+                          idx === 0 ||
+                          new Date(msg.createdAt).toDateString() !==
+                            new Date(messages[idx - 1].createdAt).toDateString();
+                        const MsgChanIcon =
+                          messageChannelIcon[msg.channel as keyof typeof messageChannelIcon] ||
+                          Globe;
 
                         return (
                           <div key={msg.id}>
@@ -505,7 +532,10 @@ export default function AthleteChatPage() {
                               <div className="flex justify-end px-3 py-0.5">
                                 <div className="max-w-[75%]">
                                   {msg.htmlBody ? (
-                                    <EmailMessageCard htmlBody={msg.htmlBody} subject={msg.emailSubject} />
+                                    <EmailMessageCard
+                                      htmlBody={msg.htmlBody}
+                                      subject={msg.emailSubject}
+                                    />
                                   ) : (
                                     <div className="bg-primary text-primary-foreground rounded-2xl rounded-br-sm px-3 py-2">
                                       <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
@@ -525,7 +555,10 @@ export default function AthleteChatPage() {
                               <div className="flex justify-start px-3 py-0.5">
                                 <div className="max-w-[75%]">
                                   {msg.htmlBody ? (
-                                    <EmailMessageCard htmlBody={msg.htmlBody} subject={msg.emailSubject} />
+                                    <EmailMessageCard
+                                      htmlBody={msg.htmlBody}
+                                      subject={msg.emailSubject}
+                                    />
                                   ) : (
                                     <div className="bg-muted rounded-2xl rounded-bl-sm px-3 py-2">
                                       <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
@@ -542,9 +575,13 @@ export default function AthleteChatPage() {
                                       <CheckCircle2 className="h-3 w-3 text-green-500" />
                                     )}
                                     {msg.twilioStatus === "FAILED" && (
-                                      <span title={msg.errorMessage || "Failed"}><AlertTriangle className="h-3 w-3 text-destructive" /></span>
+                                      <span title={msg.errorMessage || "Failed"}>
+                                        <AlertTriangle className="h-3 w-3 text-destructive" />
+                                      </span>
                                     )}
-                                    {(msg.twilioStatus === "QUEUED" || msg.twilioStatus === "SENDING" || msg.twilioStatus === "SENT") && (
+                                    {(msg.twilioStatus === "QUEUED" ||
+                                      msg.twilioStatus === "SENDING" ||
+                                      msg.twilioStatus === "SENT") && (
                                       <CheckCircle2 className="h-3 w-3 text-muted-foreground" />
                                     )}
                                   </div>
@@ -552,7 +589,7 @@ export default function AthleteChatPage() {
                               </div>
                             )}
                           </div>
-                        )
+                        );
                       })}
                     </div>
                   )}
@@ -571,9 +608,7 @@ export default function AthleteChatPage() {
                     <ChatToolbarButton
                       onClick={handleSendMessage}
                       disabled={!newMessage.trim() || isSending}
-                      className={cn(
-                        newMessage.trim() && "text-primary hover:text-primary"
-                      )}
+                      className={cn(newMessage.trim() && "text-primary hover:text-primary")}
                     >
                       {isSending ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -589,5 +624,5 @@ export default function AthleteChatPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -78,10 +78,7 @@ const GLOBAL_PARENT_TABLES: Array<{
 ];
 
 // Tables to never copy (internal Prisma/seed data, not org-related).
-const SKIP_TABLES = new Set([
-  "_prisma_migrations",
-  "ReservedDomain",
-]);
+const SKIP_TABLES = new Set(["_prisma_migrations", "ReservedDomain"]);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -146,9 +143,7 @@ function openTunnel(containerIp: string): Promise<ChildProcess> {
       { stdio: "pipe" }
     );
 
-    tunnel.on("error", (err) =>
-      reject(new Error(`SSH tunnel failed to start: ${err.message}`))
-    );
+    tunnel.on("error", (err) => reject(new Error(`SSH tunnel failed to start: ${err.message}`)));
 
     let stderrOutput = "";
     tunnel.stderr?.on("data", (data: Buffer) => {
@@ -157,11 +152,7 @@ function openTunnel(containerIp: string): Promise<ChildProcess> {
 
     tunnel.on("close", (code) => {
       if (code !== null && code !== 0) {
-        reject(
-          new Error(
-            `SSH tunnel exited with code ${code}. stderr: ${stderrOutput}`
-          )
-        );
+        reject(new Error(`SSH tunnel exited with code ${code}. stderr: ${stderrOutput}`));
       }
     });
 
@@ -187,11 +178,7 @@ function openTunnel(containerIp: string): Promise<ChildProcess> {
         if (attempts >= maxAttempts) {
           clearInterval(interval);
           tunnel.kill();
-          reject(
-            new Error(
-              `SSH tunnel did not become ready after ${maxAttempts} attempts`
-            )
-          );
+          reject(new Error(`SSH tunnel did not become ready after ${maxAttempts} attempts`));
         }
       }
     }, 1000);
@@ -326,10 +313,7 @@ function discoverChildTables(
 /**
  * Get the set of column names that are json or jsonb type for a table.
  */
-async function getJsonColumns(
-  client: Client,
-  table: string
-): Promise<Set<string>> {
+async function getJsonColumns(client: Client, table: string): Promise<Set<string>> {
   const res = await client.query(
     `
     SELECT column_name
@@ -355,10 +339,7 @@ async function copyRows(
   whereParams: any[],
   upsert: boolean = false
 ): Promise<number> {
-  const rows = await staging.query(
-    `SELECT * FROM "${table}" WHERE ${whereClause}`,
-    whereParams
-  );
+  const rows = await staging.query(`SELECT * FROM "${table}" WHERE ${whereClause}`, whereParams);
 
   if (rows.rows.length === 0) return 0;
 
@@ -380,10 +361,7 @@ async function copyRows(
 
     for (let rowIdx = 0; rowIdx < chunk.length; rowIdx++) {
       const row = chunk[rowIdx];
-      const placeholders = columns.map(
-        (_, colIdx) =>
-          `$${rowIdx * columns.length + colIdx + 1}`
-      );
+      const placeholders = columns.map((_, colIdx) => `$${rowIdx * columns.length + colIdx + 1}`);
       valuePlaceholders.push(`(${placeholders.join(", ")})`);
 
       for (const col of columns) {
@@ -432,9 +410,7 @@ async function main() {
   // Safety: refuse if local DB looks like production
   const localUrl = LOCAL_DB_URL;
   if (localUrl.includes("prod") || localUrl.includes("uplifterinc.com")) {
-    logError(
-      "DATABASE_URL looks like a production database. This script only targets local."
-    );
+    logError("DATABASE_URL looks like a production database. This script only targets local.");
     process.exit(1);
   }
 
@@ -482,10 +458,7 @@ async function main() {
 
     // Step 3: Find org on staging
     logStep(`Looking up organization "${slug}" on staging...`);
-    const orgResult = await staging.query(
-      'SELECT * FROM "Organization" WHERE "slug" = $1',
-      [slug]
-    );
+    const orgResult = await staging.query('SELECT * FROM "Organization" WHERE "slug" = $1', [slug]);
 
     if (orgResult.rows.length === 0) {
       logError(`Organization not found on staging with slug: ${slug}`);
@@ -507,9 +480,7 @@ async function main() {
     logStep("Building FK dependency graph...");
     const fkEdges = await getFkGraph(staging);
     const childTables = discoverChildTables(orgScopedSet, fkEdges);
-    log(
-      `Discovered ${childTables.length} additional child tables via FK graph`
-    );
+    log(`Discovered ${childTables.length} additional child tables via FK graph`);
 
     // Step 5: Collect User and Athlete IDs to upsert
     logStep("Collecting User and Athlete IDs...");
@@ -534,10 +505,7 @@ async function main() {
 
     // Step 6: Delete existing local org (cascade)
     logStep("Deleting existing local organization (if any)...");
-    const deleteResult = await local.query(
-      'DELETE FROM "Organization" WHERE "slug" = $1',
-      [slug]
-    );
+    const deleteResult = await local.query('DELETE FROM "Organization" WHERE "slug" = $1', [slug]);
     if ((deleteResult.rowCount ?? 0) > 0) {
       log("Deleted existing local organization and all cascaded data");
     } else {
@@ -667,13 +635,7 @@ async function main() {
     for (const table of orgScopedSet) {
       if (SKIP_TABLES.has(table)) continue;
 
-      const count = await copyRows(
-        staging,
-        local,
-        table,
-        '"organizationId" = $1',
-        [orgId]
-      );
+      const count = await copyRows(staging, local, table, '"organizationId" = $1', [orgId]);
 
       if (count > 0) {
         summary.push({ table, rows: count });
@@ -683,10 +645,7 @@ async function main() {
           `SELECT "id" FROM "${table}" WHERE "organizationId" = $1`,
           [orgId]
         );
-        copiedIds.set(
-          table,
-          new Set(idsResult.rows.map((r: { id: string }) => r.id))
-        );
+        copiedIds.set(table, new Set(idsResult.rows.map((r: { id: string }) => r.id)));
       }
 
       logDim(`${table}: ${count} rows`);
@@ -732,17 +691,12 @@ async function main() {
               `SELECT "id" FROM "${child.table}" WHERE "${child.fkColumn}" IN (${placeholders})`,
               idArray
             );
-            copiedIds.set(
-              child.table,
-              new Set(idsResult.rows.map((r: { id: string }) => r.id))
-            );
+            copiedIds.set(child.table, new Set(idsResult.rows.map((r: { id: string }) => r.id)));
           }
 
           logDim(`${child.table}: ${count} rows`);
         } catch (err: any) {
-          logWarn(
-            `Skipped ${child.table}: ${err.message.split("\n")[0]}`
-          );
+          logWarn(`Skipped ${child.table}: ${err.message.split("\n")[0]}`);
         }
       }
     }

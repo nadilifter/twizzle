@@ -11,10 +11,7 @@ export async function GET(request: NextRequest) {
     // Slug is required for public access
     const slug = searchParams.get("slug");
     if (!slug) {
-      return NextResponse.json(
-        { error: "slug parameter is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "slug parameter is required" }, { status: 400 });
     }
 
     // Look up organization by subdomain
@@ -24,10 +21,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!config) {
-      return NextResponse.json(
-        { error: "Site not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Site not found" }, { status: 404 });
     }
 
     // Date range parameters
@@ -36,12 +30,8 @@ export async function GET(request: NextRequest) {
 
     // Default to current month +/- 1 month if no dates provided
     const now = new Date();
-    const start = startParam
-      ? new Date(startParam)
-      : startOfMonth(subMonths(now, 1));
-    const end = endParam
-      ? new Date(endParam)
-      : endOfMonth(addMonths(now, 1));
+    const start = startParam ? new Date(startParam) : startOfMonth(subMonths(now, 1));
+    const end = endParam ? new Date(endParam) : endOfMonth(addMonths(now, 1));
 
     const categoryId = searchParams.get("categoryId");
 
@@ -100,29 +90,31 @@ export async function GET(request: NextRequest) {
     const programIds = [...new Set(instances.map((i) => i.programId))];
 
     // Batch-fetch program-level enrollment counts (non-waitlisted) for ALL_INSTANCES programs
-    const enrollmentCounts = programIds.length > 0
-      ? await db.enrollment.groupBy({
-          by: ["programId"],
-          where: {
-            programId: { in: programIds },
-            status: { not: "WAITLISTED" },
-          },
-          _count: true,
-        })
-      : [];
+    const enrollmentCounts =
+      programIds.length > 0
+        ? await db.enrollment.groupBy({
+            by: ["programId"],
+            where: {
+              programId: { in: programIds },
+              status: { not: "WAITLISTED" },
+            },
+            _count: true,
+          })
+        : [];
     const enrollmentMap = new Map(enrollmentCounts.map((e) => [e.programId, e._count]));
 
     // Batch-fetch waitlisted enrollment counts
-    const waitlistCounts = programIds.length > 0
-      ? await db.enrollment.groupBy({
-          by: ["programId"],
-          where: {
-            programId: { in: programIds },
-            status: "WAITLISTED",
-          },
-          _count: true,
-        })
-      : [];
+    const waitlistCounts =
+      programIds.length > 0
+        ? await db.enrollment.groupBy({
+            by: ["programId"],
+            where: {
+              programId: { in: programIds },
+              status: "WAITLISTED",
+            },
+            _count: true,
+          })
+        : [];
     const waitlistMap = new Map(waitlistCounts.map((w) => [w.programId, w._count]));
 
     const events = instances.map((instance) => {
@@ -139,7 +131,8 @@ export async function GET(request: NextRequest) {
           if (instFull) {
             if (prog.waitlistEnabled) {
               const wlCount = waitlistMap.get(instance.programId) || 0;
-              isWaitlistAvailable = prog.waitlistCapacity == null || wlCount < prog.waitlistCapacity;
+              isWaitlistAvailable =
+                prog.waitlistCapacity == null || wlCount < prog.waitlistCapacity;
             }
             isSoldOut = !isWaitlistAvailable;
           }
@@ -149,7 +142,8 @@ export async function GET(request: NextRequest) {
           if (progFull) {
             if (prog.waitlistEnabled) {
               const wlCount = waitlistMap.get(instance.programId) || 0;
-              isWaitlistAvailable = prog.waitlistCapacity == null || wlCount < prog.waitlistCapacity;
+              isWaitlistAvailable =
+                prog.waitlistCapacity == null || wlCount < prog.waitlistCapacity;
             }
             isSoldOut = !isWaitlistAvailable;
           }
@@ -191,9 +185,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ events });
   } catch (error) {
     console.error("Error fetching public calendar instances:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch calendar instances" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch calendar instances" }, { status: 500 });
   }
 }

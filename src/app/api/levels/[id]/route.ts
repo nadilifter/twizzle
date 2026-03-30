@@ -7,15 +7,16 @@ const updateLevelSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
   description: z.string().optional().nullable(),
   order: z.number().int().min(0).optional(),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color").optional().nullable(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color")
+    .optional()
+    .nullable(),
   isDefault: z.boolean().optional(),
 });
 
 // GET /api/levels/[id] - Get a specific level
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -60,10 +61,7 @@ export async function GET(
 }
 
 // PUT /api/levels/[id] - Update a level
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -182,11 +180,11 @@ export async function DELETE(
     // Check if level is in use
     if (existingLevel._count.skills > 0) {
       return NextResponse.json(
-        { 
+        {
           error: "Cannot delete level that is in use",
           details: {
             skills: existingLevel._count.skills,
-          }
+          },
         },
         { status: 400 }
       );

@@ -1,15 +1,15 @@
-"use client"
+"use client";
 
-import Script from "next/script"
-import { useFeatures } from "@/components/feature-context"
+import Script from "next/script";
+import { useFeatures } from "@/components/feature-context";
 
 export function ZendeskWidget() {
-  const { isFeatureEnabled, isLoaded } = useFeatures()
+  const { isFeatureEnabled, isLoaded } = useFeatures();
 
-  if (!isLoaded || !isFeatureEnabled("liveSupport")) return null
+  if (!isLoaded || !isFeatureEnabled("liveSupport")) return null;
 
-  const key = process.env.NEXT_PUBLIC_ZENDESK_KEY
-  if (!key) return null
+  const key = process.env.NEXT_PUBLIC_ZENDESK_KEY;
+  if (!key) return null;
 
   return (
     <Script
@@ -17,5 +17,5 @@ export function ZendeskWidget() {
       src={`https://static.zdassets.com/ekr/snippet.js?key=${key}`}
       strategy="lazyOnload"
     />
-  )
+  );
 }

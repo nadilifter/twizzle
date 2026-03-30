@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -12,7 +12,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table"
+} from "@tanstack/react-table";
 import {
   Table,
   TableBody,
@@ -20,18 +20,18 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -40,67 +40,70 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
-import { DataTablePagination } from "@/components/data-table/data-table-pagination"
-import { DataTableViewOptions } from "@/components/data-table/data-table-view-options"
-import { MoreHorizontal, Plus, Search, Calendar as CalendarIcon, Wand2, Loader2 } from "lucide-react"
-import { format, parseISO } from "date-fns"
-import { cn } from "@/lib/utils"
-import { useFeatures } from "@/components/feature-context"
-import { toast } from "sonner"
+  MoreHorizontal,
+  Plus,
+  Search,
+  Calendar as CalendarIcon,
+  Wand2,
+  Loader2,
+} from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { cn } from "@/lib/utils";
+import { useFeatures } from "@/components/feature-context";
+import { toast } from "sonner";
 
 function formatDateString(dateStr: string): string {
-  const date = parseISO(dateStr)
-  return format(date, "M/d/yyyy")
+  const date = parseISO(dateStr);
+  return format(date, "M/d/yyyy");
 }
 
-type DiscountType = "PERCENTAGE" | "FIXED_AMOUNT"
+type DiscountType = "PERCENTAGE" | "FIXED_AMOUNT";
 
 type Discount = {
-  id: string
-  name: string
-  code: string
-  type: DiscountType
-  amount: number
-  validFrom: string
-  validTo?: string | null
-  userScope: "ALL" | "NEW_USERS" | "MEMBERS" | "VIP"
-  productScope: "ALL" | "MERCHANDISE" | "EVENTS" | "MEMBERSHIP"
-  status: "ACTIVE" | "EXPIRED" | "SCHEDULED" | "DRAFT"
-  usageCount: number
-  usageLimit?: number | null
-}
+  id: string;
+  name: string;
+  code: string;
+  type: DiscountType;
+  amount: number;
+  validFrom: string;
+  validTo?: string | null;
+  userScope: "ALL" | "NEW_USERS" | "MEMBERS" | "VIP";
+  productScope: "ALL" | "MERCHANDISE" | "EVENTS" | "MEMBERSHIP";
+  status: "ACTIVE" | "EXPIRED" | "SCHEDULED" | "DRAFT";
+  usageCount: number;
+  usageLimit?: number | null;
+};
 
 export default function DiscountsPage() {
-  const { isFeatureEnabled } = useFeatures()
-  const eventsEnabled = isFeatureEnabled("events")
-  const [discounts, setDiscounts] = React.useState<Discount[]>([])
-  const [loading, setLoading] = React.useState(true)
-  const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = React.useState({})
-  
+  const { isFeatureEnabled } = useFeatures();
+  const eventsEnabled = isFeatureEnabled("events");
+  const [discounts, setDiscounts] = React.useState<Discount[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = React.useState({});
+
   // Dialog state
-  const [open, setOpen] = React.useState(false)
-  const [saving, setSaving] = React.useState(false)
-  const [dateFrom, setDateFrom] = React.useState<Date>()
-  const [dateTo, setDateTo] = React.useState<Date>()
+  const [open, setOpen] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const [dateFrom, setDateFrom] = React.useState<Date>();
+  const [dateTo, setDateTo] = React.useState<Date>();
   const [formData, setFormData] = React.useState({
     name: "",
     code: "",
@@ -108,35 +111,35 @@ export default function DiscountsPage() {
     amount: "",
     userScope: "ALL",
     productScope: "ALL",
-  })
+  });
 
   const fetchDiscounts = React.useCallback(async () => {
     try {
-      const response = await fetch("/api/discounts")
-      if (!response.ok) throw new Error("Failed to fetch discounts")
-      
-      const data = await response.json()
-      setDiscounts(data.data || [])
+      const response = await fetch("/api/discounts");
+      if (!response.ok) throw new Error("Failed to fetch discounts");
+
+      const data = await response.json();
+      setDiscounts(data.data || []);
     } catch (error) {
-      console.error("Error fetching discounts:", error)
-      toast.error("Failed to load discounts")
+      console.error("Error fetching discounts:", error);
+      toast.error("Failed to load discounts");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
   React.useEffect(() => {
-    fetchDiscounts()
-  }, [fetchDiscounts])
+    fetchDiscounts();
+  }, [fetchDiscounts]);
 
   const generateCode = () => {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    let result = ""
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let result = "";
     for (let i = 0; i < 8; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length))
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    setFormData((prev) => ({ ...prev, code: result }))
-  }
+    setFormData((prev) => ({ ...prev, code: result }));
+  };
 
   const resetForm = () => {
     setFormData({
@@ -146,18 +149,18 @@ export default function DiscountsPage() {
       amount: "",
       userScope: "ALL",
       productScope: "ALL",
-    })
-    setDateFrom(undefined)
-    setDateTo(undefined)
-  }
+    });
+    setDateFrom(undefined);
+    setDateTo(undefined);
+  };
 
   const handleCreateDiscount = async () => {
     if (!formData.name || !formData.code || !formData.amount || !dateFrom) {
-      toast.error("Please fill in all required fields")
-      return
+      toast.error("Please fill in all required fields");
+      return;
     }
 
-    setSaving(true)
+    setSaving(true);
 
     try {
       const response = await fetch("/api/discounts", {
@@ -173,24 +176,24 @@ export default function DiscountsPage() {
           userScope: formData.userScope,
           productScope: formData.productScope,
         }),
-      })
+      });
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to create discount")
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create discount");
       }
 
-      toast.success("Discount created successfully")
-      setOpen(false)
-      resetForm()
-      fetchDiscounts()
+      toast.success("Discount created successfully");
+      setOpen(false);
+      resetForm();
+      fetchDiscounts();
     } catch (error) {
-      console.error("Error creating discount:", error)
-      toast.error(error instanceof Error ? error.message : "Failed to create discount")
+      console.error("Error creating discount:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to create discount");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleDeactivate = async (id: string) => {
     try {
@@ -198,24 +201,27 @@ export default function DiscountsPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "EXPIRED" }),
-      })
+      });
 
-      if (!response.ok) throw new Error("Failed to deactivate discount")
+      if (!response.ok) throw new Error("Failed to deactivate discount");
 
-      toast.success("Discount deactivated")
-      fetchDiscounts()
+      toast.success("Discount deactivated");
+      fetchDiscounts();
     } catch (error) {
-      console.error("Error deactivating discount:", error)
-      toast.error("Failed to deactivate discount")
+      console.error("Error deactivating discount:", error);
+      toast.error("Failed to deactivate discount");
     }
-  }
+  };
 
   const columns: ColumnDef<Discount>[] = [
     {
       id: "select",
       header: ({ table }) => (
         <Checkbox
-          checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
         />
@@ -244,13 +250,13 @@ export default function DiscountsPage() {
       accessorKey: "type",
       header: "Discount",
       cell: ({ row }) => {
-        const type = row.getValue("type") as DiscountType
-        const amount = row.original.amount
+        const type = row.getValue("type") as DiscountType;
+        const amount = row.original.amount;
         return (
           <div className="font-medium">
             {type === "PERCENTAGE" ? `${amount}%` : `$${Number(amount).toFixed(2)}`}
           </div>
-        )
+        );
       },
     },
     {
@@ -258,8 +264,13 @@ export default function DiscountsPage() {
       header: ({ column }) => <DataTableColumnHeader column={column} title="Scope" />,
       cell: ({ row }) => (
         <div className="flex flex-col gap-1 text-xs">
-          <span className="text-muted-foreground">User: <span className="font-medium text-foreground">{row.original.userScope}</span></span>
-          <span className="text-muted-foreground">Product: <span className="font-medium text-foreground">{row.original.productScope}</span></span>
+          <span className="text-muted-foreground">
+            User: <span className="font-medium text-foreground">{row.original.userScope}</span>
+          </span>
+          <span className="text-muted-foreground">
+            Product:{" "}
+            <span className="font-medium text-foreground">{row.original.productScope}</span>
+          </span>
         </div>
       ),
     },
@@ -267,13 +278,13 @@ export default function DiscountsPage() {
       accessorKey: "validity",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Validity" />,
       cell: ({ row }) => {
-        const from = formatDateString(row.original.validFrom)
-        const to = row.original.validTo ? formatDateString(row.original.validTo) : "Indefinite"
+        const from = formatDateString(row.original.validFrom);
+        const to = row.original.validTo ? formatDateString(row.original.validTo) : "Indefinite";
         return (
           <div className="text-xs text-muted-foreground">
             {from} - {to}
           </div>
-        )
+        );
       },
     },
     {
@@ -282,7 +293,9 @@ export default function DiscountsPage() {
       cell: ({ row }) => (
         <div className="text-center">
           {row.getValue("usageCount")}
-          {row.original.usageLimit && <span className="text-muted-foreground">/{row.original.usageLimit}</span>}
+          {row.original.usageLimit && (
+            <span className="text-muted-foreground">/{row.original.usageLimit}</span>
+          )}
         </div>
       ),
     },
@@ -290,12 +303,16 @@ export default function DiscountsPage() {
       accessorKey: "status",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
       cell: ({ row }) => {
-        const status = row.getValue("status") as string
+        const status = row.getValue("status") as string;
         return (
-          <Badge variant={status === "ACTIVE" ? "default" : status === "SCHEDULED" ? "secondary" : "outline"}>
+          <Badge
+            variant={
+              status === "ACTIVE" ? "default" : status === "SCHEDULED" ? "secondary" : "outline"
+            }
+          >
             {status}
           </Badge>
-        )
+        );
       },
     },
     {
@@ -313,7 +330,7 @@ export default function DiscountsPage() {
             <DropdownMenuItem onClick={() => navigator.clipboard.writeText(row.original.code)}>
               Copy Code
             </DropdownMenuItem>
-            <DropdownMenuItem 
+            <DropdownMenuItem
               className="text-destructive"
               onClick={() => handleDeactivate(row.original.id)}
             >
@@ -323,7 +340,7 @@ export default function DiscountsPage() {
         </DropdownMenu>
       ),
     },
-  ]
+  ];
 
   const table = useReactTable({
     data: discounts,
@@ -345,14 +362,14 @@ export default function DiscountsPage() {
     initialState: {
       pagination: { pageSize: 20 },
     },
-  })
+  });
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-    )
+    );
   }
 
   return (
@@ -381,8 +398,8 @@ export default function DiscountsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Campaign Name</Label>
-                  <Input 
-                    id="name" 
+                  <Input
+                    id="name"
                     placeholder="e.g. Summer Sale"
                     value={formData.name}
                     onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
@@ -391,13 +408,20 @@ export default function DiscountsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="code">Code</Label>
                   <div className="flex gap-2">
-                    <Input 
-                      id="code" 
-                      placeholder="SUMMER25" 
-                      value={formData.code} 
-                      onChange={(e) => setFormData((prev) => ({ ...prev, code: e.target.value.toUpperCase() }))}
+                    <Input
+                      id="code"
+                      placeholder="SUMMER25"
+                      value={formData.code}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, code: e.target.value.toUpperCase() }))
+                      }
                     />
-                    <Button variant="outline" size="icon" onClick={generateCode} title="Generate Code">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={generateCode}
+                      title="Generate Code"
+                    >
                       <Wand2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -407,9 +431,11 @@ export default function DiscountsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="type">Discount Type</Label>
-                  <Select 
-                    value={formData.type} 
-                    onValueChange={(v) => setFormData((prev) => ({ ...prev, type: v as DiscountType }))}
+                  <Select
+                    value={formData.type}
+                    onValueChange={(v) =>
+                      setFormData((prev) => ({ ...prev, type: v as DiscountType }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select type" />
@@ -422,9 +448,9 @@ export default function DiscountsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="amount">Amount</Label>
-                  <Input 
-                    id="amount" 
-                    type="number" 
+                  <Input
+                    id="amount"
+                    type="number"
                     placeholder="0"
                     value={formData.amount}
                     onChange={(e) => setFormData((prev) => ({ ...prev, amount: e.target.value }))}
@@ -474,12 +500,7 @@ export default function DiscountsPage() {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={dateTo}
-                        onSelect={setDateTo}
-                        initialFocus
-                      />
+                      <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus />
                     </PopoverContent>
                   </Popover>
                 </div>
@@ -488,8 +509,8 @@ export default function DiscountsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="userScope">User Scope</Label>
-                  <Select 
-                    value={formData.userScope} 
+                  <Select
+                    value={formData.userScope}
                     onValueChange={(v) => setFormData((prev) => ({ ...prev, userScope: v }))}
                   >
                     <SelectTrigger>
@@ -505,8 +526,8 @@ export default function DiscountsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="productScope">Product Scope</Label>
-                  <Select 
-                    value={formData.productScope} 
+                  <Select
+                    value={formData.productScope}
                     onValueChange={(v) => setFormData((prev) => ({ ...prev, productScope: v }))}
                   >
                     <SelectTrigger>
@@ -523,7 +544,12 @@ export default function DiscountsPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={saving}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={saving}
+              >
                 Cancel
               </Button>
               <Button onClick={handleCreateDiscount} disabled={saving}>
@@ -541,9 +567,7 @@ export default function DiscountsPage() {
           <Input
             placeholder="Search discounts..."
             value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-            onChange={(event) =>
-              table.getColumn("name")?.setFilterValue(event.target.value)
-            }
+            onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
             className="pl-8"
           />
         </div>
@@ -557,7 +581,9 @@ export default function DiscountsPage() {
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <TableHead key={header.id}>
-                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -568,7 +594,9 @@ export default function DiscountsPage() {
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                    <TableCell key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
                   ))}
                 </TableRow>
               ))
@@ -582,8 +610,8 @@ export default function DiscountsPage() {
           </TableBody>
         </Table>
       </div>
-      
+
       <DataTablePagination table={table} pageSizeOptions={[10, 20, 30, 50]} />
     </div>
-  )
+  );
 }

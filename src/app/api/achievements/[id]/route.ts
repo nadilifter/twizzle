@@ -10,10 +10,7 @@ const updateAchievementSchema = z.object({
 });
 
 // GET /api/achievements/[id]
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -72,18 +69,12 @@ export async function GET(
     return NextResponse.json(achievement);
   } catch (error) {
     console.error("Error fetching achievement:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch achievement" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch achievement" }, { status: 500 });
   }
 }
 
 // PUT /api/achievements/[id]
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -140,16 +131,10 @@ export async function PUT(
     return NextResponse.json(achievement);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error updating achievement:", error);
-    return NextResponse.json(
-      { error: "Failed to update achievement" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update achievement" }, { status: 500 });
   }
 }
 
@@ -195,7 +180,7 @@ export async function DELETE(
     // Warn if athletes have earned this achievement
     if (existingAchievement._count.athleteAchievements > 0) {
       return NextResponse.json(
-        { 
+        {
           error: "Achievement has been earned",
           message: `This achievement has been earned by ${existingAchievement._count.athleteAchievements} athlete(s). Deleting it will also remove their achievement records.`,
           requiresConfirmation: true,
@@ -213,9 +198,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting achievement:", error);
-    return NextResponse.json(
-      { error: "Failed to delete achievement" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete achievement" }, { status: 500 });
   }
 }

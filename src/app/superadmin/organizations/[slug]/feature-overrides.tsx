@@ -1,115 +1,115 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { toast } from "sonner"
-import { Loader2, RotateCcw, ShieldAlert } from "lucide-react"
+import * as React from "react";
+import { toast } from "sonner";
+import { Loader2, RotateCcw, ShieldAlert } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   FEATURE_KEYS,
   FEATURE_LABELS,
   FEATURE_DESCRIPTIONS,
   type FeatureKey,
   type FeatureToggles,
-} from "@/lib/feature-toggles"
+} from "@/lib/feature-toggles";
 
 interface FeatureOverridesProps {
-  organizationId: string
-  organizationName: string
+  organizationId: string;
+  organizationName: string;
 }
 
 interface FeatureData {
-  plan: { id: string; name: string } | null
-  planDefaults: FeatureToggles | null
-  overrides: Record<string, boolean> | null
-  resolved: FeatureToggles
+  plan: { id: string; name: string } | null;
+  planDefaults: FeatureToggles | null;
+  overrides: Record<string, boolean> | null;
+  resolved: FeatureToggles;
 }
 
 export function FeatureOverrides({ organizationId, organizationName }: FeatureOverridesProps) {
-  const [data, setData] = React.useState<FeatureData | null>(null)
-  const [isLoading, setIsLoading] = React.useState(true)
-  const [isSaving, setIsSaving] = React.useState(false)
-  const [pendingOverrides, setPendingOverrides] = React.useState<Record<string, boolean>>({})
-  const [hasChanges, setHasChanges] = React.useState(false)
+  const [data, setData] = React.useState<FeatureData | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [pendingOverrides, setPendingOverrides] = React.useState<Record<string, boolean>>({});
+  const [hasChanges, setHasChanges] = React.useState(false);
 
   const fetchData = React.useCallback(async () => {
     try {
-      setIsLoading(true)
-      const response = await fetch(`/api/superadmin/organizations/${organizationId}/features`)
-      if (!response.ok) throw new Error("Failed to fetch features")
-      const result = await response.json()
-      setData(result)
-      setPendingOverrides(result.overrides ?? {})
-      setHasChanges(false)
+      setIsLoading(true);
+      const response = await fetch(`/api/superadmin/organizations/${organizationId}/features`);
+      if (!response.ok) throw new Error("Failed to fetch features");
+      const result = await response.json();
+      setData(result);
+      setPendingOverrides(result.overrides ?? {});
+      setHasChanges(false);
     } catch (error) {
-      toast.error("Failed to load feature configuration")
+      toast.error("Failed to load feature configuration");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [organizationId])
+  }, [organizationId]);
 
   React.useEffect(() => {
-    fetchData()
-  }, [fetchData])
+    fetchData();
+  }, [fetchData]);
 
   const handleToggle = (key: FeatureKey, checked: boolean) => {
-    const planDefault = data?.planDefaults?.[key] ?? false
+    const planDefault = data?.planDefaults?.[key] ?? false;
 
     setPendingOverrides((prev) => {
-      const next = { ...prev }
+      const next = { ...prev };
       if (checked === planDefault) {
         // Matches plan default, remove override
-        delete next[key]
+        delete next[key];
       } else {
-        next[key] = checked
+        next[key] = checked;
       }
-      return next
-    })
-    setHasChanges(true)
-  }
+      return next;
+    });
+    setHasChanges(true);
+  };
 
   const handleSave = async () => {
     try {
-      setIsSaving(true)
+      setIsSaving(true);
       const response = await fetch(`/api/superadmin/organizations/${organizationId}/features`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ featureToggles: pendingOverrides }),
-      })
+      });
       if (!response.ok) {
-        const err = await response.json()
-        throw new Error(err.error || "Failed to save")
+        const err = await response.json();
+        throw new Error(err.error || "Failed to save");
       }
-      toast.success("Feature overrides saved")
-      fetchData()
+      toast.success("Feature overrides saved");
+      fetchData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save overrides")
+      toast.error(error instanceof Error ? error.message : "Failed to save overrides");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const handleResetAll = async () => {
     try {
-      setIsSaving(true)
+      setIsSaving(true);
       const response = await fetch(`/api/superadmin/organizations/${organizationId}/features`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ featureToggles: {} }),
-      })
-      if (!response.ok) throw new Error("Failed to reset")
-      toast.success("All overrides cleared - using plan defaults")
-      fetchData()
+      });
+      if (!response.ok) throw new Error("Failed to reset");
+      toast.success("All overrides cleared - using plan defaults");
+      fetchData();
     } catch (error) {
-      toast.error("Failed to reset overrides")
+      toast.error("Failed to reset overrides");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   if (isLoading) {
     return (
@@ -124,12 +124,12 @@ export function FeatureOverrides({ organizationId, organizationName }: FeatureOv
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </CardContent>
       </Card>
-    )
+    );
   }
 
-  if (!data) return null
+  if (!data) return null;
 
-  const overrideCount = Object.keys(pendingOverrides).length
+  const overrideCount = Object.keys(pendingOverrides).length;
 
   return (
     <Card>
@@ -143,7 +143,10 @@ export function FeatureOverrides({ organizationId, organizationName }: FeatureOv
             <CardDescription>
               Override plan defaults for {organizationName}.
               {data.plan ? (
-                <> Current plan: <Badge variant="outline">{data.plan.name}</Badge></>
+                <>
+                  {" "}
+                  Current plan: <Badge variant="outline">{data.plan.name}</Badge>
+                </>
               ) : (
                 " No plan assigned."
               )}
@@ -151,12 +154,7 @@ export function FeatureOverrides({ organizationId, organizationName }: FeatureOv
           </div>
           <div className="flex items-center gap-2">
             {overrideCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleResetAll}
-                disabled={isSaving}
-              >
+              <Button variant="ghost" size="sm" onClick={handleResetAll} disabled={isSaving}>
                 <RotateCcw className="mr-1 h-3 w-3" />
                 Reset All
               </Button>
@@ -173,9 +171,9 @@ export function FeatureOverrides({ organizationId, organizationName }: FeatureOv
       <CardContent>
         <div className="space-y-3">
           {FEATURE_KEYS.map((key) => {
-            const planDefault = data.planDefaults?.[key] ?? false
-            const isOverridden = key in pendingOverrides
-            const currentValue = isOverridden ? pendingOverrides[key] : planDefault
+            const planDefault = data.planDefaults?.[key] ?? false;
+            const isOverridden = key in pendingOverrides;
+            const currentValue = isOverridden ? pendingOverrides[key] : planDefault;
 
             return (
               <div
@@ -190,7 +188,10 @@ export function FeatureOverrides({ organizationId, organizationName }: FeatureOv
                       {FEATURE_LABELS[key]}
                     </Label>
                     {isOverridden && (
-                      <Badge variant="outline" className="text-xs text-amber-600 border-amber-500/50">
+                      <Badge
+                        variant="outline"
+                        className="text-xs text-amber-600 border-amber-500/50"
+                      >
                         Overridden
                       </Badge>
                     )}
@@ -198,9 +199,7 @@ export function FeatureOverrides({ organizationId, organizationName }: FeatureOv
                   <p className="text-xs text-muted-foreground">
                     {FEATURE_DESCRIPTIONS[key]}
                     {data.planDefaults && (
-                      <span className="ml-1">
-                        (Plan default: {planDefault ? "on" : "off"})
-                      </span>
+                      <span className="ml-1">(Plan default: {planDefault ? "on" : "off"})</span>
                     )}
                   </p>
                 </div>
@@ -210,10 +209,10 @@ export function FeatureOverrides({ organizationId, organizationName }: FeatureOv
                   onCheckedChange={(checked) => handleToggle(key, checked)}
                 />
               </div>
-            )
+            );
           })}
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

@@ -5,12 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import {
   Sheet,
@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
+import {
   ClipboardList,
   Calendar,
   CheckCircle2,
@@ -36,8 +36,8 @@ import {
 import { format } from "date-fns";
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
-import type { 
-  EvaluationWithRelations, 
+import type {
+  EvaluationWithRelations,
   EvaluationStatus,
   SkillAttemptStatus,
 } from "@/types/evaluations";
@@ -91,7 +91,7 @@ export default function AthleteEvaluationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingEvaluations, setIsLoadingEvaluations] = useState(false);
   const [activeTab, setActiveTab] = useState("upcoming");
-  
+
   // View evaluation state
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [viewEvaluation, setViewEvaluation] = useState<EvaluationWithRelations | null>(null);
@@ -120,7 +120,7 @@ export default function AthleteEvaluationsPage() {
   // Fetch evaluations for selected athlete
   const fetchEvaluations = useCallback(async () => {
     if (!selectedAthleteId) return;
-    
+
     setIsLoadingEvaluations(true);
     try {
       const response = await api.get<{ data: EvaluationWithRelations[] }>(
@@ -141,20 +141,18 @@ export default function AthleteEvaluationsPage() {
 
   // Filter evaluations
   const upcomingEvaluations = evaluations.filter(
-    e => e.status === "PENDING" || e.status === "IN_PROGRESS"
+    (e) => e.status === "PENDING" || e.status === "IN_PROGRESS"
   );
   const completedEvaluations = evaluations.filter(
-    e => !["PENDING", "IN_PROGRESS"].includes(e.status)
+    (e) => !["PENDING", "IN_PROGRESS"].includes(e.status)
   );
 
   // Stats
   const totalEvaluations = evaluations.length;
-  const passedCount = evaluations.filter(
-    e => ["PASS", "EXCELLENT", "SATISFACTORY"].includes(e.status)
+  const passedCount = evaluations.filter((e) =>
+    ["PASS", "EXCELLENT", "SATISFACTORY"].includes(e.status)
   ).length;
-  const passRate = totalEvaluations > 0 
-    ? Math.round((passedCount / totalEvaluations) * 100) 
-    : 0;
+  const passRate = totalEvaluations > 0 ? Math.round((passedCount / totalEvaluations) * 100) : 0;
 
   // Open view sheet
   const openView = (evaluation: EvaluationWithRelations) => {
@@ -164,11 +162,7 @@ export default function AthleteEvaluationsPage() {
 
   // Get status badge
   const getStatusBadge = (status: EvaluationStatus) => {
-    return (
-      <Badge className={statusColors[status]}>
-        {statusLabels[status]}
-      </Badge>
-    );
+    return <Badge className={statusColors[status]}>{statusLabels[status]}</Badge>;
   };
 
   if (isLoading) {
@@ -190,9 +184,7 @@ export default function AthleteEvaluationsPage() {
       <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-6">
         <ClipboardList className="h-12 w-12 text-muted-foreground mb-4" />
         <h2 className="text-xl font-semibold mb-2">No Athletes Found</h2>
-        <p className="text-muted-foreground">
-          You don&apos;t have any athletes registered yet.
-        </p>
+        <p className="text-muted-foreground">You don&apos;t have any athletes registered yet.</p>
       </div>
     );
   }
@@ -205,7 +197,7 @@ export default function AthleteEvaluationsPage() {
           <h1 className="text-2xl font-bold">Evaluations</h1>
           <p className="text-muted-foreground">View evaluation results and progress</p>
         </div>
-        
+
         {athletes.length > 1 && (
           <Select value={selectedAthleteId} onValueChange={setSelectedAthleteId}>
             <SelectTrigger className="w-[200px]">
@@ -304,7 +296,10 @@ export default function AthleteEvaluationsPage() {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="font-semibold">
-                            {evaluation.template?.name || (typeof evaluation.level === 'object' ? evaluation.level?.name : evaluation.level)}
+                            {evaluation.template?.name ||
+                              (typeof evaluation.level === "object"
+                                ? evaluation.level?.name
+                                : evaluation.level)}
                           </h3>
                           {getStatusBadge(evaluation.status)}
                         </div>
@@ -349,12 +344,11 @@ export default function AthleteEvaluationsPage() {
             <div className="space-y-4">
               {completedEvaluations.map((evaluation) => {
                 const totalSkills = evaluation.skillRatings?.length || 0;
-                const succeededSkills = evaluation.skillRatings?.filter(
-                  sr => sr.attemptStatus === "SUCCEEDED"
-                ).length || 0;
-                const progressPercent = totalSkills > 0 
-                  ? Math.round((succeededSkills / totalSkills) * 100) 
-                  : 0;
+                const succeededSkills =
+                  evaluation.skillRatings?.filter((sr) => sr.attemptStatus === "SUCCEEDED")
+                    .length || 0;
+                const progressPercent =
+                  totalSkills > 0 ? Math.round((succeededSkills / totalSkills) * 100) : 0;
 
                 return (
                   <Card key={evaluation.id}>
@@ -363,7 +357,10 @@ export default function AthleteEvaluationsPage() {
                         <div>
                           <div className="flex items-center gap-3 mb-1">
                             <h3 className="font-semibold">
-                              {evaluation.template?.name || (typeof evaluation.level === 'object' ? evaluation.level?.name : evaluation.level)}
+                              {evaluation.template?.name ||
+                                (typeof evaluation.level === "object"
+                                  ? evaluation.level?.name
+                                  : evaluation.level)}
                             </h3>
                             {getStatusBadge(evaluation.status)}
                           </div>
@@ -382,7 +379,9 @@ export default function AthleteEvaluationsPage() {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
                           <span>Skills Passed</span>
-                          <span className="font-medium">{succeededSkills}/{totalSkills}</span>
+                          <span className="font-medium">
+                            {succeededSkills}/{totalSkills}
+                          </span>
                         </div>
                         <Progress value={progressPercent} className="h-2" />
                       </div>
@@ -400,13 +399,16 @@ export default function AthleteEvaluationsPage() {
         <SheetContent className="sm:max-w-xl">
           <SheetHeader>
             <SheetTitle>
-              {viewEvaluation?.template?.name || (typeof viewEvaluation?.level === 'object' ? viewEvaluation?.level?.name : viewEvaluation?.level)}
+              {viewEvaluation?.template?.name ||
+                (typeof viewEvaluation?.level === "object"
+                  ? viewEvaluation?.level?.name
+                  : viewEvaluation?.level)}
             </SheetTitle>
             <SheetDescription>
               {viewEvaluation && format(new Date(viewEvaluation.date), "MMMM d, yyyy")}
             </SheetDescription>
           </SheetHeader>
-          
+
           <ScrollArea className="h-[calc(100vh-200px)] pr-4">
             {viewEvaluation && (
               <div className="space-y-6 py-4">
@@ -439,11 +441,11 @@ export default function AthleteEvaluationsPage() {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="font-medium text-sm">{sr.skill.name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {sr.skill.category}
-                              </p>
+                              <p className="text-xs text-muted-foreground">{sr.skill.category}</p>
                             </div>
-                            <div className={`flex items-center gap-1 ${attemptStatusColors[sr.attemptStatus]}`}>
+                            <div
+                              className={`flex items-center gap-1 ${attemptStatusColors[sr.attemptStatus]}`}
+                            >
                               <Icon className="h-5 w-5" />
                               <span className="text-sm font-medium">
                                 {attemptStatusLabels[sr.attemptStatus]}

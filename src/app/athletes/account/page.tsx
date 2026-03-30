@@ -40,12 +40,7 @@ interface UserProfile {
   createdAt: string;
 }
 
-type PhoneVerificationState =
-  | "idle"
-  | "sending"
-  | "sent"
-  | "verifying"
-  | "verified";
+type PhoneVerificationState = "idle" | "sending" | "sent" | "verifying" | "verified";
 
 export default function AccountPage() {
   const { update: updateSession } = useSession();
@@ -55,8 +50,7 @@ export default function AccountPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
 
-  const [phoneVerification, setPhoneVerification] =
-    useState<PhoneVerificationState>("idle");
+  const [phoneVerification, setPhoneVerification] = useState<PhoneVerificationState>("idle");
   const [verificationCode, setVerificationCode] = useState("");
 
   useEffect(() => {
@@ -137,11 +131,7 @@ export default function AccountPage() {
       }
     } catch (error) {
       setPhoneVerification("idle");
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to send verification code"
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to send verification code");
     }
   };
 
@@ -177,9 +167,7 @@ export default function AccountPage() {
     } catch (error) {
       setPhoneVerification("sent");
       setVerificationCode("");
-      toast.error(
-        error instanceof Error ? error.message : "Verification failed"
-      );
+      toast.error(error instanceof Error ? error.message : "Verification failed");
     }
   };
 
@@ -228,9 +216,7 @@ export default function AccountPage() {
     <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-2xl font-bold">Account Settings</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Manage your profile information
-        </p>
+        <p className="text-muted-foreground text-sm mt-1">Manage your profile information</p>
       </div>
 
       <Card>
@@ -280,12 +266,7 @@ export default function AccountPage() {
               <Mail className="h-3.5 w-3.5" />
               Email
             </Label>
-            <Input
-              id="email"
-              value={profile.email}
-              disabled
-              className="bg-muted"
-            />
+            <Input id="email" value={profile.email} disabled className="bg-muted" />
             <p className="text-xs text-muted-foreground">
               Email cannot be changed as it is used for login
             </p>
@@ -393,9 +374,7 @@ export default function AccountPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">{profile.phone}</p>
-                      <p className="text-xs text-green-600 dark:text-green-400">
-                        Verified
-                      </p>
+                      <p className="text-xs text-green-600 dark:text-green-400">Verified</p>
                     </div>
                     <Button
                       variant="ghost"
@@ -425,9 +404,7 @@ export default function AccountPage() {
                     <Button
                       onClick={handleSendPhoneCode}
                       disabled={
-                        phoneVerification === "sending" ||
-                        !phone ||
-                        !isValidPhoneNumber(phone)
+                        phoneVerification === "sending" || !phone || !isValidPhoneNumber(phone)
                       }
                     >
                       {phoneVerification === "sending" ? (

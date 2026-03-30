@@ -10,7 +10,11 @@ import { db } from "@/lib/db"; // tenant-isolation-ok: User is not a tenant mode
 import { syncUserToSelfAthlete } from "@/lib/sync-self-athlete";
 
 export async function POST(request: NextRequest) {
-  const rateLimitResponse = await checkApiRateLimit(request, "avatar-upload", RATE_LIMITS.sensitive);
+  const rateLimitResponse = await checkApiRateLimit(
+    request,
+    "avatar-upload",
+    RATE_LIMITS.sensitive
+  );
   if (rateLimitResponse) return rateLimitResponse;
 
   try {
@@ -102,7 +106,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const rateLimitResponse = await checkApiRateLimit(request, "avatar-delete", RATE_LIMITS.sensitive);
+  const rateLimitResponse = await checkApiRateLimit(
+    request,
+    "avatar-delete",
+    RATE_LIMITS.sensitive
+  );
   if (rateLimitResponse) return rateLimitResponse;
 
   try {

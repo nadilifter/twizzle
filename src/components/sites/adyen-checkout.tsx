@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useRef, useState, useCallback } from "react";
 import {
   AdyenCheckout,
   Dropin,
@@ -15,19 +15,19 @@ import {
   AfterPay,
   AmazonPay,
   PayByBankUS,
-} from "@adyen/adyen-web"
-import type { CoreConfiguration } from "@adyen/adyen-web/auto"
-import "@adyen/adyen-web/styles/adyen.css"
-import { Loader2 } from "lucide-react"
+} from "@adyen/adyen-web";
+import type { CoreConfiguration } from "@adyen/adyen-web/auto";
+import "@adyen/adyen-web/styles/adyen.css";
+import { Loader2 } from "lucide-react";
 
 interface AdyenCheckoutProps {
-  sessionId: string
-  sessionData: string
-  onPaymentCompleted: (result: { resultCode: string; sessionData?: string }) => void
-  onError: (error: { name?: string; message?: string; resultCode?: string }) => void
-  countryCode?: string
-  componentType?: string
-  adyenConfig?: Partial<CoreConfiguration>
+  sessionId: string;
+  sessionData: string;
+  onPaymentCompleted: (result: { resultCode: string; sessionData?: string }) => void;
+  onError: (error: { name?: string; message?: string; resultCode?: string }) => void;
+  countryCode?: string;
+  componentType?: string;
+  adyenConfig?: Partial<CoreConfiguration>;
 }
 
 export function AdyenCheckoutComponent({
@@ -39,34 +39,34 @@ export function AdyenCheckoutComponent({
   componentType = "dropin",
   adyenConfig,
 }: AdyenCheckoutProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const mountedComponentRef = useRef<{ unmount(): void } | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mountedComponentRef = useRef<{ unmount(): void } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const onPaymentCompletedRef = useRef(onPaymentCompleted)
-  onPaymentCompletedRef.current = onPaymentCompleted
-  const onErrorRef = useRef(onError)
-  onErrorRef.current = onError
+  const onPaymentCompletedRef = useRef(onPaymentCompleted);
+  onPaymentCompletedRef.current = onPaymentCompleted;
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
 
   const stableOnPaymentCompleted = useCallback((result: any) => {
-    onPaymentCompletedRef.current(result)
-  }, [])
+    onPaymentCompletedRef.current(result);
+  }, []);
 
   const stableOnError = useCallback((error: any) => {
-    onErrorRef.current(error)
-  }, [])
+    onErrorRef.current(error);
+  }, []);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
 
     const initAdyen = async () => {
-      if (!sessionId || !sessionData) return
+      if (!sessionId || !sessionData) return;
 
       try {
-        const environment = process.env.NEXT_PUBLIC_ADYEN_ENVIRONMENT?.toLowerCase() || "test"
-        const clientKey = process.env.NEXT_PUBLIC_ADYEN_CLIENT_KEY
+        const environment = process.env.NEXT_PUBLIC_ADYEN_ENVIRONMENT?.toLowerCase() || "test";
+        const clientKey = process.env.NEXT_PUBLIC_ADYEN_CLIENT_KEY;
         if (!clientKey) {
-          throw new Error("NEXT_PUBLIC_ADYEN_CLIENT_KEY is not configured")
+          throw new Error("NEXT_PUBLIC_ADYEN_CLIENT_KEY is not configured");
         }
 
         const checkout = await AdyenCheckout({
@@ -78,25 +78,25 @@ export function AdyenCheckoutComponent({
             sessionData,
           },
           onPaymentCompleted: (result: any) => {
-            stableOnPaymentCompleted(result)
+            stableOnPaymentCompleted(result);
           },
           onPaymentFailed: (result: any) => {
-            stableOnError(result)
+            stableOnError(result);
           },
           onError: (error: any) => {
-            stableOnError(error)
+            stableOnError(error);
           },
           ...adyenConfig,
-        })
+        });
 
-        if (cancelled || !containerRef.current) return
+        if (cancelled || !containerRef.current) return;
 
         if (mountedComponentRef.current) {
-          mountedComponentRef.current.unmount()
-          mountedComponentRef.current = null
+          mountedComponentRef.current.unmount();
+          mountedComponentRef.current = null;
         }
 
-        const ComponentClass = componentType === "card" ? Card : Dropin
+        const ComponentClass = componentType === "card" ? Card : Dropin;
         const component = new ComponentClass(checkout, {
           ...(componentType !== "card" && {
             paymentMethodComponents: [
@@ -113,33 +113,41 @@ export function AdyenCheckoutComponent({
               PayByBankUS,
             ],
           }),
-        })
-        component.mount(containerRef.current)
-        mountedComponentRef.current = component as any
-        setIsLoading(false)
+        });
+        component.mount(containerRef.current);
+        mountedComponentRef.current = component as any;
+        setIsLoading(false);
       } catch (err) {
-        if (cancelled) return
-        console.error("Adyen initialization failed", err)
-        setIsLoading(false)
-        stableOnError(err as any)
+        if (cancelled) return;
+        console.error("Adyen initialization failed", err);
+        setIsLoading(false);
+        stableOnError(err as any);
       }
-    }
+    };
 
-    setIsLoading(true)
-    initAdyen()
+    setIsLoading(true);
+    initAdyen();
 
     return () => {
-      cancelled = true
+      cancelled = true;
       if (mountedComponentRef.current) {
         try {
-          mountedComponentRef.current.unmount()
+          mountedComponentRef.current.unmount();
         } catch {
           // Component may already be unmounted
         }
-        mountedComponentRef.current = null
+        mountedComponentRef.current = null;
       }
-    }
-  }, [sessionId, sessionData, countryCode, componentType, adyenConfig, stableOnPaymentCompleted, stableOnError])
+    };
+  }, [
+    sessionId,
+    sessionData,
+    countryCode,
+    componentType,
+    adyenConfig,
+    stableOnPaymentCompleted,
+    stableOnError,
+  ]);
 
   return (
     <div className="w-full">
@@ -151,5 +159,5 @@ export function AdyenCheckoutComponent({
       )}
       <div ref={containerRef} className={isLoading ? "hidden" : "w-full"} />
     </div>
-  )
+  );
 }

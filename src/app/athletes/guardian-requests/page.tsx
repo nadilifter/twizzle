@@ -60,7 +60,9 @@ export default function GuardianRequestsPage() {
       });
 
       if (res.ok) {
-        toast.success(action === "approve" ? "Guardian request approved" : "Guardian request denied");
+        toast.success(
+          action === "approve" ? "Guardian request approved" : "Guardian request denied"
+        );
         setClaims((prev) => prev.filter((c) => c.id !== claimId));
       } else {
         const data = await res.json();
@@ -86,9 +88,7 @@ export default function GuardianRequestsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Guardian Requests</h1>
-        {claims.length > 0 && (
-          <Badge variant="secondary">{claims.length} pending</Badge>
-        )}
+        {claims.length > 0 && <Badge variant="secondary">{claims.length} pending</Badge>}
       </div>
 
       {claims.length === 0 ? (
@@ -97,7 +97,8 @@ export default function GuardianRequestsPage() {
             <Shield className="w-12 h-12 mx-auto mb-3 text-muted-foreground/40" />
             <h3 className="font-semibold text-lg mb-1">No pending requests</h3>
             <p className="text-sm text-muted-foreground">
-              When someone requests to be added as a guardian of one of your athletes, it will appear here.
+              When someone requests to be added as a guardian of one of your athletes, it will
+              appear here.
             </p>
           </CardContent>
         </Card>
@@ -117,9 +118,8 @@ export default function GuardianRequestsPage() {
                       </div>
                       <div>
                         <p className="font-medium text-sm">
-                          <span className="font-semibold">{claim.requestingUser.name}</span>{" "}
-                          wants to be a guardian of{" "}
-                          <span className="font-semibold">{athleteName}</span>
+                          <span className="font-semibold">{claim.requestingUser.name}</span> wants
+                          to be a guardian of <span className="font-semibold">{athleteName}</span>
                         </p>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                           <span>{claim.requestingUser.email}</span>

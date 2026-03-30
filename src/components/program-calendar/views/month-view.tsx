@@ -21,8 +21,7 @@ import { EventPill, EventCard } from "../calendar-event";
 import type { CalendarEvent } from "../types";
 
 export function MonthView() {
-  const { currentDate, setCurrentDate, setViewMode, events } =
-    useCalendarContext();
+  const { currentDate, setCurrentDate, setViewMode, events } = useCalendarContext();
 
   // Generate calendar days for month view
   const calendarDays = useMemo(() => {
@@ -56,7 +55,7 @@ export function MonthView() {
       const dayEvents = getEventsForDay(day);
       return dayEvents.length > 0 && isSameMonth(day, currentDate);
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calendarDays, events, currentDate]);
 
   const handleDayClick = (day: Date) => {

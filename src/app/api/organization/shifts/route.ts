@@ -12,7 +12,9 @@ const createShiftSchema = z.object({
   endTime: z.string().regex(/^\d{2}:\d{2}$/, "End time must be in HH:MM format"),
   shiftType: z.string().min(1, "Shift type is required"),
   notes: z.string().optional().nullable(),
-  status: z.enum(["SCHEDULED", "CONFIRMED", "IN_PROGRESS", "COMPLETED", "CANCELLED", "NO_SHOW"]).optional(),
+  status: z
+    .enum(["SCHEDULED", "CONFIRMED", "IN_PROGRESS", "COMPLETED", "CANCELLED", "NO_SHOW"])
+    .optional(),
 });
 
 // GET - List all shifts for the organization
@@ -48,7 +50,15 @@ export async function GET(request: NextRequest) {
         organizationId,
         ...(memberId && { memberId }),
         ...(facilityId && { facilityId }),
-        ...(status && { status: status as "SCHEDULED" | "CONFIRMED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED" | "NO_SHOW" }),
+        ...(status && {
+          status: status as
+            | "SCHEDULED"
+            | "CONFIRMED"
+            | "IN_PROGRESS"
+            | "COMPLETED"
+            | "CANCELLED"
+            | "NO_SHOW",
+        }),
         ...(startDate && {
           date: {
             gte: parseDateOnly(startDate)!,
@@ -80,10 +90,7 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      orderBy: [
-        { date: "asc" },
-        { startTime: "asc" },
-      ],
+      orderBy: [{ date: "asc" }, { startTime: "asc" }],
     });
 
     return NextResponse.json(shifts);

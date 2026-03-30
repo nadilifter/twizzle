@@ -57,7 +57,7 @@ const US_STATE_TAX_RATES: Record<string, number> = {
   WI: 0.05,
   WY: 0.04,
   DC: 0.06,
-}
+};
 
 /**
  * Canadian provincial sales tax rates (combined GST/HST/PST where applicable).
@@ -76,19 +76,22 @@ const CA_PROVINCE_TAX_RATES: Record<string, number> = {
   QC: 0.14975,
   SK: 0.11,
   YT: 0.05,
-}
+};
 
 /**
  * Get the default state/provincial sales tax rate for a given region code.
  * Returns 0 if the code is not recognized.
  */
-export function getDefaultTaxRate(stateOrProvinceCode: string | null | undefined, country?: string | null): number {
-  if (!stateOrProvinceCode) return 0
-  const code = stateOrProvinceCode.toUpperCase().trim()
+export function getDefaultTaxRate(
+  stateOrProvinceCode: string | null | undefined,
+  country?: string | null
+): number {
+  if (!stateOrProvinceCode) return 0;
+  const code = stateOrProvinceCode.toUpperCase().trim();
 
   if (country?.toUpperCase() === "CA") {
-    return CA_PROVINCE_TAX_RATES[code] ?? 0
+    return CA_PROVINCE_TAX_RATES[code] ?? 0;
   }
 
-  return US_STATE_TAX_RATES[code] ?? CA_PROVINCE_TAX_RATES[code] ?? 0
+  return US_STATE_TAX_RATES[code] ?? CA_PROVINCE_TAX_RATES[code] ?? 0;
 }

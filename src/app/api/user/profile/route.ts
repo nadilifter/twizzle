@@ -8,9 +8,11 @@ import { syncUserToSelfAthlete } from "@/lib/sync-self-athlete";
 
 const updateProfileSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
-  phone: z.string()
+  phone: z
+    .string()
     .refine((val) => !val || isValidPhoneNumber(val), "Please enter a valid phone number")
-    .optional().nullable(),
+    .optional()
+    .nullable(),
 });
 
 export async function GET(request: NextRequest) {
@@ -48,7 +50,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const rateLimitResponse = await checkApiRateLimit(request, "user-profile-update", RATE_LIMITS.sensitive);
+  const rateLimitResponse = await checkApiRateLimit(
+    request,
+    "user-profile-update",
+    RATE_LIMITS.sensitive
+  );
   if (rateLimitResponse) return rateLimitResponse;
 
   try {
@@ -92,10 +98,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json(user);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error updating user profile:", error);
     return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });

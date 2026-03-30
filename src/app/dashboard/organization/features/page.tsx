@@ -1,156 +1,149 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useSession } from "next-auth/react"
-import { CheckCircle2, XCircle, Loader2, Shield, Save, RotateCcw, Info } from "lucide-react"
-import { toast } from "sonner"
+import * as React from "react";
+import { useSession } from "next-auth/react";
+import { CheckCircle2, XCircle, Loader2, Shield, Save, RotateCcw, Info } from "lucide-react";
+import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Switch } from "@/components/ui/switch"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   FEATURE_KEYS,
   FEATURE_LABELS,
   FEATURE_DESCRIPTIONS,
   type FeatureKey,
   type FeatureToggles,
-} from "@/lib/feature-toggles"
+} from "@/lib/feature-toggles";
 
 interface SuperadminFeatureData {
-  plan: { id: string; name: string } | null
-  planDefaults: FeatureToggles | null
-  overrides: Record<string, boolean> | null
-  resolved: FeatureToggles
-  lastUpdatedBy: string | null
-  lastUpdatedAt: string | null
+  plan: { id: string; name: string } | null;
+  planDefaults: FeatureToggles | null;
+  overrides: Record<string, boolean> | null;
+  resolved: FeatureToggles;
+  lastUpdatedBy: string | null;
+  lastUpdatedAt: string | null;
 }
 
 export default function OrganizationFeaturesPage() {
-  const { data: session } = useSession()
-  const isSuperAdmin = session?.user?.isSuperAdmin ?? false
-  const organizationId = session?.user?.organizationId
+  const { data: session } = useSession();
+  const isSuperAdmin = session?.user?.isSuperAdmin ?? false;
+  const organizationId = session?.user?.organizationId;
 
-  const [features, setFeatures] = React.useState<FeatureToggles | null>(null)
-  const [superadminData, setSuperadminData] = React.useState<SuperadminFeatureData | null>(null)
-  const [overrideToggles, setOverrideToggles] = React.useState<Record<string, boolean>>({})
-  const [isLoading, setIsLoading] = React.useState(true)
-  const [isSaving, setIsSaving] = React.useState(false)
+  const [features, setFeatures] = React.useState<FeatureToggles | null>(null);
+  const [superadminData, setSuperadminData] = React.useState<SuperadminFeatureData | null>(null);
+  const [overrideToggles, setOverrideToggles] = React.useState<Record<string, boolean>>({});
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isSaving, setIsSaving] = React.useState(false);
 
   const fetchFeatures = React.useCallback(async () => {
-    if (!organizationId) return
+    if (!organizationId) return;
 
     try {
       if (isSuperAdmin) {
-        const response = await fetch(`/api/superadmin/organizations/${organizationId}/features`)
-        if (!response.ok) throw new Error("Failed to fetch")
-        const data: SuperadminFeatureData = await response.json()
-        setSuperadminData(data)
-        setFeatures(data.resolved)
+        const response = await fetch(`/api/superadmin/organizations/${organizationId}/features`);
+        if (!response.ok) throw new Error("Failed to fetch");
+        const data: SuperadminFeatureData = await response.json();
+        setSuperadminData(data);
+        setFeatures(data.resolved);
         setOverrideToggles(
           data.overrides && typeof data.overrides === "object" ? { ...data.overrides } : {}
-        )
+        );
       } else {
-        const response = await fetch("/api/organization/features")
-        if (!response.ok) throw new Error("Failed to fetch")
-        const data = await response.json()
-        setFeatures(data)
+        const response = await fetch("/api/organization/features");
+        if (!response.ok) throw new Error("Failed to fetch");
+        const data = await response.json();
+        setFeatures(data);
       }
     } catch (error) {
-      console.error("Failed to load features:", error)
+      console.error("Failed to load features:", error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [organizationId, isSuperAdmin])
+  }, [organizationId, isSuperAdmin]);
 
   React.useEffect(() => {
-    fetchFeatures()
-  }, [fetchFeatures])
+    fetchFeatures();
+  }, [fetchFeatures]);
 
   const hasOverrideChanges = React.useMemo(() => {
-    if (!superadminData) return false
-    const original = superadminData.overrides ?? {}
-    if (Object.keys(overrideToggles).length !== Object.keys(original).length) return true
+    if (!superadminData) return false;
+    const original = superadminData.overrides ?? {};
+    if (Object.keys(overrideToggles).length !== Object.keys(original).length) return true;
     for (const [key, val] of Object.entries(overrideToggles)) {
-      if ((original as Record<string, boolean>)[key] !== val) return true
+      if ((original as Record<string, boolean>)[key] !== val) return true;
     }
-    return false
-  }, [overrideToggles, superadminData])
+    return false;
+  }, [overrideToggles, superadminData]);
 
   const handleToggleOverride = (key: FeatureKey, enabled: boolean) => {
-    if (!superadminData) return
-    const planDefault = superadminData.planDefaults?.[key] ?? false
+    if (!superadminData) return;
+    const planDefault = superadminData.planDefaults?.[key] ?? false;
 
     if (enabled === planDefault) {
       // Remove the override since it matches the plan default
       setOverrideToggles((prev) => {
-        const next = { ...prev }
-        delete next[key]
-        return next
-      })
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
     } else {
       // Set the override to differ from plan default
-      setOverrideToggles((prev) => ({ ...prev, [key]: enabled }))
+      setOverrideToggles((prev) => ({ ...prev, [key]: enabled }));
     }
-  }
+  };
 
   const handleSaveOverrides = async () => {
-    if (!organizationId) return
-    setIsSaving(true)
+    if (!organizationId) return;
+    setIsSaving(true);
     try {
       const response = await fetch(`/api/superadmin/organizations/${organizationId}/features`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ featureToggles: overrideToggles }),
-      })
+      });
       if (!response.ok) {
-        const err = await response.json()
-        throw new Error(err.error || "Failed to save")
+        const err = await response.json();
+        throw new Error(err.error || "Failed to save");
       }
-      toast.success("Feature overrides saved. Refreshing...")
+      toast.success("Feature overrides saved. Refreshing...");
       // Full refresh so sidebar, context, and all feature-gated UI updates
-      window.location.reload()
+      window.location.reload();
     } catch (error: any) {
-      toast.error(error.message || "Failed to save feature overrides")
-      setIsSaving(false)
+      toast.error(error.message || "Failed to save feature overrides");
+      setIsSaving(false);
     }
-  }
+  };
 
   const handleResetOverrides = () => {
-    if (!superadminData) return
+    if (!superadminData) return;
     setOverrideToggles(
       superadminData.overrides && typeof superadminData.overrides === "object"
         ? { ...superadminData.overrides }
         : {}
-    )
-  }
+    );
+  };
 
   const getResolvedValue = (key: FeatureKey): boolean => {
-    if (!superadminData) return features?.[key] ?? false
-    const planDefault = superadminData.planDefaults?.[key] ?? false
-    if (key in overrideToggles) return overrideToggles[key]
-    return planDefault
-  }
+    if (!superadminData) return features?.[key] ?? false;
+    const planDefault = superadminData.planDefaults?.[key] ?? false;
+    if (key in overrideToggles) return overrideToggles[key];
+    return planDefault;
+  };
 
-  const enabledCount = features
-    ? FEATURE_KEYS.filter((k) => features[k]).length
-    : 0
+  const enabledCount = features ? FEATURE_KEYS.filter((k) => features[k]).length : 0;
 
   const sortedFeatureKeys = React.useMemo(() => {
-    if (!features) return FEATURE_KEYS
+    if (!features) return FEATURE_KEYS;
     return [...FEATURE_KEYS].sort((a, b) => {
-      const aEnabled = features[a]
-      const bEnabled = features[b]
-      if (aEnabled !== bEnabled) return aEnabled ? -1 : 1
-      return FEATURE_LABELS[a].localeCompare(FEATURE_LABELS[b])
-    })
-  }, [features])
+      const aEnabled = features[a];
+      const bEnabled = features[b];
+      if (aEnabled !== bEnabled) return aEnabled ? -1 : 1;
+      return FEATURE_LABELS[a].localeCompare(FEATURE_LABELS[b]);
+    });
+  }, [features]);
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -200,11 +193,7 @@ export default function OrganizationFeaturesPage() {
                   <RotateCcw className="h-4 w-4 mr-1" />
                   Reset
                 </Button>
-                <Button
-                  size="sm"
-                  onClick={handleSaveOverrides}
-                  disabled={isSaving}
-                >
+                <Button size="sm" onClick={handleSaveOverrides} disabled={isSaving}>
                   {isSaving ? (
                     <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                   ) : (
@@ -219,15 +208,12 @@ export default function OrganizationFeaturesPage() {
           <TooltipProvider>
             <div className="grid gap-4 md:grid-cols-2">
               {sortedFeatureKeys.map((key) => {
-                const resolvedEnabled = isSuperAdmin ? getResolvedValue(key) : features[key]
-                const planDefault = superadminData?.planDefaults?.[key] ?? false
-                const isOverridden = isSuperAdmin && key in overrideToggles
+                const resolvedEnabled = isSuperAdmin ? getResolvedValue(key) : features[key];
+                const planDefault = superadminData?.planDefaults?.[key] ?? false;
+                const isOverridden = isSuperAdmin && key in overrideToggles;
 
                 return (
-                  <Card
-                    key={key}
-                    className={!resolvedEnabled ? "opacity-60" : ""}
-                  >
+                  <Card key={key} className={!resolvedEnabled ? "opacity-60" : ""}>
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-base flex items-center gap-2">
@@ -270,9 +256,7 @@ export default function OrganizationFeaturesPage() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-sm text-muted-foreground">
-                        {FEATURE_DESCRIPTIONS[key]}
-                      </p>
+                      <p className="text-sm text-muted-foreground">{FEATURE_DESCRIPTIONS[key]}</p>
                       {isSuperAdmin && (
                         <p className="text-xs text-muted-foreground mt-2">
                           Plan default: {planDefault ? "Enabled" : "Disabled"}
@@ -281,17 +265,18 @@ export default function OrganizationFeaturesPage() {
                       )}
                       {!isSuperAdmin && !resolvedEnabled && (
                         <p className="text-xs text-muted-foreground mt-2">
-                          Contact your administrator to upgrade your plan for access to this feature.
+                          Contact your administrator to upgrade your plan for access to this
+                          feature.
                         </p>
                       )}
                     </CardContent>
                   </Card>
-                )
+                );
               })}
             </div>
           </TooltipProvider>
         </>
       )}
     </div>
-  )
+  );
 }

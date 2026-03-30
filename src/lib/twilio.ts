@@ -57,10 +57,7 @@ function getClient(): twilio.Twilio {
     if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
       throw new Error("Twilio credentials not configured");
     }
-    twilioClient = twilio(
-      process.env.TWILIO_ACCOUNT_SID,
-      process.env.TWILIO_AUTH_TOKEN
-    );
+    twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
   }
   return twilioClient;
 }
@@ -76,9 +73,7 @@ export async function fetchVerifiedTollFreeNumbers(): Promise<Set<string>> {
   const client = getClient();
   const verifications = await client.messaging.v1.tollfreeVerifications.list();
   return new Set(
-    verifications
-      .filter((v) => v.status === "TWILIO_APPROVED")
-      .map((v) => v.tollfreePhoneNumber)
+    verifications.filter((v) => v.status === "TWILIO_APPROVED").map((v) => v.tollfreePhoneNumber)
   );
 }
 
@@ -99,12 +94,12 @@ export function isTwilioConfigured(): boolean {
  */
 export function getWebhookUrl(path: string = "/api/twilio/webhook"): string | null {
   const baseUrl = process.env.TWILIO_WEBHOOK_URL || process.env.NEXTAUTH_URL || "";
-  
+
   // Skip webhook for localhost - Twilio can't reach it
   if (baseUrl.includes("localhost") || baseUrl.includes("127.0.0.1")) {
     return null;
   }
-  
+
   return `${baseUrl}${path}`;
 }
 
@@ -289,12 +284,7 @@ export function validateWebhookSignature(
     return false;
   }
 
-  return twilio.validateRequest(
-    process.env.TWILIO_AUTH_TOKEN,
-    signature,
-    url,
-    params
-  );
+  return twilio.validateRequest(process.env.TWILIO_AUTH_TOKEN, signature, url, params);
 }
 
 /**
@@ -320,7 +310,10 @@ export async function getMessageStatus(sid: string): Promise<MessageInstance | n
 export function mapTwilioStatus(
   twilioStatus: string
 ): "QUEUED" | "SENDING" | "SENT" | "DELIVERED" | "UNDELIVERED" | "FAILED" {
-  const statusMap: Record<string, "QUEUED" | "SENDING" | "SENT" | "DELIVERED" | "UNDELIVERED" | "FAILED"> = {
+  const statusMap: Record<
+    string,
+    "QUEUED" | "SENDING" | "SENT" | "DELIVERED" | "UNDELIVERED" | "FAILED"
+  > = {
     queued: "QUEUED",
     accepted: "QUEUED",
     sending: "SENDING",

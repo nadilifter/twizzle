@@ -1,36 +1,42 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { RichTextEditor } from "@/components/ui/rich-text-editor"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, Trash2, Loader2, GripVertical, ArrowUp, ArrowDown } from "lucide-react"
-import { toast } from "sonner"
-import type { Waiver, WaiverPage } from "@/types/waivers"
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Trash2, Loader2, GripVertical, ArrowUp, ArrowDown } from "lucide-react";
+import { toast } from "sonner";
+import type { Waiver, WaiverPage } from "@/types/waivers";
 
 interface PageData {
-  id?: string
-  pageNumber: number
-  title: string
-  content: string
+  id?: string;
+  pageNumber: number;
+  title: string;
+  content: string;
 }
 
 interface WaiverBuilderProps {
-  waiver?: Waiver | null
+  waiver?: Waiver | null;
 }
 
 export function WaiverBuilder({ waiver }: WaiverBuilderProps) {
-  const router = useRouter()
-  const isEditing = !!waiver
+  const router = useRouter();
+  const isEditing = !!waiver;
 
-  const [title, setTitle] = React.useState(waiver?.title || "")
-  const [status, setStatus] = React.useState(waiver?.status || "DRAFT")
+  const [title, setTitle] = React.useState(waiver?.title || "");
+  const [status, setStatus] = React.useState(waiver?.status || "DRAFT");
   const [pages, setPages] = React.useState<PageData[]>(() => {
     if (waiver?.pages?.length) {
       return waiver.pages.map((p) => ({
@@ -38,69 +44,64 @@ export function WaiverBuilder({ waiver }: WaiverBuilderProps) {
         pageNumber: p.pageNumber,
         title: p.title || "",
         content: p.content,
-      }))
+      }));
     }
-    return [{ pageNumber: 1, title: "", content: "" }]
-  })
-  const [activePage, setActivePage] = React.useState("page-1")
-  const [isSaving, setIsSaving] = React.useState(false)
+    return [{ pageNumber: 1, title: "", content: "" }];
+  });
+  const [activePage, setActivePage] = React.useState("page-1");
+  const [isSaving, setIsSaving] = React.useState(false);
 
   const handleAddPage = () => {
-    const newPageNumber = pages.length + 1
-    setPages((prev) => [
-      ...prev,
-      { pageNumber: newPageNumber, title: "", content: "" },
-    ])
-    setActivePage(`page-${newPageNumber}`)
-  }
+    const newPageNumber = pages.length + 1;
+    setPages((prev) => [...prev, { pageNumber: newPageNumber, title: "", content: "" }]);
+    setActivePage(`page-${newPageNumber}`);
+  };
 
   const handleRemovePage = (index: number) => {
     if (pages.length <= 1) {
-      toast.error("A waiver must have at least one page")
-      return
+      toast.error("A waiver must have at least one page");
+      return;
     }
     setPages((prev) => {
-      const updated = prev.filter((_, i) => i !== index)
+      const updated = prev.filter((_, i) => i !== index);
       // Renumber pages
-      return updated.map((p, i) => ({ ...p, pageNumber: i + 1 }))
-    })
-    setActivePage(`page-1`)
-  }
+      return updated.map((p, i) => ({ ...p, pageNumber: i + 1 }));
+    });
+    setActivePage(`page-1`);
+  };
 
   const handleMovePage = (index: number, direction: "up" | "down") => {
-    const newIndex = direction === "up" ? index - 1 : index + 1
-    if (newIndex < 0 || newIndex >= pages.length) return
+    const newIndex = direction === "up" ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= pages.length) return;
 
     setPages((prev) => {
-      const updated = [...prev]
-      const temp = updated[index]
-      updated[index] = updated[newIndex]
-      updated[newIndex] = temp
+      const updated = [...prev];
+      const temp = updated[index];
+      updated[index] = updated[newIndex];
+      updated[newIndex] = temp;
       // Renumber pages
-      return updated.map((p, i) => ({ ...p, pageNumber: i + 1 }))
-    })
-    setActivePage(`page-${newIndex + 1}`)
-  }
+      return updated.map((p, i) => ({ ...p, pageNumber: i + 1 }));
+    });
+    setActivePage(`page-${newIndex + 1}`);
+  };
 
   const updatePage = (index: number, field: keyof PageData, value: string) => {
-    setPages((prev) =>
-      prev.map((p, i) => (i === index ? { ...p, [field]: value } : p))
-    )
-  }
+    setPages((prev) => prev.map((p, i) => (i === index ? { ...p, [field]: value } : p)));
+  };
 
   const handleSave = async () => {
     if (!title.trim()) {
-      toast.error("Waiver title is required")
-      return
+      toast.error("Waiver title is required");
+      return;
     }
 
-    const emptyPages = pages.filter((p) => !p.content.trim() || p.content === "<p></p>")
+    const emptyPages = pages.filter((p) => !p.content.trim() || p.content === "<p></p>");
     if (emptyPages.length > 0) {
-      toast.error(`Page ${emptyPages[0].pageNumber} has no content`)
-      return
+      toast.error(`Page ${emptyPages[0].pageNumber} has no content`);
+      return;
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
 
     try {
       const payload = {
@@ -112,31 +113,31 @@ export function WaiverBuilder({ waiver }: WaiverBuilderProps) {
           title: p.title || undefined,
           content: p.content,
         })),
-      }
+      };
 
-      const url = isEditing ? `/api/waivers/${waiver!.id}` : "/api/waivers"
-      const method = isEditing ? "PUT" : "POST"
+      const url = isEditing ? `/api/waivers/${waiver!.id}` : "/api/waivers";
+      const method = isEditing ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      })
+      });
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to save waiver")
+        const error = await response.json();
+        throw new Error(error.error || "Failed to save waiver");
       }
 
-      toast.success(isEditing ? "Waiver updated successfully" : "Waiver created successfully")
-      router.push("/dashboard/athletes/waivers")
+      toast.success(isEditing ? "Waiver updated successfully" : "Waiver created successfully");
+      router.push("/dashboard/athletes/waivers");
     } catch (error: any) {
-      console.error("Failed to save waiver:", error)
-      toast.error(error.message || "Failed to save waiver")
+      console.error("Failed to save waiver:", error);
+      toast.error(error.message || "Failed to save waiver");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   return (
     <div className="max-w-4xl mx-auto py-8 space-y-8">
@@ -156,7 +157,10 @@ export function WaiverBuilder({ waiver }: WaiverBuilderProps) {
         </div>
         <div className="space-y-2">
           <Label className="text-lg font-semibold">Status</Label>
-          <Select value={status} onValueChange={(v) => setStatus(v as "ACTIVE" | "ARCHIVED" | "DRAFT")}>
+          <Select
+            value={status}
+            onValueChange={(v) => setStatus(v as "ACTIVE" | "ARCHIVED" | "DRAFT")}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -180,7 +184,8 @@ export function WaiverBuilder({ waiver }: WaiverBuilderProps) {
             </Button>
           </div>
           <p className="text-sm text-muted-foreground">
-            Each page will be presented to the signer one at a time. They can sign pages individually or all at once.
+            Each page will be presented to the signer one at a time. They can sign pages
+            individually or all at once.
           </p>
         </CardHeader>
         <CardContent>
@@ -273,10 +278,7 @@ export function WaiverBuilder({ waiver }: WaiverBuilderProps) {
 
       {/* Actions */}
       <div className="flex justify-end gap-4">
-        <Button
-          variant="outline"
-          onClick={() => router.push("/dashboard/athletes/waivers")}
-        >
+        <Button variant="outline" onClick={() => router.push("/dashboard/athletes/waivers")}>
           Cancel
         </Button>
         <Button onClick={handleSave} disabled={isSaving}>
@@ -285,5 +287,5 @@ export function WaiverBuilder({ waiver }: WaiverBuilderProps) {
         </Button>
       </div>
     </div>
-  )
+  );
 }

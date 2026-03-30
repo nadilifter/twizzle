@@ -1,100 +1,136 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef } from "react"
-import dynamic from "next/dynamic"
-import { sanitizeHtml } from "@/lib/sanitize"
-import { useCart, CartItem } from "@/components/sites/cart-context"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { PhoneInput } from "@/components/ui/phone-input"
-import { isValidPhoneNumber } from "react-phone-number-input"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { Loader2, Trash2, FileText, Check, ChevronRight, ChevronLeft, User, Heart, AlertCircle, Plus, Pencil, CreditCard, Clock, AlertTriangle } from "lucide-react"
-import Link from "next/link"
-import type { SignaturePadRef } from "@/components/ui/signature-pad"
-import { toast } from "sonner"
-import { useRouter, useParams } from "next/navigation"
-import { useSession } from "next-auth/react"
-import { useQueueGate, useCompleteRegistration } from "@/hooks/use-queue-gate"
-import { ReservationTimer } from "@/components/sites/reservation-timer"
-import { RemoveItemDialog } from "@/components/sites/remove-item-dialog"
-import { COUNTRIES, getRegionsForCountry } from "@/lib/location-data"
-import { StateProvinceCombobox } from "@/components/ui/state-province-combobox"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { MedicalFormConfig, CustomMedicalQuestion } from "@/types/medical"
-import type { CustomInfoQuestion, CustomInfoResponse } from "@/types/custom-information"
+import { useState, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
+import { sanitizeHtml } from "@/lib/sanitize";
+import { useCart, CartItem } from "@/components/sites/cart-context";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { isValidPhoneNumber } from "react-phone-number-input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import {
+  Loader2,
+  Trash2,
+  FileText,
+  Check,
+  ChevronRight,
+  ChevronLeft,
+  User,
+  Heart,
+  AlertCircle,
+  Plus,
+  Pencil,
+  CreditCard,
+  Clock,
+  AlertTriangle,
+} from "lucide-react";
+import Link from "next/link";
+import type { SignaturePadRef } from "@/components/ui/signature-pad";
+import { toast } from "sonner";
+import { useRouter, useParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useQueueGate, useCompleteRegistration } from "@/hooks/use-queue-gate";
+import { ReservationTimer } from "@/components/sites/reservation-timer";
+import { RemoveItemDialog } from "@/components/sites/remove-item-dialog";
+import { COUNTRIES, getRegionsForCountry } from "@/lib/location-data";
+import { StateProvinceCombobox } from "@/components/ui/state-province-combobox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { MedicalFormConfig, CustomMedicalQuestion } from "@/types/medical";
+import type { CustomInfoQuestion, CustomInfoResponse } from "@/types/custom-information";
 
 const CustomInformationForm = dynamic(
-  () => import("@/components/sites/custom-information-form").then(m => m.CustomInformationForm),
+  () => import("@/components/sites/custom-information-form").then((m) => m.CustomInformationForm),
   { ssr: false, loading: () => <div className="h-48 animate-pulse bg-muted rounded-lg" /> }
-)
+);
 
 const SignaturePad = dynamic(
-  () => import("@/components/ui/signature-pad").then(m => m.SignaturePad),
+  () => import("@/components/ui/signature-pad").then((m) => m.SignaturePad),
   { ssr: false, loading: () => <div className="h-48 animate-pulse bg-muted rounded-lg" /> }
-)
+);
 
 const CheckoutMedicalForm = dynamic(
-  () => import("@/components/sites/checkout-medical-form").then(m => m.CheckoutMedicalForm),
+  () => import("@/components/sites/checkout-medical-form").then((m) => m.CheckoutMedicalForm),
   { ssr: false, loading: () => <div className="h-48 animate-pulse bg-muted rounded-lg" /> }
-)
+);
 
 const AdyenCheckoutComponent = dynamic(
-  () => import("@/components/sites/adyen-checkout").then(m => m.AdyenCheckoutComponent),
+  () => import("@/components/sites/adyen-checkout").then((m) => m.AdyenCheckoutComponent),
   { ssr: false, loading: () => <div className="h-48 animate-pulse bg-muted rounded-lg" /> }
-)
+);
 
 interface SavedContact {
-  id: string
-  firstName: string
-  lastName: string
-  email: string
-  phone: string
-  relationship: string | null
-  isPrimary: boolean
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  relationship: string | null;
+  isPrimary: boolean;
 }
 
 interface SavedBillingAddress {
-  id: string
-  label: string | null
-  street: string
-  city: string
-  stateProvince: string | null
-  postalCode: string
-  country: string
-  isPrimary: boolean
+  id: string;
+  label: string | null;
+  street: string;
+  city: string;
+  stateProvince: string | null;
+  postalCode: string;
+  country: string;
+  isPrimary: boolean;
 }
 
-type CheckoutStep = "details" | "waivers" | "customInfo" | "medical" | "payment" | "confirmation"
+type CheckoutStep = "details" | "waivers" | "customInfo" | "medical" | "payment" | "confirmation";
 
 interface WaiverToSign {
-  waiverId: string
-  waiverTitle: string
-  isSigned: boolean
+  waiverId: string;
+  waiverTitle: string;
+  isSigned: boolean;
 }
 
 interface WaiverPageData {
-  id: string
-  pageNumber: number
-  title: string | null
-  content: string
+  id: string;
+  pageNumber: number;
+  title: string | null;
+  content: string;
 }
 
 interface AthleteRequirements {
-  athleteId: string
-  athleteName: string
-  requiredWaiverIds: string[]
-  needsMedical: boolean
+  athleteId: string;
+  athleteName: string;
+  requiredWaiverIds: string[];
+  needsMedical: boolean;
 }
 
 export default function CheckoutPage({ params }: { params: { slug: string } }) {
-  const { items, subtotal, removeItem, clearCart, getDependentItems, removeItemWithDependents, getItemsByAthlete } = useCart()
-  const router = useRouter()
-  const { data: session } = useSession()
-  const hasWaitlistItems = items.some(item => item.details?.waitlist === true)
-  const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("details")
+  const {
+    items,
+    subtotal,
+    removeItem,
+    clearCart,
+    getDependentItems,
+    removeItemWithDependents,
+    getItemsByAthlete,
+  } = useCart();
+  const router = useRouter();
+  const { data: session } = useSession();
+  const hasWaitlistItems = items.some((item) => item.details?.waitlist === true);
+  const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("details");
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -105,105 +141,116 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
     stateProvince: "",
     postalCode: "",
     country: "US",
-  })
+  });
 
   // Saved contacts & billing addresses
-  const [savedContacts, setSavedContacts] = useState<SavedContact[]>([])
-  const [savedAddresses, setSavedAddresses] = useState<SavedBillingAddress[]>([])
-  const [selectedContactId, setSelectedContactId] = useState<string>("new")
-  const [selectedAddressId, setSelectedAddressId] = useState<string>("new")
-  const [isEditingContact, setIsEditingContact] = useState(false)
-  const [isEditingAddress, setIsEditingAddress] = useState(false)
-  const [isRedirectingToReceipt, setIsRedirectingToReceipt] = useState(false)
-  const [freeCheckoutInvoiceId, setFreeCheckoutInvoiceId] = useState<string | null>(null)
-  const formDataInitialized = useRef(false)
+  const [savedContacts, setSavedContacts] = useState<SavedContact[]>([]);
+  const [savedAddresses, setSavedAddresses] = useState<SavedBillingAddress[]>([]);
+  const [selectedContactId, setSelectedContactId] = useState<string>("new");
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("new");
+  const [isEditingContact, setIsEditingContact] = useState(false);
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [isRedirectingToReceipt, setIsRedirectingToReceipt] = useState(false);
+  const [freeCheckoutInvoiceId, setFreeCheckoutInvoiceId] = useState<string | null>(null);
+  const formDataInitialized = useRef(false);
 
   // Persist formData to sessionStorage so it survives page navigations
-  const FORM_STORAGE_KEY = `checkout-form-${params.slug}`
-  const CONTACT_STORAGE_KEY = `checkout-contact-${params.slug}`
-  const ADDRESS_STORAGE_KEY = `checkout-address-${params.slug}`
-  const EDITING_CONTACT_KEY = `checkout-editing-contact-${params.slug}`
-  const EDITING_ADDRESS_KEY = `checkout-editing-address-${params.slug}`
+  const FORM_STORAGE_KEY = `checkout-form-${params.slug}`;
+  const CONTACT_STORAGE_KEY = `checkout-contact-${params.slug}`;
+  const ADDRESS_STORAGE_KEY = `checkout-address-${params.slug}`;
+  const EDITING_CONTACT_KEY = `checkout-editing-contact-${params.slug}`;
+  const EDITING_ADDRESS_KEY = `checkout-editing-address-${params.slug}`;
 
   // Save form data to sessionStorage whenever it changes
   useEffect(() => {
-    if (!formDataInitialized.current) return
+    if (!formDataInitialized.current) return;
     try {
-      sessionStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(formData))
-      sessionStorage.setItem(CONTACT_STORAGE_KEY, selectedContactId)
-      sessionStorage.setItem(ADDRESS_STORAGE_KEY, selectedAddressId)
-      sessionStorage.setItem(EDITING_CONTACT_KEY, isEditingContact ? "1" : "0")
-      sessionStorage.setItem(EDITING_ADDRESS_KEY, isEditingAddress ? "1" : "0")
+      sessionStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(formData));
+      sessionStorage.setItem(CONTACT_STORAGE_KEY, selectedContactId);
+      sessionStorage.setItem(ADDRESS_STORAGE_KEY, selectedAddressId);
+      sessionStorage.setItem(EDITING_CONTACT_KEY, isEditingContact ? "1" : "0");
+      sessionStorage.setItem(EDITING_ADDRESS_KEY, isEditingAddress ? "1" : "0");
     } catch {
       // sessionStorage may not be available
     }
-  }, [formData, selectedContactId, selectedAddressId, isEditingContact, isEditingAddress, FORM_STORAGE_KEY, CONTACT_STORAGE_KEY, ADDRESS_STORAGE_KEY, EDITING_CONTACT_KEY, EDITING_ADDRESS_KEY])
+  }, [
+    formData,
+    selectedContactId,
+    selectedAddressId,
+    isEditingContact,
+    isEditingAddress,
+    FORM_STORAGE_KEY,
+    CONTACT_STORAGE_KEY,
+    ADDRESS_STORAGE_KEY,
+    EDITING_CONTACT_KEY,
+    EDITING_ADDRESS_KEY,
+  ]);
 
   // Fetch saved contacts & addresses on mount when authenticated
   useEffect(() => {
-    if (!session?.user?.email) return
+    if (!session?.user?.email) return;
     const fetchSaved = async () => {
       try {
         const [contactsRes, addressesRes] = await Promise.all([
           fetch(`/api/user/contacts`),
           fetch(`/api/user/billing-addresses`),
-        ])
+        ]);
 
         // Try to restore from sessionStorage first
-        let restoredForm: typeof formData | null = null
-        let restoredContactId: string | null = null
-        let restoredAddressId: string | null = null
-        let restoredEditingContact = false
-        let restoredEditingAddress = false
+        let restoredForm: typeof formData | null = null;
+        let restoredContactId: string | null = null;
+        let restoredAddressId: string | null = null;
+        let restoredEditingContact = false;
+        let restoredEditingAddress = false;
         try {
-          const stored = sessionStorage.getItem(FORM_STORAGE_KEY)
-          if (stored) restoredForm = JSON.parse(stored)
-          restoredContactId = sessionStorage.getItem(CONTACT_STORAGE_KEY)
-          restoredAddressId = sessionStorage.getItem(ADDRESS_STORAGE_KEY)
-          restoredEditingContact = sessionStorage.getItem(EDITING_CONTACT_KEY) === "1"
-          restoredEditingAddress = sessionStorage.getItem(EDITING_ADDRESS_KEY) === "1"
+          const stored = sessionStorage.getItem(FORM_STORAGE_KEY);
+          if (stored) restoredForm = JSON.parse(stored);
+          restoredContactId = sessionStorage.getItem(CONTACT_STORAGE_KEY);
+          restoredAddressId = sessionStorage.getItem(ADDRESS_STORAGE_KEY);
+          restoredEditingContact = sessionStorage.getItem(EDITING_CONTACT_KEY) === "1";
+          restoredEditingAddress = sessionStorage.getItem(EDITING_ADDRESS_KEY) === "1";
         } catch {
           // ignore
         }
 
         if (contactsRes.ok) {
-          const { contacts } = await contactsRes.json()
-          setSavedContacts(contacts || [])
+          const { contacts } = await contactsRes.json();
+          setSavedContacts(contacts || []);
 
           if (restoredForm && restoredContactId) {
             // Restore previously entered data
-            setSelectedContactId(restoredContactId)
-            setIsEditingContact(restoredEditingContact)
+            setSelectedContactId(restoredContactId);
+            setIsEditingContact(restoredEditingContact);
             setFormData((prev) => ({
               ...prev,
               firstName: restoredForm!.firstName,
               lastName: restoredForm!.lastName,
               email: restoredForm!.email,
               phone: restoredForm!.phone,
-            }))
+            }));
           } else {
             // Auto-select primary contact if available
-            const primary = (contacts || []).find((c: SavedContact) => c.isPrimary)
+            const primary = (contacts || []).find((c: SavedContact) => c.isPrimary);
             if (primary) {
-              setSelectedContactId(primary.id)
+              setSelectedContactId(primary.id);
               setFormData((prev) => ({
                 ...prev,
                 firstName: primary.firstName,
                 lastName: primary.lastName,
                 email: primary.email,
                 phone: primary.phone,
-              }))
+              }));
             }
           }
         }
         if (addressesRes.ok) {
-          const { addresses } = await addressesRes.json()
-          setSavedAddresses(addresses || [])
+          const { addresses } = await addressesRes.json();
+          setSavedAddresses(addresses || []);
 
           if (restoredForm && restoredAddressId) {
             // Restore previously entered data
-            setSelectedAddressId(restoredAddressId)
-            setIsEditingAddress(restoredEditingAddress)
+            setSelectedAddressId(restoredAddressId);
+            setIsEditingAddress(restoredEditingAddress);
             setFormData((prev) => ({
               ...prev,
               address: restoredForm!.address,
@@ -211,12 +258,12 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
               stateProvince: restoredForm!.stateProvince,
               postalCode: restoredForm!.postalCode,
               country: restoredForm!.country || "US",
-            }))
+            }));
           } else {
             // Auto-select primary address if available
-            const primary = (addresses || []).find((a: SavedBillingAddress) => a.isPrimary)
+            const primary = (addresses || []).find((a: SavedBillingAddress) => a.isPrimary);
             if (primary) {
-              setSelectedAddressId(primary.id)
+              setSelectedAddressId(primary.id);
               setFormData((prev) => ({
                 ...prev,
                 address: primary.street,
@@ -224,44 +271,52 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                 stateProvince: primary.stateProvince || "",
                 postalCode: primary.postalCode,
                 country: primary.country || "US",
-              }))
+              }));
             }
           }
         }
       } catch (err) {
         // Silently fail -- user can still fill in manually
-        console.error("Failed to fetch saved data:", err)
+        console.error("Failed to fetch saved data:", err);
       } finally {
-        formDataInitialized.current = true
+        formDataInitialized.current = true;
       }
-    }
-    fetchSaved()
-  }, [session, params.slug, FORM_STORAGE_KEY, CONTACT_STORAGE_KEY, ADDRESS_STORAGE_KEY, EDITING_CONTACT_KEY, EDITING_ADDRESS_KEY])
+    };
+    fetchSaved();
+  }, [
+    session,
+    params.slug,
+    FORM_STORAGE_KEY,
+    CONTACT_STORAGE_KEY,
+    ADDRESS_STORAGE_KEY,
+    EDITING_CONTACT_KEY,
+    EDITING_ADDRESS_KEY,
+  ]);
 
   // Pre-fill contact info from session when available (only if no saved contacts loaded)
   useEffect(() => {
     if (session?.user && savedContacts.length === 0) {
       setFormData((prev) => {
         // Only pre-fill empty fields to avoid overwriting user edits
-        const nameParts = (session.user?.name || "").split(" ")
+        const nameParts = (session.user?.name || "").split(" ");
         return {
           ...prev,
           firstName: prev.firstName || nameParts[0] || "",
           lastName: prev.lastName || nameParts.slice(1).join(" ") || "",
           email: prev.email || session.user?.email || "",
-        }
-      })
+        };
+      });
     }
-  }, [session, savedContacts.length])
+  }, [session, savedContacts.length]);
 
   // Handle saved contact selection
   const handleContactSelect = (contactId: string) => {
-    setSelectedContactId(contactId)
-    setIsEditingContact(false)
+    setSelectedContactId(contactId);
+    setIsEditingContact(false);
     if (contactId === "new") {
-      setFormData((prev) => ({ ...prev, firstName: "", lastName: "", email: "", phone: "" }))
+      setFormData((prev) => ({ ...prev, firstName: "", lastName: "", email: "", phone: "" }));
     } else {
-      const contact = savedContacts.find((c) => c.id === contactId)
+      const contact = savedContacts.find((c) => c.id === contactId);
       if (contact) {
         setFormData((prev) => ({
           ...prev,
@@ -269,19 +324,26 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
           lastName: contact.lastName,
           email: contact.email,
           phone: contact.phone,
-        }))
+        }));
       }
     }
-  }
+  };
 
   // Handle saved address selection
   const handleAddressSelect = (addressId: string) => {
-    setSelectedAddressId(addressId)
-    setIsEditingAddress(false)
+    setSelectedAddressId(addressId);
+    setIsEditingAddress(false);
     if (addressId === "new") {
-      setFormData((prev) => ({ ...prev, address: "", city: "", stateProvince: "", postalCode: "", country: "US" }))
+      setFormData((prev) => ({
+        ...prev,
+        address: "",
+        city: "",
+        stateProvince: "",
+        postalCode: "",
+        country: "US",
+      }));
     } else {
-      const addr = savedAddresses.find((a) => a.id === addressId)
+      const addr = savedAddresses.find((a) => a.id === addressId);
       if (addr) {
         setFormData((prev) => ({
           ...prev,
@@ -290,138 +352,143 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
           stateProvince: addr.stateProvince || "",
           postalCode: addr.postalCode,
           country: addr.country || "US",
-        }))
+        }));
       }
     }
-  }
-  const [discountCode, setDiscountCode] = useState("")
+  };
+  const [discountCode, setDiscountCode] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState<{
-    id: string
-    name: string
-    code: string
-    type: string
-    discountAmount: number
-    description: string
-  } | null>(null)
-  const [isValidatingDiscount, setIsValidatingDiscount] = useState(false)
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [paymentSession, setPaymentSession] = useState<{ id: string; sessionData: string } | null>(null)
-  const [checkoutInvoiceId, setCheckoutInvoiceId] = useState<string | null>(null)
-  const [paymentError, setPaymentError] = useState<string | null>(null)
+    id: string;
+    name: string;
+    code: string;
+    type: string;
+    discountAmount: number;
+    description: string;
+  } | null>(null);
+  const [isValidatingDiscount, setIsValidatingDiscount] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentSession, setPaymentSession] = useState<{ id: string; sessionData: string } | null>(
+    null
+  );
+  const [checkoutInvoiceId, setCheckoutInvoiceId] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   // Waiver state
-  const [requiredWaivers, setRequiredWaivers] = useState<WaiverToSign[]>([])
-  const [currentWaiverIndex, setCurrentWaiverIndex] = useState(0)
-  const [currentWaiverPages, setCurrentWaiverPages] = useState<WaiverPageData[]>([])
-  const [currentPageIndex, setCurrentPageIndex] = useState(0)
-  const [isLoadingWaiver, setIsLoadingWaiver] = useState(false)
-  const [isSigningWaiver, setIsSigningWaiver] = useState(false)
-  const [organizationId, setOrganizationId] = useState<string | null>(null)
-  const [taxRate, setTaxRate] = useState(0)
-  const [taxPaidBy, setTaxPaidBy] = useState<"CUSTOMER" | "ORGANIZATION">("CUSTOMER")
-  const [processingFeePaidBy, setProcessingFeePaidBy] = useState<"CUSTOMER" | "ORGANIZATION">("CUSTOMER")
-  const [planTransactionFee, setPlanTransactionFee] = useState(0)
-  const [planPerTransactionFee, setPlanPerTransactionFee] = useState(0)
-  const [signAllMode, setSignAllMode] = useState(false)
-  const signaturePadRef = useRef<SignaturePadRef>(null)
-  const [signatureEmpty, setSignatureEmpty] = useState(true)
+  const [requiredWaivers, setRequiredWaivers] = useState<WaiverToSign[]>([]);
+  const [currentWaiverIndex, setCurrentWaiverIndex] = useState(0);
+  const [currentWaiverPages, setCurrentWaiverPages] = useState<WaiverPageData[]>([]);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [isLoadingWaiver, setIsLoadingWaiver] = useState(false);
+  const [isSigningWaiver, setIsSigningWaiver] = useState(false);
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [taxRate, setTaxRate] = useState(0);
+  const [taxPaidBy, setTaxPaidBy] = useState<"CUSTOMER" | "ORGANIZATION">("CUSTOMER");
+  const [processingFeePaidBy, setProcessingFeePaidBy] = useState<"CUSTOMER" | "ORGANIZATION">(
+    "CUSTOMER"
+  );
+  const [planTransactionFee, setPlanTransactionFee] = useState(0);
+  const [planPerTransactionFee, setPlanPerTransactionFee] = useState(0);
+  const [signAllMode, setSignAllMode] = useState(false);
+  const signaturePadRef = useRef<SignaturePadRef>(null);
+  const [signatureEmpty, setSignatureEmpty] = useState(true);
 
   // Medical state
-  const [medicalConfig, setMedicalConfig] = useState<MedicalFormConfig | null>(null)
-  const [medicalCustomQuestions, setMedicalCustomQuestions] = useState<CustomMedicalQuestion[]>([])
+  const [medicalConfig, setMedicalConfig] = useState<MedicalFormConfig | null>(null);
+  const [medicalCustomQuestions, setMedicalCustomQuestions] = useState<CustomMedicalQuestion[]>([]);
 
   // Custom info state
-  const [customInfoQuestions, setCustomInfoQuestions] = useState<CustomInfoQuestion[]>([])
-  const [customInfoResponses, setCustomInfoResponses] = useState<CustomInfoResponse[]>([])
-  const [athleteCustomInfoComplete, setAthleteCustomInfoComplete] = useState<Set<string>>(new Set())
+  const [customInfoQuestions, setCustomInfoQuestions] = useState<CustomInfoQuestion[]>([]);
+  const [customInfoResponses, setCustomInfoResponses] = useState<CustomInfoResponse[]>([]);
+  const [athleteCustomInfoComplete, setAthleteCustomInfoComplete] = useState<Set<string>>(
+    new Set()
+  );
 
   // Per-athlete requirements flow
-  const [athleteQueue, setAthleteQueue] = useState<AthleteRequirements[]>([])
-  const [currentAthleteIndex, setCurrentAthleteIndex] = useState(0)
-  const [athleteWaiverComplete, setAthleteWaiverComplete] = useState<Set<string>>(new Set())
-  const [athleteMedicalComplete, setAthleteMedicalComplete] = useState<Set<string>>(new Set())
+  const [athleteQueue, setAthleteQueue] = useState<AthleteRequirements[]>([]);
+  const [currentAthleteIndex, setCurrentAthleteIndex] = useState(0);
+  const [athleteWaiverComplete, setAthleteWaiverComplete] = useState<Set<string>>(new Set());
+  const [athleteMedicalComplete, setAthleteMedicalComplete] = useState<Set<string>>(new Set());
   // Track signed waivers per athlete: Map<athleteId, Set<waiverId>>
-  const signedWaiverIdsRef = useRef<Map<string, Set<string>>>(new Map())
-  const athleteQueueRef = useRef<AthleteRequirements[]>([])
-  const organizationIdRef = useRef<string | null>(null)
+  const signedWaiverIdsRef = useRef<Map<string, Set<string>>>(new Map());
+  const athleteQueueRef = useRef<AthleteRequirements[]>([]);
+  const organizationIdRef = useRef<string | null>(null);
 
   // State for remove confirmation dialog
-  const [removeDialogOpen, setRemoveDialogOpen] = useState(false)
-  const [itemToRemove, setItemToRemove] = useState<CartItem | null>(null)
-  const [dependentItems, setDependentItems] = useState<CartItem[]>([])
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [itemToRemove, setItemToRemove] = useState<CartItem | null>(null);
+  const [dependentItems, setDependentItems] = useState<CartItem[]>([]);
 
   const handleRemoveClick = (item: CartItem) => {
-    const dependents = getDependentItems(item.id)
-    
+    const dependents = getDependentItems(item.id);
+
     if (dependents.length > 0) {
-      setItemToRemove(item)
-      setDependentItems(dependents)
-      setRemoveDialogOpen(true)
+      setItemToRemove(item);
+      setDependentItems(dependents);
+      setRemoveDialogOpen(true);
     } else {
-      removeItem(item.id)
+      removeItem(item.id);
     }
-  }
+  };
 
   const handleConfirmRemove = () => {
     if (itemToRemove) {
-      removeItemWithDependents(itemToRemove.id)
+      removeItemWithDependents(itemToRemove.id);
     }
-    setRemoveDialogOpen(false)
-    setItemToRemove(null)
-    setDependentItems([])
-  }
+    setRemoveDialogOpen(false);
+    setItemToRemove(null);
+    setDependentItems([]);
+  };
 
   const handleCancelRemove = () => {
-    setRemoveDialogOpen(false)
-    setItemToRemove(null)
-    setDependentItems([])
-  }
+    setRemoveDialogOpen(false);
+    setItemToRemove(null);
+    setDependentItems([]);
+  };
 
   // Queue gate
-  const { isChecking, isAllowed, hasReservation, reservation } = useQueueGate(params.slug)
-  const { complete: completeRegistration } = useCompleteRegistration(params.slug)
+  const { isChecking, isAllowed, hasReservation, reservation } = useQueueGate(params.slug);
+  const { complete: completeRegistration } = useCompleteRegistration(params.slug);
 
   useEffect(() => {
     fetch(`/api/public/site-config?slug=${params.slug}`)
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
         if (data) {
           if (data.organizationId) {
-            setOrganizationId(data.organizationId)
-            organizationIdRef.current = data.organizationId
+            setOrganizationId(data.organizationId);
+            organizationIdRef.current = data.organizationId;
           }
           if (data.taxRate != null) {
-            setTaxRate(Number(data.taxRate))
+            setTaxRate(Number(data.taxRate));
           }
-          if (data.taxPaidBy) setTaxPaidBy(data.taxPaidBy)
-          if (data.processingFeePaidBy) setProcessingFeePaidBy(data.processingFeePaidBy)
-          if (data.transactionFee != null) setPlanTransactionFee(Number(data.transactionFee))
-          if (data.perTransactionFee != null) setPlanPerTransactionFee(Number(data.perTransactionFee))
+          if (data.taxPaidBy) setTaxPaidBy(data.taxPaidBy);
+          if (data.processingFeePaidBy) setProcessingFeePaidBy(data.processingFeePaidBy);
+          if (data.transactionFee != null) setPlanTransactionFee(Number(data.transactionFee));
+          if (data.perTransactionFee != null)
+            setPlanPerTransactionFee(Number(data.perTransactionFee));
         }
       })
-      .catch((err) => console.error("Failed to load organization settings:", err))
-  }, [params.slug])
+      .catch((err) => console.error("Failed to load organization settings:", err));
+  }, [params.slug]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
   // Process per-athlete requirements starting from the given index
   // Iterates through the queue, showing waivers/medical as needed per athlete
   const advanceToNextRequirement = async (startIndex: number) => {
-    const queue = athleteQueueRef.current
-    const orgId = organizationIdRef.current
+    const queue = athleteQueueRef.current;
+    const orgId = organizationIdRef.current;
 
     for (let i = startIndex; i < queue.length; i++) {
-      const athlete = queue[i]
-      setCurrentAthleteIndex(i)
+      const athlete = queue[i];
+      setCurrentAthleteIndex(i);
 
       // Check unsigned waivers for this specific athlete
-      const athleteSigned = signedWaiverIdsRef.current.get(athlete.athleteId) || new Set()
-      const unsignedIds = athlete.requiredWaiverIds.filter(
-        (id) => !athleteSigned.has(id)
-      )
+      const athleteSigned = signedWaiverIdsRef.current.get(athlete.athleteId) || new Set();
+      const unsignedIds = athlete.requiredWaiverIds.filter((id) => !athleteSigned.has(id));
 
       if (unsignedIds.length > 0 && orgId) {
         // Verify with server which are actually unsigned
@@ -434,282 +501,306 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
             organizationId: orgId,
             athleteId: athlete.athleteId,
           }),
-        })
+        });
 
         if (!checkResponse.ok) {
-          throw new Error("Failed to check waiver status")
+          throw new Error("Failed to check waiver status");
         }
 
-        const checkData = await checkResponse.json()
+        const checkData = await checkResponse.json();
 
         // Update local signed set with server data (per athlete)
         if (!signedWaiverIdsRef.current.has(athlete.athleteId)) {
-          signedWaiverIdsRef.current.set(athlete.athleteId, new Set())
+          signedWaiverIdsRef.current.set(athlete.athleteId, new Set());
         }
-        const athleteSignedSet = signedWaiverIdsRef.current.get(athlete.athleteId)!
+        const athleteSignedSet = signedWaiverIdsRef.current.get(athlete.athleteId)!;
         checkData.data.forEach((w: WaiverToSign) => {
-          if (w.isSigned) athleteSignedSet.add(w.waiverId)
-        })
+          if (w.isSigned) athleteSignedSet.add(w.waiverId);
+        });
 
-        const stillUnsigned = checkData.data.filter((w: WaiverToSign) => !w.isSigned)
+        const stillUnsigned = checkData.data.filter((w: WaiverToSign) => !w.isSigned);
 
         if (stillUnsigned.length > 0) {
           // Show waiver signing step for this athlete
-          setRequiredWaivers(stillUnsigned)
-          setCurrentWaiverIndex(0)
-          setCheckoutStep("waivers")
-          setSignAllMode(false)
-          signaturePadRef.current?.clear()
-          setSignatureEmpty(true)
-          await loadWaiverContent(stillUnsigned[0].waiverId, orgId)
-          return // Exit — waiver step shown, flow continues after signing
+          setRequiredWaivers(stillUnsigned);
+          setCurrentWaiverIndex(0);
+          setCheckoutStep("waivers");
+          setSignAllMode(false);
+          signaturePadRef.current?.clear();
+          setSignatureEmpty(true);
+          await loadWaiverContent(stillUnsigned[0].waiverId, orgId);
+          return; // Exit — waiver step shown, flow continues after signing
         }
       }
 
       // All waivers for this athlete are done
       setAthleteWaiverComplete((prev) => {
-        const next = new Set(prev)
-        next.add(athlete.athleteId)
-        return next
-      })
+        const next = new Set(prev);
+        next.add(athlete.athleteId);
+        return next;
+      });
 
       // Check custom info
       if (orgId && !athleteCustomInfoComplete.has(athlete.athleteId)) {
         try {
-          const itemsByAthlete = getItemsByAthlete()
-          const athleteEntry = itemsByAthlete.get(athlete.athleteId)
-          const athleteItems = athleteEntry?.items || []
-          const programIds = athleteItems.filter((it: CartItem) => it.type === "program").map((it: CartItem) => it.details?.programId).filter(Boolean)
-          const competitionIds = athleteItems.filter((it: CartItem) => it.type === "competition").map((it: CartItem) => it.details?.competitionId).filter(Boolean)
-          const membershipIds = athleteItems.filter((it: CartItem) => it.type === "membership").map((it: CartItem) => it.details?.membershipInstanceId).filter(Boolean)
-          const passIds = athleteItems.filter((it: CartItem) => it.type === "pass").map((it: CartItem) => it.details?.passId).filter(Boolean)
+          const itemsByAthlete = getItemsByAthlete();
+          const athleteEntry = itemsByAthlete.get(athlete.athleteId);
+          const athleteItems = athleteEntry?.items || [];
+          const programIds = athleteItems
+            .filter((it: CartItem) => it.type === "program")
+            .map((it: CartItem) => it.details?.programId)
+            .filter(Boolean);
+          const competitionIds = athleteItems
+            .filter((it: CartItem) => it.type === "competition")
+            .map((it: CartItem) => it.details?.competitionId)
+            .filter(Boolean);
+          const membershipIds = athleteItems
+            .filter((it: CartItem) => it.type === "membership")
+            .map((it: CartItem) => it.details?.membershipInstanceId)
+            .filter(Boolean);
+          const passIds = athleteItems
+            .filter((it: CartItem) => it.type === "pass")
+            .map((it: CartItem) => it.details?.passId)
+            .filter(Boolean);
 
-          const ciParams = new URLSearchParams({ organizationId: orgId })
-          if (programIds.length > 0) ciParams.set("programIds", programIds.join(","))
-          if (competitionIds.length > 0) ciParams.set("competitionIds", competitionIds.join(","))
-          if (membershipIds.length > 0) ciParams.set("membershipIds", membershipIds.join(","))
-          if (passIds.length > 0) ciParams.set("passIds", passIds.join(","))
+          const ciParams = new URLSearchParams({ organizationId: orgId });
+          if (programIds.length > 0) ciParams.set("programIds", programIds.join(","));
+          if (competitionIds.length > 0) ciParams.set("competitionIds", competitionIds.join(","));
+          if (membershipIds.length > 0) ciParams.set("membershipIds", membershipIds.join(","));
+          if (passIds.length > 0) ciParams.set("passIds", passIds.join(","));
 
-          const ciRes = await fetch(`/api/public/custom-information?${ciParams}`)
+          const ciRes = await fetch(`/api/public/custom-information?${ciParams}`);
           if (ciRes.ok) {
-            const { questions } = await ciRes.json()
+            const { questions } = await ciRes.json();
             if (questions && questions.length > 0) {
               const respRes = await fetch(
                 `/api/public/athletes/${athlete.athleteId}/custom-information?organizationId=${orgId}&email=${encodeURIComponent(formData.email)}`
-              )
-              let existingResponses: CustomInfoResponse[] = []
-              let isCurrent = false
+              );
+              let existingResponses: CustomInfoResponse[] = [];
+              let isCurrent = false;
               if (respRes.ok) {
-                const rd = await respRes.json()
-                existingResponses = rd.responses || []
-                isCurrent = rd.isCurrent && existingResponses.length >= questions.length
+                const rd = await respRes.json();
+                existingResponses = rd.responses || [];
+                isCurrent = rd.isCurrent && existingResponses.length >= questions.length;
               }
 
               if (!isCurrent) {
-                setCustomInfoQuestions(questions)
-                setCustomInfoResponses(existingResponses)
-                setCheckoutStep("customInfo")
-                return // Exit — custom info step shown
+                setCustomInfoQuestions(questions);
+                setCustomInfoResponses(existingResponses);
+                setCheckoutStep("customInfo");
+                return; // Exit — custom info step shown
               }
             }
           }
         } catch (err) {
-          console.error("Failed to check custom info:", err)
+          console.error("Failed to check custom info:", err);
         }
         setAthleteCustomInfoComplete((prev) => {
-          const next = new Set(prev)
-          next.add(athlete.athleteId)
-          return next
-        })
+          const next = new Set(prev);
+          next.add(athlete.athleteId);
+          return next;
+        });
       }
 
       // Check medical
       if (athlete.needsMedical) {
-        setCheckoutStep("medical")
-        return // Exit — medical step shown, flow continues after completion
+        setCheckoutStep("medical");
+        return; // Exit — medical step shown, flow continues after completion
       }
 
       // No medical needed — mark complete and continue to next athlete
       setAthleteMedicalComplete((prev) => {
-        const next = new Set(prev)
-        next.add(athlete.athleteId)
-        return next
-      })
+        const next = new Set(prev);
+        next.add(athlete.athleteId);
+        return next;
+      });
     }
 
     // All athletes processed — proceed to payment
-    await createPaymentSession()
-  }
+    await createPaymentSession();
+  };
 
   // Check for per-athlete requirements (waivers + medical) and proceed accordingly
   const handleProceedToPayment = async () => {
     if (!formData.firstName || !formData.lastName || !formData.email) {
-      toast.error("Please fill in all required fields")
-      return
+      toast.error("Please fill in all required fields");
+      return;
     }
     if (formData.phone && !isValidPhoneNumber(formData.phone)) {
-      toast.error("Please enter a valid phone number")
-      return
+      toast.error("Please enter a valid phone number");
+      return;
     }
 
-    setIsProcessing(true)
+    setIsProcessing(true);
 
     try {
-      let orgId = organizationId
+      let orgId = organizationId;
       if (!orgId) {
-        const siteResponse = await fetch(`/api/public/site-config?slug=${params.slug}`)
+        const siteResponse = await fetch(`/api/public/site-config?slug=${params.slug}`);
         if (siteResponse.ok) {
-          const siteData = await siteResponse.json()
-          orgId = siteData.organizationId
-          setOrganizationId(orgId)
-          organizationIdRef.current = orgId
+          const siteData = await siteResponse.json();
+          orgId = siteData.organizationId;
+          setOrganizationId(orgId);
+          organizationIdRef.current = orgId;
         }
       }
 
       if (!orgId) {
-        toast.error("Unable to determine organization. Please try again.")
-        return
+        toast.error("Unable to determine organization. Please try again.");
+        return;
       }
 
       // Collect program items from cart
-      const programItems = items.filter((item) => item.type === "program")
+      const programItems = items.filter((item) => item.type === "program");
       const programIds = programItems
         .map((item) => item.details?.programId || item.referenceId)
-        .filter(Boolean)
+        .filter(Boolean);
 
       if (programIds.length === 0) {
         // No programs — go straight to payment
-        await createPaymentSession()
-        return
+        await createPaymentSession();
+        return;
       }
 
       // Fetch waiver and medical requirements in parallel
       const [waiverResponse, medicalResponse] = await Promise.all([
-        fetch(`/api/public/programs/waiver-requirements?programIds=${programIds.join(",")}&organizationId=${orgId}`),
-        fetch(`/api/public/programs/medical-requirements?programIds=${programIds.join(",")}&organizationId=${orgId}`),
-      ])
+        fetch(
+          `/api/public/programs/waiver-requirements?programIds=${programIds.join(",")}&organizationId=${orgId}`
+        ),
+        fetch(
+          `/api/public/programs/medical-requirements?programIds=${programIds.join(",")}&organizationId=${orgId}`
+        ),
+      ]);
 
-      let programWaiverMap: Record<string, string[]> = {}
+      let programWaiverMap: Record<string, string[]> = {};
       if (waiverResponse.ok) {
-        const waiverData = await waiverResponse.json()
-        programWaiverMap = waiverData.programWaiverMap || {}
+        const waiverData = await waiverResponse.json();
+        programWaiverMap = waiverData.programWaiverMap || {};
       }
 
-      let programIdsRequiringMedical: string[] = []
+      let programIdsRequiringMedical: string[] = [];
       if (medicalResponse.ok) {
-        const medData = await medicalResponse.json()
+        const medData = await medicalResponse.json();
         if (medData.required && medData.config) {
-          programIdsRequiringMedical = medData.programIdsRequiringMedical || []
-          setMedicalConfig(medData.config)
-          setMedicalCustomQuestions(medData.customQuestions || [])
+          programIdsRequiringMedical = medData.programIdsRequiringMedical || [];
+          setMedicalConfig(medData.config);
+          setMedicalCustomQuestions(medData.customQuestions || []);
         }
       }
 
       // Build per-athlete requirements queue
-      const athleteMap = new Map<string, { athleteName: string; programIds: string[] }>()
+      const athleteMap = new Map<string, { athleteName: string; programIds: string[] }>();
       programItems.forEach((item) => {
-        const programId = item.details?.programId || item.referenceId
-        if (!programId || !item.athleteId) return
-        const existing = athleteMap.get(item.athleteId) || { athleteName: item.athleteName, programIds: [] }
+        const programId = item.details?.programId || item.referenceId;
+        if (!programId || !item.athleteId) return;
+        const existing = athleteMap.get(item.athleteId) || {
+          athleteName: item.athleteName,
+          programIds: [],
+        };
         if (!existing.programIds.includes(programId)) {
-          existing.programIds.push(programId)
+          existing.programIds.push(programId);
         }
-        athleteMap.set(item.athleteId, existing)
-      })
+        athleteMap.set(item.athleteId, existing);
+      });
 
       const queue: AthleteRequirements[] = Array.from(athleteMap.entries()).map(
         ([athleteId, { athleteName, programIds: athleteProgramIds }]) => {
-          const waiverIdSet = new Set<string>()
+          const waiverIdSet = new Set<string>();
           athleteProgramIds.forEach((pid) => {
-            const waiverIds = programWaiverMap[pid] || []
-            waiverIds.forEach((wid) => waiverIdSet.add(wid))
-          })
+            const waiverIds = programWaiverMap[pid] || [];
+            waiverIds.forEach((wid) => waiverIdSet.add(wid));
+          });
 
-          const needsMedical = athleteProgramIds.some((pid) => programIdsRequiringMedical.includes(pid))
+          const needsMedical = athleteProgramIds.some((pid) =>
+            programIdsRequiringMedical.includes(pid)
+          );
 
           return {
             athleteId,
             athleteName,
             requiredWaiverIds: Array.from(waiverIdSet),
             needsMedical,
-          }
+          };
         }
-      )
+      );
 
       // For athletes flagged as needing medical, check if their info is still current
-      const athletesNeedingMedical = queue.filter((a) => a.needsMedical)
+      const athletesNeedingMedical = queue.filter((a) => a.needsMedical);
       if (athletesNeedingMedical.length > 0) {
         const medicalChecks = await Promise.all(
           athletesNeedingMedical.map(async (athlete) => {
             try {
               const res = await fetch(
                 `/api/public/athletes/${athlete.athleteId}/medical?organizationId=${orgId}&email=${encodeURIComponent(formData.email)}`
-              )
+              );
               if (res.ok) {
-                const data = await res.json()
-                return { athleteId: athlete.athleteId, isCurrent: !!data.isCurrent }
+                const data = await res.json();
+                return { athleteId: athlete.athleteId, isCurrent: !!data.isCurrent };
               }
             } catch {}
-            return { athleteId: athlete.athleteId, isCurrent: false }
+            return { athleteId: athlete.athleteId, isCurrent: false };
           })
-        )
+        );
         for (const check of medicalChecks) {
           if (check.isCurrent) {
-            const entry = queue.find((a) => a.athleteId === check.athleteId)
-            if (entry) entry.needsMedical = false
+            const entry = queue.find((a) => a.athleteId === check.athleteId);
+            if (entry) entry.needsMedical = false;
           }
         }
       }
 
       // Store queue in both state and ref
-      setAthleteQueue(queue)
-      athleteQueueRef.current = queue
-      signedWaiverIdsRef.current = new Map()
+      setAthleteQueue(queue);
+      athleteQueueRef.current = queue;
+      signedWaiverIdsRef.current = new Map();
 
       // If no requirements at all, go straight to payment
-      if (queue.length === 0 || queue.every((a) => a.requiredWaiverIds.length === 0 && !a.needsMedical)) {
-        await createPaymentSession()
-        return
+      if (
+        queue.length === 0 ||
+        queue.every((a) => a.requiredWaiverIds.length === 0 && !a.needsMedical)
+      ) {
+        await createPaymentSession();
+        return;
       }
 
       // Start processing from the first athlete
-      await advanceToNextRequirement(0)
+      await advanceToNextRequirement(0);
     } catch (error) {
-      console.error(error)
-      toast.error("Failed to process. Please try again.")
+      console.error(error);
+      toast.error("Failed to process. Please try again.");
     } finally {
-      setIsProcessing(false)
+      setIsProcessing(false);
     }
-  }
+  };
 
   const loadWaiverContent = async (waiverId: string, orgId: string) => {
-    setIsLoadingWaiver(true)
+    setIsLoadingWaiver(true);
     try {
-      const response = await fetch(`/api/public/waivers/${waiverId}?organizationId=${orgId}`)
+      const response = await fetch(`/api/public/waivers/${waiverId}?organizationId=${orgId}`);
       if (response.ok) {
-        const data = await response.json()
-        setCurrentWaiverPages(data.pages || [])
-        setCurrentPageIndex(0)
+        const data = await response.json();
+        setCurrentWaiverPages(data.pages || []);
+        setCurrentPageIndex(0);
       }
     } catch (error) {
-      console.error("Failed to load waiver:", error)
+      console.error("Failed to load waiver:", error);
     } finally {
-      setIsLoadingWaiver(false)
+      setIsLoadingWaiver(false);
     }
-  }
+  };
 
   const handleSignCurrentPage = async () => {
     if (signaturePadRef.current?.isEmpty()) {
-      toast.error("Please provide your signature")
-      return
+      toast.error("Please provide your signature");
+      return;
     }
 
-    const signatureData = signaturePadRef.current!.toDataURL()
-    setIsSigningWaiver(true)
+    const signatureData = signaturePadRef.current!.toDataURL();
+    setIsSigningWaiver(true);
 
     try {
-      const currentWaiver = requiredWaivers[currentWaiverIndex]
-      
+      const currentWaiver = requiredWaivers[currentWaiverIndex];
+
       // Determine which pages to sign
       const pagesToSign = signAllMode
         ? currentWaiverPages.map((page) => ({
@@ -721,9 +812,9 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
               waiverPageId: currentWaiverPages[currentPageIndex].id,
               signatureData,
             },
-          ]
+          ];
 
-      const currentAthlete = athleteQueueRef.current[currentAthleteIndex]
+      const currentAthlete = athleteQueueRef.current[currentAthleteIndex];
 
       const response = await fetch(`/api/public/waivers/${currentWaiver.waiverId}/sign`, {
         method: "POST",
@@ -735,61 +826,61 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
           name: `${formData.firstName} ${formData.lastName}`,
           signatures: pagesToSign,
         }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to sign waiver")
+        throw new Error("Failed to sign waiver");
       }
 
-      const result = await response.json()
+      const result = await response.json();
 
       if (result.allPagesSigned || signAllMode) {
         // This waiver is complete - move to next waiver or check medical/payment
-        toast.success(`"${currentWaiver.waiverTitle}" signed successfully`)
-        
+        toast.success(`"${currentWaiver.waiverTitle}" signed successfully`);
+
         if (currentWaiverIndex < requiredWaivers.length - 1) {
-          const nextIndex = currentWaiverIndex + 1
-          setCurrentWaiverIndex(nextIndex)
-          setSignAllMode(false)
-          signaturePadRef.current?.clear()
-          setSignatureEmpty(true)
-          await loadWaiverContent(requiredWaivers[nextIndex].waiverId, organizationIdRef.current!)
+          const nextIndex = currentWaiverIndex + 1;
+          setCurrentWaiverIndex(nextIndex);
+          setSignAllMode(false);
+          signaturePadRef.current?.clear();
+          setSignatureEmpty(true);
+          await loadWaiverContent(requiredWaivers[nextIndex].waiverId, organizationIdRef.current!);
         } else {
           // All waivers for this athlete signed
-          const currentAthlete = athleteQueueRef.current[currentAthleteIndex]
+          const currentAthlete = athleteQueueRef.current[currentAthleteIndex];
           if (currentAthlete) {
             // Track all of this athlete's required waivers as signed (per athlete)
             if (!signedWaiverIdsRef.current.has(currentAthlete.athleteId)) {
-              signedWaiverIdsRef.current.set(currentAthlete.athleteId, new Set())
+              signedWaiverIdsRef.current.set(currentAthlete.athleteId, new Set());
             }
-            const signedSet = signedWaiverIdsRef.current.get(currentAthlete.athleteId)!
-            currentAthlete.requiredWaiverIds.forEach((id) => signedSet.add(id))
+            const signedSet = signedWaiverIdsRef.current.get(currentAthlete.athleteId)!;
+            currentAthlete.requiredWaiverIds.forEach((id) => signedSet.add(id));
             setAthleteWaiverComplete((prev) => {
-              const next = new Set(prev)
-              next.add(currentAthlete.athleteId)
-              return next
-            })
+              const next = new Set(prev);
+              next.add(currentAthlete.athleteId);
+              return next;
+            });
 
             // Re-enter flow to handle custom info -> medical -> next athlete
-            await advanceToNextRequirement(currentAthleteIndex)
+            await advanceToNextRequirement(currentAthleteIndex);
           }
         }
       } else {
         // More pages to sign for this waiver
-        setCurrentPageIndex((prev) => prev + 1)
-        signaturePadRef.current?.clear()
-        setSignatureEmpty(true)
+        setCurrentPageIndex((prev) => prev + 1);
+        signaturePadRef.current?.clear();
+        setSignatureEmpty(true);
       }
     } catch (error: any) {
-      console.error("Failed to sign waiver:", error)
-      toast.error(error.message || "Failed to sign waiver")
+      console.error("Failed to sign waiver:", error);
+      toast.error(error.message || "Failed to sign waiver");
     } finally {
-      setIsSigningWaiver(false)
+      setIsSigningWaiver(false);
     }
-  }
+  };
 
   const createPaymentSession = async () => {
-    setIsProcessing(true)
+    setIsProcessing(true);
     try {
       const response = await fetch(`/api/sites/${params.slug}/checkout/session`, {
         method: "POST",
@@ -803,97 +894,101 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
           editingAddress: isEditingAddress && selectedAddressId !== "new",
           discountCode,
         }),
-      })
+      });
 
       if (!response.ok) {
-        const errData = await response.json()
-        throw new Error(errData.error || "Failed to create payment session")
+        const errData = await response.json();
+        throw new Error(errData.error || "Failed to create payment session");
       }
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (data.freeCheckout) {
-        setFreeCheckoutInvoiceId(data.invoiceId)
-        setCheckoutStep("confirmation")
-        return
+        setFreeCheckoutInvoiceId(data.invoiceId);
+        setCheckoutStep("confirmation");
+        return;
       }
 
-      setPaymentSession({ id: data.sessionId, sessionData: data.sessionData })
-      setCheckoutInvoiceId(data.invoiceId)
-      setPaymentError(null)
-      setCheckoutStep("payment")
+      setPaymentSession({ id: data.sessionId, sessionData: data.sessionData });
+      setCheckoutInvoiceId(data.invoiceId);
+      setPaymentError(null);
+      setCheckoutStep("payment");
     } catch (error: any) {
-      console.error(error)
-      toast.error(error.message || "Failed to initialize payment. Please try again.")
+      console.error(error);
+      toast.error(error.message || "Failed to initialize payment. Please try again.");
     } finally {
-      setIsProcessing(false)
+      setIsProcessing(false);
     }
-  }
+  };
 
   const handleCompleteFreeCheckout = async () => {
-    if (!freeCheckoutInvoiceId) return
-    setIsRedirectingToReceipt(true)
+    if (!freeCheckoutInvoiceId) return;
+    setIsRedirectingToReceipt(true);
     try {
-      sessionStorage.removeItem(FORM_STORAGE_KEY)
-      sessionStorage.removeItem(CONTACT_STORAGE_KEY)
-      sessionStorage.removeItem(ADDRESS_STORAGE_KEY)
-      sessionStorage.removeItem(EDITING_CONTACT_KEY)
-      sessionStorage.removeItem(EDITING_ADDRESS_KEY)
+      sessionStorage.removeItem(FORM_STORAGE_KEY);
+      sessionStorage.removeItem(CONTACT_STORAGE_KEY);
+      sessionStorage.removeItem(ADDRESS_STORAGE_KEY);
+      sessionStorage.removeItem(EDITING_CONTACT_KEY);
+      sessionStorage.removeItem(EDITING_ADDRESS_KEY);
     } catch {
       // ignore
     }
-    await completeRegistration()
-    clearCart()
-    router.push(`/receipt/${freeCheckoutInvoiceId}`)
-  }
+    await completeRegistration();
+    clearCart();
+    router.push(`/receipt/${freeCheckoutInvoiceId}`);
+  };
 
   const handlePaymentCompleted = async (result: any) => {
-    if (result.resultCode === "Authorised" || result.resultCode === "Pending" || result.resultCode === "Received") {
+    if (
+      result.resultCode === "Authorised" ||
+      result.resultCode === "Pending" ||
+      result.resultCode === "Received"
+    ) {
       try {
-        sessionStorage.removeItem(FORM_STORAGE_KEY)
-        sessionStorage.removeItem(CONTACT_STORAGE_KEY)
-        sessionStorage.removeItem(ADDRESS_STORAGE_KEY)
-        sessionStorage.removeItem(EDITING_CONTACT_KEY)
-        sessionStorage.removeItem(EDITING_ADDRESS_KEY)
+        sessionStorage.removeItem(FORM_STORAGE_KEY);
+        sessionStorage.removeItem(CONTACT_STORAGE_KEY);
+        sessionStorage.removeItem(ADDRESS_STORAGE_KEY);
+        sessionStorage.removeItem(EDITING_CONTACT_KEY);
+        sessionStorage.removeItem(EDITING_ADDRESS_KEY);
       } catch {
         // ignore
       }
-      clearCart()
-      await completeRegistration()
+      clearCart();
+      await completeRegistration();
       if (checkoutInvoiceId) {
         try {
           await fetch(`/api/sites/${params.slug}/checkout/finalize`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ invoiceId: checkoutInvoiceId }),
-          })
+          });
         } catch {
           // Adyen webhook will handle it if reachable
         }
-        router.push(`/receipt/${checkoutInvoiceId}`)
+        router.push(`/receipt/${checkoutInvoiceId}`);
       }
     } else {
-      setPaymentError(`Payment was not successful (${result.resultCode}). Please try again.`)
+      setPaymentError(`Payment was not successful (${result.resultCode}). Please try again.`);
     }
-  }
+  };
 
   const handlePaymentError = (error: any) => {
-    console.error("Payment error:", error)
-    const message = error?.message || error?.resultCode || "An error occurred during payment."
-    setPaymentError(message)
-    toast.error("Payment failed. Please try again.")
-  }
+    console.error("Payment error:", error);
+    const message = error?.message || error?.resultCode || "An error occurred during payment.";
+    setPaymentError(message);
+    toast.error("Payment failed. Please try again.");
+  };
 
   const handleApplyDiscount = async () => {
-    if (!discountCode.trim()) return
-    setIsValidatingDiscount(true)
+    if (!discountCode.trim()) return;
+    setIsValidatingDiscount(true);
     try {
       const res = await fetch(`/api/sites/${params.slug}/discount/validate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: discountCode.trim(), amount: subtotal }),
-      })
-      const data = await res.json()
+      });
+      const data = await res.json();
       if (data.valid) {
         setAppliedDiscount({
           id: data.discount.id,
@@ -902,36 +997,36 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
           type: data.discount.type,
           discountAmount: data.calculation?.discountAmount ?? 0,
           description: data.calculation?.discountDescription ?? "",
-        })
-        toast.success(`Discount applied: ${data.calculation?.discountDescription}`)
+        });
+        toast.success(`Discount applied: ${data.calculation?.discountDescription}`);
       } else {
-        toast.error(data.error || "Invalid discount code")
-        setAppliedDiscount(null)
+        toast.error(data.error || "Invalid discount code");
+        setAppliedDiscount(null);
       }
     } catch {
-      toast.error("Failed to validate discount code")
+      toast.error("Failed to validate discount code");
     } finally {
-      setIsValidatingDiscount(false)
+      setIsValidatingDiscount(false);
     }
-  }
+  };
 
   const handleRemoveDiscount = () => {
-    setAppliedDiscount(null)
-    setDiscountCode("")
-  }
+    setAppliedDiscount(null);
+    setDiscountCode("");
+  };
 
-  const discountAmount = appliedDiscount?.discountAmount ?? 0
-  const taxableSubtotal = Math.max(subtotal - discountAmount, 0)
-  const taxAmount = Math.round(taxableSubtotal * taxRate * 100) / 100
+  const discountAmount = appliedDiscount?.discountAmount ?? 0;
+  const taxableSubtotal = Math.max(subtotal - discountAmount, 0);
+  const taxAmount = Math.round(taxableSubtotal * taxRate * 100) / 100;
 
-  const feeBase = taxPaidBy === "CUSTOMER" ? taxableSubtotal + taxAmount : taxableSubtotal
-  const processingFeeRaw = feeBase > 0 ? feeBase * planTransactionFee + planPerTransactionFee : 0
-  const processingFee = Math.round(processingFeeRaw * 100) / 100
+  const feeBase = taxPaidBy === "CUSTOMER" ? taxableSubtotal + taxAmount : taxableSubtotal;
+  const processingFeeRaw = feeBase > 0 ? feeBase * planTransactionFee + planPerTransactionFee : 0;
+  const processingFee = Math.round(processingFeeRaw * 100) / 100;
 
-  let total = taxableSubtotal
-  if (taxPaidBy === "CUSTOMER") total += taxAmount
-  if (processingFeePaidBy === "CUSTOMER") total += processingFee
-  total = Math.round(total * 100) / 100
+  let total = taxableSubtotal;
+  if (taxPaidBy === "CUSTOMER") total += taxAmount;
+  if (processingFeePaidBy === "CUSTOMER") total += processingFee;
+  total = Math.round(total * 100) / 100;
 
   // Show loading while checking queue status
   if (isChecking) {
@@ -940,7 +1035,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
         <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
         <p className="text-muted-foreground">Checking availability...</p>
       </div>
-    )
+    );
   }
 
   if (!isAllowed) {
@@ -949,7 +1044,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
         <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
         <p className="text-muted-foreground">Redirecting to queue...</p>
       </div>
-    )
+    );
   }
 
   if (items.length === 0 && !isRedirectingToReceipt) {
@@ -961,13 +1056,13 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
           <Link href="/register">Browse Programs</Link>
         </Button>
       </div>
-    )
+    );
   }
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 md:px-8 py-12">
       <h1 className="text-3xl font-bold mb-8">Checkout</h1>
-      
+
       <div className="grid gap-8 lg:grid-cols-3">
         {/* Left Column - Forms */}
         <div className="lg:col-span-2 space-y-8">
@@ -995,7 +1090,9 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                         </SelectItem>
                       ))}
                       <SelectItem value="new">
-                        <span className="flex items-center gap-1"><Plus className="h-3 w-3" /> Add new contact</span>
+                        <span className="flex items-center gap-1">
+                          <Plus className="h-3 w-3" /> Add new contact
+                        </span>
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -1023,39 +1120,45 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
               )}
               <div className="space-y-2">
                 <Label htmlFor="firstName">First Name</Label>
-                <Input 
-                  id="firstName" 
+                <Input
+                  id="firstName"
                   name="firstName"
                   autoComplete="given-name"
-                  value={formData.firstName} 
-                  onChange={handleInputChange} 
-                  required 
-                  disabled={checkoutStep !== "details" || (selectedContactId !== "new" && !isEditingContact)}
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                  required
+                  disabled={
+                    checkoutStep !== "details" || (selectedContactId !== "new" && !isEditingContact)
+                  }
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName">Last Name</Label>
-                <Input 
-                  id="lastName" 
+                <Input
+                  id="lastName"
                   name="lastName"
                   autoComplete="family-name"
-                  value={formData.lastName} 
-                  onChange={handleInputChange} 
-                  required 
-                  disabled={checkoutStep !== "details" || (selectedContactId !== "new" && !isEditingContact)}
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  required
+                  disabled={
+                    checkoutStep !== "details" || (selectedContactId !== "new" && !isEditingContact)
+                  }
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="email">Email</Label>
-                <Input 
-                  id="email" 
-                  name="email" 
+                <Input
+                  id="email"
+                  name="email"
                   type="email"
                   autoComplete="email"
-                  value={formData.email} 
-                  onChange={handleInputChange} 
-                  required 
-                  disabled={checkoutStep !== "details" || (selectedContactId !== "new" && !isEditingContact)}
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  required
+                  disabled={
+                    checkoutStep !== "details" || (selectedContactId !== "new" && !isEditingContact)
+                  }
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
@@ -1065,7 +1168,9 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   defaultCountry="US"
                   value={formData.phone}
                   onChange={(value) => setFormData((prev) => ({ ...prev, phone: value || "" }))}
-                  disabled={checkoutStep !== "details" || (selectedContactId !== "new" && !isEditingContact)}
+                  disabled={
+                    checkoutStep !== "details" || (selectedContactId !== "new" && !isEditingContact)
+                  }
                 />
               </div>
             </CardContent>
@@ -1073,7 +1178,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
 
           {/* Billing Address */}
           <Card>
-             <CardHeader>
+            <CardHeader>
               <CardTitle>Billing Address</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
@@ -1087,12 +1192,19 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                     <SelectContent>
                       {savedAddresses.map((a) => (
                         <SelectItem key={a.id} value={a.id}>
-                          {a.label ? `${a.label} — ` : ""}{a.street}, {a.city}{a.stateProvince ? `, ${getRegionsForCountry(a.country).find((r) => r.code === a.stateProvince)?.name ?? a.stateProvince}` : ""} {a.postalCode}
+                          {a.label ? `${a.label} — ` : ""}
+                          {a.street}, {a.city}
+                          {a.stateProvince
+                            ? `, ${getRegionsForCountry(a.country).find((r) => r.code === a.stateProvince)?.name ?? a.stateProvince}`
+                            : ""}{" "}
+                          {a.postalCode}
                           {a.isPrimary ? " (Primary)" : ""}
                         </SelectItem>
                       ))}
                       <SelectItem value="new">
-                        <span className="flex items-center gap-1"><Plus className="h-3 w-3" /> Add new address</span>
+                        <span className="flex items-center gap-1">
+                          <Plus className="h-3 w-3" /> Add new address
+                        </span>
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -1120,49 +1232,67 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
               )}
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="address">Street Address</Label>
-                <Input 
-                  id="address" 
+                <Input
+                  id="address"
                   name="address"
                   autoComplete="street-address"
-                  value={formData.address} 
-                  onChange={handleInputChange} 
-                  disabled={checkoutStep !== "details" || (selectedAddressId !== "new" && !isEditingAddress)}
+                  value={formData.address}
+                  onChange={handleInputChange}
+                  disabled={
+                    checkoutStep !== "details" || (selectedAddressId !== "new" && !isEditingAddress)
+                  }
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="city">City</Label>
-                <Input 
-                  id="city" 
+                <Input
+                  id="city"
                   name="city"
                   autoComplete="address-level2"
-                  value={formData.city} 
-                  onChange={handleInputChange} 
-                  disabled={checkoutStep !== "details" || (selectedAddressId !== "new" && !isEditingAddress)}
+                  value={formData.city}
+                  onChange={handleInputChange}
+                  disabled={
+                    checkoutStep !== "details" || (selectedAddressId !== "new" && !isEditingAddress)
+                  }
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="stateProvince">
-                  {formData.country === "CA" ? "Province" : formData.country === "US" ? "State" : "State / Province"}
+                  {formData.country === "CA"
+                    ? "Province"
+                    : formData.country === "US"
+                      ? "State"
+                      : "State / Province"}
                 </Label>
                 <StateProvinceCombobox
                   country={formData.country}
                   value={formData.stateProvince}
                   onChange={(val) => setFormData((prev) => ({ ...prev, stateProvince: val }))}
-                  disabled={checkoutStep !== "details" || (selectedAddressId !== "new" && !isEditingAddress)}
+                  disabled={
+                    checkoutStep !== "details" || (selectedAddressId !== "new" && !isEditingAddress)
+                  }
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="postalCode">
-                  {formData.country === "CA" ? "Postal Code" : formData.country === "US" ? "ZIP Code" : "Postal Code"}
+                  {formData.country === "CA"
+                    ? "Postal Code"
+                    : formData.country === "US"
+                      ? "ZIP Code"
+                      : "Postal Code"}
                 </Label>
-                <Input 
-                  id="postalCode" 
+                <Input
+                  id="postalCode"
                   name="postalCode"
                   autoComplete="postal-code"
-                  value={formData.postalCode} 
-                  onChange={handleInputChange} 
-                  placeholder={formData.country === "CA" ? "A1A 1A1" : formData.country === "US" ? "12345" : ""}
-                  disabled={checkoutStep !== "details" || (selectedAddressId !== "new" && !isEditingAddress)}
+                  value={formData.postalCode}
+                  onChange={handleInputChange}
+                  placeholder={
+                    formData.country === "CA" ? "A1A 1A1" : formData.country === "US" ? "12345" : ""
+                  }
+                  disabled={
+                    checkoutStep !== "details" || (selectedAddressId !== "new" && !isEditingAddress)
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -1176,27 +1306,31 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                       stateProvince: prev.country !== value ? "" : prev.stateProvince,
                     }))
                   }
-                  disabled={checkoutStep !== "details" || (selectedAddressId !== "new" && !isEditingAddress)}
+                  disabled={
+                    checkoutStep !== "details" || (selectedAddressId !== "new" && !isEditingAddress)
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select country" />
                   </SelectTrigger>
                   <SelectContent>
                     {COUNTRIES.map((c) => (
-                      <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+                      <SelectItem key={c.code} value={c.code}>
+                        {c.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             </CardContent>
             {checkoutStep === "details" && (
-                <CardFooter>
-                    <Button onClick={handleProceedToPayment} disabled={isProcessing} className="w-full">
-                        {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Continue
-                        <ChevronRight className="ml-1 h-4 w-4" />
-                    </Button>
-                </CardFooter>
+              <CardFooter>
+                <Button onClick={handleProceedToPayment} disabled={isProcessing} className="w-full">
+                  {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Continue
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+              </CardFooter>
             )}
           </Card>
 
@@ -1214,10 +1348,12 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   )}
                 </CardTitle>
                 <CardDescription>
-                  Please review and sign the following waiver{requiredWaivers.length > 1 ? "s" : ""} before proceeding.
+                  Please review and sign the following waiver{requiredWaivers.length > 1 ? "s" : ""}{" "}
+                  before proceeding.
                   {requiredWaivers.length > 1 && (
                     <span className="block mt-1">
-                      Waiver {currentWaiverIndex + 1} of {requiredWaivers.length}: <strong>{requiredWaivers[currentWaiverIndex]?.waiverTitle}</strong>
+                      Waiver {currentWaiverIndex + 1} of {requiredWaivers.length}:{" "}
+                      <strong>{requiredWaivers[currentWaiverIndex]?.waiverTitle}</strong>
                     </span>
                   )}
                   {athleteQueue.length > 1 && (
@@ -1273,7 +1409,8 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                     <div className="space-y-2">
                       <Label>Your Signature</Label>
                       <p className="text-sm text-muted-foreground">
-                        By signing below, I acknowledge that I have read and agree to the terms above.
+                        By signing below, I acknowledge that I have read and agree to the terms
+                        above.
                       </p>
                       <SignaturePad
                         ref={signaturePadRef}
@@ -1288,8 +1425,8 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    setCheckoutStep("details")
-                    setRequiredWaivers([])
+                    setCheckoutStep("details");
+                    setRequiredWaivers([]);
                   }}
                 >
                   <ChevronLeft className="mr-1 h-4 w-4" />
@@ -1300,13 +1437,13 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   disabled={isSigningWaiver || signatureEmpty || isLoadingWaiver}
                 >
                   {isSigningWaiver && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {signAllMode ? "Sign All Pages & Continue" : (
-                    currentPageIndex < currentWaiverPages.length - 1
+                  {signAllMode
+                    ? "Sign All Pages & Continue"
+                    : currentPageIndex < currentWaiverPages.length - 1
                       ? "Sign & Next Page"
                       : currentWaiverIndex < requiredWaivers.length - 1
                         ? "Sign & Next Waiver"
-                        : "Sign & Continue"
-                  )}
+                        : "Sign & Continue"}
                   <ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
               </CardFooter>
@@ -1314,57 +1451,59 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
           )}
 
           {/* Custom Information Step */}
-          {checkoutStep === "customInfo" && customInfoQuestions.length > 0 && athleteQueue.length > 0 && (
-            <>
-              {athleteQueue.length > 1 && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <FileText className="h-4 w-4" />
-                  <span>
-                    Athlete {currentAthleteIndex + 1} of {athleteQueue.length}
-                  </span>
-                </div>
-              )}
-              <Card>
-                <CardContent className="pt-6">
-                  <CustomInformationForm
-                    key={athleteQueue[currentAthleteIndex]?.athleteId}
-                    questions={customInfoQuestions}
-                    existingResponses={customInfoResponses}
-                    athleteId={athleteQueue[currentAthleteIndex]?.athleteId}
-                    organizationId={organizationId!}
-                    onComplete={async () => {
-                      const currentAthlete = athleteQueueRef.current[currentAthleteIndex]
-                      setAthleteCustomInfoComplete((prev) => {
-                        const next = new Set(prev)
-                        next.add(currentAthlete.athleteId)
-                        return next
-                      })
+          {checkoutStep === "customInfo" &&
+            customInfoQuestions.length > 0 &&
+            athleteQueue.length > 0 && (
+              <>
+                {athleteQueue.length > 1 && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <FileText className="h-4 w-4" />
+                    <span>
+                      Athlete {currentAthleteIndex + 1} of {athleteQueue.length}
+                    </span>
+                  </div>
+                )}
+                <Card>
+                  <CardContent className="pt-6">
+                    <CustomInformationForm
+                      key={athleteQueue[currentAthleteIndex]?.athleteId}
+                      questions={customInfoQuestions}
+                      existingResponses={customInfoResponses}
+                      athleteId={athleteQueue[currentAthleteIndex]?.athleteId}
+                      organizationId={organizationId!}
+                      onComplete={async () => {
+                        const currentAthlete = athleteQueueRef.current[currentAthleteIndex];
+                        setAthleteCustomInfoComplete((prev) => {
+                          const next = new Set(prev);
+                          next.add(currentAthlete.athleteId);
+                          return next;
+                        });
 
-                      // Continue to medical or next athlete
-                      if (currentAthlete.needsMedical) {
-                        setCheckoutStep("medical")
-                      } else {
-                        setAthleteMedicalComplete((prev) => {
-                          const next = new Set(prev)
-                          next.add(currentAthlete.athleteId)
-                          return next
-                        })
-                        setIsProcessing(true)
-                        try {
-                          await advanceToNextRequirement(currentAthleteIndex + 1)
-                        } finally {
-                          setIsProcessing(false)
+                        // Continue to medical or next athlete
+                        if (currentAthlete.needsMedical) {
+                          setCheckoutStep("medical");
+                        } else {
+                          setAthleteMedicalComplete((prev) => {
+                            const next = new Set(prev);
+                            next.add(currentAthlete.athleteId);
+                            return next;
+                          });
+                          setIsProcessing(true);
+                          try {
+                            await advanceToNextRequirement(currentAthleteIndex + 1);
+                          } finally {
+                            setIsProcessing(false);
+                          }
                         }
-                      }
-                    }}
-                    onBack={() => {
-                      setCheckoutStep("details")
-                    }}
-                  />
-                </CardContent>
-              </Card>
-            </>
-          )}
+                      }}
+                      onBack={() => {
+                        setCheckoutStep("details");
+                      }}
+                    />
+                  </CardContent>
+                </Card>
+              </>
+            )}
 
           {/* Medical Information Step */}
           {checkoutStep === "medical" && medicalConfig && athleteQueue.length > 0 && (
@@ -1386,25 +1525,25 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                 organizationId={organizationId!}
                 email={formData.email}
                 onComplete={async () => {
-                  const currentAthlete = athleteQueueRef.current[currentAthleteIndex]
+                  const currentAthlete = athleteQueueRef.current[currentAthleteIndex];
                   // Mark this athlete's medical as complete
                   setAthleteMedicalComplete((prev) => {
-                    const next = new Set(prev)
-                    next.add(currentAthlete.athleteId)
-                    return next
-                  })
+                    const next = new Set(prev);
+                    next.add(currentAthlete.athleteId);
+                    return next;
+                  });
 
                   // Advance to next athlete or payment
-                  setIsProcessing(true)
+                  setIsProcessing(true);
                   try {
-                    await advanceToNextRequirement(currentAthleteIndex + 1)
+                    await advanceToNextRequirement(currentAthleteIndex + 1);
                   } finally {
-                    setIsProcessing(false)
+                    setIsProcessing(false);
                   }
                 }}
                 onBack={() => {
                   // Go back to details — signed waivers and saved medical info persist server-side
-                  setCheckoutStep("details")
+                  setCheckoutStep("details");
                 }}
               />
             </>
@@ -1431,7 +1570,8 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                         <span>You will not be charged yet</span>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        You will be added to the waitlist. When a spot opens and you are promoted, we will collect payment at that time.
+                        You will be added to the waitlist. When a spot opens and you are promoted,
+                        we will collect payment at that time.
                       </p>
                     </div>
                     <Button
@@ -1452,9 +1592,9 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        setCheckoutStep("details")
-                        setPaymentSession(null)
-                        setPaymentError(null)
+                        setCheckoutStep("details");
+                        setPaymentSession(null);
+                        setPaymentError(null);
                       }}
                     >
                       <ChevronLeft className="mr-1 h-4 w-4" />
@@ -1500,35 +1640,37 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   <Check className="h-5 w-5 text-green-500" />
                   Confirm Your Registration
                 </CardTitle>
-                <CardDescription>
-                  Review your order and complete your registration.
-                </CardDescription>
+                <CardDescription>Review your order and complete your registration.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="rounded-lg border p-4 space-y-3">
-                  {Array.from(getItemsByAthlete().entries()).map(([athleteId, { athleteName, items: athleteItems }]) => (
-                    <div key={athleteId}>
-                      <div className="flex items-center gap-2 mb-1">
-                        <User className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-sm font-semibold">{athleteName}</span>
-                      </div>
-                      <div className="pl-5 space-y-1">
-                        {athleteItems.map((item) => (
-                          <div key={item.id} className="flex justify-between text-sm">
-                            <div>
-                              <span>{item.name}</span>
-                              {item.details?.variantLabel && (
-                                <span className="text-xs text-muted-foreground ml-1">
-                                  ({item.details.variantLabel})
-                                </span>
-                              )}
+                  {Array.from(getItemsByAthlete().entries()).map(
+                    ([athleteId, { athleteName, items: athleteItems }]) => (
+                      <div key={athleteId}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <User className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="text-sm font-semibold">{athleteName}</span>
+                        </div>
+                        <div className="pl-5 space-y-1">
+                          {athleteItems.map((item) => (
+                            <div key={item.id} className="flex justify-between text-sm">
+                              <div>
+                                <span>{item.name}</span>
+                                {item.details?.variantLabel && (
+                                  <span className="text-xs text-muted-foreground ml-1">
+                                    ({item.details.variantLabel})
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-muted-foreground">
+                                ${(item.price * item.quantity).toFixed(2)}
+                              </span>
                             </div>
-                            <span className="text-muted-foreground">${(item.price * item.quantity).toFixed(2)}</span>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  )}
                 </div>
                 <Separator />
                 <div className="flex justify-between font-semibold text-lg">
@@ -1561,78 +1703,81 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
-                {Array.from(getItemsByAthlete().entries()).map(([athleteId, { athleteName, items: athleteItems }]) => (
-                  <div key={athleteId}>
-                    {/* Athlete section header */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex items-center justify-center h-5 w-5 rounded-full bg-primary/10 text-primary">
-                        <User className="h-3 w-3" />
-                      </div>
-                      <span className="text-xs font-semibold text-foreground">{athleteName}</span>
-                      {/* Requirement status indicators */}
-                      {checkoutStep !== "details" && (() => {
-                        const reqs = athleteQueue.find((a) => a.athleteId === athleteId)
-                        if (!reqs) return null
-                        return (
-                          <>
-                            {reqs.requiredWaiverIds.length > 0 && (
-                              athleteWaiverComplete.has(athleteId) ? (
-                                <span className="inline-flex items-center gap-1 text-[10px] text-green-600 bg-green-50 dark:bg-green-950/50 px-1.5 py-0.5 rounded-full">
-                                  <Check className="h-2.5 w-2.5" />
-                                  Waivers
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 bg-amber-50 dark:bg-amber-950/50 px-1.5 py-0.5 rounded-full">
-                                  <AlertCircle className="h-2.5 w-2.5" />
-                                  Waivers
-                                </span>
-                              )
-                            )}
-                            {reqs.needsMedical && (
-                              athleteMedicalComplete.has(athleteId) ? (
-                                <span className="inline-flex items-center gap-1 text-[10px] text-green-600 bg-green-50 dark:bg-green-950/50 px-1.5 py-0.5 rounded-full">
-                                  <Check className="h-2.5 w-2.5" />
-                                  Medical
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 bg-amber-50 dark:bg-amber-950/50 px-1.5 py-0.5 rounded-full">
-                                  <AlertCircle className="h-2.5 w-2.5" />
-                                  Medical
-                                </span>
-                              )
-                            )}
-                          </>
-                        )
-                      })()}
-                    </div>
-                    <div className="space-y-2 pl-2 mb-3">
-                      {athleteItems.map((item) => (
-                        <div key={item.id} className="flex justify-between gap-4 text-sm">
-                          <div className="flex-1">
-                            <span className="font-medium">{item.name}</span>
-                            {item.details?.variantLabel && (
-                              <span className="text-xs text-muted-foreground ml-1">({item.details.variantLabel})</span>
-                            )}
-                            <div className="text-xs text-muted-foreground mt-1">
-                              Qty: {item.quantity}
-                              {checkoutStep === "details" && (
-                                <button
-                                  onClick={() => handleRemoveClick(item)}
-                                  className="ml-2 text-destructive hover:underline"
-                                >
-                                  Remove
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                          <span>${(item.price * item.quantity).toFixed(2)}</span>
+                {Array.from(getItemsByAthlete().entries()).map(
+                  ([athleteId, { athleteName, items: athleteItems }]) => (
+                    <div key={athleteId}>
+                      {/* Athlete section header */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center justify-center h-5 w-5 rounded-full bg-primary/10 text-primary">
+                          <User className="h-3 w-3" />
                         </div>
-                      ))}
+                        <span className="text-xs font-semibold text-foreground">{athleteName}</span>
+                        {/* Requirement status indicators */}
+                        {checkoutStep !== "details" &&
+                          (() => {
+                            const reqs = athleteQueue.find((a) => a.athleteId === athleteId);
+                            if (!reqs) return null;
+                            return (
+                              <>
+                                {reqs.requiredWaiverIds.length > 0 &&
+                                  (athleteWaiverComplete.has(athleteId) ? (
+                                    <span className="inline-flex items-center gap-1 text-[10px] text-green-600 bg-green-50 dark:bg-green-950/50 px-1.5 py-0.5 rounded-full">
+                                      <Check className="h-2.5 w-2.5" />
+                                      Waivers
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 bg-amber-50 dark:bg-amber-950/50 px-1.5 py-0.5 rounded-full">
+                                      <AlertCircle className="h-2.5 w-2.5" />
+                                      Waivers
+                                    </span>
+                                  ))}
+                                {reqs.needsMedical &&
+                                  (athleteMedicalComplete.has(athleteId) ? (
+                                    <span className="inline-flex items-center gap-1 text-[10px] text-green-600 bg-green-50 dark:bg-green-950/50 px-1.5 py-0.5 rounded-full">
+                                      <Check className="h-2.5 w-2.5" />
+                                      Medical
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 bg-amber-50 dark:bg-amber-950/50 px-1.5 py-0.5 rounded-full">
+                                      <AlertCircle className="h-2.5 w-2.5" />
+                                      Medical
+                                    </span>
+                                  ))}
+                              </>
+                            );
+                          })()}
+                      </div>
+                      <div className="space-y-2 pl-2 mb-3">
+                        {athleteItems.map((item) => (
+                          <div key={item.id} className="flex justify-between gap-4 text-sm">
+                            <div className="flex-1">
+                              <span className="font-medium">{item.name}</span>
+                              {item.details?.variantLabel && (
+                                <span className="text-xs text-muted-foreground ml-1">
+                                  ({item.details.variantLabel})
+                                </span>
+                              )}
+                              <div className="text-xs text-muted-foreground mt-1">
+                                Qty: {item.quantity}
+                                {checkoutStep === "details" && (
+                                  <button
+                                    onClick={() => handleRemoveClick(item)}
+                                    className="ml-2 text-destructive hover:underline"
+                                  >
+                                    Remove
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            <span>${(item.price * item.quantity).toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                )}
               </div>
-              
+
               <Separator />
 
               <div className="space-y-2">
@@ -1640,8 +1785,12 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                 {appliedDiscount ? (
                   <div className="flex items-center justify-between rounded-md border bg-green-50 dark:bg-green-950/20 p-2 text-sm">
                     <div>
-                      <span className="font-medium text-green-700 dark:text-green-400">{appliedDiscount.code}</span>
-                      <span className="text-muted-foreground ml-1">— {appliedDiscount.description}</span>
+                      <span className="font-medium text-green-700 dark:text-green-400">
+                        {appliedDiscount.code}
+                      </span>
+                      <span className="text-muted-foreground ml-1">
+                        — {appliedDiscount.description}
+                      </span>
                     </div>
                     <Button
                       variant="ghost"
@@ -1661,14 +1810,25 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                       onChange={(e) => setDiscountCode(e.target.value)}
                       placeholder="Enter code"
                       disabled={checkoutStep !== "details" || isValidatingDiscount}
-                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleApplyDiscount() } }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleApplyDiscount();
+                        }
+                      }}
                     />
                     <Button
                       variant="outline"
-                      disabled={checkoutStep !== "details" || isValidatingDiscount || !discountCode.trim()}
+                      disabled={
+                        checkoutStep !== "details" || isValidatingDiscount || !discountCode.trim()
+                      }
                       onClick={handleApplyDiscount}
                     >
-                      {isValidatingDiscount ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
+                      {isValidatingDiscount ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Apply"
+                      )}
                     </Button>
                   </div>
                 )}
@@ -1689,7 +1849,9 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                 )}
                 {taxPaidBy === "CUSTOMER" && taxAmount > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Tax ({(taxRate * 100).toFixed(2).replace(/\.?0+$/, "")}%)</span>
+                    <span className="text-muted-foreground">
+                      Tax ({(taxRate * 100).toFixed(2).replace(/\.?0+$/, "")}%)
+                    </span>
                     <span>${taxAmount.toFixed(2)}</span>
                   </div>
                 )}
@@ -1710,33 +1872,49 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
               <Separator />
               <div className="space-y-2 text-xs">
                 <div className="flex items-center gap-2">
-                  <div className={`h-2 w-2 rounded-full ${checkoutStep === "details" ? "bg-primary" : "bg-green-500"}`} />
+                  <div
+                    className={`h-2 w-2 rounded-full ${checkoutStep === "details" ? "bg-primary" : "bg-green-500"}`}
+                  />
                   <span className={checkoutStep !== "details" ? "text-green-600" : ""}>
                     {checkoutStep !== "details" ? "Contact info complete" : "Fill in contact info"}
                   </span>
                 </div>
                 {athleteQueue.length > 0 && (
                   <div className="flex items-center gap-2">
-                    <div className={`h-2 w-2 rounded-full ${
-                      (checkoutStep === "payment" || checkoutStep === "confirmation") ? "bg-green-500"
-                      : (checkoutStep === "waivers" || checkoutStep === "medical") ? "bg-primary"
-                      : "bg-muted"
-                    }`} />
-                    <span className={(checkoutStep === "payment" || checkoutStep === "confirmation") ? "text-green-600" : ""}>
-                      {(checkoutStep === "payment" || checkoutStep === "confirmation")
+                    <div
+                      className={`h-2 w-2 rounded-full ${
+                        checkoutStep === "payment" || checkoutStep === "confirmation"
+                          ? "bg-green-500"
+                          : checkoutStep === "waivers" || checkoutStep === "medical"
+                            ? "bg-primary"
+                            : "bg-muted"
+                      }`}
+                    />
+                    <span
+                      className={
+                        checkoutStep === "payment" || checkoutStep === "confirmation"
+                          ? "text-green-600"
+                          : ""
+                      }
+                    >
+                      {checkoutStep === "payment" || checkoutStep === "confirmation"
                         ? "All requirements complete"
-                        : (checkoutStep === "waivers" || checkoutStep === "medical")
+                        : checkoutStep === "waivers" || checkoutStep === "medical"
                           ? `Athlete requirements (${currentAthleteIndex + 1}/${athleteQueue.length})`
                           : "Complete requirements"}
                     </span>
                   </div>
                 )}
                 <div className="flex items-center gap-2">
-                  <div className={`h-2 w-2 rounded-full ${
-                    checkoutStep === "confirmation" ? "bg-primary"
-                    : checkoutStep === "payment" ? "bg-primary"
-                    : "bg-muted"
-                  }`} />
+                  <div
+                    className={`h-2 w-2 rounded-full ${
+                      checkoutStep === "confirmation"
+                        ? "bg-primary"
+                        : checkoutStep === "payment"
+                          ? "bg-primary"
+                          : "bg-muted"
+                    }`}
+                  />
                   <span>{total === 0 ? "Confirm registration" : "Complete payment"}</span>
                 </div>
               </div>
@@ -1744,15 +1922,12 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
           </Card>
         </div>
       </div>
-      
+
       {/* Reservation Timer */}
       {hasReservation && reservation && (
-        <ReservationTimer 
-          expiresAt={reservation.expiresAt} 
-          organizationSlug={params.slug}
-        />
+        <ReservationTimer expiresAt={reservation.expiresAt} organizationSlug={params.slug} />
       )}
-      
+
       {/* Remove item confirmation dialog */}
       <RemoveItemDialog
         open={removeDialogOpen}
@@ -1763,5 +1938,5 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
         onConfirmRemove={handleConfirmRemove}
       />
     </div>
-  )
+  );
 }

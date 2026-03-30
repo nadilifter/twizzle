@@ -17,13 +17,7 @@ import {
   Link as LinkIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetClose,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from "@/components/ui/sheet";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { EventWithRelations } from "@/types/events";
 import { useState } from "react";
@@ -65,10 +59,7 @@ function getParticipantName(participantId: string): string {
     user5: "Leonel Ngoya",
   };
 
-  return (
-    names[participantId] ||
-    participantId.charAt(0).toUpperCase() + participantId.slice(1)
-  );
+  return names[participantId] || participantId.charAt(0).toUpperCase() + participantId.slice(1);
 }
 
 function getParticipantEmail(participantId: string): string {
@@ -88,9 +79,7 @@ function copyToClipboard(text: string) {
 }
 
 export function EventSheet({ event, open, onOpenChange }: EventSheetProps) {
-  const [rsvpStatus, setRsvpStatus] = useState<"yes" | "no" | "maybe" | null>(
-    null
-  );
+  const [rsvpStatus, setRsvpStatus] = useState<"yes" | "no" | "maybe" | null>(null);
 
   if (!event) return null;
 
@@ -142,32 +131,16 @@ export function EventSheet({ event, open, onOpenChange }: EventSheetProps) {
           <SheetHeader className="px-4 pt-4 pb-4 border-b border-border">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-8 hover:bg-muted"
-                >
+                <Button variant="ghost" size="icon" className="size-8 hover:bg-muted">
                   <Pen className="size-4 text-muted-foreground" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-8 hover:bg-muted"
-                >
+                <Button variant="ghost" size="icon" className="size-8 hover:bg-muted">
                   <FileText className="size-4 text-muted-foreground" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-8 hover:bg-muted"
-                >
+                <Button variant="ghost" size="icon" className="size-8 hover:bg-muted">
                   <Layers className="size-4 text-muted-foreground" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-8 hover:bg-muted"
-                >
+                <Button variant="ghost" size="icon" className="size-8 hover:bg-muted">
                   <Trash2 className="size-4 text-muted-foreground" />
                 </Button>
               </div>
@@ -207,10 +180,7 @@ export function EventSheet({ event, open, onOpenChange }: EventSheetProps) {
             <div className="flex flex-col gap-4 max-w-[512px] mx-auto">
               <div className="flex flex-col gap-4">
                 {mockParticipants.map((participant) => (
-                  <div
-                    key={participant.id}
-                    className="flex items-start gap-3 relative"
-                  >
+                  <div key={participant.id} className="flex items-start gap-3 relative">
                     <Avatar className="size-7 border-[1.4px] border-background shrink-0">
                       <AvatarImage
                         src={`https://api.dicebear.com/9.x/glass/svg?seed=${participant.id}`}
@@ -267,9 +237,7 @@ export function EventSheet({ event, open, onOpenChange }: EventSheetProps) {
                             No
                           </Button>
                           <Button
-                            variant={
-                              rsvpStatus === "maybe" ? "default" : "ghost"
-                            }
+                            variant={rsvpStatus === "maybe" ? "default" : "ghost"}
                             size="sm"
                             className={`flex-1 h-[30px] text-xs font-medium ${
                               rsvpStatus === "maybe"
@@ -306,9 +274,7 @@ export function EventSheet({ event, open, onOpenChange }: EventSheetProps) {
                     <p className="text-xs font-medium text-muted-foreground flex-1">
                       Meeting in Google Meet
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      Code: {meetingCode}
-                    </p>
+                    <p className="text-xs text-muted-foreground">Code: {meetingCode}</p>
                   </div>
                   <div className="flex gap-2">
                     <Button
@@ -385,11 +351,9 @@ export function EventSheet({ event, open, onOpenChange }: EventSheetProps) {
 
               <div className="pt-4 border-t border-border">
                 <p className="text-xs text-muted-foreground leading-[1.6]">
-                  During today&apos;s daily check-in, we had an in-depth
-                  discussion about the MVP (Minimum Viable Product). We agreed
-                  on the core features that need to be included, focusing on the
-                  AI-conducted interviews and the memoir compilation
-                  functionality.
+                  During today&apos;s daily check-in, we had an in-depth discussion about the MVP
+                  (Minimum Viable Product). We agreed on the core features that need to be included,
+                  focusing on the AI-conducted interviews and the memoir compilation functionality.
                 </p>
               </div>
             </div>

@@ -10,23 +10,18 @@ import { db } from "@/lib/db";
  * - Registrations the current user created (userId matches), OR
  * - Registrations where the creating guardian has shareRegistrations=true
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
     const { id: athleteId } = await params;
-    const userId = (session.user.isSuperAdmin && session.user.viewingAsUserId)
-      ? session.user.viewingAsUserId
-      : session.user.id;
+    const userId =
+      session.user.isSuperAdmin && session.user.viewingAsUserId
+        ? session.user.viewingAsUserId
+        : session.user.id;
 
     // Verify current user has access to this athlete (guardian or self)
     const athlete = await db.athlete.findUnique({
@@ -74,10 +69,7 @@ export async function GET(
     const instanceRegistrations = await db.instanceRegistration.findMany({
       where: {
         athleteId,
-        OR: [
-          { userId: { in: Array.from(sharedGuardianUserIds) } },
-          { userId: null },
-        ],
+        OR: [{ userId: { in: Array.from(sharedGuardianUserIds) } }, { userId: null }],
       },
       include: {
         programInstance: {
@@ -96,10 +88,7 @@ export async function GET(
     const enrollments = await db.enrollment.findMany({
       where: {
         athleteId,
-        OR: [
-          { userId: { in: Array.from(sharedGuardianUserIds) } },
-          { userId: null },
-        ],
+        OR: [{ userId: { in: Array.from(sharedGuardianUserIds) } }, { userId: null }],
       },
       include: {
         program: {
@@ -137,9 +126,6 @@ export async function GET(
     });
   } catch (error) {
     console.error("GET /api/athletes/[id]/registrations error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch registrations" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch registrations" }, { status: 500 });
   }
 }

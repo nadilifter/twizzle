@@ -3,12 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -30,18 +25,18 @@ import { toast } from "sonner";
  */
 function getLoginUrlWithCallback(): string {
   if (typeof window === "undefined") return "/login";
-  
+
   const hostname = window.location.hostname;
   const protocol = window.location.protocol;
   const port = window.location.port;
-  
+
   // Construct the current feedback page URL as the callback
   const feedbackUrl = `${protocol}//${hostname}${port ? `:${port}` : ""}${window.location.pathname}?action=submit`;
-  
+
   // Determine the login subdomain URL
   const parts = hostname.split(".");
   let loginUrl: string;
-  
+
   if (hostname.includes("localhost")) {
     // Local development
     const baseDomain = parts.slice(1).join(".") || "uplifterinc.localhost";
@@ -51,7 +46,7 @@ function getLoginUrlWithCallback(): string {
     const baseDomain = parts.slice(1).join(".");
     loginUrl = `${protocol}//login.${baseDomain}`;
   }
-  
+
   return `${loginUrl}?callbackUrl=${encodeURIComponent(feedbackUrl)}`;
 }
 
@@ -70,11 +65,11 @@ export function FeedbackContent() {
   const [hasCheckedAction, setHasCheckedAction] = useState(false);
 
   const isLoggedIn = sessionStatus === "authenticated" && !!session?.user;
-  
+
   // Check for action=submit in URL after login redirect
   useEffect(() => {
     if (sessionStatus === "loading" || hasCheckedAction) return;
-    
+
     const action = searchParams.get("action");
     if (action === "submit" && isLoggedIn) {
       setIsSubmitOpen(true);
@@ -104,7 +99,7 @@ export function FeedbackContent() {
         params.set("category", selectedCategory);
       }
       params.set("sortBy", sortBy);
-      
+
       const response = await fetch(`/api/feedback?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
@@ -140,7 +135,7 @@ export function FeedbackContent() {
   const handleSelectFeature = async (feature: FeatureRequest) => {
     setSelectedFeature(feature);
     setLoadingDetails(true);
-    
+
     try {
       const response = await fetch(`/api/feedback/${feature.id}`);
       if (response.ok) {
@@ -168,7 +163,7 @@ export function FeedbackContent() {
       const response = await fetch(`/api/feedback/${id}/vote`, {
         method: "POST",
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         // Update the feature in the list
@@ -191,7 +186,11 @@ export function FeedbackContent() {
     }
   };
 
-  const handleSubmit = async (data: { title: string; description: string; categories: string[] }) => {
+  const handleSubmit = async (data: {
+    title: string;
+    description: string;
+    categories: string[];
+  }) => {
     try {
       const response = await fetch("/api/feedback", {
         method: "POST",
@@ -233,17 +232,17 @@ export function FeedbackContent() {
         // Update feature details with new comment
         if (featureDetails?.id === featureId) {
           setFeatureDetails((prev) =>
-            prev ? { 
-              ...prev, 
-              comments: [...(prev.comments || []), data.data] 
-            } : null
+            prev
+              ? {
+                  ...prev,
+                  comments: [...(prev.comments || []), data.data],
+                }
+              : null
           );
         }
         // Update comment count in list
         setFeatures((prev) =>
-          prev.map((f) =>
-            f.id === featureId ? { ...f, commentCount: f.commentCount + 1 } : f
-          )
+          prev.map((f) => (f.id === featureId ? { ...f, commentCount: f.commentCount + 1 } : f))
         );
         toast.success("Comment added!");
       }
@@ -321,8 +320,8 @@ export function FeedbackContent() {
               <div className="flex flex-col items-center justify-center py-24 text-center">
                 <p className="text-muted-foreground">No features found</p>
                 {selectedCategory !== "all" && (
-                  <Button 
-                    variant="link" 
+                  <Button
+                    variant="link"
                     onClick={() => setSelectedCategory("all")}
                     className="mt-2"
                   >
@@ -331,26 +330,23 @@ export function FeedbackContent() {
                 )}
               </div>
             ) : (
-              <FeatureList 
-                features={features} 
-                onVote={handleVote} 
+              <FeatureList
+                features={features}
+                onVote={handleVote}
                 onSelect={handleSelectFeature}
                 isLoggedIn={isLoggedIn}
               />
             )}
           </TabsContent>
           <TabsContent value="roadmap" className="mt-6">
-            <RoadmapBoard 
-              features={features} 
-              onSelect={handleSelectFeature}
-            />
+            <RoadmapBoard features={features} onSelect={handleSelectFeature} />
           </TabsContent>
         </Tabs>
       )}
 
-      <SubmitFeatureDialog 
-        open={isSubmitOpen} 
-        onOpenChange={setIsSubmitOpen} 
+      <SubmitFeatureDialog
+        open={isSubmitOpen}
+        onOpenChange={setIsSubmitOpen}
         onSubmit={handleSubmit}
       />
 

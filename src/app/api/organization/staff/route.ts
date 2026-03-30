@@ -5,9 +5,11 @@ import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 import { isValidPhoneNumber } from "libphonenumber-js";
 
-const phoneOptional = z.string()
+const phoneOptional = z
+  .string()
   .refine((val) => !val || isValidPhoneNumber(val), "Please enter a valid phone number")
-  .optional().nullable();
+  .optional()
+  .nullable();
 
 const createStaffSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
@@ -15,17 +17,25 @@ const createStaffSchema = z.object({
   title: z.string().optional().nullable(),
   hourlyRate: z.number().optional().nullable(),
   hireDate: z.string().optional().nullable(),
-  certifications: z.array(z.object({
-    name: z.string(),
-    expiresAt: z.string().optional().nullable(),
-    verified: z.boolean().optional(),
-  })).optional().nullable(),
+  certifications: z
+    .array(
+      z.object({
+        name: z.string(),
+        expiresAt: z.string().optional().nullable(),
+        verified: z.boolean().optional(),
+      })
+    )
+    .optional()
+    .nullable(),
   phone: phoneOptional,
-  emergencyContact: z.object({
-    name: z.string(),
-    phone: z.string().refine(isValidPhoneNumber, "Please enter a valid phone number"),
-    relationship: z.string().optional(),
-  }).optional().nullable(),
+  emergencyContact: z
+    .object({
+      name: z.string(),
+      phone: z.string().refine(isValidPhoneNumber, "Please enter a valid phone number"),
+      relationship: z.string().optional(),
+    })
+    .optional()
+    .nullable(),
 });
 
 // GET - List all staff profiles for the organization
@@ -81,9 +91,7 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      orderBy: [
-        { user: { name: "asc" } },
-      ],
+      orderBy: [{ user: { name: "asc" } }],
     });
 
     return NextResponse.json(members);
@@ -127,13 +135,18 @@ export async function POST(request: NextRequest) {
       const updatedMember = await db.organizationMember.update({
         where: { id: existingMember.id },
         data: {
-          employmentType: validatedData.employmentType || existingMember.employmentType || "FULL_TIME",
+          employmentType:
+            validatedData.employmentType || existingMember.employmentType || "FULL_TIME",
           title: validatedData.title ?? existingMember.title,
           hourlyRate: validatedData.hourlyRate ?? existingMember.hourlyRate,
-          hireDate: validatedData.hireDate ? parseDateOnly(validatedData.hireDate) : existingMember.hireDate,
-          certifications: validatedData.certifications ?? existingMember.certifications ?? undefined,
+          hireDate: validatedData.hireDate
+            ? parseDateOnly(validatedData.hireDate)
+            : existingMember.hireDate,
+          certifications:
+            validatedData.certifications ?? existingMember.certifications ?? undefined,
           phone: validatedData.phone ?? existingMember.phone,
-          emergencyContact: validatedData.emergencyContact ?? existingMember.emergencyContact ?? undefined,
+          emergencyContact:
+            validatedData.emergencyContact ?? existingMember.emergencyContact ?? undefined,
         },
         include: {
           user: {

@@ -4,13 +4,7 @@ import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { X, CalendarDays, Clock, MapPin, User, Check, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetClose,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -27,18 +21,22 @@ interface AttendanceDetailSheetProps {
 }
 
 const statusConfig: Record<AttendanceStatus, { color: string; bgColor: string; label: string }> = {
-  REGISTERED: { color: "text-gray-700", bgColor: "bg-gray-100 border-gray-200", label: "Registered" },
+  REGISTERED: {
+    color: "text-gray-700",
+    bgColor: "bg-gray-100 border-gray-200",
+    label: "Registered",
+  },
   PRESENT: { color: "text-green-700", bgColor: "bg-green-100 border-green-200", label: "Present" },
   ABSENT: { color: "text-red-700", bgColor: "bg-red-100 border-red-200", label: "Absent" },
   LATE: { color: "text-yellow-700", bgColor: "bg-yellow-100 border-yellow-200", label: "Late" },
   EXCUSED: { color: "text-blue-700", bgColor: "bg-blue-100 border-blue-200", label: "Excused" },
 };
 
-export function AttendanceDetailSheet({ 
-  athleteId, 
+export function AttendanceDetailSheet({
+  athleteId,
   athleteName,
-  open, 
-  onOpenChange 
+  open,
+  onOpenChange,
 }: AttendanceDetailSheetProps) {
   const { attendances, isLoading, fetchAttendance } = useAttendance();
   const [stats, setStats] = useState({
@@ -58,13 +56,13 @@ export function AttendanceDetailSheet({
 
   useEffect(() => {
     if (attendances.length > 0) {
-      const present = attendances.filter(a => a.status === "PRESENT").length;
-      const absent = attendances.filter(a => a.status === "ABSENT").length;
-      const late = attendances.filter(a => a.status === "LATE").length;
-      const excused = attendances.filter(a => a.status === "EXCUSED").length;
+      const present = attendances.filter((a) => a.status === "PRESENT").length;
+      const absent = attendances.filter((a) => a.status === "ABSENT").length;
+      const late = attendances.filter((a) => a.status === "LATE").length;
+      const excused = attendances.filter((a) => a.status === "EXCUSED").length;
       const total = attendances.length;
       const rate = total > 0 ? Math.round(((present + late) / total) * 100) : 0;
-      
+
       setStats({ total, present, absent, late, excused, rate });
     } else {
       setStats({ total: 0, present: 0, absent: 0, late: 0, excused: 0, rate: 0 });
@@ -92,8 +90,8 @@ export function AttendanceDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent 
-        side="right" 
+      <SheetContent
+        side="right"
         className="w-full sm:max-w-[480px] overflow-hidden p-0 [&>button]:hidden"
       >
         <div className="flex flex-col h-full">
@@ -102,7 +100,10 @@ export function AttendanceDetailSheet({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Avatar className="h-12 w-12">
-                  <AvatarImage src={athlete?.avatar || undefined} alt={athleteName || athlete?.name || "Athlete"} />
+                  <AvatarImage
+                    src={athlete?.avatar || undefined}
+                    alt={athleteName || athlete?.name || "Athlete"}
+                  />
                   <AvatarFallback className="text-lg">
                     {(athleteName || athlete?.name || "?").charAt(0)}
                   </AvatarFallback>
@@ -112,9 +113,7 @@ export function AttendanceDetailSheet({
                     {athleteName || athlete?.name || "Athlete"}
                   </SheetTitle>
                   {athlete?.level && (
-                    <p className="text-sm text-muted-foreground">
-                      {athlete.level}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{athlete.level}</p>
                   )}
                 </div>
               </div>
@@ -130,13 +129,15 @@ export function AttendanceDetailSheet({
           <div className="px-6 py-4 bg-muted/30 border-b">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium">Attendance Rate</span>
-              <Badge 
-                variant="outline" 
+              <Badge
+                variant="outline"
                 className={cn(
                   "text-base font-bold",
-                  stats.rate >= 90 ? "bg-green-100 text-green-700 border-green-200" :
-                  stats.rate >= 70 ? "bg-yellow-100 text-yellow-700 border-yellow-200" :
-                  "bg-red-100 text-red-700 border-red-200"
+                  stats.rate >= 90
+                    ? "bg-green-100 text-green-700 border-green-200"
+                    : stats.rate >= 70
+                      ? "bg-yellow-100 text-yellow-700 border-yellow-200"
+                      : "bg-red-100 text-red-700 border-red-200"
                 )}
               >
                 {stats.rate}%
@@ -166,7 +167,7 @@ export function AttendanceDetailSheet({
           <ScrollArea className="flex-1">
             <div className="px-6 py-4">
               <h3 className="text-sm font-semibold mb-4">Attendance History</h3>
-              
+
               {isLoading ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -179,18 +180,24 @@ export function AttendanceDetailSheet({
               ) : (
                 <div className="space-y-3">
                   {sortedAttendances.map((attendance) => (
-                    <div 
-                      key={attendance.id} 
+                    <div
+                      key={attendance.id}
                       className="flex items-start gap-3 p-3 rounded-lg border bg-background hover:bg-muted/50 transition-colors"
                     >
-                      <div className={cn(
-                        "mt-0.5 p-1.5 rounded-full",
-                        attendance.status === "PRESENT" ? "bg-green-100" :
-                        attendance.status === "ABSENT" ? "bg-red-100" :
-                        attendance.status === "LATE" ? "bg-yellow-100" :
-                        attendance.status === "EXCUSED" ? "bg-blue-100" :
-                        "bg-gray-100"
-                      )}>
+                      <div
+                        className={cn(
+                          "mt-0.5 p-1.5 rounded-full",
+                          attendance.status === "PRESENT"
+                            ? "bg-green-100"
+                            : attendance.status === "ABSENT"
+                              ? "bg-red-100"
+                              : attendance.status === "LATE"
+                                ? "bg-yellow-100"
+                                : attendance.status === "EXCUSED"
+                                  ? "bg-blue-100"
+                                  : "bg-gray-100"
+                        )}
+                      >
                         {attendance.status === "PRESENT" ? (
                           <Check className="h-3.5 w-3.5 text-green-600" />
                         ) : attendance.status === "ABSENT" ? (
@@ -204,14 +211,10 @@ export function AttendanceDetailSheet({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <p className="font-medium text-sm truncate">
-                              {attendance.event.title}
-                            </p>
+                            <p className="font-medium text-sm truncate">{attendance.event.title}</p>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                               <CalendarDays className="h-3 w-3" />
-                              <span>
-                                {format(new Date(attendance.event.date), "MMM d, yyyy")}
-                              </span>
+                              <span>{format(new Date(attendance.event.date), "MMM d, yyyy")}</span>
                               <span>•</span>
                               <span>
                                 {attendance.event.startTime} - {attendance.event.endTime}

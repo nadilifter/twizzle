@@ -8,7 +8,12 @@ import {
   isTwilioConfigured,
 } from "@/lib/twilio";
 import { getPoolNumberForSend } from "@/lib/sms-number-pool";
-import type { MessageClassification, MessageStatus, SmsCampaignStatus, AnnouncementScope } from "@prisma/client";
+import type {
+  MessageClassification,
+  MessageStatus,
+  SmsCampaignStatus,
+  AnnouncementScope,
+} from "@prisma/client";
 
 /**
  * SMS Service
@@ -327,17 +332,8 @@ export async function getUsageStats(organizationId: string): Promise<UsageStats 
 /**
  * Send a single SMS message
  */
-export async function sendSingleSms(
-  params: SendSingleSmsParams
-): Promise<SendSingleSmsResult> {
-  const {
-    organizationId,
-    to,
-    body,
-    classification = "GENERAL",
-    userId,
-    campaignId,
-  } = params;
+export async function sendSingleSms(params: SendSingleSmsParams): Promise<SendSingleSmsResult> {
+  const { organizationId, to, body, classification = "GENERAL", userId, campaignId } = params;
 
   // Check if Twilio is configured
   if (!isTwilioConfigured()) {
@@ -539,9 +535,7 @@ async function getCampaignRecipients(
 /**
  * Create and optionally send an SMS campaign
  */
-export async function createCampaign(
-  params: SendCampaignParams
-): Promise<SendCampaignResult> {
+export async function createCampaign(params: SendCampaignParams): Promise<SendCampaignResult> {
   const {
     organizationId,
     name,
@@ -783,9 +777,8 @@ export async function handleInboundSms(params: {
   if (isOptOut || isOptIn) {
     // Build phone variants for flexible matching (phone may be stored without country code)
     const digitsOnly = normalizedFrom.replace(/\D/g, "");
-    const withoutCountryCode = digitsOnly.startsWith("1") && digitsOnly.length === 11
-      ? digitsOnly.substring(1)
-      : digitsOnly;
+    const withoutCountryCode =
+      digitsOnly.startsWith("1") && digitsOnly.length === 11 ? digitsOnly.substring(1) : digitsOnly;
     const phoneVariants = [normalizedFrom, digitsOnly, withoutCountryCode];
 
     // Update User records (primary)
@@ -802,7 +795,6 @@ export async function handleInboundSms(params: {
         },
       });
     }
-
   }
 
   // Route ALL inbound messages to conversations

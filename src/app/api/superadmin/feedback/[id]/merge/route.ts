@@ -1,33 +1,30 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getAuthSession } from "@/lib/auth"
-import { db } from "@/lib/db"
-import { sendEmail } from "@/lib/email"
-import { getEnvConfig } from "@/lib/env-domains"
-import { z } from "zod"
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthSession } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { sendEmail } from "@/lib/email";
+import { getEnvConfig } from "@/lib/env-domains";
+import { z } from "zod";
 
 const mergeSchema = z.object({
   targetFeatureId: z.string().min(1, "Target feature ID is required"),
-})
+});
 
 // POST /api/superadmin/feedback/[id]/merge
 // Merge submission into an existing feature, send email to submitter
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session?.user?.isSuperAdmin) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { id } = await params
-    const body = await request.json()
-    const validatedData = mergeSchema.parse(body)
+    const { id } = await params;
+    const body = await request.json();
+    const validatedData = mergeSchema.parse(body);
 
     // Prevent merging into itself
     if (id === validatedData.targetFeatureId) {
-      return NextResponse.json({ error: "Cannot merge a feature into itself" }, { status: 400 })
+      return NextResponse.json({ error: "Cannot merge a feature into itself" }, { status: 400 });
     }
 
     // Get the source feature (the one being merged)
@@ -39,20 +36,20 @@ export async function POST(
         },
         votes: true,
       },
-    })
+    });
 
     if (!sourceFeature) {
-      return NextResponse.json({ error: "Source feature not found" }, { status: 404 })
+      return NextResponse.json({ error: "Source feature not found" }, { status: 404 });
     }
 
     // Get the target feature (the one being merged into)
     const targetFeature = await db.featureRequest.findUnique({
       where: { id: validatedData.targetFeatureId },
       select: { id: true, title: true, isPublic: true },
-    })
+    });
 
     if (!targetFeature) {
-      return NextResponse.json({ error: "Target feature not found" }, { status: 404 })
+      return NextResponse.json({ error: "Target feature not found" }, { status: 404 });
     }
 
     // Use transaction to ensure consistency
@@ -67,7 +64,7 @@ export async function POST(
               userId: vote.userId,
             },
           },
-        })
+        });
 
         if (!existingVote) {
           await tx.featureVote.create({
@@ -75,7 +72,7 @@ export async function POST(
               featureRequestId: validatedData.targetFeatureId,
               userId: vote.userId,
             },
-          })
+          });
         }
       }
 
@@ -87,14 +84,14 @@ export async function POST(
           status: "CLOSED",
           isPublic: false, // Hide merged features from public
         },
-      })
-    })
+      });
+    });
 
     // Send email notification to the submitter
     if (sourceFeature.user?.email) {
-      const config = getEnvConfig()
-      const feedbackUrl = `https://feedback.${config.baseDomain}`
-      
+      const config = getEnvConfig();
+      const feedbackUrl = `https://feedback.${config.baseDomain}`;
+
       try {
         await sendEmail({
           to: [sourceFeature.user.email],
@@ -113,9 +110,9 @@ export async function POST(
             </div>
           `,
           text: `Great news, ${sourceFeature.user.name || "there"}!\n\nYour feedback "${sourceFeature.title}" has been merged into an existing feature on our roadmap: "${targetFeature.title}"\n\nWe've combined similar requests to help us prioritize better. Your votes have been transferred to the combined feature.\n\nTrack the progress at: ${feedbackUrl}\n\nThank you for helping us improve Uplifter!\n\nThe Uplifter Team`,
-        })
+        });
       } catch (emailError) {
-        console.error("Failed to send merge email:", emailError)
+        console.error("Failed to send merge email:", emailError);
         // Don't fail the request if email fails
       }
     }
@@ -129,18 +126,12 @@ export async function POST(
           title: targetFeature.title,
         },
       },
-    })
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    console.error("Error merging feature:", error)
-    return NextResponse.json(
-      { error: "Failed to merge feature" },
-      { status: 500 }
-    )
+    console.error("Error merging feature:", error);
+    return NextResponse.json({ error: "Failed to merge feature" }, { status: 500 });
   }
 }

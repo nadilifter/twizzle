@@ -18,20 +18,10 @@ export function CalendarWeekHeader({
   return (
     <div className="flex border-b border-border sticky top-0 z-30 bg-background w-max min-w-full">
       <div className="w-[80px] md:w-[104px] flex items-center gap-1 md:gap-2 p-1.5 md:p-2 border-r border-border shrink-0">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-7 md:size-8"
-          onClick={onPreviousWeek}
-        >
+        <Button variant="ghost" size="icon" className="size-7 md:size-8" onClick={onPreviousWeek}>
           <ChevronLeft className="size-4 md:size-5" />
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-7 md:size-8"
-          onClick={onNextWeek}
-        >
+        <Button variant="ghost" size="icon" className="size-7 md:size-8" onClick={onNextWeek}>
           <ChevronRight className="size-4 md:size-5" />
         </Button>
       </div>
@@ -48,4 +38,3 @@ export function CalendarWeekHeader({
     </div>
   );
 }
-

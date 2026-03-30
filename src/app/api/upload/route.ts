@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { 
-  uploadFile, 
-  getOrganizationAssetKey, 
-  getPublicUrl 
-} from "@/lib/storage";
+import { uploadFile, getOrganizationAssetKey, getPublicUrl } from "@/lib/storage";
 import { getCurrentEnvironment } from "@/lib/env-domains";
 import { sanitizeSvg } from "@/lib/sanitize";
 import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
@@ -18,13 +14,13 @@ import {
 } from "@/lib/file-validation";
 
 const CONTENT_TYPES: Record<string, string> = {
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.gif': 'image/gif',
-  '.webp': 'image/webp',
-  '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon',
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".svg": "image/svg+xml",
+  ".ico": "image/x-icon",
 };
 
 export async function POST(request: NextRequest) {
@@ -49,7 +45,9 @@ export async function POST(request: NextRequest) {
 
     if (!ALLOWED_ASSET_EXTENSIONS.has(ext)) {
       return NextResponse.json(
-        { error: `File type ${ext} is not allowed. Accepted types: ${[...ALLOWED_ASSET_EXTENSIONS].join(", ")}` },
+        {
+          error: `File type ${ext} is not allowed. Accepted types: ${[...ALLOWED_ASSET_EXTENSIONS].join(", ")}`,
+        },
         { status: 400 }
       );
     }
@@ -83,14 +81,14 @@ export async function POST(request: NextRequest) {
       where: { id: session.user.organizationId },
       include: {
         subscription: {
-          include: { plan: true }
-        }
-      }
+          include: { plan: true },
+        },
+      },
     });
 
     if (organization?.subscription?.plan?.maxStorageMB) {
       const maxStorageMB = organization.subscription.plan.maxStorageMB;
-      
+
       // Get current storage usage
       const storageUsage = await db.media.aggregate({
         where: { organizationId: session.user.organizationId },
@@ -98,35 +96,35 @@ export async function POST(request: NextRequest) {
       });
       const currentStorageBytes = storageUsage._sum.fileSize || 0;
       const currentStorageMB = currentStorageBytes / (1024 * 1024);
-      
+
       // Check if adding this file would exceed the limit
       if (currentStorageMB + fileSizeMB > maxStorageMB) {
         const remainingMB = Math.max(0, maxStorageMB - currentStorageMB);
-        return NextResponse.json({ 
-          error: `Storage limit exceeded. Your plan allows ${maxStorageMB >= 1000 ? `${maxStorageMB / 1000} GB` : `${maxStorageMB} MB`} of storage. You have ${remainingMB.toFixed(1)} MB remaining, but this file is ${fileSizeMB.toFixed(1)} MB.` 
-        }, { status: 400 });
+        return NextResponse.json(
+          {
+            error: `Storage limit exceeded. Your plan allows ${maxStorageMB >= 1000 ? `${maxStorageMB / 1000} GB` : `${maxStorageMB} MB`} of storage. You have ${remainingMB.toFixed(1)} MB remaining, but this file is ${fileSizeMB.toFixed(1)} MB.`,
+          },
+          { status: 400 }
+        );
       }
     }
 
-    const contentType = CONTENT_TYPES[ext] || file.type || 'application/octet-stream';
-    
+    const contentType = CONTENT_TYPES[ext] || file.type || "application/octet-stream";
+
     // Generate storage key for the organization asset
-    const key = getOrganizationAssetKey(
-      session.user.organizationId,
-      file.name,
-      type
-    );
+    const key = getOrganizationAssetKey(session.user.organizationId, file.name, type);
 
     // Check if we should use S3 or local storage
-    const useS3 = process.env.USE_S3_STORAGE === 'true' || 
-                  getCurrentEnvironment() !== 'local' ||
-                  process.env.S3_ENDPOINT; // If MinIO is configured locally
+    const useS3 =
+      process.env.USE_S3_STORAGE === "true" ||
+      getCurrentEnvironment() !== "local" ||
+      process.env.S3_ENDPOINT; // If MinIO is configured locally
 
     let publicUrl: string;
 
     if (useS3) {
       // Upload to S3/MinIO
-      await uploadFile('assets', key, buffer, {
+      await uploadFile("assets", key, buffer, {
         contentType,
         isPublic: true,
       });
@@ -145,7 +143,7 @@ export async function POST(request: NextRequest) {
       publicUrl = `/uploads/${session.user.organizationId}/${filename}`;
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       url: publicUrl,
       key: useS3 ? key : undefined,
     });

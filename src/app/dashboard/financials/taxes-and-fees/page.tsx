@@ -1,208 +1,228 @@
-"use client"
+"use client";
 
-import { useEffect, useState, useCallback } from "react"
-import Link from "next/link"
-import { toast } from "sonner"
-import { format } from "date-fns"
-import { Loader2, DollarSign, Receipt, TrendingUp } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Separator } from "@/components/ui/separator"
-import { DateRangePicker } from "@/components/ui/date-range-picker"
+import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { Loader2, DollarSign, Receipt, TrendingUp } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 
 interface TaxFeeConfig {
-  taxEnabled: boolean
-  taxRate: number
-  taxPaidBy: "CUSTOMER" | "ORGANIZATION"
-  processingFeePaidBy: "CUSTOMER" | "ORGANIZATION"
+  taxEnabled: boolean;
+  taxRate: number;
+  taxPaidBy: "CUSTOMER" | "ORGANIZATION";
+  processingFeePaidBy: "CUSTOMER" | "ORGANIZATION";
   plan: {
-    name: string
-    transactionFee: number
-    perTransactionFee: number
-  } | null
+    name: string;
+    transactionFee: number;
+    perTransactionFee: number;
+  } | null;
 }
 
 interface MonthlyTaxData {
-  month: string
-  taxCollected: number
-  invoiceCount: number
+  month: string;
+  taxCollected: number;
+  invoiceCount: number;
 }
 
 interface MonthlyFeeData {
-  month: string
-  transactionCount: number
-  grossVolume: number
-  fees: number
+  month: string;
+  transactionCount: number;
+  grossVolume: number;
+  fees: number;
 }
 
 interface ReportData {
-  tax: { total: number; monthly: MonthlyTaxData[] }
-  fees: { total: number; totalVolume: number; transactionCount: number; monthly: MonthlyFeeData[] }
-  period: { startDate: string; endDate: string }
+  tax: { total: number; monthly: MonthlyTaxData[] };
+  fees: { total: number; totalVolume: number; transactionCount: number; monthly: MonthlyFeeData[] };
+  period: { startDate: string; endDate: string };
 }
 
-type PresetPeriod = "this-month" | "last-month" | "this-quarter" | "last-quarter" | "this-year" | "last-year" | "custom"
+type PresetPeriod =
+  | "this-month"
+  | "last-month"
+  | "this-quarter"
+  | "last-quarter"
+  | "this-year"
+  | "last-year"
+  | "custom";
 
 function getPresetDates(preset: PresetPeriod): { start: string; end: string } | null {
-  if (preset === "custom") return null
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = now.getMonth()
+  if (preset === "custom") return null;
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
 
   switch (preset) {
     case "this-month":
       return {
         start: format(new Date(y, m, 1), "yyyy-MM-dd"),
         end: format(now, "yyyy-MM-dd"),
-      }
+      };
     case "last-month":
       return {
         start: format(new Date(y, m - 1, 1), "yyyy-MM-dd"),
         end: format(new Date(y, m, 0), "yyyy-MM-dd"),
-      }
+      };
     case "this-quarter": {
-      const qStart = Math.floor(m / 3) * 3
+      const qStart = Math.floor(m / 3) * 3;
       return {
         start: format(new Date(y, qStart, 1), "yyyy-MM-dd"),
         end: format(now, "yyyy-MM-dd"),
-      }
+      };
     }
     case "last-quarter": {
-      const qStart = Math.floor(m / 3) * 3 - 3
-      const qEnd = qStart + 3
+      const qStart = Math.floor(m / 3) * 3 - 3;
+      const qEnd = qStart + 3;
       return {
         start: format(new Date(y, qStart, 1), "yyyy-MM-dd"),
         end: format(new Date(y, qEnd, 0), "yyyy-MM-dd"),
-      }
+      };
     }
     case "this-year":
       return {
         start: format(new Date(y, 0, 1), "yyyy-MM-dd"),
         end: format(now, "yyyy-MM-dd"),
-      }
+      };
     case "last-year":
       return {
         start: format(new Date(y - 1, 0, 1), "yyyy-MM-dd"),
         end: format(new Date(y - 1, 11, 31), "yyyy-MM-dd"),
-      }
+      };
   }
 }
 
 function formatCurrency(amount: number): string {
-  return `$${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return `$${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function formatMonthLabel(monthStr: string): string {
-  const [year, month] = monthStr.split("-")
-  const date = new Date(Number(year), Number(month) - 1, 1)
-  return format(date, "MMM yyyy")
+  const [year, month] = monthStr.split("-");
+  const date = new Date(Number(year), Number(month) - 1, 1);
+  return format(date, "MMM yyyy");
 }
 
 export default function TaxesAndFeesPage() {
-  const [config, setConfig] = useState<TaxFeeConfig | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [config, setConfig] = useState<TaxFeeConfig | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   // Local form state
-  const [taxEnabled, setTaxEnabled] = useState(true)
-  const [ratePercent, setRatePercent] = useState("")
-  const [taxPaidBy, setTaxPaidBy] = useState<"CUSTOMER" | "ORGANIZATION">("CUSTOMER")
-  const [processingFeePaidBy, setProcessingFeePaidBy] = useState<"CUSTOMER" | "ORGANIZATION">("CUSTOMER")
+  const [taxEnabled, setTaxEnabled] = useState(true);
+  const [ratePercent, setRatePercent] = useState("");
+  const [taxPaidBy, setTaxPaidBy] = useState<"CUSTOMER" | "ORGANIZATION">("CUSTOMER");
+  const [processingFeePaidBy, setProcessingFeePaidBy] = useState<"CUSTOMER" | "ORGANIZATION">(
+    "CUSTOMER"
+  );
 
   // Report state
-  const [report, setReport] = useState<ReportData | null>(null)
-  const [reportLoading, setReportLoading] = useState(false)
-  const [period, setPeriod] = useState<PresetPeriod>("this-month")
-  const [customStart, setCustomStart] = useState<string | null>(null)
-  const [customEnd, setCustomEnd] = useState<string | null>(null)
+  const [report, setReport] = useState<ReportData | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [period, setPeriod] = useState<PresetPeriod>("this-month");
+  const [customStart, setCustomStart] = useState<string | null>(null);
+  const [customEnd, setCustomEnd] = useState<string | null>(null);
 
   const loadConfig = useCallback(async () => {
     try {
-      const res = await fetch("/api/organization/taxes-and-fees")
-      if (!res.ok) throw new Error("Failed to load")
-      const data: TaxFeeConfig = await res.json()
-      setConfig(data)
-      setTaxEnabled(data.taxEnabled)
-      setRatePercent(
-        (data.taxRate * 100).toFixed(2).replace(/\.?0+$/, "")
-      )
-      setTaxPaidBy(data.taxPaidBy)
-      setProcessingFeePaidBy(data.processingFeePaidBy)
+      const res = await fetch("/api/organization/taxes-and-fees");
+      if (!res.ok) throw new Error("Failed to load");
+      const data: TaxFeeConfig = await res.json();
+      setConfig(data);
+      setTaxEnabled(data.taxEnabled);
+      setRatePercent((data.taxRate * 100).toFixed(2).replace(/\.?0+$/, ""));
+      setTaxPaidBy(data.taxPaidBy);
+      setProcessingFeePaidBy(data.processingFeePaidBy);
     } catch {
-      toast.error("Failed to load tax and fee settings")
+      toast.error("Failed to load tax and fee settings");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
   const loadReport = useCallback(async (start: string, end: string) => {
-    setReportLoading(true)
+    setReportLoading(true);
     try {
       const res = await fetch(
         `/api/organization/taxes-and-fees/report?startDate=${start}&endDate=${end}`
-      )
-      if (!res.ok) throw new Error("Failed to load report")
-      const data: ReportData = await res.json()
-      setReport(data)
+      );
+      if (!res.ok) throw new Error("Failed to load report");
+      const data: ReportData = await res.json();
+      setReport(data);
     } catch {
-      toast.error("Failed to load report data")
+      toast.error("Failed to load report data");
     } finally {
-      setReportLoading(false)
+      setReportLoading(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    loadConfig()
-  }, [loadConfig])
+    loadConfig();
+  }, [loadConfig]);
 
   useEffect(() => {
     if (period === "custom") {
       if (customStart && customEnd) {
-        loadReport(customStart, customEnd)
+        loadReport(customStart, customEnd);
       }
     } else {
-      const dates = getPresetDates(period)
+      const dates = getPresetDates(period);
       if (dates) {
-        loadReport(dates.start, dates.end)
+        loadReport(dates.start, dates.end);
       }
     }
-  }, [period, customStart, customEnd, loadReport])
+  }, [period, customStart, customEnd, loadReport]);
 
-  const hasConfigChanges = config && (
-    taxEnabled !== config.taxEnabled ||
-    ratePercent !== (config.taxRate * 100).toFixed(2).replace(/\.?0+$/, "") ||
-    taxPaidBy !== config.taxPaidBy ||
-    processingFeePaidBy !== config.processingFeePaidBy
-  )
+  const hasConfigChanges =
+    config &&
+    (taxEnabled !== config.taxEnabled ||
+      ratePercent !== (config.taxRate * 100).toFixed(2).replace(/\.?0+$/, "") ||
+      taxPaidBy !== config.taxPaidBy ||
+      processingFeePaidBy !== config.processingFeePaidBy);
 
   const handleSave = async () => {
-    const parsed = parseFloat(ratePercent)
+    const parsed = parseFloat(ratePercent);
     if (taxEnabled && (isNaN(parsed) || parsed < 0 || parsed > 100)) {
-      toast.error("Tax rate must be between 0 and 100")
-      return
+      toast.error("Tax rate must be between 0 and 100");
+      return;
     }
 
-    setSaving(true)
+    setSaving(true);
     try {
       const res = await fetch("/api/organization/taxes-and-fees", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           taxEnabled,
-          taxRate: taxEnabled ? parsed / 100 : config?.taxRate ?? 0,
+          taxRate: taxEnabled ? parsed / 100 : (config?.taxRate ?? 0),
           taxPaidBy,
           processingFeePaidBy,
         }),
-      })
+      });
 
       if (res.ok) {
-        const updated = await res.json()
+        const updated = await res.json();
         setConfig((prev) =>
           prev
             ? {
@@ -213,25 +233,25 @@ export default function TaxesAndFeesPage() {
                 processingFeePaidBy: updated.processingFeePaidBy,
               }
             : prev
-        )
-        toast.success("Settings saved")
+        );
+        toast.success("Settings saved");
       } else {
-        const err = await res.json()
-        toast.error(err.error || "Failed to save settings")
+        const err = await res.json();
+        toast.error(err.error || "Failed to save settings");
       }
     } catch {
-      toast.error("Failed to save settings")
+      toast.error("Failed to save settings");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-    )
+    );
   }
 
   return (
@@ -264,7 +284,11 @@ export default function TaxesAndFeesPage() {
               Processing Fee
             </CardTitle>
             <CardDescription>
-              Your processing fee rate is determined by your <Link href="/dashboard/usage/billing" className="underline hover:text-foreground">subscription plan</Link>.
+              Your processing fee rate is determined by your{" "}
+              <Link href="/dashboard/usage/billing" className="underline hover:text-foreground">
+                subscription plan
+              </Link>
+              .
             </CardDescription>
           </CardHeader>
           <CardContent className="flex-1 space-y-4">
@@ -277,7 +301,8 @@ export default function TaxesAndFeesPage() {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Transaction Fee</span>
                   <span className="font-medium">
-                    {(config.plan.transactionFee * 100).toFixed(1)}% + ${config.plan.perTransactionFee.toFixed(2)}
+                    {(config.plan.transactionFee * 100).toFixed(1)}% + $
+                    {config.plan.perTransactionFee.toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -327,8 +352,8 @@ export default function TaxesAndFeesPage() {
               Sales Tax Configuration
             </CardTitle>
             <CardDescription>
-              Configure whether your organization collects sales tax and at what rate.
-              The rate was defaulted from your state when you signed up.
+              Configure whether your organization collects sales tax and at what rate. The rate was
+              defaulted from your state when you signed up.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex-1 space-y-4">
@@ -339,11 +364,7 @@ export default function TaxesAndFeesPage() {
                   When disabled, no tax will be applied at checkout.
                 </span>
               </Label>
-              <Switch
-                id="tax-toggle"
-                checked={taxEnabled}
-                onCheckedChange={setTaxEnabled}
-              />
+              <Switch id="tax-toggle" checked={taxEnabled} onCheckedChange={setTaxEnabled} />
             </div>
 
             {taxEnabled && (
@@ -377,7 +398,10 @@ export default function TaxesAndFeesPage() {
                   >
                     <div className="flex items-start space-x-3">
                       <RadioGroupItem value="CUSTOMER" id="tax-customer" className="mt-0.5" />
-                      <Label htmlFor="tax-customer" className="flex flex-col gap-0.5 cursor-pointer">
+                      <Label
+                        htmlFor="tax-customer"
+                        className="flex flex-col gap-0.5 cursor-pointer"
+                      >
                         <span>Customer pays</span>
                         <span className="font-normal text-xs text-muted-foreground">
                           Tax appears as a separate line item at checkout.
@@ -400,7 +424,6 @@ export default function TaxesAndFeesPage() {
           </CardContent>
         </Card>
       </div>
-
 
       {/* Report Section */}
       <Separator className="my-2" />
@@ -474,7 +497,9 @@ export default function TaxesAndFeesPage() {
                       <TableRow key={row.month}>
                         <TableCell>{formatMonthLabel(row.month)}</TableCell>
                         <TableCell className="text-right">{row.invoiceCount}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(row.taxCollected)}</TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(row.taxCollected)}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -514,7 +539,9 @@ export default function TaxesAndFeesPage() {
                       <TableRow key={row.month}>
                         <TableCell>{formatMonthLabel(row.month)}</TableCell>
                         <TableCell className="text-right">{row.transactionCount}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(row.grossVolume)}</TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(row.grossVolume)}
+                        </TableCell>
                         <TableCell className="text-right">{formatCurrency(row.fees)}</TableCell>
                       </TableRow>
                     ))}
@@ -528,5 +555,5 @@ export default function TaxesAndFeesPage() {
         </div>
       ) : null}
     </div>
-  )
+  );
 }

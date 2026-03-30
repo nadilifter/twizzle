@@ -12,10 +12,7 @@ const restockSchema = z.object({
 });
 
 // POST /api/products/[id]/inventory - Restock a product or variant
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -54,7 +51,7 @@ export async function POST(
 
     // Variant-level restock
     if (validatedData.variantId) {
-      const variant = product.variants.find(v => v.id === validatedData.variantId);
+      const variant = product.variants.find((v) => v.id === validatedData.variantId);
       if (!variant) {
         return NextResponse.json({ error: "Variant not found" }, { status: 404 });
       }
@@ -66,13 +63,22 @@ export async function POST(
       }
 
       if (validatedData.type === "add" && validatedData.quantity === undefined) {
-        return NextResponse.json({ error: "Quantity is required for add operation" }, { status: 400 });
+        return NextResponse.json(
+          { error: "Quantity is required for add operation" },
+          { status: 400 }
+        );
       }
       if (validatedData.type === "set" && validatedData.quantity === undefined) {
-        return NextResponse.json({ error: "Quantity is required for set operation" }, { status: 400 });
+        return NextResponse.json(
+          { error: "Quantity is required for set operation" },
+          { status: 400 }
+        );
       }
       if (validatedData.type === "max" && variant.maxInventory === null) {
-        return NextResponse.json({ error: "Variant has no maximum inventory set" }, { status: 400 });
+        return NextResponse.json(
+          { error: "Variant has no maximum inventory set" },
+          { status: 400 }
+        );
       }
 
       const updated = await db.$transaction(async (tx) => {
@@ -120,7 +126,9 @@ export async function POST(
             quantity: quantityChange,
             previousQty,
             newQty,
-            notes: validatedData.notes || `Variant inventory ${validatedData.type}: ${validatedData.quantity ?? "to max"}`,
+            notes:
+              validatedData.notes ||
+              `Variant inventory ${validatedData.type}: ${validatedData.quantity ?? "to max"}`,
             createdBy: session.user.id,
           },
         });
@@ -155,16 +163,11 @@ export async function POST(
       );
     }
     if (validatedData.type === "max" && product.maxInventory === null) {
-      return NextResponse.json(
-        { error: "Product has no maximum inventory set" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Product has no maximum inventory set" }, { status: 400 });
     }
 
     const updatedProduct = await db.$transaction(async (tx) => {
-      await tx.$queryRaw(
-        Prisma.sql`SELECT id FROM "Product" WHERE id = ${id} FOR UPDATE`
-      );
+      await tx.$queryRaw(Prisma.sql`SELECT id FROM "Product" WHERE id = ${id} FOR UPDATE`);
 
       const fresh = await tx.product.findFirst({
         where: { id, organizationId: session.user.organizationId },
@@ -211,7 +214,9 @@ export async function POST(
           quantity: quantityChange,
           previousQty,
           newQty,
-          notes: validatedData.notes || `Inventory ${validatedData.type}: ${validatedData.quantity ?? "to max"}`,
+          notes:
+            validatedData.notes ||
+            `Inventory ${validatedData.type}: ${validatedData.quantity ?? "to max"}`,
           createdBy: session.user.id,
         },
       });
@@ -225,28 +230,23 @@ export async function POST(
     return NextResponse.json(updatedProduct);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     const msg = error instanceof Error ? error.message : "";
-    if (msg.startsWith("Inventory cannot") || msg.startsWith("Product not found") || msg.startsWith("Variant not found")) {
+    if (
+      msg.startsWith("Inventory cannot") ||
+      msg.startsWith("Product not found") ||
+      msg.startsWith("Variant not found")
+    ) {
       return NextResponse.json({ error: msg }, { status: 409 });
     }
     console.error("Error updating inventory:", error);
-    return NextResponse.json(
-      { error: "Failed to update inventory" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update inventory" }, { status: 500 });
   }
 }
 
 // GET /api/products/[id]/inventory - Get stock movement history
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -294,9 +294,6 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error fetching stock movements:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch stock movements" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch stock movements" }, { status: 500 });
   }
 }

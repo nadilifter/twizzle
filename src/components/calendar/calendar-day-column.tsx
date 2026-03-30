@@ -1,12 +1,7 @@
 "use client";
 
 import { EventWithRelations } from "@/types/events";
-import {
-  HOURS_24,
-  HOUR_HEIGHT,
-  getEventTop,
-  getEventHeight,
-} from "./calendar-utils";
+import { HOURS_24, HOUR_HEIGHT, getEventTop, getEventHeight } from "./calendar-utils";
 import { EventCard } from "./event-card";
 import { CurrentTimeIndicator } from "./current-time-indicator";
 
@@ -40,11 +35,7 @@ export function CalendarDayColumn({
       className="flex-1 border-r border-border last:border-r-0 relative min-w-44 overflow-y-auto"
     >
       {HOURS_24.map((hour) => (
-        <div
-          key={hour}
-          className="border-b border-border"
-          style={{ height: `${HOUR_HEIGHT}px` }}
-        />
+        <div key={hour} className="border-b border-border" style={{ height: `${HOUR_HEIGHT}px` }} />
       ))}
 
       <CurrentTimeIndicator

@@ -4,10 +4,7 @@ import { resolvePublicRequest } from "@/lib/public-api";
 import { isFeatureEnabled } from "@/lib/feature-resolver";
 
 // GET /api/public/products/[id] - Get a single active product for the public storefront
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const { searchParams } = new URL(request.url);
@@ -53,9 +50,6 @@ export async function GET(
     return NextResponse.json({ data: product });
   } catch (error) {
     console.error("Error fetching public product:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch product" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch product" }, { status: 500 });
   }
 }

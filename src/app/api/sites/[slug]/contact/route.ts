@@ -54,10 +54,7 @@ export async function POST(
     });
 
     if (!config || !config.isPublished) {
-      return NextResponse.json(
-        { error: "Organization not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
 
     const org = config.organization;
@@ -202,16 +199,12 @@ export async function POST(
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    logger.error("[CONTACT] Contact form submission error", { error: error instanceof Error ? error.message : String(error) });
-    return NextResponse.json(
-      { error: "Failed to send message" },
-      { status: 500 }
-    );
+    logger.error("[CONTACT] Contact form submission error", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return NextResponse.json({ error: "Failed to send message" }, { status: 500 });
   }
 }
 

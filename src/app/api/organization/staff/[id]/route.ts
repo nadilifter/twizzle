@@ -5,33 +5,40 @@ import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 import { isValidPhoneNumber } from "libphonenumber-js";
 
-const phoneOptional = z.string()
+const phoneOptional = z
+  .string()
   .refine((val) => !val || isValidPhoneNumber(val), "Please enter a valid phone number")
-  .optional().nullable();
+  .optional()
+  .nullable();
 
 const updateStaffSchema = z.object({
   employmentType: z.enum(["FULL_TIME", "PART_TIME", "CONTRACTOR", "VOLUNTEER"]).optional(),
   title: z.string().optional().nullable(),
   hourlyRate: z.number().optional().nullable(),
   hireDate: z.string().optional().nullable(),
-  certifications: z.array(z.object({
-    name: z.string(),
-    expiresAt: z.string().optional().nullable(),
-    verified: z.boolean().optional(),
-  })).optional().nullable(),
+  certifications: z
+    .array(
+      z.object({
+        name: z.string(),
+        expiresAt: z.string().optional().nullable(),
+        verified: z.boolean().optional(),
+      })
+    )
+    .optional()
+    .nullable(),
   phone: phoneOptional,
-  emergencyContact: z.object({
-    name: z.string(),
-    phone: z.string().refine(isValidPhoneNumber, "Please enter a valid phone number"),
-    relationship: z.string().optional(),
-  }).optional().nullable(),
+  emergencyContact: z
+    .object({
+      name: z.string(),
+      phone: z.string().refine(isValidPhoneNumber, "Please enter a valid phone number"),
+      relationship: z.string().optional(),
+    })
+    .optional()
+    .nullable(),
 });
 
 // GET - Get a specific staff profile
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -83,10 +90,7 @@ export async function GET(
 }
 
 // PATCH - Update a staff profile
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -122,13 +126,17 @@ export async function PATCH(
 
     // Build update data
     const updateData: Record<string, unknown> = {};
-    if (validatedData.employmentType !== undefined) updateData.employmentType = validatedData.employmentType;
+    if (validatedData.employmentType !== undefined)
+      updateData.employmentType = validatedData.employmentType;
     if (validatedData.title !== undefined) updateData.title = validatedData.title;
     if (validatedData.hourlyRate !== undefined) updateData.hourlyRate = validatedData.hourlyRate;
-    if (validatedData.hireDate !== undefined) updateData.hireDate = validatedData.hireDate ? parseDateOnly(validatedData.hireDate) : null;
-    if (validatedData.certifications !== undefined) updateData.certifications = validatedData.certifications;
+    if (validatedData.hireDate !== undefined)
+      updateData.hireDate = validatedData.hireDate ? parseDateOnly(validatedData.hireDate) : null;
+    if (validatedData.certifications !== undefined)
+      updateData.certifications = validatedData.certifications;
     if (validatedData.phone !== undefined) updateData.phone = validatedData.phone;
-    if (validatedData.emergencyContact !== undefined) updateData.emergencyContact = validatedData.emergencyContact;
+    if (validatedData.emergencyContact !== undefined)
+      updateData.emergencyContact = validatedData.emergencyContact;
 
     const scopedDb = getScopedDb(organizationId);
     const member = await scopedDb.organizationMember.update({

@@ -28,33 +28,29 @@ export async function refundPayment(
   pspReference: string,
   amount: { value: number; currency: string },
   merchantAccount?: string,
-  reference?: string,
-): Promise<{ pspReference: string; status: string; [key: string]: any }>
+  reference?: string
+): Promise<{ pspReference: string; status: string; [key: string]: any }>;
 ```
 
 **Implementation**:
+
 ```typescript
 export async function refundPayment(
   pspReference: string,
   amount: { value: number; currency: string },
   merchantAccount?: string,
-  reference?: string,
+  reference?: string
 ) {
   try {
     // Use the Checkout API's modifications endpoint
     const { CheckoutAPI } = require("@adyen/api-library");
     const checkoutApi = new CheckoutAPI(getPlatformClient());
 
-    const response = await checkoutApi.ModificationsApi.refundCapturedPayment(
-      pspReference,
-      {
-        amount,
-        merchantAccount: merchantAccount
-          || process.env.ADYEN_MERCHANT_ACCOUNT
-          || "TestMerchant",
-        reference: reference || `refund-${pspReference}-${Date.now()}`,
-      }
-    );
+    const response = await checkoutApi.ModificationsApi.refundCapturedPayment(pspReference, {
+      amount,
+      merchantAccount: merchantAccount || process.env.ADYEN_MERCHANT_ACCOUNT || "TestMerchant",
+      reference: reference || `refund-${pspReference}-${Date.now()}`,
+    });
 
     return response;
   } catch (error) {
@@ -75,6 +71,7 @@ export async function refundPayment(
 **Auth**: Requires authenticated session with `financials.create` permission or admin (`*`).
 
 **Request body**:
+
 ```typescript
 {
   amount?: number;  // Optional: partial refund amount in dollars. If omitted, full refund.
@@ -83,6 +80,7 @@ export async function refundPayment(
 ```
 
 **Flow**:
+
 1. Look up the `Transaction` by ID (from URL param)
 2. Verify the transaction belongs to the current organization
 3. Verify the transaction type is `PAYMENT` and status is `SETTLED` or `CAPTURED`
@@ -99,33 +97,34 @@ export async function refundPayment(
        pspReference: response.pspReference,
        merchantRef: transaction.merchantRef,
        type: "REFUND",
-       amount: -refundAmount,  // Negative to indicate money going out
+       amount: -refundAmount, // Negative to indicate money going out
        currency: transaction.currency,
-       status: "PENDING",  // Will be updated to SETTLED when webhook arrives
+       status: "PENDING", // Will be updated to SETTLED when webhook arrives
        method: transaction.method,
        description: `Refund – ${transaction.merchantRef}${reason ? ` (${reason})` : ""}`,
        metadata: { originalPspReference: transaction.pspReference, reason },
      },
-   })
+   });
    ```
 8. If full refund and there's an associated invoice, update invoice status:
    ```typescript
    if (isFullRefund && transaction.paymentId) {
-     const payment = await db.payment.findUnique({ where: { id: transaction.paymentId } })
+     const payment = await db.payment.findUnique({ where: { id: transaction.paymentId } });
      if (payment?.invoiceId) {
        await db.payment.update({
          where: { id: payment.id },
          data: { status: "REFUNDED" },
-       })
+       });
        await db.invoice.update({
          where: { id: payment.invoiceId },
          data: { status: "CANCELLED" },
-       })
+       });
      }
    }
    ```
 
 **Error handling**:
+
 - If Adyen returns an error, return the error to the caller
 - Do not create a Transaction record if the Adyen call fails
 
@@ -145,18 +144,18 @@ If the Phase 2B implementation only logs refund events without updating records,
 
 ```typescript
 async function handleRefund(notificationItem: any) {
-  const { pspReference, success } = notificationItem
+  const { pspReference, success } = notificationItem;
 
   if (success !== "true" && success !== true) {
-    logger.warn("Refund failed", { pspReference })
-    return
+    logger.warn("Refund failed", { pspReference });
+    return;
   }
 
   // Update the refund transaction status
   await db.transaction.updateMany({
     where: { pspReference, type: "REFUND" },
     data: { status: "SETTLED", settledAt: new Date() },
-  })
+  });
 }
 ```
 

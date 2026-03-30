@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -46,9 +43,7 @@ export async function GET(
     });
 
     const certStatus = allCertifications.map((cert) => {
-      const memberCert = memberCertifications.find(
-        (mc) => mc.certificationId === cert.id
-      );
+      const memberCert = memberCertifications.find((mc) => mc.certificationId === cert.id);
       const now = new Date();
       let status: "active" | "expired" | "failed" | "not_granted" = "not_granted";
 

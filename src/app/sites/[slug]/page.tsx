@@ -15,7 +15,10 @@ import { getHeroContrastStyles } from "@/lib/color-utils";
 
 function hasContent(html: string | null | undefined): boolean {
   if (!html) return false;
-  const textContent = html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+  const textContent = html
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .trim();
   return textContent.length > 0;
 }
 
@@ -37,7 +40,7 @@ const getCachedHomePrograms = unstable_cache(
         where: { organizationId, status: "ACTIVE" },
         include: {
           facility: {
-            select: { id: true, name: true, city: true, stateProvince: true }
+            select: { id: true, name: true, city: true, stateProvince: true },
           },
           bulkDiscounts: true,
           levelRequirements: {
@@ -71,8 +74,12 @@ const getCachedHomePrograms = unstable_cache(
           requiredPasses: {
             where: { status: "ACTIVE" },
             select: {
-              id: true, name: true, price: true,
-              billingInterval: true, sessionLimit: true, limitPeriod: true,
+              id: true,
+              name: true,
+              price: true,
+              billingInterval: true,
+              sessionLimit: true,
+              limitPeriod: true,
             },
           },
         },
@@ -84,17 +91,18 @@ const getCachedHomePrograms = unstable_cache(
       }),
     ]);
 
-    const waitlistPrograms = programs.filter(p => p.waitlistEnabled);
-    const waitlistedCounts = waitlistPrograms.length > 0
-      ? await db.enrollment.groupBy({
-          by: ["programId"],
-          where: {
-            programId: { in: waitlistPrograms.map(p => p.id) },
-            status: "WAITLISTED",
-          },
-          _count: true,
-        })
-      : [];
+    const waitlistPrograms = programs.filter((p) => p.waitlistEnabled);
+    const waitlistedCounts =
+      waitlistPrograms.length > 0
+        ? await db.enrollment.groupBy({
+            by: ["programId"],
+            where: {
+              programId: { in: waitlistPrograms.map((p) => p.id) },
+              status: "WAITLISTED",
+            },
+            _count: true,
+          })
+        : [];
 
     return { programs, levels, waitlistedCounts };
   },
@@ -142,20 +150,19 @@ export default async function SitePage({ params }: { params: { slug: string } })
   const primaryColor = config.primaryColor || "#000000";
   const hero = getHeroContrastStyles(primaryColor);
 
-  const [{ programs, levels, waitlistedCounts }, seasonsEnabled, siteCategories] = await Promise.all([
-    getCachedHomePrograms(config.organizationId),
-    isFeatureEnabled(config.organizationId, "seasons"),
-    getCachedCategories(config.organizationId),
-  ]);
+  const [{ programs, levels, waitlistedCounts }, seasonsEnabled, siteCategories] =
+    await Promise.all([
+      getCachedHomePrograms(config.organizationId),
+      isFeatureEnabled(config.organizationId, "seasons"),
+      getCachedCategories(config.organizationId),
+    ]);
 
-  const seasons = seasonsEnabled
-    ? await getCachedSeasons(config.organizationId)
-    : [];
-  const waitlistCountMap = new Map(waitlistedCounts.map(w => [w.programId, w._count]));
-  const hasUncategorizedPrograms = programs.some(p => !p.categoryId);
+  const seasons = seasonsEnabled ? await getCachedSeasons(config.organizationId) : [];
+  const waitlistCountMap = new Map(waitlistedCounts.map((w) => [w.programId, w._count]));
+  const hasUncategorizedPrograms = programs.some((p) => !p.categoryId);
   const hasCategories = siteCategories.length > 0;
 
-  const enrichedPrograms = programs.map(p => ({
+  const enrichedPrograms = programs.map((p) => ({
     ...p,
     _count: {
       ...p._count,
@@ -166,7 +173,7 @@ export default async function SitePage({ params }: { params: { slug: string } })
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section 
+      <section
         className={`relative py-20 ${hero.text}`}
         style={{
           background: `linear-gradient(to bottom right, ${primaryColor}, ${primaryColor}e6, ${primaryColor}cc)`,
@@ -185,27 +192,21 @@ export default async function SitePage({ params }: { params: { slug: string } })
         <div className="relative z-10 mx-auto w-full max-w-6xl px-4 md:px-8">
           <div className="mx-auto max-w-3xl text-center">
             {config.showRegistration && enrichedPrograms.length > 0 && (
-              <Badge
-                variant="secondary"
-                className={`mb-6 ${hero.badge}`}
-              >
+              <Badge variant="secondary" className={`mb-6 ${hero.badge}`}>
                 <Trophy className="mr-1.5 h-3.5 w-3.5" />
                 Registration Now Open
               </Badge>
             )}
 
             <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-              {config.heroHeadline && (
-                <>
-                  {config.heroHeadline}
-                </>
-              )}
-              <span 
+              {config.heroHeadline && <>{config.heroHeadline}</>}
+              <span
                 className={config.heroHeadline ? "block mt-2" : ""}
-                style={{ 
-                  color: config.secondaryColor && config.secondaryColor !== "#ffffff" 
-                    ? config.secondaryColor 
-                    : hero.secondaryFallback 
+                style={{
+                  color:
+                    config.secondaryColor && config.secondaryColor !== "#ffffff"
+                      ? config.secondaryColor
+                      : hero.secondaryFallback,
                 }}
               >
                 {config.organization.name}
@@ -219,7 +220,9 @@ export default async function SitePage({ params }: { params: { slug: string } })
             )}
 
             {(config.heroAgeRange || config.heroProgramPeriods || config.heroLocation) && (
-              <div className={`flex flex-wrap items-center justify-center gap-4 text-sm ${hero.textSubtle}`}>
+              <div
+                className={`flex flex-wrap items-center justify-center gap-4 text-sm ${hero.textSubtle}`}
+              >
                 {config.heroAgeRange && (
                   <div className="flex items-center gap-1.5">
                     <Users className="h-4 w-4" />
@@ -243,12 +246,7 @@ export default async function SitePage({ params }: { params: { slug: string } })
 
             {config.showRegistration && (
               <div className="mt-8">
-                <Button
-                  asChild
-                  size="lg"
-                  variant="secondary"
-                  className="gap-2 text-base"
-                >
+                <Button asChild size="lg" variant="secondary" className="gap-2 text-base">
                   <a href="#programs">
                     View Programs
                     <span aria-hidden="true">↓</span>
@@ -266,10 +264,10 @@ export default async function SitePage({ params }: { params: { slug: string } })
           <div className="mx-auto w-full max-w-6xl px-4 md:px-8">
             <div className="relative w-full aspect-video rounded-xl border bg-card/50 backdrop-blur shadow-2xl overflow-hidden ring-1 ring-black/5 group">
               <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent z-10 pointer-events-none" />
-              <ProgressiveImage 
-                src={config.heroImage} 
+              <ProgressiveImage
+                src={config.heroImage}
                 alt={`${config.organization.name} featured image`}
-                fill 
+                fill
                 className="object-cover transition-transform duration-700 group-hover:scale-105"
                 sizes="(max-width: 1280px) 100vw, 1280px"
                 priority
@@ -284,9 +282,9 @@ export default async function SitePage({ params }: { params: { slug: string } })
         <section className="py-16 bg-muted/30">
           <div className="mx-auto w-full max-w-6xl px-4 md:px-8">
             <div className="max-w-3xl mx-auto bg-card rounded-2xl p-8 md:p-12 shadow-sm border">
-              <div 
-                className="prose prose-lg prose-slate mx-auto" 
-                dangerouslySetInnerHTML={{ __html: sanitizeHtml(config.heroText!) }} 
+              <div
+                className="prose prose-lg prose-slate mx-auto"
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(config.heroText!) }}
               />
             </div>
           </div>
@@ -315,11 +313,11 @@ export default async function SitePage({ params }: { params: { slug: string } })
             />
           ) : (
             <FilterableProgramList
-              programs={enrichedPrograms.map(program => ({
+              programs={enrichedPrograms.map((program) => ({
                 ...program,
                 basePrice: program.basePrice ? Number(program.basePrice) : null,
                 perSessionPrice: program.perSessionPrice ? Number(program.perSessionPrice) : null,
-                staffAssignments: program.staffAssignments.map(sa => ({
+                staffAssignments: program.staffAssignments.map((sa) => ({
                   id: sa.id,
                   role: sa.role,
                   isPrimary: sa.isPrimary,
@@ -329,18 +327,19 @@ export default async function SitePage({ params }: { params: { slug: string } })
                     user: sa.member.user,
                   },
                 })),
-                requiredMemberships: program.requiredMemberships.map(m => ({
+                requiredMemberships: program.requiredMemberships.map((m) => ({
                   ...m,
                   price: Number(m.price),
                 })),
-                requiredPasses: (program.requiredPasses || []).map(p => ({
+                requiredPasses: (program.requiredPasses || []).map((p) => ({
                   ...p,
                   price: Number(p.price),
                 })),
-                bulkDiscounts: (program as any).bulkDiscounts?.map((d: any) => ({
-                  ...d,
-                  discountValue: Number(d.discountValue),
-                })) || [],
+                bulkDiscounts:
+                  (program as any).bulkDiscounts?.map((d: any) => ({
+                    ...d,
+                    discountValue: Number(d.discountValue),
+                  })) || [],
               }))}
               levels={levels}
               seasons={seasons}
@@ -352,7 +351,7 @@ export default async function SitePage({ params }: { params: { slug: string } })
       )}
 
       {/* Info Section */}
-      <InfoSection 
+      <InfoSection
         infoBox1Title={config.infoBox1Title}
         infoBox1Content={config.infoBox1Content}
         infoBox2Title={config.infoBox2Title}

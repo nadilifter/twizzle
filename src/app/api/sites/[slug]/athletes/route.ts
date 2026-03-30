@@ -11,17 +11,11 @@ import { syncUserToSelfAthlete } from "@/lib/sync-self-athlete";
  * Athletes are global identities — the user sees every athlete they are a
  * guardian of or are themselves, regardless of which org created the athlete.
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.email || !session?.user?.id) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
     const { slug } = await params;
@@ -91,25 +85,24 @@ export async function GET(
     }
 
     // Filter by org-specific status; if no org link yet, include (they haven't registered at this org)
-    const athletes = Array.from(athleteMap.values()).filter((a) => {
-      const orgLink = a.organizationAthletes[0];
-      if (!orgLink) return true;
-      return orgLink.status === "ACTIVE" || orgLink.status === "TRIAL";
-    }).map((a) => {
-      const { organizationAthletes, ...rest } = a;
-      const orgLink = organizationAthletes[0];
-      return { ...rest, status: orgLink?.status ?? "ACTIVE" };
-    });
+    const athletes = Array.from(athleteMap.values())
+      .filter((a) => {
+        const orgLink = a.organizationAthletes[0];
+        if (!orgLink) return true;
+        return orgLink.status === "ACTIVE" || orgLink.status === "TRIAL";
+      })
+      .map((a) => {
+        const { organizationAthletes, ...rest } = a;
+        const orgLink = organizationAthletes[0];
+        return { ...rest, status: orgLink?.status ?? "ACTIVE" };
+      });
 
     const hasSelfAthlete = selfAthlete != null;
 
     return NextResponse.json({ athletes, hasSelfAthlete });
   } catch (error) {
     console.error("Fetch athletes error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch athletes" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch athletes" }, { status: 500 });
   }
 }
 
@@ -130,10 +123,7 @@ export async function POST(
   try {
     const session = await getAuthSession();
     if (!session?.user?.email || !session?.user?.id) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
     const { slug } = await params;
@@ -150,10 +140,7 @@ export async function POST(
 
     const validGenders = ["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"];
     if (!validGenders.includes(gender)) {
-      return NextResponse.json(
-        { error: "Invalid gender value" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid gender value" }, { status: 400 });
     }
 
     const config = await db.websiteConfig.findUnique({
@@ -266,18 +253,25 @@ export async function POST(
           create: { organizationId, athleteId: existingAthlete.id },
         });
 
-        return NextResponse.json({
-          athlete: existingAthlete,
-          claimed: true,
-          message: "Athlete found and you have been added as a guardian.",
-        }, { status: 200 });
+        return NextResponse.json(
+          {
+            athlete: existingAthlete,
+            claimed: true,
+            message: "Athlete found and you have been added as a guardian.",
+          },
+          { status: 200 }
+        );
       } else {
         // Cannot claim -- must request
-        return NextResponse.json({
-          error: "duplicate_found",
-          message: "An athlete with this name and date of birth already exists at this organization. The athlete's guardian has not enabled other guardians to claim this athlete. Please contact the athlete's guardian or the organization's administrators to be added.",
-          athleteId: existingAthlete.id,
-        }, { status: 409 });
+        return NextResponse.json(
+          {
+            error: "duplicate_found",
+            message:
+              "An athlete with this name and date of birth already exists at this organization. The athlete's guardian has not enabled other guardians to claim this athlete. Please contact the athlete's guardian or the organization's administrators to be added.",
+            athleteId: existingAthlete.id,
+          },
+          { status: 409 }
+        );
       }
     }
 
@@ -288,10 +282,7 @@ export async function POST(
         firstName: { equals: firstName, mode: "insensitive" },
         lastName: { equals: lastName, mode: "insensitive" },
         birthDate: { gte: startOfDay, lte: endOfDay },
-        OR: [
-          { guardians: { some: { userId } } },
-          { userId },
-        ],
+        OR: [{ guardians: { some: { userId } } }, { userId }],
       },
       select: {
         id: true,
@@ -306,11 +297,14 @@ export async function POST(
     });
 
     if (userExistingAthlete) {
-      return NextResponse.json({
-        athlete: userExistingAthlete,
-        claimed: false,
-        message: "You already have this athlete in your account.",
-      }, { status: 200 });
+      return NextResponse.json(
+        {
+          athlete: userExistingAthlete,
+          claimed: false,
+          message: "You already have this athlete in your account.",
+        },
+        { status: 200 }
+      );
     }
 
     if (isSelf) {
@@ -371,14 +365,14 @@ export async function POST(
 
     const { organizationAthletes: _oa, ...athleteRest } = athlete;
     const orgLink = athlete.organizationAthletes[0];
-    return NextResponse.json({
-      athlete: { ...athleteRest, status: orgLink?.status ?? "ACTIVE" },
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        athlete: { ...athleteRest, status: orgLink?.status ?? "ACTIVE" },
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Create athlete error:", error);
-    return NextResponse.json(
-      { error: "Failed to create athlete" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create athlete" }, { status: 500 });
   }
 }

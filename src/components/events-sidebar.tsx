@@ -1,18 +1,12 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { useSession } from "next-auth/react"
-import { 
-  CalendarCheck, 
-  LayoutDashboard, 
-  ScanLine, 
-  Search,
-  ArrowLeft
-} from "lucide-react"
+import * as React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { CalendarCheck, LayoutDashboard, ScanLine, Search, ArrowLeft } from "lucide-react";
 
-import { NavUser } from "@/components/nav-user"
+import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
   SidebarContent,
@@ -24,7 +18,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
 const navItems = [
   {
@@ -42,19 +36,21 @@ const navItems = [
     url: "/events/search",
     icon: Search,
   },
-]
+];
 
 export function EventsSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const pathname = usePathname()
-  const { data: session, status } = useSession()
+  const pathname = usePathname();
+  const { data: session, status } = useSession();
 
-  const user = session?.user ? {
-    name: session.user.name || "User",
-    email: session.user.email || "",
-    avatar: session.user.image || null,
-  } : null
+  const user = session?.user
+    ? {
+        name: session.user.name || "User",
+        email: session.user.email || "",
+        avatar: session.user.image || null,
+      }
+    : null;
 
-  const isLoading = status === "loading"
+  const isLoading = status === "loading";
 
   return (
     <Sidebar {...props}>
@@ -82,9 +78,10 @@ export function EventsSidebar({ ...props }: React.ComponentProps<typeof Sidebar>
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => {
-                const isActive = pathname === item.url || 
-                  (item.url !== "/events" && pathname.startsWith(item.url))
-                
+                const isActive =
+                  pathname === item.url ||
+                  (item.url !== "/events" && pathname.startsWith(item.url));
+
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
@@ -94,7 +91,7 @@ export function EventsSidebar({ ...props }: React.ComponentProps<typeof Sidebar>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                )
+                );
               })}
             </SidebarMenu>
           </SidebarGroupContent>
@@ -131,5 +128,5 @@ export function EventsSidebar({ ...props }: React.ComponentProps<typeof Sidebar>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }

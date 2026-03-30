@@ -54,7 +54,10 @@ export async function generateUpcomingInstances() {
       if (latestInstance.autoRenewDate) {
         nextAutoRenewDate = addYears(new Date(latestInstance.autoRenewDate), 1);
       }
-    } else if (group.defaultBillingInterval === "MONTHLY" || latestInstance.billingInterval === "MONTHLY") {
+    } else if (
+      group.defaultBillingInterval === "MONTHLY" ||
+      latestInstance.billingInterval === "MONTHLY"
+    ) {
       nextEndDate = addMonths(nextStartDate, 1);
       if (latestInstance.autoRenewDate) {
         nextAutoRenewDate = addMonths(new Date(latestInstance.autoRenewDate), 1);
@@ -75,9 +78,10 @@ export async function generateUpcomingInstances() {
         membershipGroupId: group.id,
         name: nextName,
         price: group.defaultPrice ?? latestInstance.price,
-        billingInterval: group.defaultBillingInterval !== "ONE_TIME"
-          ? group.defaultBillingInterval
-          : latestInstance.billingInterval,
+        billingInterval:
+          group.defaultBillingInterval !== "ONE_TIME"
+            ? group.defaultBillingInterval
+            : latestInstance.billingInterval,
         startDate: nextStartDate,
         endDate: nextEndDate,
         autoRenewDate: nextAutoRenewDate,
@@ -244,7 +248,9 @@ export async function processAthleteRenewals() {
           where: { membershipInstanceId: nextInstance.id, status: "ACTIVE" },
         });
         if (currentCount >= effectiveCapacity) {
-          console.warn(`Membership instance ${nextInstance.id} at capacity, skipping renewal for athlete ${membership.athleteId}`);
+          console.warn(
+            `Membership instance ${nextInstance.id} at capacity, skipping renewal for athlete ${membership.athleteId}`
+          );
           continue;
         }
       }
@@ -261,7 +267,9 @@ export async function processAthleteRenewals() {
       },
     });
 
-    const athleteName = `${membership.athlete.firstName || ""} ${membership.athlete.lastName || ""}`.trim() || membership.athlete.name;
+    const athleteName =
+      `${membership.athlete.firstName || ""} ${membership.athlete.lastName || ""}`.trim() ||
+      membership.athlete.name;
     renewals.push({
       athlete: athleteName,
       from: membership.instance.name,

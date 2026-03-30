@@ -1,35 +1,35 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getAuthSession } from "@/lib/auth"
-import { checkFeatureGate } from "@/lib/feature-resolver"
-import { db } from "@/lib/db"
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthSession } from "@/lib/auth";
+import { checkFeatureGate } from "@/lib/feature-resolver";
+import { db } from "@/lib/db";
 import {
   formatSeedMarkForDisplay,
   seedValueForComparison,
   hasSeedValue,
   type SeedMarkFields,
   type ResultType,
-} from "@/lib/athletics-formats"
+} from "@/lib/athletics-formats";
 
 function getCategoryLabel(category: {
-  sportEvent?: { name: string; code: string } | null
-  ageCategory?: { name: string; code: string } | null
-  individualEntry?: { name: string } | null
+  sportEvent?: { name: string; code: string } | null;
+  ageCategory?: { name: string; code: string } | null;
+  individualEntry?: { name: string } | null;
   combinationEntry?: {
-    rowValue: { name: string }
-    colValue: { name: string }
-  } | null
-  id: string
+    rowValue: { name: string };
+    colValue: { name: string };
+  } | null;
+  id: string;
 }): string {
   if (category.ageCategory && category.sportEvent) {
-    return `${category.ageCategory.code} ${category.sportEvent.name}`
+    return `${category.ageCategory.code} ${category.sportEvent.name}`;
   }
-  if (category.sportEvent) return category.sportEvent.name
-  if (category.ageCategory) return category.ageCategory.name
-  if (category.individualEntry?.name) return category.individualEntry.name
+  if (category.sportEvent) return category.sportEvent.name;
+  if (category.ageCategory) return category.ageCategory.name;
+  if (category.individualEntry?.name) return category.individualEntry.name;
   if (category.combinationEntry) {
-    return `${category.combinationEntry.rowValue.name} - ${category.combinationEntry.colValue.name}`
+    return `${category.combinationEntry.rowValue.name} - ${category.combinationEntry.colValue.name}`;
   }
-  return `Category ${category.id.slice(-4)}`
+  return `Category ${category.id.slice(-4)}`;
 }
 
 /**
@@ -41,27 +41,27 @@ export async function GET(
   { params }: { params: Promise<{ id: string; categoryId: string }> }
 ) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const organizationId = session.user.organizationId
+    const organizationId = session.user.organizationId;
     if (!organizationId) {
-      return NextResponse.json({ error: "No organization" }, { status: 400 })
+      return NextResponse.json({ error: "No organization" }, { status: 400 });
     }
 
-    const gateResponse = await checkFeatureGate(organizationId, "competitions")
-    if (gateResponse) return gateResponse
+    const gateResponse = await checkFeatureGate(organizationId, "competitions");
+    if (gateResponse) return gateResponse;
 
-    const { id, categoryId } = await params
+    const { id, categoryId } = await params;
 
     const competition = await db.competition.findFirst({
       where: { id, organizationId },
       select: { id: true, name: true },
-    })
+    });
     if (!competition) {
-      return NextResponse.json({ error: "Competition not found" }, { status: 404 })
+      return NextResponse.json({ error: "Competition not found" }, { status: 404 });
     }
 
     const category = await db.competitionCategory.findFirst({
@@ -73,9 +73,9 @@ export async function GET(
         ageCategory: { select: { id: true, name: true, code: true } },
         _count: { select: { entries: true, results: true } },
       },
-    })
+    });
     if (!category) {
-      return NextResponse.json({ error: "Category not found" }, { status: 404 })
+      return NextResponse.json({ error: "Category not found" }, { status: 404 });
     }
 
     const entries = await db.competitionEntry.findMany({
@@ -92,10 +92,10 @@ export async function GET(
         },
       },
       orderBy: { createdAt: "asc" },
-    })
+    });
 
     // Batch-resolve guardians via AthleteGuardian -> User
-    const athleteIds = [...new Set(entries.map((e) => e.athlete.id))]
+    const athleteIds = [...new Set(entries.map((e) => e.athlete.id))];
     const guardianLinks =
       athleteIds.length > 0
         ? await db.athleteGuardian.findMany({
@@ -107,16 +107,16 @@ export async function GET(
             },
             orderBy: { isPrimary: "desc" },
           })
-        : []
-    const guardianMap = new Map<string, { id: string; name: string | null; email: string }[]>()
+        : [];
+    const guardianMap = new Map<string, { id: string; name: string | null; email: string }[]>();
     for (const g of guardianLinks) {
-      if (!g.user) continue
-      const list = guardianMap.get(g.athleteId) ?? []
-      list.push(g.user)
-      guardianMap.set(g.athleteId, list)
+      if (!g.user) continue;
+      const list = guardianMap.get(g.athleteId) ?? [];
+      list.push(g.user);
+      guardianMap.set(g.athleteId, list);
     }
 
-    const resultType = (category.resultType ?? "TIME") as ResultType
+    const resultType = (category.resultType ?? "TIME") as ResultType;
 
     const formattedEntries = entries.map((entry) => {
       const seedFields: SeedMarkFields = {
@@ -128,7 +128,7 @@ export async function GET(
         seedDistance: entry.seedDistance ? Number(entry.seedDistance) : null,
         seedPoints: entry.seedPoints ? Number(entry.seedPoints) : null,
         seedPlacement: entry.seedPlacement,
-      }
+      };
 
       return {
         id: entry.id,
@@ -147,21 +147,19 @@ export async function GET(
         seedMarkStatus: entry.seedMarkStatus,
         seedMarkNotes: entry.seedMarkNotes,
         hasSeed: hasSeedValue(seedFields, resultType),
-      }
-    })
+      };
+    });
 
     // Sort by seed mark: entries with seeds first, then by value
-    const sortAsc = category.sortDirection === "ASC"
+    const sortAsc = category.sortDirection === "ASC";
     formattedEntries.sort((a, b) => {
-      if (a.seedValue === null && b.seedValue === null) return 0
-      if (a.seedValue === null) return 1
-      if (b.seedValue === null) return -1
-      return sortAsc
-        ? a.seedValue - b.seedValue
-        : b.seedValue - a.seedValue
-    })
+      if (a.seedValue === null && b.seedValue === null) return 0;
+      if (a.seedValue === null) return 1;
+      if (b.seedValue === null) return -1;
+      return sortAsc ? a.seedValue - b.seedValue : b.seedValue - a.seedValue;
+    });
 
-    const seedSubmittedCount = formattedEntries.filter((e) => e.hasSeed).length
+    const seedSubmittedCount = formattedEntries.filter((e) => e.hasSeed).length;
 
     return NextResponse.json({
       competitionName: competition.name,
@@ -180,12 +178,9 @@ export async function GET(
         seedSubmittedCount,
       },
       entries: formattedEntries,
-    })
+    });
   } catch (error) {
-    console.error("Error fetching competition event detail:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch event details" },
-      { status: 500 }
-    )
+    console.error("Error fetching competition event detail:", error);
+    return NextResponse.json({ error: "Failed to fetch event details" }, { status: 500 });
   }
 }

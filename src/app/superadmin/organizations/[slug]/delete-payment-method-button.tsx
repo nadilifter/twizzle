@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Trash2 } from "lucide-react"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
 
 interface DeletePaymentMethodButtonProps {
-  organizationId: string
-  paymentMethodId: string
-  label: string
+  organizationId: string;
+  paymentMethodId: string;
+  label: string;
 }
 
 export function DeletePaymentMethodButton({
@@ -16,8 +16,8 @@ export function DeletePaymentMethodButton({
   paymentMethodId,
   label,
 }: DeletePaymentMethodButtonProps) {
-  const router = useRouter()
-  const [isDeleting, setIsDeleting] = useState(false)
+  const router = useRouter();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
     if (
@@ -25,29 +25,29 @@ export function DeletePaymentMethodButton({
         `Remove payment method ${label}? This will disable it in Adyen and mark it inactive.`
       )
     ) {
-      return
+      return;
     }
 
-    setIsDeleting(true)
+    setIsDeleting(true);
     try {
       const res = await fetch(
         `/api/superadmin/organizations/${organizationId}/payment-methods/${paymentMethodId}`,
         { method: "DELETE" }
-      )
-      const data = await res.json()
+      );
+      const data = await res.json();
 
       if (res.ok && data.success) {
-        alert(data.message || "Payment method removed.")
-        router.refresh()
+        alert(data.message || "Payment method removed.");
+        router.refresh();
       } else {
-        alert(data.error || "Failed to remove payment method.")
+        alert(data.error || "Failed to remove payment method.");
       }
     } catch {
-      alert("An error occurred while removing the payment method.")
+      alert("An error occurred while removing the payment method.");
     } finally {
-      setIsDeleting(false)
+      setIsDeleting(false);
     }
-  }
+  };
 
   return (
     <Button
@@ -61,5 +61,5 @@ export function DeletePaymentMethodButton({
       <Trash2 className="h-3.5 w-3.5" />
       <span className="sr-only">Remove</span>
     </Button>
-  )
+  );
 }

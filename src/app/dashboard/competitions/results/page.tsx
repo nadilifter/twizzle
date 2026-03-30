@@ -1,125 +1,137 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { toast } from "sonner"
+import * as React from "react";
+import { toast } from "sonner";
 import {
   formatResultValue as sharedFormatResultValue,
   formatSeedMarkForDisplay,
   type SeedMarkFields,
   type ResultType as AthleticsResultType,
-} from "@/lib/athletics-formats"
+} from "@/lib/athletics-formats";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
-  Card, CardContent, CardDescription, CardHeader, CardTitle,
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import {
-  BarChart3, Loader2, Trophy, Check, X, Clock, Ruler, ArrowUpDown, Plus,
-} from "lucide-react"
-import { DemoDataBanner } from "@/components/demo-data-banner"
+  BarChart3,
+  Loader2,
+  Trophy,
+  Check,
+  X,
+  Clock,
+  Ruler,
+  ArrowUpDown,
+  Plus,
+} from "lucide-react";
+import { DemoDataBanner } from "@/components/demo-data-banner";
 
 // ============================================
 // Types
 // ============================================
 
 interface Competition {
-  id: string
-  name: string
-  competitionType: string
-  status: string
-  startDate: string
-  endDate: string
-  categories: CompetitionCategory[]
-  _count: { entries: number; results: number; teams: number }
+  id: string;
+  name: string;
+  competitionType: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+  categories: CompetitionCategory[];
+  _count: { entries: number; results: number; teams: number };
 }
 
 interface CompetitionCategory {
-  id: string
-  resultType: "TIME" | "DISTANCE" | "HEIGHT" | "SCORE"
-  sortDirection: "ASC" | "DESC"
-  precision: number
-  seedMarkRequired: boolean
-  submissionMode: string
-  qualifyingMark: number | null
-  isTeamEvent: boolean
-  teamSize: number | null
+  id: string;
+  resultType: "TIME" | "DISTANCE" | "HEIGHT" | "SCORE";
+  sortDirection: "ASC" | "DESC";
+  precision: number;
+  seedMarkRequired: boolean;
+  submissionMode: string;
+  qualifyingMark: number | null;
+  isTeamEvent: boolean;
+  teamSize: number | null;
   combinationEntry: {
-    id: string
-    name: string | null
-    rowValue: { id: string; name: string }
-    colValue: { id: string; name: string }
-  } | null
+    id: string;
+    name: string | null;
+    rowValue: { id: string; name: string };
+    colValue: { id: string; name: string };
+  } | null;
   individualEntry: {
-    id: string
-    name: string
-    template: { id: string; name: string }
-  } | null
+    id: string;
+    name: string;
+    template: { id: string; name: string };
+  } | null;
   sportEvent: {
-    id: string
-    code: string
-    name: string
-    eventGroup: string
-    eventType: string
-    resultType: string
-    sortDirection: string
-  } | null
+    id: string;
+    code: string;
+    name: string;
+    eventGroup: string;
+    eventType: string;
+    resultType: string;
+    sortDirection: string;
+  } | null;
   ageCategory: {
-    id: string
-    code: string
-    name: string
-    minAge: number
-    maxAge: number | null
-  } | null
-  _count: { entries: number; results: number; teams: number }
+    id: string;
+    code: string;
+    name: string;
+    minAge: number;
+    maxAge: number | null;
+  } | null;
+  _count: { entries: number; results: number; teams: number };
 }
 
 interface CompetitionEntry {
-  id: string
-  athleteId: string
-  status: string
-  seedHours: number | null
-  seedMinutes: number | null
-  seedSeconds: number | null
-  seedMs: number | null
-  seedHandTimed: boolean
-  seedDistance: number | null
-  seedPoints: number | null
-  seedPlacement: string | null
-  seedMarkStatus: string | null
-  seedMarkNotes: string | null
+  id: string;
+  athleteId: string;
+  status: string;
+  seedHours: number | null;
+  seedMinutes: number | null;
+  seedSeconds: number | null;
+  seedMs: number | null;
+  seedHandTimed: boolean;
+  seedDistance: number | null;
+  seedPoints: number | null;
+  seedPlacement: string | null;
+  seedMarkStatus: string | null;
+  seedMarkNotes: string | null;
   athlete: {
-    id: string
-    firstName: string
-    lastName: string
-    name: string
-    level: string
-  }
-  category: CompetitionCategory
+    id: string;
+    firstName: string;
+    lastName: string;
+    name: string;
+    level: string;
+  };
+  category: CompetitionCategory;
 }
 
 interface CompetitionResult {
-  id: string
-  athleteId: string | null
-  teamId: string | null
-  value: number
-  displayValue: string | null
-  placement: number | null
-  heat: number | null
-  isHandTimed: boolean
-  isPersonalBest: boolean
-  isDNF: boolean
-  isDNS: boolean
-  isDQ: boolean
-  attemptNumber: number | null
-  isBestAttempt: boolean
-  notes: string | null
-  athlete: { id: string; firstName: string; lastName: string; name: string } | null
-  team: { id: string; name: string } | null
-  category: { id: string; resultType: string; sortDirection: string; precision: number }
+  id: string;
+  athleteId: string | null;
+  teamId: string | null;
+  value: number;
+  displayValue: string | null;
+  placement: number | null;
+  heat: number | null;
+  isHandTimed: boolean;
+  isPersonalBest: boolean;
+  isDNF: boolean;
+  isDNS: boolean;
+  isDQ: boolean;
+  attemptNumber: number | null;
+  isBestAttempt: boolean;
+  notes: string | null;
+  athlete: { id: string; firstName: string; lastName: string; name: string } | null;
+  team: { id: string; name: string } | null;
+  category: { id: string; resultType: string; sortDirection: string; precision: number };
 }
 
 // ============================================
@@ -132,7 +144,7 @@ const RESULT_TYPE_LABELS: Record<string, string> = {
   HEIGHT: "Height",
   SCORE: "Score",
   PLACEMENT: "Placement",
-}
+};
 
 const RESULT_TYPE_ICONS: Record<string, React.ReactNode> = {
   TIME: <Clock className="h-3 w-3" />,
@@ -140,7 +152,7 @@ const RESULT_TYPE_ICONS: Record<string, React.ReactNode> = {
   HEIGHT: <ArrowUpDown className="h-3 w-3" />,
   SCORE: <Trophy className="h-3 w-3" />,
   PLACEMENT: <Trophy className="h-3 w-3" />,
-}
+};
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   APPROVED: "default",
@@ -149,22 +161,25 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
   REJECTED: "destructive",
   WITHDRAWN: "outline",
   SCRATCHED: "outline",
-}
+};
 
 function getCategoryLabel(cat: CompetitionCategory): string {
   if (cat.sportEvent && cat.ageCategory) {
-    return `${cat.sportEvent.name} - ${cat.ageCategory.code}`
+    return `${cat.sportEvent.name} - ${cat.ageCategory.code}`;
   }
   if (cat.sportEvent) {
-    return cat.sportEvent.name
+    return cat.sportEvent.name;
   }
   if (cat.combinationEntry) {
-    return cat.combinationEntry.name || `${cat.combinationEntry.rowValue.name} - ${cat.combinationEntry.colValue.name}`
+    return (
+      cat.combinationEntry.name ||
+      `${cat.combinationEntry.rowValue.name} - ${cat.combinationEntry.colValue.name}`
+    );
   }
   if (cat.individualEntry) {
-    return cat.individualEntry.name
+    return cat.individualEntry.name;
   }
-  return "Unknown"
+  return "Unknown";
 }
 
 function formatResultValueLocal(
@@ -172,9 +187,9 @@ function formatResultValueLocal(
   resultType: string,
   precision: number,
   handTimed = false,
-  heat?: number | null,
+  heat?: number | null
 ): string {
-  return sharedFormatResultValue(value, resultType, precision, handTimed, heat)
+  return sharedFormatResultValue(value, resultType, precision, handTimed, heat);
 }
 
 function getEntrySeedDisplay(entry: CompetitionEntry): string {
@@ -187,9 +202,9 @@ function getEntrySeedDisplay(entry: CompetitionEntry): string {
     seedDistance: entry.seedDistance,
     seedPoints: entry.seedPoints,
     seedPlacement: entry.seedPlacement,
-  }
-  const resultType = entry.category?.resultType as AthleticsResultType | undefined
-  return formatSeedMarkForDisplay(fields, resultType ?? "TIME")
+  };
+  const resultType = entry.category?.resultType as AthleticsResultType | undefined;
+  return formatSeedMarkForDisplay(fields, resultType ?? "TIME");
 }
 
 // ============================================
@@ -197,110 +212,110 @@ function getEntrySeedDisplay(entry: CompetitionEntry): string {
 // ============================================
 
 export default function ResultsPage() {
-  const [competitions, setCompetitions] = React.useState<Competition[]>([])
-  const [selectedCompId, setSelectedCompId] = React.useState<string | null>(null)
-  const [selectedCatId, setSelectedCatId] = React.useState<string | null>(null)
-  const [entries, setEntries] = React.useState<CompetitionEntry[]>([])
-  const [results, setResults] = React.useState<CompetitionResult[]>([])
-  const [loading, setLoading] = React.useState(true)
-  const [loadingEntries, setLoadingEntries] = React.useState(false)
-  const [loadingResults, setLoadingResults] = React.useState(false)
-  const [reviewingId, setReviewingId] = React.useState<string | null>(null)
+  const [competitions, setCompetitions] = React.useState<Competition[]>([]);
+  const [selectedCompId, setSelectedCompId] = React.useState<string | null>(null);
+  const [selectedCatId, setSelectedCatId] = React.useState<string | null>(null);
+  const [entries, setEntries] = React.useState<CompetitionEntry[]>([]);
+  const [results, setResults] = React.useState<CompetitionResult[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [loadingEntries, setLoadingEntries] = React.useState(false);
+  const [loadingResults, setLoadingResults] = React.useState(false);
+  const [reviewingId, setReviewingId] = React.useState<string | null>(null);
 
   // New result entry form
-  const [newResultAthleteId, setNewResultAthleteId] = React.useState("")
-  const [newResultValue, setNewResultValue] = React.useState("")
-  const [submittingResult, setSubmittingResult] = React.useState(false)
+  const [newResultAthleteId, setNewResultAthleteId] = React.useState("");
+  const [newResultValue, setNewResultValue] = React.useState("");
+  const [submittingResult, setSubmittingResult] = React.useState(false);
 
-  const selectedComp = competitions.find(c => c.id === selectedCompId)
-  const selectedCat = selectedComp?.categories.find(c => c.id === selectedCatId)
+  const selectedComp = competitions.find((c) => c.id === selectedCompId);
+  const selectedCat = selectedComp?.categories.find((c) => c.id === selectedCatId);
 
   // Fetch competitions
   React.useEffect(() => {
     const fetchCompetitions = async () => {
       try {
-        const res = await fetch("/api/competitions")
+        const res = await fetch("/api/competitions");
         if (res.ok) {
-          const data = await res.json()
-          setCompetitions(data)
+          const data = await res.json();
+          setCompetitions(data);
           if (data.length > 0 && !selectedCompId) {
-            setSelectedCompId(data[0].id)
+            setSelectedCompId(data[0].id);
           }
         }
       } catch (error) {
-        console.error("Error:", error)
-        toast.error("Failed to load competitions")
+        console.error("Error:", error);
+        toast.error("Failed to load competitions");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    fetchCompetitions()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    };
+    fetchCompetitions();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch entries and results when category changes
   React.useEffect(() => {
     if (!selectedCompId || !selectedCatId) {
-      setEntries([])
-      setResults([])
-      return
+      setEntries([]);
+      setResults([]);
+      return;
     }
 
     const fetchData = async () => {
-      setLoadingEntries(true)
-      setLoadingResults(true)
+      setLoadingEntries(true);
+      setLoadingResults(true);
 
       try {
         const [entriesRes, resultsRes] = await Promise.all([
           fetch(`/api/competitions/${selectedCompId}/entries?categoryId=${selectedCatId}`),
           fetch(`/api/competitions/${selectedCompId}/results?categoryId=${selectedCatId}`),
-        ])
+        ]);
 
-        if (entriesRes.ok) setEntries(await entriesRes.json())
-        if (resultsRes.ok) setResults(await resultsRes.json())
+        if (entriesRes.ok) setEntries(await entriesRes.json());
+        if (resultsRes.ok) setResults(await resultsRes.json());
       } catch (error) {
-        console.error("Error:", error)
+        console.error("Error:", error);
       } finally {
-        setLoadingEntries(false)
-        setLoadingResults(false)
+        setLoadingEntries(false);
+        setLoadingResults(false);
       }
-    }
-    fetchData()
-  }, [selectedCompId, selectedCatId])
+    };
+    fetchData();
+  }, [selectedCompId, selectedCatId]);
 
   // Auto-select first category when competition changes
   React.useEffect(() => {
     if (selectedComp && selectedComp.categories.length > 0) {
-      setSelectedCatId(selectedComp.categories[0].id)
+      setSelectedCatId(selectedComp.categories[0].id);
     } else {
-      setSelectedCatId(null)
+      setSelectedCatId(null);
     }
-  }, [selectedCompId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedCompId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle seed mark review
   const handleReview = async (entryId: string, decision: "APPROVED" | "REJECTED") => {
-    if (!selectedCompId) return
-    setReviewingId(entryId)
+    if (!selectedCompId) return;
+    setReviewingId(entryId);
     try {
       const res = await fetch(`/api/competitions/${selectedCompId}/entries/${entryId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ seedMarkStatus: decision }),
-      })
-      if (!res.ok) throw new Error("Failed to review")
-      const updated = await res.json()
-      setEntries(prev => prev.map(e => e.id === entryId ? { ...e, ...updated } : e))
-      toast.success(`Entry ${decision.toLowerCase()}`)
+      });
+      if (!res.ok) throw new Error("Failed to review");
+      const updated = await res.json();
+      setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...e, ...updated } : e)));
+      toast.success(`Entry ${decision.toLowerCase()}`);
     } catch (error) {
-      toast.error("Failed to review entry")
+      toast.error("Failed to review entry");
     } finally {
-      setReviewingId(null)
+      setReviewingId(null);
     }
-  }
+  };
 
   // Handle adding a result
   const handleAddResult = async () => {
-    if (!selectedCompId || !selectedCatId || !newResultAthleteId || !newResultValue) return
-    setSubmittingResult(true)
+    if (!selectedCompId || !selectedCatId || !newResultAthleteId || !newResultValue) return;
+    setSubmittingResult(true);
     try {
       const res = await fetch(`/api/competitions/${selectedCompId}/results`, {
         method: "POST",
@@ -310,26 +325,26 @@ export default function ResultsPage() {
           athleteId: newResultAthleteId,
           value: parseFloat(newResultValue),
         }),
-      })
-      if (!res.ok) throw new Error("Failed to record result")
-      const newResult = await res.json()
-      setResults(prev => [...prev, newResult])
-      setNewResultAthleteId("")
-      setNewResultValue("")
-      toast.success("Result recorded")
+      });
+      if (!res.ok) throw new Error("Failed to record result");
+      const newResult = await res.json();
+      setResults((prev) => [...prev, newResult]);
+      setNewResultAthleteId("");
+      setNewResultValue("");
+      toast.success("Result recorded");
     } catch (error) {
-      toast.error("Failed to record result")
+      toast.error("Failed to record result");
     } finally {
-      setSubmittingResult(false)
+      setSubmittingResult(false);
     }
-  }
+  };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-    )
+    );
   }
 
   return (
@@ -359,15 +374,12 @@ export default function ResultsPage() {
           <div className="flex items-center gap-4">
             <div className="space-y-1 flex-1 max-w-sm">
               <Label className="text-sm">Competition</Label>
-              <Select
-                value={selectedCompId || ""}
-                onValueChange={setSelectedCompId}
-              >
+              <Select value={selectedCompId || ""} onValueChange={setSelectedCompId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a competition" />
                 </SelectTrigger>
                 <SelectContent>
-                  {competitions.map(comp => (
+                  {competitions.map((comp) => (
                     <SelectItem key={comp.id} value={comp.id}>
                       {comp.name}
                       <span className="text-xs text-muted-foreground ml-2">({comp.status})</span>
@@ -382,7 +394,8 @@ export default function ResultsPage() {
                 <Badge variant="outline">{selectedComp.competitionType}</Badge>
                 <Badge variant="secondary">{selectedComp.status}</Badge>
                 <span className="text-xs text-muted-foreground">
-                  {selectedComp._count.entries} entries &middot; {selectedComp._count.results} results
+                  {selectedComp._count.entries} entries &middot; {selectedComp._count.results}{" "}
+                  results
                 </span>
               </div>
             )}
@@ -393,7 +406,7 @@ export default function ResultsPage() {
               {/* Category Tabs */}
               {selectedComp.categories.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                  {selectedComp.categories.map(cat => (
+                  {selectedComp.categories.map((cat) => (
                     <Button
                       key={cat.id}
                       variant={selectedCatId === cat.id ? "default" : "outline"}
@@ -415,7 +428,9 @@ export default function ResultsPage() {
                     <div className="text-center text-muted-foreground">
                       <BarChart3 className="h-8 w-8 mx-auto mb-2 opacity-50" />
                       <p className="font-medium">No Categories</p>
-                      <p className="text-sm mt-1">This competition has no categories configured yet.</p>
+                      <p className="text-sm mt-1">
+                        This competition has no categories configured yet.
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
@@ -429,12 +444,16 @@ export default function ResultsPage() {
                       <CardTitle className="text-base flex items-center gap-2">
                         Entries &amp; Seed Marks
                         {selectedCat.seedMarkRequired && (
-                          <Badge variant="secondary" className="text-xs">Seed Required</Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            Seed Required
+                          </Badge>
                         )}
                       </CardTitle>
                       <CardDescription className="text-xs">
                         {RESULT_TYPE_LABELS[selectedCat.resultType]} &middot;{" "}
-                        {selectedCat.sortDirection === "ASC" ? "Lower is better" : "Higher is better"}
+                        {selectedCat.sortDirection === "ASC"
+                          ? "Lower is better"
+                          : "Higher is better"}
                         {selectedCat.isTeamEvent && ` · Team (${selectedCat.teamSize})`}
                       </CardDescription>
                     </CardHeader>
@@ -444,18 +463,27 @@ export default function ResultsPage() {
                           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                         </div>
                       ) : entries.length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center py-4">No entries yet.</p>
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          No entries yet.
+                        </p>
                       ) : (
                         <div className="space-y-2">
-                          {entries.map(entry => (
-                            <div key={entry.id} className="flex items-center justify-between rounded-lg border p-2.5">
+                          {entries.map((entry) => (
+                            <div
+                              key={entry.id}
+                              className="flex items-center justify-between rounded-lg border p-2.5"
+                            >
                               <div className="flex items-center gap-2 min-w-0">
                                 <div className="min-w-0">
                                   <p className="text-sm font-medium truncate">
-                                    {entry.athlete.firstName || entry.athlete.name} {entry.athlete.lastName}
+                                    {entry.athlete.firstName || entry.athlete.name}{" "}
+                                    {entry.athlete.lastName}
                                   </p>
                                   <div className="flex items-center gap-1.5">
-                                    <Badge variant={STATUS_VARIANT[entry.status] || "outline"} className="text-xs h-4 px-1">
+                                    <Badge
+                                      variant={STATUS_VARIANT[entry.status] || "outline"}
+                                      className="text-xs h-4 px-1"
+                                    >
                                       {entry.status.replace("_", " ")}
                                     </Badge>
                                     {getEntrySeedDisplay(entry) !== "-" && (
@@ -503,9 +531,7 @@ export default function ResultsPage() {
                   {/* Results / Leaderboard Card */}
                   <Card>
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-base">
-                        Results &amp; Leaderboard
-                      </CardTitle>
+                      <CardTitle className="text-base">Results &amp; Leaderboard</CardTitle>
                       <CardDescription className="text-xs">
                         {results.length} result{results.length !== 1 ? "s" : ""} recorded
                       </CardDescription>
@@ -532,7 +558,9 @@ export default function ResultsPage() {
                                     className="flex items-center justify-between rounded-lg border p-2.5"
                                   >
                                     <div className="flex items-center gap-3">
-                                      <span className={`text-sm font-bold w-6 text-center ${idx < 3 ? "text-primary" : "text-muted-foreground"}`}>
+                                      <span
+                                        className={`text-sm font-bold w-6 text-center ${idx < 3 ? "text-primary" : "text-muted-foreground"}`}
+                                      >
                                         {result.placement || idx + 1}
                                       </span>
                                       <div>
@@ -542,23 +570,56 @@ export default function ResultsPage() {
                                             : result.team?.name || "—"}
                                         </p>
                                         <div className="flex items-center gap-1.5">
-                                          {result.isDNF && <Badge variant="destructive" className="text-xs h-4 px-1">DNF</Badge>}
-                                          {result.isDNS && <Badge variant="destructive" className="text-xs h-4 px-1">DNS</Badge>}
-                                          {result.isDQ && <Badge variant="destructive" className="text-xs h-4 px-1">DQ</Badge>}
-                                          {result.isPersonalBest && <Badge variant="default" className="text-xs h-4 px-1">PB</Badge>}
+                                          {result.isDNF && (
+                                            <Badge
+                                              variant="destructive"
+                                              className="text-xs h-4 px-1"
+                                            >
+                                              DNF
+                                            </Badge>
+                                          )}
+                                          {result.isDNS && (
+                                            <Badge
+                                              variant="destructive"
+                                              className="text-xs h-4 px-1"
+                                            >
+                                              DNS
+                                            </Badge>
+                                          )}
+                                          {result.isDQ && (
+                                            <Badge
+                                              variant="destructive"
+                                              className="text-xs h-4 px-1"
+                                            >
+                                              DQ
+                                            </Badge>
+                                          )}
+                                          {result.isPersonalBest && (
+                                            <Badge variant="default" className="text-xs h-4 px-1">
+                                              PB
+                                            </Badge>
+                                          )}
                                         </div>
                                       </div>
                                     </div>
                                     <span className="text-sm font-mono font-medium">
                                       {result.isDNF || result.isDNS || result.isDQ
                                         ? "—"
-                                        : formatResultValueLocal(Number(result.value), selectedCat.resultType, selectedCat.precision, result.isHandTimed, result.heat)}
+                                        : formatResultValueLocal(
+                                            Number(result.value),
+                                            selectedCat.resultType,
+                                            selectedCat.precision,
+                                            result.isHandTimed,
+                                            result.heat
+                                          )}
                                     </span>
                                   </div>
                                 ))}
                             </div>
                           ) : (
-                            <p className="text-sm text-muted-foreground text-center py-4">No results recorded yet.</p>
+                            <p className="text-sm text-muted-foreground text-center py-4">
+                              No results recorded yet.
+                            </p>
                           )}
 
                           <Separator />
@@ -576,10 +637,11 @@ export default function ResultsPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                   {entries
-                                    .filter(e => e.status === "APPROVED")
-                                    .map(entry => (
+                                    .filter((e) => e.status === "APPROVED")
+                                    .map((entry) => (
                                       <SelectItem key={entry.athlete.id} value={entry.athlete.id}>
-                                        {entry.athlete.firstName || entry.athlete.name} {entry.athlete.lastName}
+                                        {entry.athlete.firstName || entry.athlete.name}{" "}
+                                        {entry.athlete.lastName}
                                       </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -589,14 +651,16 @@ export default function ResultsPage() {
                                 step="any"
                                 placeholder={selectedCat.resultType === "TIME" ? "ms" : "value"}
                                 value={newResultValue}
-                                onChange={e => setNewResultValue(e.target.value)}
+                                onChange={(e) => setNewResultValue(e.target.value)}
                                 className="w-28 h-8 text-xs"
                               />
                               <Button
                                 size="sm"
                                 className="h-8"
                                 onClick={handleAddResult}
-                                disabled={submittingResult || !newResultAthleteId || !newResultValue}
+                                disabled={
+                                  submittingResult || !newResultAthleteId || !newResultValue
+                                }
                               >
                                 {submittingResult ? (
                                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -606,10 +670,14 @@ export default function ResultsPage() {
                               </Button>
                             </div>
                             <p className="text-xs text-muted-foreground">
-                              {selectedCat.resultType === "TIME" && "Enter value in milliseconds (e.g., 12345 = 12.345s)"}
-                              {selectedCat.resultType === "DISTANCE" && "Enter value in millimeters (e.g., 5230 = 5.23m)"}
-                              {selectedCat.resultType === "HEIGHT" && "Enter value in millimeters (e.g., 2010 = 2.01m)"}
-                              {selectedCat.resultType === "SCORE" && "Enter score value (e.g., 9.750)"}
+                              {selectedCat.resultType === "TIME" &&
+                                "Enter value in milliseconds (e.g., 12345 = 12.345s)"}
+                              {selectedCat.resultType === "DISTANCE" &&
+                                "Enter value in millimeters (e.g., 5230 = 5.23m)"}
+                              {selectedCat.resultType === "HEIGHT" &&
+                                "Enter value in millimeters (e.g., 2010 = 2.01m)"}
+                              {selectedCat.resultType === "SCORE" &&
+                                "Enter score value (e.g., 9.750)"}
                             </p>
                           </div>
                         </>
@@ -623,5 +691,5 @@ export default function ResultsPage() {
         </>
       )}
     </div>
-  )
+  );
 }

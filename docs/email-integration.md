@@ -37,7 +37,17 @@ const sesClient = new SESClient({
   },
 });
 
-export async function sendEmail({ to, subject, html, text }: { to: string; subject: string; html: string; text?: string }) {
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  text,
+}: {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+}) {
   const command = new SendEmailCommand({
     Destination: { ToAddresses: [to] },
     Message: {
@@ -65,8 +75,9 @@ export async function sendEmail({ to, subject, html, text }: { to: string; subje
 Use a library like `@react-email/components` to build responsive HTML emails using React components, or use simple HTML templates.
 
 Suggested templates:
--   `src/emails/receipt.tsx`: Order confirmation with invoice details.
--   `src/emails/welcome.tsx`: Welcome message for new users.
+
+- `src/emails/receipt.tsx`: Order confirmation with invoice details.
+- `src/emails/welcome.tsx`: Welcome message for new users.
 
 ### 4. Trigger Emails
 

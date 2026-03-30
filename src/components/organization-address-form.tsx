@@ -1,34 +1,34 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Loader2 } from "lucide-react"
-import { toast } from "sonner"
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
-import { COUNTRIES } from "@/lib/location-data"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { PhoneInput } from "@/components/ui/phone-input"
+import { COUNTRIES } from "@/lib/location-data";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PhoneInput } from "@/components/ui/phone-input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { StateProvinceCombobox } from "@/components/ui/state-province-combobox"
+} from "@/components/ui/select";
+import { StateProvinceCombobox } from "@/components/ui/state-province-combobox";
 
 interface OrganizationAddressFormProps {
   organization: {
-    street: string | null
-    city: string | null
-    stateProvince: string | null
-    postalCode: string | null
-    country: string | null
-    phone?: string | null
-  }
-  onSuccess: (updatedOrg: any) => void
-  onCancel?: () => void
+    street: string | null;
+    city: string | null;
+    stateProvince: string | null;
+    postalCode: string | null;
+    country: string | null;
+    phone?: string | null;
+  };
+  onSuccess: (updatedOrg: any) => void;
+  onCancel?: () => void;
 }
 
 export function OrganizationAddressForm({
@@ -36,7 +36,7 @@ export function OrganizationAddressForm({
   onSuccess,
   onCancel,
 }: OrganizationAddressFormProps) {
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     street: organization.street || "",
     city: organization.city || "",
@@ -44,15 +44,15 @@ export function OrganizationAddressForm({
     postalCode: organization.postalCode || "",
     country: organization.country || "US",
     phone: organization.phone || "",
-  })
+  });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
-  }
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault();
+    setLoading(true);
 
     try {
       const res = await fetch("/api/organization/details", {
@@ -61,21 +61,21 @@ export function OrganizationAddressForm({
           "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
-      })
+      });
 
       if (!res.ok) {
-        throw new Error("Failed to update organization address")
+        throw new Error("Failed to update organization address");
       }
 
-      const updated = await res.json()
-      toast.success("Address updated successfully")
-      onSuccess(updated)
+      const updated = await res.json();
+      toast.success("Address updated successfully");
+      onSuccess(updated);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update address")
+      toast.error(error instanceof Error ? error.message : "Failed to update address");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -85,34 +85,26 @@ export function OrganizationAddressForm({
           id="phone"
           defaultCountry="US"
           value={formData.phone}
-          onChange={(value) => setFormData(prev => ({ ...prev, phone: value || "" }))}
+          onChange={(value) => setFormData((prev) => ({ ...prev, phone: value || "" }))}
           required
         />
       </div>
       <div className="space-y-2">
         <Label htmlFor="street">Street Address</Label>
-        <Input
-          id="street"
-          name="street"
-          value={formData.street}
-          onChange={handleChange}
-          required
-        />
+        <Input id="street" name="street" value={formData.street} onChange={handleChange} required />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="city">City</Label>
-          <Input
-            id="city"
-            name="city"
-            value={formData.city}
-            onChange={handleChange}
-            required
-          />
+          <Input id="city" name="city" value={formData.city} onChange={handleChange} required />
         </div>
         <div className="space-y-2">
           <Label htmlFor="stateProvince">
-            {formData.country === "CA" ? "Province" : formData.country === "US" ? "State" : "State / Province"}
+            {formData.country === "CA"
+              ? "Province"
+              : formData.country === "US"
+                ? "State"
+                : "State / Province"}
           </Label>
           <StateProvinceCombobox
             country={formData.country}
@@ -124,14 +116,20 @@ export function OrganizationAddressForm({
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="postalCode">
-            {formData.country === "CA" ? "Postal Code" : formData.country === "US" ? "ZIP Code" : "Postal/ZIP Code"}
+            {formData.country === "CA"
+              ? "Postal Code"
+              : formData.country === "US"
+                ? "ZIP Code"
+                : "Postal/ZIP Code"}
           </Label>
           <Input
             id="postalCode"
             name="postalCode"
             value={formData.postalCode}
             onChange={handleChange}
-            placeholder={formData.country === "CA" ? "A1A 1A1" : formData.country === "US" ? "12345" : ""}
+            placeholder={
+              formData.country === "CA" ? "A1A 1A1" : formData.country === "US" ? "12345" : ""
+            }
             required
           />
         </div>
@@ -152,7 +150,9 @@ export function OrganizationAddressForm({
             </SelectTrigger>
             <SelectContent>
               {COUNTRIES.map((c) => (
-                <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+                <SelectItem key={c.code} value={c.code}>
+                  {c.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -170,5 +170,5 @@ export function OrganizationAddressForm({
         </Button>
       </div>
     </form>
-  )
+  );
 }

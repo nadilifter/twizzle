@@ -19,10 +19,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!connection) {
-      return NextResponse.json(
-        { error: "No QBO connection found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "No QBO connection found" }, { status: 404 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -69,9 +66,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("[QBO Sync Status] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to get sync status" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to get sync status" }, { status: 500 });
   }
 }

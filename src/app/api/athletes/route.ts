@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
         total: 0,
         limit: 50,
         offset: 0,
-        message: "Please select an organization first"
+        message: "Please select an organization first",
       });
     }
 
@@ -124,14 +124,10 @@ export async function GET(request: NextRequest) {
       const orgAthlete = athlete.organizationAthletes[0];
 
       const programsWithFutureInstances = new Set(
-        athlete.enrollments
-          .filter((e) => e.program.instances.length > 0)
-          .map((e) => e.program.id)
+        athlete.enrollments.filter((e) => e.program.instances.length > 0).map((e) => e.program.id)
       );
 
-      const uniqueCompetitionIds = new Set(
-        athlete.competitionEntries.map((e) => e.competitionId)
-      );
+      const uniqueCompetitionIds = new Set(athlete.competitionEntries.map((e) => e.competitionId));
 
       const { organizationAthletes: _oa, ...rest } = athlete;
       return {
@@ -154,10 +150,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching athletes:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch athletes" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch athletes" }, { status: 500 });
   }
 }
 
@@ -171,20 +164,13 @@ export async function POST(request: NextRequest) {
 
     // Require an organization to be selected
     if (!session.user.organizationId) {
-      return NextResponse.json(
-        { error: "Please select an organization first" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Please select an organization first" }, { status: 400 });
     }
 
     // Super admins bypass permission checks
     const permissions = session.user.permissions ?? [];
     const isSuperAdmin = session.user.isSuperAdmin === true;
-    if (
-      !isSuperAdmin &&
-      !permissions.includes("*") &&
-      !permissions.includes("athletes.create")
-    ) {
+    if (!isSuperAdmin && !permissions.includes("*") && !permissions.includes("athletes.create")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -197,10 +183,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!guardianUser) {
-      return NextResponse.json(
-        { error: "Guardian user not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Guardian user not found" }, { status: 404 });
     }
 
     const athlete = await db.athlete.create({
@@ -278,10 +261,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(transformedAthlete);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     // Log detailed error for debugging
     console.error("Error creating athlete:", error);

@@ -113,7 +113,13 @@ function createUplifterAdapter(prisma: typeof db): Adapter {
       return user ? toAdapterUser(user) : null;
     },
 
-    getUserByAccount: async ({ providerAccountId, provider }: { providerAccountId: string; provider: string }) => {
+    getUserByAccount: async ({
+      providerAccountId,
+      provider,
+    }: {
+      providerAccountId: string;
+      provider: string;
+    }) => {
       const account = await prisma.account.findUnique({
         where: { provider_providerAccountId: { provider, providerAccountId } },
         include: { user: true },
@@ -172,7 +178,7 @@ async function buildAuthorizedUser(userId: string, targetOrgId?: string | null) 
       // Superadmins can select any org, fetch its name
       const targetOrg = await db.organization.findUnique({
         where: { id: targetOrgId },
-        select: { name: true }
+        select: { name: true },
       });
       if (targetOrg) {
         organizationName = targetOrg.name;
@@ -201,7 +207,7 @@ async function buildAuthorizedUser(userId: string, targetOrgId?: string | null) 
     permissions =
       memberPerms.length > 0
         ? memberPerms
-        : ROLE_PERMISSIONS[(membership.role || "").toUpperCase()] ?? [];
+        : (ROLE_PERMISSIONS[(membership.role || "").toUpperCase()] ?? []);
   } else {
     permissions = ROLE_PERMISSIONS[(user.role || "").toUpperCase()] ?? [];
   }
@@ -246,8 +252,7 @@ export const authOptions: NextAuthOptions = {
             // will be linked automatically — this is convenient but risky if an
             // attacker controls an OAuth account matching an existing user's email.
             // Set ALLOW_OAUTH_ACCOUNT_LINKING=true to explicitly opt in.
-            allowDangerousEmailAccountLinking:
-              process.env.ALLOW_OAUTH_ACCOUNT_LINKING === "true",
+            allowDangerousEmailAccountLinking: process.env.ALLOW_OAUTH_ACCOUNT_LINKING === "true",
             authorization: {
               params: {
                 access_type: "offline",
@@ -264,8 +269,7 @@ export const authOptions: NextAuthOptions = {
             clientId: process.env.AZURE_AD_CLIENT_ID,
             clientSecret: process.env.AZURE_AD_CLIENT_SECRET,
             tenantId: process.env.AZURE_AD_TENANT_ID || "common",
-            allowDangerousEmailAccountLinking:
-              process.env.ALLOW_OAUTH_ACCOUNT_LINKING === "true",
+            allowDangerousEmailAccountLinking: process.env.ALLOW_OAUTH_ACCOUNT_LINKING === "true",
             authorization: {
               params: {
                 scope: "openid profile email User.Read",
@@ -313,10 +317,7 @@ export const authOptions: NextAuthOptions = {
             throw new Error("Invalid email or password");
           }
 
-          const isValidPassword = await bcrypt.compare(
-            credentials.password,
-            user.passwordHash
-          );
+          const isValidPassword = await bcrypt.compare(credentials.password, user.passwordHash);
 
           if (!isValidPassword) {
             throw new Error("Invalid email or password");
@@ -352,11 +353,14 @@ export const authOptions: NextAuthOptions = {
 
           const returnedUser = await buildAuthorizedUser(user.id);
           if (!returnedUser) throw new Error("User not found");
-          logger.info("Authorize returning user", { email: returnedUser.email, id: returnedUser.id });
+          logger.info("Authorize returning user", {
+            email: returnedUser.email,
+            id: returnedUser.id,
+          });
           return returnedUser;
         } catch (error) {
           console.error("Authorize error:", error);
-          throw error; 
+          throw error;
         }
       },
     }),
@@ -380,11 +384,7 @@ export const authOptions: NextAuthOptions = {
           const isProofValid = proofResult && proofResult.email === email;
 
           if (!isProofValid) {
-            const isValid = await validateVerificationCode(
-              email,
-              credentials.code,
-              "EMAIL_LOGIN"
-            );
+            const isValid = await validateVerificationCode(email, credentials.code, "EMAIL_LOGIN");
             if (!isValid) {
               throw new Error("Invalid or expired code");
             }
@@ -406,7 +406,10 @@ export const authOptions: NextAuthOptions = {
 
           const returnedUser = await buildAuthorizedUser(user.id);
           if (!returnedUser) throw new Error("User not found");
-          logger.info("Email-code authorize returning user", { email: returnedUser.email, id: returnedUser.id });
+          logger.info("Email-code authorize returning user", {
+            email: returnedUser.email,
+            id: returnedUser.id,
+          });
           return returnedUser;
         } catch (error) {
           console.error("Email-code authorize error:", error);
@@ -434,11 +437,13 @@ export const authOptions: NextAuthOptions = {
 
           if (existingUser) {
             const hasPassword = !!existingUser.passwordHash;
-            const hasProviderLink = existingUser.accounts.some(
-              (acc) => acc.provider === provider
-            );
+            const hasProviderLink = existingUser.accounts.some((acc) => acc.provider === provider);
 
-            if (hasPassword && !hasProviderLink && process.env.ALLOW_OAUTH_ACCOUNT_LINKING === "false") {
+            if (
+              hasPassword &&
+              !hasProviderLink &&
+              process.env.ALLOW_OAUTH_ACCOUNT_LINKING === "false"
+            ) {
               console.warn(
                 `OAuth linking blocked for ${email}: User has password but no ${provider} link`
               );
@@ -464,7 +469,11 @@ export const authOptions: NextAuthOptions = {
       try {
         // Initial sign in with credentials or email-code provider
         if (user && (account?.provider === "credentials" || account?.provider === "email-code")) {
-          logger.info("JWT callback: sign in for user", { provider: account.provider, email: user.email, id: user.id });
+          logger.info("JWT callback: sign in for user", {
+            provider: account.provider,
+            email: user.email,
+            id: user.id,
+          });
           token.id = user.id;
           token.role = user.role;
           token.organizationId = user.organizationId;
@@ -473,16 +482,19 @@ export const authOptions: NextAuthOptions = {
           token.isSuperAdmin = user.isSuperAdmin;
           token.avatar = user.image || null;
         }
-        
+
         // OAuth sign-in - fetch user data from database
         if ((account?.provider === "google" || account?.provider === "azure-ad") && user?.email) {
-          logger.info("JWT callback: OAuth sign in for user", { provider: account.provider, email: user.email });
-          
+          logger.info("JWT callback: OAuth sign in for user", {
+            provider: account.provider,
+            email: user.email,
+          });
+
           const dbUser = await db.user.findUnique({
             where: { email: user.email },
             select: { id: true, avatar: true },
           });
-          
+
           if (dbUser) {
             const authUser = await buildAuthorizedUser(dbUser.id);
             if (authUser) {
@@ -500,7 +512,7 @@ export const authOptions: NextAuthOptions = {
         // Handle session updates (e.g., switching organizations or impersonation)
         if (trigger === "update" && session) {
           logger.info("JWT callback: Session update", { session });
-          
+
           // Handle organization switching -- re-resolve permissions for the new org
           if (session.organizationId !== undefined) {
             const authUser = await buildAuthorizedUser(
@@ -515,7 +527,7 @@ export const authOptions: NextAuthOptions = {
               token.avatar = authUser.image || token.avatar || null;
             }
           }
-          
+
           // Handle impersonation (superadmin "view as user" feature)
           if (token.isSuperAdmin && session.viewingAsUserId !== undefined) {
             token.viewingAsUserId = session.viewingAsUserId || undefined;
@@ -544,7 +556,7 @@ export const authOptions: NextAuthOptions = {
           session.user.organizationName = token.organizationName as string;
           session.user.permissions = token.permissions as string[];
           session.user.isSuperAdmin = token.isSuperAdmin as boolean;
-          
+
           session.user.viewingAsUserId = token.viewingAsUserId as string | undefined;
           session.user.viewingAsUserName = token.viewingAsUserName as string | undefined;
           session.user.viewingAsUserEmail = token.viewingAsUserEmail as string | undefined;
@@ -559,14 +571,14 @@ export const authOptions: NextAuthOptions = {
     async redirect({ url, baseUrl }) {
       const config = getEnvConfig();
       const currentEnv = getCurrentEnvironment();
-      const baseDomain = config.baseDomain.split(':')[0]; // Remove port if present
-      
+      const baseDomain = config.baseDomain.split(":")[0]; // Remove port if present
+
       // PRODUCTION/STAGING: Standard redirect behavior
       // Cookies are properly shared across subdomains via domain attribute,
       // so no bridge is needed - NextAuth handles everything correctly
-      if (currentEnv !== 'local') {
+      if (currentEnv !== "local") {
         let finalUrl = url;
-        
+
         // Allows relative callback URLs
         if (finalUrl.startsWith("/")) {
           finalUrl = `${baseUrl}${finalUrl}`;
@@ -581,7 +593,7 @@ export const authOptions: NextAuthOptions = {
             finalUrl = baseUrl;
           }
         }
-        
+
         // Prevent redirect loop: if the resolved URL points to the login portal,
         // redirect to admin instead (middleware will route to the correct portal)
         try {
@@ -592,24 +604,24 @@ export const authOptions: NextAuthOptions = {
         } catch {
           // URL parsing failed, continue with finalUrl
         }
-        
+
         return finalUrl;
       }
-      
+
       // LOCAL DEVELOPMENT: Handle cross-domain OAuth redirect
       // When OAuth completes on localhost:3000 but the callbackUrl is for a local subdomain,
       // we need to redirect through the session bridge to set the cookie on the correct domain.
       // This is only needed in local dev because OAuth providers don't allow localhost
       // subdomains as redirect URIs.
-      
+
       const isLocalhost = baseUrl === "http://localhost:3000";
       const callbackIsLocalSubdomain = url.includes(baseDomain);
       const isNotAlreadyBridge = !url.includes("oauth-bridge");
-      
+
       if (isLocalhost && callbackIsLocalSubdomain && isNotAlreadyBridge) {
         // Extract the original callback URL
         let finalCallback = url;
-        
+
         try {
           const urlObj = new URL(url);
           const nestedCallback = urlObj.searchParams.get("callbackUrl");
@@ -619,7 +631,7 @@ export const authOptions: NextAuthOptions = {
         } catch {
           // URL parsing failed, use as-is
         }
-        
+
         // Prevent redirect loop: if callback is the login portal, redirect to admin instead
         try {
           const callbackUrlObj = new URL(finalCallback);
@@ -632,15 +644,15 @@ export const authOptions: NextAuthOptions = {
         } catch {
           // URL parsing failed, continue with original
         }
-        
+
         logger.info("Redirect callback: Detected cross-domain OAuth, redirecting to bridge");
         logger.debug("Redirect callback details", { baseUrl, url, finalCallback });
-        
+
         const bridgeUrl = new URL("/api/auth/oauth-bridge", "http://localhost:3000");
         bridgeUrl.searchParams.set("callbackUrl", finalCallback);
         return bridgeUrl.toString();
       }
-      
+
       // Local dev fallback: standard redirect behavior
       if (url.startsWith("/")) {
         return `${baseUrl}${url}`;
@@ -677,10 +689,6 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 // Helper to verify passwords
-export async function verifyPassword(
-  password: string,
-  hashedPassword: string
-): Promise<boolean> {
+export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
   return bcrypt.compare(password, hashedPassword);
 }
-

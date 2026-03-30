@@ -8,18 +8,23 @@ const updateShiftSchema = z.object({
   memberId: z.string().optional(),
   facilityId: z.string().optional().nullable(),
   date: z.string().optional(),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/, "Start time must be in HH:MM format").optional(),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/, "End time must be in HH:MM format").optional(),
+  startTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/, "Start time must be in HH:MM format")
+    .optional(),
+  endTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/, "End time must be in HH:MM format")
+    .optional(),
   shiftType: z.string().optional(),
   notes: z.string().optional().nullable(),
-  status: z.enum(["SCHEDULED", "CONFIRMED", "IN_PROGRESS", "COMPLETED", "CANCELLED", "NO_SHOW"]).optional(),
+  status: z
+    .enum(["SCHEDULED", "CONFIRMED", "IN_PROGRESS", "COMPLETED", "CANCELLED", "NO_SHOW"])
+    .optional(),
 });
 
 // GET - Get a specific shift
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -69,10 +74,7 @@ export async function GET(
 }
 
 // PATCH - Update a shift
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {

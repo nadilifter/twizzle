@@ -1,65 +1,65 @@
-"use client"
+"use client";
 
-import { useEffect, useState, Suspense } from "react"
-import { useSearchParams, useRouter } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { ShineBorder } from "@/components/ui/shine-border"
-import { UplifterLogo } from "@/components/uplifter-logo"
-import { Loader2, ChevronLeft, AlertCircle, CheckCircle2 } from "lucide-react"
-import { signIn } from "next-auth/react"
-import { toast } from "sonner"
-import { validatePassword, PASSWORD_PLACEHOLDER, PASSWORD_MIN_LENGTH } from "@/lib/password"
+import { useEffect, useState, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { ShineBorder } from "@/components/ui/shine-border";
+import { UplifterLogo } from "@/components/uplifter-logo";
+import { Loader2, ChevronLeft, AlertCircle, CheckCircle2 } from "lucide-react";
+import { signIn } from "next-auth/react";
+import { toast } from "sonner";
+import { validatePassword, PASSWORD_PLACEHOLDER, PASSWORD_MIN_LENGTH } from "@/lib/password";
 
 interface InvitationData {
-  valid: boolean
-  error?: string
-  errorCode?: string
+  valid: boolean;
+  error?: string;
+  errorCode?: string;
   invitation?: {
-    id: string
-    email: string
-    organizationId: string
-    organizationName: string
-    role: string
-    inviterName: string
-    expiresAt: string
-  }
+    id: string;
+    email: string;
+    organizationId: string;
+    organizationName: string;
+    role: string;
+    inviterName: string;
+    expiresAt: string;
+  };
   user?: {
-    exists: boolean
-    name: string | null
-    email: string
-    needsPassword: boolean
-  }
+    exists: boolean;
+    name: string | null;
+    email: string;
+    needsPassword: boolean;
+  };
 }
 
 interface SessionInfo {
-  email: string | null
-  isLoggedIn: boolean
+  email: string | null;
+  isLoggedIn: boolean;
 }
 
 function AcceptInvitationContent() {
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const token = searchParams.get("token")
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const token = searchParams.get("token");
 
-  const [invitationData, setInvitationData] = useState<InvitationData | null>(null)
-  const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const [invitationData, setInvitationData] = useState<InvitationData | null>(null);
+  const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   // Fetch invitation data and session info on mount
   useEffect(() => {
     if (!token) {
-      setIsLoading(false)
-      setError("No invitation token provided")
-      return
+      setIsLoading(false);
+      setError("No invitation token provided");
+      return;
     }
 
     async function fetchData() {
@@ -68,125 +68,127 @@ function AcceptInvitationContent() {
         const [invitationRes, sessionRes] = await Promise.all([
           fetch(`/api/invitations/${token}`),
           fetch("/api/auth/session"),
-        ])
-        
-        const invitationData = await invitationRes.json()
-        const sessionData = await sessionRes.json()
-        
-        setInvitationData(invitationData)
+        ]);
+
+        const invitationData = await invitationRes.json();
+        const sessionData = await sessionRes.json();
+
+        setInvitationData(invitationData);
         setSessionInfo({
           email: sessionData?.user?.email || null,
           isLoggedIn: !!sessionData?.user,
-        })
-        
+        });
+
         if (!invitationData.valid) {
-          setError(invitationData.error || "Invalid invitation")
+          setError(invitationData.error || "Invalid invitation");
         }
       } catch {
-        setError("Failed to load invitation details")
+        setError("Failed to load invitation details");
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
     }
 
-    fetchData()
-  }, [token])
+    fetchData();
+  }, [token]);
 
   // Handle form submission for new users (password setup)
   const handleNewUserSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
+    e.preventDefault();
+    setError(null);
 
-    const passwordError = validatePassword(password)
+    const passwordError = validatePassword(password);
     if (passwordError) {
-      setError(passwordError)
-      return
+      setError(passwordError);
+      return;
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match")
-      return
+      setError("Passwords do not match");
+      return;
     }
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
     try {
       const response = await fetch(`/api/invitations/${token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password, confirmPassword }),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (data.success) {
-        setSuccess(true)
-        toast.success(`Welcome to ${data.organizationName}!`)
-        
+        setSuccess(true);
+        toast.success(`Welcome to ${data.organizationName}!`);
+
         // Auto-login the user
         const signInResult = await signIn("credentials", {
           email: invitationData?.invitation?.email,
           password,
           redirect: false,
-        })
+        });
 
         if (signInResult?.ok) {
-          router.push("/dashboard")
-          router.refresh()
+          router.push("/dashboard");
+          router.refresh();
         } else {
           // If auto-login fails, redirect to login page
-          router.push(`/login?email=${encodeURIComponent(invitationData?.invitation?.email || "")}`)
+          router.push(
+            `/login?email=${encodeURIComponent(invitationData?.invitation?.email || "")}`
+          );
         }
       } else {
-        setError(data.error || "Failed to accept invitation")
+        setError(data.error || "Failed to accept invitation");
       }
     } catch {
-      setError("An error occurred. Please try again.")
+      setError("An error occurred. Please try again.");
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   // Handle accepting invitation for existing users
   const handleExistingUserAccept = async () => {
-    setError(null)
-    setIsSubmitting(true)
+    setError(null);
+    setIsSubmitting(true);
 
     try {
       const response = await fetch(`/api/invitations/${token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (data.success) {
-        setSuccess(true)
-        toast.success(data.message || `Welcome to ${data.organizationName}!`)
-        
+        setSuccess(true);
+        toast.success(data.message || `Welcome to ${data.organizationName}!`);
+
         // In local development, we need to go through the credentials-bridge
         // to transfer the session to the correct cookie domain
-        const isLocal = window.location.hostname.includes("localhost")
+        const isLocal = window.location.hostname.includes("localhost");
         if (isLocal) {
-          const adminUrl = `http://admin.uplifterinc.localhost:3000/`
-          window.location.href = `/api/auth/credentials-bridge?callbackUrl=${encodeURIComponent(adminUrl)}`
+          const adminUrl = `http://admin.uplifterinc.localhost:3000/`;
+          window.location.href = `/api/auth/credentials-bridge?callbackUrl=${encodeURIComponent(adminUrl)}`;
         } else {
-          router.push("/dashboard")
-          router.refresh()
+          router.push("/dashboard");
+          router.refresh();
         }
       } else if (data.requiresAuth) {
         // Redirect to login with callback
-        router.push(data.redirectUrl)
+        router.push(data.redirectUrl);
       } else {
-        setError(data.error || "Failed to accept invitation")
+        setError(data.error || "Failed to accept invitation");
       }
     } catch {
-      setError("An error occurred. Please try again.")
+      setError("An error occurred. Please try again.");
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   // Loading state
   if (isLoading) {
@@ -201,7 +203,7 @@ function AcceptInvitationContent() {
           <p className="mt-4 text-muted-foreground">Loading invitation...</p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   // Error state (invalid/expired token)
@@ -229,14 +231,17 @@ function AcceptInvitationContent() {
             </p>
           )}
           <div className="text-center text-sm">
-            <Link href="/login" className="flex items-center justify-center gap-2 text-muted-foreground hover:text-primary">
+            <Link
+              href="/login"
+              className="flex items-center justify-center gap-2 text-muted-foreground hover:text-primary"
+            >
               <ChevronLeft className="h-4 w-4" />
               Back to Login
             </Link>
           </div>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   // Success state
@@ -257,15 +262,15 @@ function AcceptInvitationContent() {
           <p className="text-sm text-muted-foreground mt-2">Redirecting to dashboard...</p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
-  const { invitation, user } = invitationData
+  const { invitation, user } = invitationData;
 
   // Existing user flow - accept invitation
   // Check if user is logged in (using fetched session info)
-  const isLoggedIn = sessionInfo?.isLoggedIn ?? false
-  const isCorrectUser = sessionInfo?.email === invitation?.email
+  const isLoggedIn = sessionInfo?.isLoggedIn ?? false;
+  const isCorrectUser = sessionInfo?.email === invitation?.email;
 
   // New user flow - password setup
   if (user?.needsPassword) {
@@ -279,7 +284,7 @@ function AcceptInvitationContent() {
             You&apos;ve been invited to join <strong>{invitation?.organizationName}</strong>
           </p>
         </CardHeader>
-        
+
         <CardContent className="grid gap-4">
           <form onSubmit={handleNewUserSubmit} className="grid gap-4">
             <div className="rounded-md bg-muted/50 px-3 py-2 text-sm">
@@ -303,8 +308,8 @@ function AcceptInvitationContent() {
                 minLength={PASSWORD_MIN_LENGTH}
                 value={password}
                 onChange={(e) => {
-                  setPassword(e.target.value)
-                  if (error) setError(null)
+                  setPassword(e.target.value);
+                  if (error) setError(null);
                 }}
                 placeholder={PASSWORD_PLACEHOLDER}
                 disabled={isSubmitting}
@@ -319,8 +324,8 @@ function AcceptInvitationContent() {
                 required
                 value={confirmPassword}
                 onChange={(e) => {
-                  setConfirmPassword(e.target.value)
-                  if (error) setError(null)
+                  setConfirmPassword(e.target.value);
+                  if (error) setError(null);
                 }}
                 disabled={isSubmitting}
               />
@@ -345,7 +350,7 @@ function AcceptInvitationContent() {
           </form>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
@@ -358,7 +363,7 @@ function AcceptInvitationContent() {
           {invitation?.inviterName} has invited you to join their organization
         </p>
       </CardHeader>
-      
+
       <CardContent className="grid gap-4">
         <div className="rounded-md bg-muted/50 px-3 py-2 text-sm">
           <p className="text-muted-foreground">
@@ -385,7 +390,8 @@ function AcceptInvitationContent() {
           // Logged in as wrong user
           <>
             <div className="rounded-md bg-yellow-500/15 px-3 py-2 text-sm text-yellow-700 dark:text-yellow-400">
-              You&apos;re logged in as {sessionInfo?.email}, but this invitation was sent to {invitation?.email}.
+              You&apos;re logged in as {sessionInfo?.email}, but this invitation was sent to{" "}
+              {invitation?.email}.
             </div>
             <Button asChild variant="outline" className="w-full">
               <Link href={`/login?callbackUrl=/accept-invitation?token=${token}`}>
@@ -401,11 +407,7 @@ function AcceptInvitationContent() {
                 {error}
               </div>
             )}
-            <Button 
-              onClick={handleExistingUserAccept} 
-              className="w-full"
-              disabled={isSubmitting}
-            >
+            <Button onClick={handleExistingUserAccept} className="w-full" disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -419,14 +421,17 @@ function AcceptInvitationContent() {
         )}
 
         <div className="text-center text-sm">
-          <Link href="/" className="flex items-center justify-center gap-2 text-muted-foreground hover:text-primary">
+          <Link
+            href="/"
+            className="flex items-center justify-center gap-2 text-muted-foreground hover:text-primary"
+          >
             <ChevronLeft className="h-4 w-4" />
             Back to Home
           </Link>
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 // Loading fallback for Suspense
@@ -442,7 +447,7 @@ function LoadingFallback() {
         <p className="mt-4 text-muted-foreground">Loading invitation...</p>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 // Wrap in Suspense for useSearchParams
@@ -451,5 +456,5 @@ export default function AcceptInvitationPage() {
     <Suspense fallback={<LoadingFallback />}>
       <AcceptInvitationContent />
     </Suspense>
-  )
+  );
 }

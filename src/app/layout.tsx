@@ -18,7 +18,7 @@ const geistMono = localFont({
 
 // Determine if we should block search engine indexing
 // Non-production environments (staging, development, local) should never be indexed
-const isProduction = process.env.APP_ENVIRONMENT === 'production';
+const isProduction = process.env.APP_ENVIRONMENT === "production";
 
 export const metadata: Metadata = {
   title: "Uplifter",
@@ -53,9 +53,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <Providers session={session}>
           {children}
           <Toaster />

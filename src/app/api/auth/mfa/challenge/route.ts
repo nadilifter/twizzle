@@ -70,10 +70,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!shouldRequireMfa(user.lastActiveAt)) {
-      return NextResponse.json(
-        { mfaRequired: false },
-        { headers: rateLimitHeaders(rateLimit) }
-      );
+      return NextResponse.json({ mfaRequired: false }, { headers: rateLimitHeaders(rateLimit) });
     }
 
     // MFA required — generate code and send email
@@ -89,16 +86,10 @@ export async function POST(request: NextRequest) {
       expiresIn: `${CODE_EXPIRY_MINUTES} minutes`,
     });
 
-    return NextResponse.json(
-      { mfaRequired: true },
-      { headers: rateLimitHeaders(rateLimit) }
-    );
+    return NextResponse.json({ mfaRequired: true }, { headers: rateLimitHeaders(rateLimit) });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("MFA challenge error:", error);
     return NextResponse.json(

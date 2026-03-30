@@ -7,16 +7,9 @@ import {
   mapTwilioStatus,
   isTwilioConfigured,
 } from "@/lib/twilio";
-import {
-  checkUsageLimits,
-  recordUsage,
-} from "@/lib/sms-service";
+import { checkUsageLimits, recordUsage } from "@/lib/sms-service";
 import { getPoolNumberForSend } from "@/lib/sms-number-pool";
-import type {
-  MessageClassification,
-  SmsTargetType,
-  AnnouncementScope,
-} from "@prisma/client";
+import type { MessageClassification, SmsTargetType, AnnouncementScope } from "@prisma/client";
 
 /**
  * SMS Campaign Service
@@ -522,9 +515,7 @@ export async function getExpandedSmsCampaignRecipients(
 /**
  * Get just the recipient count for a targeting configuration (for preview)
  */
-export async function getSmsCampaignRecipientCount(
-  params: SmsTargetingParams
-): Promise<number> {
+export async function getSmsCampaignRecipientCount(params: SmsTargetingParams): Promise<number> {
   const recipients = await getExpandedSmsCampaignRecipients(params);
   return recipients.length;
 }
@@ -556,7 +547,11 @@ async function buildRecipientContext(
 
   // Date context
   const now = new Date();
-  context.currentDate = now.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  context.currentDate = now.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
   context.currentYear = now.getFullYear().toString();
 
   if (userId) {
@@ -607,10 +602,20 @@ async function buildRecipientContext(
         if (membership) {
           context.membershipName = membership.instance.name;
           context.membershipGroupName = membership.instance.group.name;
-          context.membershipStartDate = membership.startDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+          context.membershipStartDate = membership.startDate.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
           if (membership.endDate) {
-            context.membershipEndDate = membership.endDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-            const daysRemaining = Math.ceil((membership.endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            context.membershipEndDate = membership.endDate.toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            });
+            const daysRemaining = Math.ceil(
+              (membership.endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+            );
             context.membershipDaysRemaining = daysRemaining.toString();
           }
           context.membershipStatus = membership.status;
@@ -619,7 +624,8 @@ async function buildRecipientContext(
         const enrollment = athlete.enrollments?.[0];
         if (enrollment) {
           context.programName = enrollment.program.name;
-          if (enrollment.program.description) context.programDescription = enrollment.program.description;
+          if (enrollment.program.description)
+            context.programDescription = enrollment.program.description;
         }
       }
     }
@@ -665,7 +671,11 @@ export function renderSmsCampaignPreview(body: string): string {
     organizationEmail: "info@sunrise-gymnastics.com",
     organizationPhone: "(555) 987-6543",
     organizationAddress: "123 Main St, Anytown, CA 12345",
-    currentDate: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+    currentDate: new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }),
     currentYear: new Date().getFullYear().toString(),
   };
 
@@ -821,7 +831,11 @@ export async function executeSmsCampaign(campaignId: string): Promise<void> {
       ? await buildRecipientContext(campaign.organizationId, recipient.userId)
       : {
           organizationName: campaign.organization.name,
-          currentDate: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+          currentDate: new Date().toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }),
           currentYear: new Date().getFullYear().toString(),
         };
 

@@ -58,6 +58,7 @@ isProject: false
 ## Current State
 
 **Backend Implementation Complete:**
+
 - ✅ Full Prisma schema with all entities (Phases 1-6)
 - ✅ Secure Multi-tenancy Architecture (Shared Schema + Row-Level Isolation)
 - ✅ NextAuth.js authentication (credentials + Google OAuth)
@@ -67,6 +68,7 @@ isProject: false
 - ✅ Seed data with demo organization, users, programs, families, athletes, events, invoices, skills, and discounts
 
 **Remaining:**
+
 - ⏳ GLCode/Ledger API (Phase 4.4)
 - ⏳ Connect frontend pages to real API endpoints:
   - ✅ Core Entities (Athletes, Families, Programs, Memberships)
@@ -86,31 +88,29 @@ erDiagram
     Organization ||--o{ User : has
     Organization ||--o{ Program : offers
     Organization ||--o{ Family : serves
-    
+
     Family ||--o{ Athlete : contains
     Family ||--o{ Invoice : receives
     Family ||--o{ PaymentMethod : owns
-    
+
     Athlete }o--o{ Program : enrolled_in
     Athlete }o--o{ Event : attends
     Athlete ||--o{ Evaluation : receives
-    
+
     Program ||--o{ Event : schedules
     Program ||--o{ LessonPlan : uses
     Program ||--o{ MembershipTier : has
-    
+
     Event ||--o{ Attendance : tracks
     Event }o--|| User : taught_by
-    
+
     Invoice ||--o{ LineItem : contains
     LineItem }o--|| Program : references
     LineItem }o--|| Event : references
-    
+
     User ||--o{ LessonPlan : creates
     User ||--o{ Evaluation : conducts
 ```
-
-
 
 ---
 
@@ -450,19 +450,19 @@ flowchart TD
         Users[User Management]
         DB --> Auth --> Users
     end
-    
+
     subgraph phase2 [Phase 2: Core Entities]
         AF[Athletes and Families]
         PM[Programs and Memberships]
         AF --> PM
     end
-    
+
     subgraph phase3 [Phase 3: Operations]
         Events[Events and Calendar]
         Attend[Attendance]
         Events --> Attend
     end
-    
+
     subgraph phase4 [Phase 4: Financial]
         Inv[Invoices]
         Pay[Payments]
@@ -470,20 +470,20 @@ flowchart TD
         Led[Ledger]
         Inv --> Pay --> Disc --> Led
     end
-    
+
     subgraph phase5 [Phase 5: Training]
         LP[Lesson Plans]
         Skills[Skills]
         Eval[Evaluations]
         LP --> Skills --> Eval
     end
-    
+
     subgraph phase6 [Phase 6: Communication]
         Ann[Announcements]
         Msg[Email and SMS]
         Ann --> Msg
     end
-    
+
     phase1 --> phase2
     phase2 --> phase3
     phase3 --> phase4
@@ -492,12 +492,9 @@ flowchart TD
     phase5 --> phase6
 ```
 
-
-
 ---
 
 ## Key Feature Interplay Examples
-
 
 | Query                                          | Entities Involved                                     |
 | ---------------------------------------------- | ----------------------------------------------------- |
@@ -507,7 +504,6 @@ flowchart TD
 | "Unpaid invoices for athletes in Recreational" | Invoice -> Family -> Athlete -> Enrollment -> Program |
 | "Coaches with most classes this month"         | Event -> User (coach)                                 |
 | "Athletes who passed Level 3 evaluation"       | Evaluation -> Athlete                                 |
-
 
 ---
 

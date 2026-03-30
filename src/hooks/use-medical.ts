@@ -49,23 +49,26 @@ export function useMedicalConfig(): UseMedicalConfigReturn {
     }
   }, []);
 
-  const updateConfig = useCallback(async (data: UpdateMedicalFormConfigPayload): Promise<boolean> => {
-    setIsSaving(true);
-    setError(null);
+  const updateConfig = useCallback(
+    async (data: UpdateMedicalFormConfigPayload): Promise<boolean> => {
+      setIsSaving(true);
+      setError(null);
 
-    try {
-      const response = await api.put<MedicalFormConfig>("/api/organization/medical-config", data);
-      setConfig(response);
-      return true;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to update medical config";
-      setError(message);
-      console.error("Error updating medical config:", err);
-      return false;
-    } finally {
-      setIsSaving(false);
-    }
-  }, []);
+      try {
+        const response = await api.put<MedicalFormConfig>("/api/organization/medical-config", data);
+        setConfig(response);
+        return true;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to update medical config";
+        setError(message);
+        console.error("Error updating medical config:", err);
+        return false;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    []
+  );
 
   const clearError = useCallback(() => setError(null), []);
 
@@ -94,8 +97,13 @@ interface UseMedicalQuestionsReturn {
   isSaving: boolean;
   error: string | null;
   fetchQuestions: (includeInactive?: boolean) => Promise<void>;
-  createQuestion: (data: CreateCustomMedicalQuestionPayload) => Promise<CustomMedicalQuestion | null>;
-  updateQuestion: (id: string, data: UpdateCustomMedicalQuestionPayload) => Promise<CustomMedicalQuestion | null>;
+  createQuestion: (
+    data: CreateCustomMedicalQuestionPayload
+  ) => Promise<CustomMedicalQuestion | null>;
+  updateQuestion: (
+    id: string,
+    data: UpdateCustomMedicalQuestionPayload
+  ) => Promise<CustomMedicalQuestion | null>;
   deleteQuestion: (id: string) => Promise<boolean>;
   reorderQuestions: (questions: { id: string; displayOrder: number }[]) => Promise<boolean>;
   clearError: () => void;
@@ -112,9 +120,12 @@ export function useMedicalQuestions(): UseMedicalQuestionsReturn {
     setError(null);
 
     try {
-      const response = await api.get<CustomMedicalQuestion[]>("/api/organization/medical-questions", {
-        includeInactive: includeInactive.toString(),
-      });
+      const response = await api.get<CustomMedicalQuestion[]>(
+        "/api/organization/medical-questions",
+        {
+          includeInactive: includeInactive.toString(),
+        }
+      );
       setQuestions(response);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch medical questions";
@@ -125,43 +136,60 @@ export function useMedicalQuestions(): UseMedicalQuestionsReturn {
     }
   }, []);
 
-  const createQuestion = useCallback(async (data: CreateCustomMedicalQuestionPayload): Promise<CustomMedicalQuestion | null> => {
-    setIsSaving(true);
-    setError(null);
+  const createQuestion = useCallback(
+    async (data: CreateCustomMedicalQuestionPayload): Promise<CustomMedicalQuestion | null> => {
+      setIsSaving(true);
+      setError(null);
 
-    try {
-      const response = await api.post<CustomMedicalQuestion>("/api/organization/medical-questions", data);
-      setQuestions((prev) => [...prev, response].sort((a, b) => a.displayOrder - b.displayOrder));
-      return response;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to create question";
-      setError(message);
-      console.error("Error creating question:", err);
-      return null;
-    } finally {
-      setIsSaving(false);
-    }
-  }, []);
+      try {
+        const response = await api.post<CustomMedicalQuestion>(
+          "/api/organization/medical-questions",
+          data
+        );
+        setQuestions((prev) => [...prev, response].sort((a, b) => a.displayOrder - b.displayOrder));
+        return response;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to create question";
+        setError(message);
+        console.error("Error creating question:", err);
+        return null;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    []
+  );
 
-  const updateQuestion = useCallback(async (id: string, data: UpdateCustomMedicalQuestionPayload): Promise<CustomMedicalQuestion | null> => {
-    setIsSaving(true);
-    setError(null);
+  const updateQuestion = useCallback(
+    async (
+      id: string,
+      data: UpdateCustomMedicalQuestionPayload
+    ): Promise<CustomMedicalQuestion | null> => {
+      setIsSaving(true);
+      setError(null);
 
-    try {
-      const response = await api.patch<CustomMedicalQuestion>("/api/organization/medical-questions", { id, ...data });
-      setQuestions((prev) =>
-        prev.map((q) => (q.id === id ? response : q)).sort((a, b) => a.displayOrder - b.displayOrder)
-      );
-      return response;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to update question";
-      setError(message);
-      console.error("Error updating question:", err);
-      return null;
-    } finally {
-      setIsSaving(false);
-    }
-  }, []);
+      try {
+        const response = await api.patch<CustomMedicalQuestion>(
+          "/api/organization/medical-questions",
+          { id, ...data }
+        );
+        setQuestions((prev) =>
+          prev
+            .map((q) => (q.id === id ? response : q))
+            .sort((a, b) => a.displayOrder - b.displayOrder)
+        );
+        return response;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to update question";
+        setError(message);
+        console.error("Error updating question:", err);
+        return null;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    []
+  );
 
   const deleteQuestion = useCallback(async (id: string): Promise<boolean> => {
     setIsSaving(true);
@@ -181,25 +209,31 @@ export function useMedicalQuestions(): UseMedicalQuestionsReturn {
     }
   }, []);
 
-  const reorderQuestions = useCallback(async (orderedQuestions: { id: string; displayOrder: number }[]): Promise<boolean> => {
-    setIsSaving(true);
-    setError(null);
+  const reorderQuestions = useCallback(
+    async (orderedQuestions: { id: string; displayOrder: number }[]): Promise<boolean> => {
+      setIsSaving(true);
+      setError(null);
 
-    try {
-      const response = await api.patch<CustomMedicalQuestion[]>("/api/organization/medical-questions", {
-        questions: orderedQuestions,
-      });
-      setQuestions(response);
-      return true;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to reorder questions";
-      setError(message);
-      console.error("Error reordering questions:", err);
-      return false;
-    } finally {
-      setIsSaving(false);
-    }
-  }, []);
+      try {
+        const response = await api.patch<CustomMedicalQuestion[]>(
+          "/api/organization/medical-questions",
+          {
+            questions: orderedQuestions,
+          }
+        );
+        setQuestions(response);
+        return true;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to reorder questions";
+        setError(message);
+        console.error("Error reordering questions:", err);
+        return false;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    []
+  );
 
   const clearError = useCallback(() => setError(null), []);
 
@@ -271,25 +305,31 @@ export function useAthleteMedicalInfo(athleteId: string | null): UseAthleteMedic
     }
   }, [athleteId]);
 
-  const saveMedicalInfo = useCallback(async (data: UpsertAthleteMedicalInfoPayload): Promise<boolean> => {
-    if (!athleteId) return false;
+  const saveMedicalInfo = useCallback(
+    async (data: UpsertAthleteMedicalInfoPayload): Promise<boolean> => {
+      if (!athleteId) return false;
 
-    setIsSaving(true);
-    setError(null);
+      setIsSaving(true);
+      setError(null);
 
-    try {
-      const response = await api.put<AthleteMedicalInfoWithResponses>(`/api/athletes/${athleteId}/medical`, data);
-      setMedicalInfo(response);
-      return true;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to save medical info";
-      setError(message);
-      console.error("Error saving medical info:", err);
-      return false;
-    } finally {
-      setIsSaving(false);
-    }
-  }, [athleteId]);
+      try {
+        const response = await api.put<AthleteMedicalInfoWithResponses>(
+          `/api/athletes/${athleteId}/medical`,
+          data
+        );
+        setMedicalInfo(response);
+        return true;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to save medical info";
+        setError(message);
+        console.error("Error saving medical info:", err);
+        return false;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [athleteId]
+  );
 
   const clearError = useCallback(() => setError(null), []);
 
@@ -362,39 +402,42 @@ export function usePublicAthleteMedicalInfo(
     }
   }, [athleteId, organizationId, email]);
 
-  const saveMedicalInfo = useCallback(async (data: UpsertAthleteMedicalInfoPayload): Promise<boolean> => {
-    if (!athleteId || !organizationId || !email) return false;
+  const saveMedicalInfo = useCallback(
+    async (data: UpsertAthleteMedicalInfoPayload): Promise<boolean> => {
+      if (!athleteId || !organizationId || !email) return false;
 
-    setIsSaving(true);
-    setError(null);
+      setIsSaving(true);
+      setError(null);
 
-    try {
-      const response = await fetch(`/api/public/athletes/${athleteId}/medical`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          organizationId,
-          email,
-        }),
-      });
+      try {
+        const response = await fetch(`/api/public/athletes/${athleteId}/medical`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...data,
+            organizationId,
+            email,
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error("Failed to save medical info");
+        if (!response.ok) {
+          throw new Error("Failed to save medical info");
+        }
+
+        const result = await response.json();
+        setMedicalInfo(result.medicalInfo);
+        return true;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to save medical info";
+        setError(message);
+        console.error("Error saving public medical info:", err);
+        return false;
+      } finally {
+        setIsSaving(false);
       }
-
-      const result = await response.json();
-      setMedicalInfo(result.medicalInfo);
-      return true;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to save medical info";
-      setError(message);
-      console.error("Error saving public medical info:", err);
-      return false;
-    } finally {
-      setIsSaving(false);
-    }
-  }, [athleteId, organizationId, email]);
+    },
+    [athleteId, organizationId, email]
+  );
 
   const clearError = useCallback(() => setError(null), []);
 

@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import { useState, useRef, useEffect, useCallback } from "react"
-import { Check, ChevronsUpDown } from "lucide-react"
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Check, ChevronsUpDown } from "lucide-react";
 
-import { getRegionsForCountry } from "@/lib/location-data"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { getRegionsForCountry } from "@/lib/location-data";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -13,20 +13,16 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command"
-import { Input } from "@/components/ui/input"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
+} from "@/components/ui/command";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface StateProvinceComboboxProps {
-  country: string
-  value: string
-  onChange: (value: string) => void
-  disabled?: boolean
-  error?: boolean
+  country: string;
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  error?: boolean;
 }
 
 /**
@@ -42,50 +38,50 @@ export function StateProvinceCombobox({
   disabled,
   error,
 }: StateProvinceComboboxProps) {
-  const [open, setOpen] = useState(false)
-  const autofillRef = useRef<HTMLInputElement>(null)
-  const regions = getRegionsForCountry(country)
+  const [open, setOpen] = useState(false);
+  const autofillRef = useRef<HTMLInputElement>(null);
+  const regions = getRegionsForCountry(country);
 
   const matchRegion = useCallback(
     (raw: string) => {
-      if (!raw || regions.length === 0) return null
-      const trimmed = raw.trim()
-      const lower = trimmed.toLowerCase()
-      const byCode = regions.find((r) => r.code.toLowerCase() === lower)
-      if (byCode) return byCode.code
-      const byName = regions.find((r) => r.name.toLowerCase() === lower)
-      if (byName) return byName.code
-      return null
+      if (!raw || regions.length === 0) return null;
+      const trimmed = raw.trim();
+      const lower = trimmed.toLowerCase();
+      const byCode = regions.find((r) => r.code.toLowerCase() === lower);
+      if (byCode) return byCode.code;
+      const byName = regions.find((r) => r.name.toLowerCase() === lower);
+      if (byName) return byName.code;
+      return null;
     },
-    [regions],
-  )
+    [regions]
+  );
 
   useEffect(() => {
-    const el = autofillRef.current
-    if (!el) return
+    const el = autofillRef.current;
+    if (!el) return;
 
     const sync = () => {
-      const val = el.value
-      if (!val) return
-      const matched = matchRegion(val)
-      if (matched) onChange(matched)
-      el.value = ""
-    }
+      const val = el.value;
+      if (!val) return;
+      const matched = matchRegion(val);
+      if (matched) onChange(matched);
+      el.value = "";
+    };
 
-    el.addEventListener("input", sync)
-    el.addEventListener("change", sync)
+    el.addEventListener("input", sync);
+    el.addEventListener("change", sync);
 
     // Some browsers don't fire events on autofill; poll as a fallback.
     const interval = setInterval(() => {
-      if (el.value) sync()
-    }, 1000)
+      if (el.value) sync();
+    }, 1000);
 
     return () => {
-      el.removeEventListener("input", sync)
-      el.removeEventListener("change", sync)
-      clearInterval(interval)
-    }
-  }, [matchRegion, onChange])
+      el.removeEventListener("input", sync);
+      el.removeEventListener("change", sync);
+      clearInterval(interval);
+    };
+  }, [matchRegion, onChange]);
 
   if (regions.length === 0) {
     return (
@@ -98,7 +94,7 @@ export function StateProvinceCombobox({
         placeholder="e.g. NY"
         className={error ? "border-destructive" : ""}
       />
-    )
+    );
   }
 
   return (
@@ -122,23 +118,18 @@ export function StateProvinceCombobox({
             className={cn(
               "w-full justify-between font-normal",
               !value && "text-muted-foreground",
-              error && "border-destructive",
+              error && "border-destructive"
             )}
           >
             {value
-              ? regions.find((r) => r.code === value)?.name ?? value
+              ? (regions.find((r) => r.code === value)?.name ?? value)
               : `Select ${country === "CA" ? "province" : "state"}...`}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent
-          className="w-[--radix-popover-trigger-width] p-0"
-          align="start"
-        >
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
           <Command>
-            <CommandInput
-              placeholder={`Search ${country === "CA" ? "provinces" : "states"}...`}
-            />
+            <CommandInput placeholder={`Search ${country === "CA" ? "provinces" : "states"}...`} />
             <CommandList>
               <CommandEmpty>No results found.</CommandEmpty>
               <CommandGroup>
@@ -147,14 +138,14 @@ export function StateProvinceCombobox({
                     key={region.code}
                     value={region.name}
                     onSelect={() => {
-                      onChange(region.code)
-                      setOpen(false)
+                      onChange(region.code);
+                      setOpen(false);
                     }}
                   >
                     <Check
                       className={cn(
                         "mr-2 h-4 w-4",
-                        value === region.code ? "opacity-100" : "opacity-0",
+                        value === region.code ? "opacity-100" : "opacity-0"
                       )}
                     />
                     {region.name}
@@ -166,5 +157,5 @@ export function StateProvinceCombobox({
         </PopoverContent>
       </Popover>
     </div>
-  )
+  );
 }

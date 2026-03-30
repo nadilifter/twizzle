@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getAuthSession } from "@/lib/auth"
-import { db } from "@/lib/db"
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthSession } from "@/lib/auth";
+import { db } from "@/lib/db";
 import {
   createLegalEntity,
   createBusinessLine,
@@ -8,12 +8,9 @@ import {
   createBalanceAccount,
   getAccountHolder,
   isPlatformConfigured,
-} from "@/lib/adyen-platform"
-import {
-  deriveOnboardingStatus,
-  summarizeVerification,
-} from "@/lib/adyen-onboarding-status"
-import { getSubdomainUrl } from "@/lib/env-domains"
+} from "@/lib/adyen-platform";
+import { deriveOnboardingStatus, summarizeVerification } from "@/lib/adyen-onboarding-status";
+import { getSubdomainUrl } from "@/lib/env-domains";
 
 /**
  * GET /api/organization/adyen-onboarding
@@ -21,14 +18,14 @@ import { getSubdomainUrl } from "@/lib/env-domains"
  */
 export async function GET() {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     let account = await db.adyenPlatformAccount.findUnique({
       where: { organizationId: session.user.organizationId },
-    })
+    });
 
     // Live-sync: if the account exists and isn't already terminal, reconcile
     // with Adyen's API so the status is accurate even without webhooks.
@@ -38,10 +35,10 @@ export async function GET() {
       isPlatformConfigured()
     ) {
       try {
-        const liveHolder = await getAccountHolder(account.accountHolderId)
-        const onboardingStatus = deriveOnboardingStatus(liveHolder)
-        const verificationStatus = summarizeVerification(liveHolder)
-        const capabilities = liveHolder.capabilities || {}
+        const liveHolder = await getAccountHolder(account.accountHolderId);
+        const onboardingStatus = deriveOnboardingStatus(liveHolder);
+        const verificationStatus = summarizeVerification(liveHolder);
+        const capabilities = liveHolder.capabilities || {};
 
         if (
           onboardingStatus !== account.onboardingStatus ||
@@ -50,7 +47,7 @@ export async function GET() {
           account = await db.adyenPlatformAccount.update({
             where: { id: account.id },
             data: { onboardingStatus, verificationStatus, capabilities },
-          })
+          });
         }
       } catch {
         // Best-effort: if Adyen API is unreachable, fall back to stored status
@@ -71,7 +68,7 @@ export async function GET() {
         taxRate: true,
         taxEnabled: true,
       },
-    })
+    });
 
     return NextResponse.json({
       organization: org,
@@ -87,13 +84,10 @@ export async function GET() {
             balanceAccountId: account.balanceAccountId,
           }
         : null,
-    })
+    });
   } catch (error) {
-    console.error("Failed to fetch onboarding status:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch onboarding status" },
-      { status: 500 }
-    )
+    console.error("Failed to fetch onboarding status:", error);
+    return NextResponse.json({ error: "Failed to fetch onboarding status" }, { status: 500 });
   }
 }
 
@@ -104,32 +98,26 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const permissions = session.user.permissions || []
-    if (
-      !permissions.includes("*") &&
-      !permissions.includes("financials.create")
-    ) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    const permissions = session.user.permissions || [];
+    if (!permissions.includes("*") && !permissions.includes("financials.create")) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     if (!isPlatformConfigured()) {
-      return NextResponse.json(
-        { error: "Adyen platform is not configured" },
-        { status: 503 }
-      )
+      return NextResponse.json({ error: "Adyen platform is not configured" }, { status: 503 });
     }
 
-    const orgId = session.user.organizationId
+    const orgId = session.user.organizationId;
 
     // Check if already onboarded
     const existing = await db.adyenPlatformAccount.findUnique({
       where: { organizationId: orgId },
-    })
+    });
     if (existing) {
       return NextResponse.json({
         account: {
@@ -140,7 +128,7 @@ export async function POST(request: NextRequest) {
           balanceAccountId: existing.balanceAccountId,
         },
         message: "Onboarding already initiated",
-      })
+      });
     }
 
     const org = await db.organization.findUnique({
@@ -158,30 +146,43 @@ export async function POST(request: NextRequest) {
         email: true,
         websiteConfig: { select: { subdomain: true } },
       },
-    })
+    });
 
     if (!org) {
-      return NextResponse.json({ error: "Organization not found" }, { status: 404 })
+      return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
 
-    if (!org.street || !org.city || !org.stateProvince || !org.postalCode || !org.country || !org.phone) {
+    if (
+      !org.street ||
+      !org.city ||
+      !org.stateProvince ||
+      !org.postalCode ||
+      !org.country ||
+      !org.phone
+    ) {
       return NextResponse.json(
-        { error: "Organization address or phone number is incomplete. Please update your organization details before onboarding." },
+        {
+          error:
+            "Organization address or phone number is incomplete. Please update your organization details before onboarding.",
+        },
         { status: 400 }
-      )
+      );
     }
 
     if (org.stateProvince.length > 2 || org.country.length > 2) {
       return NextResponse.json(
-        { error: "State/Province and Country must be 2-letter codes. Please edit your organization address to fix this." },
+        {
+          error:
+            "State/Province and Country must be 2-letter codes. Please edit your organization address to fix this.",
+        },
         { status: 400 }
-      )
+      );
     }
 
     // Read optional override from request body
-    let body: any = {}
+    let body: any = {};
     try {
-      body = await request.json()
+      body = await request.json();
     } catch {
       // No body is fine
     }
@@ -199,12 +200,12 @@ export async function POST(request: NextRequest) {
           country: org.country,
         },
       },
-    })
+    });
 
     // Step 2: Create Business Line
-    const subdomain = org.websiteConfig?.subdomain || org.slug
-    const webAddress = getSubdomainUrl(subdomain)
-    let businessLine: { id: string } | null = null
+    const subdomain = org.websiteConfig?.subdomain || org.slug;
+    const webAddress = getSubdomainUrl(subdomain);
+    let businessLine: { id: string } | null = null;
     try {
       businessLine = await createBusinessLine({
         legalEntityId: legalEntity.id,
@@ -212,22 +213,22 @@ export async function POST(request: NextRequest) {
         service: "paymentProcessing",
         salesChannels: ["eCommerce"],
         webData: [{ webAddress }],
-      })
+      });
     } catch (error) {
-      console.error("Business line creation failed, continuing:", error)
+      console.error("Business line creation failed, continuing:", error);
     }
 
     // Step 3: Create Account Holder
     const accountHolder = await createAccountHolder({
       legalEntityId: legalEntity.id,
       description: org.name,
-    })
+    });
 
     // Step 4: Create Balance Account
     const balanceAccount = await createBalanceAccount({
       accountHolderId: accountHolder.id,
       description: `${org.name} - Primary`,
-    })
+    });
 
     // Save to database
     const account = await db.adyenPlatformAccount.create({
@@ -239,7 +240,7 @@ export async function POST(request: NextRequest) {
         balanceAccountId: balanceAccount.id,
         onboardingStatus: "PENDING_HOSTED",
       },
-    })
+    });
 
     return NextResponse.json({
       account: {
@@ -250,12 +251,9 @@ export async function POST(request: NextRequest) {
         businessLineId: account.businessLineId,
       },
       message: "Onboarding initiated successfully",
-    })
+    });
   } catch (error: any) {
-    console.error("Onboarding initiation failed:", error)
-    return NextResponse.json(
-      { error: "Onboarding initiation failed" },
-      { status: 500 }
-    )
+    console.error("Onboarding initiation failed:", error);
+    return NextResponse.json({ error: "Onboarding initiation failed" }, { status: 500 });
   }
 }

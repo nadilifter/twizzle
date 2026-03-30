@@ -95,10 +95,7 @@ export async function getEnabledHolidayDates(
 /**
  * Filter out dates that fall on enabled holidays.
  */
-export function filterOutHolidayDates(
-  dates: Date[],
-  holidayDateSet: Set<string>
-): Date[] {
+export function filterOutHolidayDates(dates: Date[], holidayDateSet: Set<string>): Date[] {
   if (holidayDateSet.size === 0) return dates;
   return dates.filter((d) => !holidayDateSet.has(formatDateOnly(d)));
 }

@@ -109,7 +109,9 @@ export async function POST(request: NextRequest) {
         facilityId: validatedData.facilityId ?? null,
         spaceId: validatedData.spaceId ?? null,
         purchaseDate: validatedData.purchaseDate ? parseDateOnly(validatedData.purchaseDate) : null,
-        lastInspectionDate: validatedData.lastInspectionDate ? parseDateOnly(validatedData.lastInspectionDate) : null,
+        lastInspectionDate: validatedData.lastInspectionDate
+          ? parseDateOnly(validatedData.lastInspectionDate)
+          : null,
         notes: validatedData.notes ?? null,
       },
       include: {

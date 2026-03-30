@@ -53,27 +53,34 @@ export function useCoachAthletes(options: UseCoachAthletesOptions = {}): UseCoac
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const currentParamsRef = useRef<{ search?: string; limit?: number; offset?: number }>({ search, limit, offset });
+  const currentParamsRef = useRef<{ search?: string; limit?: number; offset?: number }>({
+    search,
+    limit,
+    offset,
+  });
 
-  const fetchAthletes = useCallback(async (params?: { search?: string; limit?: number; offset?: number }) => {
-    const queryParams = params ?? currentParamsRef.current;
-    currentParamsRef.current = queryParams;
+  const fetchAthletes = useCallback(
+    async (params?: { search?: string; limit?: number; offset?: number }) => {
+      const queryParams = params ?? currentParamsRef.current;
+      currentParamsRef.current = queryParams;
 
-    setIsLoading(true);
-    setError(null);
+      setIsLoading(true);
+      setError(null);
 
-    try {
-      const response = await api.get<CoachAthletesResponse>("/api/coach/athletes", queryParams);
-      setAthletes(response.data);
-      setTotal(response.total);
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to fetch athletes";
-      setError(message);
-      console.error("Error fetching coach athletes:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+      try {
+        const response = await api.get<CoachAthletesResponse>("/api/coach/athletes", queryParams);
+        setAthletes(response.data);
+        setTotal(response.total);
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to fetch athletes";
+        setError(message);
+        console.error("Error fetching coach athletes:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
 
   const refresh = useCallback(async () => {
     await fetchAthletes(currentParamsRef.current);

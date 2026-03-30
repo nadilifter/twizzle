@@ -1,6 +1,6 @@
 /**
  * Notification Service
- * 
+ *
  * Core service for the notification rules system. Handles:
  * - Recipient selection based on filters
  * - Action execution (Email, SMS, Announcement)
@@ -280,7 +280,7 @@ export async function getRecipients(
       type: "user",
       id: user.id,
       email: user.emailOptOut ? undefined : user.email,
-      phone: user.smsOptOut ? undefined : (user.phone || undefined),
+      phone: user.smsOptOut ? undefined : user.phone || undefined,
       name: user.name,
       userId: user.id,
     });
@@ -301,7 +301,12 @@ export async function getRecipients(
   };
 
   const guardianUserSelect = {
-    id: true, email: true, phone: true, name: true, smsOptOut: true, emailOptOut: true,
+    id: true,
+    email: true,
+    phone: true,
+    name: true,
+    smsOptOut: true,
+    emailOptOut: true,
   } as const;
 
   // Shared helper: resolve context-specific guardian(s) with org-scoping
@@ -475,9 +480,9 @@ export async function buildTemplateContext(
     context.organizationName = org.name;
     context.organizationEmail = org.email || undefined;
     context.organizationPhone = org.phone || undefined;
-    context.organizationAddress = [org.street, org.city, org.stateProvince, org.postalCode]
-      .filter(Boolean)
-      .join(", ") || undefined;
+    context.organizationAddress =
+      [org.street, org.city, org.stateProvince, org.postalCode].filter(Boolean).join(", ") ||
+      undefined;
     context.websiteUrl = org.websiteConfig?.subdomain
       ? getSubdomainUrl(org.websiteConfig.subdomain)
       : undefined;
@@ -501,7 +506,7 @@ export async function buildTemplateContext(
       context.athleteEmail = athlete.email || undefined;
       const orgAthleteLevel = athlete.organizationAthletes[0]?.level;
       context.athleteLevel = orgAthleteLevel || undefined;
-      
+
       if (athlete.birthDate) {
         context.athleteBirthDate = formatDate(athlete.birthDate);
         context.athleteAge = calculateAge(athlete.birthDate);
@@ -591,7 +596,7 @@ export async function buildTemplateContext(
       context.dueDaysRemaining = calculateDaysUntil(invoice.dueDate);
       context.balanceDue = formatCurrency(Number(invoice.total));
       // Payment URL - uses environment-aware subdomain
-      context.paymentUrl = `${getSubdomainUrl('pay')}/inv/${invoice.id}`;
+      context.paymentUrl = `${getSubdomainUrl("pay")}/inv/${invoice.id}`;
     }
   }
 
@@ -650,17 +655,19 @@ export async function executeNotification(
   }
 
   // Get recipients
-  const recipients = params.recipientOverride || await getRecipients(
-    rule.organizationId,
-    rule.recipientConfig?.recipientType || "GUARDIANS",
-    (rule.recipientConfig?.filters as RecipientFilters) || {},
-    {
-      athleteId: params.athleteId,
-      userId: params.userId,
-      programId: params.programId,
-      eventId: params.eventId,
-    }
-  );
+  const recipients =
+    params.recipientOverride ||
+    (await getRecipients(
+      rule.organizationId,
+      rule.recipientConfig?.recipientType || "GUARDIANS",
+      (rule.recipientConfig?.filters as RecipientFilters) || {},
+      {
+        athleteId: params.athleteId,
+        userId: params.userId,
+        programId: params.programId,
+        eventId: params.eventId,
+      }
+    ));
 
   if (recipients.length === 0) {
     result.skippedCount = 0;
@@ -722,7 +729,7 @@ export async function executeNotification(
   // Execute for each recipient (EMAIL / SMS)
   for (const recipient of recipients) {
     const context: TemplateContext = { ...baseContext };
-    
+
     if (recipient.userId && !context.guardianName) {
       const user = await db.user.findUnique({
         where: { id: recipient.userId },
@@ -739,7 +746,7 @@ export async function executeNotification(
     const subjectResult = rule.template.subject
       ? renderTemplate(rule.template.subject, context)
       : { rendered: "", missingPlaceholders: [], usedPlaceholders: [] };
-    
+
     const bodyResult = renderTemplate(rule.template.body, context);
     const smsBodyResult = rule.template.smsBody
       ? renderTemplate(rule.template.smsBody, context)
@@ -912,11 +919,7 @@ export async function getNotificationRules(
       template: true,
       recipientConfig: true,
     },
-    orderBy: [
-      { isSystem: "desc" },
-      { triggerType: "asc" },
-      { name: "asc" },
-    ],
+    orderBy: [{ isSystem: "desc" }, { triggerType: "asc" }, { name: "asc" }],
   });
 }
 
@@ -1027,7 +1030,7 @@ export async function updateNotificationRule(
 
   // System rules can only have certain fields updated
   const updateData: any = {};
-  
+
   if (!currentRule.isSystem) {
     // Non-system rules can update all fields
     if (data.name !== undefined) updateData.name = data.name;
@@ -1037,7 +1040,7 @@ export async function updateNotificationRule(
     if (data.timingDirection !== undefined) updateData.timingDirection = data.timingDirection;
     if (data.actionType !== undefined) updateData.actionType = data.actionType;
   }
-  
+
   // Both system and non-system can update isActive and template
   if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
@@ -1065,7 +1068,9 @@ export async function updateNotificationRule(
       where: { id: currentRule.recipientConfig.id },
       data: {
         recipientType: data.recipientConfig.recipientType,
-        filters: data.recipientConfig.filters ? JSON.parse(JSON.stringify(data.recipientConfig.filters)) : undefined,
+        filters: data.recipientConfig.filters
+          ? JSON.parse(JSON.stringify(data.recipientConfig.filters))
+          : undefined,
         ccEmails: data.recipientConfig.ccEmails,
       },
     });

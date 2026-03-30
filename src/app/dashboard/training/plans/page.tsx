@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -8,19 +8,11 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { 
-  Plus, 
-  Search, 
-  CalendarDays, 
-  FileText, 
-  MoreHorizontal,
-  Copy,
-  Trash2
-} from "lucide-react"
-import Link from "next/link"
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Search, CalendarDays, FileText, MoreHorizontal, Copy, Trash2 } from "lucide-react";
+import Link from "next/link";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,7 +20,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,34 +31,34 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { useState } from "react"
-import { useLessonPlanStore } from "@/store/lesson-plan-store"
-import { format, parseISO, isValid } from "date-fns"
+} from "@/components/ui/alert-dialog";
+import { useState } from "react";
+import { useLessonPlanStore } from "@/store/lesson-plan-store";
+import { format, parseISO, isValid } from "date-fns";
 
 export default function PlansPage() {
-  const { plans, deletePlan, duplicatePlan } = useLessonPlanStore()
-  const [planToDelete, setPlanToDelete] = useState<string | null>(null)
+  const { plans, deletePlan, duplicatePlan } = useLessonPlanStore();
+  const [planToDelete, setPlanToDelete] = useState<string | null>(null);
 
   const handleDelete = () => {
     if (planToDelete) {
-      deletePlan(planToDelete)
-      setPlanToDelete(null)
+      deletePlan(planToDelete);
+      setPlanToDelete(null);
     }
-  }
+  };
 
   const handleDuplicate = (id: string) => {
-    duplicatePlan(id)
-  }
+    duplicatePlan(id);
+  };
 
   const formatPlanDate = (dateStr: string) => {
-    if (dateStr.includes(" - ")) return dateStr
-    const date = parseISO(dateStr)
+    if (dateStr.includes(" - ")) return dateStr;
+    const date = parseISO(dateStr);
     if (isValid(date)) {
-      return `Week of ${format(date, "MMM dd, yyyy")}`
+      return `Week of ${format(date, "MMM dd, yyyy")}`;
     }
-    return dateStr
-  }
+    return dateStr;
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -88,11 +80,7 @@ export default function PlansPage() {
       <div className="flex items-center gap-4">
         <div className="relative flex-1 md:max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search plans..."
-            className="pl-8"
-          />
+          <Input type="search" placeholder="Search plans..." className="pl-8" />
         </div>
       </div>
 
@@ -123,44 +111,54 @@ export default function PlansPage() {
               </div>
             </CardContent>
             <CardFooter className="pt-3 border-t flex justify-between items-center">
-              <div className="text-xs text-muted-foreground">
-                By {plan.author}
-              </div>
-              <AlertDialog open={planToDelete === plan.id} onOpenChange={(open) => !open && setPlanToDelete(null)}>
+              <div className="text-xs text-muted-foreground">By {plan.author}</div>
+              <AlertDialog
+                open={planToDelete === plan.id}
+                onOpenChange={(open) => !open && setPlanToDelete(null)}
+              >
                 <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                  <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Menu</span>
+                      <MoreHorizontal className="h-4 w-4" />
+                      <span className="sr-only">Menu</span>
                     </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                     <DropdownMenuItem asChild>
-                        <Link href={`/dashboard/training/plans/new`}>Edit Plan</Link>
+                      <Link href={`/dashboard/training/plans/new`}>Edit Plan</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleDuplicate(plan.id)}>
-                        <Copy className="mr-2 h-4 w-4" /> Duplicate
+                      <Copy className="mr-2 h-4 w-4" /> Duplicate
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <AlertDialogTrigger asChild>
-                        <DropdownMenuItem className="text-destructive" onSelect={() => setPlanToDelete(plan.id)}>
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                        </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onSelect={() => setPlanToDelete(plan.id)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                      </DropdownMenuItem>
                     </AlertDialogTrigger>
-                    </DropdownMenuContent>
+                  </DropdownMenuContent>
                 </DropdownMenu>
                 <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the lesson plan &quot;{plan.name}&quot;.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
-                    </AlertDialogFooter>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete the lesson plan
+                      &quot;{plan.name}&quot;.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
             </CardFooter>
@@ -168,5 +166,5 @@ export default function PlansPage() {
         ))}
       </div>
     </div>
-  )
+  );
 }

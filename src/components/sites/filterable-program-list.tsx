@@ -84,8 +84,19 @@ interface Program {
   startTime?: string | null;
   duration?: number | null;
   rrule?: string | null;
-  facility?: { id: string; name: string; city?: string | null; stateProvince?: string | null } | null;
-  instances?: { id: string; date: string | Date; startTime: string; endTime: string; status: string }[];
+  facility?: {
+    id: string;
+    name: string;
+    city?: string | null;
+    stateProvince?: string | null;
+  } | null;
+  instances?: {
+    id: string;
+    date: string | Date;
+    startTime: string;
+    endTime: string;
+    status: string;
+  }[];
   capacity?: number | null;
   hasCapacityRestriction?: boolean;
   hasAgeRestriction?: boolean;
@@ -185,9 +196,7 @@ export function FilterableProgramList({
       // Date range filter: show programs whose [startDate, endDate] overlaps the filter date range
       if (filters.dateRange?.from) {
         const filterFrom = startOfDay(filters.dateRange.from);
-        const filterTo = filters.dateRange.to
-          ? startOfDay(filters.dateRange.to)
-          : filterFrom;
+        const filterTo = filters.dateRange.to ? startOfDay(filters.dateRange.to) : filterFrom;
 
         const progStart = toDate(program.startDate);
         const progEnd = toDate(program.endDate);
@@ -198,7 +207,10 @@ export function FilterableProgramList({
           const effectiveEnd = progEnd || progStart!;
 
           // Check overlap: programStart <= filterEnd AND programEnd >= filterStart
-          if (isAfter(startOfDay(effectiveStart), filterTo) || isBefore(startOfDay(effectiveEnd), filterFrom)) {
+          if (
+            isAfter(startOfDay(effectiveStart), filterTo) ||
+            isBefore(startOfDay(effectiveEnd), filterFrom)
+          ) {
             return false;
           }
         }
@@ -297,7 +309,8 @@ export function FilterableProgramList({
   useEffect(() => {
     if (initialCategoryId && !scrolledRef.current) {
       scrolledRef.current = true;
-      const sectionId = initialCategoryId === "other" ? "category-other" : `category-${initialCategoryId}`;
+      const sectionId =
+        initialCategoryId === "other" ? "category-other" : `category-${initialCategoryId}`;
       const el = document.getElementById(sectionId);
       if (el) {
         setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
@@ -349,9 +362,7 @@ export function FilterableProgramList({
               <DrawerHeader>
                 <DrawerTitle>Filter Programs</DrawerTitle>
               </DrawerHeader>
-              <div className="px-4 pb-4 max-h-[70vh] overflow-y-auto">
-                {filtersContent}
-              </div>
+              <div className="px-4 pb-4 max-h-[70vh] overflow-y-auto">{filtersContent}</div>
               <DrawerFooter>
                 <DrawerClose asChild>
                   <Button>{resultLabel}</Button>
@@ -370,9 +381,7 @@ export function FilterableProgramList({
                   Narrow down programs by age, schedule, time, or level
                 </SheetDescription>
               </SheetHeader>
-              <div className="mt-6 overflow-y-auto flex-1">
-                {filtersContent}
-              </div>
+              <div className="mt-6 overflow-y-auto flex-1">{filtersContent}</div>
               <SheetFooter className="mt-6">
                 <SheetClose asChild>
                   <Button className="w-full">{resultLabel}</Button>
@@ -397,18 +406,12 @@ export function FilterableProgramList({
                     {group.category?.name || "Other Programs"}
                   </h2>
                   {group.category?.description && (
-                    <p className="mt-1 text-muted-foreground">
-                      {group.category.description}
-                    </p>
+                    <p className="mt-1 text-muted-foreground">{group.category.description}</p>
                   )}
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {group.programs.map((program) => (
-                    <ProgramCard
-                      key={program.id}
-                      program={program}
-                      primaryColor={primaryColor}
-                    />
+                    <ProgramCard key={program.id} program={program} primaryColor={primaryColor} />
                   ))}
                 </div>
               </section>
@@ -417,11 +420,7 @@ export function FilterableProgramList({
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredPrograms.map((program) => (
-              <ProgramCard
-                key={program.id}
-                program={program}
-                primaryColor={primaryColor}
-              />
+              <ProgramCard key={program.id} program={program} primaryColor={primaryColor} />
             ))}
           </div>
         )

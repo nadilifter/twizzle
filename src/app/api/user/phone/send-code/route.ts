@@ -32,16 +32,10 @@ export async function POST(request: NextRequest) {
 
     const normalized = normalizePhoneNumber(phone);
     if (!isValidE164(normalized)) {
-      return NextResponse.json(
-        { error: "Invalid phone number format" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid phone number format" }, { status: 400 });
     }
 
-    const { code } = await createVerificationCode(
-      normalized,
-      "PHONE_VERIFICATION"
-    );
+    const { code } = await createVerificationCode(normalized, "PHONE_VERIFICATION");
 
     const result = await sendSms({
       to: normalized,
@@ -58,15 +52,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ sent: true });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error sending phone verification code:", error);
-    return NextResponse.json(
-      { error: "Failed to send verification code" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to send verification code" }, { status: 500 });
   }
 }

@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import { ShoppingCart } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { useCart } from "@/components/sites/cart-context"
-import { Badge } from "@/components/ui/badge"
+import { ShoppingCart } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useCart } from "@/components/sites/cart-context";
+import { Badge } from "@/components/ui/badge";
 
 export function CartFloatingButton() {
-  const { setIsOpen, totalItems } = useCart()
+  const { setIsOpen, totalItems } = useCart();
 
-  if (totalItems === 0) return null
+  if (totalItems === 0) return null;
 
   return (
     <Button
@@ -17,12 +17,12 @@ export function CartFloatingButton() {
       size="icon"
     >
       <ShoppingCart className="h-6 w-6" />
-      <Badge 
-        className="absolute -top-2 -right-2 h-6 w-6 flex items-center justify-center p-0 rounded-full" 
+      <Badge
+        className="absolute -top-2 -right-2 h-6 w-6 flex items-center justify-center p-0 rounded-full"
         variant="destructive"
       >
         {totalItems}
       </Badge>
     </Button>
-  )
+  );
 }

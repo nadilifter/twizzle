@@ -56,7 +56,7 @@ const getCachedHasActiveProducts = unstable_cache(
 function getLoginUrl(subdomain: string): string {
   // Construct the callback URL to return to this tenant site after login
   const callbackUrl = `${getSubdomainUrl(subdomain)}/`;
-  
+
   // Construct the login URL with callback
   return getEnvLoginUrl(callbackUrl);
 }
@@ -69,23 +69,23 @@ function isValidHexColor(color: string): boolean {
 
 function hexToHSL(hex: string): string {
   // Remove # if present
-  hex = hex.replace(/^#/, '');
-  
+  hex = hex.replace(/^#/, "");
+
   // Parse hex
   const r = parseInt(hex.slice(0, 2), 16) / 255;
   const g = parseInt(hex.slice(2, 4), 16) / 255;
   const b = parseInt(hex.slice(4, 6), 16) / 255;
-  
+
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
   let h = 0;
   let s = 0;
   const l = (max + min) / 2;
-  
+
   if (max !== min) {
     const d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    
+
     switch (max) {
       case r:
         h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
@@ -98,7 +98,7 @@ function hexToHSL(hex: string): string {
         break;
     }
   }
-  
+
   // Return HSL without the hsl() wrapper for Tailwind CSS variables
   return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }
@@ -106,54 +106,61 @@ function hexToHSL(hex: string): string {
 /**
  * Generate SEO-optimized metadata for tenant sites.
  * Includes Open Graph, Twitter Cards, canonical URLs, and keywords.
- * 
+ *
  * Note: Non-production environments (staging, development, local) are always blocked
  * from indexing regardless of the site's published status.
  */
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: { slug: string };
+}): Promise<Metadata> {
   const config = await getCachedSiteConfig(params.slug);
   if (!config) return {};
 
   const org = config.organization;
-  
+
   // Check if we're in production - only production sites can be indexed
-  const isProduction = process.env.APP_ENVIRONMENT === 'production';
-  
+  const isProduction = process.env.APP_ENVIRONMENT === "production";
+
   // Construct the canonical site URL
-  const siteUrl = config.domain 
-    ? `https://${config.domain}` 
-    : getSubdomainUrl(config.subdomain!);
+  const siteUrl = config.domain ? `https://${config.domain}` : getSubdomainUrl(config.subdomain!);
 
   // Generate description: use custom SEO description, or hero content, or default
-  const locationText = org.city && org.stateProvince 
-    ? `in ${org.city}, ${org.stateProvince}` 
-    : "";
-  const defaultDescription = `${org.name} - Gymnastics programs ${locationText}. Classes for all ages and skill levels.`.trim().replace(/\s+/g, ' ');
+  const locationText = org.city && org.stateProvince ? `in ${org.city}, ${org.stateProvince}` : "";
+  const defaultDescription =
+    `${org.name} - Gymnastics programs ${locationText}. Classes for all ages and skill levels.`
+      .trim()
+      .replace(/\s+/g, " ");
   const description = config.seoDescription || config.heroSubheadline || defaultDescription;
 
   // Build keywords array: use custom keywords or generate defaults for gymnastics
-  const customKeywords = config.seoKeywords 
-    ? config.seoKeywords.split(',').map(k => k.trim()).filter(Boolean)
+  const customKeywords = config.seoKeywords
+    ? config.seoKeywords
+        .split(",")
+        .map((k) => k.trim())
+        .filter(Boolean)
     : [];
-  
+
   const defaultKeywords = [
-    'gymnastics',
-    'gymnastics classes',
-    'gymnastics programs',
-    'youth gymnastics',
-    'kids gymnastics',
+    "gymnastics",
+    "gymnastics classes",
+    "gymnastics programs",
+    "youth gymnastics",
+    "kids gymnastics",
     org.city,
     org.stateProvince,
     `gymnastics ${org.city}`,
-    'tumbling',
-    'recreational gymnastics',
-    'competitive gymnastics',
+    "tumbling",
+    "recreational gymnastics",
+    "competitive gymnastics",
   ].filter(Boolean) as string[];
 
   // Merge custom keywords with defaults, removing duplicates
-  const keywords = customKeywords.length > 0 
-    ? Array.from(new Set([...customKeywords, ...defaultKeywords]))
-    : defaultKeywords;
+  const keywords =
+    customKeywords.length > 0
+      ? Array.from(new Set([...customKeywords, ...defaultKeywords]))
+      : defaultKeywords;
 
   // Determine robots directive:
   // - Non-production: always noindex
@@ -168,45 +175,46 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     },
     description,
     keywords,
-    icons: { 
+    icons: {
       icon: config.favicon || "/favicon.ico",
     },
     metadataBase: new URL(siteUrl),
-    alternates: { 
+    alternates: {
       canonical: siteUrl,
     },
     openGraph: {
-      type: 'website',
+      type: "website",
       siteName: org.name,
       title: org.name,
       description,
       url: siteUrl,
-      locale: 'en_US',
-      images: config.heroImage 
-        ? [{ 
-            url: config.heroImage, 
-            alt: `${org.name} - Gymnastics`,
-            width: 1200,
-            height: 630,
-          }] 
+      locale: "en_US",
+      images: config.heroImage
+        ? [
+            {
+              url: config.heroImage,
+              alt: `${org.name} - Gymnastics`,
+              width: 1200,
+              height: 630,
+            },
+          ]
         : [],
     },
     twitter: {
-      card: 'summary_large_image',
+      card: "summary_large_image",
       title: org.name,
       description,
       images: config.heroImage ? [config.heroImage] : [],
     },
     // Block indexing for non-production environments or unpublished sites
-    robots: shouldIndex 
-      ? { index: true, follow: true }
-      : { index: false, follow: false },
+    robots: shouldIndex ? { index: true, follow: true } : { index: false, follow: false },
     // Google Search Console verification (only relevant for production)
-    ...(isProduction && config.googleVerification && {
-      verification: {
-        google: config.googleVerification,
-      },
-    }),
+    ...(isProduction &&
+      config.googleVerification && {
+        verification: {
+          google: config.googleVerification,
+        },
+      }),
   };
 }
 
@@ -228,9 +236,7 @@ export default async function SiteLayout({
   }
 
   if (!config.organization.isActive) {
-    return (
-      <SiteUnavailablePage organizationName={config.organization.name} />
-    );
+    return <SiteUnavailablePage organizationName={config.organization.name} />;
   }
 
   // Get login URL for this tenant site
@@ -259,36 +265,36 @@ export default async function SiteLayout({
   const storeFeatureEnabled = config.showStore
     ? await isFeatureEnabled(config.organizationId, "store")
     : false;
-  const hasProducts = config.showStore && storeFeatureEnabled
-    ? await getCachedHasActiveProducts(config.organizationId)
-    : false;
+  const hasProducts =
+    config.showStore && storeFeatureEnabled
+      ? await getCachedHasActiveProducts(config.organizationId)
+      : false;
 
-  const primaryColor = isValidHexColor(config.primaryColor ?? "") ? config.primaryColor! : "#000000";
-  const secondaryColor = isValidHexColor(config.secondaryColor ?? "") ? config.secondaryColor! : "#ffffff";
-  
+  const primaryColor = isValidHexColor(config.primaryColor ?? "")
+    ? config.primaryColor!
+    : "#000000";
+  const secondaryColor = isValidHexColor(config.secondaryColor ?? "")
+    ? config.secondaryColor!
+    : "#ffffff";
+
   // Convert to HSL for Tailwind CSS variables
   const primaryHSL = hexToHSL(primaryColor);
   const primaryForegroundHSL = isLightColor(primaryColor) ? "0 0% 9%" : "0 0% 100%";
 
   // Construct the canonical site URL for structured data
-  const siteUrl = config.domain 
-    ? `https://${config.domain}` 
-    : getSubdomainUrl(config.subdomain!);
+  const siteUrl = config.domain ? `https://${config.domain}` : getSubdomainUrl(config.subdomain!);
 
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="system"
-      enableSystem
-      disableTransitionOnChange
-    >
-    <SessionProviderWrapper>
-    <QueueProvider organizationSlug={subdomain}>
-    <CartProvider organizationId={config.organizationId}>
-    <div className="min-h-screen flex flex-col bg-background font-sans">
-        <CartSheet />
-        <CartFloatingButton />
-        <style dangerouslySetInnerHTML={{ __html: `
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <SessionProviderWrapper>
+        <QueueProvider organizationSlug={subdomain}>
+          <CartProvider organizationId={config.organizationId}>
+            <div className="min-h-screen flex flex-col bg-background font-sans">
+              <CartSheet />
+              <CartFloatingButton />
+              <style
+                dangerouslySetInnerHTML={{
+                  __html: `
             :root {
                 --site-primary: ${primaryColor};
                 --site-secondary: ${secondaryColor};
@@ -303,183 +309,246 @@ export default async function SiteLayout({
                 --primary-foreground: ${primaryForegroundHSL};
                 --ring: ${primaryHSL};
             }
-        `}} />
-        
-        {/* SEO Structured Data (JSON-LD) */}
-        <SiteStructuredData
-          organization={config.organization}
-          siteUrl={siteUrl}
-          heroImage={config.heroImage}
-        />
-        
-        <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 md:px-8">
-                <div className="flex items-center gap-2">
-                <MobileNav
-                    links={[
+        `,
+                }}
+              />
+
+              {/* SEO Structured Data (JSON-LD) */}
+              <SiteStructuredData
+                organization={config.organization}
+                siteUrl={siteUrl}
+                heroImage={config.heroImage}
+              />
+
+              <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 md:px-8">
+                  <div className="flex items-center gap-2">
+                    <MobileNav
+                      links={[
                         { href: "/", label: "Home" },
-                        ...(config.showRegistration ? [{ href: "/register", label: "Programs" }] : []),
+                        ...(config.showRegistration
+                          ? [{ href: "/register", label: "Programs" }]
+                          : []),
                         ...(config.showCalendar ? [{ href: "/calendar", label: "Calendar" }] : []),
-                        ...(config.showCompetitions ? [{ href: "/competitions", label: "Competitions" }] : []),
-                        ...(config.showStore && hasProducts ? [{ href: "/store", label: "Store" }] : []),
-                        ...(config.showLocations ? [{ href: "/facilities", label: "Facilities" }] : []),
+                        ...(config.showCompetitions
+                          ? [{ href: "/competitions", label: "Competitions" }]
+                          : []),
+                        ...(config.showStore && hasProducts
+                          ? [{ href: "/store", label: "Store" }]
+                          : []),
+                        ...(config.showLocations
+                          ? [{ href: "/facilities", label: "Facilities" }]
+                          : []),
                         ...(config.showTeam ? [{ href: "/team", label: "Our Team" }] : []),
                         ...(config.showContact ? [{ href: "/contact", label: "Contact" }] : []),
-                    ]}
-                    loginUrl={loginUrl}
-                    isAuthenticated={!!session?.user}
-                />
-                <Link href="/" className="flex items-center">
-                    {config.logo ? (
-                        <Image 
-                            src={config.logo} 
-                            alt={config.organization.name} 
-                            width={40} 
-                            height={40} 
-                            className="object-contain h-10 w-auto" 
+                      ]}
+                      loginUrl={loginUrl}
+                      isAuthenticated={!!session?.user}
+                    />
+                    <Link href="/" className="flex items-center">
+                      {config.logo ? (
+                        <Image
+                          src={config.logo}
+                          alt={config.organization.name}
+                          width={40}
+                          height={40}
+                          className="object-contain h-10 w-auto"
                         />
-                    ) : (
+                      ) : (
                         <>
-                            <Image 
-                                src="/uplifter-logo.svg"
-                                alt={config.organization.name} 
-                                width={100} 
-                                height={32} 
-                                className="object-contain h-8 w-auto dark:hidden" 
-                            />
-                            <Image 
-                                src="/uplifter-logo-dark.svg"
-                                alt={config.organization.name} 
-                                width={100} 
-                                height={32} 
-                                className="object-contain h-8 w-auto hidden dark:block" 
-                            />
+                          <Image
+                            src="/uplifter-logo.svg"
+                            alt={config.organization.name}
+                            width={100}
+                            height={32}
+                            className="object-contain h-8 w-auto dark:hidden"
+                          />
+                          <Image
+                            src="/uplifter-logo-dark.svg"
+                            alt={config.organization.name}
+                            width={100}
+                            height={32}
+                            className="object-contain h-8 w-auto hidden dark:block"
+                          />
                         </>
+                      )}
+                    </Link>
+                  </div>
+                  <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
+                    <Link
+                      href="/"
+                      className="text-foreground/80 hover:text-primary transition-colors"
+                    >
+                      Home
+                    </Link>
+                    {config.showRegistration && (
+                      <Link
+                        href="/register"
+                        className="text-foreground/80 hover:text-primary transition-colors"
+                      >
+                        Programs
+                      </Link>
                     )}
-                </Link>
-                </div>
-                <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
-                    <Link href="/" className="text-foreground/80 hover:text-primary transition-colors">Home</Link>
-                    {config.showRegistration && <Link href="/register" className="text-foreground/80 hover:text-primary transition-colors">Programs</Link>}
-                    {config.showCalendar && <Link href="/calendar" className="text-foreground/80 hover:text-primary transition-colors">Calendar</Link>}
-                    {config.showCompetitions && <Link href="/competitions" className="text-foreground/80 hover:text-primary transition-colors">Competitions</Link>}
-                    {config.showStore && hasProducts && <Link href="/store" className="text-foreground/80 hover:text-primary transition-colors">Store</Link>}
-                    {config.showLocations && <Link href="/facilities" className="text-foreground/80 hover:text-primary transition-colors">Facilities</Link>}
-                    {config.showTeam && <Link href="/team" className="text-foreground/80 hover:text-primary transition-colors">Our Team</Link>}
-                    {config.showContact && <Link href="/contact" className="text-foreground/80 hover:text-primary transition-colors">Contact</Link>}
-                </nav>
-                <div className="flex items-center gap-3 text-sm">
+                    {config.showCalendar && (
+                      <Link
+                        href="/calendar"
+                        className="text-foreground/80 hover:text-primary transition-colors"
+                      >
+                        Calendar
+                      </Link>
+                    )}
+                    {config.showCompetitions && (
+                      <Link
+                        href="/competitions"
+                        className="text-foreground/80 hover:text-primary transition-colors"
+                      >
+                        Competitions
+                      </Link>
+                    )}
+                    {config.showStore && hasProducts && (
+                      <Link
+                        href="/store"
+                        className="text-foreground/80 hover:text-primary transition-colors"
+                      >
+                        Store
+                      </Link>
+                    )}
+                    {config.showLocations && (
+                      <Link
+                        href="/facilities"
+                        className="text-foreground/80 hover:text-primary transition-colors"
+                      >
+                        Facilities
+                      </Link>
+                    )}
+                    {config.showTeam && (
+                      <Link
+                        href="/team"
+                        className="text-foreground/80 hover:text-primary transition-colors"
+                      >
+                        Our Team
+                      </Link>
+                    )}
+                    {config.showContact && (
+                      <Link
+                        href="/contact"
+                        className="text-foreground/80 hover:text-primary transition-colors"
+                      >
+                        Contact
+                      </Link>
+                    )}
+                  </nav>
+                  <div className="flex items-center gap-3 text-sm">
                     <MarketingAnnouncementBell organizationId={config.organizationId} />
                     <ThemeToggle />
                     {session?.user ? (
-                        <MarketingUserMenu
-                            user={{
-                                name: session.user.name || session.user.email || "User",
-                                email: session.user.email || "",
-                                image: session.user.image,
-                            }}
-                            isAdmin={isAdmin}
-                            isSuperAdmin={session.user.isSuperAdmin === true}
-                            siteUrl={siteUrl}
-                        />
+                      <MarketingUserMenu
+                        user={{
+                          name: session.user.name || session.user.email || "User",
+                          email: session.user.email || "",
+                          image: session.user.image,
+                        }}
+                        isAdmin={isAdmin}
+                        isSuperAdmin={session.user.isSuperAdmin === true}
+                        siteUrl={siteUrl}
+                      />
                     ) : (
-                        <div className="hidden md:flex items-center gap-3">
-                            <Link 
-                                href="/signup" 
-                                className="text-foreground/80 hover:text-primary transition-colors font-medium"
-                            >
-                                Sign Up
-                            </Link>
-                            <Button asChild size="sm" className="text-sm font-medium">
-                                <Link href={loginUrl}>Login</Link>
-                            </Button>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </header>
-        <main className="flex-1">
-            {children}
-        </main>
-        <footer className="border-t border-border/40 bg-muted/50 py-6">
-             <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-4 px-4 md:flex-row md:px-8">
-                <p className="text-center text-sm text-muted-foreground">
-                    © {new Date().getFullYear()} {config.organization.name}. All rights reserved. Powered by Uplifter.
-                </p>
-                <div className="flex items-center gap-4 flex-wrap justify-center">
-                    {config.showContact && (
-                        <Link 
-                            href="/contact" 
-                            className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                      <div className="hidden md:flex items-center gap-3">
+                        <Link
+                          href="/signup"
+                          className="text-foreground/80 hover:text-primary transition-colors font-medium"
                         >
-                            Contact Us
+                          Sign Up
                         </Link>
+                        <Button asChild size="sm" className="text-sm font-medium">
+                          <Link href={loginUrl}>Login</Link>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </header>
+              <main className="flex-1">{children}</main>
+              <footer className="border-t border-border/40 bg-muted/50 py-6">
+                <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-4 px-4 md:flex-row md:px-8">
+                  <p className="text-center text-sm text-muted-foreground">
+                    © {new Date().getFullYear()} {config.organization.name}. All rights reserved.
+                    Powered by Uplifter.
+                  </p>
+                  <div className="flex items-center gap-4 flex-wrap justify-center">
+                    {config.showContact && (
+                      <Link
+                        href="/contact"
+                        className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                      >
+                        Contact Us
+                      </Link>
                     )}
                     {config.showRegistration && (
-                        <Link 
-                            href="/register" 
-                            className="text-sm text-muted-foreground transition-colors hover:text-primary"
-                        >
-                            Programs
-                        </Link>
+                      <Link
+                        href="/register"
+                        className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                      >
+                        Programs
+                      </Link>
                     )}
                     {config.showCompetitions && (
-                        <Link 
-                            href="/competitions" 
-                            className="text-sm text-muted-foreground transition-colors hover:text-primary"
-                        >
-                            Competitions
-                        </Link>
+                      <Link
+                        href="/competitions"
+                        className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                      >
+                        Competitions
+                      </Link>
                     )}
                     {config.showStore && hasProducts && (
-                        <Link 
-                            href="/store" 
-                            className="text-sm text-muted-foreground transition-colors hover:text-primary"
-                        >
-                            Store
-                        </Link>
+                      <Link
+                        href="/store"
+                        className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                      >
+                        Store
+                      </Link>
                     )}
                     {config.showLocations && (
-                        <Link 
-                            href="/facilities" 
-                            className="text-sm text-muted-foreground transition-colors hover:text-primary"
-                        >
-                            Facilities
-                        </Link>
+                      <Link
+                        href="/facilities"
+                        className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                      >
+                        Facilities
+                      </Link>
                     )}
                     {config.showTeam && (
-                        <Link 
-                            href="/team" 
-                            className="text-sm text-muted-foreground transition-colors hover:text-primary"
-                        >
-                            Our Team
-                        </Link>
+                      <Link
+                        href="/team"
+                        className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                      >
+                        Our Team
+                      </Link>
                     )}
-                    <a 
-                        href="https://www.uplifterinc.com/privacy-policy"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                    <a
+                      href="https://www.uplifterinc.com/privacy-policy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-muted-foreground transition-colors hover:text-primary"
                     >
-                        Privacy
+                      Privacy
                     </a>
-                    <a 
-                        href="https://www.uplifterinc.com/terms-of-service"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                    <a
+                      href="https://www.uplifterinc.com/terms-of-service"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-muted-foreground transition-colors hover:text-primary"
                     >
-                        Terms
+                      Terms
                     </a>
+                  </div>
                 </div>
-             </div>
-        </footer>
-        <VisitorTracker organizationId={config.organizationId} />
-        <CookieNotice />
-    </div>
-    </CartProvider>
-    </QueueProvider>
-    </SessionProviderWrapper>
+              </footer>
+              <VisitorTracker organizationId={config.organizationId} />
+              <CookieNotice />
+            </div>
+          </CartProvider>
+        </QueueProvider>
+      </SessionProviderWrapper>
     </ThemeProvider>
   );
 }

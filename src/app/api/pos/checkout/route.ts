@@ -57,10 +57,7 @@ export async function POST(request: NextRequest) {
     for (const item of validatedData.items) {
       const product = productMap.get(item.referenceId);
       if (!product) {
-        return NextResponse.json(
-          { error: `Product not found: ${item.name}` },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: `Product not found: ${item.name}` }, { status: 400 });
       }
       if (!product.isActive) {
         return NextResponse.json(
@@ -89,13 +86,15 @@ export async function POST(request: NextRequest) {
         },
       },
     });
-    const taxRate = org?.taxEnabled !== false
-      ? Number(org?.taxRate ?? 0)
-      : 0;
+    const taxRate = org?.taxEnabled !== false ? Number(org?.taxRate ?? 0) : 0;
     const taxPaidBy = org?.taxPaidBy ?? "CUSTOMER";
     const processingFeePaidBy = org?.processingFeePaidBy ?? "CUSTOMER";
-    const planTransactionFee = org?.subscription?.plan ? Number(org.subscription.plan.transactionFee) : 0;
-    const planPerTransactionFee = org?.subscription?.plan ? Number(org.subscription.plan.perTransactionFee) : 0;
+    const planTransactionFee = org?.subscription?.plan
+      ? Number(org.subscription.plan.transactionFee)
+      : 0;
+    const planPerTransactionFee = org?.subscription?.plan
+      ? Number(org.subscription.plan.perTransactionFee)
+      : 0;
 
     const reference = `POS-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 
@@ -148,11 +147,15 @@ export async function POST(request: NextRequest) {
             throw new Error(`Variant no longer available for ${item.name}`);
           }
           if (variant.currentInventory !== null && variant.currentInventory < item.quantity) {
-            throw new Error(`Insufficient inventory for ${item.name} (${variant.label}). Only ${variant.currentInventory} available.`);
+            throw new Error(
+              `Insufficient inventory for ${item.name} (${variant.label}). Only ${variant.currentInventory} available.`
+            );
           }
         } else {
           if (product.currentInventory !== null && product.currentInventory < item.quantity) {
-            throw new Error(`Insufficient inventory for ${item.name}. Only ${product.currentInventory} available.`);
+            throw new Error(
+              `Insufficient inventory for ${item.name}. Only ${product.currentInventory} available.`
+            );
           }
         }
       }
@@ -172,7 +175,8 @@ export async function POST(request: NextRequest) {
       const tax = Math.round(subtotal * taxRate * 100) / 100;
 
       const feeBase = taxPaidBy === "CUSTOMER" ? subtotal + tax : subtotal;
-      const processingFeeRaw = feeBase > 0 ? feeBase * planTransactionFee + planPerTransactionFee : 0;
+      const processingFeeRaw =
+        feeBase > 0 ? feeBase * planTransactionFee + planPerTransactionFee : 0;
       const processingFee = Math.round(processingFeeRaw * 100) / 100;
 
       let total = subtotal;
@@ -196,7 +200,11 @@ export async function POST(request: NextRequest) {
       });
 
       const defaultProductGLCode = await tx.gLCode.findFirst({
-        where: { organizationId: session.user.organizationId, isDefault: true, defaultForType: "PRODUCT" },
+        where: {
+          organizationId: session.user.organizationId,
+          isDefault: true,
+          defaultForType: "PRODUCT",
+        },
         select: { id: true },
       });
 
@@ -330,21 +338,17 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    if (error instanceof Error && (error.message.startsWith("Insufficient inventory") || error.message.startsWith("Product no longer") || error.message.startsWith("Variant no longer"))) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 409 }
-      );
+    if (
+      error instanceof Error &&
+      (error.message.startsWith("Insufficient inventory") ||
+        error.message.startsWith("Product no longer") ||
+        error.message.startsWith("Variant no longer"))
+    ) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
     }
     console.error("Error processing checkout:", error);
-    return NextResponse.json(
-      { error: "Failed to process checkout" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to process checkout" }, { status: 500 });
   }
 }

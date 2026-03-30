@@ -3,10 +3,7 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
-async function verifyGuardian(
-  athleteId: string,
-  email: string,
-): Promise<boolean> {
+async function verifyGuardian(athleteId: string, email: string): Promise<boolean> {
   const guardian = await db.athleteGuardian.findFirst({
     where: {
       athleteId,
@@ -24,10 +21,7 @@ async function verifyGuardian(
  * Used by registration flows to determine whether the athlete
  * already satisfies a membership requirement.
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const rateLimited = await checkApiRateLimit(request, "medical", RATE_LIMITS.medical);
     if (rateLimited) return rateLimited;
@@ -40,18 +34,12 @@ export async function GET(
     const email = session?.user?.email || paramEmail;
 
     if (!email) {
-      return NextResponse.json(
-        { error: "email is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "email is required" }, { status: 400 });
     }
 
     const hasAccess = await verifyGuardian(athleteId, email);
     if (!hasAccess) {
-      return NextResponse.json(
-        { error: "Access denied" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
     const memberships = await db.athleteMembership.findMany({
@@ -69,9 +57,6 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error fetching athlete memberships (public):", error);
-    return NextResponse.json(
-      { error: "Failed to fetch memberships" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch memberships" }, { status: 500 });
   }
 }

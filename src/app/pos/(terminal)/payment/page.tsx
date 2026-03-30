@@ -1,81 +1,83 @@
-"use client"
+"use client";
 
-import { useEffect, useState, useCallback, Suspense } from "react"
-import { useSearchParams, useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { useCart } from "@/components/sites/cart-context"
-import { QRCodeSVG } from "qrcode.react"
-import { 
-  ArrowLeft, 
-  CheckCircle2, 
-  Loader2, 
-  CreditCard, 
+import { useEffect, useState, useCallback, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useCart } from "@/components/sites/cart-context";
+import { QRCodeSVG } from "qrcode.react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Loader2,
+  CreditCard,
   Banknote,
   QrCode,
   XCircle,
   RefreshCw,
-} from "lucide-react"
-import Link from "next/link"
-import { toast } from "sonner"
+} from "lucide-react";
+import Link from "next/link";
+import { toast } from "sonner";
 
-type PaymentStatus = "idle" | "generating" | "waiting" | "completed" | "failed" | "processing"
+type PaymentStatus = "idle" | "generating" | "waiting" | "completed" | "failed" | "processing";
 
 function PaymentPageContent() {
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const initialMethod = searchParams.get("method") as "cash" | "card" | null
-  
-  const { items, subtotal, clearCart } = useCart()
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">(initialMethod || "card")
-  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("idle")
-  const [paymentLinkUrl, setPaymentLinkUrl] = useState<string | null>(null)
-  const [paymentLinkId, setPaymentLinkId] = useState<string | null>(null)
-  const [invoiceId, setInvoiceId] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [taxRate, setTaxRate] = useState(0)
-  const [taxPaidBy, setTaxPaidBy] = useState<"CUSTOMER" | "ORGANIZATION">("CUSTOMER")
-  const [processingFeePaidBy, setProcessingFeePaidBy] = useState<"CUSTOMER" | "ORGANIZATION">("CUSTOMER")
-  const [planTransactionFee, setPlanTransactionFee] = useState(0)
-  const [planPerTransactionFee, setPlanPerTransactionFee] = useState(0)
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const initialMethod = searchParams.get("method") as "cash" | "card" | null;
+
+  const { items, subtotal, clearCart } = useCart();
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">(initialMethod || "card");
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("idle");
+  const [paymentLinkUrl, setPaymentLinkUrl] = useState<string | null>(null);
+  const [paymentLinkId, setPaymentLinkId] = useState<string | null>(null);
+  const [invoiceId, setInvoiceId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [taxRate, setTaxRate] = useState(0);
+  const [taxPaidBy, setTaxPaidBy] = useState<"CUSTOMER" | "ORGANIZATION">("CUSTOMER");
+  const [processingFeePaidBy, setProcessingFeePaidBy] = useState<"CUSTOMER" | "ORGANIZATION">(
+    "CUSTOMER"
+  );
+  const [planTransactionFee, setPlanTransactionFee] = useState(0);
+  const [planPerTransactionFee, setPlanPerTransactionFee] = useState(0);
 
   useEffect(() => {
     fetch("/api/organization/taxes-and-fees")
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (!data) return
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data) return;
         if (data.taxEnabled !== false && data.taxRate != null) {
-          setTaxRate(Number(data.taxRate))
+          setTaxRate(Number(data.taxRate));
         }
-        if (data.taxPaidBy) setTaxPaidBy(data.taxPaidBy)
-        if (data.processingFeePaidBy) setProcessingFeePaidBy(data.processingFeePaidBy)
+        if (data.taxPaidBy) setTaxPaidBy(data.taxPaidBy);
+        if (data.processingFeePaidBy) setProcessingFeePaidBy(data.processingFeePaidBy);
         if (data.plan) {
-          setPlanTransactionFee(data.plan.transactionFee)
-          setPlanPerTransactionFee(data.plan.perTransactionFee)
+          setPlanTransactionFee(data.plan.transactionFee);
+          setPlanPerTransactionFee(data.plan.perTransactionFee);
         }
       })
-      .catch((err) => console.error("Failed to load tax/fee settings:", err))
-  }, [])
+      .catch((err) => console.error("Failed to load tax/fee settings:", err));
+  }, []);
 
-  const tax = Math.round(subtotal * taxRate * 100) / 100
-  const feeBase = taxPaidBy === "CUSTOMER" ? subtotal + tax : subtotal
-  const processingFeeRaw = feeBase > 0 ? feeBase * planTransactionFee + planPerTransactionFee : 0
-  const processingFee = Math.round(processingFeeRaw * 100) / 100
+  const tax = Math.round(subtotal * taxRate * 100) / 100;
+  const feeBase = taxPaidBy === "CUSTOMER" ? subtotal + tax : subtotal;
+  const processingFeeRaw = feeBase > 0 ? feeBase * planTransactionFee + planPerTransactionFee : 0;
+  const processingFee = Math.round(processingFeeRaw * 100) / 100;
 
-  let total = subtotal
-  if (taxPaidBy === "CUSTOMER") total += tax
-  if (processingFeePaidBy === "CUSTOMER") total += processingFee
-  total = Math.round(total * 100) / 100
+  let total = subtotal;
+  if (taxPaidBy === "CUSTOMER") total += tax;
+  if (processingFeePaidBy === "CUSTOMER") total += processingFee;
+  total = Math.round(total * 100) / 100;
 
   // Generate payment link for card payments
   const generatePaymentLink = useCallback(async () => {
-    if (items.length === 0) return
+    if (items.length === 0) return;
 
-    setPaymentStatus("generating")
-    setError(null)
+    setPaymentStatus("generating");
+    setError(null);
 
     try {
-      const reference = `POS-${Date.now()}`
+      const reference = `POS-${Date.now()}`;
       const response = await fetch("/api/pos/payment-link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -85,60 +87,60 @@ function PaymentPageContent() {
           reference,
           description: `POS Sale - ${items.length} items`,
         }),
-      })
+      });
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to create payment link")
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create payment link");
       }
 
-      const data = await response.json()
-      setPaymentLinkUrl(data.url)
-      setPaymentLinkId(data.id)
-      setPaymentStatus("waiting")
+      const data = await response.json();
+      setPaymentLinkUrl(data.url);
+      setPaymentLinkId(data.id);
+      setPaymentStatus("waiting");
     } catch (err) {
-      console.error("Error generating payment link:", err)
-      setError(err instanceof Error ? err.message : "Failed to generate payment link")
-      setPaymentStatus("failed")
+      console.error("Error generating payment link:", err);
+      setError(err instanceof Error ? err.message : "Failed to generate payment link");
+      setPaymentStatus("failed");
     }
-  }, [items.length, total])
+  }, [items.length, total]);
 
   // Poll for payment status
   useEffect(() => {
-    if (paymentStatus !== "waiting" || !paymentLinkId) return
+    if (paymentStatus !== "waiting" || !paymentLinkId) return;
 
     const pollInterval = setInterval(async () => {
       try {
-        const response = await fetch(`/api/pos/payment-link?id=${paymentLinkId}`)
+        const response = await fetch(`/api/pos/payment-link?id=${paymentLinkId}`);
         if (response.ok) {
-          const data = await response.json()
+          const data = await response.json();
           // Check if payment is completed (status varies by Adyen - could be "completed", "paid", etc.)
           if (data.status === "completed" || data.status === "paid") {
-            setPaymentStatus("processing")
-            clearInterval(pollInterval)
+            setPaymentStatus("processing");
+            clearInterval(pollInterval);
             // Process the checkout
-            await processCheckout("CARD")
+            await processCheckout("CARD");
           }
         }
       } catch (err) {
-        console.error("Error polling payment status:", err)
+        console.error("Error polling payment status:", err);
       }
-    }, 3000) // Poll every 3 seconds
+    }, 3000); // Poll every 3 seconds
 
-    return () => clearInterval(pollInterval)
-  }, [paymentStatus, paymentLinkId])
+    return () => clearInterval(pollInterval);
+  }, [paymentStatus, paymentLinkId]);
 
   // Auto-generate payment link for card payments
   useEffect(() => {
     if (paymentMethod === "card" && paymentStatus === "idle" && items.length > 0) {
-      generatePaymentLink()
+      generatePaymentLink();
     }
-  }, [paymentMethod, paymentStatus, items.length, generatePaymentLink])
+  }, [paymentMethod, paymentStatus, items.length, generatePaymentLink]);
 
   // Process checkout
   const processCheckout = async (method: "CARD" | "CASH") => {
-    setPaymentStatus("processing")
-    setError(null)
+    setPaymentStatus("processing");
+    setError(null);
 
     try {
       const response = await fetch("/api/pos/checkout", {
@@ -158,40 +160,40 @@ function PaymentPageContent() {
           tax,
           total,
         }),
-      })
+      });
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to process checkout")
+        const error = await response.json();
+        throw new Error(error.error || "Failed to process checkout");
       }
 
-      const data = await response.json()
-      setInvoiceId(data.invoiceId)
-      setPaymentStatus("completed")
-      clearCart()
-      toast.success("Payment completed successfully!")
+      const data = await response.json();
+      setInvoiceId(data.invoiceId);
+      setPaymentStatus("completed");
+      clearCart();
+      toast.success("Payment completed successfully!");
     } catch (err) {
-      console.error("Error processing checkout:", err)
-      setError(err instanceof Error ? err.message : "Failed to process checkout")
-      setPaymentStatus("failed")
+      console.error("Error processing checkout:", err);
+      setError(err instanceof Error ? err.message : "Failed to process checkout");
+      setPaymentStatus("failed");
     }
-  }
+  };
 
   // Handle cash payment
   const handleCashPayment = () => {
-    processCheckout("CASH")
-  }
+    processCheckout("CASH");
+  };
 
   // Reset and try again
   const handleRetry = () => {
-    setPaymentStatus("idle")
-    setPaymentLinkUrl(null)
-    setPaymentLinkId(null)
-    setError(null)
+    setPaymentStatus("idle");
+    setPaymentLinkUrl(null);
+    setPaymentLinkId(null);
+    setError(null);
     if (paymentMethod === "card") {
-      generatePaymentLink()
+      generatePaymentLink();
     }
-  }
+  };
 
   // If no items in cart, redirect back
   if (items.length === 0 && paymentStatus !== "completed") {
@@ -212,7 +214,7 @@ function PaymentPageContent() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -226,9 +228,7 @@ function PaymentPageContent() {
                 <CheckCircle2 className="h-10 w-10 text-green-600 dark:text-green-500" />
               </div>
               <CardTitle className="text-2xl">Payment Successful!</CardTitle>
-              <CardDescription>
-                Order #{invoiceId?.slice(-8)} has been completed
-              </CardDescription>
+              <CardDescription>Order #{invoiceId?.slice(-8)} has been completed</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="text-3xl font-bold">${total.toFixed(2)}</div>
@@ -282,9 +282,9 @@ function PaymentPageContent() {
                 variant={paymentMethod === "card" ? "default" : "outline"}
                 className="flex-1 h-14"
                 onClick={() => {
-                  setPaymentMethod("card")
+                  setPaymentMethod("card");
                   if (paymentStatus === "idle") {
-                    generatePaymentLink()
+                    generatePaymentLink();
                   }
                 }}
               >
@@ -321,12 +321,7 @@ function PaymentPageContent() {
                   ) : paymentLinkUrl ? (
                     <>
                       <div className="p-4 bg-white rounded-lg shadow-inner border">
-                        <QRCodeSVG
-                          value={paymentLinkUrl}
-                          size={240}
-                          level="H"
-                          includeMargin
-                        />
+                        <QRCodeSVG value={paymentLinkUrl} size={240} level="H" includeMargin />
                       </div>
                       <p className="text-sm text-muted-foreground text-center">
                         Waiting for payment...
@@ -350,20 +345,14 @@ function PaymentPageContent() {
                     <Banknote className="h-5 w-5" />
                     Cash Payment
                   </CardTitle>
-                  <CardDescription>
-                    Collect ${total.toFixed(2)} from the customer
-                  </CardDescription>
+                  <CardDescription>Collect ${total.toFixed(2)} from the customer</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="text-center">
                     <div className="text-5xl font-bold">${total.toFixed(2)}</div>
                     <p className="text-sm text-muted-foreground mt-2">Amount Due</p>
                   </div>
-                  <Button
-                    onClick={handleCashPayment}
-                    className="w-full h-12"
-                    size="lg"
-                  >
+                  <Button onClick={handleCashPayment} className="w-full h-12" size="lg">
                     <CheckCircle2 className="mr-2 h-5 w-5" />
                     Complete Cash Payment
                   </Button>
@@ -385,7 +374,7 @@ function PaymentPageContent() {
       {paymentStatus !== "completed" && (
         <div className="w-[320px] bg-muted/30 border-l p-6 flex flex-col">
           <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
-          
+
           <div className="flex-1 overflow-y-auto space-y-2">
             {items.map((item) => (
               <div key={item.id} className="flex justify-between text-sm">
@@ -422,17 +411,19 @@ function PaymentPageContent() {
         </div>
       )}
     </div>
-  )
+  );
 }
 
 export default function PaymentPage() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center h-full">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-full">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      }
+    >
       <PaymentPageContent />
     </Suspense>
-  )
+  );
 }

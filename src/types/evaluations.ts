@@ -1,7 +1,13 @@
 // Skills and Evaluations Types
 
 export type SkillAttemptStatus = "NOT_ATTEMPTED" | "ATTEMPTED" | "SUCCEEDED";
-export type EvaluationStatus = "PENDING" | "IN_PROGRESS" | "PASS" | "RETRY" | "EXCELLENT" | "SATISFACTORY";
+export type EvaluationStatus =
+  | "PENDING"
+  | "IN_PROGRESS"
+  | "PASS"
+  | "RETRY"
+  | "EXCELLENT"
+  | "SATISFACTORY";
 export type ScoringType = "PASS_FAIL" | "POINT_SCALE";
 export type CompletionType = "PERCENTAGE" | "COUNT" | "ALL";
 
@@ -103,18 +109,18 @@ export interface EvaluationTemplate {
   organizationId: string;
   createdAt: string;
   updatedAt: string;
-  
+
   // Auto-sync configuration
   autoSyncEnabled: boolean;
   autoSyncLevels: string[];
   autoSyncCategories: string[];
-  
+
   // Scoring configuration
   scoringType: ScoringType;
   pointScaleMin: number;
   pointScaleMax: number;
   pointScalePassThreshold: number;
-  
+
   // Completion requirements
   completionType: CompletionType;
   completionThreshold: number;
@@ -179,22 +185,22 @@ export interface CreateEvaluationTemplatePayload {
   minAge?: number;
   maxAge?: number;
   isActive?: boolean;
-  
+
   // Auto-sync configuration
   autoSyncEnabled?: boolean;
   autoSyncLevels?: string[];
   autoSyncCategories?: string[];
-  
+
   // Scoring configuration
   scoringType?: ScoringType;
   pointScaleMin?: number;
   pointScaleMax?: number;
   pointScalePassThreshold?: number;
-  
+
   // Completion requirements
   completionType?: CompletionType;
   completionThreshold?: number;
-  
+
   // Skills (optional if auto-sync enabled)
   skillIds?: string[];
 }
@@ -206,22 +212,22 @@ export interface UpdateEvaluationTemplatePayload {
   minAge?: number | null;
   maxAge?: number | null;
   isActive?: boolean;
-  
+
   // Auto-sync configuration
   autoSyncEnabled?: boolean;
   autoSyncLevels?: string[];
   autoSyncCategories?: string[];
-  
+
   // Scoring configuration
   scoringType?: ScoringType;
   pointScaleMin?: number;
   pointScaleMax?: number;
   pointScalePassThreshold?: number;
-  
+
   // Completion requirements
   completionType?: CompletionType;
   completionThreshold?: number;
-  
+
   skillIds?: string[];
 }
 
@@ -353,12 +359,15 @@ export interface AthleteSkillProgressResponse {
     attempted: number;
     succeeded: number;
   };
-  byCategory: Record<string, {
-    total: number;
-    notAttempted: number;
-    attempted: number;
-    succeeded: number;
-  }>;
+  byCategory: Record<
+    string,
+    {
+      total: number;
+      notAttempted: number;
+      attempted: number;
+      succeeded: number;
+    }
+  >;
 }
 
 // ===== Achievements =====

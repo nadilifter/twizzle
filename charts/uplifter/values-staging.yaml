@@ -4,7 +4,7 @@ replicaCount: 1
 
 image:
   repository: "YOUR_AWS_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/uplifter"
-  tag: ""  # Set by CI/CD pipeline
+  tag: "" # Set by CI/CD pipeline
 
 env:
   NODE_ENV: "production"

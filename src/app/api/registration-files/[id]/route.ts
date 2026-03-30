@@ -5,10 +5,7 @@ import { unlink } from "fs/promises";
 import path from "path";
 import { db } from "@/lib/db";
 
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {

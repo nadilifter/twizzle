@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { CalendarIcon, Plus, Trash2, Loader2 } from "lucide-react"
-import { format } from "date-fns"
-import { toast } from "sonner"
+import * as React from "react";
+import { CalendarIcon, Plus, Trash2, Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Sheet,
   SheetClose,
@@ -17,120 +17,112 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
+} from "@/components/ui/sheet";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Calendar } from "@/components/ui/calendar"
-import { cn } from "@/lib/utils"
-import { Separator } from "@/components/ui/separator"
-import { Textarea } from "@/components/ui/textarea"
+} from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 
 interface LineItem {
-  id: string
-  description: string
-  quantity: number
-  unitPrice: number
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
 }
 
 interface Guardian {
-  id: string
-  name: string
-  email: string
+  id: string;
+  name: string;
+  email: string;
 }
 
 interface CreateInvoiceSheetProps {
-  onSuccess?: () => void
+  onSuccess?: () => void;
 }
 
 export function CreateInvoiceSheet({ onSuccess }: CreateInvoiceSheetProps) {
-  const [open, setOpen] = React.useState(false)
-  const [loading, setLoading] = React.useState(false)
-  const [loadingGuardians, setLoadingGuardians] = React.useState(false)
-  const [date, setDate] = React.useState<Date>()
+  const [open, setOpen] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const [loadingGuardians, setLoadingGuardians] = React.useState(false);
+  const [date, setDate] = React.useState<Date>();
   const [items, setItems] = React.useState<LineItem[]>([
     { id: "1", description: "", quantity: 1, unitPrice: 0 },
-  ])
+  ]);
 
-  const [guardians, setGuardians] = React.useState<Guardian[]>([])
-  const [selectedUserId, setSelectedUserId] = React.useState("")
-  const [notes, setNotes] = React.useState("")
-  const [status, setStatus] = React.useState<"DRAFT" | "SENT">("DRAFT")
+  const [guardians, setGuardians] = React.useState<Guardian[]>([]);
+  const [selectedUserId, setSelectedUserId] = React.useState("");
+  const [notes, setNotes] = React.useState("");
+  const [status, setStatus] = React.useState<"DRAFT" | "SENT">("DRAFT");
 
   React.useEffect(() => {
     if (open && guardians.length === 0) {
-      setLoadingGuardians(true)
+      setLoadingGuardians(true);
       fetch("/api/guardians")
         .then((res) => res.json())
         .then((data) => {
-          setGuardians(data.data || [])
+          setGuardians(data.data || []);
         })
         .catch((err) => {
-          console.error("Error fetching guardians:", err)
-          toast.error("Failed to load guardians")
+          console.error("Error fetching guardians:", err);
+          toast.error("Failed to load guardians");
         })
-        .finally(() => setLoadingGuardians(false))
+        .finally(() => setLoadingGuardians(false));
     }
-  }, [open, guardians.length])
+  }, [open, guardians.length]);
 
   const addItem = () => {
     setItems([
       ...items,
       { id: Math.random().toString(36).substr(2, 9), description: "", quantity: 1, unitPrice: 0 },
-    ])
-  }
+    ]);
+  };
 
   const removeItem = (id: string) => {
-    if (items.length === 1) return
-    setItems(items.filter((item) => item.id !== id))
-  }
+    if (items.length === 1) return;
+    setItems(items.filter((item) => item.id !== id));
+  };
 
   const updateItem = (id: string, field: keyof LineItem, value: string | number) => {
-    setItems(
-      items.map((item) =>
-        item.id === id ? { ...item, [field]: value } : item
-      )
-    )
-  }
+    setItems(items.map((item) => (item.id === id ? { ...item, [field]: value } : item)));
+  };
 
-  const subtotal = items.reduce((acc, item) => acc + item.quantity * item.unitPrice, 0)
+  const subtotal = items.reduce((acc, item) => acc + item.quantity * item.unitPrice, 0);
 
   const resetForm = () => {
-    setSelectedUserId("")
-    setNotes("")
-    setStatus("DRAFT")
-    setItems([{ id: "1", description: "", quantity: 1, unitPrice: 0 }])
-    setDate(undefined)
-  }
+    setSelectedUserId("");
+    setNotes("");
+    setStatus("DRAFT");
+    setItems([{ id: "1", description: "", quantity: 1, unitPrice: 0 }]);
+    setDate(undefined);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!selectedUserId) {
-      toast.error("Please select a guardian")
-      return
+      toast.error("Please select a guardian");
+      return;
     }
 
     if (!date) {
-      toast.error("Please select a due date")
-      return
+      toast.error("Please select a due date");
+      return;
     }
 
     if (items.some((item) => !item.description || item.unitPrice <= 0)) {
-      toast.error("Please fill in all line items")
-      return
+      toast.error("Please fill in all line items");
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
 
     try {
       const response = await fetch("/api/invoices", {
@@ -149,25 +141,25 @@ export function CreateInvoiceSheet({ onSuccess }: CreateInvoiceSheetProps) {
             unitPrice: item.unitPrice,
           })),
         }),
-      })
+      });
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to create invoice")
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create invoice");
       }
 
-      const invoice = await response.json()
-      toast.success(`Invoice ${invoice.reference} created successfully`)
-      setOpen(false)
-      resetForm()
-      onSuccess?.()
+      const invoice = await response.json();
+      toast.success(`Invoice ${invoice.reference} created successfully`);
+      setOpen(false);
+      resetForm();
+      onSuccess?.();
     } catch (error) {
-      console.error("Error creating invoice:", error)
-      toast.error(error instanceof Error ? error.message : "Failed to create invoice")
+      console.error("Error creating invoice:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to create invoice");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -195,7 +187,9 @@ export function CreateInvoiceSheet({ onSuccess }: CreateInvoiceSheetProps) {
                 disabled={loadingGuardians}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={loadingGuardians ? "Loading..." : "Select a guardian"} />
+                  <SelectValue
+                    placeholder={loadingGuardians ? "Loading..." : "Select a guardian"}
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {guardians.map((g) => (
@@ -242,12 +236,7 @@ export function CreateInvoiceSheet({ onSuccess }: CreateInvoiceSheetProps) {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={setDate}
-                      initialFocus
-                    />
+                    <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -268,7 +257,10 @@ export function CreateInvoiceSheet({ onSuccess }: CreateInvoiceSheetProps) {
 
             <div className="grid gap-4">
               {items.map((item, index) => (
-                <div key={item.id} className="grid grid-cols-[1fr_80px_100px_40px] gap-2 items-start">
+                <div
+                  key={item.id}
+                  className="grid grid-cols-[1fr_80px_100px_40px] gap-2 items-start"
+                >
                   <div className="grid gap-1">
                     {index === 0 && <Label className="text-xs">Description</Label>}
                     <Input
@@ -284,7 +276,9 @@ export function CreateInvoiceSheet({ onSuccess }: CreateInvoiceSheetProps) {
                       type="number"
                       min="1"
                       value={item.quantity}
-                      onChange={(e) => updateItem(item.id, "quantity", parseInt(e.target.value) || 0)}
+                      onChange={(e) =>
+                        updateItem(item.id, "quantity", parseInt(e.target.value) || 0)
+                      }
                       required
                     />
                   </div>
@@ -295,7 +289,9 @@ export function CreateInvoiceSheet({ onSuccess }: CreateInvoiceSheetProps) {
                       min="0"
                       step="0.01"
                       value={item.unitPrice}
-                      onChange={(e) => updateItem(item.id, "unitPrice", parseFloat(e.target.value) || 0)}
+                      onChange={(e) =>
+                        updateItem(item.id, "unitPrice", parseFloat(e.target.value) || 0)
+                      }
                       required
                     />
                   </div>
@@ -346,5 +342,5 @@ export function CreateInvoiceSheet({ onSuccess }: CreateInvoiceSheetProps) {
         </form>
       </SheetContent>
     </Sheet>
-  )
+  );
 }

@@ -70,39 +70,39 @@ import {
   CalendarClock,
   Info,
 } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useMedicalConfig, useMedicalQuestions } from "@/hooks/use-medical";
-import type { CustomMedicalQuestion, CreateCustomMedicalQuestionPayload, MedicalQuestionType, UpdateMedicalFormConfigPayload } from "@/types/medical";
+import type {
+  CustomMedicalQuestion,
+  CreateCustomMedicalQuestionPayload,
+  MedicalQuestionType,
+  UpdateMedicalFormConfigPayload,
+} from "@/types/medical";
 
 function ValidityDaysInput({
   value,
   onSave,
   disabled,
 }: {
-  value: number
-  onSave: (val: number) => void
-  disabled: boolean
+  value: number;
+  onSave: (val: number) => void;
+  disabled: boolean;
 }) {
-  const [localValue, setLocalValue] = useState(String(value))
+  const [localValue, setLocalValue] = useState(String(value));
 
   React.useEffect(() => {
-    setLocalValue(String(value))
-  }, [value])
+    setLocalValue(String(value));
+  }, [value]);
 
   const handleBlur = () => {
-    const parsed = parseInt(localValue, 10)
+    const parsed = parseInt(localValue, 10);
     if (!isNaN(parsed) && parsed >= 1 && parsed <= 3650 && parsed !== value) {
-      onSave(parsed)
+      onSave(parsed);
     } else {
-      setLocalValue(String(value))
+      setLocalValue(String(value));
     }
-  }
+  };
 
   return (
     <div className="space-y-2">
@@ -114,7 +114,8 @@ function ValidityDaysInput({
               <Info className="h-4 w-4 text-muted-foreground cursor-help" />
             </TooltipTrigger>
             <TooltipContent side="right" className="max-w-xs">
-              Athletes who have submitted medical information within this window will not be asked to re-submit during registration or checkout.
+              Athletes who have submitted medical information within this window will not be asked
+              to re-submit during registration or checkout.
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -130,8 +131,8 @@ function ValidityDaysInput({
           onBlur={handleBlur}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
-              e.preventDefault()
-              handleBlur()
+              e.preventDefault();
+              handleBlur();
             }
           }}
           disabled={disabled}
@@ -140,7 +141,7 @@ function ValidityDaysInput({
         <span className="text-sm text-muted-foreground">days</span>
       </div>
     </div>
-  )
+  );
 }
 
 // Sortable question item component
@@ -153,13 +154,9 @@ function SortableQuestion({
   onEdit: (question: CustomMedicalQuestion) => void;
   onDelete: (id: string) => void;
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({ id: question.id });
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+    id: question.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -187,7 +184,9 @@ function SortableQuestion({
           <div className="flex items-center gap-2 mb-1">
             <p className="font-medium truncate">{question.questionText}</p>
             {question.required && (
-              <Badge variant="destructive" className="text-xs">Required</Badge>
+              <Badge variant="destructive" className="text-xs">
+                Required
+              </Badge>
             )}
           </div>
           <p className="text-sm text-muted-foreground">
@@ -211,14 +210,13 @@ function SortableQuestion({
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete Question</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete this question? This will also delete any existing responses to this question.
+                  Are you sure you want to delete this question? This will also delete any existing
+                  responses to this question.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => onDelete(question.id)}>
-                  Delete
-                </AlertDialogAction>
+                <AlertDialogAction onClick={() => onDelete(question.id)}>Delete</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
@@ -243,7 +241,9 @@ function QuestionEditor({
   isSaving: boolean;
 }) {
   const [questionText, setQuestionText] = useState(question?.questionText || "");
-  const [questionType, setQuestionType] = useState<MedicalQuestionType>(question?.questionType || "TEXT");
+  const [questionType, setQuestionType] = useState<MedicalQuestionType>(
+    question?.questionType || "TEXT"
+  );
   const [required, setRequired] = useState(question?.required || false);
   const [options, setOptions] = useState<string[]>((question?.options as string[]) || []);
   const [newOption, setNewOption] = useState("");
@@ -275,13 +275,14 @@ function QuestionEditor({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const data = {
       id: question?.id,
       questionText,
       questionType,
       required,
-      options: questionType === "MULTIPLE_CHOICE" || questionType === "CHECKBOX" ? options : undefined,
+      options:
+        questionType === "MULTIPLE_CHOICE" || questionType === "CHECKBOX" ? options : undefined,
     };
 
     await onSave(data);
@@ -312,7 +313,10 @@ function QuestionEditor({
             </div>
             <div className="space-y-2">
               <Label htmlFor="questionType">Answer Type</Label>
-              <Select value={questionType} onValueChange={(v) => setQuestionType(v as MedicalQuestionType)}>
+              <Select
+                value={questionType}
+                onValueChange={(v) => setQuestionType(v as MedicalQuestionType)}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -356,11 +360,7 @@ function QuestionEditor({
               </div>
             )}
             <div className="flex items-center space-x-2">
-              <Switch
-                id="required"
-                checked={required}
-                onCheckedChange={setRequired}
-              />
+              <Switch id="required" checked={required} onCheckedChange={setRequired} />
               <Label htmlFor="required">Required question</Label>
             </div>
           </div>
@@ -380,10 +380,15 @@ function QuestionEditor({
 }
 
 export default function MedicalSettingsPage() {
-  const { config, isLoading: configLoading, isSaving: configSaving, updateConfig } = useMedicalConfig();
-  const { 
-    questions, 
-    isLoading: questionsLoading, 
+  const {
+    config,
+    isLoading: configLoading,
+    isSaving: configSaving,
+    updateConfig,
+  } = useMedicalConfig();
+  const {
+    questions,
+    isLoading: questionsLoading,
     isSaving: questionsSaving,
     createQuestion,
     updateQuestion,
@@ -401,7 +406,10 @@ export default function MedicalSettingsPage() {
     })
   );
 
-  const handleConfigChange = async (key: keyof UpdateMedicalFormConfigPayload, value: boolean | number) => {
+  const handleConfigChange = async (
+    key: keyof UpdateMedicalFormConfigPayload,
+    value: boolean | number
+  ) => {
     const success = await updateConfig({ [key]: value } as UpdateMedicalFormConfigPayload);
     if (success) {
       toast.success("Settings updated");
@@ -417,7 +425,7 @@ export default function MedicalSettingsPage() {
       const oldIndex = questions.findIndex((q) => q.id === active.id);
       const newIndex = questions.findIndex((q) => q.id === over.id);
       const reordered = arrayMove(questions, oldIndex, newIndex);
-      
+
       const orderedQuestions = reordered.map((q, i) => ({
         id: q.id,
         displayOrder: i,
@@ -496,9 +504,7 @@ export default function MedicalSettingsPage() {
             <Settings className="h-5 w-5" />
             Standard Questions
           </CardTitle>
-          <CardDescription>
-            Enable or disable standard medical information fields
-          </CardDescription>
+          <CardDescription>Enable or disable standard medical information fields</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
@@ -506,7 +512,9 @@ export default function MedicalSettingsPage() {
               <AlertTriangle className="h-5 w-5 text-amber-500" />
               <div>
                 <Label className="text-base">Allergies</Label>
-                <p className="text-sm text-muted-foreground">Collect food, environmental, and medication allergies</p>
+                <p className="text-sm text-muted-foreground">
+                  Collect food, environmental, and medication allergies
+                </p>
               </div>
             </div>
             <Switch
@@ -523,7 +531,9 @@ export default function MedicalSettingsPage() {
               <Heart className="h-5 w-5 text-red-500" />
               <div>
                 <Label className="text-base">Medical Conditions</Label>
-                <p className="text-sm text-muted-foreground">Collect conditions like asthma, diabetes, epilepsy</p>
+                <p className="text-sm text-muted-foreground">
+                  Collect conditions like asthma, diabetes, epilepsy
+                </p>
               </div>
             </div>
             <Switch
@@ -540,7 +550,9 @@ export default function MedicalSettingsPage() {
               <Pill className="h-5 w-5 text-blue-500" />
               <div>
                 <Label className="text-base">Medications</Label>
-                <p className="text-sm text-muted-foreground">Collect current medications the athlete is taking</p>
+                <p className="text-sm text-muted-foreground">
+                  Collect current medications the athlete is taking
+                </p>
               </div>
             </div>
             <Switch
@@ -557,7 +569,9 @@ export default function MedicalSettingsPage() {
               <Phone className="h-5 w-5 text-green-500" />
               <div>
                 <Label className="text-base">Emergency Contact</Label>
-                <p className="text-sm text-muted-foreground">Collect emergency contact name, phone, and relationship</p>
+                <p className="text-sm text-muted-foreground">
+                  Collect emergency contact name, phone, and relationship
+                </p>
               </div>
             </div>
             <Switch
@@ -574,12 +588,16 @@ export default function MedicalSettingsPage() {
               <UtensilsCrossed className="h-5 w-5 text-orange-500" />
               <div>
                 <Label className="text-base">Dietary Restrictions</Label>
-                <p className="text-sm text-muted-foreground">Collect dietary restrictions and food preferences</p>
+                <p className="text-sm text-muted-foreground">
+                  Collect dietary restrictions and food preferences
+                </p>
               </div>
             </div>
             <Switch
               checked={config?.collectDietaryRestrictions === true}
-              onCheckedChange={(checked) => handleConfigChange("collectDietaryRestrictions", checked)}
+              onCheckedChange={(checked) =>
+                handleConfigChange("collectDietaryRestrictions", checked)
+              }
               disabled={configSaving}
             />
           </div>
@@ -591,7 +609,9 @@ export default function MedicalSettingsPage() {
               <Shield className="h-5 w-5 text-purple-500" />
               <div>
                 <Label className="text-base">Insurance Information</Label>
-                <p className="text-sm text-muted-foreground">Collect insurance provider and policy number</p>
+                <p className="text-sm text-muted-foreground">
+                  Collect insurance provider and policy number
+                </p>
               </div>
             </div>
             <Switch
@@ -611,7 +631,8 @@ export default function MedicalSettingsPage() {
             Medical Info Validity Period
           </CardTitle>
           <CardDescription>
-            How long collected medical information remains valid before athletes are asked to re-submit it
+            How long collected medical information remains valid before athletes are asked to
+            re-submit it
           </CardDescription>
         </CardHeader>
         <CardContent>

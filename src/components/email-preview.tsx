@@ -1,18 +1,18 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Loader2, ExternalLink, Monitor, Smartphone } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, ExternalLink, Monitor, Smartphone } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface EmailPreviewProps {
-  html: string
-  subject?: string
-  recipientCount?: number
-  className?: string
-  showDeviceToggle?: boolean
+  html: string;
+  subject?: string;
+  recipientCount?: number;
+  className?: string;
+  showDeviceToggle?: boolean;
 }
 
 export function EmailPreview({
@@ -22,17 +22,17 @@ export function EmailPreview({
   className,
   showDeviceToggle = true,
 }: EmailPreviewProps) {
-  const [device, setDevice] = useState<"desktop" | "mobile">("desktop")
-  const [isLoading, setIsLoading] = useState(true)
+  const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Reset loading when html changes
-    setIsLoading(true)
-  }, [html])
+    setIsLoading(true);
+  }, [html]);
 
   const handleIframeLoad = () => {
-    setIsLoading(false)
-  }
+    setIsLoading(false);
+  };
 
   return (
     <Card className={cn("overflow-hidden", className)}>
@@ -93,17 +93,17 @@ export function EmailPreview({
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 interface EmailPreviewModalProps {
-  html: string
-  isOpen: boolean
-  onClose: () => void
+  html: string;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 export function EmailPreviewModal({ html, isOpen, onClose }: EmailPreviewModalProps) {
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm">
@@ -138,17 +138,17 @@ export function EmailPreviewModal({ html, isOpen, onClose }: EmailPreviewModalPr
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 interface LiveEmailPreviewProps {
-  subject: string
-  body: string
-  targetScope: string
-  targetProgramId?: string
-  targetEventId?: string
-  targetMembershipStatus?: string
-  className?: string
+  subject: string;
+  body: string;
+  targetScope: string;
+  targetProgramId?: string;
+  targetEventId?: string;
+  targetMembershipStatus?: string;
+  className?: string;
 }
 
 export function LiveEmailPreview({
@@ -160,21 +160,21 @@ export function LiveEmailPreview({
   targetMembershipStatus,
   className,
 }: LiveEmailPreviewProps) {
-  const [html, setHtml] = useState("")
-  const [recipientCount, setRecipientCount] = useState(0)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [html, setHtml] = useState("");
+  const [recipientCount, setRecipientCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPreview = async () => {
       if (!subject || !body) {
-        setHtml("")
-        setRecipientCount(0)
-        return
+        setHtml("");
+        setRecipientCount(0);
+        return;
       }
 
-      setIsLoading(true)
-      setError(null)
+      setIsLoading(true);
+      setError(null);
 
       try {
         const response = await fetch("/api/email/campaigns/preview", {
@@ -188,34 +188,34 @@ export function LiveEmailPreview({
             targetEventId,
             targetMembershipStatus,
           }),
-        })
+        });
 
         if (!response.ok) {
-          const data = await response.json()
-          throw new Error(data.error || "Failed to generate preview")
+          const data = await response.json();
+          throw new Error(data.error || "Failed to generate preview");
         }
 
-        const data = await response.json()
-        setHtml(data.html)
-        setRecipientCount(data.recipientCount)
+        const data = await response.json();
+        setHtml(data.html);
+        setRecipientCount(data.recipientCount);
       } catch (err: any) {
-        setError(err.message)
+        setError(err.message);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
     // Debounce the preview fetch
-    const timeoutId = setTimeout(fetchPreview, 500)
-    return () => clearTimeout(timeoutId)
-  }, [subject, body, targetScope, targetProgramId, targetEventId, targetMembershipStatus])
+    const timeoutId = setTimeout(fetchPreview, 500);
+    return () => clearTimeout(timeoutId);
+  }, [subject, body, targetScope, targetProgramId, targetEventId, targetMembershipStatus]);
 
   if (error) {
     return (
       <Card className={cn("p-4", className)}>
         <p className="text-sm text-destructive">Error: {error}</p>
       </Card>
-    )
+    );
   }
 
   if (isLoading) {
@@ -225,7 +225,7 @@ export function LiveEmailPreview({
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       </Card>
-    )
+    );
   }
 
   if (!html) {
@@ -235,7 +235,7 @@ export function LiveEmailPreview({
           Enter a subject and content to see a preview
         </p>
       </Card>
-    )
+    );
   }
 
   return (
@@ -245,5 +245,5 @@ export function LiveEmailPreview({
       recipientCount={recipientCount}
       className={className}
     />
-  )
+  );
 }

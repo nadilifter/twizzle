@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
-import { executeEmailCampaign, checkEmailUsageLimits, getCampaignRecipients } from "@/lib/email-campaign-service";
+import {
+  executeEmailCampaign,
+  checkEmailUsageLimits,
+  getCampaignRecipients,
+} from "@/lib/email-campaign-service";
 
 // POST /api/email/campaigns/[id]/send - Send a campaign
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.organizationId) {
@@ -74,10 +75,7 @@ export async function POST(
     // Check usage limits
     const limits = await checkEmailUsageLimits(session.user.organizationId, recipients.length);
     if (!limits.allowed) {
-      return NextResponse.json(
-        { error: limits.error || "Email limit reached" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: limits.error || "Email limit reached" }, { status: 400 });
     }
 
     // Update recipient count (in case it changed)
@@ -99,9 +97,6 @@ export async function POST(
     });
   } catch (error) {
     console.error("Error sending email campaign:", error);
-    return NextResponse.json(
-      { error: "Failed to send campaign" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to send campaign" }, { status: 500 });
   }
 }

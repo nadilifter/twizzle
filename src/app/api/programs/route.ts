@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
-import { checkMemberCertifications, type CertCheckFailure } from "@/lib/services/certification-check";
+import {
+  checkMemberCertifications,
+  type CertCheckFailure,
+} from "@/lib/services/certification-check";
 import { z } from "zod";
 import { generateInstanceDates, calculateEndTime } from "@/lib/program-instance-utils";
 import { getEnabledHolidayDates, filterOutHolidayDates } from "@/lib/holiday-utils";
@@ -20,7 +23,10 @@ class CertificationError extends Error {
 const createProgramSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color").optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color")
+    .optional(),
   status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).default("ACTIVE"),
   pricingModel: z.enum(["FLAT_RATE", "PER_SESSION"]).default("FLAT_RATE"),
   basePrice: z.number().min(0).optional().nullable(),
@@ -66,11 +72,17 @@ const createProgramSchema = z.object({
   passRequirementIds: z.array(z.string()).optional(),
   waiverRequirementIds: z.array(z.string()).optional(),
   spaceIds: z.array(z.string()).optional(),
-  staffAssignments: z.array(z.object({
-    memberId: z.string(),
-    role: z.enum(["LEAD_COACH", "ASSISTANT_COACH", "SUBSTITUTE", "VOLUNTEER"]).default("ASSISTANT_COACH"),
-    isPrimary: z.boolean().default(false),
-  })).optional(),
+  staffAssignments: z
+    .array(
+      z.object({
+        memberId: z.string(),
+        role: z
+          .enum(["LEAD_COACH", "ASSISTANT_COACH", "SUBSTITUTE", "VOLUNTEER"])
+          .default("ASSISTANT_COACH"),
+        isPrimary: z.boolean().default(false),
+      })
+    )
+    .optional(),
   glCodeId: z.string().optional().nullable(),
   seasonId: z.string().optional().nullable(),
   categoryId: z.string().optional().nullable(),
@@ -186,10 +198,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching programs:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch programs" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch programs" }, { status: 500 });
   }
 }
 
@@ -215,19 +224,22 @@ export async function POST(request: NextRequest) {
       where: { id: session.user.organizationId! },
       include: {
         subscription: {
-          include: { plan: true }
-        }
-      }
+          include: { plan: true },
+        },
+      },
     });
 
     if (organization?.subscription?.plan?.maxPrograms) {
       const maxPrograms = organization.subscription.plan.maxPrograms;
       const currentCount = await scopedDb.program.count();
-      
+
       if (currentCount >= maxPrograms) {
-        return NextResponse.json({ 
-          error: `Programs limit reached. Your plan allows a maximum of ${maxPrograms} program${maxPrograms === 1 ? '' : 's'}. Please upgrade your plan to create more programs.` 
-        }, { status: 400 });
+        return NextResponse.json(
+          {
+            error: `Programs limit reached. Your plan allows a maximum of ${maxPrograms} program${maxPrograms === 1 ? "" : "s"}. Please upgrade your plan to create more programs.`,
+          },
+          { status: 400 }
+        );
       }
     }
 
@@ -235,7 +247,9 @@ export async function POST(request: NextRequest) {
     const validatedData = createProgramSchema.parse(body);
 
     if (validatedData.facilityId) {
-      const facility = await scopedDb.facility.findUnique({ where: { id: validatedData.facilityId } });
+      const facility = await scopedDb.facility.findUnique({
+        where: { id: validatedData.facilityId },
+      });
       if (!facility) return NextResponse.json({ error: "Facility not found" }, { status: 404 });
     }
     if (validatedData.glCodeId) {
@@ -243,33 +257,59 @@ export async function POST(request: NextRequest) {
       if (!glCode) return NextResponse.json({ error: "GL code not found" }, { status: 404 });
     }
     if (validatedData.levelRequirementIds?.length) {
-      const valid = await scopedDb.level.findMany({ where: { id: { in: validatedData.levelRequirementIds } }, select: { id: true } });
-      if (valid.length !== validatedData.levelRequirementIds.length) return NextResponse.json({ error: "One or more levels not found" }, { status: 404 });
+      const valid = await scopedDb.level.findMany({
+        where: { id: { in: validatedData.levelRequirementIds } },
+        select: { id: true },
+      });
+      if (valid.length !== validatedData.levelRequirementIds.length)
+        return NextResponse.json({ error: "One or more levels not found" }, { status: 404 });
     }
     if (validatedData.waiverRequirementIds?.length) {
-      const valid = await scopedDb.waiver.findMany({ where: { id: { in: validatedData.waiverRequirementIds } }, select: { id: true } });
-      if (valid.length !== validatedData.waiverRequirementIds.length) return NextResponse.json({ error: "One or more waivers not found" }, { status: 404 });
+      const valid = await scopedDb.waiver.findMany({
+        where: { id: { in: validatedData.waiverRequirementIds } },
+        select: { id: true },
+      });
+      if (valid.length !== validatedData.waiverRequirementIds.length)
+        return NextResponse.json({ error: "One or more waivers not found" }, { status: 404 });
     }
     if (validatedData.membershipRequirementIds?.length) {
       const valid = await db.membershipInstance.findMany({
-        where: { id: { in: validatedData.membershipRequirementIds }, group: { organizationId: session.user.organizationId } },
+        where: {
+          id: { in: validatedData.membershipRequirementIds },
+          group: { organizationId: session.user.organizationId },
+        },
         select: { id: true },
       });
-      if (valid.length !== validatedData.membershipRequirementIds.length) return NextResponse.json({ error: "One or more membership instances not found" }, { status: 404 });
+      if (valid.length !== validatedData.membershipRequirementIds.length)
+        return NextResponse.json(
+          { error: "One or more membership instances not found" },
+          { status: 404 }
+        );
     }
     if (validatedData.passRequirementIds?.length) {
-      const valid = await scopedDb.pass.findMany({ where: { id: { in: validatedData.passRequirementIds } }, select: { id: true } });
-      if (valid.length !== validatedData.passRequirementIds.length) return NextResponse.json({ error: "One or more passes not found" }, { status: 404 });
+      const valid = await scopedDb.pass.findMany({
+        where: { id: { in: validatedData.passRequirementIds } },
+        select: { id: true },
+      });
+      if (valid.length !== validatedData.passRequirementIds.length)
+        return NextResponse.json({ error: "One or more passes not found" }, { status: 404 });
     }
     if (validatedData.spaceIds?.length) {
       const valid = await db.space.findMany({
-        where: { id: { in: validatedData.spaceIds }, facility: { organizationId: session.user.organizationId } },
+        where: {
+          id: { in: validatedData.spaceIds },
+          facility: { organizationId: session.user.organizationId },
+        },
         select: { id: true },
       });
-      if (valid.length !== validatedData.spaceIds.length) return NextResponse.json({ error: "One or more spaces not found" }, { status: 404 });
+      if (valid.length !== validatedData.spaceIds.length)
+        return NextResponse.json({ error: "One or more spaces not found" }, { status: 404 });
     }
     if (validatedData.categoryId) {
-      const cat = await scopedDb.category.findUnique({ where: { id: validatedData.categoryId }, select: { id: true } });
+      const cat = await scopedDb.category.findUnique({
+        where: { id: validatedData.categoryId },
+        select: { id: true },
+      });
       if (!cat) return NextResponse.json({ error: "Category not found" }, { status: 404 });
     }
 
@@ -322,9 +362,13 @@ export async function POST(request: NextRequest) {
           waitlistAutoPromote: validatedData.waitlistAutoPromote,
           waitlistCapacity: validatedData.waitlistCapacity,
           glCodeId: validatedData.glCodeId ?? undefined,
-          registrationStartDate: validatedData.registrationStartDate ? parseDateOnly(validatedData.registrationStartDate) : null,
+          registrationStartDate: validatedData.registrationStartDate
+            ? parseDateOnly(validatedData.registrationStartDate)
+            : null,
           registrationStartTime: validatedData.registrationStartTime,
-          registrationEndDate: validatedData.registrationEndDate ? parseDateOnly(validatedData.registrationEndDate) : null,
+          registrationEndDate: validatedData.registrationEndDate
+            ? parseDateOnly(validatedData.registrationEndDate)
+            : null,
           registrationEndTime: validatedData.registrationEndTime,
           registrationOpen: validatedData.registrationOpen,
           earlyAccessCode: validatedData.earlyAccessCode,
@@ -333,12 +377,12 @@ export async function POST(request: NextRequest) {
           organizationId: session.user.organizationId,
           ...(validatedData.membershipRequirementIds?.length && {
             requiredMemberships: {
-              connect: validatedData.membershipRequirementIds.map(id => ({ id })),
+              connect: validatedData.membershipRequirementIds.map((id) => ({ id })),
             },
           }),
           ...(validatedData.passRequirementIds?.length && {
             requiredPasses: {
-              connect: validatedData.passRequirementIds.map(id => ({ id })),
+              connect: validatedData.passRequirementIds.map((id) => ({ id })),
             },
           }),
         },
@@ -347,7 +391,7 @@ export async function POST(request: NextRequest) {
       // Create level requirements if provided
       if (validatedData.levelRequirementIds?.length) {
         await tx.programLevelRequirement.createMany({
-          data: validatedData.levelRequirementIds.map(levelId => ({
+          data: validatedData.levelRequirementIds.map((levelId) => ({
             programId: newProgram.id,
             levelId,
           })),
@@ -357,7 +401,7 @@ export async function POST(request: NextRequest) {
       // Create waiver requirements if provided
       if (validatedData.waiverRequirementIds?.length) {
         await tx.programWaiverRequirement.createMany({
-          data: validatedData.waiverRequirementIds.map(waiverId => ({
+          data: validatedData.waiverRequirementIds.map((waiverId) => ({
             programId: newProgram.id,
             waiverId,
           })),
@@ -378,7 +422,7 @@ export async function POST(request: NextRequest) {
         }
 
         await tx.programStaff.createMany({
-          data: validatedData.staffAssignments.map(sa => ({
+          data: validatedData.staffAssignments.map((sa) => ({
             programId: newProgram.id,
             memberId: sa.memberId,
             role: sa.role,
@@ -390,7 +434,7 @@ export async function POST(request: NextRequest) {
       // Create space assignments if provided
       if (validatedData.spaceIds?.length) {
         await tx.programSpace.createMany({
-          data: validatedData.spaceIds.map(spaceId => ({
+          data: validatedData.spaceIds.map((spaceId) => ({
             programId: newProgram.id,
             spaceId,
           })),
@@ -402,17 +446,17 @@ export async function POST(request: NextRequest) {
         const startDate = parseDateOnly(validatedData.startDate)!;
         const endDate = validatedData.endDate ? parseDateOnly(validatedData.endDate)! : startDate;
         const endTime = calculateEndTime(validatedData.startTime, validatedData.duration);
-        
+
         const allDates = validatedData.rrule
           ? generateInstanceDates(startDate, endDate, validatedData.rrule)
           : [startDate];
 
         const instanceDates = filterOutHolidayDates(allDates, holidayDates);
-        
+
         // Create program instances
         if (instanceDates.length > 0) {
           await tx.programInstance.createMany({
-            data: instanceDates.map(date => ({
+            data: instanceDates.map((date) => ({
               programId: newProgram.id,
               date,
               startTime: validatedData.startTime!,
@@ -430,8 +474,8 @@ export async function POST(request: NextRequest) {
               select: { id: true },
             });
 
-            const instanceSpaceData = createdInstances.flatMap(inst =>
-              validatedData.spaceIds!.map(spaceId => ({
+            const instanceSpaceData = createdInstances.flatMap((inst) =>
+              validatedData.spaceIds!.map((spaceId) => ({
                 programInstanceId: inst.id,
                 spaceId,
               }))
@@ -514,15 +558,9 @@ export async function POST(request: NextRequest) {
       );
     }
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating program:", error);
-    return NextResponse.json(
-      { error: "Failed to create program" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create program" }, { status: 500 });
   }
 }

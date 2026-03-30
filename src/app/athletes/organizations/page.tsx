@@ -6,16 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Building2,
-  ExternalLink,
-  Mail,
-  MapPin,
-  Phone,
-  Settings,
-  User,
-  Users,
-} from "lucide-react";
+import { Building2, ExternalLink, Mail, MapPin, Phone, Settings, User, Users } from "lucide-react";
 
 interface OrgConnection {
   type: "member" | "athlete";
@@ -72,8 +63,7 @@ export default function MyOrganizationsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">My Organizations</h1>
         <Badge variant="secondary">
-          {organizations.length}{" "}
-          {organizations.length === 1 ? "organization" : "organizations"}
+          {organizations.length} {organizations.length === 1 ? "organization" : "organizations"}
         </Badge>
       </div>
 
@@ -83,8 +73,7 @@ export default function MyOrganizationsPage() {
             <Building2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground/40" />
             <h3 className="font-semibold text-lg mb-1">No organizations</h3>
             <p className="text-sm text-muted-foreground">
-              Organizations that you or your athletes are connected to will
-              appear here.
+              Organizations that you or your athletes are connected to will appear here.
             </p>
           </CardContent>
         </Card>
@@ -101,9 +90,7 @@ export default function MyOrganizationsPage() {
                     className="shrink-0"
                   >
                     <Avatar className="h-12 w-12 rounded-lg">
-                      {org.logo && (
-                        <AvatarImage src={org.logo} alt={org.name} />
-                      )}
+                      {org.logo && <AvatarImage src={org.logo} alt={org.name} />}
                       <AvatarFallback className="rounded-lg bg-primary/10 text-primary">
                         <Building2 className="h-6 w-6" />
                       </AvatarFallback>
@@ -125,17 +112,12 @@ export default function MyOrganizationsPage() {
                           <ExternalLink className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                         </a>
 
-                        {(org.city ||
-                          org.stateProvince ||
-                          org.email ||
-                          org.phone) && (
+                        {(org.city || org.stateProvince || org.email || org.phone) && (
                           <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
                             {(org.city || org.stateProvince) && (
                               <span className="text-xs text-muted-foreground flex items-center gap-1">
                                 <MapPin className="h-3 w-3" />
-                                {[org.city, org.stateProvince]
-                                  .filter(Boolean)
-                                  .join(", ")}
+                                {[org.city, org.stateProvince].filter(Boolean).join(", ")}
                               </span>
                             )}
                             {org.email && (
@@ -155,12 +137,7 @@ export default function MyOrganizationsPage() {
                       </div>
 
                       {org.dashboardUrl && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          asChild
-                          className="shrink-0"
-                        >
+                        <Button variant="outline" size="sm" asChild className="shrink-0">
                           <a href={org.dashboardUrl}>
                             <Settings className="h-3.5 w-3.5 mr-1.5" />
                             Dashboard
@@ -171,11 +148,7 @@ export default function MyOrganizationsPage() {
 
                     <div className="flex flex-wrap gap-1.5 mt-3">
                       {org.connections.map((conn, i) => (
-                        <Badge
-                          key={i}
-                          variant="outline"
-                          className="text-xs font-normal"
-                        >
+                        <Badge key={i} variant="outline" className="text-xs font-normal">
                           {conn.type === "member" ? (
                             <Users className="h-3 w-3 mr-1" />
                           ) : (

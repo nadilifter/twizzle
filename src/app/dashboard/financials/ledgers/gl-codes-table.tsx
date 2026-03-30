@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   type ColumnDef,
   type ColumnFiltersState,
@@ -12,15 +12,15 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table"
-import { Download, MoreHorizontal, Plus, Upload, ExternalLink } from "lucide-react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+} from "@tanstack/react-table";
+import { Download, MoreHorizontal, Plus, Upload, ExternalLink } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
-import { DataTablePagination } from "@/components/data-table/data-table-pagination"
-import { DataTableViewOptions } from "@/components/data-table/data-table-view-options"
-import { Button } from "@/components/ui/button"
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,8 +28,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -37,85 +37,90 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Textarea } from "@/components/ui/textarea"
-import { toast } from "sonner"
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 export interface GLCode {
-  id: string
-  code: string
-  description: string
-  type: string
-  status: "Active" | "Inactive"
+  id: string;
+  code: string;
+  description: string;
+  type: string;
+  status: "Active" | "Inactive";
 }
 
 const getBadgeColor = (type: string) => {
   switch (type) {
     case "Revenue":
-      return "bg-emerald-500 hover:bg-emerald-600 border-emerald-500/50 text-white"
+      return "bg-emerald-500 hover:bg-emerald-600 border-emerald-500/50 text-white";
     case "Expense":
-      return "bg-rose-500 hover:bg-rose-600 border-rose-500/50 text-white"
+      return "bg-rose-500 hover:bg-rose-600 border-rose-500/50 text-white";
     case "Liability":
-      return "bg-amber-500 hover:bg-amber-600 border-amber-500/50 text-white"
+      return "bg-amber-500 hover:bg-amber-600 border-amber-500/50 text-white";
     case "Asset":
-      return "bg-blue-500 hover:bg-blue-600 border-blue-500/50 text-white"
+      return "bg-blue-500 hover:bg-blue-600 border-blue-500/50 text-white";
     case "Equity":
-      return "bg-purple-500 hover:bg-purple-600 border-purple-500/50 text-white"
+      return "bg-purple-500 hover:bg-purple-600 border-purple-500/50 text-white";
     default:
-      return "bg-slate-500 hover:bg-slate-600 border-slate-500/50 text-white"
+      return "bg-slate-500 hover:bg-slate-600 border-slate-500/50 text-white";
   }
-}
+};
 
 export const columns: ColumnDef<GLCode>[] = [
   {
     accessorKey: "code",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Code" />
-    ),
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Code" />,
     cell: ({ row }) => (
-      <Link href={`/dashboard/financials/ledgers/${row.original.id}`} className="font-medium text-primary hover:underline">
+      <Link
+        href={`/dashboard/financials/ledgers/${row.original.id}`}
+        className="font-medium text-primary hover:underline"
+      >
         {row.getValue("code")}
       </Link>
     ),
   },
   {
     accessorKey: "description",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Description" />
-    ),
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Description" />,
     cell: ({ row }) => <div>{row.getValue("description")}</div>,
   },
   {
     accessorKey: "type",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Type" />
-    ),
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
     cell: ({ row }) => {
-      const type = row.getValue("type") as string
-      return <Badge className={getBadgeColor(type)}>{type}</Badge>
+      const type = row.getValue("type") as string;
+      return <Badge className={getBadgeColor(type)}>{type}</Badge>;
     },
   },
   {
     accessorKey: "status",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Status" />
-    ),
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
     cell: ({ row }) => {
-      const status = row.getValue("status") as string
+      const status = row.getValue("status") as string;
       return (
-        <Badge variant={status === "Active" ? "default" : "secondary"} className={status === "Active" ? "bg-green-500 hover:bg-green-600" : ""}>
+        <Badge
+          variant={status === "Active" ? "default" : "secondary"}
+          className={status === "Active" ? "bg-green-500 hover:bg-green-600" : ""}
+        >
           {status}
         </Badge>
-      )
+      );
     },
   },
   {
     id: "actions",
     enableHiding: false,
     cell: ({ row }) => {
-      const glCode = row.original
+      const glCode = row.original;
 
       return (
         <div className="text-right">
@@ -134,9 +139,7 @@ export const columns: ColumnDef<GLCode>[] = [
                   View Details
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => navigator.clipboard.writeText(glCode.code)}
-              >
+              <DropdownMenuItem onClick={() => navigator.clipboard.writeText(glCode.code)}>
                 Copy GL Code
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -145,24 +148,24 @@ export const columns: ColumnDef<GLCode>[] = [
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      )
+      );
     },
   },
-]
+];
 
 interface GLCodesTableProps {
-  data: GLCode[]
-  onAddClick?: () => void
+  data: GLCode[];
+  onAddClick?: () => void;
 }
 
 export function GLCodesTable({ data, onAddClick }: GLCodesTableProps) {
-  const router = useRouter()
-  const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
+  const router = useRouter();
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
 
-  const [isImportOpen, setIsImportOpen] = React.useState(false)
-  const [csvContent, setCsvContent] = React.useState("")
+  const [isImportOpen, setIsImportOpen] = React.useState(false);
+  const [csvContent, setCsvContent] = React.useState("");
 
   const table = useReactTable({
     data,
@@ -182,39 +185,39 @@ export function GLCodesTable({ data, onAddClick }: GLCodesTableProps) {
     initialState: {
       pagination: { pageSize: 20 },
     },
-  })
+  });
 
   const handleExportCSV = () => {
-    const headers = ["ID", "Code", "Description", "Type", "Status"]
-    const rows = data.map(item =>
+    const headers = ["ID", "Code", "Description", "Type", "Status"];
+    const rows = data.map((item) =>
       [item.id, item.code, item.description, item.type, item.status].join(",")
-    )
-    const csvString = [headers.join(","), ...rows].join("\n")
+    );
+    const csvString = [headers.join(","), ...rows].join("\n");
 
-    const blob = new Blob([csvString], { type: "text/csv" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = "gl_codes_export.csv"
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    const blob = new Blob([csvString], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "gl_codes_export.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 
-    toast.success("GL Codes exported successfully")
-  }
+    toast.success("GL Codes exported successfully");
+  };
 
   const handleImportCSV = () => {
     if (!csvContent) {
-      toast.error("Please enter CSV content")
-      return
+      toast.error("Please enter CSV content");
+      return;
     }
 
-    console.log("Importing CSV:", csvContent)
+    console.log("Importing CSV:", csvContent);
 
-    toast.success("GL Codes imported successfully (Simulation)")
-    setCsvContent("")
-    setIsImportOpen(false)
-  }
+    toast.success("GL Codes imported successfully (Simulation)");
+    setCsvContent("");
+    setIsImportOpen(false);
+  };
 
   return (
     <div className="w-full space-y-4">
@@ -222,9 +225,7 @@ export function GLCodesTable({ data, onAddClick }: GLCodesTableProps) {
         <Input
           placeholder="Filter descriptions..."
           value={(table.getColumn("description")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("description")?.setFilterValue(event.target.value)
-          }
+          onChange={(event) => table.getColumn("description")?.setFilterValue(event.target.value)}
           className="max-w-sm"
         />
         <div className="flex items-center gap-2">
@@ -254,10 +255,7 @@ export function GLCodesTable({ data, onAddClick }: GLCodesTableProps) {
                   <TableHead key={header.id} colSpan={header.colSpan}>
                     {header.isPlaceholder
                       ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                      : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -274,20 +272,14 @@ export function GLCodesTable({ data, onAddClick }: GLCodesTableProps) {
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
+                <TableCell colSpan={columns.length} className="h-24 text-center">
                   No results.
                 </TableCell>
               </TableRow>
@@ -314,11 +306,13 @@ export function GLCodesTable({ data, onAddClick }: GLCodesTableProps) {
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsImportOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setIsImportOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={handleImportCSV}>Import</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

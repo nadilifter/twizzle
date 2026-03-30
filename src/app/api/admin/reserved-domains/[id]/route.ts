@@ -17,7 +17,7 @@ export async function DELETE(
 
     // Check if the reserved domain exists
     const existing = await db.reservedDomain.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!existing) {
@@ -25,7 +25,7 @@ export async function DELETE(
     }
 
     await db.reservedDomain.delete({
-      where: { id }
+      where: { id },
     });
 
     return NextResponse.json({ success: true });
@@ -36,10 +36,7 @@ export async function DELETE(
 }
 
 // GET - Get a single reserved domain
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.isSuperAdmin) {
@@ -49,7 +46,7 @@ export async function GET(
     const { id } = await params;
 
     const reservedDomain = await db.reservedDomain.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!reservedDomain) {

@@ -60,9 +60,12 @@ interface EnrolledAthlete {
 
 const EVENT_TYPE_STYLES: Record<string, string> = {
   CLASS: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800",
-  CLINIC: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800",
-  TRYOUT: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800",
-  MEETING: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800",
+  CLINIC:
+    "bg-green-500/10 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800",
+  TRYOUT:
+    "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800",
+  MEETING:
+    "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800",
   OTHER: "bg-muted text-muted-foreground",
 };
 
@@ -83,7 +86,11 @@ function CoachAttendanceContent() {
   const [loadingAthletes, setLoadingAthletes] = useState(false);
   const [bulkUpdating, setBulkUpdating] = useState(false);
 
-  const { events, isLoading: loadingEvents, fetchEvents } = useCoachEvents({
+  const {
+    events,
+    isLoading: loadingEvents,
+    fetchEvents,
+  } = useCoachEvents({
     autoFetch: false,
   });
   const {
@@ -116,12 +123,17 @@ function CoachAttendanceContent() {
     if (selectedEventId) {
       fetchEnrolledAthletes(selectedEventId);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedEventId, events]);
 
   // Auto-select initial event from URL or clear if events change
   useEffect(() => {
-    if (selectedEventId && !events.find((e) => e.id === selectedEventId) && events.length > 0 && !initialEventId) {
+    if (
+      selectedEventId &&
+      !events.find((e) => e.id === selectedEventId) &&
+      events.length > 0 &&
+      !initialEventId
+    ) {
       setSelectedEventId(null);
     }
   }, [events, selectedEventId, initialEventId]);
@@ -229,17 +241,37 @@ function CoachAttendanceContent() {
   const getStatusBadge = (status?: AttendanceStatus) => {
     switch (status) {
       case "PRESENT":
-        return <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-200">Present</Badge>;
+        return (
+          <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-200">
+            Present
+          </Badge>
+        );
       case "ABSENT":
-        return <Badge className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-200">Absent</Badge>;
+        return (
+          <Badge className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-200">
+            Absent
+          </Badge>
+        );
       case "LATE":
-        return <Badge className="bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-200">Late</Badge>;
+        return (
+          <Badge className="bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-200">
+            Late
+          </Badge>
+        );
       case "EXCUSED":
-        return <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200">Excused</Badge>;
+        return (
+          <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200">
+            Excused
+          </Badge>
+        );
       case "REGISTERED":
         return <Badge variant="outline">Registered</Badge>;
       default:
-        return <Badge variant="outline" className="text-muted-foreground">Not marked</Badge>;
+        return (
+          <Badge variant="outline" className="text-muted-foreground">
+            Not marked
+          </Badge>
+        );
     }
   };
 
@@ -445,7 +477,9 @@ function CoachAttendanceContent() {
                             <Button
                               size="icon"
                               variant={currentStatus === "PRESENT" ? "default" : "outline"}
-                              className={currentStatus === "PRESENT" ? "bg-green-600 hover:bg-green-700" : ""}
+                              className={
+                                currentStatus === "PRESENT" ? "bg-green-600 hover:bg-green-700" : ""
+                              }
                               onClick={() => handleMarkAttendance(athlete.id, "PRESENT")}
                               disabled={isUpdating || bulkUpdating}
                               title="Present"
@@ -455,7 +489,9 @@ function CoachAttendanceContent() {
                             <Button
                               size="icon"
                               variant={currentStatus === "LATE" ? "default" : "outline"}
-                              className={currentStatus === "LATE" ? "bg-yellow-600 hover:bg-yellow-700" : ""}
+                              className={
+                                currentStatus === "LATE" ? "bg-yellow-600 hover:bg-yellow-700" : ""
+                              }
                               onClick={() => handleMarkAttendance(athlete.id, "LATE")}
                               disabled={isUpdating || bulkUpdating}
                               title="Late"
@@ -465,7 +501,9 @@ function CoachAttendanceContent() {
                             <Button
                               size="icon"
                               variant={currentStatus === "ABSENT" ? "default" : "outline"}
-                              className={currentStatus === "ABSENT" ? "bg-red-600 hover:bg-red-700" : ""}
+                              className={
+                                currentStatus === "ABSENT" ? "bg-red-600 hover:bg-red-700" : ""
+                              }
                               onClick={() => handleMarkAttendance(athlete.id, "ABSENT")}
                               disabled={isUpdating || bulkUpdating}
                               title="Absent"
@@ -475,7 +513,9 @@ function CoachAttendanceContent() {
                             <Button
                               size="icon"
                               variant={currentStatus === "EXCUSED" ? "default" : "outline"}
-                              className={currentStatus === "EXCUSED" ? "bg-blue-600 hover:bg-blue-700" : ""}
+                              className={
+                                currentStatus === "EXCUSED" ? "bg-blue-600 hover:bg-blue-700" : ""
+                              }
                               onClick={() => handleMarkAttendance(athlete.id, "EXCUSED")}
                               disabled={isUpdating || bulkUpdating}
                               title="Excused"
@@ -520,8 +560,7 @@ function CoachAttendanceContent() {
               {dateRange?.from ? (
                 dateRange.to ? (
                   <>
-                    {format(dateRange.from, "MMM d")} -{" "}
-                    {format(dateRange.to, "MMM d, yyyy")}
+                    {format(dateRange.from, "MMM d")} - {format(dateRange.to, "MMM d, yyyy")}
                   </>
                 ) : (
                   format(dateRange.from, "MMM d, yyyy")
@@ -565,8 +604,8 @@ function CoachAttendanceContent() {
             <CalendarDays className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="font-semibold mb-2">No Classes Found</h3>
             <p className="text-muted-foreground">
-              You don&apos;t have any classes assigned in this date range. Try
-              adjusting the dates or check your schedule.
+              You don&apos;t have any classes assigned in this date range. Try adjusting the dates
+              or check your schedule.
             </p>
           </CardContent>
         </Card>
@@ -584,21 +623,13 @@ function CoachAttendanceContent() {
                   <h3
                     className={cn(
                       "text-sm font-semibold uppercase tracking-wider",
-                      today
-                        ? "text-primary"
-                        : isPast
-                          ? "text-muted-foreground"
-                          : ""
+                      today ? "text-primary" : isPast ? "text-muted-foreground" : ""
                     )}
                   >
-                    {today
-                      ? "Today"
-                      : format(date, "EEEE, MMM d")}
+                    {today ? "Today" : format(date, "EEEE, MMM d")}
                   </h3>
                   {today && (
-                    <span className="text-xs text-muted-foreground">
-                      {format(date, "MMM d")}
-                    </span>
+                    <span className="text-xs text-muted-foreground">{format(date, "MMM d")}</span>
                   )}
                   <Badge variant="secondary" className="text-xs">
                     {dayEvents.length}
@@ -618,14 +649,11 @@ function CoachAttendanceContent() {
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <h4 className="font-semibold truncate">
-                                  {event.title}
-                                </h4>
+                                <h4 className="font-semibold truncate">{event.title}</h4>
                                 <Badge
                                   variant="outline"
                                   className={
-                                    EVENT_TYPE_STYLES[event.type] ??
-                                    EVENT_TYPE_STYLES.OTHER
+                                    EVENT_TYPE_STYLES[event.type] ?? EVENT_TYPE_STYLES.OTHER
                                   }
                                 >
                                   {event.type}
@@ -689,8 +717,7 @@ function CoachAttendanceContent() {
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground text-center">
-              {events.length} class{events.length !== 1 ? "es" : ""} in selected
-              range
+              {events.length} class{events.length !== 1 ? "es" : ""} in selected range
             </p>
           </CardContent>
         </Card>

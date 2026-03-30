@@ -44,23 +44,26 @@ export function usePasses(options: UsePassesOptions = {}): UsePassesReturn {
   const [error, setError] = useState<string | null>(null);
   const [currentParams, setCurrentParams] = useState<PassesQueryParams>(initialParams);
 
-  const fetchPasses = useCallback(async (params?: PassesQueryParams) => {
-    const queryParams = params ?? currentParams;
-    setCurrentParams(queryParams);
-    setIsLoading(true);
-    setError(null);
+  const fetchPasses = useCallback(
+    async (params?: PassesQueryParams) => {
+      const queryParams = params ?? currentParams;
+      setCurrentParams(queryParams);
+      setIsLoading(true);
+      setError(null);
 
-    try {
-      const response = await api.get<PassesListResponse>("/api/passes", queryParams);
-      setPasses(response.data);
-      setTotal(response.total);
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to fetch passes";
-      setError(message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentParams]);
+      try {
+        const response = await api.get<PassesListResponse>("/api/passes", queryParams);
+        setPasses(response.data);
+        setTotal(response.total);
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to fetch passes";
+        setError(message);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [currentParams]
+  );
 
   const createPass = useCallback(async (data: CreatePassPayload): Promise<Pass | null> => {
     setIsCreating(true);
@@ -142,7 +145,10 @@ interface UsePassReturn {
   updatePass: (data: UpdatePassPayload) => Promise<Pass | null>;
   addProgram: (programId: string) => Promise<boolean>;
   removeProgram: (programId: string) => Promise<boolean>;
-  addAthlete: (athleteId: string, data: { startDate: string; endDate?: string; autoRenew?: boolean }) => Promise<boolean>;
+  addAthlete: (
+    athleteId: string,
+    data: { startDate: string; endDate?: string; autoRenew?: boolean }
+  ) => Promise<boolean>;
   removeAthlete: (athleteId: string) => Promise<boolean>;
   clearError: () => void;
 }
@@ -172,86 +178,101 @@ export function usePass(passId: string | null, options: UsePassOptions = {}): Us
     }
   }, [passId]);
 
-  const updatePass = useCallback(async (data: UpdatePassPayload): Promise<Pass | null> => {
-    if (!passId) return null;
-    setIsUpdating(true);
-    setError(null);
+  const updatePass = useCallback(
+    async (data: UpdatePassPayload): Promise<Pass | null> => {
+      if (!passId) return null;
+      setIsUpdating(true);
+      setError(null);
 
-    try {
-      const updated = await api.patch<Pass>(`/api/passes/${passId}`, data);
-      setPass(updated);
-      return updated;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to update pass";
-      setError(message);
-      return null;
-    } finally {
-      setIsUpdating(false);
-    }
-  }, [passId]);
+      try {
+        const updated = await api.patch<Pass>(`/api/passes/${passId}`, data);
+        setPass(updated);
+        return updated;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to update pass";
+        setError(message);
+        return null;
+      } finally {
+        setIsUpdating(false);
+      }
+    },
+    [passId]
+  );
 
-  const addProgram = useCallback(async (programId: string): Promise<boolean> => {
-    if (!passId) return false;
-    setError(null);
+  const addProgram = useCallback(
+    async (programId: string): Promise<boolean> => {
+      if (!passId) return false;
+      setError(null);
 
-    try {
-      await api.post(`/api/passes/${passId}/programs`, { programId });
-      await fetchPass();
-      return true;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to add program";
-      setError(message);
-      return false;
-    }
-  }, [passId, fetchPass]);
+      try {
+        await api.post(`/api/passes/${passId}/programs`, { programId });
+        await fetchPass();
+        return true;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to add program";
+        setError(message);
+        return false;
+      }
+    },
+    [passId, fetchPass]
+  );
 
-  const removeProgram = useCallback(async (programId: string): Promise<boolean> => {
-    if (!passId) return false;
-    setError(null);
+  const removeProgram = useCallback(
+    async (programId: string): Promise<boolean> => {
+      if (!passId) return false;
+      setError(null);
 
-    try {
-      await api.delete(`/api/passes/${passId}/programs`, { programId });
-      await fetchPass();
-      return true;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to remove program";
-      setError(message);
-      return false;
-    }
-  }, [passId, fetchPass]);
+      try {
+        await api.delete(`/api/passes/${passId}/programs`, { programId });
+        await fetchPass();
+        return true;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to remove program";
+        setError(message);
+        return false;
+      }
+    },
+    [passId, fetchPass]
+  );
 
-  const addAthlete = useCallback(async (
-    athleteId: string,
-    data: { startDate: string; endDate?: string; autoRenew?: boolean }
-  ): Promise<boolean> => {
-    if (!passId) return false;
-    setError(null);
+  const addAthlete = useCallback(
+    async (
+      athleteId: string,
+      data: { startDate: string; endDate?: string; autoRenew?: boolean }
+    ): Promise<boolean> => {
+      if (!passId) return false;
+      setError(null);
 
-    try {
-      await api.post(`/api/passes/${passId}/athletes`, { athleteId, ...data });
-      await fetchPass();
-      return true;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to add athlete";
-      setError(message);
-      return false;
-    }
-  }, [passId, fetchPass]);
+      try {
+        await api.post(`/api/passes/${passId}/athletes`, { athleteId, ...data });
+        await fetchPass();
+        return true;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to add athlete";
+        setError(message);
+        return false;
+      }
+    },
+    [passId, fetchPass]
+  );
 
-  const removeAthlete = useCallback(async (athleteId: string): Promise<boolean> => {
-    if (!passId) return false;
-    setError(null);
+  const removeAthlete = useCallback(
+    async (athleteId: string): Promise<boolean> => {
+      if (!passId) return false;
+      setError(null);
 
-    try {
-      await api.delete(`/api/passes/${passId}/athletes`, { athleteId });
-      await fetchPass();
-      return true;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to remove athlete";
-      setError(message);
-      return false;
-    }
-  }, [passId, fetchPass]);
+      try {
+        await api.delete(`/api/passes/${passId}/athletes`, { athleteId });
+        await fetchPass();
+        return true;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to remove athlete";
+        setError(message);
+        return false;
+      }
+    },
+    [passId, fetchPass]
+  );
 
   const clearError = useCallback(() => {
     setError(null);

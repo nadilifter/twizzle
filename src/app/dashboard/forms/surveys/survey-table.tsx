@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -12,13 +12,13 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table"
-import { MoreHorizontal, Plus } from "lucide-react"
+} from "@tanstack/react-table";
+import { MoreHorizontal, Plus } from "lucide-react";
 
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
-import { DataTablePagination } from "@/components/data-table/data-table-pagination"
-import { DataTableViewOptions } from "@/components/data-table/data-table-view-options"
-import { Button } from "@/components/ui/button"
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,8 +26,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -35,16 +35,16 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 export type Survey = {
-  id: string
-  title: string
-  status: "active" | "draft" | "closed"
-  responses: number
-  createdAt: string
-}
+  id: string;
+  title: string;
+  status: "active" | "draft" | "closed";
+  responses: number;
+  createdAt: string;
+};
 
 export const columns: ColumnDef<Survey>[] = [
   {
@@ -56,12 +56,14 @@ export const columns: ColumnDef<Survey>[] = [
     accessorKey: "status",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
     cell: ({ row }) => {
-      const status = row.getValue("status") as string
+      const status = row.getValue("status") as string;
       return (
-        <Badge variant={status === "active" ? "default" : status === "draft" ? "secondary" : "outline"}>
+        <Badge
+          variant={status === "active" ? "default" : status === "draft" ? "secondary" : "outline"}
+        >
           {status.charAt(0).toUpperCase() + status.slice(1)}
         </Badge>
-      )
+      );
     },
   },
   {
@@ -78,7 +80,7 @@ export const columns: ColumnDef<Survey>[] = [
     id: "actions",
     enableHiding: false,
     cell: ({ row }) => {
-      const survey = row.original
+      const survey = row.original;
 
       return (
         <DropdownMenu>
@@ -90,9 +92,7 @@ export const columns: ColumnDef<Survey>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(survey.id)}
-            >
+            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(survey.id)}>
               Copy ID
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -101,19 +101,16 @@ export const columns: ColumnDef<Survey>[] = [
             <DropdownMenuItem className="text-destructive">Delete Survey</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      )
+      );
     },
   },
-]
+];
 
 export function SurveyTable({ data }: { data: Survey[] }) {
-  const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  )
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = React.useState({})
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = React.useState({});
 
   const table = useReactTable({
     data,
@@ -135,7 +132,7 @@ export function SurveyTable({ data }: { data: Survey[] }) {
     initialState: {
       pagination: { pageSize: 20 },
     },
-  })
+  });
 
   return (
     <div className="flex flex-col gap-4">
@@ -143,9 +140,7 @@ export function SurveyTable({ data }: { data: Survey[] }) {
         <Input
           placeholder="Filter surveys..."
           value={(table.getColumn("title")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("title")?.setFilterValue(event.target.value)
-          }
+          onChange={(event) => table.getColumn("title")?.setFilterValue(event.target.value)}
           className="max-w-sm"
         />
         <div className="flex items-center gap-2">
@@ -167,12 +162,9 @@ export function SurveyTable({ data }: { data: Survey[] }) {
                     <TableHead key={header.id}>
                       {header.isPlaceholder
                         ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                        : flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
-                  )
+                  );
                 })}
               </TableRow>
             ))}
@@ -180,26 +172,17 @@ export function SurveyTable({ data }: { data: Survey[] }) {
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
+                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
+                <TableCell colSpan={columns.length} className="h-24 text-center">
                   No results.
                 </TableCell>
               </TableRow>
@@ -209,5 +192,5 @@ export function SurveyTable({ data }: { data: Survey[] }) {
       </div>
       <DataTablePagination table={table} pageSizeOptions={[10, 20, 30, 50]} />
     </div>
-  )
+  );
 }

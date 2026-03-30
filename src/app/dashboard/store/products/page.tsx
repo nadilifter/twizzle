@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Image from "next/image"
+import * as React from "react";
+import Image from "next/image";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -13,7 +13,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table"
+} from "@tanstack/react-table";
 import {
   Table,
   TableBody,
@@ -21,12 +21,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Switch } from "@/components/ui/switch"
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,7 +34,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -43,88 +43,88 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
-import { DataTablePagination } from "@/components/data-table/data-table-pagination"
-import { DataTableViewOptions } from "@/components/data-table/data-table-view-options"
-import { 
-  MoreHorizontal, 
-  Plus, 
-  Search, 
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
+import {
+  MoreHorizontal,
+  Plus,
+  Search,
   Package,
   AlertCircle,
   Infinity,
   RefreshCw,
   Loader2,
   Trash2,
-} from "lucide-react"
-import { toast } from "sonner"
-import { GLCodeSelector } from "@/components/gl-code-selector"
-import { ImageUpload } from "@/components/ui/image-upload"
+} from "lucide-react";
+import { toast } from "sonner";
+import { GLCodeSelector } from "@/components/gl-code-selector";
+import { ImageUpload } from "@/components/ui/image-upload";
 
 type ProductVariant = {
-  id?: string
-  label: string
-  price: number | null
-  imageUrl: string | null
-  maxInventory: number | null
-  currentInventory: number | null
-  sortOrder: number
-  isActive: boolean
-}
+  id?: string;
+  label: string;
+  price: number | null;
+  imageUrl: string | null;
+  maxInventory: number | null;
+  currentInventory: number | null;
+  sortOrder: number;
+  isActive: boolean;
+};
 
 type Product = {
-  id: string
-  name: string
-  description: string | null
-  sku: string | null
-  category: string
-  price: number
-  imageUrl: string | null
-  maxInventory: number | null
-  currentInventory: number | null
-  typeName: string | null
-  variants: ProductVariant[]
-  isActive: boolean
-  createdAt: string
-  updatedAt: string
-}
+  id: string;
+  name: string;
+  description: string | null;
+  sku: string | null;
+  category: string;
+  price: number;
+  imageUrl: string | null;
+  maxInventory: number | null;
+  currentInventory: number | null;
+  typeName: string | null;
+  variants: ProductVariant[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
 
 type VariantFormData = {
-  id?: string
-  label: string
-  price: string
-  imageUrl: string
-  maxInventory: string
-  currentInventory: string
-  isUnlimited: boolean
-}
+  id?: string;
+  label: string;
+  price: string;
+  imageUrl: string;
+  maxInventory: string;
+  currentInventory: string;
+  isUnlimited: boolean;
+};
 
 type ProductFormData = {
-  name: string
-  description: string
-  sku: string
-  category: string
-  price: number
-  imageUrl: string
-  maxInventory: number | null
-  currentInventory: number | null
-  isUnlimited: boolean
-  isActive: boolean
-  glCodeId: string | null
-  hasType: boolean
-  typeName: string
-  variants: VariantFormData[]
-}
+  name: string;
+  description: string;
+  sku: string;
+  category: string;
+  price: number;
+  imageUrl: string;
+  maxInventory: number | null;
+  currentInventory: number | null;
+  isUnlimited: boolean;
+  isActive: boolean;
+  glCodeId: string | null;
+  hasType: boolean;
+  typeName: string;
+  variants: VariantFormData[];
+};
 
 const defaultVariant: VariantFormData = {
   label: "",
@@ -133,7 +133,7 @@ const defaultVariant: VariantFormData = {
   maxInventory: "10",
   currentInventory: "10",
   isUnlimited: false,
-}
+};
 
 const defaultFormData: ProductFormData = {
   name: "",
@@ -150,85 +150,85 @@ const defaultFormData: ProductFormData = {
   hasType: false,
   typeName: "",
   variants: [],
-}
+};
 
-const defaultCategories = ["General", "Drinks/Snacks", "Equipment", "Merchandise", "Services"]
+const defaultCategories = ["General", "Drinks/Snacks", "Equipment", "Merchandise", "Services"];
 
 export default function StorePage() {
-  const [products, setProducts] = React.useState<Product[]>([])
-  const [categories, setCategories] = React.useState<string[]>(defaultCategories)
-  const [isLoading, setIsLoading] = React.useState(true)
-  const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = React.useState({})
-  
+  const [products, setProducts] = React.useState<Product[]>([]);
+  const [categories, setCategories] = React.useState<string[]>(defaultCategories);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = React.useState({});
+
   // Dialog state
-  const [dialogOpen, setDialogOpen] = React.useState(false)
-  const [restockDialogOpen, setRestockDialogOpen] = React.useState(false)
-  const [editingProduct, setEditingProduct] = React.useState<Product | null>(null)
-  const [restockingProduct, setRestockingProduct] = React.useState<Product | null>(null)
-  const [formData, setFormData] = React.useState<ProductFormData>(defaultFormData)
-  const [isSaving, setIsSaving] = React.useState(false)
-  const [restockQuantity, setRestockQuantity] = React.useState<number>(0)
-  const [restockType, setRestockType] = React.useState<"add" | "set" | "max">("add")
-  const [restockVariantId, setRestockVariantId] = React.useState<string>("")
+  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [restockDialogOpen, setRestockDialogOpen] = React.useState(false);
+  const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
+  const [restockingProduct, setRestockingProduct] = React.useState<Product | null>(null);
+  const [formData, setFormData] = React.useState<ProductFormData>(defaultFormData);
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [restockQuantity, setRestockQuantity] = React.useState<number>(0);
+  const [restockType, setRestockType] = React.useState<"add" | "set" | "max">("add");
+  const [restockVariantId, setRestockVariantId] = React.useState<string>("");
 
   // Fetch products
   const fetchProducts = React.useCallback(async () => {
     try {
-      setIsLoading(true)
-      const response = await fetch("/api/products")
-      if (!response.ok) throw new Error("Failed to fetch products")
-      const data = await response.json()
-      setProducts(data.data || [])
+      setIsLoading(true);
+      const response = await fetch("/api/products");
+      if (!response.ok) throw new Error("Failed to fetch products");
+      const data = await response.json();
+      setProducts(data.data || []);
       if (data.categories?.length > 0) {
-        const allCats = Array.from(new Set([...defaultCategories, ...data.categories]))
-        const sorted = allCats.filter(c => c !== "General").sort((a, b) => a.localeCompare(b))
-        setCategories(["General", ...sorted])
+        const allCats = Array.from(new Set([...defaultCategories, ...data.categories]));
+        const sorted = allCats.filter((c) => c !== "General").sort((a, b) => a.localeCompare(b));
+        setCategories(["General", ...sorted]);
       }
     } catch (error) {
-      console.error("Error fetching products:", error)
-      toast.error("Failed to load products")
+      console.error("Error fetching products:", error);
+      toast.error("Failed to load products");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [])
+  }, []);
 
   React.useEffect(() => {
-    fetchProducts()
-  }, [fetchProducts])
+    fetchProducts();
+  }, [fetchProducts]);
 
   // Handle form submission
   const handleSubmit = async () => {
     if (!formData.name.trim()) {
-      toast.error("Product name is required")
-      return
+      toast.error("Product name is required");
+      return;
     }
 
     if (formData.price < 0) {
-      toast.error("Price cannot be negative")
-      return
+      toast.error("Price cannot be negative");
+      return;
     }
 
     if (formData.hasType) {
       if (!formData.typeName.trim()) {
-        toast.error("Type name is required (e.g., \"Size\", \"Color\")")
-        return
+        toast.error('Type name is required (e.g., "Size", "Color")');
+        return;
       }
       if (formData.variants.length === 0) {
-        toast.error("Add at least one type option")
-        return
+        toast.error("Add at least one type option");
+        return;
       }
       for (const v of formData.variants) {
         if (!v.label.trim()) {
-          toast.error("All type options must have a label")
-          return
+          toast.error("All type options must have a label");
+          return;
         }
       }
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       const variants = formData.hasType
         ? formData.variants.map((v, i) => ({
@@ -236,11 +236,11 @@ export default function StorePage() {
             label: v.label,
             price: v.price ? parseFloat(v.price) : null,
             imageUrl: v.imageUrl || null,
-            maxInventory: v.isUnlimited ? null : (parseInt(v.maxInventory) || null),
-            currentInventory: v.isUnlimited ? null : (parseInt(v.currentInventory) || null),
+            maxInventory: v.isUnlimited ? null : parseInt(v.maxInventory) || null,
+            currentInventory: v.isUnlimited ? null : parseInt(v.currentInventory) || null,
             sortOrder: i,
           }))
-        : undefined
+        : undefined;
 
       const payload = {
         name: formData.name,
@@ -249,52 +249,56 @@ export default function StorePage() {
         category: formData.category,
         price: formData.price,
         imageUrl: formData.imageUrl || null,
-        maxInventory: formData.hasType ? null : (formData.isUnlimited ? null : formData.maxInventory),
-        currentInventory: formData.hasType ? null : (formData.isUnlimited ? null : formData.currentInventory),
+        maxInventory: formData.hasType ? null : formData.isUnlimited ? null : formData.maxInventory,
+        currentInventory: formData.hasType
+          ? null
+          : formData.isUnlimited
+            ? null
+            : formData.currentInventory,
         isActive: formData.isActive,
         glCodeId: formData.glCodeId,
         typeName: formData.hasType ? formData.typeName : null,
         variants: formData.hasType ? variants : null,
-      }
+      };
 
-      let response: Response
+      let response: Response;
       if (editingProduct) {
         response = await fetch(`/api/products/${editingProduct.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
-        })
+        });
       } else {
         response = await fetch("/api/products", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
-        })
+        });
       }
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to save product")
+        const error = await response.json();
+        throw new Error(error.error || "Failed to save product");
       }
 
-      toast.success(editingProduct ? "Product updated" : "Product created")
-      setDialogOpen(false)
-      setEditingProduct(null)
-      setFormData(defaultFormData)
-      fetchProducts()
+      toast.success(editingProduct ? "Product updated" : "Product created");
+      setDialogOpen(false);
+      setEditingProduct(null);
+      setFormData(defaultFormData);
+      fetchProducts();
     } catch (error) {
-      console.error("Error saving product:", error)
-      toast.error(error instanceof Error ? error.message : "Failed to save product")
+      console.error("Error saving product:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to save product");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   // Handle restock
   const handleRestock = async () => {
-    if (!restockingProduct) return
+    if (!restockingProduct) return;
 
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       const response = await fetch(`/api/products/${restockingProduct.id}/inventory`, {
         method: "POST",
@@ -304,48 +308,48 @@ export default function StorePage() {
           quantity: restockType !== "max" ? restockQuantity : undefined,
           variantId: restockVariantId || undefined,
         }),
-      })
+      });
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to restock")
+        const error = await response.json();
+        throw new Error(error.error || "Failed to restock");
       }
 
-      toast.success("Inventory updated")
-      setRestockDialogOpen(false)
-      setRestockingProduct(null)
-      setRestockQuantity(0)
-      setRestockVariantId("")
-      fetchProducts()
+      toast.success("Inventory updated");
+      setRestockDialogOpen(false);
+      setRestockingProduct(null);
+      setRestockQuantity(0);
+      setRestockVariantId("");
+      fetchProducts();
     } catch (error) {
-      console.error("Error restocking:", error)
-      toast.error(error instanceof Error ? error.message : "Failed to restock")
+      console.error("Error restocking:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to restock");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   // Handle delete/deactivate
   const handleDeactivate = async (product: Product) => {
     try {
       const response = await fetch(`/api/products/${product.id}`, {
         method: "DELETE",
-      })
+      });
 
-      if (!response.ok) throw new Error("Failed to deactivate product")
+      if (!response.ok) throw new Error("Failed to deactivate product");
 
-      toast.success("Product deactivated")
-      fetchProducts()
+      toast.success("Product deactivated");
+      fetchProducts();
     } catch (error) {
-      console.error("Error deactivating product:", error)
-      toast.error("Failed to deactivate product")
+      console.error("Error deactivating product:", error);
+      toast.error("Failed to deactivate product");
     }
-  }
+  };
 
   // Open edit dialog
   const openEditDialog = (product: Product) => {
-    setEditingProduct(product)
-    const hasType = !!product.typeName && product.variants.length > 0
+    setEditingProduct(product);
+    const hasType = !!product.typeName && product.variants.length > 0;
     setFormData({
       name: product.name,
       description: product.description || "",
@@ -371,91 +375,105 @@ export default function StorePage() {
             isUnlimited: v.maxInventory === null && v.currentInventory === null,
           }))
         : [],
-    })
-    setDialogOpen(true)
-  }
+    });
+    setDialogOpen(true);
+  };
 
   // Open restock dialog
   const openRestockDialog = (product: Product) => {
-    setRestockingProduct(product)
-    setRestockQuantity(0)
-    setRestockType("add")
-    const hasTrackedVariants = product.variants.some(v => v.maxInventory !== null)
-    setRestockVariantId(hasTrackedVariants ? product.variants.find(v => v.maxInventory !== null)?.id || "" : "")
-    setRestockDialogOpen(true)
-  }
+    setRestockingProduct(product);
+    setRestockQuantity(0);
+    setRestockType("add");
+    const hasTrackedVariants = product.variants.some((v) => v.maxInventory !== null);
+    setRestockVariantId(
+      hasTrackedVariants ? product.variants.find((v) => v.maxInventory !== null)?.id || "" : ""
+    );
+    setRestockDialogOpen(true);
+  };
 
   // Get inventory status
   const getInventoryStatus = (product: Product) => {
     if (product.typeName && product.variants.length > 0) {
-      const allUnlimited = product.variants.every(v => v.maxInventory === null && v.currentInventory === null)
+      const allUnlimited = product.variants.every(
+        (v) => v.maxInventory === null && v.currentInventory === null
+      );
       if (allUnlimited) {
-        return { label: "Unlimited", variant: "secondary" as const, icon: Infinity }
+        return { label: "Unlimited", variant: "secondary" as const, icon: Infinity };
       }
-      const totalCurrent = product.variants.reduce((sum, v) => sum + (v.currentInventory ?? 0), 0)
-      const totalMax = product.variants.reduce((sum, v) => sum + (v.maxInventory ?? v.currentInventory ?? 0), 0)
-      const percentage = totalMax > 0 ? (totalCurrent / totalMax) * 100 : 0
+      const totalCurrent = product.variants.reduce((sum, v) => sum + (v.currentInventory ?? 0), 0);
+      const totalMax = product.variants.reduce(
+        (sum, v) => sum + (v.maxInventory ?? v.currentInventory ?? 0),
+        0
+      );
+      const percentage = totalMax > 0 ? (totalCurrent / totalMax) * 100 : 0;
 
       if (totalCurrent === 0) {
-        return { label: "Out of Stock", variant: "destructive" as const, icon: AlertCircle }
+        return { label: "Out of Stock", variant: "destructive" as const, icon: AlertCircle };
       }
       if (percentage <= 20) {
-        return { label: `Low Stock (${totalCurrent})`, variant: "warning" as const, icon: AlertCircle }
+        return {
+          label: `Low Stock (${totalCurrent})`,
+          variant: "warning" as const,
+          icon: AlertCircle,
+        };
       }
-      return { label: `${totalCurrent}/${totalMax}`, variant: "default" as const, icon: Package }
+      return { label: `${totalCurrent}/${totalMax}`, variant: "default" as const, icon: Package };
     }
 
     if (product.maxInventory === null && product.currentInventory === null) {
-      return { label: "Unlimited", variant: "secondary" as const, icon: Infinity }
+      return { label: "Unlimited", variant: "secondary" as const, icon: Infinity };
     }
-    const current = product.currentInventory ?? 0
-    const max = product.maxInventory ?? current
-    const percentage = max > 0 ? (current / max) * 100 : 0
-    
+    const current = product.currentInventory ?? 0;
+    const max = product.maxInventory ?? current;
+    const percentage = max > 0 ? (current / max) * 100 : 0;
+
     if (current === 0) {
-      return { label: "Out of Stock", variant: "destructive" as const, icon: AlertCircle }
+      return { label: "Out of Stock", variant: "destructive" as const, icon: AlertCircle };
     }
     if (percentage <= 20) {
-      return { label: `Low Stock (${current})`, variant: "warning" as const, icon: AlertCircle }
+      return { label: `Low Stock (${current})`, variant: "warning" as const, icon: AlertCircle };
     }
-    return { label: `${current}/${max}`, variant: "default" as const, icon: Package }
-  }
+    return { label: `${current}/${max}`, variant: "default" as const, icon: Package };
+  };
 
   const hasTrackedInventory = (product: Product) => {
     if (product.typeName && product.variants.length > 0) {
-      return product.variants.some(v => v.maxInventory !== null)
+      return product.variants.some((v) => v.maxInventory !== null);
     }
-    return product.maxInventory !== null
-  }
+    return product.maxInventory !== null;
+  };
 
   // Variant helpers
   const addVariant = () => {
     setFormData((prev) => ({
       ...prev,
       variants: [...prev.variants, { ...defaultVariant }],
-    }))
-  }
+    }));
+  };
 
   const removeVariant = (index: number) => {
     setFormData((prev) => ({
       ...prev,
       variants: prev.variants.filter((_, i) => i !== index),
-    }))
-  }
+    }));
+  };
 
   const updateVariant = (index: number, updates: Partial<VariantFormData>) => {
     setFormData((prev) => ({
       ...prev,
       variants: prev.variants.map((v, i) => (i === index ? { ...v, ...updates } : v)),
-    }))
-  }
+    }));
+  };
 
   const columns: ColumnDef<Product>[] = [
     {
       id: "select",
       header: ({ table }) => (
         <Checkbox
-          checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
         />
@@ -474,7 +492,7 @@ export default function StorePage() {
       accessorKey: "name",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Product" />,
       cell: ({ row }) => {
-        const product = row.original
+        const product = row.original;
         return (
           <div className="flex items-center gap-3">
             {product.imageUrl ? (
@@ -509,30 +527,28 @@ export default function StorePage() {
               </div>
             </div>
           </div>
-        )
+        );
       },
     },
     {
       accessorKey: "category",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Category" />,
-      cell: ({ row }) => (
-        <Badge variant="outline">{row.getValue("category")}</Badge>
-      ),
+      cell: ({ row }) => <Badge variant="outline">{row.getValue("category")}</Badge>,
     },
     {
       accessorKey: "price",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Price" />,
       cell: ({ row }) => {
-        const price = Number(row.getValue("price"))
-        return <span className="font-medium">${price.toFixed(2)}</span>
+        const price = Number(row.getValue("price"));
+        return <span className="font-medium">${price.toFixed(2)}</span>;
       },
     },
     {
       accessorKey: "inventory",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Inventory" />,
       cell: ({ row }) => {
-        const product = row.original
-        const status = getInventoryStatus(product)
+        const product = row.original;
+        const status = getInventoryStatus(product);
         return (
           <div className="flex items-center gap-2">
             <Badge variant={status.variant === "warning" ? "secondary" : status.variant}>
@@ -551,7 +567,7 @@ export default function StorePage() {
               </Button>
             )}
           </div>
-        )
+        );
       },
     },
     {
@@ -566,7 +582,7 @@ export default function StorePage() {
     {
       id: "actions",
       cell: ({ row }) => {
-        const product = row.original
+        const product = row.original;
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -594,10 +610,10 @@ export default function StorePage() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        )
+        );
       },
     },
-  ]
+  ];
 
   const table = useReactTable({
     data: products,
@@ -619,10 +635,10 @@ export default function StorePage() {
     initialState: {
       pagination: { pageSize: 20 },
     },
-  })
+  });
 
   // Get restock variant info
-  const restockVariant = restockingProduct?.variants.find(v => v.id === restockVariantId)
+  const restockVariant = restockingProduct?.variants.find((v) => v.id === restockVariantId);
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
@@ -633,13 +649,16 @@ export default function StorePage() {
             Manage products available for sale in your store and point of sale.
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
-          setDialogOpen(open)
-          if (!open) {
-            setEditingProduct(null)
-            setFormData(defaultFormData)
-          }
-        }}>
+        <Dialog
+          open={dialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) {
+              setEditingProduct(null);
+              setFormData(defaultFormData);
+            }
+          }}
+        >
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" /> Add Product
@@ -649,7 +668,9 @@ export default function StorePage() {
             <DialogHeader>
               <DialogTitle>{editingProduct ? "Edit Product" : "Add New Product"}</DialogTitle>
               <DialogDescription>
-                {editingProduct ? "Update product details." : "Add a new product to your store inventory."}
+                {editingProduct
+                  ? "Update product details."
+                  : "Add a new product to your store inventory."}
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4 px-1 max-h-[60vh] overflow-y-auto">
@@ -669,7 +690,9 @@ export default function StorePage() {
                     id="sku"
                     placeholder="e.g. WB-001"
                     value={formData.sku}
-                    onChange={(e) => setFormData({ ...formData, sku: e.target.value.toUpperCase() })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, sku: e.target.value.toUpperCase() })
+                    }
                   />
                 </div>
               </div>
@@ -696,7 +719,9 @@ export default function StorePage() {
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((cat) => (
-                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        <SelectItem key={cat} value={cat}>
+                          {cat}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -710,7 +735,9 @@ export default function StorePage() {
                     step="0.01"
                     placeholder="0.00"
                     value={formData.price || ""}
-                    onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })
+                    }
                   />
                 </div>
               </div>
@@ -737,10 +764,11 @@ export default function StorePage() {
                       setFormData({
                         ...formData,
                         hasType: checked,
-                        variants: checked && formData.variants.length === 0
-                          ? [{ ...defaultVariant }]
-                          : formData.variants,
-                      })
+                        variants:
+                          checked && formData.variants.length === 0
+                            ? [{ ...defaultVariant }]
+                            : formData.variants,
+                      });
                     }}
                   />
                 </div>
@@ -796,7 +824,9 @@ export default function StorePage() {
                                   updateVariant(index, {
                                     isUnlimited: !!checked,
                                     maxInventory: checked ? "" : variant.maxInventory || "10",
-                                    currentInventory: checked ? "" : variant.currentInventory || "10",
+                                    currentInventory: checked
+                                      ? ""
+                                      : variant.currentInventory || "10",
                                   })
                                 }
                               />
@@ -809,7 +839,9 @@ export default function StorePage() {
                                   min="1"
                                   placeholder="Max"
                                   value={variant.maxInventory}
-                                  onChange={(e) => updateVariant(index, { maxInventory: e.target.value })}
+                                  onChange={(e) =>
+                                    updateVariant(index, { maxInventory: e.target.value })
+                                  }
                                   className="h-7 w-20 text-xs"
                                 />
                                 <Input
@@ -817,7 +849,9 @@ export default function StorePage() {
                                   min="0"
                                   placeholder="Current"
                                   value={variant.currentInventory}
-                                  onChange={(e) => updateVariant(index, { currentInventory: e.target.value })}
+                                  onChange={(e) =>
+                                    updateVariant(index, { currentInventory: e.target.value })
+                                  }
                                   className="h-7 w-20 text-xs"
                                 />
                               </>
@@ -857,12 +891,14 @@ export default function StorePage() {
                     </div>
                     <Switch
                       checked={formData.isUnlimited}
-                      onCheckedChange={(checked) => setFormData({
-                        ...formData,
-                        isUnlimited: checked,
-                        maxInventory: checked ? null : formData.maxInventory ?? 10,
-                        currentInventory: checked ? null : formData.currentInventory ?? 10,
-                      })}
+                      onCheckedChange={(checked) =>
+                        setFormData({
+                          ...formData,
+                          isUnlimited: checked,
+                          maxInventory: checked ? null : (formData.maxInventory ?? 10),
+                          currentInventory: checked ? null : (formData.currentInventory ?? 10),
+                        })
+                      }
                     />
                   </div>
 
@@ -876,10 +912,12 @@ export default function StorePage() {
                           min="1"
                           placeholder="e.g. 100"
                           value={formData.maxInventory ?? ""}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            maxInventory: parseInt(e.target.value) || null,
-                          })}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              maxInventory: parseInt(e.target.value) || null,
+                            })
+                          }
                         />
                       </div>
                       <div className="space-y-2">
@@ -890,10 +928,12 @@ export default function StorePage() {
                           min="0"
                           placeholder="e.g. 50"
                           value={formData.currentInventory ?? ""}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            currentInventory: parseInt(e.target.value) || null,
-                          })}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              currentInventory: parseInt(e.target.value) || null,
+                            })
+                          }
                         />
                       </div>
                     </div>
@@ -910,9 +950,7 @@ export default function StorePage() {
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Active</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Product is available for sale
-                  </p>
+                  <p className="text-xs text-muted-foreground">Product is available for sale</p>
                 </div>
                 <Switch
                   checked={formData.isActive}
@@ -951,9 +989,9 @@ export default function StorePage() {
                 <Select
                   value={restockVariantId}
                   onValueChange={(value) => {
-                    setRestockVariantId(value)
-                    setRestockQuantity(0)
-                    setRestockType("add")
+                    setRestockVariantId(value);
+                    setRestockQuantity(0);
+                    setRestockType("add");
                   }}
                 >
                   <SelectTrigger>
@@ -961,7 +999,7 @@ export default function StorePage() {
                   </SelectTrigger>
                   <SelectContent>
                     {restockingProduct.variants
-                      .filter(v => v.maxInventory !== null || v.currentInventory !== null)
+                      .filter((v) => v.maxInventory !== null || v.currentInventory !== null)
                       .map((v) => (
                         <SelectItem key={v.id} value={v.id!}>
                           {v.label} ({v.currentInventory ?? 0}/{v.maxInventory ?? "∞"})
@@ -986,7 +1024,8 @@ export default function StorePage() {
                   <SelectItem value="set">Set exact quantity</SelectItem>
                   {(restockVariant?.maxInventory ?? restockingProduct?.maxInventory) && (
                     <SelectItem value="max">
-                      Restore to max ({restockVariant?.maxInventory ?? restockingProduct?.maxInventory})
+                      Restore to max (
+                      {restockVariant?.maxInventory ?? restockingProduct?.maxInventory})
                     </SelectItem>
                   )}
                 </SelectContent>
@@ -1026,9 +1065,7 @@ export default function StorePage() {
           <Input
             placeholder="Search products..."
             value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-            onChange={(event) =>
-              table.getColumn("name")?.setFilterValue(event.target.value)
-            }
+            onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
             className="pl-8"
           />
         </div>
@@ -1044,7 +1081,9 @@ export default function StorePage() {
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
             {categories.map((cat) => (
-              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+              <SelectItem key={cat} value={cat}>
+                {cat}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -1058,7 +1097,9 @@ export default function StorePage() {
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <TableHead key={header.id}>
-                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -1075,7 +1116,9 @@ export default function StorePage() {
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                    <TableCell key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
                   ))}
                 </TableRow>
               ))
@@ -1095,8 +1138,8 @@ export default function StorePage() {
           </TableBody>
         </Table>
       </div>
-      
+
       <DataTablePagination table={table} pageSizeOptions={[10, 20, 30, 50]} />
     </div>
-  )
+  );
 }

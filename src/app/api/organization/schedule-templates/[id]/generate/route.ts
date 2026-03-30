@@ -11,10 +11,7 @@ const generateShiftsSchema = z.object({
 });
 
 // POST - Generate shifts from a schedule template
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -49,7 +46,10 @@ export async function POST(
     }
 
     if (template.entries.length === 0) {
-      return NextResponse.json({ error: "Template has no entries to generate shifts from" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Template has no entries to generate shifts from" },
+        { status: 400 }
+      );
     }
 
     const body = await request.json();
@@ -121,7 +121,7 @@ export async function POST(
     }
 
     if (shiftsToCreate.length === 0) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         message: "No shifts generated. Make sure template entries have staff assigned.",
         shiftsCreated: 0,
       });

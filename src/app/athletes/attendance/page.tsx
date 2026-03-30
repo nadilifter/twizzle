@@ -6,13 +6,26 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  CalendarIcon, Check, X, Clock, Shield, AlertCircle, Loader2, 
-  CalendarDays, User
+import {
+  CalendarIcon,
+  Check,
+  X,
+  Clock,
+  Shield,
+  AlertCircle,
+  Loader2,
+  CalendarDays,
+  User,
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
 import { DateRange } from "react-day-picker";
@@ -33,12 +46,40 @@ interface Athlete {
   }>;
 }
 
-const statusConfig: Record<AttendanceStatus, { color: string; bgColor: string; icon: React.ReactNode; label: string }> = {
-  REGISTERED: { color: "text-gray-700", bgColor: "bg-gray-100", icon: <AlertCircle className="h-3 w-3" />, label: "Registered" },
-  PRESENT: { color: "text-green-700", bgColor: "bg-green-100", icon: <Check className="h-3 w-3" />, label: "Present" },
-  ABSENT: { color: "text-red-700", bgColor: "bg-red-100", icon: <X className="h-3 w-3" />, label: "Absent" },
-  LATE: { color: "text-yellow-700", bgColor: "bg-yellow-100", icon: <Clock className="h-3 w-3" />, label: "Late" },
-  EXCUSED: { color: "text-blue-700", bgColor: "bg-blue-100", icon: <Shield className="h-3 w-3" />, label: "Excused" },
+const statusConfig: Record<
+  AttendanceStatus,
+  { color: string; bgColor: string; icon: React.ReactNode; label: string }
+> = {
+  REGISTERED: {
+    color: "text-gray-700",
+    bgColor: "bg-gray-100",
+    icon: <AlertCircle className="h-3 w-3" />,
+    label: "Registered",
+  },
+  PRESENT: {
+    color: "text-green-700",
+    bgColor: "bg-green-100",
+    icon: <Check className="h-3 w-3" />,
+    label: "Present",
+  },
+  ABSENT: {
+    color: "text-red-700",
+    bgColor: "bg-red-100",
+    icon: <X className="h-3 w-3" />,
+    label: "Absent",
+  },
+  LATE: {
+    color: "text-yellow-700",
+    bgColor: "bg-yellow-100",
+    icon: <Clock className="h-3 w-3" />,
+    label: "Late",
+  },
+  EXCUSED: {
+    color: "text-blue-700",
+    bgColor: "bg-blue-100",
+    icon: <Shield className="h-3 w-3" />,
+    label: "Excused",
+  },
 };
 
 export default function AthleteAttendancePage() {
@@ -69,13 +110,13 @@ export default function AthleteAttendancePage() {
             avatar: athlete.avatar,
             enrollments: athlete.enrollments,
           }));
-          
+
           setAthletes(fetched);
           setSelectedAthleteId(fetched[0].id);
 
           const programSet = new Map<string, { id: string; name: string }>();
           fetched.forEach((athlete) => {
-            athlete.enrollments?.forEach(enrollment => {
+            athlete.enrollments?.forEach((enrollment) => {
               if (enrollment.program && !programSet.has(enrollment.program.id)) {
                 programSet.set(enrollment.program.id, enrollment.program);
               }
@@ -103,7 +144,7 @@ export default function AthleteAttendancePage() {
         const params: Record<string, string> = {
           athleteId: selectedAthleteId,
         };
-        
+
         if (dateRange?.from) {
           params.startDate = format(dateRange.from, "yyyy-MM-dd");
         }
@@ -111,7 +152,10 @@ export default function AthleteAttendancePage() {
           params.endDate = format(dateRange.to, "yyyy-MM-dd");
         }
 
-        const response = await api.get<{ data: AttendanceWithRelations[] }>("/api/attendance", params);
+        const response = await api.get<{ data: AttendanceWithRelations[] }>(
+          "/api/attendance",
+          params
+        );
         setAttendances(response.data);
       } catch (error) {
         console.error("Error fetching attendance:", error);
@@ -127,16 +171,16 @@ export default function AthleteAttendancePage() {
   // Filter attendances by program
   const filteredAttendances = useMemo(() => {
     if (selectedProgramId === "all") return attendances;
-    return attendances.filter(a => a.event.program?.id === selectedProgramId);
+    return attendances.filter((a) => a.event.program?.id === selectedProgramId);
   }, [attendances, selectedProgramId]);
 
   // Calculate stats
   const stats = useMemo(() => {
     const total = filteredAttendances.length;
-    const present = filteredAttendances.filter(a => a.status === "PRESENT").length;
-    const absent = filteredAttendances.filter(a => a.status === "ABSENT").length;
-    const late = filteredAttendances.filter(a => a.status === "LATE").length;
-    const excused = filteredAttendances.filter(a => a.status === "EXCUSED").length;
+    const present = filteredAttendances.filter((a) => a.status === "PRESENT").length;
+    const absent = filteredAttendances.filter((a) => a.status === "ABSENT").length;
+    const late = filteredAttendances.filter((a) => a.status === "LATE").length;
+    const excused = filteredAttendances.filter((a) => a.status === "EXCUSED").length;
     const rate = total > 0 ? Math.round(((present + late) / total) * 100) : 0;
 
     return { total, present, absent, late, excused, rate };
@@ -144,7 +188,7 @@ export default function AthleteAttendancePage() {
 
   // Get selected athlete
   const selectedAthlete = useMemo(() => {
-    return athletes.find(a => a.id === selectedAthleteId);
+    return athletes.find((a) => a.id === selectedAthleteId);
   }, [athletes, selectedAthleteId]);
 
   if (isLoading) {
@@ -162,7 +206,8 @@ export default function AthleteAttendancePage() {
           <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="font-semibold mb-2">No Athletes Found</h3>
           <p className="text-muted-foreground">
-            There are no athletes linked to your account. Please contact your organization administrator.
+            There are no athletes linked to your account. Please contact your organization
+            administrator.
           </p>
         </CardContent>
       </Card>
@@ -197,10 +242,14 @@ export default function AthleteAttendancePage() {
               </Avatar>
               <div className="text-left">
                 <div className="font-medium">{athlete.name}</div>
-                <div className={cn(
-                  "text-xs",
-                  selectedAthleteId === athlete.id ? "text-primary-foreground/70" : "text-muted-foreground"
-                )}>
+                <div
+                  className={cn(
+                    "text-xs",
+                    selectedAthleteId === athlete.id
+                      ? "text-primary-foreground/70"
+                      : "text-muted-foreground"
+                  )}
+                >
                   {athlete.level}
                 </div>
               </div>
@@ -310,9 +359,7 @@ export default function AthleteAttendancePage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Attendance Records</CardTitle>
-              <CardDescription>
-                {filteredAttendances.length} records found
-              </CardDescription>
+              <CardDescription>{filteredAttendances.length} records found</CardDescription>
             </CardHeader>
             <CardContent>
               {isLoadingAttendance ? (
@@ -328,7 +375,10 @@ export default function AthleteAttendancePage() {
                 <ScrollArea className="h-[400px] pr-4">
                   <div className="space-y-3">
                     {filteredAttendances
-                      .sort((a, b) => new Date(b.event.date).getTime() - new Date(a.event.date).getTime())
+                      .sort(
+                        (a, b) =>
+                          new Date(b.event.date).getTime() - new Date(a.event.date).getTime()
+                      )
                       .map((attendance) => {
                         const config = statusConfig[attendance.status];
                         return (
@@ -373,9 +423,7 @@ export default function AthleteAttendancePage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Monthly Calendar</CardTitle>
-              <CardDescription>
-                Select a date range to view attendance records
-              </CardDescription>
+              <CardDescription>Select a date range to view attendance records</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex flex-col md:flex-row gap-6">
@@ -395,37 +443,55 @@ export default function AthleteAttendancePage() {
                       <>
                         <div className="grid grid-cols-2 gap-3">
                           {Object.entries(
-                            filteredAttendances.reduce((acc, a) => {
-                              const dateKey = format(parseISO(a.event.date), "MMM d");
-                              if (!acc[dateKey]) acc[dateKey] = { present: 0, absent: 0, late: 0, excused: 0 };
-                              if (a.status === "PRESENT") acc[dateKey].present++;
-                              else if (a.status === "ABSENT") acc[dateKey].absent++;
-                              else if (a.status === "LATE") acc[dateKey].late++;
-                              else if (a.status === "EXCUSED") acc[dateKey].excused++;
-                              return acc;
-                            }, {} as Record<string, { present: number; absent: number; late: number; excused: number }>)
-                          ).slice(0, 6).map(([date, counts]) => (
-                            <div key={date} className="p-2 rounded-lg border bg-background">
-                              <div className="font-medium text-sm">{date}</div>
-                              <div className="flex gap-2 mt-1">
-                                {counts.present > 0 && (
-                                  <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">
-                                    {counts.present} present
-                                  </Badge>
-                                )}
-                                {counts.absent > 0 && (
-                                  <Badge variant="outline" className="bg-red-50 text-red-700 text-xs">
-                                    {counts.absent} absent
-                                  </Badge>
-                                )}
-                                {counts.late > 0 && (
-                                  <Badge variant="outline" className="bg-yellow-50 text-yellow-700 text-xs">
-                                    {counts.late} late
-                                  </Badge>
-                                )}
+                            filteredAttendances.reduce(
+                              (acc, a) => {
+                                const dateKey = format(parseISO(a.event.date), "MMM d");
+                                if (!acc[dateKey])
+                                  acc[dateKey] = { present: 0, absent: 0, late: 0, excused: 0 };
+                                if (a.status === "PRESENT") acc[dateKey].present++;
+                                else if (a.status === "ABSENT") acc[dateKey].absent++;
+                                else if (a.status === "LATE") acc[dateKey].late++;
+                                else if (a.status === "EXCUSED") acc[dateKey].excused++;
+                                return acc;
+                              },
+                              {} as Record<
+                                string,
+                                { present: number; absent: number; late: number; excused: number }
+                              >
+                            )
+                          )
+                            .slice(0, 6)
+                            .map(([date, counts]) => (
+                              <div key={date} className="p-2 rounded-lg border bg-background">
+                                <div className="font-medium text-sm">{date}</div>
+                                <div className="flex gap-2 mt-1">
+                                  {counts.present > 0 && (
+                                    <Badge
+                                      variant="outline"
+                                      className="bg-green-50 text-green-700 text-xs"
+                                    >
+                                      {counts.present} present
+                                    </Badge>
+                                  )}
+                                  {counts.absent > 0 && (
+                                    <Badge
+                                      variant="outline"
+                                      className="bg-red-50 text-red-700 text-xs"
+                                    >
+                                      {counts.absent} absent
+                                    </Badge>
+                                  )}
+                                  {counts.late > 0 && (
+                                    <Badge
+                                      variant="outline"
+                                      className="bg-yellow-50 text-yellow-700 text-xs"
+                                    >
+                                      {counts.late} late
+                                    </Badge>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
                         </div>
                       </>
                     )}

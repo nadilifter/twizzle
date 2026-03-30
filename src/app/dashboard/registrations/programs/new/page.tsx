@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { ProgramStepper } from "../components/program-stepper"
-import { ArrowLeft } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
+import { ProgramStepper } from "../components/program-stepper";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function NewProgramPage() {
   return (
@@ -24,5 +24,5 @@ export default function NewProgramPage() {
 
       <ProgramStepper />
     </div>
-  )
+  );
 }

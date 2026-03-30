@@ -1,31 +1,31 @@
-import { NextRequest, NextResponse } from "next/server"
-import { db } from "@/lib/db"
-import { admitNextInQueue, lockQueueConfig } from "@/lib/queue-utils"
-import { getRegistrationStatus } from "@/lib/registration-utils"
-import { v4 as uuidv4 } from "uuid"
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { admitNextInQueue, lockQueueConfig } from "@/lib/queue-utils";
+import { getRegistrationStatus } from "@/lib/registration-utils";
+import { v4 as uuidv4 } from "uuid";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { programId, competitionId, organizationSlug, sessionToken: existingToken, earlyAccessCode } = body
+    const body = await request.json();
+    const {
+      programId,
+      competitionId,
+      organizationSlug,
+      sessionToken: existingToken,
+      earlyAccessCode,
+    } = body;
 
     if (!organizationSlug) {
-      return NextResponse.json(
-        { error: "Organization slug is required" },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: "Organization slug is required" }, { status: 400 });
     }
 
     const organization = await db.organization.findUnique({
       where: { slug: organizationSlug },
       select: { id: true },
-    })
+    });
 
     if (!organization) {
-      return NextResponse.json(
-        { error: "Organization not found" },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
 
     // Check registration window if a specific program is targeted
@@ -41,18 +41,22 @@ export async function POST(request: NextRequest) {
           registrationEndTime: true,
           earlyAccessCode: true,
         },
-      })
+      });
 
       if (program) {
-        const status = getRegistrationStatus(program)
+        const status = getRegistrationStatus(program);
         if (status !== "open") {
-          const hasValidCode = earlyAccessCode && program.earlyAccessCode && earlyAccessCode === program.earlyAccessCode
+          const hasValidCode =
+            earlyAccessCode &&
+            program.earlyAccessCode &&
+            earlyAccessCode === program.earlyAccessCode;
           if (!hasValidCode) {
-            const reason = status === "closed" ? "Registration has closed" : "Registration is not yet open"
+            const reason =
+              status === "closed" ? "Registration has closed" : "Registration is not yet open";
             return NextResponse.json(
               { error: `${reason} for "${program.name}".` },
               { status: 400 }
-            )
+            );
           }
         }
       }
@@ -71,18 +75,22 @@ export async function POST(request: NextRequest) {
           registrationEndTime: true,
           earlyAccessCode: true,
         },
-      })
+      });
 
       if (competition) {
-        const status = getRegistrationStatus(competition)
+        const status = getRegistrationStatus(competition);
         if (status !== "open") {
-          const hasValidCode = earlyAccessCode && competition.earlyAccessCode && earlyAccessCode === competition.earlyAccessCode
+          const hasValidCode =
+            earlyAccessCode &&
+            competition.earlyAccessCode &&
+            earlyAccessCode === competition.earlyAccessCode;
           if (!hasValidCode) {
-            const reason = status === "closed" ? "Registration has closed" : "Registration is not yet open"
+            const reason =
+              status === "closed" ? "Registration has closed" : "Registration is not yet open";
             return NextResponse.json(
               { error: `${reason} for "${competition.name}".` },
               { status: 400 }
-            )
+            );
           }
         }
       }
@@ -100,7 +108,7 @@ export async function POST(request: NextRequest) {
             isEnabled: true,
           },
         })
-      : null
+      : null;
 
     if (!queueConfig) {
       queueConfig = await db.registrationQueueConfig.findFirst({
@@ -109,7 +117,7 @@ export async function POST(request: NextRequest) {
           programId: null,
           isEnabled: true,
         },
-      })
+      });
     }
 
     if (!queueConfig) {
@@ -117,7 +125,7 @@ export async function POST(request: NextRequest) {
         queued: false,
         canProceed: true,
         message: "No queue active, proceed to registration",
-      })
+      });
     }
 
     if (!checkQueueActive(queueConfig)) {
@@ -125,7 +133,7 @@ export async function POST(request: NextRequest) {
         queued: false,
         canProceed: true,
         message: "Queue is not currently active",
-      })
+      });
     }
 
     // Check for an existing session
@@ -133,7 +141,7 @@ export async function POST(request: NextRequest) {
       const existingEntry = await db.queueEntry.findUnique({
         where: { sessionToken: existingToken },
         include: { reservation: true },
-      })
+      });
 
       if (existingEntry) {
         if (existingEntry.status === "ADMITTED" && existingEntry.reservation) {
@@ -144,13 +152,13 @@ export async function POST(request: NextRequest) {
               entry: existingEntry,
               reservation: existingEntry.reservation,
               message: "You have an active reservation",
-            })
+            });
           }
         }
 
         if (existingEntry.status === "WAITING") {
-          const position = await getQueuePosition(existingEntry)
-          const estimatedWait = calculateEstimatedWait(position, queueConfig)
+          const position = await getQueuePosition(existingEntry);
+          const estimatedWait = calculateEstimatedWait(position, queueConfig);
 
           return NextResponse.json({
             queued: true,
@@ -159,17 +167,17 @@ export async function POST(request: NextRequest) {
             position,
             estimatedWaitMinutes: estimatedWait,
             message: `You are #${position} in line`,
-          })
+          });
         }
       }
     }
 
-    const sessionToken = existingToken || uuidv4()
+    const sessionToken = existingToken || uuidv4();
 
     // Use a serialized transaction with a row-level lock on the queue config
     // to prevent concurrent requests from exceeding maxConcurrent.
     const result = await db.$transaction(async (tx) => {
-      await lockQueueConfig(tx, queueConfig.id)
+      await lockQueueConfig(tx, queueConfig.id);
 
       const activeReservations = await tx.queueReservation.count({
         where: {
@@ -179,7 +187,7 @@ export async function POST(request: NextRequest) {
             queueConfigId: queueConfig.id,
           },
         },
-      })
+      });
 
       if (activeReservations < queueConfig.maxConcurrent) {
         const entry = await tx.queueEntry.create({
@@ -190,19 +198,17 @@ export async function POST(request: NextRequest) {
             status: "ADMITTED",
             admittedAt: new Date(),
           },
-        })
+        });
 
         const reservation = await tx.queueReservation.create({
           data: {
             queueEntryId: entry.id,
             programId: programId || queueConfig.programId || "",
-            expiresAt: new Date(
-              Date.now() + queueConfig.reservationMinutes * 60 * 1000
-            ),
+            expiresAt: new Date(Date.now() + queueConfig.reservationMinutes * 60 * 1000),
           },
-        })
+        });
 
-        return { admitted: true as const, entry, reservation }
+        return { admitted: true as const, entry, reservation };
       }
 
       // Queue is full — add to waiting list
@@ -213,9 +219,9 @@ export async function POST(request: NextRequest) {
         },
         orderBy: { position: "desc" },
         select: { position: true },
-      })
+      });
 
-      const nextPosition = (lastEntry?.position || 0) + 1
+      const nextPosition = (lastEntry?.position || 0) + 1;
 
       const entry = await tx.queueEntry.create({
         data: {
@@ -224,10 +230,10 @@ export async function POST(request: NextRequest) {
           position: nextPosition,
           status: "WAITING",
         },
-      })
+      });
 
-      return { admitted: false as const, entry, position: nextPosition }
-    })
+      return { admitted: false as const, entry, position: nextPosition };
+    });
 
     if (result.admitted) {
       return NextResponse.json({
@@ -237,10 +243,10 @@ export async function POST(request: NextRequest) {
         reservation: result.reservation,
         sessionToken,
         message: "You have been admitted to registration",
-      })
+      });
     }
 
-    const estimatedWait = calculateEstimatedWait(result.position, queueConfig)
+    const estimatedWait = calculateEstimatedWait(result.position, queueConfig);
 
     return NextResponse.json({
       queued: true,
@@ -250,51 +256,49 @@ export async function POST(request: NextRequest) {
       position: result.position,
       estimatedWaitMinutes: estimatedWait,
       message: `You are #${result.position} in line`,
-    })
+    });
   } catch (error) {
-    console.error("Error entering queue:", error)
-    return NextResponse.json(
-      { error: "Failed to enter queue" },
-      { status: 500 }
-    )
+    console.error("Error entering queue:", error);
+    return NextResponse.json({ error: "Failed to enter queue" }, { status: 500 });
   }
 }
 
 function checkQueueActive(config: any): boolean {
-  if (!config.isEnabled) return false
+  if (!config.isEnabled) return false;
 
   switch (config.activationType) {
     case "ALWAYS":
-      return true
+      return true;
     case "SCHEDULED": {
-      const now = new Date()
-      if (config.scheduledStart && new Date(config.scheduledStart) > now) return false
-      if (config.scheduledEnd && new Date(config.scheduledEnd) < now) return false
-      return true
+      const now = new Date();
+      if (config.scheduledStart && new Date(config.scheduledStart) > now) return false;
+      if (config.scheduledEnd && new Date(config.scheduledEnd) < now) return false;
+      return true;
     }
     case "THRESHOLD":
-      return true
+      return true;
     default:
-      return true
+      return true;
   }
 }
 
-async function getQueuePosition(
-  entry: { queueConfigId: string; enteredAt: Date }
-): Promise<number> {
+async function getQueuePosition(entry: {
+  queueConfigId: string;
+  enteredAt: Date;
+}): Promise<number> {
   const waitingAhead = await db.queueEntry.count({
     where: {
       queueConfigId: entry.queueConfigId,
       status: "WAITING",
       enteredAt: { lt: entry.enteredAt },
     },
-  })
-  return waitingAhead + 1
+  });
+  return waitingAhead + 1;
 }
 
 function calculateEstimatedWait(position: number, config: any): number {
-  const avgTime = 5
-  const slotsPerCycle = config.maxConcurrent
-  const cyclesNeeded = Math.ceil(position / slotsPerCycle)
-  return cyclesNeeded * avgTime
+  const avgTime = 5;
+  const slotsPerCycle = config.maxConcurrent;
+  const cyclesNeeded = Math.ceil(position / slotsPerCycle);
+  return cyclesNeeded * avgTime;
 }

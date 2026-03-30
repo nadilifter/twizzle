@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import Image, { type ImageProps } from "next/image"
-import { useState } from "react"
-import { cn } from "@/lib/utils"
+import Image, { type ImageProps } from "next/image";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 /**
  * Drop-in replacement for next/image that loads a tiny placeholder first,
@@ -23,7 +23,7 @@ export function ProgressiveImage({
   style,
   ...props
 }: ImageProps) {
-  const [isLoaded, setIsLoaded] = useState(false)
+  const [isLoaded, setIsLoaded] = useState(false);
 
   return (
     <>
@@ -43,16 +43,15 @@ export function ProgressiveImage({
         style={{
           ...(style && typeof style === "object" ? style : {}),
           opacity: isLoaded ? 1 : 0,
-          transition:
-            "opacity 700ms ease-in-out, transform 300ms cubic-bezier(0.4, 0, 0.2, 1)",
+          transition: "opacity 700ms ease-in-out, transform 300ms cubic-bezier(0.4, 0, 0.2, 1)",
         }}
         onLoad={(e) => {
-          setIsLoaded(true)
+          setIsLoaded(true);
           if (typeof onLoad === "function") {
-            ;(onLoad as (e: React.SyntheticEvent<HTMLImageElement>) => void)(e)
+            (onLoad as (e: React.SyntheticEvent<HTMLImageElement>) => void)(e);
           }
         }}
       />
     </>
-  )
+  );
 }

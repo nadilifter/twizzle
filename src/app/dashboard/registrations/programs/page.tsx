@@ -1,40 +1,44 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { sanitizeHtml } from "@/lib/sanitize"
-import { Button } from "@/components/ui/button"
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { sanitizeHtml } from "@/lib/sanitize";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { 
-  Plus, Search, Settings, Loader2, AlertCircle, CalendarDays, CalendarClock,
-  Clock, MapPin, Users, UserCheck, Shield, Repeat, Star, User
-} from "lucide-react"
-import {
-  Sheet,
-  SheetContent,
-} from "@/components/ui/sheet"
+  Plus,
+  Search,
+  Settings,
+  Loader2,
+  AlertCircle,
+  CalendarDays,
+  CalendarClock,
+  Clock,
+  MapPin,
+  Users,
+  UserCheck,
+  Shield,
+  Repeat,
+  Star,
+  User,
+} from "lucide-react";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { usePrograms } from "@/hooks/use-programs"
-import { useSeasons } from "@/hooks/use-seasons"
-import { useFeatures } from "@/components/feature-context"
-import { formatRRuleDays } from "@/lib/rrule-utils"
-import { ProgramConfiguration } from "./program-configuration"
+} from "@/components/ui/select";
+import { usePrograms } from "@/hooks/use-programs";
+import { useSeasons } from "@/hooks/use-seasons";
+import { useFeatures } from "@/components/feature-context";
+import { formatRRuleDays } from "@/lib/rrule-utils";
+import { ProgramConfiguration } from "./program-configuration";
 
 function formatPrice(price: number | string | null | undefined): string {
   if (price === null || price === undefined) return "Free";
@@ -49,35 +53,35 @@ function formatPrice(price: number | string | null | undefined): string {
 }
 
 export default function ProgramsPage() {
-  const router = useRouter()
-  const { programs, isLoading, error, fetchPrograms } = usePrograms({ autoFetch: false })
-  const { isFeatureEnabled } = useFeatures()
-  const seasonsEnabled = isFeatureEnabled("seasons")
-  const { seasons } = useSeasons({ autoFetch: seasonsEnabled })
-  const [searchTerm, setSearchTerm] = React.useState("")
-  const [seasonFilter, setSeasonFilter] = React.useState<string>("all")
-  const [isConfigOpen, setIsConfigOpen] = React.useState(false)
-  const [selectedProgram, setSelectedProgram] = React.useState<any>(null)
+  const router = useRouter();
+  const { programs, isLoading, error, fetchPrograms } = usePrograms({ autoFetch: false });
+  const { isFeatureEnabled } = useFeatures();
+  const seasonsEnabled = isFeatureEnabled("seasons");
+  const { seasons } = useSeasons({ autoFetch: seasonsEnabled });
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const [seasonFilter, setSeasonFilter] = React.useState<string>("all");
+  const [isConfigOpen, setIsConfigOpen] = React.useState(false);
+  const [selectedProgram, setSelectedProgram] = React.useState<any>(null);
 
-  const hasFetched = React.useRef(false)
+  const hasFetched = React.useRef(false);
   React.useEffect(() => {
     const params = {
       search: searchTerm,
       ...(seasonFilter && seasonFilter !== "all" ? { seasonId: seasonFilter } : {}),
-    }
+    };
     if (!hasFetched.current) {
-      hasFetched.current = true
-      fetchPrograms(params)
-      return
+      hasFetched.current = true;
+      fetchPrograms(params);
+      return;
     }
-    const timer = setTimeout(() => fetchPrograms(params), 500)
-    return () => clearTimeout(timer)
-  }, [searchTerm, seasonFilter, fetchPrograms])
+    const timer = setTimeout(() => fetchPrograms(params), 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm, seasonFilter, fetchPrograms]);
 
   const handleQuickConfigure = (program: any) => {
-    setSelectedProgram(program)
-    setIsConfigOpen(true)
-  }
+    setSelectedProgram(program);
+    setIsConfigOpen(true);
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -104,7 +108,7 @@ export default function ProgramsPage() {
             placeholder="Search programs..."
             className="pl-8"
             value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         {seasonsEnabled && seasons.length > 0 && (
@@ -143,17 +147,17 @@ export default function ProgramsPage() {
       {/* Quick Configuration Sheet */}
       <Sheet open={isConfigOpen} onOpenChange={setIsConfigOpen}>
         <SheetContent className="sm:max-w-2xl p-0">
-            {selectedProgram ? (
-                <ProgramConfiguration 
-                    program={selectedProgram} 
-                    onClose={() => setIsConfigOpen(false)}
-                    onUpdated={() => fetchPrograms()}
-                />
-            ) : (
-                <div className="p-6">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                </div>
-            )}
+          {selectedProgram ? (
+            <ProgramConfiguration
+              program={selectedProgram}
+              onClose={() => setIsConfigOpen(false)}
+              onUpdated={() => fetchPrograms()}
+            />
+          ) : (
+            <div className="p-6">
+              <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+            </div>
+          )}
         </SheetContent>
       </Sheet>
 
@@ -178,8 +182,8 @@ export default function ProgramsPage() {
               ? p.minAge && p.maxAge
                 ? `Ages ${p.minAge}–${p.maxAge}`
                 : p.minAge
-                ? `Ages ${p.minAge}+`
-                : `Up to age ${p.maxAge}`
+                  ? `Ages ${p.minAge}+`
+                  : `Up to age ${p.maxAge}`
               : null;
 
             return (
@@ -194,11 +198,19 @@ export default function ProgramsPage() {
                           style={{ backgroundColor: program.color || "#3b82f6" }}
                         />
                         {levelReqs.map((lr: any) => (
-                          <Badge 
+                          <Badge
                             key={lr.id}
-                            variant="secondary" 
+                            variant="secondary"
                             className="text-[10px] px-1.5 py-0"
-                            style={lr.level?.color ? { backgroundColor: `${lr.level.color}15`, color: lr.level.color, borderColor: `${lr.level.color}40` } : undefined}
+                            style={
+                              lr.level?.color
+                                ? {
+                                    backgroundColor: `${lr.level.color}15`,
+                                    color: lr.level.color,
+                                    borderColor: `${lr.level.color}40`,
+                                  }
+                                : undefined
+                            }
                           >
                             {lr.level?.name}
                           </Badge>
@@ -206,7 +218,10 @@ export default function ProgramsPage() {
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
-                      <Badge variant={program.status === "ACTIVE" ? "default" : "secondary"} className="text-[10px]">
+                      <Badge
+                        variant={program.status === "ACTIVE" ? "default" : "secondary"}
+                        className="text-[10px]"
+                      >
                         {program.status}
                       </Badge>
                       {program.season && (
@@ -242,7 +257,9 @@ export default function ProgramsPage() {
                       </div>
                       <div className="flex items-center gap-1 text-xs font-medium">
                         <span>{formatPrice(price)}</span>
-                        {price && p.pricingModel === "PER_SESSION" && <span className="text-muted-foreground">/session</span>}
+                        {price && p.pricingModel === "PER_SESSION" && (
+                          <span className="text-muted-foreground">/session</span>
+                        )}
                       </div>
                     </div>
 
@@ -257,7 +274,10 @@ export default function ProgramsPage() {
                     {p.facility && (
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <MapPin className="h-3.5 w-3.5" />
-                        <span>{p.facility.name}{p.facility.city && `, ${p.facility.city}`}</span>
+                        <span>
+                          {p.facility.name}
+                          {p.facility.city && `, ${p.facility.city}`}
+                        </span>
                       </div>
                     )}
 
@@ -265,7 +285,10 @@ export default function ProgramsPage() {
                     {p.startTime && (
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <Clock className="h-3.5 w-3.5" />
-                        <span>{p.startTime}{p.duration ? ` (${p.duration} min)` : ""}</span>
+                        <span>
+                          {p.startTime}
+                          {p.duration ? ` (${p.duration} min)` : ""}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -312,7 +335,9 @@ export default function ProgramsPage() {
                           <span key={sa.id}>
                             {i > 0 && ", "}
                             {sa.member?.user?.name}
-                            {sa.isPrimary && <Star className="h-3 w-3 inline ml-0.5 text-amber-500" />}
+                            {sa.isPrimary && (
+                              <Star className="h-3 w-3 inline ml-0.5 text-amber-500" />
+                            )}
                           </span>
                         ))}
                         {staffAssignments.length > 2 && (
@@ -329,8 +354,14 @@ export default function ProgramsPage() {
                       Sessions
                     </Link>
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleQuickConfigure(program)} title="Configure">
-                      <Settings className="h-4 w-4" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handleQuickConfigure(program)}
+                    title="Configure"
+                  >
+                    <Settings className="h-4 w-4" />
                   </Button>
                 </CardFooter>
               </Card>
@@ -344,5 +375,5 @@ export default function ProgramsPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

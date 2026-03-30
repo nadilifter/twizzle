@@ -1,135 +1,133 @@
-"use client"
+"use client";
 
-import { useState, useMemo } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  Users, 
+import { useState, useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  Users,
   Search,
   Check,
   Clock4,
   Loader2,
   UserCheck,
-  Filter
-} from "lucide-react"
-import Link from "next/link"
-import { format } from "date-fns"
-import { useEvent } from "@/hooks/use-events"
-import { useAttendance } from "@/hooks/use-attendance"
-import { toast } from "sonner"
+  Filter,
+} from "lucide-react";
+import Link from "next/link";
+import { format } from "date-fns";
+import { useEvent } from "@/hooks/use-events";
+import { useAttendance } from "@/hooks/use-attendance";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 
 interface EventCheckinPageProps {
   params: {
-    id: string
-  }
+    id: string;
+  };
 }
 
 function getInitials(name: string) {
-  const parts = name.split(" ")
+  const parts = name.split(" ");
   if (parts.length >= 2) {
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
   }
-  return name.substring(0, 2).toUpperCase()
+  return name.substring(0, 2).toUpperCase();
 }
 
-type FilterStatus = "all" | "registered" | "checked-in" | "not-checked-in"
+type FilterStatus = "all" | "registered" | "checked-in" | "not-checked-in";
 
 export default function EventCheckinPage({ params }: EventCheckinPageProps) {
-  const { event, isLoading, fetchEvent } = useEvent(params.id)
-  const { markAttendance, isUpdating } = useAttendance()
-  const [searchQuery, setSearchQuery] = useState("")
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>("all")
-  const [processingId, setProcessingId] = useState<string | null>(null)
+  const { event, isLoading, fetchEvent } = useEvent(params.id);
+  const { markAttendance, isUpdating } = useAttendance();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   const handleCheckin = async (athleteId: string, status: "PRESENT" | "LATE") => {
-    if (!event) return
-    
-    setProcessingId(athleteId)
-    
+    if (!event) return;
+
+    setProcessingId(athleteId);
+
     const result = await markAttendance({
       athleteId,
       eventId: event.id,
-      status
-    })
-    
+      status,
+    });
+
     if (result) {
-      toast.success(`Marked as ${status.toLowerCase()}`)
-      fetchEvent()
+      toast.success(`Marked as ${status.toLowerCase()}`);
+      fetchEvent();
     } else {
-      toast.error("Failed to update attendance")
+      toast.error("Failed to update attendance");
     }
-    
-    setProcessingId(null)
-  }
+
+    setProcessingId(null);
+  };
 
   // Filter and search attendees
   const filteredAttendees = useMemo(() => {
-    if (!event?.attendances) return []
-    
-    let filtered = [...event.attendances]
-    
+    if (!event?.attendances) return [];
+
+    let filtered = [...event.attendances];
+
     // Apply status filter
     if (filterStatus === "registered") {
-      filtered = filtered.filter(a => a.status === "REGISTERED")
+      filtered = filtered.filter((a) => a.status === "REGISTERED");
     } else if (filterStatus === "checked-in") {
-      filtered = filtered.filter(a => a.status === "PRESENT" || a.status === "LATE")
+      filtered = filtered.filter((a) => a.status === "PRESENT" || a.status === "LATE");
     } else if (filterStatus === "not-checked-in") {
-      filtered = filtered.filter(a => a.status === "REGISTERED" || a.status === "ABSENT")
+      filtered = filtered.filter((a) => a.status === "REGISTERED" || a.status === "ABSENT");
     }
-    
+
     // Apply search
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(a => 
-        a.athlete.name.toLowerCase().includes(query)
-      )
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((a) => a.athlete.name.toLowerCase().includes(query));
     }
-    
+
     // Sort: not checked in first, then alphabetically
     filtered.sort((a, b) => {
-      const aCheckedIn = a.status === "PRESENT" || a.status === "LATE"
-      const bCheckedIn = b.status === "PRESENT" || b.status === "LATE"
+      const aCheckedIn = a.status === "PRESENT" || a.status === "LATE";
+      const bCheckedIn = b.status === "PRESENT" || b.status === "LATE";
       if (aCheckedIn !== bCheckedIn) {
-        return aCheckedIn ? 1 : -1
+        return aCheckedIn ? 1 : -1;
       }
-      return a.athlete.name.localeCompare(b.athlete.name)
-    })
-    
-    return filtered
-  }, [event?.attendances, searchQuery, filterStatus])
+      return a.athlete.name.localeCompare(b.athlete.name);
+    });
+
+    return filtered;
+  }, [event?.attendances, searchQuery, filterStatus]);
 
   // Stats
   const stats = useMemo(() => {
-    if (!event?.attendances) return { total: 0, checkedIn: 0, registered: 0 }
-    
-    const total = event.attendances.length
+    if (!event?.attendances) return { total: 0, checkedIn: 0, registered: 0 };
+
+    const total = event.attendances.length;
     const checkedIn = event.attendances.filter(
-      a => a.status === "PRESENT" || a.status === "LATE"
-    ).length
-    const registered = event.attendances.filter(a => a.status === "REGISTERED").length
-    
-    return { total, checkedIn, registered }
-  }, [event?.attendances])
+      (a) => a.status === "PRESENT" || a.status === "LATE"
+    ).length;
+    const registered = event.attendances.filter((a) => a.status === "REGISTERED").length;
+
+    return { total, checkedIn, registered };
+  }, [event?.attendances]);
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-    )
+    );
   }
 
   if (!event) {
@@ -140,7 +138,7 @@ export default function EventCheckinPage({ params }: EventCheckinPageProps) {
           <Link href="/events">Back to Events</Link>
         </Button>
       </div>
-    )
+    );
   }
 
   return (
@@ -235,20 +233,19 @@ export default function EventCheckinPage({ params }: EventCheckinPageProps) {
         <CardContent className="p-0">
           {filteredAttendees.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
-              {searchQuery || filterStatus !== "all" 
+              {searchQuery || filterStatus !== "all"
                 ? "No attendees match your search/filter"
-                : "No registered attendees for this event"
-              }
+                : "No registered attendees for this event"}
             </div>
           ) : (
             <div className="divide-y">
               {filteredAttendees.map((attendance) => {
-                const isCheckedIn = attendance.status === "PRESENT" || attendance.status === "LATE"
-                const isProcessing = processingId === attendance.athlete.id
-                
+                const isCheckedIn = attendance.status === "PRESENT" || attendance.status === "LATE";
+                const isProcessing = processingId === attendance.athlete.id;
+
                 return (
-                  <div 
-                    key={attendance.id} 
+                  <div
+                    key={attendance.id}
                     className={`flex items-center justify-between p-4 gap-4 ${
                       isCheckedIn ? "bg-green-50/50 dark:bg-green-950/30" : ""
                     }`}
@@ -256,25 +253,27 @@ export default function EventCheckinPage({ params }: EventCheckinPageProps) {
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <Avatar className="h-10 w-10 shrink-0">
                         <AvatarImage src={attendance.athlete.avatar || undefined} />
-                        <AvatarFallback className={`font-medium ${
-                          isCheckedIn 
-                            ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" 
-                            : "bg-primary/10 text-primary"
-                        }`}>
+                        <AvatarFallback
+                          className={`font-medium ${
+                            isCheckedIn
+                              ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                              : "bg-primary/10 text-primary"
+                          }`}
+                        >
                           {getInitials(attendance.athlete.name)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{attendance.athlete.name}</p>
                         <div className="flex items-center gap-2">
-                          <Badge 
+                          <Badge
                             variant={isCheckedIn ? "default" : "secondary"}
                             className={`text-xs ${
-                              attendance.status === "PRESENT" 
-                                ? "bg-green-100 text-green-700 hover:bg-green-100" 
+                              attendance.status === "PRESENT"
+                                ? "bg-green-100 text-green-700 hover:bg-green-100"
                                 : attendance.status === "LATE"
-                                ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-100"
-                                : ""
+                                  ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-100"
+                                  : ""
                             }`}
                           >
                             {attendance.status === "REGISTERED" ? "Awaiting" : attendance.status}
@@ -287,7 +286,7 @@ export default function EventCheckinPage({ params }: EventCheckinPageProps) {
                         </div>
                       </div>
                     </div>
-                    
+
                     {!isCheckedIn && (
                       <div className="flex items-center gap-2 shrink-0">
                         <Button
@@ -319,7 +318,7 @@ export default function EventCheckinPage({ params }: EventCheckinPageProps) {
                         </Button>
                       </div>
                     )}
-                    
+
                     {isCheckedIn && (
                       <div className="flex items-center gap-2 text-green-600">
                         <UserCheck className="h-5 w-5" />
@@ -327,12 +326,12 @@ export default function EventCheckinPage({ params }: EventCheckinPageProps) {
                       </div>
                     )}
                   </div>
-                )
+                );
               })}
             </div>
           )}
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

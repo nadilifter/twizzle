@@ -96,13 +96,10 @@ export async function POST(request: NextRequest) {
       });
 
       // Return TwiML to acknowledge (empty response)
-      return new NextResponse(
-        '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
-        {
-          status: 200,
-          headers: { "Content-Type": "text/xml" },
-        }
-      );
+      return new NextResponse('<?xml version="1.0" encoding="UTF-8"?><Response></Response>', {
+        status: 200,
+        headers: { "Content-Type": "text/xml" },
+      });
     }
 
     // Handle status callbacks

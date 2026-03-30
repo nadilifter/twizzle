@@ -2,7 +2,11 @@ import { db } from "@/lib/db";
 import { getXeroClient, type XeroApiClient } from "@/lib/xero";
 import type { GLCode } from "@prisma/client";
 import type { Account as XeroAccountModel, Contact, Item } from "xero-node";
-import type { MappingSuggestion, SpecialAccountSuggestion, AutoSuggestResult } from "@/lib/qbo-discovery";
+import type {
+  MappingSuggestion,
+  SpecialAccountSuggestion,
+  AutoSuggestResult,
+} from "@/lib/qbo-discovery";
 
 export type { MappingSuggestion, SpecialAccountSuggestion, AutoSuggestResult };
 
@@ -80,9 +84,7 @@ function scoreName(glDescription: string, xeroName: string): number {
 
   const aWords = glDescription.toLowerCase().split(/\s+/);
   const bWords = xeroName.toLowerCase().split(/\s+/);
-  const commonWords = aWords.filter((w) =>
-    bWords.some((bw) => bw.includes(w) || w.includes(bw))
-  );
+  const commonWords = aWords.filter((w) => bWords.some((bw) => bw.includes(w) || w.includes(bw)));
 
   if (commonWords.length === 0) return 0;
   return Math.round((commonWords.length / Math.max(aWords.length, bWords.length)) * 60);
@@ -111,9 +113,7 @@ function suggestGlCodeMappings(
 ): MappingSuggestion[] {
   return glCodes.map((gl) => {
     const allowedClasses = GL_TO_XERO_CLASS_MAP[gl.type] || [];
-    const classMatchedAccounts = xeroAccounts.filter((a) =>
-      allowedClasses.includes(a.class)
-    );
+    const classMatchedAccounts = xeroAccounts.filter((a) => allowedClasses.includes(a.class));
 
     const scored = classMatchedAccounts
       .map((a) => ({
@@ -145,21 +145,19 @@ function suggestGlCodeMappings(
   });
 }
 
-function suggestSpecialAccounts(
-  xeroAccounts: XeroAccount[]
-): SpecialAccountSuggestion[] {
+function suggestSpecialAccounts(xeroAccounts: XeroAccount[]): SpecialAccountSuggestion[] {
   const suggestions: SpecialAccountSuggestion[] = [];
 
   const bankAccounts = xeroAccounts.filter((a) => a.type === "BANK");
   const checkingAccount = bankAccounts.find(
-    (a) => normalizeForComparison(a.name).includes("checking") ||
-           normalizeForComparison(a.name).includes("everyday")
+    (a) =>
+      normalizeForComparison(a.name).includes("checking") ||
+      normalizeForComparison(a.name).includes("everyday")
   );
   suggestions.push({
     mappingType: "BANK_ACCOUNT",
     suggestedAccountId: checkingAccount?.accountID ?? bankAccounts[0]?.accountID ?? null,
-    suggestedAccountName:
-      checkingAccount?.name ?? bankAccounts[0]?.name ?? null,
+    suggestedAccountName: checkingAccount?.name ?? bankAccounts[0]?.name ?? null,
     confidence: checkingAccount ? "high" : bankAccounts.length > 0 ? "medium" : "none",
     candidates: bankAccounts.map((a) => ({
       accountId: a.accountID,
@@ -199,8 +197,7 @@ function suggestSpecialAccounts(
   suggestions.push({
     mappingType: "REFUNDS",
     suggestedAccountId: refundAccount?.accountID ?? revenueAccounts[0]?.accountID ?? null,
-    suggestedAccountName:
-      refundAccount?.name ?? revenueAccounts[0]?.name ?? null,
+    suggestedAccountName: refundAccount?.name ?? revenueAccounts[0]?.name ?? null,
     confidence: refundAccount ? "high" : "low",
     candidates: revenueAccounts.slice(0, 10).map((a) => ({
       accountId: a.accountID,

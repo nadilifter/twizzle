@@ -11,10 +11,7 @@ import {
 import { getEffectiveUser, getCoachingMemberships } from "@/lib/impersonation";
 
 // GET /api/coach/chat/conversations/[id]/messages
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -35,18 +32,12 @@ export async function GET(
 
     const conversation = await getCoachConversation(id, effectiveUser.userId);
     if (!conversation) {
-      return NextResponse.json(
-        { error: "Conversation not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
 
     const searchParams = request.nextUrl.searchParams;
     const page = Math.max(1, parseInt(searchParams.get("page") || "1") || 1);
-    const limit = Math.min(
-      100,
-      Math.max(1, parseInt(searchParams.get("limit") || "50") || 50)
-    );
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50") || 50));
 
     const result = await getConversationMessages(id, {
       page,
@@ -61,26 +52,16 @@ export async function GET(
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error fetching coach conversation messages:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch messages" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch messages" }, { status: 500 });
   }
 }
 
 const sendMessageSchema = z.object({
-  body: z
-    .string()
-    .trim()
-    .min(1, "Message body is required")
-    .max(5000, "Message too long"),
+  body: z.string().trim().min(1, "Message body is required").max(5000, "Message too long"),
 });
 
 // POST /api/coach/chat/conversations/[id]/messages - Send a message
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -101,30 +82,26 @@ export async function POST(
 
     const conversation = await getCoachConversation(id, effectiveUser.userId);
     if (!conversation) {
-      return NextResponse.json(
-        { error: "Conversation not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
 
     if (conversation.channel === "WEB_SMS") {
-      const smsBlocked = await checkFeatureGate(
-        conversation.organizationId,
-        "sms"
-      );
+      const smsBlocked = await checkFeatureGate(conversation.organizationId, "sms");
       if (smsBlocked) return smsBlocked;
     }
 
     const reqBody = await request.json();
     const { body } = sendMessageSchema.parse(reqBody);
 
-    const result = await sendCoachMessage(id, body, effectiveUser.userId, conversation.organizationId);
+    const result = await sendCoachMessage(
+      id,
+      body,
+      effectiveUser.userId,
+      conversation.organizationId
+    );
 
     if (!result.success) {
-      return NextResponse.json(
-        { error: result.error, code: result.code },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: result.error, code: result.code }, { status: 400 });
     }
 
     return NextResponse.json({
@@ -139,9 +116,6 @@ export async function POST(
       );
     }
     console.error("Error sending coach message:", error);
-    return NextResponse.json(
-      { error: "Failed to send message" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to send message" }, { status: 500 });
   }
 }

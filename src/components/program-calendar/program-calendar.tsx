@@ -85,15 +85,15 @@ export function ProgramCalendar({
       viewMode === "month"
         ? startOfWeek(startOfMonth(currentDate), { weekStartsOn: 0 })
         : viewMode === "week"
-        ? startOfWeek(currentDate, { weekStartsOn: 0 })
-        : startOfDay(currentDate);
+          ? startOfWeek(currentDate, { weekStartsOn: 0 })
+          : startOfDay(currentDate);
 
     const calendarEnd =
       viewMode === "month"
         ? endOfWeek(endOfMonth(currentDate), { weekStartsOn: 0 })
         : viewMode === "week"
-        ? endOfWeek(currentDate, { weekStartsOn: 0 })
-        : endOfDay(currentDate);
+          ? endOfWeek(currentDate, { weekStartsOn: 0 })
+          : endOfDay(currentDate);
 
     const dateFiltered = events.filter((event) => {
       try {
@@ -159,9 +159,7 @@ export function ProgramCalendar({
             <CalendarHeader />
           </CardHeader>
         )}
-        <CardContent className="flex-1 p-0 overflow-hidden">
-          {renderView()}
-        </CardContent>
+        <CardContent className="flex-1 p-0 overflow-hidden">{renderView()}</CardContent>
       </Card>
     </CalendarContext.Provider>
   );

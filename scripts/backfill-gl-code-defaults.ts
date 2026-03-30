@@ -21,13 +21,48 @@ const db = new PrismaClient();
 const isDryRun = process.argv.includes("--dry-run");
 
 const DEFAULT_GL_CODES = [
-  { code: "4100", description: "Program Revenue", type: "REVENUE" as const, defaultForType: "PROGRAM" as const },
-  { code: "4200", description: "Event Revenue", type: "REVENUE" as const, defaultForType: "EVENT" as const },
-  { code: "4300", description: "Competition Revenue", type: "REVENUE" as const, defaultForType: "COMPETITION" as const },
-  { code: "4400", description: "Membership Revenue", type: "REVENUE" as const, defaultForType: "MEMBERSHIP" as const },
-  { code: "4500", description: "Pass Revenue", type: "REVENUE" as const, defaultForType: "PASS" as const },
-  { code: "4600", description: "Product Revenue", type: "REVENUE" as const, defaultForType: "PRODUCT" as const },
-  { code: "2100", description: "Sales Tax Collected", type: "LIABILITY" as const, defaultForType: null },
+  {
+    code: "4100",
+    description: "Program Revenue",
+    type: "REVENUE" as const,
+    defaultForType: "PROGRAM" as const,
+  },
+  {
+    code: "4200",
+    description: "Event Revenue",
+    type: "REVENUE" as const,
+    defaultForType: "EVENT" as const,
+  },
+  {
+    code: "4300",
+    description: "Competition Revenue",
+    type: "REVENUE" as const,
+    defaultForType: "COMPETITION" as const,
+  },
+  {
+    code: "4400",
+    description: "Membership Revenue",
+    type: "REVENUE" as const,
+    defaultForType: "MEMBERSHIP" as const,
+  },
+  {
+    code: "4500",
+    description: "Pass Revenue",
+    type: "REVENUE" as const,
+    defaultForType: "PASS" as const,
+  },
+  {
+    code: "4600",
+    description: "Product Revenue",
+    type: "REVENUE" as const,
+    defaultForType: "PRODUCT" as const,
+  },
+  {
+    code: "2100",
+    description: "Sales Tax Collected",
+    type: "LIABILITY" as const,
+    defaultForType: null,
+  },
 ] as const;
 
 async function main() {

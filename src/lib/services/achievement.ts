@@ -4,7 +4,7 @@ import { Decimal } from "@prisma/client/runtime/library";
 
 /**
  * Achievement Service
- * 
+ *
  * Handles achievement completion checking and awarding for evaluation templates.
  */
 
@@ -34,7 +34,7 @@ interface TemplateData {
 
 /**
  * Check if an evaluation meets the completion requirements for its template.
- * 
+ *
  * @param evaluationId - The evaluation to check
  * @returns Object containing completion status and details
  */
@@ -88,15 +88,11 @@ export async function checkEvaluationCompletion(evaluationId: string): Promise<{
 
   // Get the required skills from the template
   const requiredSkillIds = new Set(
-    template.skills
-      .filter((s) => s.isRequired)
-      .map((s) => s.skillId)
+    template.skills.filter((s) => s.isRequired).map((s) => s.skillId)
   );
 
   // Count passed skills among required skills
-  const passedSkills = skillRatings.filter(
-    (sr) => sr.passed && requiredSkillIds.has(sr.skillId)
-  );
+  const passedSkills = skillRatings.filter((sr) => sr.passed && requiredSkillIds.has(sr.skillId));
 
   const passedCount = passedSkills.length;
   const requiredCount = requiredSkillIds.size;
@@ -129,7 +125,7 @@ export async function checkEvaluationCompletion(evaluationId: string): Promise<{
 
 /**
  * Calculate best results by category for an athlete's evaluations with a specific template.
- * 
+ *
  * @param athleteId - The athlete ID
  * @param templateId - The template ID
  * @returns Object mapping category names to best scores
@@ -173,7 +169,7 @@ export async function calculateBestResultsByCategory(
 
 /**
  * Award an achievement to an athlete if not already earned.
- * 
+ *
  * @param athleteId - The athlete ID
  * @param achievementId - The achievement ID
  * @param evaluationId - The evaluation that triggered the achievement (optional)
@@ -218,9 +214,10 @@ export async function awardAchievement(
 
   // Calculate overall score (average of category bests)
   const categoryScores = Object.values(bestResultsByCategory);
-  const overallScore = categoryScores.length > 0
-    ? categoryScores.reduce((a, b) => a + b, 0) / categoryScores.length
-    : 0;
+  const overallScore =
+    categoryScores.length > 0
+      ? categoryScores.reduce((a, b) => a + b, 0) / categoryScores.length
+      : 0;
 
   // Create the achievement record
   const athleteAchievement = await db.athleteAchievement.create({
@@ -242,7 +239,7 @@ export async function awardAchievement(
 /**
  * Check and award achievements for an evaluation if completion requirements are met.
  * This should be called after an evaluation is completed/updated.
- * 
+ *
  * @param evaluationId - The evaluation ID to check
  * @returns Array of newly awarded achievements
  */
@@ -274,11 +271,7 @@ export async function checkAndAwardAchievements(
 
   // Try to award each achievement associated with the template
   for (const achievement of evaluation.template.achievements) {
-    const result = await awardAchievement(
-      evaluation.athleteId,
-      achievement.id,
-      evaluationId
-    );
+    const result = await awardAchievement(evaluation.athleteId, achievement.id, evaluationId);
 
     if (result) {
       awardedAchievements.push({
@@ -293,7 +286,7 @@ export async function checkAndAwardAchievements(
 
 /**
  * Get athlete's progress toward achievements for a specific template.
- * 
+ *
  * @param athleteId - The athlete ID
  * @param templateId - The template ID
  * @returns Progress information including earned status and completion percentage
@@ -340,9 +333,7 @@ export async function getAthleteAchievementProgress(
     },
   });
 
-  const earnedMap = new Map(
-    earnedAchievements.map((ea) => [ea.achievementId, ea])
-  );
+  const earnedMap = new Map(earnedAchievements.map((ea) => [ea.achievementId, ea]));
 
   // Get latest evaluation for progress calculation
   const latestEvaluation = await db.evaluation.findFirst({
@@ -359,9 +350,8 @@ export async function getAthleteAchievementProgress(
   // Calculate current progress
   const requiredSkillIds = new Set(template.skills.map((s) => s.skillId));
   const passedCount = latestEvaluation
-    ? latestEvaluation.skillRatings.filter(
-        (sr) => sr.passed && requiredSkillIds.has(sr.skillId)
-      ).length
+    ? latestEvaluation.skillRatings.filter((sr) => sr.passed && requiredSkillIds.has(sr.skillId))
+        .length
     : 0;
   const requiredCount = requiredSkillIds.size;
   const percentage = requiredCount > 0 ? (passedCount / requiredCount) * 100 : 0;

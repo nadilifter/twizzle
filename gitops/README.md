@@ -32,11 +32,11 @@ Push to main → Build Image → Push to ECR → ArgoCD Detects → Deploy to EK
 
 ## Environment Mapping
 
-| Branch    | Environment   | Domain                    | ArgoCD App              |
-|-----------|---------------|---------------------------|-------------------------|
-| main      | production    | uplifterinc.com          | uplifter-production     |
-| main      | staging       | upliftergymnastics.com   | uplifter-staging        |
-| develop   | development   | uplifterdev.com          | uplifter-development    |
+| Branch  | Environment | Domain                 | ArgoCD App           |
+| ------- | ----------- | ---------------------- | -------------------- |
+| main    | production  | uplifterinc.com        | uplifter-production  |
+| main    | staging     | upliftergymnastics.com | uplifter-staging     |
+| develop | development | uplifterdev.com        | uplifter-development |
 
 ## Initial Setup
 

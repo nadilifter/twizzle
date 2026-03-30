@@ -1,14 +1,14 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getAuthSession } from "@/lib/auth"
-import { db } from "@/lib/db"
-import { z } from "zod"
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthSession } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { z } from "zod";
 
 const templateInclude = {
   sport: { select: { id: true, name: true, slug: true } },
   axisValues: { orderBy: { displayOrder: "asc" as const } },
   combinationEntries: true,
   individualEntries: { orderBy: { displayOrder: "asc" as const } },
-}
+};
 
 const axisValueSchema = z.object({
   id: z.string().optional(),
@@ -17,10 +17,13 @@ const axisValueSchema = z.object({
   displayOrder: z.number().int().default(0),
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
-  allowedGenders: z.array(z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"])).optional().default([]),
+  allowedGenders: z
+    .array(z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]))
+    .optional()
+    .default([]),
   resultType: z.enum(["TIME", "DISTANCE", "HEIGHT", "SCORE"]).optional().nullable(),
   sortDirection: z.enum(["ASC", "DESC"]).optional().nullable(),
-})
+});
 
 const individualEntrySchema = z.object({
   id: z.string().optional(),
@@ -30,13 +33,16 @@ const individualEntrySchema = z.object({
   hasGenderRestriction: z.boolean().default(false),
   hasAgeRestriction: z.boolean().default(false),
   hasCapacityRestriction: z.boolean().default(false),
-  allowedGenders: z.array(z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"])).optional().default([]),
+  allowedGenders: z
+    .array(z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]))
+    .optional()
+    .default([]),
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
   capacity: z.number().int().min(1).optional().nullable(),
   resultType: z.enum(["TIME", "DISTANCE", "HEIGHT", "SCORE"]).optional().nullable(),
   sortDirection: z.enum(["ASC", "DESC"]).optional().nullable(),
-})
+});
 
 const updateTemplateSchema = z.object({
   name: z.string().min(1).optional(),
@@ -47,72 +53,67 @@ const updateTemplateSchema = z.object({
   columnAxisLabel: z.string().optional().nullable(),
   restrictionAxis: z.enum(["ROW", "COLUMN"]).optional().nullable(),
   axisValues: z.array(axisValueSchema).optional(),
-  combinationUpdates: z.array(z.object({
-    rowValueId: z.string(),
-    colValueId: z.string(),
-    isActive: z.boolean(),
-  })).optional(),
+  combinationUpdates: z
+    .array(
+      z.object({
+        rowValueId: z.string(),
+        colValueId: z.string(),
+        isActive: z.boolean(),
+      })
+    )
+    .optional(),
   individualEntries: z.array(individualEntrySchema).optional(),
-})
+});
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const organizationId = session.user.organizationId
+    const organizationId = session.user.organizationId;
     if (!organizationId) {
-      return NextResponse.json({ error: "No organization selected" }, { status: 400 })
+      return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
-    const { id } = await params
+    const { id } = await params;
     const template = await db.competitionCategoryTemplate.findUnique({
       where: { id },
       include: templateInclude,
-    })
+    });
 
     if (!template) {
-      return NextResponse.json({ error: "Template not found" }, { status: 404 })
+      return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
 
     // Org-specific templates must belong to this organization
     if (template.organizationId != null && template.organizationId !== organizationId) {
-      return NextResponse.json({ error: "Cannot access this template" }, { status: 403 })
+      return NextResponse.json({ error: "Cannot access this template" }, { status: 403 });
     }
 
-    return NextResponse.json(template)
+    return NextResponse.json(template);
   } catch (error) {
-    console.error("Error fetching template:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch template" },
-      { status: 500 }
-    )
+    console.error("Error fetching template:", error);
+    return NextResponse.json({ error: "Failed to fetch template" }, { status: 500 });
   }
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const organizationId = session.user.organizationId
+    const organizationId = session.user.organizationId;
     if (!organizationId) {
-      return NextResponse.json({ error: "No organization selected" }, { status: 400 })
+      return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
-    const { id } = await params
-    const body = await request.json()
-    const data = updateTemplateSchema.parse(body)
+    const { id } = await params;
+    const body = await request.json();
+    const data = updateTemplateSchema.parse(body);
 
     const existing = await db.competitionCategoryTemplate.findUnique({
       where: { id },
@@ -121,15 +122,15 @@ export async function PATCH(
         combinationEntries: true,
         individualEntries: true,
       },
-    })
+    });
 
     if (!existing) {
-      return NextResponse.json({ error: "Template not found" }, { status: 404 })
+      return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
 
     // Only allow editing org-level templates that belong to this organization
     if (existing.organizationId !== organizationId) {
-      return NextResponse.json({ error: "Cannot edit this template" }, { status: 403 })
+      return NextResponse.json({ error: "Cannot edit this template" }, { status: 403 });
     }
 
     // Update base fields
@@ -144,16 +145,16 @@ export async function PATCH(
         columnAxisLabel: data.columnAxisLabel,
         restrictionAxis: data.restrictionAxis,
       },
-    })
+    });
 
     // Handle COMBINATION axis values
     if (existing.type === "COMBINATION" && data.axisValues) {
-      const existingIds = existing.axisValues.map((v) => v.id)
-      const incomingIds = data.axisValues.filter((v) => v.id).map((v) => v.id!)
+      const existingIds = existing.axisValues.map((v) => v.id);
+      const incomingIds = data.axisValues.filter((v) => v.id).map((v) => v.id!);
 
-      const toDelete = existingIds.filter((eid) => !incomingIds.includes(eid))
+      const toDelete = existingIds.filter((eid) => !incomingIds.includes(eid));
       if (toDelete.length > 0) {
-        await db.categoryAxisValue.deleteMany({ where: { id: { in: toDelete } } })
+        await db.categoryAxisValue.deleteMany({ where: { id: { in: toDelete } } });
       }
 
       for (const v of data.axisValues) {
@@ -170,7 +171,7 @@ export async function PATCH(
               resultType: v.resultType || null,
               sortDirection: v.sortDirection || null,
             },
-          })
+          });
         } else {
           await db.categoryAxisValue.create({
             data: {
@@ -184,7 +185,7 @@ export async function PATCH(
               resultType: v.resultType || null,
               sortDirection: v.sortDirection || null,
             },
-          })
+          });
         }
       }
 
@@ -192,43 +193,43 @@ export async function PATCH(
       const updatedValues = await db.categoryAxisValue.findMany({
         where: { templateId: id },
         orderBy: { displayOrder: "asc" },
-      })
-      const rows = updatedValues.filter((v) => v.axis === "ROW")
-      const cols = updatedValues.filter((v) => v.axis === "COLUMN")
+      });
+      const rows = updatedValues.filter((v) => v.axis === "ROW");
+      const cols = updatedValues.filter((v) => v.axis === "COLUMN");
 
-      await db.categoryCombinationEntry.deleteMany({ where: { templateId: id } })
+      await db.categoryCombinationEntry.deleteMany({ where: { templateId: id } });
 
       const comboUpdateMap = new Map(
         (data.combinationUpdates || []).map((u) => [`${u.rowValueId}:${u.colValueId}`, u.isActive])
-      )
+      );
 
-      const combEntries = []
+      const combEntries = [];
       for (const row of rows) {
         for (const col of cols) {
-          const key = `${row.id}:${col.id}`
+          const key = `${row.id}:${col.id}`;
           combEntries.push({
             templateId: id,
             rowValueId: row.id,
             colValueId: col.id,
             isActive: comboUpdateMap.has(key) ? comboUpdateMap.get(key)! : true,
             name: `${row.name} - ${col.name}`,
-          })
+          });
         }
       }
 
       if (combEntries.length > 0) {
-        await db.categoryCombinationEntry.createMany({ data: combEntries })
+        await db.categoryCombinationEntry.createMany({ data: combEntries });
       }
     }
 
     // Handle INDIVIDUAL entries
     if (existing.type === "INDIVIDUAL" && data.individualEntries) {
-      const existingIds = existing.individualEntries.map((e) => e.id)
-      const incomingIds = data.individualEntries.filter((e) => e.id).map((e) => e.id!)
+      const existingIds = existing.individualEntries.map((e) => e.id);
+      const incomingIds = data.individualEntries.filter((e) => e.id).map((e) => e.id!);
 
-      const toDelete = existingIds.filter((eid) => !incomingIds.includes(eid))
+      const toDelete = existingIds.filter((eid) => !incomingIds.includes(eid));
       if (toDelete.length > 0) {
-        await db.categoryIndividualEntry.deleteMany({ where: { id: { in: toDelete } } })
+        await db.categoryIndividualEntry.deleteMany({ where: { id: { in: toDelete } } });
       }
 
       for (const e of data.individualEntries) {
@@ -249,7 +250,7 @@ export async function PATCH(
               resultType: e.resultType || null,
               sortDirection: e.sortDirection || null,
             },
-          })
+          });
         } else {
           await db.categoryIndividualEntry.create({
             data: {
@@ -267,7 +268,7 @@ export async function PATCH(
               resultType: e.resultType || null,
               sortDirection: e.sortDirection || null,
             },
-          })
+          });
         }
       }
     }
@@ -275,19 +276,16 @@ export async function PATCH(
     const updated = await db.competitionCategoryTemplate.findUnique({
       where: { id },
       include: templateInclude,
-    })
+    });
 
-    return NextResponse.json(updated)
+    return NextResponse.json(updated);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const message = error.issues?.[0]?.message || "Validation error"
-      return NextResponse.json({ error: message }, { status: 400 })
+      const message = error.issues?.[0]?.message || "Validation error";
+      return NextResponse.json({ error: message }, { status: 400 });
     }
-    console.error("Error updating template:", error)
-    return NextResponse.json(
-      { error: "Failed to update template" },
-      { status: 500 }
-    )
+    console.error("Error updating template:", error);
+    return NextResponse.json({ error: "Failed to update template" }, { status: 500 });
   }
 }
 
@@ -296,72 +294,66 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const organizationId = session.user.organizationId
+    const organizationId = session.user.organizationId;
     if (!organizationId) {
-      return NextResponse.json({ error: "No organization selected" }, { status: 400 })
+      return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
-    const { id } = await params
+    const { id } = await params;
     const template = await db.competitionCategoryTemplate.findUnique({
       where: { id },
-    })
+    });
 
     if (!template) {
-      return NextResponse.json({ error: "Template not found" }, { status: 404 })
+      return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
 
     if (template.organizationId !== organizationId) {
-      return NextResponse.json({ error: "Cannot delete this template" }, { status: 403 })
+      return NextResponse.json({ error: "Cannot delete this template" }, { status: 403 });
     }
 
-    await db.competitionCategoryTemplate.delete({ where: { id } })
+    await db.competitionCategoryTemplate.delete({ where: { id } });
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting template:", error)
-    return NextResponse.json(
-      { error: "Failed to delete template" },
-      { status: 500 }
-    )
+    console.error("Error deleting template:", error);
+    return NextResponse.json({ error: "Failed to delete template" }, { status: 500 });
   }
 }
 
 // PUT - Toggle preset disabled/enabled status for this organization
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const organizationId = session.user.organizationId
+    const organizationId = session.user.organizationId;
     if (!organizationId) {
-      return NextResponse.json({ error: "No organization selected" }, { status: 400 })
+      return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
-    const { id } = await params
-    const body = await request.json()
-    const { isDisabled } = z.object({ isDisabled: z.boolean() }).parse(body)
+    const { id } = await params;
+    const body = await request.json();
+    const { isDisabled } = z.object({ isDisabled: z.boolean() }).parse(body);
 
     // Verify the template exists and is a sport-level preset
     const template = await db.competitionCategoryTemplate.findUnique({
       where: { id },
-    })
+    });
 
     if (!template) {
-      return NextResponse.json({ error: "Template not found" }, { status: 404 })
+      return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
 
     if (!template.sportId) {
-      return NextResponse.json({ error: "Can only toggle preset templates" }, { status: 400 })
+      return NextResponse.json({ error: "Can only toggle preset templates" }, { status: 400 });
     }
 
     // Upsert the preference
@@ -378,17 +370,14 @@ export async function PUT(
         templateId: id,
         isDisabled,
       },
-    })
+    });
 
-    return NextResponse.json({ success: true, isDisabled: preference.isDisabled })
+    return NextResponse.json({ success: true, isDisabled: preference.isDisabled });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
+      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
     }
-    console.error("Error toggling preset preference:", error)
-    return NextResponse.json(
-      { error: "Failed to update preference" },
-      { status: 500 }
-    )
+    console.error("Error toggling preset preference:", error);
+    return NextResponse.json({ error: "Failed to update preference" }, { status: 500 });
   }
 }

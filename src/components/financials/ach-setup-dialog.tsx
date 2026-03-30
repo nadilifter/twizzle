@@ -1,56 +1,70 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2Icon, LockIcon } from "lucide-react"
-import { toast } from "sonner"
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Loader2Icon, LockIcon } from "lucide-react";
+import { toast } from "sonner";
 
 export function AchSetupDialog({ trigger }: { trigger?: React.ReactNode }) {
-  const [open, setOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  
+  const [open, setOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
   // Form State
-  const [holderName, setHolderName] = useState("")
-  const [routingNumber, setRoutingNumber] = useState("")
-  const [accountNumber, setAccountNumber] = useState("")
-  const [confirmAccountNumber, setConfirmAccountNumber] = useState("")
-  const [accountType, setAccountType] = useState<string>("checking")
+  const [holderName, setHolderName] = useState("");
+  const [routingNumber, setRoutingNumber] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [confirmAccountNumber, setConfirmAccountNumber] = useState("");
+  const [accountType, setAccountType] = useState<string>("checking");
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+    e.preventDefault();
+    setIsLoading(true);
 
     // Basic Validation
     if (accountNumber !== confirmAccountNumber) {
-        toast.error("Account numbers do not match")
-        setIsLoading(false)
-        return
+      toast.error("Account numbers do not match");
+      setIsLoading(false);
+      return;
     }
 
     if (routingNumber.length !== 9) {
-        toast.error("Routing number must be 9 digits")
-        setIsLoading(false)
-        return
+      toast.error("Routing number must be 9 digits");
+      setIsLoading(false);
+      return;
     }
 
     // Simulate API call to Adyen / Backend
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    toast.success("Bank account added successfully")
-    setIsLoading(false)
-    setOpen(false)
-    
+    toast.success("Bank account added successfully");
+    setIsLoading(false);
+    setOpen(false);
+
     // Reset form
-    setHolderName("")
-    setRoutingNumber("")
-    setAccountNumber("")
-    setConfirmAccountNumber("")
-    setAccountType("checking")
-  }
+    setHolderName("");
+    setRoutingNumber("");
+    setAccountNumber("");
+    setConfirmAccountNumber("");
+    setAccountType("checking");
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -61,61 +75,61 @@ export function AchSetupDialog({ trigger }: { trigger?: React.ReactNode }) {
         <DialogHeader>
           <DialogTitle>Bank Account Details</DialogTitle>
           <DialogDescription>
-            Enter your bank account information to receive payouts. 
-            Your data is securely encrypted and sent directly to Adyen.
+            Enter your bank account information to receive payouts. Your data is securely encrypted
+            and sent directly to Adyen.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="grid gap-6 py-4">
           <div className="grid gap-2">
             <Label htmlFor="holderName">Account Holder Name</Label>
-            <Input 
-                id="holderName" 
-                placeholder="e.g. Acme Corp" 
-                value={holderName}
-                onChange={(e) => setHolderName(e.target.value)}
-                required
+            <Input
+              id="holderName"
+              placeholder="e.g. Acme Corp"
+              value={holderName}
+              onChange={(e) => setHolderName(e.target.value)}
+              required
             />
           </div>
 
           <div className="grid gap-2">
             <Label htmlFor="routingNumber">Routing Number (ABA)</Label>
-            <Input 
-                id="routingNumber" 
-                placeholder="9 digits" 
-                value={routingNumber}
-                onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, '').slice(0, 9)
-                    setRoutingNumber(val)
-                }}
-                required
-                pattern="\d{9}"
-                inputMode="numeric"
+            <Input
+              id="routingNumber"
+              placeholder="9 digits"
+              value={routingNumber}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, "").slice(0, 9);
+                setRoutingNumber(val);
+              }}
+              required
+              pattern="\d{9}"
+              inputMode="numeric"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-                <Label htmlFor="accountNumber">Account Number</Label>
-                <Input 
-                    id="accountNumber" 
-                    type="password"
-                    placeholder="••••••••••••" 
-                    value={accountNumber}
-                    onChange={(e) => setAccountNumber(e.target.value)}
-                    required
-                />
+              <Label htmlFor="accountNumber">Account Number</Label>
+              <Input
+                id="accountNumber"
+                type="password"
+                placeholder="••••••••••••"
+                value={accountNumber}
+                onChange={(e) => setAccountNumber(e.target.value)}
+                required
+              />
             </div>
             <div className="grid gap-2">
-                <Label htmlFor="confirmAccountNumber">Confirm Account Number</Label>
-                <Input 
-                    id="confirmAccountNumber" 
-                    type="password"
-                    placeholder="••••••••••••" 
-                    value={confirmAccountNumber}
-                    onChange={(e) => setConfirmAccountNumber(e.target.value)}
-                    required
-                />
+              <Label htmlFor="confirmAccountNumber">Confirm Account Number</Label>
+              <Input
+                id="confirmAccountNumber"
+                type="password"
+                placeholder="••••••••••••"
+                value={confirmAccountNumber}
+                onChange={(e) => setConfirmAccountNumber(e.target.value)}
+                required
+              />
             </div>
           </div>
 
@@ -138,17 +152,16 @@ export function AchSetupDialog({ trigger }: { trigger?: React.ReactNode }) {
           </div>
 
           <DialogFooter>
-             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-             <Button type="submit" disabled={isLoading}>
-                {isLoading && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
-                Save Bank Account
-             </Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
+              Save Bank Account
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
-
-
-

@@ -12,11 +12,11 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    
+
     // Date range parameters
     const startParam = searchParams.get("start");
     const endParam = searchParams.get("end");
-    
+
     // Default to current month +/- 1 month if no dates provided
     const now = new Date();
     const start = startParam ? new Date(startParam) : startOfMonth(subMonths(now, 1));
@@ -103,9 +103,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ events });
   } catch (error) {
     console.error("Error fetching calendar instances:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch calendar instances" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch calendar instances" }, { status: 500 });
   }
 }

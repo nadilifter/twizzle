@@ -59,10 +59,7 @@ export async function GET(
     return NextResponse.json(registration);
   } catch (error) {
     console.error("Error fetching registration:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch registration" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch registration" }, { status: 500 });
   }
 }
 
@@ -156,16 +153,10 @@ export async function PATCH(
     return NextResponse.json(registration);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error updating registration:", error);
-    return NextResponse.json(
-      { error: "Failed to update registration" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update registration" }, { status: 500 });
   }
 }
 
@@ -241,9 +232,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting registration:", error);
-    return NextResponse.json(
-      { error: "Failed to delete registration" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete registration" }, { status: 500 });
   }
 }

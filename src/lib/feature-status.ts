@@ -1,22 +1,22 @@
 /**
  * Feature Status Configuration
- * 
+ *
  * This file tracks which features have backend services implemented vs. those
  * still using demo/mock data. Used to display indicators in navigation and
  * show demo data banners on pages.
- * 
+ *
  * Status meanings:
  * - "live": Feature has backend API connected and uses real database
  * - "demo": Feature uses mock/demo data for UI demonstration
  * - "partial": Some functionality works with real data, some uses demo
  */
 
-export type FeatureStatus = "live" | "demo" | "partial"
+export type FeatureStatus = "live" | "demo" | "partial";
 
 export interface FeatureConfig {
-  status: FeatureStatus
-  description?: string
-  apiRoutes?: string[] // Which API routes power this feature
+  status: FeatureStatus;
+  description?: string;
+  apiRoutes?: string[]; // Which API routes power this feature
 }
 
 // Map of URL paths to their feature status
@@ -25,7 +25,7 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
   // ========================================
   // LIVE FEATURES (Backend Connected)
   // ========================================
-  
+
   // Authentication & User Management
   "/login": {
     status: "live",
@@ -42,7 +42,7 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     description: "User management with full CRUD and permissions",
     apiRoutes: ["/api/users"],
   },
-  
+
   // Super Admin
   "/admin": {
     status: "live",
@@ -53,7 +53,7 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
   // ========================================
   // DEMO FEATURES (Mock Data)
   // ========================================
-  
+
   // Dashboard
   "/dashboard": {
     status: "live",
@@ -61,8 +61,15 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
   },
   "/dashboard/analytics": {
     status: "live",
-    description: "Organization analytics with demographics, enrollment trends, and program insights",
-    apiRoutes: ["/api/analytics/overview", "/api/analytics/retention", "/api/analytics/revenue", "/api/analytics/engagement", "/api/analytics/programs"],
+    description:
+      "Organization analytics with demographics, enrollment trends, and program insights",
+    apiRoutes: [
+      "/api/analytics/overview",
+      "/api/analytics/retention",
+      "/api/analytics/revenue",
+      "/api/analytics/engagement",
+      "/api/analytics/programs",
+    ],
   },
 
   // Athletes Section
@@ -125,8 +132,14 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
   // Competitions Section
   "/dashboard/competitions": {
     status: "live",
-    description: "Competitions management with categories, results tracking, and large-scale participant registration.",
-    apiRoutes: ["/api/competitions", "/api/competitions/[id]", "/api/competitions/[id]/entries", "/api/competitions/[id]/results"],
+    description:
+      "Competitions management with categories, results tracking, and large-scale participant registration.",
+    apiRoutes: [
+      "/api/competitions",
+      "/api/competitions/[id]",
+      "/api/competitions/[id]/entries",
+      "/api/competitions/[id]/results",
+    ],
   },
   "/dashboard/competitions/categories": {
     status: "live",
@@ -160,7 +173,11 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
   "/dashboard/communication/sms": {
     status: "live",
     description: "SMS campaigns with targeting, placeholders, and Twilio integration",
-    apiRoutes: ["/api/sms/campaigns", "/api/sms/campaigns/preview", "/api/sms/campaigns/recipients"],
+    apiRoutes: [
+      "/api/sms/campaigns",
+      "/api/sms/campaigns/preview",
+      "/api/sms/campaigns/recipients",
+    ],
   },
   "/dashboard/usage/email": {
     status: "live",
@@ -169,12 +186,23 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
   "/dashboard/communication/notifications": {
     status: "live",
     description: "Notification rules management with templates and recipient configuration",
-    apiRoutes: ["/api/notifications/rules", "/api/notifications/placeholders", "/api/notifications/preview", "/api/notifications/logs"],
+    apiRoutes: [
+      "/api/notifications/rules",
+      "/api/notifications/placeholders",
+      "/api/notifications/preview",
+      "/api/notifications/logs",
+    ],
   },
   "/dashboard/usage/sms": {
     status: "live",
     description: "SMS messaging with Twilio integration, usage tracking, and campaigns",
-    apiRoutes: ["/api/sms", "/api/sms/sync", "/api/sms/campaigns", "/api/twilio/webhook", "/api/organization/sms-usage"],
+    apiRoutes: [
+      "/api/sms",
+      "/api/sms/sync",
+      "/api/sms/campaigns",
+      "/api/twilio/webhook",
+      "/api/organization/sms-usage",
+    ],
   },
 
   // Organization Section
@@ -202,7 +230,11 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
   "/dashboard/athletes/medical": {
     status: "live",
     description: "Medical form configuration and custom questions management",
-    apiRoutes: ["/api/organization/medical-config", "/api/organization/medical-questions", "/api/athletes/[id]/medical"],
+    apiRoutes: [
+      "/api/organization/medical-config",
+      "/api/organization/medical-questions",
+      "/api/athletes/[id]/medical",
+    ],
   },
   "/dashboard/organization/schedules": {
     status: "live",
@@ -266,7 +298,11 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
   "/dashboard/financials/onboarding": {
     status: "live",
     description: "Adyen payment onboarding",
-    apiRoutes: ["/api/organization/adyen-onboarding", "/api/organization/adyen-onboarding/finalize", "/api/organization/adyen-onboarding/link"],
+    apiRoutes: [
+      "/api/organization/adyen-onboarding",
+      "/api/organization/adyen-onboarding/finalize",
+      "/api/organization/adyen-onboarding/link",
+    ],
   },
   "/dashboard/financials/payouts": {
     status: "live",
@@ -296,7 +332,12 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
   "/dashboard/athletes/waivers": {
     status: "live",
     description: "Waiver management with WYSIWYG builder and digital signatures",
-    apiRoutes: ["/api/waivers", "/api/waivers/[id]", "/api/waivers/[id]/sign", "/api/waivers/check"],
+    apiRoutes: [
+      "/api/waivers",
+      "/api/waivers/[id]",
+      "/api/waivers/[id]/sign",
+      "/api/waivers/check",
+    ],
   },
 
   // Usage Section
@@ -318,14 +359,14 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     description: "Feedback and feature requests",
     apiRoutes: ["/api/feedback"],
   },
-  
+
   // Feedback Portal (public)
   "/feedback": {
     status: "live",
     description: "Public feedback portal for feature requests and voting",
     apiRoutes: ["/api/feedback", "/api/feedback/categories"],
   },
-  
+
   // Superadmin Feedback Management
   "/superadmin/feedback": {
     status: "live",
@@ -379,7 +420,7 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     description: "Athlete SMS chat with organizations",
     apiRoutes: ["/api/athletes/chat"],
   },
-}
+};
 
 /**
  * Get the feature status for a given pathname
@@ -388,28 +429,28 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
 export function getFeatureStatus(pathname: string): FeatureConfig | null {
   // First try exact match
   if (featureStatusMap[pathname]) {
-    return featureStatusMap[pathname]
+    return featureStatusMap[pathname];
   }
 
   // Then try matching parent paths (most specific first)
-  const pathParts = pathname.split("/").filter(Boolean)
+  const pathParts = pathname.split("/").filter(Boolean);
   while (pathParts.length > 0) {
-    const testPath = "/" + pathParts.join("/")
+    const testPath = "/" + pathParts.join("/");
     if (featureStatusMap[testPath]) {
-      return featureStatusMap[testPath]
+      return featureStatusMap[testPath];
     }
-    pathParts.pop()
+    pathParts.pop();
   }
 
-  return null
+  return null;
 }
 
 /**
  * Check if a path is using demo data
  */
 export function isDemoFeature(pathname: string): boolean {
-  const config = getFeatureStatus(pathname)
-  return config?.status === "demo" || config?.status === "partial"
+  const config = getFeatureStatus(pathname);
+  return config?.status === "demo" || config?.status === "partial";
 }
 
 /**
@@ -418,5 +459,5 @@ export function isDemoFeature(pathname: string): boolean {
 export function getPathsByStatus(status: FeatureStatus): string[] {
   return Object.entries(featureStatusMap)
     .filter(([_, config]) => config.status === status)
-    .map(([path]) => path)
+    .map(([path]) => path);
 }

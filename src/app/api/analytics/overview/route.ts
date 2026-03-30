@@ -102,7 +102,7 @@ export async function GET() {
       "6-12": 0,
       "13-17": 0,
       "18+": 0,
-      "Unknown": 0,
+      Unknown: 0,
     };
 
     const genderBuckets: Record<string, number> = {
@@ -117,8 +117,7 @@ export async function GET() {
       // Age
       if (athlete.birthDate) {
         const age = Math.floor(
-          (now.getTime() - new Date(athlete.birthDate).getTime()) /
-            (365.25 * 24 * 60 * 60 * 1000)
+          (now.getTime() - new Date(athlete.birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
         );
         if (age < 6) ageBuckets["Under 6"]++;
         else if (age <= 12) ageBuckets["6-12"]++;
@@ -171,9 +170,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Error fetching analytics overview:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch analytics data" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch analytics data" }, { status: 500 });
   }
 }

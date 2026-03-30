@@ -1,17 +1,23 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { RichTextEditor } from "@/components/ui/rich-text-editor"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/components/ui/switch"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Checkbox } from "@/components/ui/checkbox"
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   defineStepper,
   StepperNav,
@@ -20,7 +26,7 @@ import {
   StepperSeparator,
   StepperTitle,
   getStepStatus,
-} from "@/components/ui/stepper"
+} from "@/components/ui/stepper";
 import {
   ArrowLeft,
   ArrowRight,
@@ -41,107 +47,107 @@ import {
   Heart,
   ShieldAlert,
   Copy,
-} from "lucide-react"
-import { toast } from "sonner"
-import { GLCodeSelector } from "@/components/gl-code-selector"
-import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-config"
-import type { FileRequirementConfig } from "@/types/file-requirements"
-import { useFeatures } from "@/components/feature-context"
-import { useStaff } from "@/hooks/use-staff"
-import { useStaffCertStatus } from "@/hooks/use-staff-cert-status"
-import { useMemberships } from "@/hooks/use-memberships"
-import { cn } from "@/lib/utils"
-import { CopySettingsDialog } from "@/components/copy-settings-dialog"
-import { ColorSelector } from "@/components/color-selector"
-import { useCategories } from "@/hooks/use-categories"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { format } from "date-fns"
-import type { EventType, EventWithRelations } from "@/types/events"
+} from "lucide-react";
+import { toast } from "sonner";
+import { GLCodeSelector } from "@/components/gl-code-selector";
+import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-config";
+import type { FileRequirementConfig } from "@/types/file-requirements";
+import { useFeatures } from "@/components/feature-context";
+import { useStaff } from "@/hooks/use-staff";
+import { useStaffCertStatus } from "@/hooks/use-staff-cert-status";
+import { useMemberships } from "@/hooks/use-memberships";
+import { cn } from "@/lib/utils";
+import { CopySettingsDialog } from "@/components/copy-settings-dialog";
+import { ColorSelector } from "@/components/color-selector";
+import { useCategories } from "@/hooks/use-categories";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { format } from "date-fns";
+import type { EventType, EventWithRelations } from "@/types/events";
 
-type EventStaffRole = "LEAD" | "ASSISTANT" | "VOLUNTEER" | "OBSERVER"
+type EventStaffRole = "LEAD" | "ASSISTANT" | "VOLUNTEER" | "OBSERVER";
 
 interface Level {
-  id: string
-  name: string
-  color: string | null
-  order: number
+  id: string;
+  name: string;
+  color: string | null;
+  order: number;
 }
 
 interface Facility {
-  id: string
-  name: string
-  street: string | null
-  city: string | null
-  stateProvince: string | null
+  id: string;
+  name: string;
+  street: string | null;
+  city: string | null;
+  stateProvince: string | null;
 }
 
 interface MembershipInstance {
-  id: string
-  name: string
-  price: number
-  groupName: string
+  id: string;
+  name: string;
+  price: number;
+  groupName: string;
 }
 
 interface StaffAssignment {
-  memberId: string
-  role: EventStaffRole
+  memberId: string;
+  role: EventStaffRole;
   member?: {
-    id: string
+    id: string;
     user: {
-      name: string
-      avatar: string | null
-    }
-    title: string | null
-  }
+      name: string;
+      avatar: string | null;
+    };
+    title: string | null;
+  };
 }
 
 interface EventFormData {
   // Step 1: General
-  name: string
-  description: string
-  color: string
-  type: EventType
-  price: number | null
+  name: string;
+  description: string;
+  color: string;
+  type: EventType;
+  price: number | null;
 
   // Step 2: Date & Location
-  date: Date | null
-  startTime: string
-  endTime: string
-  facilityId: string | null
+  date: Date | null;
+  startTime: string;
+  endTime: string;
+  facilityId: string | null;
 
   // Step 3: Requirements
-  hasLevelRestriction: boolean
-  levelRequirementIds: string[]
-  hasCapacityRestriction: boolean
-  capacity: number | null
-  hasAgeRestriction: boolean
-  minAge: number | null
-  maxAge: number | null
-  hasGenderRestriction: boolean
-  allowedGenders: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[]
-  hasMembershipRestriction: boolean
-  membershipRequirementIds: string[]
-  hasWaiverRestriction: boolean
-  waiverRequirementIds: string[]
-  hasMedicalRequirement: boolean
-  hasFileRequirement: boolean
-  fileRequirementConfig: FileRequirementConfig | null
+  hasLevelRestriction: boolean;
+  levelRequirementIds: string[];
+  hasCapacityRestriction: boolean;
+  capacity: number | null;
+  hasAgeRestriction: boolean;
+  minAge: number | null;
+  maxAge: number | null;
+  hasGenderRestriction: boolean;
+  allowedGenders: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[];
+  hasMembershipRestriction: boolean;
+  membershipRequirementIds: string[];
+  hasWaiverRestriction: boolean;
+  waiverRequirementIds: string[];
+  hasMedicalRequirement: boolean;
+  hasFileRequirement: boolean;
+  fileRequirementConfig: FileRequirementConfig | null;
 
   // Step 4: Staff
-  staffAssignments: StaffAssignment[]
+  staffAssignments: StaffAssignment[];
 
   // GL Code
-  glCodeId: string | null
+  glCodeId: string | null;
 
   // Category
-  categoryId: string | null
+  categoryId: string | null;
 }
 
 interface EventStepperProps {
-  event?: EventWithRelations | null
-  onSuccess?: (event: EventWithRelations) => void
+  event?: EventWithRelations | null;
+  onSuccess?: (event: EventWithRelations) => void;
 }
 
 const EVENT_TYPES: { value: EventType; label: string; description: string }[] = [
@@ -151,42 +157,50 @@ const EVENT_TYPES: { value: EventType; label: string; description: string }[] = 
   { value: "TRYOUT", label: "Tryout", description: "Athlete evaluation or team selection" },
   { value: "MEETING", label: "Meeting", description: "Staff meeting or parent meeting" },
   { value: "OTHER", label: "Other", description: "Any other type of event" },
-]
+];
 
 const ROLE_LABELS: Record<EventStaffRole, string> = {
   LEAD: "Lead",
   ASSISTANT: "Assistant",
   VOLUNTEER: "Volunteer",
   OBSERVER: "Observer",
-}
+};
 
 const { useStepper } = defineStepper(
   { id: "general", title: "General" },
   { id: "dateLocation", title: "Schedule" },
   { id: "requirements", title: "Requirements" },
-  { id: "staff", title: "Staff" },
-)
+  { id: "staff", title: "Staff" }
+);
 
 export function EventStepper({ event, onSuccess }: EventStepperProps) {
-  const router = useRouter()
-  const isEditing = !!event
-  const { isFeatureEnabled } = useFeatures()
-  const trainingEnabled = isFeatureEnabled("training")
-  const membershipsEnabled = isFeatureEnabled("memberships")
+  const router = useRouter();
+  const isEditing = !!event;
+  const { isFeatureEnabled } = useFeatures();
+  const trainingEnabled = isFeatureEnabled("training");
+  const membershipsEnabled = isFeatureEnabled("memberships");
 
-  const { staff: availableStaff, isLoading: loadingStaff } = useStaff()
-  const { memberships, isLoading: loadingMemberships } = useMemberships({ initialParams: { include: "instances" } })
-  const { requiredCertNames, hasRequirements: hasCertRequirements, getMemberStatus } = useStaffCertStatus("events")
-  const { categories, isLoading: categoriesLoading } = useCategories()
+  const { staff: availableStaff, isLoading: loadingStaff } = useStaff();
+  const { memberships, isLoading: loadingMemberships } = useMemberships({
+    initialParams: { include: "instances" },
+  });
+  const {
+    requiredCertNames,
+    hasRequirements: hasCertRequirements,
+    getMemberStatus,
+  } = useStaffCertStatus("events");
+  const { categories, isLoading: categoriesLoading } = useCategories();
 
-  const [levels, setLevels] = React.useState<Level[]>([])
-  const [loadingLevels, setLoadingLevels] = React.useState(true)
+  const [levels, setLevels] = React.useState<Level[]>([]);
+  const [loadingLevels, setLoadingLevels] = React.useState(true);
 
-  const [facilities, setFacilities] = React.useState<Facility[]>([])
-  const [loadingFacilities, setLoadingFacilities] = React.useState(true)
+  const [facilities, setFacilities] = React.useState<Facility[]>([]);
+  const [loadingFacilities, setLoadingFacilities] = React.useState(true);
 
-  const [waivers, setWaivers] = React.useState<Array<{ id: string; title: string; status: string }>>([])
-  const [loadingWaivers, setLoadingWaivers] = React.useState(true)
+  const [waivers, setWaivers] = React.useState<
+    Array<{ id: string; title: string; status: string }>
+  >([]);
+  const [loadingWaivers, setLoadingWaivers] = React.useState(true);
 
   const [formData, setFormData] = React.useState<EventFormData>(() => ({
     name: (event as any)?.title || "",
@@ -222,19 +236,19 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
     glCodeId: (event as any)?.glCodeId || null,
 
     categoryId: event?.categoryId || null,
-  }))
+  }));
 
-  const [isSaving, setIsSaving] = React.useState(false)
-  const [copyDialogOpen, setCopyDialogOpen] = React.useState(false)
-  const stepper = useStepper()
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [copyDialogOpen, setCopyDialogOpen] = React.useState(false);
+  const stepper = useStepper();
 
   const handleCopyFromEvent = React.useCallback(async (sourceId: string) => {
     try {
-      const response = await fetch(`/api/events/${sourceId}`)
-      if (!response.ok) throw new Error("Failed to fetch event")
-      const data = await response.json()
+      const response = await fetch(`/api/events/${sourceId}`);
+      if (!response.ok) throw new Error("Failed to fetch event");
+      const data = await response.json();
 
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         description: data.description || "",
         color: data.color || "#3b82f6",
@@ -261,191 +275,204 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
         hasFileRequirement: data.hasFileRequirement || false,
         fileRequirementConfig: data.fileRequirementConfig || null,
         staffAssignments: [],
-      }))
+      }));
 
-      toast.success(`Settings copied from "${data.title}"`)
+      toast.success(`Settings copied from "${data.title}"`);
     } catch (error) {
-      console.error("Failed to copy event settings:", error)
-      toast.error("Failed to copy event settings")
-      throw error
+      console.error("Failed to copy event settings:", error);
+      toast.error("Failed to copy event settings");
+      throw error;
     }
-  }, [])
+  }, []);
 
   React.useEffect(() => {
     const fetchLevels = async () => {
       try {
-        const response = await fetch("/api/levels")
+        const response = await fetch("/api/levels");
         if (response.ok) {
-          const data = await response.json()
-          setLevels(data)
+          const data = await response.json();
+          setLevels(data);
         }
       } catch (error) {
-        console.error("Failed to fetch levels:", error)
+        console.error("Failed to fetch levels:", error);
       } finally {
-        setLoadingLevels(false)
+        setLoadingLevels(false);
       }
-    }
-    fetchLevels()
-  }, [])
+    };
+    fetchLevels();
+  }, []);
 
   React.useEffect(() => {
     const fetchFacilities = async () => {
       try {
-        const response = await fetch("/api/organization/facilities")
+        const response = await fetch("/api/organization/facilities");
         if (response.ok) {
-          const data = await response.json()
-          setFacilities(data)
+          const data = await response.json();
+          setFacilities(data);
         }
       } catch (error) {
-        console.error("Failed to fetch facilities:", error)
+        console.error("Failed to fetch facilities:", error);
       } finally {
-        setLoadingFacilities(false)
+        setLoadingFacilities(false);
       }
-    }
-    fetchFacilities()
-  }, [])
+    };
+    fetchFacilities();
+  }, []);
 
   React.useEffect(() => {
     const fetchWaivers = async () => {
       try {
-        const response = await fetch("/api/waivers?status=ACTIVE")
+        const response = await fetch("/api/waivers?status=ACTIVE");
         if (response.ok) {
-          const data = await response.json()
-          setWaivers(data.data || [])
+          const data = await response.json();
+          setWaivers(data.data || []);
         }
       } catch (error) {
-        console.error("Failed to fetch waivers:", error)
+        console.error("Failed to fetch waivers:", error);
       } finally {
-        setLoadingWaivers(false)
+        setLoadingWaivers(false);
       }
-    }
-    fetchWaivers()
-  }, [])
+    };
+    fetchWaivers();
+  }, []);
 
   const allMembershipInstances = React.useMemo(() => {
-    return memberships?.flatMap(group =>
-      group.instances?.map((instance: any) => ({
-        id: instance.id,
-        name: instance.name,
-        price: Number(instance.price),
-        groupName: group.name,
-      })) || []
-    ) || []
-  }, [memberships])
+    return (
+      memberships?.flatMap(
+        (group) =>
+          group.instances?.map((instance: any) => ({
+            id: instance.id,
+            name: instance.name,
+            price: Number(instance.price),
+            groupName: group.name,
+          })) || []
+      ) || []
+    );
+  }, [memberships]);
 
   const unassignedStaff = React.useMemo(() => {
-    return availableStaff?.filter(
-      s => !formData.staffAssignments.some(a => a.memberId === s.id)
-    ) || []
-  }, [availableStaff, formData.staffAssignments])
+    return (
+      availableStaff?.filter((s) => !formData.staffAssignments.some((a) => a.memberId === s.id)) ||
+      []
+    );
+  }, [availableStaff, formData.staffAssignments]);
 
   const validateStep = (stepId: string): boolean => {
     switch (stepId) {
       case "general":
         if (!formData.name.trim()) {
-          toast.error("Event name is required")
-          return false
+          toast.error("Event name is required");
+          return false;
         }
         if (formData.price !== null && formData.price !== undefined && formData.price < 0) {
-          toast.error("Price cannot be negative")
-          return false
+          toast.error("Price cannot be negative");
+          return false;
         }
-        return true
+        return true;
       case "dateLocation":
         if (!formData.date) {
-          toast.error("Event date is required")
-          return false
+          toast.error("Event date is required");
+          return false;
         }
         if (!formData.startTime) {
-          toast.error("Start time is required")
-          return false
+          toast.error("Start time is required");
+          return false;
         }
         if (!formData.endTime) {
-          toast.error("End time is required")
-          return false
+          toast.error("End time is required");
+          return false;
         }
         if (formData.startTime >= formData.endTime) {
-          toast.error("End time must be after start time")
-          return false
+          toast.error("End time must be after start time");
+          return false;
         }
-        return true
+        return true;
       case "requirements":
         if (formData.hasCapacityRestriction && (!formData.capacity || formData.capacity < 1)) {
-          toast.error("Capacity must be at least 1 when enabled")
-          return false
+          toast.error("Capacity must be at least 1 when enabled");
+          return false;
         }
         if (formData.hasAgeRestriction) {
           if (formData.minAge === null && formData.maxAge === null) {
-            toast.error("At least one age value is required when age restriction is enabled")
-            return false
+            toast.error("At least one age value is required when age restriction is enabled");
+            return false;
           }
           if (formData.minAge !== null && (formData.minAge < 0 || formData.minAge > 100)) {
-            toast.error("Minimum age must be between 0 and 100")
-            return false
+            toast.error("Minimum age must be between 0 and 100");
+            return false;
           }
           if (formData.maxAge !== null && (formData.maxAge < 0 || formData.maxAge > 100)) {
-            toast.error("Maximum age must be between 0 and 100")
-            return false
+            toast.error("Maximum age must be between 0 and 100");
+            return false;
           }
-          if (formData.minAge !== null && formData.maxAge !== null && formData.minAge > formData.maxAge) {
-            toast.error("Minimum age cannot be greater than maximum age")
-            return false
+          if (
+            formData.minAge !== null &&
+            formData.maxAge !== null &&
+            formData.minAge > formData.maxAge
+          ) {
+            toast.error("Minimum age cannot be greater than maximum age");
+            return false;
           }
         }
         if (formData.hasGenderRestriction && formData.allowedGenders.length === 0) {
-          toast.error("Select at least one gender when gender restriction is enabled")
-          return false
+          toast.error("Select at least one gender when gender restriction is enabled");
+          return false;
         }
         if (formData.hasLevelRestriction && formData.levelRequirementIds.length === 0) {
-          toast.error("Select at least one level when level restriction is enabled")
-          return false
+          toast.error("Select at least one level when level restriction is enabled");
+          return false;
         }
         if (formData.hasMembershipRestriction && formData.membershipRequirementIds.length === 0) {
-          toast.error("Select at least one membership when membership restriction is enabled")
-          return false
+          toast.error("Select at least one membership when membership restriction is enabled");
+          return false;
         }
         if (formData.hasWaiverRestriction && formData.waiverRequirementIds.length === 0) {
-          toast.error("Select at least one waiver when waiver restriction is enabled")
-          return false
+          toast.error("Select at least one waiver when waiver restriction is enabled");
+          return false;
         }
-        if (formData.hasFileRequirement && (!formData.fileRequirementConfig?.label?.trim())) {
-          toast.error("Provide a label for the file upload requirement")
-          return false
+        if (formData.hasFileRequirement && !formData.fileRequirementConfig?.label?.trim()) {
+          toast.error("Provide a label for the file upload requirement");
+          return false;
         }
         if (formData.hasFileRequirement && formData.fileRequirementConfig) {
-          const { acceptedPresets, acceptedExtensions } = formData.fileRequirementConfig
+          const { acceptedPresets, acceptedExtensions } = formData.fileRequirementConfig;
           if (acceptedPresets.length === 0 && acceptedExtensions.length === 0) {
-            toast.error("Select at least one file type preset or add a custom extension")
-            return false
+            toast.error("Select at least one file type preset or add a custom extension");
+            return false;
           }
         }
-        return true
+        return true;
       case "staff":
-        return true
+        return true;
       default:
-        return true
+        return true;
     }
-  }
+  };
 
   const handleNext = () => {
     if (validateStep(stepper.state.current.data.id)) {
-      stepper.navigation.next()
+      stepper.navigation.next();
     }
-  }
+  };
 
   const handlePrev = () => {
-    stepper.navigation.prev()
-  }
+    stepper.navigation.prev();
+  };
 
   const handleSubmit = async () => {
-    if (!validateStep("general") || !validateStep("dateLocation") || !validateStep("requirements") || !validateStep("staff")) {
-      return
+    if (
+      !validateStep("general") ||
+      !validateStep("dateLocation") ||
+      !validateStep("requirements") ||
+      !validateStep("staff")
+    ) {
+      return;
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
 
     try {
-      const dateStr = formData.date ? format(formData.date, "yyyy-MM-dd") : ""
+      const dateStr = formData.date ? format(formData.date, "yyyy-MM-dd") : "";
 
       const payload: any = {
         title: formData.name,
@@ -464,54 +491,56 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
         allowedGenders: formData.hasGenderRestriction ? formData.allowedGenders : [],
         hasFileRequirement: formData.hasFileRequirement,
         fileRequirementConfig: formData.hasFileRequirement ? formData.fileRequirementConfig : null,
-        staffAssignments: formData.staffAssignments.map(sa => ({
+        staffAssignments: formData.staffAssignments.map((sa) => ({
           memberId: sa.memberId,
           role: sa.role,
         })),
         glCodeId: formData.glCodeId,
         categoryId: formData.categoryId,
-      }
+      };
 
-      const url = isEditing ? `/api/events/${(event as any).id}` : "/api/events"
-      const method = isEditing ? "PATCH" : "POST"
+      const url = isEditing ? `/api/events/${(event as any).id}` : "/api/events";
+      const method = isEditing ? "PATCH" : "POST";
 
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      })
+      });
 
       if (!response.ok) {
-        const error = await response.json()
+        const error = await response.json();
         if (response.status === 422 && error.certifications) {
-          const names = error.certifications.map((c: { certificationName: string }) => c.certificationName).join(", ")
-          throw new Error(`Staff missing required certifications: ${names}`)
+          const names = error.certifications
+            .map((c: { certificationName: string }) => c.certificationName)
+            .join(", ");
+          throw new Error(`Staff missing required certifications: ${names}`);
         }
-        throw new Error(error.error || "Failed to save event")
+        throw new Error(error.error || "Failed to save event");
       }
 
-      const savedEvent = await response.json()
+      const savedEvent = await response.json();
 
-      toast.success(isEditing ? "Event updated successfully" : "Event created successfully")
+      toast.success(isEditing ? "Event updated successfully" : "Event created successfully");
 
       if (onSuccess) {
-        onSuccess(savedEvent)
+        onSuccess(savedEvent);
       } else {
-        router.push("/dashboard/events")
+        router.push("/dashboard/events");
       }
     } catch (error: any) {
-      console.error("Failed to save event:", error)
-      toast.error(error.message || "Failed to save event")
+      console.error("Failed to save event:", error);
+      toast.error(error.message || "Failed to save event");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const handleAddStaff = (memberId: string) => {
-    const staff = availableStaff?.find(s => s.id === memberId)
-    if (!staff) return
+    const staff = availableStaff?.find((s) => s.id === memberId);
+    if (!staff) return;
 
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       staffAssignments: [
         ...prev.staffAssignments,
@@ -528,33 +557,33 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
           },
         },
       ],
-    }))
-  }
+    }));
+  };
 
   const handleRemoveStaff = (memberId: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      staffAssignments: prev.staffAssignments.filter(a => a.memberId !== memberId),
-    }))
-  }
+      staffAssignments: prev.staffAssignments.filter((a) => a.memberId !== memberId),
+    }));
+  };
 
   const handleUpdateStaffRole = (memberId: string, role: EventStaffRole) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      staffAssignments: prev.staffAssignments.map(a =>
+      staffAssignments: prev.staffAssignments.map((a) =>
         a.memberId === memberId ? { ...a, role } : a
       ),
-    }))
-  }
+    }));
+  };
 
-  const currentIndex = stepper.state.all.findIndex(s => s.id === stepper.state.current.data.id)
+  const currentIndex = stepper.state.all.findIndex((s) => s.id === stepper.state.current.data.id);
 
   return (
     <div className="w-full max-w-4xl mx-auto">
       <div className="flex flex-col gap-4">
         <StepperNav className="mb-4">
           {stepper.state.all.map((step, index) => {
-            const status = getStepStatus(index, currentIndex)
+            const status = getStepStatus(index, currentIndex);
             return (
               <React.Fragment key={step.id}>
                 <StepperItem status={status}>
@@ -562,16 +591,18 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                     status={status}
                     step={index + 1}
                     onClick={() => {
-                      if (index < currentIndex) stepper.navigation.goTo(step.id)
+                      if (index < currentIndex) stepper.navigation.goTo(step.id);
                     }}
                   />
-                  <StepperTitle status={status} className="hidden sm:block">{step.title}</StepperTitle>
+                  <StepperTitle status={status} className="hidden sm:block">
+                    {step.title}
+                  </StepperTitle>
                 </StepperItem>
                 {index < stepper.state.all.length - 1 && (
                   <StepperSeparator status={status} className="hidden sm:block" />
                 )}
               </React.Fragment>
-            )
+            );
           })}
         </StepperNav>
 
@@ -585,9 +616,7 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                     <Layers className="h-5 w-5" />
                     Event Details
                   </CardTitle>
-                  <CardDescription>
-                    Enter the basic information about your event
-                  </CardDescription>
+                  <CardDescription>Enter the basic information about your event</CardDescription>
                 </div>
                 {!isEditing && (
                   <Button
@@ -617,7 +646,7 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                   id="name"
                   placeholder="e.g., Spring Showcase 2026"
                   value={formData.name}
-                  onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                 />
               </div>
 
@@ -625,14 +654,14 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                 <Label htmlFor="description">Description</Label>
                 <RichTextEditor
                   value={formData.description}
-                  onChange={value => setFormData(prev => ({ ...prev, description: value }))}
+                  onChange={(value) => setFormData((prev) => ({ ...prev, description: value }))}
                   placeholder="Describe what this event is about, who it's for, and what to expect..."
                 />
               </div>
 
               <ColorSelector
                 value={formData.color}
-                onChange={(color) => setFormData(prev => ({ ...prev, color }))}
+                onChange={(color) => setFormData((prev) => ({ ...prev, color }))}
               />
 
               {/* Category */}
@@ -641,7 +670,9 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                   <Label>Category</Label>
                   <Select
                     value={formData.categoryId || "none"}
-                    onValueChange={(val) => setFormData(prev => ({ ...prev, categoryId: val === "none" ? null : val }))}
+                    onValueChange={(val) =>
+                      setFormData((prev) => ({ ...prev, categoryId: val === "none" ? null : val }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="No Category" />
@@ -649,7 +680,9 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                     <SelectContent>
                       <SelectItem value="none">No Category</SelectItem>
                       {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -662,7 +695,7 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                 <RadioGroup
                   value={formData.type}
                   onValueChange={(value: EventType) =>
-                    setFormData(prev => ({ ...prev, type: value }))
+                    setFormData((prev) => ({ ...prev, type: value }))
                   }
                   className="grid grid-cols-1 md:grid-cols-2 gap-3"
                 >
@@ -693,7 +726,9 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                   Price
                 </Label>
                 <div className="relative max-w-[200px]">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                    $
+                  </span>
                   <Input
                     id="price"
                     type="number"
@@ -703,25 +738,25 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                     className="pl-7"
                     value={formData.price === null ? "" : formData.price}
                     onChange={(e) => {
-                      const raw = e.target.value
+                      const raw = e.target.value;
                       if (raw === "") {
-                        setFormData(prev => ({ ...prev, price: null }))
-                        return
+                        setFormData((prev) => ({ ...prev, price: null }));
+                        return;
                       }
-                      const parsed = parseFloat(raw)
-                      if (Number.isNaN(parsed)) return
-                      if (parsed < 0) return
-                      const rounded = Math.round(parsed * 100) / 100
-                      setFormData(prev => ({ ...prev, price: rounded }))
+                      const parsed = parseFloat(raw);
+                      if (Number.isNaN(parsed)) return;
+                      if (parsed < 0) return;
+                      const rounded = Math.round(parsed * 100) / 100;
+                      setFormData((prev) => ({ ...prev, price: rounded }));
                     }}
                     onBlur={(e) => {
-                      const raw = e.target.value
-                      if (raw === "") return
-                      const parsed = parseFloat(raw)
+                      const raw = e.target.value;
+                      if (raw === "") return;
+                      const parsed = parseFloat(raw);
                       if (!Number.isNaN(parsed) && parsed >= 0) {
-                        const rounded = Math.round(parsed * 100) / 100
+                        const rounded = Math.round(parsed * 100) / 100;
                         if (rounded !== formData.price) {
-                          setFormData(prev => ({ ...prev, price: rounded }))
+                          setFormData((prev) => ({ ...prev, price: rounded }));
                         }
                       }
                     }}
@@ -735,7 +770,7 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
               {/* GL Code */}
               <GLCodeSelector
                 value={formData.glCodeId}
-                onChange={(v) => setFormData(prev => ({ ...prev, glCodeId: v }))}
+                onChange={(v) => setFormData((prev) => ({ ...prev, glCodeId: v }))}
                 entityType="EVENT"
               />
             </CardContent>
@@ -750,9 +785,7 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                 <CalendarDays className="h-5 w-5" />
                 Date & Location
               </CardTitle>
-              <CardDescription>
-                Set when and where this event takes place
-              </CardDescription>
+              <CardDescription>Set when and where this event takes place</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Date */}
@@ -775,7 +808,7 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                     <CalendarComponent
                       mode="single"
                       selected={formData.date || undefined}
-                      onSelect={(date) => setFormData(prev => ({ ...prev, date: date || null }))}
+                      onSelect={(date) => setFormData((prev) => ({ ...prev, date: date || null }))}
                       initialFocus
                     />
                   </PopoverContent>
@@ -792,7 +825,9 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                       id="startTime"
                       type="time"
                       value={formData.startTime}
-                      onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, startTime: e.target.value }))
+                      }
                       className="pl-9"
                     />
                   </div>
@@ -806,7 +841,9 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                       id="endTime"
                       type="time"
                       value={formData.endTime}
-                      onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, endTime: e.target.value }))
+                      }
                       className="pl-9"
                     />
                   </div>
@@ -826,7 +863,10 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                     <MapPin className="h-6 w-6 mx-auto text-muted-foreground/50 mb-2" />
                     <p className="text-sm text-muted-foreground">
                       No facilities configured.{" "}
-                      <a href="/dashboard/organization/facilities" className="text-primary underline">
+                      <a
+                        href="/dashboard/organization/facilities"
+                        className="text-primary underline"
+                      >
                         Add a facility
                       </a>
                     </p>
@@ -834,10 +874,12 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                 ) : (
                   <Select
                     value={formData.facilityId || "__none__"}
-                    onValueChange={(value) => setFormData(prev => ({
-                      ...prev,
-                      facilityId: value === "__none__" ? null : value
-                    }))}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        facilityId: value === "__none__" ? null : value,
+                      }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select a facility (optional)" />
@@ -851,7 +893,8 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                             <span>{facility.name}</span>
                             {facility.city && (
                               <span className="text-muted-foreground">
-                                - {facility.city}{facility.stateProvince && `, ${facility.stateProvince}`}
+                                - {facility.city}
+                                {facility.stateProvince && `, ${facility.stateProvince}`}
                               </span>
                             )}
                           </div>
@@ -874,7 +917,8 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                 Requirements & Restrictions
               </CardTitle>
               <CardDescription>
-                Configure who can register for this event. Toggle on the restrictions you want to apply.
+                Configure who can register for this event. Toggle on the restrictions you want to
+                apply.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -890,11 +934,13 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                     </div>
                     <Switch
                       checked={formData.hasLevelRestriction}
-                      onCheckedChange={checked => setFormData(prev => ({
-                        ...prev,
-                        hasLevelRestriction: checked,
-                        levelRequirementIds: checked ? prev.levelRequirementIds : [],
-                      }))}
+                      onCheckedChange={(checked) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          hasLevelRestriction: checked,
+                          levelRequirementIds: checked ? prev.levelRequirementIds : [],
+                        }))
+                      }
                     />
                   </div>
 
@@ -907,11 +953,15 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                         </div>
                       ) : levels.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
-                          No levels configured. <a href="/dashboard/training/levels" className="text-primary underline">Create levels</a> first.
+                          No levels configured.{" "}
+                          <a href="/dashboard/training/levels" className="text-primary underline">
+                            Create levels
+                          </a>{" "}
+                          first.
                         </p>
                       ) : (
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                          {levels.map(level => (
+                          {levels.map((level) => (
                             <label
                               key={level.id}
                               className={cn(
@@ -923,13 +973,13 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                             >
                               <Checkbox
                                 checked={formData.levelRequirementIds.includes(level.id)}
-                                onCheckedChange={checked => {
-                                  setFormData(prev => ({
+                                onCheckedChange={(checked) => {
+                                  setFormData((prev) => ({
                                     ...prev,
                                     levelRequirementIds: checked
                                       ? [...prev.levelRequirementIds, level.id]
-                                      : prev.levelRequirementIds.filter(id => id !== level.id),
-                                  }))
+                                      : prev.levelRequirementIds.filter((id) => id !== level.id),
+                                  }));
                                 }}
                               />
                               <div
@@ -951,17 +1001,17 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label className="text-base font-medium">Capacity Limit</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Limit the number of attendees
-                    </p>
+                    <p className="text-sm text-muted-foreground">Limit the number of attendees</p>
                   </div>
                   <Switch
                     checked={formData.hasCapacityRestriction}
-                    onCheckedChange={checked => setFormData(prev => ({
-                      ...prev,
-                      hasCapacityRestriction: checked,
-                      capacity: checked ? (prev.capacity || 20) : null,
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        hasCapacityRestriction: checked,
+                        capacity: checked ? prev.capacity || 20 : null,
+                      }))
+                    }
                   />
                 </div>
 
@@ -974,10 +1024,12 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                       min={1}
                       placeholder="Enter maximum number of attendees"
                       value={formData.capacity || ""}
-                      onChange={e => setFormData(prev => ({
-                        ...prev,
-                        capacity: e.target.value ? parseInt(e.target.value) : null,
-                      }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          capacity: e.target.value ? parseInt(e.target.value) : null,
+                        }))
+                      }
                       className="mt-2 max-w-[200px]"
                     />
                   </div>
@@ -995,12 +1047,14 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                   </div>
                   <Switch
                     checked={formData.hasAgeRestriction}
-                    onCheckedChange={checked => setFormData(prev => ({
-                      ...prev,
-                      hasAgeRestriction: checked,
-                      minAge: checked ? prev.minAge : null,
-                      maxAge: checked ? prev.maxAge : null,
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        hasAgeRestriction: checked,
+                        minAge: checked ? prev.minAge : null,
+                        maxAge: checked ? prev.maxAge : null,
+                      }))
+                    }
                   />
                 </div>
 
@@ -1009,7 +1063,8 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                     <div className="flex items-center gap-2 p-2 rounded bg-muted/50">
                       <Info className="h-4 w-4 text-muted-foreground shrink-0" />
                       <p className="text-xs text-muted-foreground">
-                        At least one age value is required. Leave the other blank for no limit in that direction.
+                        At least one age value is required. Leave the other blank for no limit in
+                        that direction.
                       </p>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -1022,10 +1077,12 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                           max={100}
                           placeholder="No minimum"
                           value={formData.minAge ?? ""}
-                          onChange={e => setFormData(prev => ({
-                            ...prev,
-                            minAge: e.target.value ? parseInt(e.target.value) : null,
-                          }))}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              minAge: e.target.value ? parseInt(e.target.value) : null,
+                            }))
+                          }
                         />
                       </div>
                       <div className="space-y-2">
@@ -1037,10 +1094,12 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                           max={100}
                           placeholder="No maximum"
                           value={formData.maxAge ?? ""}
-                          onChange={e => setFormData(prev => ({
-                            ...prev,
-                            maxAge: e.target.value ? parseInt(e.target.value) : null,
-                          }))}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              maxAge: e.target.value ? parseInt(e.target.value) : null,
+                            }))
+                          }
                         />
                       </div>
                     </div>
@@ -1053,42 +1112,45 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label className="text-base font-medium">Gender Restriction</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Restrict registration by gender
-                    </p>
+                    <p className="text-sm text-muted-foreground">Restrict registration by gender</p>
                   </div>
                   <Switch
                     checked={formData.hasGenderRestriction}
-                    onCheckedChange={checked => setFormData(prev => ({
-                      ...prev,
-                      hasGenderRestriction: checked,
-                      allowedGenders: checked ? prev.allowedGenders : [],
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        hasGenderRestriction: checked,
+                        allowedGenders: checked ? prev.allowedGenders : [],
+                      }))
+                    }
                   />
                 </div>
 
                 {formData.hasGenderRestriction && (
                   <div className="pt-2 border-t">
                     <div className="flex flex-wrap gap-2">
-                      {(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"] as const).map(gender => {
-                        const selected = formData.allowedGenders.includes(gender)
+                      {(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"] as const).map((gender) => {
+                        const selected = formData.allowedGenders.includes(gender);
                         return (
                           <Badge
                             key={gender}
                             variant={selected ? "default" : "outline"}
                             className="cursor-pointer"
                             onClick={() => {
-                              setFormData(prev => ({
+                              setFormData((prev) => ({
                                 ...prev,
                                 allowedGenders: selected
-                                  ? prev.allowedGenders.filter(g => g !== gender)
+                                  ? prev.allowedGenders.filter((g) => g !== gender)
                                   : [...prev.allowedGenders, gender],
-                              }))
+                              }));
                             }}
                           >
-                            {gender.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
+                            {gender
+                              .replaceAll("_", " ")
+                              .toLowerCase()
+                              .replace(/\b\w/g, (l) => l.toUpperCase())}
                           </Badge>
-                        )
+                        );
                       })}
                     </div>
                   </div>
@@ -1106,11 +1168,13 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                     </div>
                     <Switch
                       checked={formData.hasMembershipRestriction}
-                      onCheckedChange={checked => setFormData(prev => ({
-                        ...prev,
-                        hasMembershipRestriction: checked,
-                        membershipRequirementIds: checked ? prev.membershipRequirementIds : [],
-                      }))}
+                      onCheckedChange={(checked) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          hasMembershipRestriction: checked,
+                          membershipRequirementIds: checked ? prev.membershipRequirementIds : [],
+                        }))
+                      }
                     />
                   </div>
 
@@ -1123,7 +1187,14 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                         </div>
                       ) : allMembershipInstances.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
-                          No memberships configured. <a href="/dashboard/athletes/memberships" className="text-primary underline">Create memberships</a> first.
+                          No memberships configured.{" "}
+                          <a
+                            href="/dashboard/athletes/memberships"
+                            className="text-primary underline"
+                          >
+                            Create memberships
+                          </a>{" "}
+                          first.
                         </p>
                       ) : (
                         <div className="space-y-2">
@@ -1139,21 +1210,27 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                             >
                               <Checkbox
                                 checked={formData.membershipRequirementIds.includes(instance.id)}
-                                onCheckedChange={checked => {
-                                  setFormData(prev => ({
+                                onCheckedChange={(checked) => {
+                                  setFormData((prev) => ({
                                     ...prev,
                                     membershipRequirementIds: checked
                                       ? [...prev.membershipRequirementIds, instance.id]
-                                      : prev.membershipRequirementIds.filter(id => id !== instance.id),
-                                  }))
+                                      : prev.membershipRequirementIds.filter(
+                                          (id) => id !== instance.id
+                                        ),
+                                  }));
                                 }}
                               />
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
                                   <CreditCard className="h-4 w-4 text-muted-foreground" />
-                                  <span className="text-sm font-medium">{instance.groupName} - {instance.name}</span>
+                                  <span className="text-sm font-medium">
+                                    {instance.groupName} - {instance.name}
+                                  </span>
                                 </div>
-                                <span className="text-xs text-muted-foreground">${instance.price.toFixed(2)}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  ${instance.price.toFixed(2)}
+                                </span>
                               </div>
                             </label>
                           ))}
@@ -1175,11 +1252,13 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                   </div>
                   <Switch
                     checked={formData.hasWaiverRestriction}
-                    onCheckedChange={checked => setFormData(prev => ({
-                      ...prev,
-                      hasWaiverRestriction: checked,
-                      waiverRequirementIds: checked ? prev.waiverRequirementIds : [],
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        hasWaiverRestriction: checked,
+                        waiverRequirementIds: checked ? prev.waiverRequirementIds : [],
+                      }))
+                    }
                   />
                 </div>
 
@@ -1192,7 +1271,14 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                       </div>
                     ) : waivers.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
-                        No active waivers found. <a href="/dashboard/athletes/waivers/new" className="text-primary underline">Create a waiver</a> first.
+                        No active waivers found.{" "}
+                        <a
+                          href="/dashboard/athletes/waivers/new"
+                          className="text-primary underline"
+                        >
+                          Create a waiver
+                        </a>{" "}
+                        first.
                       </p>
                     ) : (
                       <div className="space-y-2">
@@ -1208,13 +1294,13 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                           >
                             <Checkbox
                               checked={formData.waiverRequirementIds.includes(waiver.id)}
-                              onCheckedChange={checked => {
-                                setFormData(prev => ({
+                              onCheckedChange={(checked) => {
+                                setFormData((prev) => ({
                                   ...prev,
                                   waiverRequirementIds: checked
                                     ? [...prev.waiverRequirementIds, waiver.id]
-                                    : prev.waiverRequirementIds.filter(id => id !== waiver.id),
-                                }))
+                                    : prev.waiverRequirementIds.filter((id) => id !== waiver.id),
+                                }));
                               }}
                             />
                             <div className="flex-1">
@@ -1242,10 +1328,12 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                   </div>
                   <Switch
                     checked={formData.hasMedicalRequirement}
-                    onCheckedChange={checked => setFormData(prev => ({
-                      ...prev,
-                      hasMedicalRequirement: checked,
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        hasMedicalRequirement: checked,
+                      }))
+                    }
                   />
                 </div>
 
@@ -1257,7 +1345,8 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                         Medical information categories are configured in your{" "}
                         <a href="/dashboard/athletes/medical" className="text-primary underline">
                           Medical Information Settings
-                        </a>.
+                        </a>
+                        .
                       </span>
                     </div>
                   </div>
@@ -1274,13 +1363,16 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                 </div>
                 <Switch
                   checked={formData.hasFileRequirement}
-                  onCheckedChange={checked => setFormData(prev => ({
-                    ...prev,
-                    hasFileRequirement: checked,
-                    fileRequirementConfig: checked && !prev.fileRequirementConfig
-                      ? { label: "", acceptedPresets: [], acceptedExtensions: [] }
-                      : prev.fileRequirementConfig,
-                  }))}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      hasFileRequirement: checked,
+                      fileRequirementConfig:
+                        checked && !prev.fileRequirementConfig
+                          ? { label: "", acceptedPresets: [], acceptedExtensions: [] }
+                          : prev.fileRequirementConfig,
+                    }))
+                  }
                 />
               </div>
 
@@ -1288,7 +1380,9 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                 <div className="pt-2 border-t">
                   <FileRequirementConfigEditor
                     config={formData.fileRequirementConfig}
-                    onChange={(config) => setFormData(prev => ({ ...prev, fileRequirementConfig: config }))}
+                    onChange={(config) =>
+                      setFormData((prev) => ({ ...prev, fileRequirementConfig: config }))
+                    }
                   />
                 </div>
               )}
@@ -1304,9 +1398,7 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                 <User className="h-5 w-5" />
                 Staff Assignments
               </CardTitle>
-              <CardDescription>
-                Assign staff to this event
-              </CardDescription>
+              <CardDescription>Assign staff to this event</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Add Staff */}
@@ -1319,17 +1411,19 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                     disabled={loadingStaff || unassignedStaff.length === 0}
                   >
                     <SelectTrigger className="flex-1">
-                      <SelectValue placeholder={
-                        loadingStaff
-                          ? "Loading..."
-                          : unassignedStaff.length === 0
-                          ? "All staff assigned"
-                          : "Select staff member to add"
-                      } />
+                      <SelectValue
+                        placeholder={
+                          loadingStaff
+                            ? "Loading..."
+                            : unassignedStaff.length === 0
+                              ? "All staff assigned"
+                              : "Select staff member to add"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      {unassignedStaff.map(s => {
-                        const certResult = getMemberStatus(s.id)
+                      {unassignedStaff.map((s) => {
+                        const certResult = getMemberStatus(s.id);
                         return (
                           <SelectItem key={s.id} value={s.id} disabled={!certResult.valid}>
                             <div className="flex items-center gap-2">
@@ -1340,15 +1434,18 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                                 </AvatarFallback>
                               </Avatar>
                               <span>{s.user?.name || "Unknown"}</span>
-                              {s.title && <span className="text-muted-foreground">({s.title})</span>}
+                              {s.title && (
+                                <span className="text-muted-foreground">({s.title})</span>
+                              )}
                               {!certResult.valid && (
                                 <span className="text-destructive text-xs ml-1 shrink-0">
-                                  Missing: {certResult.missing.map(m => m.certificationName).join(", ")}
+                                  Missing:{" "}
+                                  {certResult.missing.map((m) => m.certificationName).join(", ")}
                                 </span>
                               )}
                             </div>
                           </SelectItem>
-                        )
+                        );
                       })}
                     </SelectContent>
                   </Select>
@@ -1381,7 +1478,7 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {formData.staffAssignments.map(assignment => (
+                    {formData.staffAssignments.map((assignment) => (
                       <div
                         key={assignment.memberId}
                         className="flex items-center gap-3 rounded-lg border p-3 bg-card"
@@ -1449,21 +1546,13 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
 
         {/* Navigation Buttons */}
         <div className="flex items-center justify-between mt-6">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.push("/dashboard/events")}
-          >
+          <Button type="button" variant="outline" onClick={() => router.push("/dashboard/events")}>
             Cancel
           </Button>
 
           <div className="flex items-center gap-2">
             {!stepper.state.isFirst && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handlePrev}
-              >
+              <Button type="button" variant="outline" onClick={handlePrev}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Previous
               </Button>
@@ -1475,11 +1564,7 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             ) : (
-              <Button
-                type="button"
-                onClick={handleSubmit}
-                disabled={isSaving}
-              >
+              <Button type="button" onClick={handleSubmit} disabled={isSaving}>
                 {isSaving ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1497,5 +1582,5 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -8,7 +8,11 @@ const createLevelSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional().nullable(),
   order: z.number().int().min(0).optional(),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color").optional().nullable(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color")
+    .optional()
+    .nullable(),
   isDefault: z.boolean().optional(),
 });
 

@@ -55,9 +55,7 @@ export async function admitNextInQueue(
     data: {
       queueEntryId: nextEntry.id,
       programId: config.programId || "",
-      expiresAt: new Date(
-        Date.now() + config.reservationMinutes * 60 * 1000
-      ),
+      expiresAt: new Date(Date.now() + config.reservationMinutes * 60 * 1000),
     },
   });
 
@@ -80,10 +78,7 @@ export async function admitNextInQueue(
  * Use inside a transaction to serialize concurrent admission attempts
  * and prevent exceeding maxConcurrent.
  */
-export async function lockQueueConfig(
-  tx: TransactionClient,
-  queueConfigId: string
-): Promise<void> {
+export async function lockQueueConfig(tx: TransactionClient, queueConfigId: string): Promise<void> {
   await tx.$queryRaw(
     Prisma.sql`SELECT id FROM "RegistrationQueueConfig" WHERE id = ${queueConfigId} FOR UPDATE`
   );

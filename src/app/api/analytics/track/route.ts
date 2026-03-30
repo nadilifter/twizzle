@@ -5,10 +5,10 @@ import { checkApiRateLimit } from "@/lib/rate-limit";
 
 /**
  * POST /api/analytics/track
- * 
+ *
  * Track a unique visitor for an organization.
  * Uses Redis SADD for automatic deduplication.
- * 
+ *
  * This endpoint is designed for fire-and-forget tracking:
  * - No authentication required (public marketing sites)
  * - organizationId is derived server-side from the Host header subdomain
@@ -17,7 +17,10 @@ import { checkApiRateLimit } from "@/lib/rate-limit";
  */
 export async function POST(request: NextRequest) {
   try {
-    const rateLimitResponse = await checkApiRateLimit(request, "analytics-track", { limit: 60, windowSeconds: 60 });
+    const rateLimitResponse = await checkApiRateLimit(request, "analytics-track", {
+      limit: 60,
+      windowSeconds: 60,
+    });
     if (rateLimitResponse) return rateLimitResponse;
 
     if (!redis) {
@@ -42,8 +45,8 @@ export async function POST(request: NextRequest) {
 
     const organizationId = siteConfig.organizationId;
 
-    let body: { 
-      visitorId?: string; 
+    let body: {
+      visitorId?: string;
       date?: string;
       deviceType?: string;
     };
@@ -70,18 +73,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate and normalize device type (default to desktop)
-    const normalizedDeviceType: DeviceType = 
-      deviceType === "mobile" ? "mobile" : "desktop";
+    const normalizedDeviceType: DeviceType = deviceType === "mobile" ? "mobile" : "desktop";
 
     // Add visitor to the device-specific daily set (SADD handles deduplication)
     const key = visitorKeys.dailyByDevice(organizationId, date, normalizedDeviceType);
-    
+
     // Use pipeline for atomic operation with TTL
-    await redis
-      .pipeline()
-      .sadd(key, visitorId)
-      .expire(key, VISITOR_TTL_SECONDS)
-      .exec();
+    await redis.pipeline().sadd(key, visitorId).expire(key, VISITOR_TTL_SECONDS).exec();
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {

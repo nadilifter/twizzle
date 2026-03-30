@@ -1,15 +1,15 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Bell } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { AnnouncementsTray } from "./announcements-tray"
-import { useState } from "react"
+import * as React from "react";
+import { Bell } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AnnouncementsTray } from "./announcements-tray";
+import { useState } from "react";
 
 interface AnnouncementBellMarketingProps {
-  organizationId?: string
-  unreadCount?: number
-  onClose?: () => void
+  organizationId?: string;
+  unreadCount?: number;
+  onClose?: () => void;
 }
 
 export function AnnouncementBellMarketing({
@@ -17,24 +17,24 @@ export function AnnouncementBellMarketing({
   unreadCount = 0,
   onClose,
 }: AnnouncementBellMarketingProps) {
-  const [open, setOpen] = useState(false)
-  const [mounted, setMounted] = React.useState(false)
+  const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = React.useState(false);
 
   const handleOpenChange = (value: boolean) => {
-    setOpen(value)
-    if (!value) onClose?.()
-  }
+    setOpen(value);
+    if (!value) onClose?.();
+  };
 
   React.useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
   if (!mounted) {
     return (
       <Button variant="ghost" size="icon" className="size-8 md:size-9">
         <Bell className="size-4 md:size-5" />
       </Button>
-    )
+    );
   }
 
   return (
@@ -54,5 +54,5 @@ export function AnnouncementBellMarketing({
         <span className="sr-only">View announcements</span>
       </Button>
     </AnnouncementsTray>
-  )
+  );
 }

@@ -155,9 +155,7 @@ export default function CoachDashboard() {
                   <CalendarDays className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
-                  <div className="text-2xl font-bold">
-                    {data?.todayEventCount ?? 0}
-                  </div>
+                  <div className="text-2xl font-bold">{data?.todayEventCount ?? 0}</div>
                   <p className="text-xs text-muted-foreground">
                     event{data?.todayEventCount !== 1 ? "s" : ""} today
                   </p>
@@ -166,9 +164,7 @@ export default function CoachDashboard() {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
-                  <CardTitle className="text-sm font-medium">
-                    Attendance
-                  </CardTitle>
+                  <CardTitle className="text-sm font-medium">Attendance</CardTitle>
                   <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
@@ -177,38 +173,28 @@ export default function CoachDashboard() {
                   >
                     {data?.pendingAttendanceCount ?? 0}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    pending today
-                  </p>
+                  <p className="text-xs text-muted-foreground">pending today</p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
-                  <CardTitle className="text-sm font-medium">
-                    Programs
-                  </CardTitle>
+                  <CardTitle className="text-sm font-medium">Programs</CardTitle>
                   <GraduationCap className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
-                  <div className="text-2xl font-bold">
-                    {data?.programCount ?? 0}
-                  </div>
+                  <div className="text-2xl font-bold">{data?.programCount ?? 0}</div>
                   <p className="text-xs text-muted-foreground">active</p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
-                  <CardTitle className="text-sm font-medium">
-                    Competitions
-                  </CardTitle>
+                  <CardTitle className="text-sm font-medium">Competitions</CardTitle>
                   <Trophy className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
-                  <div className="text-2xl font-bold">
-                    {data?.competitionCount ?? 0}
-                  </div>
+                  <div className="text-2xl font-bold">{data?.competitionCount ?? 0}</div>
                   <p className="text-xs text-muted-foreground">upcoming</p>
                 </CardContent>
               </Card>
@@ -277,32 +263,22 @@ export default function CoachDashboard() {
           <Card>
             <CardContent className="p-6 text-center">
               <CalendarDays className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">
-                No events scheduled for today
-              </p>
+              <p className="text-sm text-muted-foreground">No events scheduled for today</p>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-3">
             {data?.todayEvents.map((event) => (
-              <Link
-                key={event.id}
-                href={`/coach/attendance?eventId=${event.id}`}
-              >
+              <Link key={event.id} href={`/coach/attendance?eventId=${event.id}`}>
                 <Card className="hover:bg-accent/50 transition-colors cursor-pointer mb-3">
                   <CardContent className="p-4">
                     <div className="flex justify-between items-start">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold truncate">
-                            {event.title}
-                          </h3>
+                          <h3 className="font-semibold truncate">{event.title}</h3>
                           <Badge
                             variant="outline"
-                            className={
-                              EVENT_TYPE_STYLES[event.type] ??
-                              EVENT_TYPE_STYLES.OTHER
-                            }
+                            className={EVENT_TYPE_STYLES[event.type] ?? EVENT_TYPE_STYLES.OTHER}
                           >
                             {event.type}
                           </Badge>
@@ -373,9 +349,7 @@ export default function CoachDashboard() {
           <Card>
             <CardContent className="p-6 text-center">
               <GraduationCap className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">
-                No active programs assigned
-              </p>
+              <p className="text-sm text-muted-foreground">No active programs assigned</p>
             </CardContent>
           </Card>
         ) : (
@@ -430,9 +404,7 @@ export default function CoachDashboard() {
           <Card>
             <CardContent className="p-6 text-center">
               <Trophy className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">
-                No upcoming competitions
-              </p>
+              <p className="text-sm text-muted-foreground">No upcoming competitions</p>
             </CardContent>
           </Card>
         ) : (
@@ -465,8 +437,7 @@ export default function CoachDashboard() {
                     <div className="flex gap-2 ml-2">
                       {comp.entryCount > 0 && (
                         <div className="bg-primary/10 text-primary px-2 py-1 rounded text-xs font-bold whitespace-nowrap">
-                          {comp.entryCount}{" "}
-                          {comp.entryCount === 1 ? "entry" : "entries"}
+                          {comp.entryCount} {comp.entryCount === 1 ? "entry" : "entries"}
                         </div>
                       )}
                     </div>
@@ -487,10 +458,7 @@ export default function CoachDashboard() {
                 {data.weekEventCount} event
                 {data.weekEventCount !== 1 ? "s" : ""} this week
               </span>
-              <Link
-                href="/coach/schedule"
-                className="text-primary hover:underline"
-              >
+              <Link href="/coach/schedule" className="text-primary hover:underline">
                 View schedule
               </Link>
             </div>

@@ -18,10 +18,7 @@ const statusSchema = z.object({
   notes: z.string().optional(),
 });
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.isSuperAdmin) {
@@ -47,18 +44,12 @@ export async function PATCH(
     });
 
     if (!organization) {
-      return NextResponse.json(
-        { error: "Organization not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
 
     if (action === "deactivate") {
       if (!organization.isActive) {
-        return NextResponse.json(
-          { error: "Organization is already deactivated" },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: "Organization is already deactivated" }, { status: 400 });
       }
 
       if (!reason) {
@@ -110,10 +101,7 @@ export async function PATCH(
 
     if (action === "reactivate") {
       if (organization.isActive) {
-        return NextResponse.json(
-          { error: "Organization is already active" },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: "Organization is already active" }, { status: 400 });
       }
 
       await db.$transaction(async (tx) => {
@@ -128,10 +116,7 @@ export async function PATCH(
           },
         });
 
-        if (
-          organization.subscription &&
-          organization.subscription.status === "PAUSED"
-        ) {
+        if (organization.subscription && organization.subscription.status === "PAUSED") {
           await tx.organizationSubscription.update({
             where: { id: organization.subscription.id },
             data: { status: "ACTIVE" },

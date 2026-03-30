@@ -129,7 +129,9 @@ export function CustomInformationForm({
     for (const q of questions) {
       const needsSignature =
         q.questionType === "SIGNATURE" ||
-        (q.questionType === "BOOLEAN" && q.requireSignatureOnYes && values[q.id]?.responseValue === "true");
+        (q.questionType === "BOOLEAN" &&
+          q.requireSignatureOnYes &&
+          values[q.id]?.responseValue === "true");
       if (needsSignature && signatureRefs.current[q.id]) {
         const sigRef = signatureRefs.current[q.id];
         if (sigRef && !sigRef.isEmpty()) {
@@ -169,12 +171,15 @@ export function CustomInformationForm({
         .filter((q) => q.questionType !== "IMAGE")
         .map((q) => ({
           questionId: q.id,
-          responseValue: q.questionType === "BOOLEAN"
-            ? (values[q.id]?.responseValue ?? "false")
-            : (values[q.id]?.responseValue ?? null),
-          signatureData: (q.questionType === "SIGNATURE" || (q.questionType === "BOOLEAN" && q.requireSignatureOnYes))
-            ? (values[q.id]?.signatureData ?? null)
-            : null,
+          responseValue:
+            q.questionType === "BOOLEAN"
+              ? (values[q.id]?.responseValue ?? "false")
+              : (values[q.id]?.responseValue ?? null),
+          signatureData:
+            q.questionType === "SIGNATURE" ||
+            (q.questionType === "BOOLEAN" && q.requireSignatureOnYes)
+              ? (values[q.id]?.signatureData ?? null)
+              : null,
         }));
 
       if (textResponses.length > 0) {
@@ -238,11 +243,7 @@ export function CustomInformationForm({
             Back
           </Button>
         )}
-        <Button
-          onClick={handleSubmit}
-          disabled={isSubmitting}
-          className={onBack ? "" : "ml-auto"}
-        >
+        <Button onClick={handleSubmit} disabled={isSubmitting} className={onBack ? "" : "ml-auto"}>
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Continue
         </Button>
@@ -269,9 +270,10 @@ function QuestionField({
   const renderInput = () => {
     switch (question.questionType) {
       case "VALUE": {
-        const rangeHint = question.valueMin != null && question.valueMax != null
-          ? `${question.valueMin} – ${question.valueMax}${question.allowDecimals ? " (decimals allowed)" : " (whole numbers)"}`
-          : undefined;
+        const rangeHint =
+          question.valueMin != null && question.valueMax != null
+            ? `${question.valueMin} – ${question.valueMax}${question.allowDecimals ? " (decimals allowed)" : " (whole numbers)"}`
+            : undefined;
         return (
           <div className="space-y-1">
             <Input
@@ -311,11 +313,7 @@ function QuestionField({
                 <p className="text-sm font-medium">Signature required</p>
                 {value?.signatureData ? (
                   <div className="relative border rounded-md p-2">
-                    <img
-                      src={value.signatureData}
-                      alt="Signature"
-                      className="max-h-32 mx-auto"
-                    />
+                    <img src={value.signatureData} alt="Signature" className="max-h-32 mx-auto" />
                     <Button
                       type="button"
                       variant="ghost"
@@ -339,11 +337,7 @@ function QuestionField({
           <div className="space-y-2">
             {value?.signatureData ? (
               <div className="relative border rounded-md p-2">
-                <img
-                  src={value.signatureData}
-                  alt="Signature"
-                  className="max-h-32 mx-auto"
-                />
+                <img src={value.signatureData} alt="Signature" className="max-h-32 mx-auto" />
                 <Button
                   type="button"
                   variant="ghost"
@@ -382,7 +376,7 @@ function QuestionField({
       case "IMAGE":
         return (
           <div className="space-y-2">
-            {(value?.file || value?.fileUrl) ? (
+            {value?.file || value?.fileUrl ? (
               <div className="flex items-center gap-2 border rounded-md p-3">
                 <FileIcon className="h-5 w-5 text-muted-foreground shrink-0" />
                 <span className="text-sm truncate flex-1">

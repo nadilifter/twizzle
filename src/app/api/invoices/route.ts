@@ -170,10 +170,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching invoices:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch invoices" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch invoices" }, { status: 500 });
   }
 }
 
@@ -217,16 +214,26 @@ export async function POST(request: NextRequest) {
     const entityGlCodes = new Map<string, string>();
 
     if (programIds.length > 0) {
-      const programs = await db.program.findMany({ where: { id: { in: programIds } }, select: { id: true, glCodeId: true } });
+      const programs = await db.program.findMany({
+        where: { id: { in: programIds } },
+        select: { id: true, glCodeId: true },
+      });
       for (const p of programs) if (p.glCodeId) entityGlCodes.set(`program:${p.id}`, p.glCodeId);
     }
     if (eventIds.length > 0) {
-      const events = await db.event.findMany({ where: { id: { in: eventIds } }, select: { id: true, glCodeId: true } });
+      const events = await db.event.findMany({
+        where: { id: { in: eventIds } },
+        select: { id: true, glCodeId: true },
+      });
       for (const e of events) if (e.glCodeId) entityGlCodes.set(`event:${e.id}`, e.glCodeId);
     }
 
     const defaultGlCodes = await db.gLCode.findMany({
-      where: { organizationId: session.user.organizationId, isDefault: true, defaultForType: { not: null } },
+      where: {
+        organizationId: session.user.organizationId,
+        isDefault: true,
+        defaultForType: { not: null },
+      },
       select: { id: true, defaultForType: true },
     });
     const defaultByType = new Map(defaultGlCodes.map((d) => [d.defaultForType!, d.id]));
@@ -250,9 +257,9 @@ export async function POST(request: NextRequest) {
               lineItems: {
                 create: lineItemsWithTotals.map((item) => {
                   let glCodeId: string | undefined =
-                    (item.programId ? entityGlCodes.get(`program:${item.programId}`) : undefined)
-                    ?? (item.eventId ? entityGlCodes.get(`event:${item.eventId}`) : undefined)
-                    ?? undefined;
+                    (item.programId ? entityGlCodes.get(`program:${item.programId}`) : undefined) ??
+                    (item.eventId ? entityGlCodes.get(`event:${item.eventId}`) : undefined) ??
+                    undefined;
 
                   if (!glCodeId) {
                     if (item.programId) glCodeId = defaultByType.get("PROGRAM");
@@ -307,15 +314,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(invoice);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating invoice:", error);
-    return NextResponse.json(
-      { error: "Failed to create invoice" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create invoice" }, { status: 500 });
   }
 }

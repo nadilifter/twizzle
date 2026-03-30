@@ -1,9 +1,20 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Plus, MoreHorizontal, Trash2, Loader2, AlertCircle, Settings, Ticket, Calendar, Hash, Globe } from "lucide-react"
+import * as React from "react";
+import {
+  Plus,
+  MoreHorizontal,
+  Trash2,
+  Loader2,
+  AlertCircle,
+  Settings,
+  Ticket,
+  Calendar,
+  Hash,
+  Globe,
+} from "lucide-react";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -11,14 +22,14 @@ import {
   CardHeader,
   CardTitle,
   CardFooter,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet"
+} from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,119 +37,129 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
-import { Switch } from "@/components/ui/switch"
-import { Checkbox } from "@/components/ui/checkbox"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { usePasses, usePass } from "@/hooks/use-passes"
-import { useFeatures } from "@/components/feature-context"
-import { DashboardPageHeader } from "@/components/dashboard-page-header"
-import { toast } from "sonner"
-import { GLCodeSelector } from "@/components/gl-code-selector"
-import type { Pass, BillingInterval, PassLimitPeriod } from "@/types/passes"
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { usePasses, usePass } from "@/hooks/use-passes";
+import { useFeatures } from "@/components/feature-context";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
+import { toast } from "sonner";
+import { GLCodeSelector } from "@/components/gl-code-selector";
+import type { Pass, BillingInterval, PassLimitPeriod } from "@/types/passes";
 
 function formatBillingInterval(interval: string) {
   switch (interval) {
-    case "MONTHLY": return "month"
-    case "YEARLY": return "year"
-    case "ONE_TIME": return "one-time"
-    default: return interval.toLowerCase().replace("_", "-")
+    case "MONTHLY":
+      return "month";
+    case "YEARLY":
+      return "year";
+    case "ONE_TIME":
+      return "one-time";
+    default:
+      return interval.toLowerCase().replace("_", "-");
   }
 }
 
 function formatLimitPeriod(period: string) {
   switch (period) {
-    case "WEEKLY": return "week"
-    case "MONTHLY": return "month"
-    default: return period.toLowerCase()
+    case "WEEKLY":
+      return "week";
+    case "MONTHLY":
+      return "month";
+    default:
+      return period.toLowerCase();
   }
 }
 
-type AvailableProgram = { id: string; name: string; status: string }
+type AvailableProgram = { id: string; name: string; status: string };
 
 function useAvailablePrograms(shouldFetch: boolean) {
-  const [programs, setPrograms] = React.useState<AvailableProgram[]>([])
+  const [programs, setPrograms] = React.useState<AvailableProgram[]>([]);
 
   React.useEffect(() => {
-    if (!shouldFetch) return
+    if (!shouldFetch) return;
     fetch("/api/programs?limit=200")
       .then((r) => r.json())
       .then((data) => setPrograms(data.data || []))
-      .catch((err) => console.error("Failed to load programs:", err))
-  }, [shouldFetch])
+      .catch((err) => console.error("Failed to load programs:", err));
+  }, [shouldFetch]);
 
-  return programs
+  return programs;
 }
 
 export default function PassesPage() {
-  const { passes, isLoading, error, createPass, deletePass, refresh } = usePasses({ initialParams: { include: "programs" } })
-  const { isFeatureEnabled } = useFeatures()
-  const passesEnabled = isFeatureEnabled("passes")
+  const { passes, isLoading, error, createPass, deletePass, refresh } = usePasses({
+    initialParams: { include: "programs" },
+  });
+  const { isFeatureEnabled } = useFeatures();
+  const passesEnabled = isFeatureEnabled("passes");
 
-  const [isCreateOpen, setIsCreateOpen] = React.useState(false)
-  const [selectedPassId, setSelectedPassId] = React.useState<string | null>(null)
+  const [isCreateOpen, setIsCreateOpen] = React.useState(false);
+  const [selectedPassId, setSelectedPassId] = React.useState<string | null>(null);
 
-  const availablePrograms = useAvailablePrograms(isCreateOpen)
+  const availablePrograms = useAvailablePrograms(isCreateOpen);
 
-  const [createName, setCreateName] = React.useState("")
-  const [createDescription, setCreateDescription] = React.useState("")
-  const [createPrice, setCreatePrice] = React.useState("")
-  const [createBillingInterval, setCreateBillingInterval] = React.useState<BillingInterval>("MONTHLY")
-  const [createSessionLimit, setCreateSessionLimit] = React.useState("")
-  const [createLimitPeriod, setCreateLimitPeriod] = React.useState<PassLimitPeriod>("WEEKLY")
-  const [createScopeMode, setCreateScopeMode] = React.useState<"all" | "specific">("all")
-  const [createProgramIds, setCreateProgramIds] = React.useState<Set<string>>(new Set())
-  const [createGlCodeId, setCreateGlCodeId] = React.useState<string | null>(null)
-  const [createHasGenderRestriction, setCreateHasGenderRestriction] = React.useState(false)
-  const [createAllowedGenders, setCreateAllowedGenders] = React.useState<string[]>([])
+  const [createName, setCreateName] = React.useState("");
+  const [createDescription, setCreateDescription] = React.useState("");
+  const [createPrice, setCreatePrice] = React.useState("");
+  const [createBillingInterval, setCreateBillingInterval] =
+    React.useState<BillingInterval>("MONTHLY");
+  const [createSessionLimit, setCreateSessionLimit] = React.useState("");
+  const [createLimitPeriod, setCreateLimitPeriod] = React.useState<PassLimitPeriod>("WEEKLY");
+  const [createScopeMode, setCreateScopeMode] = React.useState<"all" | "specific">("all");
+  const [createProgramIds, setCreateProgramIds] = React.useState<Set<string>>(new Set());
+  const [createGlCodeId, setCreateGlCodeId] = React.useState<string | null>(null);
+  const [createHasGenderRestriction, setCreateHasGenderRestriction] = React.useState(false);
+  const [createAllowedGenders, setCreateAllowedGenders] = React.useState<string[]>([]);
 
   const resetCreateForm = () => {
-    setCreateName("")
-    setCreateDescription("")
-    setCreatePrice("")
-    setCreateBillingInterval("MONTHLY")
-    setCreateSessionLimit("")
-    setCreateLimitPeriod("WEEKLY")
-    setCreateScopeMode("all")
-    setCreateProgramIds(new Set())
-    setCreateGlCodeId(null)
-    setCreateHasGenderRestriction(false)
-    setCreateAllowedGenders([])
-  }
+    setCreateName("");
+    setCreateDescription("");
+    setCreatePrice("");
+    setCreateBillingInterval("MONTHLY");
+    setCreateSessionLimit("");
+    setCreateLimitPeriod("WEEKLY");
+    setCreateScopeMode("all");
+    setCreateProgramIds(new Set());
+    setCreateGlCodeId(null);
+    setCreateHasGenderRestriction(false);
+    setCreateAllowedGenders([]);
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    const price = parseFloat(createPrice)
-    const sessionLimit = parseInt(createSessionLimit)
+    const price = parseFloat(createPrice);
+    const sessionLimit = parseInt(createSessionLimit);
 
     if (isNaN(price) || price < 0) {
-      toast.error("Please enter a valid price")
-      return
+      toast.error("Please enter a valid price");
+      return;
     }
     if (isNaN(sessionLimit) || sessionLimit < 1) {
-      toast.error("Session limit must be at least 1")
-      return
+      toast.error("Session limit must be at least 1");
+      return;
     }
     if (createScopeMode === "specific" && createProgramIds.size === 0) {
-      toast.error("Select at least one program or choose 'All programs'")
-      return
+      toast.error("Select at least one program or choose 'All programs'");
+      return;
     }
     if (createHasGenderRestriction && createAllowedGenders.length === 0) {
-      toast.error("Select at least one gender when gender restriction is enabled")
-      return
+      toast.error("Select at least one gender when gender restriction is enabled");
+      return;
     }
 
     const result = await createPass({
@@ -153,25 +174,25 @@ export default function PassesPage() {
       glCodeId: createGlCodeId,
       hasGenderRestriction: createHasGenderRestriction,
       allowedGenders: createHasGenderRestriction ? createAllowedGenders : [],
-    } as any)
+    } as any);
 
     if (result) {
-      toast.success("Pass created")
-      setIsCreateOpen(false)
-      resetCreateForm()
-      refresh()
+      toast.success("Pass created");
+      setIsCreateOpen(false);
+      resetCreateForm();
+      refresh();
     }
-  }
+  };
 
   const handleDelete = async (id: string) => {
     if (confirm("Are you sure? This will remove this pass and all athlete enrollments.")) {
-      const success = await deletePass(id)
+      const success = await deletePass(id);
       if (success) {
-        toast.success("Pass deleted")
-        if (selectedPassId === id) setSelectedPassId(null)
+        toast.success("Pass deleted");
+        if (selectedPassId === id) setSelectedPassId(null);
       }
     }
-  }
+  };
 
   if (!passesEnabled) {
     return (
@@ -180,7 +201,7 @@ export default function PassesPage() {
         <h2 className="text-xl font-semibold">Passes not available</h2>
         <p className="text-muted-foreground">Upgrade to a Gold or Platinum plan to use Passes.</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -271,7 +292,11 @@ export default function PassesPage() {
                 </div>
               </CardContent>
               <CardFooter className="border-t pt-4">
-                <Button variant="outline" className="w-full" onClick={() => setSelectedPassId(pass.id)}>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setSelectedPassId(pass.id)}
+                >
                   Manage
                 </Button>
               </CardFooter>
@@ -286,11 +311,21 @@ export default function PassesPage() {
       )}
 
       {/* Create Pass Sheet */}
-      <Sheet open={isCreateOpen} onOpenChange={(o) => { if (!o) { setIsCreateOpen(false); resetCreateForm() } }}>
+      <Sheet
+        open={isCreateOpen}
+        onOpenChange={(o) => {
+          if (!o) {
+            setIsCreateOpen(false);
+            resetCreateForm();
+          }
+        }}
+      >
         <SheetContent className="sm:max-w-[540px] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Create Pass</SheetTitle>
-            <SheetDescription>Define a pass with pricing, session limits, and program scope.</SheetDescription>
+            <SheetDescription>
+              Define a pass with pricing, session limits, and program scope.
+            </SheetDescription>
           </SheetHeader>
           <form onSubmit={handleCreate} className="mt-6 space-y-4">
             <div className="grid gap-2">
@@ -317,7 +352,9 @@ export default function PassesPage() {
               <div className="grid gap-2">
                 <Label htmlFor="create-price">Price</Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                    $
+                  </span>
                   <Input
                     id="create-price"
                     type="number"
@@ -333,7 +370,10 @@ export default function PassesPage() {
               </div>
               <div className="grid gap-2">
                 <Label>Billing Period</Label>
-                <Select value={createBillingInterval} onValueChange={(v) => setCreateBillingInterval(v as BillingInterval)}>
+                <Select
+                  value={createBillingInterval}
+                  onValueChange={(v) => setCreateBillingInterval(v as BillingInterval)}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -360,7 +400,10 @@ export default function PassesPage() {
               </div>
               <div className="grid gap-2">
                 <Label>Per</Label>
-                <Select value={createLimitPeriod} onValueChange={(v) => setCreateLimitPeriod(v as PassLimitPeriod)}>
+                <Select
+                  value={createLimitPeriod}
+                  onValueChange={(v) => setCreateLimitPeriod(v as PassLimitPeriod)}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -376,33 +419,45 @@ export default function PassesPage() {
 
             <div className="grid gap-3">
               <Label className="text-base font-medium">Program Scope</Label>
-              <RadioGroup value={createScopeMode} onValueChange={(v) => setCreateScopeMode(v as "all" | "specific")}>
+              <RadioGroup
+                value={createScopeMode}
+                onValueChange={(v) => setCreateScopeMode(v as "all" | "specific")}
+              >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="all" id="scope-all" />
-                  <Label htmlFor="scope-all" className="font-normal">All programs (automatically includes new programs)</Label>
+                  <Label htmlFor="scope-all" className="font-normal">
+                    All programs (automatically includes new programs)
+                  </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="specific" id="scope-specific" />
-                  <Label htmlFor="scope-specific" className="font-normal">Specific programs</Label>
+                  <Label htmlFor="scope-specific" className="font-normal">
+                    Specific programs
+                  </Label>
                 </div>
               </RadioGroup>
 
               {createScopeMode === "specific" && (
                 <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-2">
                   {availablePrograms.length === 0 && (
-                    <p className="text-sm text-muted-foreground py-2 text-center">Loading programs...</p>
+                    <p className="text-sm text-muted-foreground py-2 text-center">
+                      Loading programs...
+                    </p>
                   )}
                   {availablePrograms.map((program) => (
-                    <div key={program.id} className="flex items-center space-x-3 py-1.5 px-1 rounded-md hover:bg-muted/50">
+                    <div
+                      key={program.id}
+                      className="flex items-center space-x-3 py-1.5 px-1 rounded-md hover:bg-muted/50"
+                    >
                       <Checkbox
                         checked={createProgramIds.has(program.id)}
                         onCheckedChange={(checked) => {
                           setCreateProgramIds((prev) => {
-                            const next = new Set(prev)
-                            if (checked) next.add(program.id)
-                            else next.delete(program.id)
-                            return next
-                          })
+                            const next = new Set(prev);
+                            if (checked) next.add(program.id);
+                            else next.delete(program.id);
+                            return next;
+                          });
                         }}
                       />
                       <span className="text-sm truncate">{program.name}</span>
@@ -423,47 +478,56 @@ export default function PassesPage() {
                 <Switch
                   checked={createHasGenderRestriction}
                   onCheckedChange={(checked) => {
-                    setCreateHasGenderRestriction(checked)
-                    if (!checked) setCreateAllowedGenders([])
+                    setCreateHasGenderRestriction(checked);
+                    if (!checked) setCreateAllowedGenders([]);
                   }}
                 />
               </div>
               {createHasGenderRestriction && (
                 <div className="pt-2 border-t">
                   <div className="flex flex-wrap gap-2">
-                    {(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"] as const).map(gender => {
-                      const selected = createAllowedGenders.includes(gender)
+                    {(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"] as const).map((gender) => {
+                      const selected = createAllowedGenders.includes(gender);
                       return (
                         <Badge
                           key={gender}
                           variant={selected ? "default" : "outline"}
                           className="cursor-pointer"
                           onClick={() => {
-                            setCreateAllowedGenders(prev =>
-                              selected ? prev.filter(g => g !== gender) : [...prev, gender]
-                            )
+                            setCreateAllowedGenders((prev) =>
+                              selected ? prev.filter((g) => g !== gender) : [...prev, gender]
+                            );
                           }}
                         >
-                          {gender.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
+                          {gender
+                            .replaceAll("_", " ")
+                            .toLowerCase()
+                            .replace(/\b\w/g, (l) => l.toUpperCase())}
                         </Badge>
-                      )
+                      );
                     })}
                   </div>
                 </div>
               )}
             </div>
 
-            <GLCodeSelector
-              value={createGlCodeId}
-              onChange={setCreateGlCodeId}
-              entityType="PASS"
-            />
+            <GLCodeSelector value={createGlCodeId} onChange={setCreateGlCodeId} entityType="PASS" />
 
             <div className="flex gap-3 pt-2">
-              <Button type="button" variant="outline" className="flex-1" onClick={() => { setIsCreateOpen(false); resetCreateForm() }}>
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setIsCreateOpen(false);
+                  resetCreateForm();
+                }}
+              >
                 Cancel
               </Button>
-              <Button type="submit" className="flex-1">Create Pass</Button>
+              <Button type="submit" className="flex-1">
+                Create Pass
+              </Button>
             </div>
           </form>
         </SheetContent>
@@ -474,68 +538,90 @@ export default function PassesPage() {
         <PassManagerSheet
           passId={selectedPassId}
           open={!!selectedPassId}
-          onClose={() => { setSelectedPassId(null); refresh() }}
+          onClose={() => {
+            setSelectedPassId(null);
+            refresh();
+          }}
         />
       )}
     </div>
-  )
+  );
 }
 
-function PassManagerSheet({ passId, open, onClose }: { passId: string; open: boolean; onClose: () => void }) {
-  const { pass, isLoading, isUpdating, updatePass, addProgram, removeProgram, addAthlete, removeAthlete, error, fetchPass } = usePass(passId)
-  const [activeTab, setActiveTab] = React.useState<"details" | "programs" | "athletes">("details")
+function PassManagerSheet({
+  passId,
+  open,
+  onClose,
+}: {
+  passId: string;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const {
+    pass,
+    isLoading,
+    isUpdating,
+    updatePass,
+    addProgram,
+    removeProgram,
+    addAthlete,
+    removeAthlete,
+    error,
+    fetchPass,
+  } = usePass(passId);
+  const [activeTab, setActiveTab] = React.useState<"details" | "programs" | "athletes">("details");
 
-  const availablePrograms = useAvailablePrograms(open)
+  const availablePrograms = useAvailablePrograms(open);
 
-  const [editName, setEditName] = React.useState("")
-  const [editDescription, setEditDescription] = React.useState("")
-  const [editPrice, setEditPrice] = React.useState("")
-  const [editBillingInterval, setEditBillingInterval] = React.useState<BillingInterval>("MONTHLY")
-  const [editSessionLimit, setEditSessionLimit] = React.useState("")
-  const [editLimitPeriod, setEditLimitPeriod] = React.useState<PassLimitPeriod>("WEEKLY")
-  const [editScopeMode, setEditScopeMode] = React.useState<"all" | "specific">("all")
-  const [editProgramIds, setEditProgramIds] = React.useState<Set<string>>(new Set())
-  const [scopeDirty, setScopeDirty] = React.useState(false)
-  const [editHasGenderRestriction, setEditHasGenderRestriction] = React.useState(false)
-  const [editAllowedGenders, setEditAllowedGenders] = React.useState<string[]>([])
+  const [editName, setEditName] = React.useState("");
+  const [editDescription, setEditDescription] = React.useState("");
+  const [editPrice, setEditPrice] = React.useState("");
+  const [editBillingInterval, setEditBillingInterval] = React.useState<BillingInterval>("MONTHLY");
+  const [editSessionLimit, setEditSessionLimit] = React.useState("");
+  const [editLimitPeriod, setEditLimitPeriod] = React.useState<PassLimitPeriod>("WEEKLY");
+  const [editScopeMode, setEditScopeMode] = React.useState<"all" | "specific">("all");
+  const [editProgramIds, setEditProgramIds] = React.useState<Set<string>>(new Set());
+  const [scopeDirty, setScopeDirty] = React.useState(false);
+  const [editHasGenderRestriction, setEditHasGenderRestriction] = React.useState(false);
+  const [editAllowedGenders, setEditAllowedGenders] = React.useState<string[]>([]);
 
   React.useEffect(() => {
     if (pass) {
-      setEditName(pass.name)
-      setEditDescription(pass.description || "")
-      setEditPrice(String(Number(pass.price)))
-      setEditBillingInterval(pass.billingInterval)
-      setEditSessionLimit(String(pass.sessionLimit))
-      setEditLimitPeriod(pass.limitPeriod)
-      setEditScopeMode(pass.coversAllPrograms ? "all" : "specific")
-      setEditProgramIds(new Set(pass.coveredPrograms?.map((p) => p.id) || []))
-      setScopeDirty(false)
-      setEditHasGenderRestriction((pass as any).hasGenderRestriction || false)
-      setEditAllowedGenders((pass as any).allowedGenders || [])
+      setEditName(pass.name);
+      setEditDescription(pass.description || "");
+      setEditPrice(String(Number(pass.price)));
+      setEditBillingInterval(pass.billingInterval);
+      setEditSessionLimit(String(pass.sessionLimit));
+      setEditLimitPeriod(pass.limitPeriod);
+      setEditScopeMode(pass.coversAllPrograms ? "all" : "specific");
+      setEditProgramIds(new Set(pass.coveredPrograms?.map((p) => p.id) || []));
+      setScopeDirty(false);
+      setEditHasGenderRestriction((pass as any).hasGenderRestriction || false);
+      setEditAllowedGenders((pass as any).allowedGenders || []);
     }
-  }, [pass])
+  }, [pass]);
 
   const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    const price = parseFloat(editPrice)
-    const sessionLimit = parseInt(editSessionLimit)
+    const price = parseFloat(editPrice);
+    const sessionLimit = parseInt(editSessionLimit);
 
     if (isNaN(price) || price < 0) {
-      toast.error("Please enter a valid price")
-      return
+      toast.error("Please enter a valid price");
+      return;
     }
     if (isNaN(sessionLimit) || sessionLimit < 1) {
-      toast.error("Session limit must be at least 1")
-      return
+      toast.error("Session limit must be at least 1");
+      return;
     }
     if (editScopeMode === "specific" && editProgramIds.size === 0) {
-      toast.error("Select at least one program or choose 'All programs'")
-      return
+      toast.error("Select at least one program or choose 'All programs'");
+      return;
     }
     if (editHasGenderRestriction && editAllowedGenders.length === 0) {
-      toast.error("Select at least one gender when gender restriction is enabled")
-      return
+      toast.error("Select at least one gender when gender restriction is enabled");
+      return;
     }
 
     const result = await updatePass({
@@ -546,25 +632,34 @@ function PassManagerSheet({ passId, open, onClose }: { passId: string; open: boo
       sessionLimit,
       limitPeriod: editLimitPeriod,
       coversAllPrograms: editScopeMode === "all",
-      ...(editScopeMode === "specific" ? { programIds: Array.from(editProgramIds) } : { programIds: [] }),
+      ...(editScopeMode === "specific"
+        ? { programIds: Array.from(editProgramIds) }
+        : { programIds: [] }),
       hasGenderRestriction: editHasGenderRestriction,
       allowedGenders: editHasGenderRestriction ? editAllowedGenders : [],
-    } as any)
+    } as any);
 
     if (result) {
-      toast.success("Pass updated")
-      setScopeDirty(false)
+      toast.success("Pass updated");
+      setScopeDirty(false);
     }
-  }
+  };
 
-  const coveredProgramIds = editProgramIds
+  const coveredProgramIds = editProgramIds;
 
   return (
-    <Sheet open={open} onOpenChange={(o) => { if (!o) onClose() }}>
+    <Sheet
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
       <SheetContent className="sm:max-w-[540px] overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{pass?.name || "Loading..."}</SheetTitle>
-          <SheetDescription>Manage pass details, covered programs, and athlete enrollments.</SheetDescription>
+          <SheetDescription>
+            Manage pass details, covered programs, and athlete enrollments.
+          </SheetDescription>
         </SheetHeader>
 
         {isLoading && (
@@ -601,17 +696,29 @@ function PassManagerSheet({ passId, open, onClose }: { passId: string; open: boo
               <form onSubmit={handleUpdate} className="space-y-4">
                 <div className="grid gap-2">
                   <Label htmlFor="edit-name">Pass Name</Label>
-                  <Input id="edit-name" value={editName} onChange={(e) => setEditName(e.target.value)} required />
+                  <Input
+                    id="edit-name"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    required
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="edit-description">Description</Label>
-                  <Textarea id="edit-description" value={editDescription} onChange={(e) => setEditDescription(e.target.value)} rows={2} />
+                  <Textarea
+                    id="edit-description"
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    rows={2}
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
                     <Label htmlFor="edit-price">Price</Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                        $
+                      </span>
                       <Input
                         id="edit-price"
                         type="number"
@@ -627,7 +734,10 @@ function PassManagerSheet({ passId, open, onClose }: { passId: string; open: boo
                   </div>
                   <div className="grid gap-2">
                     <Label>Billing Period</Label>
-                    <Select value={editBillingInterval} onValueChange={(v) => setEditBillingInterval(v as BillingInterval)}>
+                    <Select
+                      value={editBillingInterval}
+                      onValueChange={(v) => setEditBillingInterval(v as BillingInterval)}
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -653,7 +763,10 @@ function PassManagerSheet({ passId, open, onClose }: { passId: string; open: boo
                   </div>
                   <div className="grid gap-2">
                     <Label>Per</Label>
-                    <Select value={editLimitPeriod} onValueChange={(v) => setEditLimitPeriod(v as PassLimitPeriod)}>
+                    <Select
+                      value={editLimitPeriod}
+                      onValueChange={(v) => setEditLimitPeriod(v as PassLimitPeriod)}
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -671,35 +784,47 @@ function PassManagerSheet({ passId, open, onClose }: { passId: string; open: boo
                   <Label className="text-base font-medium">Program Scope</Label>
                   <RadioGroup
                     value={editScopeMode}
-                    onValueChange={(v) => { setEditScopeMode(v as "all" | "specific"); setScopeDirty(true) }}
+                    onValueChange={(v) => {
+                      setEditScopeMode(v as "all" | "specific");
+                      setScopeDirty(true);
+                    }}
                   >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="all" id="edit-scope-all" />
-                      <Label htmlFor="edit-scope-all" className="font-normal">All programs (automatically includes new programs)</Label>
+                      <Label htmlFor="edit-scope-all" className="font-normal">
+                        All programs (automatically includes new programs)
+                      </Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="specific" id="edit-scope-specific" />
-                      <Label htmlFor="edit-scope-specific" className="font-normal">Specific programs</Label>
+                      <Label htmlFor="edit-scope-specific" className="font-normal">
+                        Specific programs
+                      </Label>
                     </div>
                   </RadioGroup>
 
                   {editScopeMode === "specific" && (
                     <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-2">
                       {availablePrograms.length === 0 && (
-                        <p className="text-sm text-muted-foreground py-2 text-center">Loading programs...</p>
+                        <p className="text-sm text-muted-foreground py-2 text-center">
+                          Loading programs...
+                        </p>
                       )}
                       {availablePrograms.map((program) => (
-                        <div key={program.id} className="flex items-center space-x-3 py-1.5 px-1 rounded-md hover:bg-muted/50">
+                        <div
+                          key={program.id}
+                          className="flex items-center space-x-3 py-1.5 px-1 rounded-md hover:bg-muted/50"
+                        >
                           <Checkbox
                             checked={coveredProgramIds.has(program.id)}
                             onCheckedChange={(checked) => {
                               setEditProgramIds((prev) => {
-                                const next = new Set(prev)
-                                if (checked) next.add(program.id)
-                                else next.delete(program.id)
-                                return next
-                              })
-                              setScopeDirty(true)
+                                const next = new Set(prev);
+                                if (checked) next.add(program.id);
+                                else next.delete(program.id);
+                                return next;
+                              });
+                              setScopeDirty(true);
                             }}
                           />
                           <span className="text-sm truncate">{program.name}</span>
@@ -720,31 +845,36 @@ function PassManagerSheet({ passId, open, onClose }: { passId: string; open: boo
                     <Switch
                       checked={editHasGenderRestriction}
                       onCheckedChange={(checked) => {
-                        setEditHasGenderRestriction(checked)
-                        if (!checked) setEditAllowedGenders([])
+                        setEditHasGenderRestriction(checked);
+                        if (!checked) setEditAllowedGenders([]);
                       }}
                     />
                   </div>
                   {editHasGenderRestriction && (
                     <div className="pt-2 border-t">
                       <div className="flex flex-wrap gap-2">
-                        {(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"] as const).map(gender => {
-                          const selected = editAllowedGenders.includes(gender)
-                          return (
-                            <Badge
-                              key={gender}
-                              variant={selected ? "default" : "outline"}
-                              className="cursor-pointer"
-                              onClick={() => {
-                                setEditAllowedGenders(prev =>
-                                  selected ? prev.filter(g => g !== gender) : [...prev, gender]
-                                )
-                              }}
-                            >
-                              {gender.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
-                            </Badge>
-                          )
-                        })}
+                        {(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"] as const).map(
+                          (gender) => {
+                            const selected = editAllowedGenders.includes(gender);
+                            return (
+                              <Badge
+                                key={gender}
+                                variant={selected ? "default" : "outline"}
+                                className="cursor-pointer"
+                                onClick={() => {
+                                  setEditAllowedGenders((prev) =>
+                                    selected ? prev.filter((g) => g !== gender) : [...prev, gender]
+                                  );
+                                }}
+                              >
+                                {gender
+                                  .replaceAll("_", " ")
+                                  .toLowerCase()
+                                  .replace(/\b\w/g, (l) => l.toUpperCase())}
+                              </Badge>
+                            );
+                          }
+                        )}
                       </div>
                     </div>
                   )}
@@ -752,7 +882,10 @@ function PassManagerSheet({ passId, open, onClose }: { passId: string; open: boo
 
                 <div className="grid gap-2">
                   <Label>Status</Label>
-                  <Badge variant={pass.status === "ACTIVE" ? "default" : "secondary"} className="w-fit">
+                  <Badge
+                    variant={pass.status === "ACTIVE" ? "default" : "secondary"}
+                    className="w-fit"
+                  >
                     {pass.status}
                   </Badge>
                 </div>
@@ -770,41 +903,51 @@ function PassManagerSheet({ passId, open, onClose }: { passId: string; open: boo
                   <div className="flex items-center gap-2 p-3 rounded-md bg-muted/50 text-sm">
                     <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
                     <span>
-                      This pass covers <strong>all programs</strong> automatically. To choose specific programs, change the scope in the Details tab.
+                      This pass covers <strong>all programs</strong> automatically. To choose
+                      specific programs, change the scope in the Details tab.
                     </span>
                   </div>
                 ) : (
                   <>
                     <p className="text-sm text-muted-foreground">
-                      Programs covered by this pass. Athletes with this pass get free registration to these programs (within session limits).
+                      Programs covered by this pass. Athletes with this pass get free registration
+                      to these programs (within session limits).
                     </p>
                     <Separator />
                     <div className="space-y-2 max-h-96 overflow-y-auto">
                       {availablePrograms.length === 0 && (
-                        <p className="text-sm text-muted-foreground py-4 text-center">No programs found.</p>
+                        <p className="text-sm text-muted-foreground py-4 text-center">
+                          No programs found.
+                        </p>
                       )}
                       {availablePrograms.map((program) => {
-                        const isCovered = pass.coveredPrograms?.some((p) => p.id === program.id) ?? false
+                        const isCovered =
+                          pass.coveredPrograms?.some((p) => p.id === program.id) ?? false;
                         return (
-                          <div key={program.id} className="flex items-center space-x-3 py-2 px-1 rounded-md hover:bg-muted/50">
+                          <div
+                            key={program.id}
+                            className="flex items-center space-x-3 py-2 px-1 rounded-md hover:bg-muted/50"
+                          >
                             <Checkbox
                               checked={isCovered}
                               onCheckedChange={async () => {
                                 if (isCovered) {
-                                  const success = await removeProgram(program.id)
-                                  if (success) toast.success("Program removed from pass")
+                                  const success = await removeProgram(program.id);
+                                  if (success) toast.success("Program removed from pass");
                                 } else {
-                                  const success = await addProgram(program.id)
-                                  if (success) toast.success("Program added to pass")
+                                  const success = await addProgram(program.id);
+                                  if (success) toast.success("Program added to pass");
                                 }
                               }}
                             />
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium truncate">{program.name}</p>
                             </div>
-                            <Badge variant="secondary" className="text-xs shrink-0">{program.status}</Badge>
+                            <Badge variant="secondary" className="text-xs shrink-0">
+                              {program.status}
+                            </Badge>
                           </div>
-                        )
+                        );
                       })}
                     </div>
                   </>
@@ -816,7 +959,8 @@ function PassManagerSheet({ passId, open, onClose }: { passId: string; open: boo
             {activeTab === "athletes" && (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Athletes enrolled in this pass. Athletes can also purchase passes from the public storefront.
+                  Athletes enrolled in this pass. Athletes can also purchase passes from the public
+                  storefront.
                 </p>
                 <Separator />
                 {pass.athletePasses && pass.athletePasses.length > 0 ? (
@@ -829,15 +973,22 @@ function PassManagerSheet({ passId, open, onClose }: { passId: string; open: boo
                           </p>
                           <p className="text-xs text-muted-foreground">
                             Since {new Date(ap.startDate).toLocaleDateString()}
-                            {ap.endDate && ` · Expires ${new Date(ap.endDate).toLocaleDateString()}`}
+                            {ap.endDate &&
+                              ` · Expires ${new Date(ap.endDate).toLocaleDateString()}`}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge variant={ap.status === "ACTIVE" ? "default" : "secondary"} className="text-xs">
+                          <Badge
+                            variant={ap.status === "ACTIVE" ? "default" : "secondary"}
+                            className="text-xs"
+                          >
                             {ap.status}
                           </Badge>
                           {ap.autoRenew && (
-                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                            <Badge
+                              variant="outline"
+                              className="text-xs bg-green-50 text-green-700 border-green-200"
+                            >
                               <Calendar className="mr-1 h-3 w-3" />
                               Auto-renew
                             </Badge>
@@ -847,9 +998,14 @@ function PassManagerSheet({ passId, open, onClose }: { passId: string; open: boo
                             size="sm"
                             className="h-7 w-7 p-0 text-destructive hover:text-destructive"
                             onClick={async () => {
-                              if (ap.athlete && confirm(`Remove ${ap.athlete.firstName} ${ap.athlete.lastName} from this pass?`)) {
-                                const success = await removeAthlete(ap.athleteId)
-                                if (success) toast.success("Athlete removed from pass")
+                              if (
+                                ap.athlete &&
+                                confirm(
+                                  `Remove ${ap.athlete.firstName} ${ap.athlete.lastName} from this pass?`
+                                )
+                              ) {
+                                const success = await removeAthlete(ap.athleteId);
+                                if (success) toast.success("Athlete removed from pass");
                               }
                             }}
                           >
@@ -870,5 +1026,5 @@ function PassManagerSheet({ passId, open, onClose }: { passId: string; open: boo
         )}
       </SheetContent>
     </Sheet>
-  )
+  );
 }

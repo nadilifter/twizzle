@@ -7,12 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
-import { 
-  CalendarDays, 
-  Clock, 
-  MapPin, 
-  Users, 
-  ChevronLeft, 
+import {
+  CalendarDays,
+  Clock,
+  MapPin,
+  Users,
+  ChevronLeft,
   ChevronRight,
   List,
   CalendarIcon,
@@ -28,7 +28,7 @@ export default function CoachSchedulePage() {
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [weekStart, setWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 0 }));
-  
+
   const weekEnd = endOfWeek(weekStart, { weekStartsOn: 0 });
 
   const { events, isLoading, error } = useCoachEvents({
@@ -172,12 +172,9 @@ export default function CoachSchedulePage() {
             const dateKey = format(day, "yyyy-MM-dd");
             const dayEvents = eventsByDate[dateKey] || [];
             const isToday = isSameDay(day, new Date());
-            
+
             return (
-              <Card 
-                key={dateKey} 
-                className={`${isToday ? "border-primary" : ""}`}
-              >
+              <Card key={dateKey} className={`${isToday ? "border-primary" : ""}`}>
                 <CardHeader className="p-3 pb-2">
                   <CardTitle className={`text-sm ${isToday ? "text-primary" : ""}`}>
                     <span className="block text-xs text-muted-foreground">
@@ -191,12 +188,12 @@ export default function CoachSchedulePage() {
                     <p className="text-xs text-muted-foreground">No events</p>
                   ) : (
                     dayEvents.map((event) => (
-                      <Link 
-                        key={event.id} 
+                      <Link
+                        key={event.id}
                         href={`/coach/attendance?eventId=${event.id}`}
                         className="block"
                       >
-                        <div 
+                        <div
                           className={`p-2 rounded-md border text-xs cursor-pointer hover:opacity-80 transition-opacity ${getEventTypeColor(event.type)}`}
                         >
                           <div className="font-medium truncate">{event.title}</div>
@@ -232,7 +229,7 @@ export default function CoachSchedulePage() {
               />
             </CardContent>
           </Card>
-          
+
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle className="text-lg">
@@ -256,7 +253,7 @@ export default function CoachSchedulePage() {
                               {event.type}
                             </Badge>
                           </div>
-                          
+
                           <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Clock className="h-4 w-4" />
@@ -282,7 +279,7 @@ export default function CoachSchedulePage() {
                             )}
                           </div>
                         </div>
-                        
+
                         <Link href={`/coach/attendance?eventId=${event.id}`}>
                           <Button size="sm" variant="outline">
                             <ClipboardCheck className="h-4 w-4 mr-1" />

@@ -26,23 +26,23 @@ export async function GET(request: NextRequest) {
     // Validate subdomain format (alphanumeric and hyphens only)
     const subdomainRegex = /^[a-z0-9-]+$/;
     if (!subdomainRegex.test(subdomain)) {
-        return NextResponse.json({ available: false, reason: "Invalid format" });
+      return NextResponse.json({ available: false, reason: "Invalid format" });
     }
 
     // Check against reserved domains
     const reservedCheck = await isSubdomainReserved(subdomain);
     if (reservedCheck.reserved) {
-      return NextResponse.json({ 
-        available: false, 
+      return NextResponse.json({
+        available: false,
         reason: "Reserved",
-        reservedReason: reservedCheck.reason 
+        reservedReason: reservedCheck.reason,
       });
     }
 
     // Check if subdomain exists
     const existing = await db.websiteConfig.findUnique({
       where: { subdomain },
-      select: { organizationId: true }
+      select: { organizationId: true },
     });
 
     if (existing) {

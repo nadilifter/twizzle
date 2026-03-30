@@ -13,11 +13,13 @@ Create a single webhook route for ALL Adyen balance platform events, and extend 
 ## Adyen Prerequisite
 
 Three balance platform webhook subscriptions must be configured in the Adyen Customer Area (Phase 0, Step 0.5), all pointing to `/api/webhooks/adyen-balance-platform`:
+
 1. **Configuration webhook** (account holder events)
 2. **Transfer webhook** (transfer events)
 3. **Negative Balance Compensation Warning** webhook
 
 Each generates its own HMAC key. All three must be set in `.env`:
+
 - `ADYEN_BP_CONFIG_WEBHOOK_HMAC_KEY`
 - `ADYEN_BP_TRANSFER_WEBHOOK_HMAC_KEY`
 - `ADYEN_BP_NEGBAL_WEBHOOK_HMAC_KEY`
@@ -51,11 +53,13 @@ Balance platform webhooks have a DIFFERENT format from standard payment webhooks
 #### Configuration events (onboarding status)
 
 **`balancePlatform.accountHolder.created`**
+
 - Look up `AdyenPlatformAccount` by `data.accountHolder.id` (matching `accountHolderId`)
 - Confirm creation, log success
 - No status change needed (already `PENDING_HOSTED` from Phase 3)
 
 **`balancePlatform.accountHolder.updated`**
+
 - Look up `AdyenPlatformAccount` by `data.accountHolder.id`
 - Extract `capabilities` from `data.accountHolder.capabilities`
 - Store raw capabilities JSON in `AdyenPlatformAccount.capabilities`
@@ -67,12 +71,14 @@ Balance platform webhooks have a DIFFERENT format from standard payment webhooks
 - Update `verificationStatus` with a human-readable summary string
 
 **`balancePlatform.balanceAccount.created`** / **`balancePlatform.balanceAccount.updated`**
+
 - Log the event
 - If the balance account matches an org's `AdyenPlatformAccount.balanceAccountId`, update if needed
 
 #### Transfer events (payment tracking)
 
 **`balancePlatform.transfer.created`** / **`balancePlatform.transfer.updated`**
+
 - These represent all money movements: captures, refunds, chargebacks, sweeps, bank transfers
 - Extract: `data.transfer.id`, `data.transfer.category`, `data.transfer.status`, `data.transfer.amount`
 - Map `category` to internal tracking:
@@ -86,6 +92,7 @@ Balance platform webhooks have a DIFFERENT format from standard payment webhooks
 #### Negative balance events
 
 **`balancePlatform.negativeBalanceCompensationWarning.scheduled`**
+
 - Extract `data.balanceAccountId` and match to organization
 - Log a warning
 - (Phase 7 will add: store negative balance state, trigger notifications)
@@ -97,13 +104,13 @@ Adyen has three separate webhook subscriptions (Configuration, Transfer, Negativ
 The HMAC is computed over the entire raw body:
 
 ```typescript
-import crypto from "crypto"
+import crypto from "crypto";
 
 const BP_HMAC_KEYS = [
   process.env.ADYEN_BP_CONFIG_WEBHOOK_HMAC_KEY,
   process.env.ADYEN_BP_TRANSFER_WEBHOOK_HMAC_KEY,
   process.env.ADYEN_BP_NEGBAL_WEBHOOK_HMAC_KEY,
-].filter(Boolean) as string[]
+].filter(Boolean) as string[];
 
 function verifyBalancePlatformHmac(rawBody: string, signature: string): boolean {
   for (const hmacKey of BP_HMAC_KEYS) {
@@ -111,19 +118,16 @@ function verifyBalancePlatformHmac(rawBody: string, signature: string): boolean 
       const expectedSignature = crypto
         .createHmac("sha256", Buffer.from(hmacKey, "hex"))
         .update(rawBody, "utf-8")
-        .digest("base64")
+        .digest("base64");
 
-      if (crypto.timingSafeEqual(
-        Buffer.from(signature),
-        Buffer.from(expectedSignature)
-      )) {
-        return true
+      if (crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
+        return true;
       }
     } catch {
-      continue
+      continue;
     }
   }
-  return false
+  return false;
 }
 ```
 
@@ -134,41 +138,41 @@ Always return `{ "notificationResponse": "[accepted]" }` with HTTP 200, even on 
 ### Implementation skeleton
 
 ```typescript
-import { NextRequest, NextResponse } from "next/server"
-import { db } from "@/lib/db"
-import { logger } from "@/lib/logger"
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
-  const body = await request.text()
+  const body = await request.text();
 
   // Verify HMAC signature
-  const hmacSignature = request.headers.get("hmacsignature") || ""
+  const hmacSignature = request.headers.get("hmacsignature") || "";
   // ... verify using verifyBalancePlatformHmac() with all three HMAC keys
 
-  const event = JSON.parse(body)
-  const eventType = event.type as string
+  const event = JSON.parse(body);
+  const eventType = event.type as string;
 
-  logger.info("[WEBHOOK] Balance platform event received", { type: eventType })
+  logger.info("[WEBHOOK] Balance platform event received", { type: eventType });
 
   switch (eventType) {
     case "balancePlatform.accountHolder.created":
-      await handleAccountHolderCreated(event.data)
-      break
+      await handleAccountHolderCreated(event.data);
+      break;
     case "balancePlatform.accountHolder.updated":
-      await handleAccountHolderUpdated(event.data)
-      break
+      await handleAccountHolderUpdated(event.data);
+      break;
     case "balancePlatform.transfer.created":
     case "balancePlatform.transfer.updated":
-      await handleTransferEvent(event.data, eventType)
-      break
+      await handleTransferEvent(event.data, eventType);
+      break;
     case "balancePlatform.negativeBalanceCompensationWarning.scheduled":
-      await handleNegativeBalanceWarning(event.data)
-      break
+      await handleNegativeBalanceWarning(event.data);
+      break;
     default:
-      logger.info("[WEBHOOK] Unhandled balance platform event", { type: eventType })
+      logger.info("[WEBHOOK] Unhandled balance platform event", { type: eventType });
   }
 
-  return NextResponse.json({ notificationResponse: "[accepted]" })
+  return NextResponse.json({ notificationResponse: "[accepted]" });
 }
 ```
 
@@ -181,19 +185,23 @@ export async function POST(request: NextRequest) {
 The current webhook only handles `AUTHORISATION`. Add handlers for these additional event codes:
 
 **`CAPTURE`** (payment captured):
+
 - Look up `Transaction` by `pspReference`
 - Update `status` to `CAPTURED` if currently `AUTHORISED`
 
 **`REFUND`** (refund completed):
+
 - Look up original `Transaction` by `originalReference` (from the notification's `additionalData`)
 - Create a new `Transaction` with type `REFUND` and negative amount
 - Look up associated `Invoice` and update status to `REFUNDED` if fully refunded
 
 **`CHARGEBACK`** (chargeback received):
+
 - Create a `Transaction` with type `CHARGEBACK` and negative amount
 - Look up associated `Invoice` and log the chargeback
 
 **`REFUND_FAILED`** / **`CAPTURE_FAILED`**:
+
 - Log the failure with full details
 - Update relevant `Transaction` status to `ERROR`
 
@@ -205,19 +213,19 @@ In the `POST` function, after the existing AUTHORISATION handling (line 55-61 in
 // After existing AUTHORISATION handling...
 
 if (eventCode === "CAPTURE" && (success === "true" || success === true)) {
-  await handleCapture(pspReference)
+  await handleCapture(pspReference);
 }
 
 if (eventCode === "REFUND" && (success === "true" || success === true)) {
-  await handleRefund(notificationItem)
+  await handleRefund(notificationItem);
 }
 
 if (eventCode === "CHARGEBACK") {
-  await handleChargeback(notificationItem)
+  await handleChargeback(notificationItem);
 }
 
 if (eventCode === "REFUND_FAILED" || eventCode === "CAPTURE_FAILED") {
-  await handleFailure(eventCode, notificationItem)
+  await handleFailure(eventCode, notificationItem);
 }
 ```
 

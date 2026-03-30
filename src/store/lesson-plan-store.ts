@@ -37,7 +37,7 @@ const initialPlans: LessonPlan[] = [
     author: "Coach Sarah",
     status: "Active",
     theme: "Fall Fun",
-    rotations: []
+    rotations: [],
   },
   {
     id: "2",
@@ -47,7 +47,7 @@ const initialPlans: LessonPlan[] = [
     author: "Coach Mike",
     status: "Active",
     theme: "Power & Speed",
-    rotations: []
+    rotations: [],
   },
   {
     id: "3",
@@ -57,7 +57,7 @@ const initialPlans: LessonPlan[] = [
     author: "Coach Emily",
     status: "Draft",
     theme: "Spooky Skills",
-    rotations: []
+    rotations: [],
   },
   {
     id: "4",
@@ -67,8 +67,8 @@ const initialPlans: LessonPlan[] = [
     author: "Coach Sarah",
     status: "Archived",
     theme: "Balance",
-    rotations: []
-  }
+    rotations: [],
+  },
 ];
 
 export const useLessonPlanStore = create<LessonPlanState>((set) => ({
@@ -78,8 +78,7 @@ export const useLessonPlanStore = create<LessonPlanState>((set) => ({
     set((state) => ({
       plans: state.plans.map((p) => (p.id === id ? { ...p, ...updates } : p)),
     })),
-  deletePlan: (id) =>
-    set((state) => ({ plans: state.plans.filter((p) => p.id !== id) })),
+  deletePlan: (id) => set((state) => ({ plans: state.plans.filter((p) => p.id !== id) })),
   duplicatePlan: (id) =>
     set((state) => {
       const planToDup = state.plans.find((p) => p.id === id);
@@ -93,8 +92,3 @@ export const useLessonPlanStore = create<LessonPlanState>((set) => ({
       return { plans: [newPlan, ...state.plans] };
     }),
 }));
-
-
-
-
-

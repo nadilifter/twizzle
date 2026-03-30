@@ -7,7 +7,15 @@ import type {
   AccountingSyncQueue,
   AccountingEntityType,
 } from "@prisma/client";
-import { Contact, Invoice as XeroInvoice, CreditNote, BankTransaction, Phone, Address, LineAmountTypes } from "xero-node";
+import {
+  Contact,
+  Invoice as XeroInvoice,
+  CreditNote,
+  BankTransaction,
+  Phone,
+  Address,
+  LineAmountTypes,
+} from "xero-node";
 import type { LineItem, Payment as XeroPayment, ManualJournal, ManualJournalLine } from "xero-node";
 
 const MAX_ATTEMPTS = 5;
@@ -61,10 +69,7 @@ async function processConnectionQueue(
   try {
     client = await getXeroClient(connection.id);
   } catch (error) {
-    console.error(
-      `[Xero Sync] Failed to get client for connection ${connection.id}:`,
-      error
-    );
+    console.error(`[Xero Sync] Failed to get client for connection ${connection.id}:`, error);
     return { processed: 0, succeeded: 0, failed: 0 };
   }
 
@@ -306,10 +311,9 @@ async function syncContact(
     }),
   };
 
-  const response = await client.accountingApi.createContacts(
-    client.tenantId,
-    { contacts: [contact] }
-  );
+  const response = await client.accountingApi.createContacts(client.tenantId, {
+    contacts: [contact],
+  });
 
   const created = response.body?.contacts?.[0];
   if (!created?.contactID) {
@@ -346,9 +350,7 @@ async function syncInvoice(
   }
 
   const lineItems: LineItem[] = invoice.lineItems.map((li) => {
-    const glMapping = li.glCodeId
-      ? getMapping(connection, "GL_CODE", li.glCodeId)
-      : undefined;
+    const glMapping = li.glCodeId ? getMapping(connection, "GL_CODE", li.glCodeId) : undefined;
 
     return {
       description: li.description,
@@ -371,10 +373,9 @@ async function syncInvoice(
     lineAmountTypes: LineAmountTypes.Exclusive,
   };
 
-  const response = await client.accountingApi.createInvoices(
-    client.tenantId,
-    { invoices: [xeroInvoice] }
-  );
+  const response = await client.accountingApi.createInvoices(client.tenantId, {
+    invoices: [xeroInvoice],
+  });
 
   const created = response.body?.invoices?.[0];
   if (!created?.invoiceID) {
@@ -426,10 +427,7 @@ async function syncPayment(
     date: formatDate(payment.processedAt || payment.createdAt),
   };
 
-  const response = await client.accountingApi.createPayment(
-    client.tenantId,
-    xeroPayment
-  );
+  const response = await client.accountingApi.createPayment(client.tenantId, xeroPayment);
 
   const created = response.body?.payments?.[0];
   if (!created?.paymentID) {
@@ -483,10 +481,9 @@ async function syncCreditNote(
     status: CreditNote.StatusEnum.AUTHORISED,
   };
 
-  const response = await client.accountingApi.createCreditNotes(
-    client.tenantId,
-    { creditNotes: [creditNote] }
-  );
+  const response = await client.accountingApi.createCreditNotes(client.tenantId, {
+    creditNotes: [creditNote],
+  });
 
   const created = response.body?.creditNotes?.[0];
   if (!created?.creditNoteID) {
@@ -510,9 +507,7 @@ async function syncManualJournal(
 
   const glMapping = getMapping(connection, "GL_CODE", entry.glCodeId);
   if (!glMapping) {
-    throw new Error(
-      `No account mapping for GL code ${entry.glCode.code} (${entry.glCodeId})`
-    );
+    throw new Error(`No account mapping for GL code ${entry.glCode.code} (${entry.glCodeId})`);
   }
 
   const journalLines: ManualJournalLine[] = [];
@@ -539,10 +534,9 @@ async function syncManualJournal(
     journalLines,
   };
 
-  const response = await client.accountingApi.createManualJournals(
-    client.tenantId,
-    { manualJournals: [journal] }
-  );
+  const response = await client.accountingApi.createManualJournals(client.tenantId, {
+    manualJournals: [journal],
+  });
 
   const created = response.body?.manualJournals?.[0];
   if (!created?.manualJournalID) {
@@ -603,10 +597,9 @@ async function syncBankTransaction(
     reference: payout.reference,
   };
 
-  const response = await client.accountingApi.createBankTransactions(
-    client.tenantId,
-    { bankTransactions: [bankTransaction] }
-  );
+  const response = await client.accountingApi.createBankTransactions(client.tenantId, {
+    bankTransactions: [bankTransaction],
+  });
 
   const created = response.body?.bankTransactions?.[0];
   if (!created?.bankTransactionID) {

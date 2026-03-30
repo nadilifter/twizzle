@@ -3,18 +3,22 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { 
-  AlertTriangle, 
-  Pill, 
-  Heart, 
-  Phone, 
+import {
+  AlertTriangle,
+  Pill,
+  Heart,
+  Phone,
   FileText,
   UtensilsCrossed,
   Shield,
   CheckCircle,
 } from "lucide-react";
 import { formatPhoneNumberIntl } from "react-phone-number-input";
-import type { AthleteMedicalInfoWithResponses, MedicalFormConfig, CustomMedicalQuestion } from "@/types/medical";
+import type {
+  AthleteMedicalInfoWithResponses,
+  MedicalFormConfig,
+  CustomMedicalQuestion,
+} from "@/types/medical";
 
 interface MedicalDisplayProps {
   medicalInfo: AthleteMedicalInfoWithResponses | null;
@@ -23,11 +27,11 @@ interface MedicalDisplayProps {
   compact?: boolean;
 }
 
-export function MedicalDisplay({ 
-  medicalInfo, 
-  config, 
+export function MedicalDisplay({
+  medicalInfo,
+  config,
   showEmptyState = true,
-  compact = false 
+  compact = false,
 }: MedicalDisplayProps) {
   if (!medicalInfo && !showEmptyState) {
     return null;
@@ -36,8 +40,10 @@ export function MedicalDisplay({
   const hasAllergies = medicalInfo?.allergies && medicalInfo.allergies.length > 0;
   const hasConditions = medicalInfo?.conditions && medicalInfo.conditions.length > 0;
   const hasMedications = medicalInfo?.medications && medicalInfo.medications.length > 0;
-  const hasDietaryRestrictions = medicalInfo?.dietaryRestrictions && medicalInfo.dietaryRestrictions.length > 0;
-  const hasEmergencyContact = medicalInfo?.emergencyContactName || medicalInfo?.emergencyContactPhone;
+  const hasDietaryRestrictions =
+    medicalInfo?.dietaryRestrictions && medicalInfo.dietaryRestrictions.length > 0;
+  const hasEmergencyContact =
+    medicalInfo?.emergencyContactName || medicalInfo?.emergencyContactPhone;
   const hasInsurance = medicalInfo?.insuranceProvider || medicalInfo?.insurancePolicyNumber;
   const hasCustomResponses = medicalInfo?.customResponses && medicalInfo.customResponses.length > 0;
   const hasMedicalAlerts = hasAllergies || hasConditions;
@@ -87,7 +93,8 @@ export function MedicalDisplay({
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Phone className="h-3 w-3" />
             {medicalInfo.emergencyContactName}
-            {medicalInfo.emergencyContactPhone && `: ${formatPhoneNumberIntl(medicalInfo.emergencyContactPhone) || medicalInfo.emergencyContactPhone}`}
+            {medicalInfo.emergencyContactPhone &&
+              `: ${formatPhoneNumberIntl(medicalInfo.emergencyContactPhone) || medicalInfo.emergencyContactPhone}`}
           </div>
         )}
       </div>
@@ -115,7 +122,7 @@ export function MedicalDisplay({
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Allergies */}
-        {(config?.collectAllergies !== false) && (
+        {config?.collectAllergies !== false && (
           <div>
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle className="h-4 w-4 text-amber-500" />
@@ -139,7 +146,7 @@ export function MedicalDisplay({
         )}
 
         {/* Medical Conditions */}
-        {(config?.collectConditions !== false) && (
+        {config?.collectConditions !== false && (
           <div>
             <div className="flex items-center gap-2 mb-2">
               <Heart className="h-4 w-4 text-red-500" />
@@ -163,7 +170,7 @@ export function MedicalDisplay({
         )}
 
         {/* Medications */}
-        {(config?.collectMedications !== false) && (
+        {config?.collectMedications !== false && (
           <div>
             <div className="flex items-center gap-2 mb-2">
               <Pill className="h-4 w-4 text-blue-500" />
@@ -184,7 +191,7 @@ export function MedicalDisplay({
         )}
 
         {/* Dietary Restrictions */}
-        {(config?.collectDietaryRestrictions !== false) && hasDietaryRestrictions && (
+        {config?.collectDietaryRestrictions !== false && hasDietaryRestrictions && (
           <div>
             <div className="flex items-center gap-2 mb-2">
               <UtensilsCrossed className="h-4 w-4 text-orange-500" />
@@ -203,7 +210,7 @@ export function MedicalDisplay({
         <Separator />
 
         {/* Emergency Contact */}
-        {(config?.collectEmergencyContact !== false) && (
+        {config?.collectEmergencyContact !== false && (
           <div>
             <div className="flex items-center gap-2 mb-2">
               <Phone className="h-4 w-4 text-green-500" />
@@ -212,13 +219,23 @@ export function MedicalDisplay({
             {hasEmergencyContact ? (
               <div className="text-sm space-y-1">
                 {medicalInfo.emergencyContactName && (
-                  <p><span className="text-muted-foreground">Name:</span> {medicalInfo.emergencyContactName}</p>
+                  <p>
+                    <span className="text-muted-foreground">Name:</span>{" "}
+                    {medicalInfo.emergencyContactName}
+                  </p>
                 )}
                 {medicalInfo.emergencyContactPhone && (
-                  <p><span className="text-muted-foreground">Phone:</span> {formatPhoneNumberIntl(medicalInfo.emergencyContactPhone) || medicalInfo.emergencyContactPhone}</p>
+                  <p>
+                    <span className="text-muted-foreground">Phone:</span>{" "}
+                    {formatPhoneNumberIntl(medicalInfo.emergencyContactPhone) ||
+                      medicalInfo.emergencyContactPhone}
+                  </p>
                 )}
                 {medicalInfo.emergencyContactRelation && (
-                  <p><span className="text-muted-foreground">Relationship:</span> {medicalInfo.emergencyContactRelation}</p>
+                  <p>
+                    <span className="text-muted-foreground">Relationship:</span>{" "}
+                    {medicalInfo.emergencyContactRelation}
+                  </p>
                 )}
               </div>
             ) : (
@@ -228,7 +245,7 @@ export function MedicalDisplay({
         )}
 
         {/* Insurance */}
-        {(config?.collectInsuranceInfo !== false) && hasInsurance && (
+        {config?.collectInsuranceInfo !== false && hasInsurance && (
           <div>
             <div className="flex items-center gap-2 mb-2">
               <Shield className="h-4 w-4 text-purple-500" />
@@ -236,10 +253,16 @@ export function MedicalDisplay({
             </div>
             <div className="text-sm space-y-1">
               {medicalInfo.insuranceProvider && (
-                <p><span className="text-muted-foreground">Provider:</span> {medicalInfo.insuranceProvider}</p>
+                <p>
+                  <span className="text-muted-foreground">Provider:</span>{" "}
+                  {medicalInfo.insuranceProvider}
+                </p>
               )}
               {medicalInfo.insurancePolicyNumber && (
-                <p><span className="text-muted-foreground">Policy #:</span> {medicalInfo.insurancePolicyNumber}</p>
+                <p>
+                  <span className="text-muted-foreground">Policy #:</span>{" "}
+                  {medicalInfo.insurancePolicyNumber}
+                </p>
               )}
             </div>
           </div>

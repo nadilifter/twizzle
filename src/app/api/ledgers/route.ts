@@ -92,7 +92,10 @@ export async function GET(request: NextRequest) {
       _count: true,
     });
     const lineItemMap = new Map(
-      lineItemTotals.map((li) => [li.glCodeId, { total: Number(li._sum.total || 0), count: li._count }])
+      lineItemTotals.map((li) => [
+        li.glCodeId,
+        { total: Number(li._sum.total || 0), count: li._count },
+      ])
     );
 
     // Get monthly revenue data for the current year (from line items)
@@ -113,7 +116,7 @@ export async function GET(request: NextRequest) {
       const debitTotal = Number(balance?._sum.debit || 0);
       const creditTotal = Number(balance?._sum.credit || 0);
       const lineItemData = lineItemMap.get(glCode.id);
-      
+
       return {
         ...glCode,
         entryCount: glCode._count.ledgerEntries,
@@ -135,14 +138,20 @@ export async function GET(request: NextRequest) {
     };
 
     // Revenue stats from line items (real transaction data)
-    const revenueByCode: Array<{ id: string; code: string; description: string; amount: number }> = [];
+    const revenueByCode: Array<{ id: string; code: string; description: string; amount: number }> =
+      [];
 
     for (const code of codesWithBalances) {
       if (code.type === "REVENUE") {
         const amount = code.lineItemTotal;
         stats.totalRevenue += amount;
         if (amount > 0) {
-          revenueByCode.push({ id: code.id, code: code.code, description: code.description, amount });
+          revenueByCode.push({
+            id: code.id,
+            code: code.code,
+            description: code.description,
+            amount,
+          });
         }
       }
 
@@ -178,10 +187,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching GL codes:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch GL codes" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch GL codes" }, { status: 500 });
   }
 }
 
@@ -212,10 +218,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (existing) {
-      return NextResponse.json(
-        { error: "GL code already exists" },
-        { status: 409 }
-      );
+      return NextResponse.json({ error: "GL code already exists" }, { status: 409 });
     }
 
     const glCode = await db.gLCode.create({
@@ -231,16 +234,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(glCode);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating GL code:", error);
-    return NextResponse.json(
-      { error: "Failed to create GL code" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create GL code" }, { status: 500 });
   }
 }
 
@@ -279,16 +276,10 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json(glCode);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error updating GL code:", error);
-    return NextResponse.json(
-      { error: "Failed to update GL code" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update GL code" }, { status: 500 });
   }
 }
 
@@ -349,9 +340,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting GL code:", error);
-    return NextResponse.json(
-      { error: "Failed to delete GL code" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete GL code" }, { status: 500 });
   }
 }

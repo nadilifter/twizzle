@@ -1,43 +1,57 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { TrendingUp, TrendingDown, Loader2 } from "lucide-react"
-import { Bar, BarChart, CartesianGrid, XAxis, Pie, PieChart, Cell, Label } from "recharts"
-import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart"
-import { toast } from "sonner"
+import * as React from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { TrendingUp, TrendingDown, Loader2 } from "lucide-react";
+import { Bar, BarChart, CartesianGrid, XAxis, Pie, PieChart, Cell, Label } from "recharts";
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/components/ui/chart";
+import { toast } from "sonner";
 
 interface FinancialOverview {
   revenue: {
-    current: number
-    previous: number
-    changePercent: string
-    transactionCount: number
-    byMonth: Array<{ month: string; revenue: number }>
-    breakdown: Array<{ category: string; amount: number }>
-  }
+    current: number;
+    previous: number;
+    changePercent: string;
+    transactionCount: number;
+    byMonth: Array<{ month: string; revenue: number }>;
+    breakdown: Array<{ category: string; amount: number }>;
+  };
   payouts: {
-    pending: number
-    pendingCount: number
-    nextScheduled: string | null
-  }
+    pending: number;
+    pendingCount: number;
+    nextScheduled: string | null;
+  };
   subscriptions: {
-    active: number
-  }
+    active: number;
+  };
   invoices: {
-    outstanding: number
-    outstandingCount: number
-    byStatus: Array<{ status: string; count: number; total: number }>
-  }
+    outstanding: number;
+    outstandingCount: number;
+    byStatus: Array<{ status: string; count: number; total: number }>;
+  };
   transactions: {
-    settledThisMonth: number
-    settledCount: number
-  }
+    settledThisMonth: number;
+    settledCount: number;
+  };
   adyenStatus: {
-    status: string
-    verificationComplete: boolean
-  }
+    status: string;
+    verificationComplete: boolean;
+  };
 }
 
 const revenueConfig = {
@@ -45,7 +59,7 @@ const revenueConfig = {
     label: "Revenue",
     color: "hsl(var(--primary))",
   },
-} satisfies ChartConfig
+} satisfies ChartConfig;
 
 const breakdownConfig = {
   amount: { label: "Amount" },
@@ -53,42 +67,42 @@ const breakdownConfig = {
   merchandise: { label: "Merchandise", color: "hsl(var(--chart-2))" },
   events: { label: "Events", color: "hsl(var(--chart-3))" },
   lessons: { label: "Private Lessons", color: "hsl(var(--chart-4))" },
-} satisfies ChartConfig
+} satisfies ChartConfig;
 
 export default function FinancialsPage() {
-  const [data, setData] = React.useState<FinancialOverview | null>(null)
-  const [loading, setLoading] = React.useState(true)
+  const [data, setData] = React.useState<FinancialOverview | null>(null);
+  const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
     async function fetchOverview() {
       try {
-        const response = await fetch("/api/financials/overview")
-        if (!response.ok) throw new Error("Failed to fetch financial overview")
-        
-        const overview = await response.json()
-        setData(overview)
+        const response = await fetch("/api/financials/overview");
+        if (!response.ok) throw new Error("Failed to fetch financial overview");
+
+        const overview = await response.json();
+        setData(overview);
       } catch (error) {
-        console.error("Error fetching financial overview:", error)
-        toast.error("Failed to load financial data")
+        console.error("Error fetching financial overview:", error);
+        toast.error("Failed to load financial data");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
 
-    fetchOverview()
-  }, [])
+    fetchOverview();
+  }, []);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-    )
+    );
   }
 
   // Prepare chart data
-  const revenueData = data?.revenue.byMonth.length 
-    ? data.revenue.byMonth 
+  const revenueData = data?.revenue.byMonth.length
+    ? data.revenue.byMonth
     : [
         { month: "Jun", revenue: 0 },
         { month: "Jul", revenue: 0 },
@@ -96,17 +110,18 @@ export default function FinancialsPage() {
         { month: "Sep", revenue: 0 },
         { month: "Oct", revenue: 0 },
         { month: "Nov", revenue: 0 },
-      ]
+      ];
 
-  const breakdownData = data?.revenue.breakdown.map((item) => ({
-    category: item.category,
-    amount: item.amount,
-    fill: `var(--color-${item.category})`,
-  })) || []
+  const breakdownData =
+    data?.revenue.breakdown.map((item) => ({
+      category: item.category,
+      amount: item.amount,
+      fill: `var(--color-${item.category})`,
+    })) || [];
 
-  const totalRevenue = data?.revenue.current || 0
-  const revenueChange = parseFloat(data?.revenue.changePercent || "0")
-  const isPositiveChange = revenueChange >= 0
+  const totalRevenue = data?.revenue.current || 0;
+  const revenueChange = parseFloat(data?.revenue.changePercent || "0");
+  const isPositiveChange = revenueChange >= 0;
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -135,10 +150,23 @@ export default function FinancialsPage() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <p className={`text-xs ${isPositiveChange ? "text-green-600" : "text-red-600"} flex items-center`}>
-              {isPositiveChange ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
-              {isPositiveChange ? "+" : ""}{revenueChange}% from last month
+            <div className="text-2xl font-bold">
+              $
+              {totalRevenue.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </div>
+            <p
+              className={`text-xs ${isPositiveChange ? "text-green-600" : "text-red-600"} flex items-center`}
+            >
+              {isPositiveChange ? (
+                <TrendingUp className="h-3 w-3 mr-1" />
+              ) : (
+                <TrendingDown className="h-3 w-3 mr-1" />
+              )}
+              {isPositiveChange ? "+" : ""}
+              {revenueChange}% from last month
             </p>
           </CardContent>
         </Card>
@@ -160,7 +188,13 @@ export default function FinancialsPage() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${(data?.payouts.pending || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div className="text-2xl font-bold">
+              $
+              {(data?.payouts.pending || 0).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </div>
             <p className="text-xs text-muted-foreground">
               {data?.payouts.nextScheduled || `${data?.payouts.pendingCount || 0} pending`}
             </p>
@@ -183,7 +217,9 @@ export default function FinancialsPage() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${data?.adyenStatus.status === "active" ? "text-green-600" : "text-yellow-600"} flex items-center gap-2`}>
+            <div
+              className={`text-2xl font-bold ${data?.adyenStatus.status === "active" ? "text-green-600" : "text-yellow-600"} flex items-center gap-2`}
+            >
               {data?.adyenStatus.status === "active" ? "Active" : "Pending"}
               {data?.adyenStatus.status === "active" && (
                 <span className="relative flex h-3 w-3">
@@ -193,7 +229,9 @@ export default function FinancialsPage() {
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              {data?.adyenStatus.verificationComplete ? "Account verification complete" : "Verification pending"}
+              {data?.adyenStatus.verificationComplete
+                ? "Account verification complete"
+                : "Verification pending"}
             </p>
           </CardContent>
         </Card>
@@ -217,9 +255,7 @@ export default function FinancialsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{data?.subscriptions.active || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Recurring charges
-            </p>
+            <p className="text-xs text-muted-foreground">Recurring charges</p>
           </CardContent>
         </Card>
       </div>
@@ -228,9 +264,7 @@ export default function FinancialsPage() {
         <Card className="col-span-4">
           <CardHeader>
             <CardTitle>Revenue Over Time</CardTitle>
-            <CardDescription>
-              Monthly revenue for the last 6 months.
-            </CardDescription>
+            <CardDescription>Monthly revenue for the last 6 months.</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
             <ChartContainer config={revenueConfig} className="min-h-[300px] w-full">
@@ -253,9 +287,7 @@ export default function FinancialsPage() {
         <Card className="col-span-3">
           <CardHeader>
             <CardTitle>Revenue Breakdown</CardTitle>
-            <CardDescription>
-              Revenue distribution by category.
-            </CardDescription>
+            <CardDescription>Revenue distribution by category.</CardDescription>
           </CardHeader>
           <CardContent className="flex-1 pb-0">
             <ChartContainer
@@ -263,10 +295,7 @@ export default function FinancialsPage() {
               className="mx-auto aspect-square max-h-[300px]"
             >
               <PieChart>
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent hideLabel />}
-                />
+                <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
                 <Pie
                   data={breakdownData}
                   dataKey="amount"
@@ -301,7 +330,7 @@ export default function FinancialsPage() {
                               Total
                             </tspan>
                           </text>
-                        )
+                        );
                       }
                     }}
                   />
@@ -315,8 +344,13 @@ export default function FinancialsPage() {
           </CardContent>
           <CardFooter className="flex-col gap-2 text-sm">
             <div className="flex items-center gap-2 font-medium leading-none">
-              {isPositiveChange ? "Trending up" : "Trending down"} by {Math.abs(revenueChange)}% this month
-              {isPositiveChange ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+              {isPositiveChange ? "Trending up" : "Trending down"} by {Math.abs(revenueChange)}%
+              this month
+              {isPositiveChange ? (
+                <TrendingUp className="h-4 w-4" />
+              ) : (
+                <TrendingDown className="h-4 w-4" />
+              )}
             </div>
             <div className="leading-none text-muted-foreground">
               Showing total revenue distribution for the current period
@@ -325,5 +359,5 @@ export default function FinancialsPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

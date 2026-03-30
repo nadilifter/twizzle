@@ -35,7 +35,9 @@ export default function RegistrationsPage() {
           athleteList.map(async (a: any) => {
             try {
               const regRes = await fetch(`/api/athletes/${a.id}/registrations`);
-              const regData = regRes.ok ? await regRes.json() : { instanceRegistrations: [], enrollments: [], competitionEntries: [] };
+              const regData = regRes.ok
+                ? await regRes.json()
+                : { instanceRegistrations: [], enrollments: [], competitionEntries: [] };
               return {
                 id: a.id,
                 firstName: a.firstName,
@@ -47,7 +49,11 @@ export default function RegistrationsPage() {
                 id: a.id,
                 firstName: a.firstName,
                 lastName: a.lastName,
-                registrations: { instanceRegistrations: [], enrollments: [], competitionEntries: [] },
+                registrations: {
+                  instanceRegistrations: [],
+                  enrollments: [],
+                  competitionEntries: [],
+                },
               };
             }
           })
@@ -118,7 +124,10 @@ export default function RegistrationsPage() {
               </CardHeader>
               <CardContent className="space-y-2">
                 {regs.enrollments?.map((e: any) => (
-                  <div key={e.id} className="flex items-center justify-between p-3 rounded-lg border">
+                  <div
+                    key={e.id}
+                    className="flex items-center justify-between p-3 rounded-lg border"
+                  >
                     <div>
                       <div className="font-medium text-sm">{e.program?.name || "Program"}</div>
                       <div className="text-xs text-muted-foreground">Enrollment</div>
@@ -127,7 +136,10 @@ export default function RegistrationsPage() {
                   </div>
                 ))}
                 {regs.instanceRegistrations?.map((r: any) => (
-                  <div key={r.id} className="flex items-center justify-between p-3 rounded-lg border">
+                  <div
+                    key={r.id}
+                    className="flex items-center justify-between p-3 rounded-lg border"
+                  >
                     <div>
                       <div className="font-medium text-sm">
                         {r.programInstance?.program?.name || "Session"}
@@ -143,10 +155,17 @@ export default function RegistrationsPage() {
                   </div>
                 ))}
                 {regs.competitionEntries?.map((c: any) => (
-                  <div key={c.id} className="flex items-center justify-between p-3 rounded-lg border">
+                  <div
+                    key={c.id}
+                    className="flex items-center justify-between p-3 rounded-lg border"
+                  >
                     <div>
-                      <div className="font-medium text-sm">{c.competition?.name || "Competition"}</div>
-                      <div className="text-xs text-muted-foreground">{c.competitionCategory?.name || "Entry"}</div>
+                      <div className="font-medium text-sm">
+                        {c.competition?.name || "Competition"}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {c.competitionCategory?.name || "Entry"}
+                      </div>
                     </div>
                     <Badge variant="outline">{c.status}</Badge>
                   </div>

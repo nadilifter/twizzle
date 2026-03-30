@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useParams } from "next/navigation"
+import * as React from "react";
+import { useParams } from "next/navigation";
 import {
   ArrowLeft,
   Mail,
@@ -13,22 +13,16 @@ import {
   User,
   Loader2,
   Star,
-} from "lucide-react"
-import Link from "next/link"
+} from "lucide-react";
+import Link from "next/link";
 
-import { formatPhoneNumberIntl } from "react-phone-number-input"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
-import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { formatPhoneNumberIntl } from "react-phone-number-input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Table,
   TableBody,
@@ -36,104 +30,104 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
+} from "@/components/ui/table";
+import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
 
 interface GuardianAthlete {
-  id: string
-  name: string
-  firstName?: string | null
-  lastName?: string | null
-  birthDate?: string | null
-  gender?: string | null
-  level?: string | null
-  avatar?: string | null
-  status: string
-  isPrimary?: boolean
-  relationship?: string | null
+  id: string;
+  name: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  birthDate?: string | null;
+  gender?: string | null;
+  level?: string | null;
+  avatar?: string | null;
+  status: string;
+  isPrimary?: boolean;
+  relationship?: string | null;
 }
 
 interface Contact {
-  id: string
-  firstName: string
-  lastName: string
-  email?: string | null
-  phone?: string | null
-  isPrimary?: boolean
-  relationship?: string | null
+  id: string;
+  firstName: string;
+  lastName: string;
+  email?: string | null;
+  phone?: string | null;
+  isPrimary?: boolean;
+  relationship?: string | null;
 }
 
 interface BillingAddress {
-  id: string
-  label?: string | null
-  street: string
-  city: string
-  stateProvince?: string | null
-  postalCode?: string | null
-  country?: string | null
-  isPrimary?: boolean
+  id: string;
+  label?: string | null;
+  street: string;
+  city: string;
+  stateProvince?: string | null;
+  postalCode?: string | null;
+  country?: string | null;
+  isPrimary?: boolean;
 }
 
 interface Invoice {
-  id: string
-  reference?: string | null
-  total: number | string
-  status: string
-  createdAt: string
+  id: string;
+  reference?: string | null;
+  total: number | string;
+  status: string;
+  createdAt: string;
 }
 
 interface Payment {
-  id: string
-  amount: number | string
-  method?: string | null
-  status: string
-  processedAt?: string | null
+  id: string;
+  amount: number | string;
+  method?: string | null;
+  status: string;
+  processedAt?: string | null;
 }
 
 interface GuardianDetail {
-  id: string
-  name: string | null
-  email: string | null
-  phone: string | null
-  balance: number | string | null
-  status: string | null
-  athletes: GuardianAthlete[]
-  contacts: Contact[]
-  billingAddresses: BillingAddress[]
-  userInvoices: Invoice[]
-  userPayments: Payment[]
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  balance: number | string | null;
+  status: string | null;
+  athletes: GuardianAthlete[];
+  contacts: Contact[];
+  billingAddresses: BillingAddress[];
+  userInvoices: Invoice[];
+  userPayments: Payment[];
 }
 
 export default function GuardianDetailPage() {
-  const params = useParams()
-  const guardianId = typeof params.id === "string" ? params.id : null
-  const [activeTab, setActiveTab] = React.useState("overview")
-  const [guardian, setGuardian] = React.useState<GuardianDetail | null>(null)
-  const [isLoading, setIsLoading] = React.useState(true)
-  const [error, setError] = React.useState<string | null>(null)
+  const params = useParams();
+  const guardianId = typeof params.id === "string" ? params.id : null;
+  const [activeTab, setActiveTab] = React.useState("overview");
+  const [guardian, setGuardian] = React.useState<GuardianDetail | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   useBreadcrumbOverride(
     guardian ? `/dashboard/athletes/guardians/${guardianId}` : undefined,
-    guardian?.name ?? undefined,
-  )
+    guardian?.name ?? undefined
+  );
 
   React.useEffect(() => {
-    if (!guardianId) return
-    setIsLoading(true)
+    if (!guardianId) return;
+    setIsLoading(true);
     fetch(`/api/guardians/${guardianId}`)
       .then(async (res) => {
-        if (!res.ok) throw new Error("Guardian not found")
-        return res.json()
+        if (!res.ok) throw new Error("Guardian not found");
+        return res.json();
       })
       .then((data) => {
-        setGuardian(data)
-        setError(null)
+        setGuardian(data);
+        setError(null);
       })
       .catch((err) => {
-        setError(err instanceof Error ? err.message : "Failed to load guardian")
+        setError(err instanceof Error ? err.message : "Failed to load guardian");
       })
-      .finally(() => setIsLoading(false))
-  }, [guardianId])
+      .finally(() => setIsLoading(false));
+  }, [guardianId]);
 
   if (isLoading) {
     return (
@@ -141,7 +135,7 @@ export default function GuardianDetailPage() {
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         <p className="text-muted-foreground">Loading guardian details...</p>
       </div>
-    )
+    );
   }
 
   if (error || !guardian) {
@@ -152,7 +146,7 @@ export default function GuardianDetailPage() {
           <Link href="/dashboard/athletes/guardians">Go Back</Link>
         </Button>
       </div>
-    )
+    );
   }
 
   return (
@@ -164,9 +158,7 @@ export default function GuardianDetailPage() {
           </Link>
         </Button>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">
-            {guardian.name || "Guardian"}
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight">{guardian.name || "Guardian"}</h1>
           <div className="flex items-center gap-2 text-muted-foreground">
             <span className="flex items-center gap-1">
               <User className="h-4 w-4" /> {guardian.email}
@@ -207,7 +199,7 @@ export default function GuardianDetailPage() {
                 <div>
                   <p className="text-sm font-medium">Phone</p>
                   <p className="text-sm text-muted-foreground">
-                    {guardian.phone ? (formatPhoneNumberIntl(guardian.phone) || guardian.phone) : "—"}
+                    {guardian.phone ? formatPhoneNumberIntl(guardian.phone) || guardian.phone : "—"}
                   </p>
                 </div>
               </div>
@@ -220,9 +212,7 @@ export default function GuardianDetailPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Current Balance
-                </p>
+                <p className="text-sm font-medium text-muted-foreground">Current Balance</p>
                 <p
                   className={`text-2xl font-bold ${Number(guardian.balance) > 0 ? "text-destructive" : "text-green-600"}`}
                 >
@@ -231,18 +221,13 @@ export default function GuardianDetailPage() {
                 </p>
               </div>
               <div className="pt-2 border-t">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Status
-                </p>
+                <p className="text-sm font-medium text-muted-foreground">Status</p>
                 <Badge
-                  variant={
-                    guardian.status === "ACTIVE" ? "default" : "secondary"
-                  }
+                  variant={guardian.status === "ACTIVE" ? "default" : "secondary"}
                   className="mt-1"
                 >
                   {guardian.status
-                    ? guardian.status.charAt(0) +
-                      guardian.status.slice(1).toLowerCase()
+                    ? guardian.status.charAt(0) + guardian.status.slice(1).toLowerCase()
                     : "Unknown"}
                 </Badge>
               </div>
@@ -253,7 +238,11 @@ export default function GuardianDetailPage() {
         {/* Main Content */}
         <div className="md:col-span-2">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <ResponsiveTabsList value={activeTab} onValueChange={setActiveTab} className="w-full justify-start">
+            <ResponsiveTabsList
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="w-full justify-start"
+            >
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="athletes">Athletes</TabsTrigger>
               <TabsTrigger value="contacts">Contacts</TabsTrigger>
@@ -269,60 +258,37 @@ export default function GuardianDetailPage() {
                 <CardContent>
                   <dl className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <dt className="text-sm font-medium text-muted-foreground">
-                        Name
-                      </dt>
+                      <dt className="text-sm font-medium text-muted-foreground">Name</dt>
+                      <dd className="text-sm mt-1">{guardian.name || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-muted-foreground">Email</dt>
+                      <dd className="text-sm mt-1">{guardian.email || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-muted-foreground">Phone</dt>
                       <dd className="text-sm mt-1">
-                        {guardian.name || "—"}
+                        {guardian.phone
+                          ? formatPhoneNumberIntl(guardian.phone) || guardian.phone
+                          : "—"}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-sm font-medium text-muted-foreground">
-                        Email
-                      </dt>
+                      <dt className="text-sm font-medium text-muted-foreground">Status</dt>
                       <dd className="text-sm mt-1">
-                        {guardian.email || "—"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-muted-foreground">
-                        Phone
-                      </dt>
-                      <dd className="text-sm mt-1">
-                        {guardian.phone ? (formatPhoneNumberIntl(guardian.phone) || guardian.phone) : "—"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-muted-foreground">
-                        Status
-                      </dt>
-                      <dd className="text-sm mt-1">
-                        <Badge
-                          variant={
-                            guardian.status === "ACTIVE"
-                              ? "default"
-                              : "secondary"
-                          }
-                        >
+                        <Badge variant={guardian.status === "ACTIVE" ? "default" : "secondary"}>
                           {guardian.status
-                            ? guardian.status.charAt(0) +
-                              guardian.status.slice(1).toLowerCase()
+                            ? guardian.status.charAt(0) + guardian.status.slice(1).toLowerCase()
                             : "Unknown"}
                         </Badge>
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-sm font-medium text-muted-foreground">
-                        Athletes
-                      </dt>
-                      <dd className="text-sm mt-1">
-                        {guardian.athletes.length} linked
-                      </dd>
+                      <dt className="text-sm font-medium text-muted-foreground">Athletes</dt>
+                      <dd className="text-sm mt-1">{guardian.athletes.length} linked</dd>
                     </div>
                     <div>
-                      <dt className="text-sm font-medium text-muted-foreground">
-                        Balance
-                      </dt>
+                      <dt className="text-sm font-medium text-muted-foreground">Balance</dt>
                       <dd className="text-sm mt-1">
                         <Badge
                           variant={
@@ -360,32 +326,21 @@ export default function GuardianDetailPage() {
                       <div className="flex items-center gap-4 p-4">
                         <Avatar className="h-12 w-12">
                           <AvatarImage src={athlete.avatar || undefined} alt={athlete.name} />
-                          <AvatarFallback>
-                            {(athlete.name || "?").charAt(0)}
-                          </AvatarFallback>
+                          <AvatarFallback>{(athlete.name || "?").charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <Link
                             href={`/dashboard/athletes/${athlete.id}`}
                             className="hover:underline"
                           >
-                            <h4 className="font-semibold truncate">
-                              {athlete.name}
-                            </h4>
+                            <h4 className="font-semibold truncate">{athlete.name}</h4>
                           </Link>
                           <p className="text-sm text-muted-foreground">
                             {athlete.level || "No level"}
                           </p>
                         </div>
-                        <Badge
-                          variant={
-                            athlete.status === "ACTIVE"
-                              ? "default"
-                              : "secondary"
-                          }
-                        >
-                          {athlete.status.charAt(0) +
-                            athlete.status.slice(1).toLowerCase()}
+                        <Badge variant={athlete.status === "ACTIVE" ? "default" : "secondary"}>
+                          {athlete.status.charAt(0) + athlete.status.slice(1).toLowerCase()}
                         </Badge>
                       </div>
                       <div className="bg-muted/50 px-4 py-3 flex items-center justify-between text-sm">
@@ -399,9 +354,7 @@ export default function GuardianDetailPage() {
                           className="h-auto p-0 text-primary"
                           asChild
                         >
-                          <Link href={`/dashboard/athletes/${athlete.id}`}>
-                            View
-                          </Link>
+                          <Link href={`/dashboard/athletes/${athlete.id}`}>View</Link>
                         </Button>
                       </div>
                     </CardContent>
@@ -420,9 +373,7 @@ export default function GuardianDetailPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Contacts</CardTitle>
-                  <CardDescription>
-                    Contact records associated with this guardian.
-                  </CardDescription>
+                  <CardDescription>Contact records associated with this guardian.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {guardian.contacts && guardian.contacts.length > 0 ? (
@@ -441,26 +392,22 @@ export default function GuardianDetailPage() {
                                 {contact.firstName} {contact.lastName}
                               </p>
                               {contact.isPrimary && (
-                                <Badge
-                                  variant="secondary"
-                                  className="text-[10px] h-5"
-                                >
+                                <Badge variant="secondary" className="text-[10px] h-5">
                                   <Star className="h-3 w-3 mr-0.5" />
                                   Primary
                                 </Badge>
                               )}
                               {contact.relationship && (
-                                <Badge
-                                  variant="outline"
-                                  className="text-[10px] h-5"
-                                >
+                                <Badge variant="outline" className="text-[10px] h-5">
                                   {contact.relationship}
                                 </Badge>
                               )}
                             </div>
                             <p className="text-sm text-muted-foreground">
                               {contact.email || "—"} &middot;{" "}
-                              {contact.phone ? (formatPhoneNumberIntl(contact.phone) || contact.phone) : "—"}
+                              {contact.phone
+                                ? formatPhoneNumberIntl(contact.phone) || contact.phone
+                                : "—"}
                             </p>
                           </div>
                         </div>
@@ -481,13 +428,10 @@ export default function GuardianDetailPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Billing Addresses</CardTitle>
-                  <CardDescription>
-                    Addresses used during checkout.
-                  </CardDescription>
+                  <CardDescription>Addresses used during checkout.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {guardian.billingAddresses &&
-                  guardian.billingAddresses.length > 0 ? (
+                  {guardian.billingAddresses && guardian.billingAddresses.length > 0 ? (
                     <div className="space-y-3">
                       {guardian.billingAddresses.map((addr) => (
                         <div
@@ -503,10 +447,7 @@ export default function GuardianDetailPage() {
                                 {addr.label || "Billing Address"}
                               </p>
                               {addr.isPrimary && (
-                                <Badge
-                                  variant="secondary"
-                                  className="text-[10px] h-5"
-                                >
+                                <Badge variant="secondary" className="text-[10px] h-5">
                                   <Star className="h-3 w-3 mr-0.5" />
                                   Primary
                                 </Badge>
@@ -514,9 +455,7 @@ export default function GuardianDetailPage() {
                             </div>
                             <p className="text-sm text-muted-foreground">
                               {addr.street}, {addr.city}
-                              {addr.stateProvince
-                                ? `, ${addr.stateProvince}`
-                                : ""}{" "}
+                              {addr.stateProvince ? `, ${addr.stateProvince}` : ""}{" "}
                               {addr.postalCode}
                               {addr.country ? ` ${addr.country}` : ""}
                             </p>
@@ -555,9 +494,7 @@ export default function GuardianDetailPage() {
                       {guardian.userInvoices &&
                         guardian.userInvoices.map((inv) => (
                           <TableRow key={inv.id}>
-                            <TableCell>
-                              {new Date(inv.createdAt).toLocaleDateString()}
-                            </TableCell>
+                            <TableCell>{new Date(inv.createdAt).toLocaleDateString()}</TableCell>
                             <TableCell>{inv.reference || "—"}</TableCell>
                             <TableCell>
                               <Badge
@@ -585,13 +522,9 @@ export default function GuardianDetailPage() {
                             </TableCell>
                           </TableRow>
                         ))}
-                      {(!guardian.userInvoices ||
-                        guardian.userInvoices.length === 0) && (
+                      {(!guardian.userInvoices || guardian.userInvoices.length === 0) && (
                         <TableRow>
-                          <TableCell
-                            colSpan={5}
-                            className="h-24 text-center"
-                          >
+                          <TableCell colSpan={5} className="h-24 text-center">
                             No invoices found.
                           </TableCell>
                         </TableRow>
@@ -622,9 +555,7 @@ export default function GuardianDetailPage() {
                           <TableRow key={pmt.id}>
                             <TableCell>
                               {pmt.processedAt
-                                ? new Date(
-                                    pmt.processedAt
-                                  ).toLocaleDateString()
+                                ? new Date(pmt.processedAt).toLocaleDateString()
                                 : "—"}
                             </TableCell>
                             <TableCell>
@@ -654,13 +585,9 @@ export default function GuardianDetailPage() {
                             </TableCell>
                           </TableRow>
                         ))}
-                      {(!guardian.userPayments ||
-                        guardian.userPayments.length === 0) && (
+                      {(!guardian.userPayments || guardian.userPayments.length === 0) && (
                         <TableRow>
-                          <TableCell
-                            colSpan={4}
-                            className="h-24 text-center"
-                          >
+                          <TableCell colSpan={4} className="h-24 text-center">
                             No payments found.
                           </TableCell>
                         </TableRow>
@@ -674,5 +601,5 @@ export default function GuardianDetailPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

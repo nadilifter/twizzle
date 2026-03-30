@@ -1,6 +1,6 @@
 /**
  * Notification Template Service
- * 
+ *
  * Handles template rendering with placeholders for the notification system.
  * Provides placeholder validation, rendering, and metadata.
  */
@@ -19,7 +19,7 @@ export interface PlaceholderDefinition {
   category: PlaceholderCategory;
 }
 
-export type PlaceholderCategory = 
+export type PlaceholderCategory =
   | "athlete"
   | "guardian"
   | "membership"
@@ -38,14 +38,14 @@ export interface TemplateContext {
   athleteLevel?: string;
   athleteBirthDate?: string;
   athleteAge?: number;
-  
+
   // Guardian context
   guardianName?: string;
   guardianFirstName?: string;
   guardianEmail?: string;
   guardianPhone?: string;
   guardianBalance?: string;
-  
+
   // Membership context
   membershipName?: string;
   membershipGroupName?: string;
@@ -54,18 +54,18 @@ export interface TemplateContext {
   membershipDaysRemaining?: number;
   membershipStatus?: string;
   membershipPrice?: string;
-  
+
   // Program context
   programName?: string;
   programDescription?: string;
-  
+
   // Event context
   eventName?: string;
   eventDate?: string;
   eventTime?: string;
   eventLocation?: string;
   eventDescription?: string;
-  
+
   // Payment context
   invoiceAmount?: string;
   invoiceReference?: string;
@@ -74,14 +74,14 @@ export interface TemplateContext {
   dueDaysRemaining?: number;
   paymentUrl?: string;
   balanceDue?: string;
-  
+
   // Organization context
   organizationName?: string;
   organizationEmail?: string;
   organizationPhone?: string;
   organizationAddress?: string;
   websiteUrl?: string;
-  
+
   // Date context
   currentDate?: string;
   currentYear?: string;
@@ -423,52 +423,54 @@ export function getPlaceholdersByCategory(category: PlaceholderCategory): Placeh
 /**
  * Get placeholders available for a specific trigger type
  */
-export function getPlaceholdersForTrigger(triggerType: NotificationTriggerType): PlaceholderDefinition[] {
+export function getPlaceholdersForTrigger(
+  triggerType: NotificationTriggerType
+): PlaceholderDefinition[] {
   // Organization and date placeholders are always available
   const baseCategories: PlaceholderCategory[] = ["organization", "date"];
-  
+
   // Determine which additional categories are relevant based on trigger type
   const additionalCategories: PlaceholderCategory[] = [];
-  
+
   switch (triggerType) {
     case "MEMBERSHIP_EXPIRY":
     case "MEMBERSHIP_EXPIRED":
       additionalCategories.push("athlete", "guardian", "membership");
       break;
-      
+
     case "PAYMENT_DUE":
     case "PAYMENT_OVERDUE":
     case "PAYMENT_RECEIVED":
       additionalCategories.push("guardian", "payment");
       break;
-      
+
     case "PROGRAM_REMINDER":
     case "PROGRAM_ENROLLMENT":
     case "PROGRAM_CANCELLATION":
       additionalCategories.push("athlete", "guardian", "program");
       break;
-      
+
     case "EVENT_REMINDER":
     case "EVENT_REGISTRATION_OPEN":
     case "EVENT_REGISTRATION_CLOSE":
       additionalCategories.push("athlete", "guardian", "event");
       break;
-      
+
     case "ATTENDANCE_MISSED":
     case "SKILL_ACHIEVED":
     case "EVALUATION_DUE":
     case "EVALUATION_COMPLETED":
       additionalCategories.push("athlete", "guardian", "program");
       break;
-      
+
     case "BIRTHDAY":
       additionalCategories.push("athlete", "guardian");
       break;
-      
+
     case "WAITLIST_OPENING":
       additionalCategories.push("athlete", "guardian", "program", "event");
       break;
-      
+
     case "RECURRING_CHARGE_UPCOMING":
     case "RECURRING_CHARGE_SUCCEEDED":
     case "RECURRING_CHARGE_FAILED":
@@ -478,11 +480,11 @@ export function getPlaceholdersForTrigger(triggerType: NotificationTriggerType):
 
     case "CUSTOM":
       return PLACEHOLDER_DEFINITIONS;
-      
+
     default:
       additionalCategories.push("athlete", "guardian");
   }
-  
+
   const allCategories = [...baseCategories, ...additionalCategories];
   return PLACEHOLDER_DEFINITIONS.filter((p) => allCategories.includes(p.category));
 }
@@ -498,13 +500,13 @@ export function extractPlaceholders(template: string): string[] {
   const regex = /\{\{(\w+)\}\}/g;
   const matches: string[] = [];
   let match;
-  
+
   while ((match = regex.exec(template)) !== null) {
     if (!matches.includes(match[1])) {
       matches.push(match[1]);
     }
   }
-  
+
   return matches;
 }
 
@@ -514,31 +516,25 @@ export function extractPlaceholders(template: string): string[] {
 export function renderTemplate(template: string, context: TemplateContext): RenderResult {
   const usedPlaceholders: string[] = [];
   const missingPlaceholders: string[] = [];
-  
+
   // Find all placeholders in the template
   const placeholdersInTemplate = extractPlaceholders(template);
-  
+
   // Replace placeholders with values
   let rendered = template;
   for (const key of placeholdersInTemplate) {
     const value = context[key as keyof TemplateContext];
-    
+
     if (value !== undefined && value !== null) {
-      rendered = rendered.replace(
-        new RegExp(`\\{\\{${key}\\}\\}`, "g"),
-        String(value)
-      );
+      rendered = rendered.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), String(value));
       usedPlaceholders.push(key);
     } else {
       missingPlaceholders.push(key);
       // Leave placeholder as-is for missing values (or replace with empty)
-      rendered = rendered.replace(
-        new RegExp(`\\{\\{${key}\\}\\}`, "g"),
-        ""
-      );
+      rendered = rendered.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), "");
     }
   }
-  
+
   return {
     rendered,
     missingPlaceholders,
@@ -552,17 +548,14 @@ export function renderTemplate(template: string, context: TemplateContext): Rend
 export function renderTemplatePreview(template: string): string {
   const placeholdersInTemplate = extractPlaceholders(template);
   let rendered = template;
-  
+
   for (const key of placeholdersInTemplate) {
     const definition = PLACEHOLDER_DEFINITIONS.find((p) => p.key === key);
     const exampleValue = definition?.example || `[${key}]`;
-    
-    rendered = rendered.replace(
-      new RegExp(`\\{\\{${key}\\}\\}`, "g"),
-      exampleValue
-    );
+
+    rendered = rendered.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), exampleValue);
   }
-  
+
   return rendered;
 }
 
@@ -579,15 +572,15 @@ export function validateTemplate(
 ): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
-  
+
   // Extract placeholders from template
   const usedPlaceholders = extractPlaceholders(template);
-  
+
   // Get valid placeholders for this trigger type
   const validPlaceholders = getPlaceholdersForTrigger(triggerType);
   const validKeys = validPlaceholders.map((p) => p.key);
   const allValidKeys = getAllPlaceholderKeys();
-  
+
   // Check for unknown placeholders
   const unknownPlaceholders: string[] = [];
   for (const key of usedPlaceholders) {
@@ -600,18 +593,18 @@ export function validateTemplate(
       );
     }
   }
-  
+
   // Check for empty template
   if (!template.trim()) {
     errors.push("Template cannot be empty");
   }
-  
+
   // Check for unclosed placeholders
   const unclosedMatches = template.match(/\{\{[^}]*$/g);
   if (unclosedMatches) {
     errors.push("Template contains unclosed placeholder brackets");
   }
-  
+
   return {
     isValid: errors.length === 0,
     errors,
@@ -624,7 +617,9 @@ export function validateTemplate(
 /**
  * Get a summary of placeholder categories used in a template
  */
-export function getTemplatePlaceholderSummary(template: string): Record<PlaceholderCategory, string[]> {
+export function getTemplatePlaceholderSummary(
+  template: string
+): Record<PlaceholderCategory, string[]> {
   const usedPlaceholders = extractPlaceholders(template);
   const summary: Record<PlaceholderCategory, string[]> = {
     athlete: [],
@@ -636,14 +631,14 @@ export function getTemplatePlaceholderSummary(template: string): Record<Placehol
     organization: [],
     date: [],
   };
-  
+
   for (const key of usedPlaceholders) {
     const definition = PLACEHOLDER_DEFINITIONS.find((p) => p.key === key);
     if (definition) {
       summary[definition.category].push(key);
     }
   }
-  
+
   return summary;
 }
 
@@ -833,6 +828,8 @@ Thank you,
 /**
  * Get the default template for a trigger type
  */
-export function getDefaultTemplate(triggerType: NotificationTriggerType): DefaultTemplate | undefined {
+export function getDefaultTemplate(
+  triggerType: NotificationTriggerType
+): DefaultTemplate | undefined {
   return DEFAULT_TEMPLATES.find((t) => t.triggerType === triggerType);
 }

@@ -1,38 +1,44 @@
-"use client"
+"use client";
 
-import { useState, useMemo } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, User, Calendar as CalendarIcon } from "lucide-react"
-import { toast } from "sonner"
-import { useGuardians } from "@/hooks/use-guardians"
-import { useLevels } from "@/hooks/use-levels"
-import type { AthleteStatus, UpdateAthletePayload } from "@/types/athletes"
-import { format } from "date-fns"
-import { cn } from "@/lib/utils"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useState, useMemo } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Loader2, User, Calendar as CalendarIcon } from "lucide-react";
+import { toast } from "sonner";
+import { useGuardians } from "@/hooks/use-guardians";
+import { useLevels } from "@/hooks/use-levels";
+import type { AthleteStatus, UpdateAthletePayload } from "@/types/athletes";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface AthleteData {
-  id: string
-  name: string
-  firstName: string
-  lastName: string
-  email: string | null
-  level: string
-  status: AthleteStatus
-  birthDate: string | null
-  gender: string | null
-  guardian?: { id: string; name: string | null; email: string } | null
+  id: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  level: string;
+  status: AthleteStatus;
+  birthDate: string | null;
+  gender: string | null;
+  guardian?: { id: string; name: string | null; email: string } | null;
 }
 
 interface AthleteConfigurationProps {
-  athlete: AthleteData
-  onClose: () => void
-  onUpdated?: (data: UpdateAthletePayload) => Promise<unknown>
+  athlete: AthleteData;
+  onClose: () => void;
+  onUpdated?: (data: UpdateAthletePayload) => Promise<unknown>;
 }
 
 const STATUS_OPTIONS: { value: AthleteStatus; label: string }[] = [
@@ -40,40 +46,38 @@ const STATUS_OPTIONS: { value: AthleteStatus; label: string }[] = [
   { value: "INACTIVE", label: "Inactive" },
   { value: "TRIAL", label: "Trial" },
   { value: "GRADUATED", label: "Graduated" },
-]
+];
 
 export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteConfigurationProps) {
-  const { guardians, isLoading: loadingGuardians } = useGuardians()
-  const { levels: configuredLevels, isLoading: loadingLevels } = useLevels()
+  const { guardians, isLoading: loadingGuardians } = useGuardians();
+  const { levels: configuredLevels, isLoading: loadingLevels } = useLevels();
 
-  const [isSaving, setIsSaving] = useState(false)
+  const [isSaving, setIsSaving] = useState(false);
 
   const [formData, setFormData] = useState(() => ({
     name: athlete.name || "",
     email: athlete.email || "",
     level: athlete.level || "",
     status: athlete.status || ("ACTIVE" as AthleteStatus),
-    birthDate: athlete.birthDate
-      ? new Date(athlete.birthDate).toISOString().split("T")[0]
-      : "",
+    birthDate: athlete.birthDate ? new Date(athlete.birthDate).toISOString().split("T")[0] : "",
     guardianUserId: athlete.guardian?.id || "",
-  }))
+  }));
 
   const levelColor = useMemo(() => {
-    return configuredLevels.find((l) => l.name === formData.level)?.color ?? null
-  }, [configuredLevels, formData.level])
+    return configuredLevels.find((l) => l.name === formData.level)?.color ?? null;
+  }, [configuredLevels, formData.level]);
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
-      toast.error("Athlete name is required")
-      return
+      toast.error("Athlete name is required");
+      return;
     }
     if (!formData.level) {
-      toast.error("Level is required")
-      return
+      toast.error("Level is required");
+      return;
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       const payload: UpdateAthletePayload = {
         name: formData.name.trim(),
@@ -82,20 +86,20 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
         status: formData.status,
         birthDate: formData.birthDate || null,
         guardianUserId: formData.guardianUserId || undefined,
-      }
+      };
 
       if (onUpdated) {
-        await onUpdated(payload)
+        await onUpdated(payload);
       }
 
-      toast.success("Athlete updated successfully")
-      onClose()
+      toast.success("Athlete updated successfully");
+      onClose();
     } catch {
-      toast.error("Failed to update athlete")
+      toast.error("Failed to update athlete");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -145,17 +149,29 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
                   <Button
                     type="button"
                     variant="outline"
-                    className={cn("w-full justify-start text-left font-normal", !formData.birthDate && "text-muted-foreground")}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !formData.birthDate && "text-muted-foreground"
+                    )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.birthDate ? format(new Date(formData.birthDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                    {formData.birthDate
+                      ? format(new Date(formData.birthDate + "T12:00:00Z"), "PPP")
+                      : "Pick a date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={formData.birthDate ? new Date(formData.birthDate + "T12:00:00Z") : undefined}
-                    onSelect={(date) => setFormData((prev) => ({ ...prev, birthDate: date ? format(date, "yyyy-MM-dd") : "" }))}
+                    selected={
+                      formData.birthDate ? new Date(formData.birthDate + "T12:00:00Z") : undefined
+                    }
+                    onSelect={(date) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        birthDate: date ? format(date, "yyyy-MM-dd") : "",
+                      }))
+                    }
                     captionLayout="dropdown"
                     fromYear={1940}
                     toYear={new Date().getFullYear()}
@@ -168,7 +184,9 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
               <Label htmlFor="config-status">Status *</Label>
               <Select
                 value={formData.status}
-                onValueChange={(value) => setFormData((prev) => ({ ...prev, status: value as AthleteStatus }))}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({ ...prev, status: value as AthleteStatus }))
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select status" />
@@ -214,7 +232,11 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
               <Badge
                 variant="outline"
                 className="mt-1"
-                style={{ borderColor: levelColor, color: levelColor, backgroundColor: `${levelColor}15` }}
+                style={{
+                  borderColor: levelColor,
+                  color: levelColor,
+                  backgroundColor: `${levelColor}15`,
+                }}
               >
                 {formData.level}
               </Badge>
@@ -251,5 +273,5 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
         </div>
       </div>
     </div>
-  )
+  );
 }

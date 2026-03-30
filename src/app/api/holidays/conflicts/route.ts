@@ -23,10 +23,7 @@ export async function GET(request: NextRequest) {
       );
     }
     if (action !== "enable" && action !== "disable") {
-      return NextResponse.json(
-        { error: 'action must be "enable" or "disable"' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'action must be "enable" or "disable"' }, { status: 400 });
     }
 
     const date = parseDateOnly(dateParam);
@@ -40,8 +37,12 @@ export async function GET(request: NextRequest) {
 
     if (action === "enable") {
       // Find scheduled program instances on this date
-      const dayStart = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 0, 0, 0));
-      const dayEnd = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 23, 59, 59, 999));
+      const dayStart = new Date(
+        Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 0, 0, 0)
+      );
+      const dayEnd = new Date(
+        Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 23, 59, 59, 999)
+      );
 
       const instances = await scopedDb.programInstance.findMany({
         where: {
@@ -104,14 +105,16 @@ export async function GET(request: NextRequest) {
         program.rrule
       );
 
-      const wouldHaveInstance = instanceDates.some(
-        (d) => formatDateOnly(d) === dateStr
-      );
+      const wouldHaveInstance = instanceDates.some((d) => formatDateOnly(d) === dateStr);
       if (!wouldHaveInstance) continue;
 
       // Check if an instance already exists for this program on this date
-      const dayStart = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 0, 0, 0));
-      const dayEnd = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 23, 59, 59, 999));
+      const dayStart = new Date(
+        Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 0, 0, 0)
+      );
+      const dayEnd = new Date(
+        Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 23, 59, 59, 999)
+      );
 
       const existingInstance = await scopedDb.programInstance.findFirst({
         where: {
@@ -136,9 +139,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error checking holiday conflicts:", error);
-    return NextResponse.json(
-      { error: "Failed to check conflicts" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to check conflicts" }, { status: 500 });
   }
 }

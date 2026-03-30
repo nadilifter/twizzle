@@ -13,12 +13,14 @@ const createAttendanceSchema = z.object({
 });
 
 const bulkAttendanceSchema = z.object({
-  attendances: z.array(z.object({
-    athleteId: z.string(),
-    status: z.enum(["REGISTERED", "PRESENT", "ABSENT", "LATE", "EXCUSED"]).default("PRESENT"),
-    checkedIn: z.boolean().optional().default(true), // Will be converted to DateTime
-    notes: z.string().optional().nullable(),
-  })),
+  attendances: z.array(
+    z.object({
+      athleteId: z.string(),
+      status: z.enum(["REGISTERED", "PRESENT", "ABSENT", "LATE", "EXCUSED"]).default("PRESENT"),
+      checkedIn: z.boolean().optional().default(true), // Will be converted to DateTime
+      notes: z.string().optional().nullable(),
+    })
+  ),
 });
 
 // Helper to convert boolean checkedIn to DateTime
@@ -86,14 +88,14 @@ export async function GET(
     });
 
     // Combine: all registered athletes with their attendance status
-    const attendedIds = new Set(attendances.map(a => a.athleteId));
-    const allAthletes = registeredAthletes.map(reg => ({
+    const attendedIds = new Set(attendances.map((a) => a.athleteId));
+    const allAthletes = registeredAthletes.map((reg) => ({
       athlete: reg.athlete,
       registration: {
         id: reg.id,
         status: reg.status,
       },
-      attendance: attendances.find(a => a.athleteId === reg.athleteId) || null,
+      attendance: attendances.find((a) => a.athleteId === reg.athleteId) || null,
     }));
 
     return NextResponse.json({
@@ -101,17 +103,14 @@ export async function GET(
       roster: allAthletes,
       summary: {
         total: registeredAthletes.length,
-        checkedIn: attendances.filter(a => a.checkedIn).length,
-        absent: attendances.filter(a => a.status === "ABSENT").length,
+        checkedIn: attendances.filter((a) => a.checkedIn).length,
+        absent: attendances.filter((a) => a.status === "ABSENT").length,
         pending: registeredAthletes.length - attendedIds.size,
       },
     });
   } catch (error) {
     console.error("Error fetching attendance:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch attendance" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch attendance" }, { status: 500 });
   }
 }
 
@@ -200,10 +199,13 @@ export async function POST(
         }
       }
 
-      return NextResponse.json({
-        message: `Updated ${results.length} attendance records`,
-        count: results.length,
-      }, { status: 201 });
+      return NextResponse.json(
+        {
+          message: `Updated ${results.length} attendance records`,
+          count: results.length,
+        },
+        { status: 201 }
+      );
     } else {
       const validated = createAttendanceSchema.parse(body);
       const checkedInTime = getCheckedInTime(validated.checkedIn);
@@ -258,15 +260,9 @@ export async function POST(
     }
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating attendance:", error);
-    return NextResponse.json(
-      { error: "Failed to create attendance" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create attendance" }, { status: 500 });
   }
 }

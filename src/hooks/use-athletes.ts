@@ -20,16 +20,16 @@ interface UseAthletesReturn {
   // Data
   athletes: AthleteWithRelations[];
   total: number;
-  
+
   // Loading states
   isLoading: boolean;
   isCreating: boolean;
   isUpdating: boolean;
   isDeleting: boolean;
-  
+
   // Error state
   error: string | null;
-  
+
   // Actions
   fetchAthletes: (params?: AthletesQueryParams) => Promise<void>;
   createAthlete: (data: CreateAthletePayload) => Promise<AthleteWithRelations | null>;
@@ -56,70 +56,76 @@ export function useAthletes(options: UseAthletesOptions = {}): UseAthletesReturn
   const [currentParams, setCurrentParams] = useState<AthletesQueryParams>(initialParams);
 
   // Fetch athletes list
-  const fetchAthletes = useCallback(async (params?: AthletesQueryParams) => {
-    const queryParams = params ?? currentParams;
-    setCurrentParams(queryParams);
-    setIsLoading(true);
-    setError(null);
+  const fetchAthletes = useCallback(
+    async (params?: AthletesQueryParams) => {
+      const queryParams = params ?? currentParams;
+      setCurrentParams(queryParams);
+      setIsLoading(true);
+      setError(null);
 
-    try {
-      const response = await api.get<AthletesListResponse>("/api/athletes", queryParams);
-      setAthletes(response.data);
-      setTotal(response.total);
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to fetch athletes";
-      setError(message);
-      console.error("Error fetching athletes:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentParams]);
+      try {
+        const response = await api.get<AthletesListResponse>("/api/athletes", queryParams);
+        setAthletes(response.data);
+        setTotal(response.total);
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to fetch athletes";
+        setError(message);
+        console.error("Error fetching athletes:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [currentParams]
+  );
 
   // Create athlete
-  const createAthlete = useCallback(async (data: CreateAthletePayload): Promise<AthleteWithRelations | null> => {
-    setIsCreating(true);
-    setError(null);
+  const createAthlete = useCallback(
+    async (data: CreateAthletePayload): Promise<AthleteWithRelations | null> => {
+      setIsCreating(true);
+      setError(null);
 
-    try {
-      const newAthlete = await api.post<AthleteWithRelations>("/api/athletes", data);
-      // Add to local state
-      setAthletes((prev) => [...prev, newAthlete]);
-      setTotal((prev) => prev + 1);
-      return newAthlete;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to create athlete";
-      setError(message);
-      console.error("Error creating athlete:", err);
-      return null;
-    } finally {
-      setIsCreating(false);
-    }
-  }, []);
+      try {
+        const newAthlete = await api.post<AthleteWithRelations>("/api/athletes", data);
+        // Add to local state
+        setAthletes((prev) => [...prev, newAthlete]);
+        setTotal((prev) => prev + 1);
+        return newAthlete;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to create athlete";
+        setError(message);
+        console.error("Error creating athlete:", err);
+        return null;
+      } finally {
+        setIsCreating(false);
+      }
+    },
+    []
+  );
 
   // Update athlete
-  const updateAthlete = useCallback(async (
-    id: string,
-    data: UpdateAthletePayload
-  ): Promise<AthleteWithRelations | null> => {
-    setIsUpdating(true);
-    setError(null);
+  const updateAthlete = useCallback(
+    async (id: string, data: UpdateAthletePayload): Promise<AthleteWithRelations | null> => {
+      setIsUpdating(true);
+      setError(null);
 
-    try {
-      const updatedAthlete = await api.patch<AthleteWithRelations>(`/api/athletes/${id}`, data);
-      // Update local state
-      setAthletes((prev) =>
-        prev.map((athlete) => (athlete.id === id ? updatedAthlete : athlete))
-      );
-      return updatedAthlete;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to update athlete";
-      setError(message);
-      console.error("Error updating athlete:", err);
-      return null;
-    } finally {
-      setIsUpdating(false);
-    }
-  }, []);
+      try {
+        const updatedAthlete = await api.patch<AthleteWithRelations>(`/api/athletes/${id}`, data);
+        // Update local state
+        setAthletes((prev) =>
+          prev.map((athlete) => (athlete.id === id ? updatedAthlete : athlete))
+        );
+        return updatedAthlete;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to update athlete";
+        setError(message);
+        console.error("Error updating athlete:", err);
+        return null;
+      } finally {
+        setIsUpdating(false);
+      }
+    },
+    []
+  );
 
   // Delete athlete
   const deleteAthlete = useCallback(async (id: string): Promise<boolean> => {
@@ -219,25 +225,28 @@ export function useAthlete(athleteId: string | null): UseAthleteReturn {
   }, [athleteId]);
 
   // Update athlete
-  const updateAthlete = useCallback(async (data: UpdateAthletePayload): Promise<AthleteDetail | null> => {
-    if (!athleteId) return null;
+  const updateAthlete = useCallback(
+    async (data: UpdateAthletePayload): Promise<AthleteDetail | null> => {
+      if (!athleteId) return null;
 
-    setIsUpdating(true);
-    setError(null);
+      setIsUpdating(true);
+      setError(null);
 
-    try {
-      const updated = await api.patch<AthleteDetail>(`/api/athletes/${athleteId}`, data);
-      setAthlete(updated);
-      return updated;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to update athlete";
-      setError(message);
-      console.error("Error updating athlete:", err);
-      return null;
-    } finally {
-      setIsUpdating(false);
-    }
-  }, [athleteId]);
+      try {
+        const updated = await api.patch<AthleteDetail>(`/api/athletes/${athleteId}`, data);
+        setAthlete(updated);
+        return updated;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to update athlete";
+        setError(message);
+        console.error("Error updating athlete:", err);
+        return null;
+      } finally {
+        setIsUpdating(false);
+      }
+    },
+    [athleteId]
+  );
 
   // Delete athlete
   const deleteAthlete = useCallback(async (): Promise<boolean> => {

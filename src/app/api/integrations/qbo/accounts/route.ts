@@ -20,10 +20,7 @@ export async function GET() {
     });
 
     if (!connection || !connection.isActive) {
-      return NextResponse.json(
-        { error: "No active QBO connection" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "No active QBO connection" }, { status: 404 });
     }
 
     const accounts = await fetchChartOfAccounts(connection.id);
@@ -31,9 +28,6 @@ export async function GET() {
     return NextResponse.json({ accounts });
   } catch (error) {
     console.error("[QBO Accounts] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch QBO accounts" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch QBO accounts" }, { status: 500 });
   }
 }

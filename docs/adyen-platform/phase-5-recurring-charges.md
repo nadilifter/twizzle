@@ -11,6 +11,7 @@
 The recurring charge batch runner at `src/app/api/recurring/route.ts` is currently a placeholder that updates dates but does NOT actually call Adyen to charge cards. This phase implements the actual payment execution.
 
 The current code (lines 288-315) contains this comment:
+
 ```
 // In a real implementation, you would:
 // 1. Create a payment intent with Adyen
@@ -45,11 +46,12 @@ interface ChargeResult {
 
 export async function executeRecurringCharge(
   charge: RecurringChargeWithRelations,
-  organizationId: string,
-): Promise<ChargeResult>
+  organizationId: string
+): Promise<ChargeResult>;
 ```
 
 **Where `RecurringChargeWithRelations` includes**:
+
 ```typescript
 {
   id: string;
@@ -65,6 +67,7 @@ export async function executeRecurringCharge(
 ```
 
 **Flow**:
+
 1. **Validate**: Ensure `paymentMethodId` and `paymentMethod` exist. Return `{ success: false, error: "No payment method" }` if missing.
 
 2. **Look up stored token**: The `PaymentMethod` model stores card info but does NOT currently store Adyen's `storedPaymentMethodId`. This is a gap:
@@ -73,6 +76,7 @@ export async function executeRecurringCharge(
    - **Schema addition needed**: Add `adyenTokenId` (String, optional) and `shopperReference` (String, optional) to the `PaymentMethod` model
 
 3. **Build payment request**:
+
    ```typescript
    const paymentRequest: any = {
      amount: { currency: "USD", value: Math.round(Number(charge.amount) * 100) },
@@ -89,12 +93,14 @@ export async function executeRecurringCharge(
    ```
 
 4. **Add Idempotency-Key**: For `/payments` calls (unlike `/sessions`), idempotency keys are important:
+
    ```typescript
    // The idempotency key ensures retries don't create duplicate charges
    const idempotencyKey = `recurring-${charge.id}-${charge.nextChargeDate.toISOString().split("T")[0]}`;
    ```
 
 5. **Call Adyen**:
+
    ```typescript
    const response = await checkoutApi.PaymentsApi.payments(paymentRequest, {
      idempotencyKey,
@@ -184,7 +190,7 @@ for (const charge of dueCharges) {
         data: {
           nextChargeDate: nextDate,
           lastChargedAt: new Date(),
-          failureCount: 0,  // Reset on success
+          failureCount: 0, // Reset on success
         },
       });
 
@@ -211,6 +217,7 @@ for (const charge of dueCharges) {
 ```
 
 Also update the query to include `paymentMethod` with the new fields:
+
 ```typescript
 include: {
   paymentMethod: {

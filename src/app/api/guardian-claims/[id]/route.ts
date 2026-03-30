@@ -8,17 +8,11 @@ import { getAuthSession } from "@/lib/auth";
  * Approve or deny a guardian claim request.
  * Only the primary guardian of the athlete or an organization admin can do this.
  */
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
     const { id } = await params;
@@ -26,10 +20,7 @@ export async function PATCH(
     const { action } = body; // "approve" or "deny"
 
     if (!["approve", "deny"].includes(action)) {
-      return NextResponse.json(
-        { error: "action must be 'approve' or 'deny'" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "action must be 'approve' or 'deny'" }, { status: 400 });
     }
 
     const claim = await db.guardianClaimRequest.findUnique({
@@ -52,10 +43,7 @@ export async function PATCH(
     });
 
     if (!claim) {
-      return NextResponse.json(
-        { error: "Claim request not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Claim request not found" }, { status: 404 });
     }
 
     if (claim.status !== "PENDING") {
@@ -67,9 +55,7 @@ export async function PATCH(
 
     // Authorization: must be primary guardian or org admin of any linked org
     const userId = session.user.id;
-    const isPrimaryGuardian = claim.athlete.guardians.some(
-      (g) => g.userId === userId
-    );
+    const isPrimaryGuardian = claim.athlete.guardians.some((g) => g.userId === userId);
 
     let isOrgAdmin = false;
     for (const oa of claim.athlete.organizationAthletes) {
@@ -143,9 +129,6 @@ export async function PATCH(
     }
   } catch (error) {
     console.error("Process guardian claim error:", error);
-    return NextResponse.json(
-      { error: "Failed to process claim" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to process claim" }, { status: 500 });
   }
 }

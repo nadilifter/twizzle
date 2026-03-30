@@ -80,10 +80,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching enrollments:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch enrollments" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch enrollments" }, { status: 500 });
   }
 }
 
@@ -185,15 +182,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(enrollment);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating enrollment:", error);
-    return NextResponse.json(
-      { error: "Failed to create enrollment" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create enrollment" }, { status: 500 });
   }
 }

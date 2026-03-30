@@ -1,24 +1,29 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getAuthSession } from "@/lib/auth"
-import { db } from "@/lib/db"
-import { z } from "zod"
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthSession } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { z } from "zod";
 
-const featureTogglesSchema = z.object({
-  events: z.boolean(),
-  competitions: z.boolean(),
-  sms: z.boolean(),
-  emailCampaigns: z.boolean(),
-  customDomains: z.boolean(),
-  accountingIntegrations: z.boolean(),
-  training: z.boolean(),
-  store: z.boolean(),
-  liveSupport: z.boolean(),
-  customInformation: z.boolean(),
-}).optional()
+const featureTogglesSchema = z
+  .object({
+    events: z.boolean(),
+    competitions: z.boolean(),
+    sms: z.boolean(),
+    emailCampaigns: z.boolean(),
+    customDomains: z.boolean(),
+    accountingIntegrations: z.boolean(),
+    training: z.boolean(),
+    store: z.boolean(),
+    liveSupport: z.boolean(),
+    customInformation: z.boolean(),
+  })
+  .optional();
 
 const updatePlanSchema = z.object({
   name: z.string().min(1).optional(),
-  slug: z.string().regex(/^[a-z0-9-]+$/).optional(),
+  slug: z
+    .string()
+    .regex(/^[a-z0-9-]+$/)
+    .optional(),
   description: z.string().optional().nullable(),
   monthlyPrice: z.number().min(0).optional(),
   yearlyPrice: z.number().min(0).optional().nullable(),
@@ -44,106 +49,91 @@ const updatePlanSchema = z.object({
   displayOrder: z.number().int().optional(),
   isActive: z.boolean().optional(),
   isPublic: z.boolean().optional(),
-})
+});
 
 // GET /api/superadmin/plans/[id] - Get a specific plan
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session?.user?.isSuperAdmin) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await params
+    const { id } = await params;
     const plan = await db.subscriptionPlan.findUnique({
       where: { id },
       include: {
         subscriptions: {
           include: {
             organization: {
-              select: { id: true, name: true, slug: true }
-            }
-          }
+              select: { id: true, name: true, slug: true },
+            },
+          },
         },
         _count: {
-          select: { subscriptions: true }
-        }
-      }
-    })
+          select: { subscriptions: true },
+        },
+      },
+    });
 
     if (!plan) {
-      return NextResponse.json({ error: "Plan not found" }, { status: 404 })
+      return NextResponse.json({ error: "Plan not found" }, { status: 404 });
     }
 
-    return NextResponse.json(plan)
+    return NextResponse.json(plan);
   } catch (error) {
-    console.error("Error fetching plan:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch plan" },
-      { status: 500 }
-    )
+    console.error("Error fetching plan:", error);
+    return NextResponse.json({ error: "Failed to fetch plan" }, { status: 500 });
   }
 }
 
 // PATCH /api/superadmin/plans/[id] - Update a plan
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session?.user?.isSuperAdmin) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await params
-    const body = await request.json()
-    const validatedData = updatePlanSchema.parse(body)
+    const { id } = await params;
+    const body = await request.json();
+    const validatedData = updatePlanSchema.parse(body);
 
     // Check if plan exists
     const existingPlan = await db.subscriptionPlan.findUnique({
-      where: { id }
-    })
+      where: { id },
+    });
 
     if (!existingPlan) {
-      return NextResponse.json({ error: "Plan not found" }, { status: 404 })
+      return NextResponse.json({ error: "Plan not found" }, { status: 404 });
     }
 
     // If slug is being changed, check for conflicts
     if (validatedData.slug && validatedData.slug !== existingPlan.slug) {
       const slugConflict = await db.subscriptionPlan.findUnique({
-        where: { slug: validatedData.slug }
-      })
+        where: { slug: validatedData.slug },
+      });
       if (slugConflict) {
         return NextResponse.json(
           { error: "A plan with this slug already exists" },
           { status: 400 }
-        )
+        );
       }
     }
 
     const plan = await db.subscriptionPlan.update({
       where: { id },
       data: validatedData,
-    })
+    });
 
-    return NextResponse.json(plan)
+    return NextResponse.json(plan);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const message = error.issues?.[0]?.message || "Validation error"
-      return NextResponse.json(
-        { error: message },
-        { status: 400 }
-      )
+      const message = error.issues?.[0]?.message || "Validation error";
+      return NextResponse.json({ error: message }, { status: 400 });
     }
-    console.error("Error updating plan:", error)
-    return NextResponse.json(
-      { error: "Failed to update plan" },
-      { status: 500 }
-    )
+    console.error("Error updating plan:", error);
+    return NextResponse.json({ error: "Failed to update plan" }, { status: 500 });
   }
 }
 
@@ -153,38 +143,37 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session?.user?.isSuperAdmin) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await params
+    const { id } = await params;
 
     // Check if plan has active subscriptions
     const activeSubscriptions = await db.organizationSubscription.count({
-      where: { 
+      where: {
         planId: id,
-        status: { in: ["ACTIVE", "TRIALING"] }
-      }
-    })
+        status: { in: ["ACTIVE", "TRIALING"] },
+      },
+    });
 
     if (activeSubscriptions > 0) {
       return NextResponse.json(
-        { error: `Cannot delete plan with ${activeSubscriptions} active subscription(s). Deactivate the plan instead.` },
+        {
+          error: `Cannot delete plan with ${activeSubscriptions} active subscription(s). Deactivate the plan instead.`,
+        },
         { status: 400 }
-      )
+      );
     }
 
     await db.subscriptionPlan.delete({
-      where: { id }
-    })
+      where: { id },
+    });
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting plan:", error)
-    return NextResponse.json(
-      { error: "Failed to delete plan" },
-      { status: 500 }
-    )
+    console.error("Error deleting plan:", error);
+    return NextResponse.json({ error: "Failed to delete plan" }, { status: 500 });
   }
 }

@@ -11,12 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import {
   Sheet,
@@ -37,8 +37,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Plus, 
+import {
+  Plus,
   Search,
   Calendar,
   FileText,
@@ -55,9 +55,9 @@ import { api, ApiError } from "@/lib/api-client";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
-import type { 
-  EvaluationWithRelations, 
-  EvaluationTemplateWithSkills, 
+import type {
+  EvaluationWithRelations,
+  EvaluationTemplateWithSkills,
   EvaluationStatus,
   SkillAttemptStatus,
   ScoringType,
@@ -113,24 +113,26 @@ function CoachEvaluationsContent() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [activeTab, setActiveTab] = useState("all");
-  
+
   // Assign evaluation state
   const [isAssignOpen, setIsAssignOpen] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
   const [selectedAthleteId, setSelectedAthleteId] = useState<string>("");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [evaluationDate, setEvaluationDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  
+
   // Record results state
   const [isRecordOpen, setIsRecordOpen] = useState(false);
-  const [selectedEvaluation, setSelectedEvaluation] = useState<EvaluationWithRelations | null>(null);
+  const [selectedEvaluation, setSelectedEvaluation] = useState<EvaluationWithRelations | null>(
+    null
+  );
   const [skillRatings, setSkillRatings] = useState<Record<string, SkillAttemptStatus>>({});
   const [skillPointScores, setSkillPointScores] = useState<Record<string, number>>({});
   const [skillComments, setSkillComments] = useState<Record<string, string>>({});
   const [overallStatus, setOverallStatus] = useState<EvaluationStatus>("SATISFACTORY");
   const [overallNotes, setOverallNotes] = useState("");
   const [isRecording, setIsRecording] = useState(false);
-  
+
   // View evaluation state
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [viewEvaluation, setViewEvaluation] = useState<EvaluationWithRelations | null>(null);
@@ -140,7 +142,7 @@ function CoachEvaluationsContent() {
   // Fetch evaluations
   const fetchEvaluations = useCallback(async () => {
     if (!session?.user?.id) return;
-    
+
     setIsLoading(true);
     try {
       const response = await api.get<{ data: EvaluationWithRelations[] }>("/api/evaluations", {
@@ -159,9 +161,12 @@ function CoachEvaluationsContent() {
   const fetchTemplates = async () => {
     setIsLoadingTemplates(true);
     try {
-      const response = await api.get<{ data: EvaluationTemplateWithSkills[] }>("/api/evaluation-templates", {
-        isActive: "true",
-      });
+      const response = await api.get<{ data: EvaluationTemplateWithSkills[] }>(
+        "/api/evaluation-templates",
+        {
+          isActive: "true",
+        }
+      );
       setTemplates(response.data);
     } catch (error) {
       console.error("Error fetching templates:", error);
@@ -178,8 +183,10 @@ function CoachEvaluationsContent() {
   const filteredEvaluations = evaluations.filter((evaluation) => {
     const matchesSearch = evaluation.athlete.name.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === "all" || evaluation.status === statusFilter;
-    const matchesTab = activeTab === "all" || 
-      (activeTab === "pending" && (evaluation.status === "PENDING" || evaluation.status === "IN_PROGRESS")) ||
+    const matchesTab =
+      activeTab === "all" ||
+      (activeTab === "pending" &&
+        (evaluation.status === "PENDING" || evaluation.status === "IN_PROGRESS")) ||
       (activeTab === "completed" && !["PENDING", "IN_PROGRESS"].includes(evaluation.status));
     return matchesSearch && matchesStatus && matchesTab;
   });
@@ -208,7 +215,7 @@ function CoachEvaluationsContent() {
         date: evaluationDate,
         status: "PENDING",
       });
-      
+
       toast.success("Evaluation assigned successfully");
       setIsAssignOpen(false);
       fetchEvaluations();
@@ -223,16 +230,16 @@ function CoachEvaluationsContent() {
   // Open record results sheet
   const openRecord = (evaluation: EvaluationWithRelations) => {
     setSelectedEvaluation(evaluation);
-    
+
     // Initialize skill ratings from existing data
     const ratings: Record<string, SkillAttemptStatus> = {};
     const pointScores: Record<string, number> = {};
     const comments: Record<string, string> = {};
-    
+
     // Get default values based on template scoring config
     const template = evaluation.template;
     const defaultPointScore = template?.pointScaleMin || 1;
-    
+
     evaluation.skillRatings?.forEach((sr) => {
       ratings[sr.skillId] = sr.attemptStatus;
       pointScores[sr.skillId] = sr.pointScore ?? defaultPointScore;
@@ -240,13 +247,15 @@ function CoachEvaluationsContent() {
         comments[sr.skillId] = sr.comment;
       }
     });
-    
+
     setSkillRatings(ratings);
     setSkillPointScores(pointScores);
     setSkillComments(comments);
-    setOverallStatus(evaluation.status === "PENDING" || evaluation.status === "IN_PROGRESS" 
-      ? "SATISFACTORY" 
-      : evaluation.status);
+    setOverallStatus(
+      evaluation.status === "PENDING" || evaluation.status === "IN_PROGRESS"
+        ? "SATISFACTORY"
+        : evaluation.status
+    );
     setOverallNotes(evaluation.notes || "");
     setIsRecordOpen(true);
   };
@@ -260,35 +269,38 @@ function CoachEvaluationsContent() {
       const template = selectedEvaluation.template;
       const scoringType: ScoringType = template?.scoringType || "PASS_FAIL";
       const passThreshold = template?.pointScalePassThreshold || 7;
-      
+
       // Calculate overall score based on scoring type
       let overallScore = 0;
       const skillCount = Object.keys(skillRatings).length;
-      
+
       if (scoringType === "POINT_SCALE") {
         // Average of point scores
         const pointScoresValues = Object.values(skillPointScores);
         if (pointScoresValues.length > 0) {
-          overallScore = Math.round(
-            pointScoresValues.reduce((a, b) => a + b, 0) / pointScoresValues.length * 10
-          ) / 10;
+          overallScore =
+            Math.round(
+              (pointScoresValues.reduce((a, b) => a + b, 0) / pointScoresValues.length) * 10
+            ) / 10;
         }
       } else {
         // Pass/fail: calculate based on attempt status
-        const succeededCount = Object.values(skillRatings).filter(s => s === "SUCCEEDED").length;
-        const attemptedCount = Object.values(skillRatings).filter(s => s === "ATTEMPTED").length;
-        overallScore = skillCount > 0 
-          ? Math.round((succeededCount * 10 + attemptedCount * 5) / skillCount * 10) / 10
-          : 0;
+        const succeededCount = Object.values(skillRatings).filter((s) => s === "SUCCEEDED").length;
+        const attemptedCount = Object.values(skillRatings).filter((s) => s === "ATTEMPTED").length;
+        overallScore =
+          skillCount > 0
+            ? Math.round(((succeededCount * 10 + attemptedCount * 5) / skillCount) * 10) / 10
+            : 0;
       }
 
       // Build skill ratings with appropriate scoring
       const skillRatingsPayload = Object.entries(skillRatings).map(([skillId, attemptStatus]) => {
         const pointScore = skillPointScores[skillId];
-        const passed = scoringType === "POINT_SCALE" 
-          ? pointScore >= passThreshold 
-          : attemptStatus === "SUCCEEDED";
-        
+        const passed =
+          scoringType === "POINT_SCALE"
+            ? pointScore >= passThreshold
+            : attemptStatus === "SUCCEEDED";
+
         return {
           skillId,
           attemptStatus,
@@ -298,13 +310,16 @@ function CoachEvaluationsContent() {
         };
       });
 
-      const response = await api.put<EvaluationWithRelations>(`/api/evaluations/${selectedEvaluation.id}`, {
-        status: overallStatus,
-        overallScore,
-        notes: overallNotes || undefined,
-        skillRatings: skillRatingsPayload,
-      });
-      
+      const response = await api.put<EvaluationWithRelations>(
+        `/api/evaluations/${selectedEvaluation.id}`,
+        {
+          status: overallStatus,
+          overallScore,
+          notes: overallNotes || undefined,
+          skillRatings: skillRatingsPayload,
+        }
+      );
+
       // Check for newly awarded achievements
       if (response.newAchievements && response.newAchievements.length > 0) {
         response.newAchievements.forEach((achievement: { achievementName: string }) => {
@@ -313,7 +328,7 @@ function CoachEvaluationsContent() {
           });
         });
       }
-      
+
       toast.success("Evaluation results recorded successfully");
       setIsRecordOpen(false);
       setSelectedEvaluation(null);
@@ -334,17 +349,19 @@ function CoachEvaluationsContent() {
 
   // Get status badge
   const getStatusBadge = (status: EvaluationStatus) => {
-    return (
-      <Badge className={statusColors[status]}>
-        {statusLabels[status]}
-      </Badge>
-    );
+    return <Badge className={statusColors[status]}>{statusLabels[status]}</Badge>;
   };
 
   // Stats
-  const pendingCount = evaluations.filter(e => e.status === "PENDING" || e.status === "IN_PROGRESS").length;
-  const completedCount = evaluations.filter(e => !["PENDING", "IN_PROGRESS"].includes(e.status)).length;
-  const passedCount = evaluations.filter(e => ["PASS", "EXCELLENT", "SATISFACTORY"].includes(e.status)).length;
+  const pendingCount = evaluations.filter(
+    (e) => e.status === "PENDING" || e.status === "IN_PROGRESS"
+  ).length;
+  const completedCount = evaluations.filter(
+    (e) => !["PENDING", "IN_PROGRESS"].includes(e.status)
+  ).length;
+  const passedCount = evaluations.filter((e) =>
+    ["PASS", "EXCELLENT", "SATISFACTORY"].includes(e.status)
+  ).length;
 
   return (
     <div className="space-y-4">
@@ -354,7 +371,7 @@ function CoachEvaluationsContent() {
           <h1 className="text-2xl font-bold">Evaluations</h1>
           <p className="text-muted-foreground">Track athlete progress and assessments</p>
         </div>
-        
+
         <Button onClick={openAssign}>
           <Plus className="h-4 w-4 mr-2" />
           Assign Evaluation
@@ -397,7 +414,7 @@ function CoachEvaluationsContent() {
             <TabsTrigger value="pending">Pending</TabsTrigger>
             <TabsTrigger value="completed">Completed</TabsTrigger>
           </TabsList>
-          
+
           <div className="flex-1 flex gap-4">
             <div className="flex-1 relative max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -439,7 +456,7 @@ function CoachEvaluationsContent() {
                   <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <h3 className="font-semibold mb-2">No Evaluations Found</h3>
                   <p className="text-muted-foreground mb-4">
-                    {search || statusFilter !== "all" 
+                    {search || statusFilter !== "all"
                       ? "Try adjusting your filters"
                       : "Assign your first evaluation to get started"}
                   </p>
@@ -465,25 +482,35 @@ function CoachEvaluationsContent() {
                   <TableBody>
                     {filteredEvaluations.map((evaluation) => {
                       const totalSkills = evaluation.skillRatings?.length || 0;
-                      const succeededSkills = evaluation.skillRatings?.filter(
-                        sr => sr.attemptStatus === "SUCCEEDED"
-                      ).length || 0;
-                      
+                      const succeededSkills =
+                        evaluation.skillRatings?.filter((sr) => sr.attemptStatus === "SUCCEEDED")
+                          .length || 0;
+
                       return (
                         <TableRow key={evaluation.id}>
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <Avatar className="h-8 w-8">
-                                <AvatarImage src={evaluation.athlete.avatar || undefined} alt={evaluation.athlete.name} />
+                                <AvatarImage
+                                  src={evaluation.athlete.avatar || undefined}
+                                  alt={evaluation.athlete.name}
+                                />
                                 <AvatarFallback>
-                                  {evaluation.athlete.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                                  {evaluation.athlete.name
+                                    .split(" ")
+                                    .map((n) => n[0])
+                                    .join("")
+                                    .slice(0, 2)}
                                 </AvatarFallback>
                               </Avatar>
                               <span className="font-medium">{evaluation.athlete.name}</span>
                             </div>
                           </TableCell>
                           <TableCell>
-                            {evaluation.template?.name || (typeof evaluation.level === 'object' ? evaluation.level?.name : evaluation.level)}
+                            {evaluation.template?.name ||
+                              (typeof evaluation.level === "object"
+                                ? evaluation.level?.name
+                                : evaluation.level)}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1 text-muted-foreground">
@@ -491,9 +518,7 @@ function CoachEvaluationsContent() {
                               {format(new Date(evaluation.date), "MMM d, yyyy")}
                             </div>
                           </TableCell>
-                          <TableCell>
-                            {getStatusBadge(evaluation.status)}
-                          </TableCell>
+                          <TableCell>{getStatusBadge(evaluation.status)}</TableCell>
                           <TableCell>
                             {totalSkills > 0 ? (
                               <span className="text-sm">
@@ -505,11 +530,9 @@ function CoachEvaluationsContent() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
-                              {(evaluation.status === "PENDING" || evaluation.status === "IN_PROGRESS") ? (
-                                <Button
-                                  size="sm"
-                                  onClick={() => openRecord(evaluation)}
-                                >
+                              {evaluation.status === "PENDING" ||
+                              evaluation.status === "IN_PROGRESS" ? (
+                                <Button size="sm" onClick={() => openRecord(evaluation)}>
                                   <ClipboardList className="h-4 w-4 mr-1" />
                                   Record
                                 </Button>
@@ -541,11 +564,9 @@ function CoachEvaluationsContent() {
         <SheetContent>
           <SheetHeader>
             <SheetTitle>Assign Evaluation</SheetTitle>
-            <SheetDescription>
-              Select an athlete and evaluation template
-            </SheetDescription>
+            <SheetDescription>Select an athlete and evaluation template</SheetDescription>
           </SheetHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="athlete">Athlete *</Label>
@@ -555,9 +576,13 @@ function CoachEvaluationsContent() {
                 </SelectTrigger>
                 <SelectContent>
                   {loadingAthletes ? (
-                    <SelectItem value="loading" disabled>Loading...</SelectItem>
+                    <SelectItem value="loading" disabled>
+                      Loading...
+                    </SelectItem>
                   ) : athletes.length === 0 ? (
-                    <SelectItem value="none" disabled>No athletes found</SelectItem>
+                    <SelectItem value="none" disabled>
+                      No athletes found
+                    </SelectItem>
                   ) : (
                     athletes.map((athlete) => (
                       <SelectItem key={athlete.id} value={athlete.id}>
@@ -577,9 +602,13 @@ function CoachEvaluationsContent() {
                 </SelectTrigger>
                 <SelectContent>
                   {isLoadingTemplates ? (
-                    <SelectItem value="loading" disabled>Loading...</SelectItem>
+                    <SelectItem value="loading" disabled>
+                      Loading...
+                    </SelectItem>
                   ) : templates.length === 0 ? (
-                    <SelectItem value="none" disabled>No templates found</SelectItem>
+                    <SelectItem value="none" disabled>
+                      No templates found
+                    </SelectItem>
                   ) : (
                     templates.map((template) => (
                       <SelectItem key={template.id} value={template.id}>
@@ -598,10 +627,15 @@ function CoachEvaluationsContent() {
                   <Button
                     type="button"
                     variant="outline"
-                    className={cn("w-full justify-start text-left font-normal", !evaluationDate && "text-muted-foreground")}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !evaluationDate && "text-muted-foreground"
+                    )}
                   >
                     <Calendar className="mr-2 h-4 w-4" />
-                    {evaluationDate ? format(new Date(evaluationDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                    {evaluationDate
+                      ? format(new Date(evaluationDate + "T12:00:00Z"), "PPP")
+                      : "Pick a date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -630,7 +664,7 @@ function CoachEvaluationsContent() {
               </div>
             )}
           </div>
-          
+
           <SheetFooter>
             <Button onClick={handleAssign} disabled={isAssigning}>
               {isAssigning && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -646,23 +680,28 @@ function CoachEvaluationsContent() {
           <SheetHeader>
             <SheetTitle>Record Evaluation Results</SheetTitle>
             <SheetDescription>
-              {selectedEvaluation?.athlete.name} - {selectedEvaluation?.template?.name || (typeof selectedEvaluation?.level === 'object' ? selectedEvaluation?.level?.name : selectedEvaluation?.level)}
+              {selectedEvaluation?.athlete.name} -{" "}
+              {selectedEvaluation?.template?.name ||
+                (typeof selectedEvaluation?.level === "object"
+                  ? selectedEvaluation?.level?.name
+                  : selectedEvaluation?.level)}
             </SheetDescription>
           </SheetHeader>
-          
+
           <ScrollArea className="h-[calc(100vh-200px)] pr-4">
             <div className="space-y-6 py-4">
               {/* Scoring Type Info */}
               {selectedEvaluation?.template && (
                 <div className="bg-muted/50 rounded-lg p-3">
                   <p className="text-sm font-medium">
-                    Scoring: {selectedEvaluation.template.scoringType === "POINT_SCALE" 
-                      ? `Point Scale (${selectedEvaluation.template.pointScaleMin}-${selectedEvaluation.template.pointScaleMax}, pass at ${selectedEvaluation.template.pointScalePassThreshold}+)` 
+                    Scoring:{" "}
+                    {selectedEvaluation.template.scoringType === "POINT_SCALE"
+                      ? `Point Scale (${selectedEvaluation.template.pointScaleMin}-${selectedEvaluation.template.pointScaleMax}, pass at ${selectedEvaluation.template.pointScalePassThreshold}+)`
                       : "Pass/Fail"}
                   </p>
                 </div>
               )}
-              
+
               {/* Skills */}
               <div className="space-y-4">
                 <Label className="text-base">Skills Assessment</Label>
@@ -673,10 +712,11 @@ function CoachEvaluationsContent() {
                   const pointMax = template?.pointScaleMax || 10;
                   const passThreshold = template?.pointScalePassThreshold || 7;
                   const currentPointScore = skillPointScores[sr.skillId] ?? pointMin;
-                  const isPassing = scoringType === "POINT_SCALE" 
-                    ? currentPointScore >= passThreshold 
-                    : skillRatings[sr.skillId] === "SUCCEEDED";
-                  
+                  const isPassing =
+                    scoringType === "POINT_SCALE"
+                      ? currentPointScore >= passThreshold
+                      : skillRatings[sr.skillId] === "SUCCEEDED";
+
                   return (
                     <Card key={sr.id}>
                       <CardHeader className="pb-2">
@@ -684,7 +724,8 @@ function CoachEvaluationsContent() {
                           <div>
                             <CardTitle className="text-sm font-medium">{sr.skill.name}</CardTitle>
                             <CardDescription className="text-xs">
-                              {sr.skill.category}{sr.skill.skillLevel ? ` • ${sr.skill.skillLevel.name}` : ""}
+                              {sr.skill.category}
+                              {sr.skill.skillLevel ? ` • ${sr.skill.skillLevel.name}` : ""}
                             </CardDescription>
                           </div>
                           {isPassing && (
@@ -709,8 +750,8 @@ function CoachEvaluationsContent() {
                             </div>
                             <Slider
                               value={[currentPointScore]}
-                              onValueChange={(value) => 
-                                setSkillPointScores(prev => ({ ...prev, [sr.skillId]: value[0] }))
+                              onValueChange={(value) =>
+                                setSkillPointScores((prev) => ({ ...prev, [sr.skillId]: value[0] }))
                               }
                               min={pointMin}
                               max={pointMax}
@@ -726,17 +767,22 @@ function CoachEvaluationsContent() {
                           // Pass/Fail UI
                           <RadioGroup
                             value={skillRatings[sr.skillId] || "NOT_ATTEMPTED"}
-                            onValueChange={(value) => 
-                              setSkillRatings(prev => ({ ...prev, [sr.skillId]: value as SkillAttemptStatus }))
+                            onValueChange={(value) =>
+                              setSkillRatings((prev) => ({
+                                ...prev,
+                                [sr.skillId]: value as SkillAttemptStatus,
+                              }))
                             }
                             className="flex gap-4"
                           >
-                            {(["NOT_ATTEMPTED", "ATTEMPTED", "SUCCEEDED"] as SkillAttemptStatus[]).map((status) => {
+                            {(
+                              ["NOT_ATTEMPTED", "ATTEMPTED", "SUCCEEDED"] as SkillAttemptStatus[]
+                            ).map((status) => {
                               const Icon = attemptStatusIcons[status];
                               return (
                                 <div key={status} className="flex items-center space-x-2">
                                   <RadioGroupItem value={status} id={`${sr.skillId}-${status}`} />
-                                  <Label 
+                                  <Label
                                     htmlFor={`${sr.skillId}-${status}`}
                                     className={`flex items-center gap-1 cursor-pointer ${attemptStatusColors[status]}`}
                                   >
@@ -751,8 +797,8 @@ function CoachEvaluationsContent() {
                         <Input
                           placeholder="Optional comment..."
                           value={skillComments[sr.skillId] || ""}
-                          onChange={(e) => 
-                            setSkillComments(prev => ({ ...prev, [sr.skillId]: e.target.value }))
+                          onChange={(e) =>
+                            setSkillComments((prev) => ({ ...prev, [sr.skillId]: e.target.value }))
                           }
                           className="text-sm"
                         />
@@ -765,8 +811,8 @@ function CoachEvaluationsContent() {
               {/* Overall Status */}
               <div className="space-y-2">
                 <Label>Overall Status *</Label>
-                <Select 
-                  value={overallStatus} 
+                <Select
+                  value={overallStatus}
                   onValueChange={(v) => setOverallStatus(v as EvaluationStatus)}
                 >
                   <SelectTrigger>
@@ -793,7 +839,7 @@ function CoachEvaluationsContent() {
               </div>
             </div>
           </ScrollArea>
-          
+
           <SheetFooter className="mt-4">
             <Button onClick={handleRecordResults} disabled={isRecording}>
               {isRecording && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -809,10 +855,14 @@ function CoachEvaluationsContent() {
           <SheetHeader>
             <SheetTitle>Evaluation Results</SheetTitle>
             <SheetDescription>
-              {viewEvaluation?.athlete.name} - {viewEvaluation?.template?.name || (typeof viewEvaluation?.level === 'object' ? viewEvaluation?.level?.name : viewEvaluation?.level)}
+              {viewEvaluation?.athlete.name} -{" "}
+              {viewEvaluation?.template?.name ||
+                (typeof viewEvaluation?.level === "object"
+                  ? viewEvaluation?.level?.name
+                  : viewEvaluation?.level)}
             </SheetDescription>
           </SheetHeader>
-          
+
           <ScrollArea className="h-[calc(100vh-200px)] pr-4">
             {viewEvaluation && (
               <div className="space-y-6 py-4">
@@ -820,7 +870,9 @@ function CoachEvaluationsContent() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Date</p>
-                    <p className="font-medium">{format(new Date(viewEvaluation.date), "MMMM d, yyyy")}</p>
+                    <p className="font-medium">
+                      {format(new Date(viewEvaluation.date), "MMMM d, yyyy")}
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-muted-foreground">Status</p>
@@ -840,10 +892,11 @@ function CoachEvaluationsContent() {
                     const Icon = attemptStatusIcons[sr.attemptStatus];
                     const scoringType = viewEvaluation.template?.scoringType || "PASS_FAIL";
                     const passThreshold = viewEvaluation.template?.pointScalePassThreshold || 7;
-                    const isPassing = scoringType === "POINT_SCALE" 
-                      ? (sr.pointScore ?? 0) >= passThreshold 
-                      : sr.attemptStatus === "SUCCEEDED";
-                    
+                    const isPassing =
+                      scoringType === "POINT_SCALE"
+                        ? (sr.pointScore ?? 0) >= passThreshold
+                        : sr.attemptStatus === "SUCCEEDED";
+
                     return (
                       <div key={sr.id} className="flex items-center justify-between py-2 border-b">
                         <div>
@@ -854,16 +907,24 @@ function CoachEvaluationsContent() {
                         </div>
                         <div className="flex items-center gap-2">
                           {scoringType === "POINT_SCALE" ? (
-                            <Badge className={isPassing 
-                              ? "bg-green-500/10 text-green-700 dark:text-green-400" 
-                              : "bg-slate-500/10 text-slate-700 dark:text-slate-400"
-                            }>
-                              {sr.pointScore ?? "-"} / {viewEvaluation.template?.pointScaleMax || 10}
+                            <Badge
+                              className={
+                                isPassing
+                                  ? "bg-green-500/10 text-green-700 dark:text-green-400"
+                                  : "bg-slate-500/10 text-slate-700 dark:text-slate-400"
+                              }
+                            >
+                              {sr.pointScore ?? "-"} /{" "}
+                              {viewEvaluation.template?.pointScaleMax || 10}
                             </Badge>
                           ) : (
-                            <div className={`flex items-center gap-1 ${attemptStatusColors[sr.attemptStatus]}`}>
+                            <div
+                              className={`flex items-center gap-1 ${attemptStatusColors[sr.attemptStatus]}`}
+                            >
                               <Icon className="h-4 w-4" />
-                              <span className="text-sm">{attemptStatusLabels[sr.attemptStatus]}</span>
+                              <span className="text-sm">
+                                {attemptStatusLabels[sr.attemptStatus]}
+                              </span>
                             </div>
                           )}
                         </div>

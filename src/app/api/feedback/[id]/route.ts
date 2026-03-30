@@ -1,17 +1,14 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getAuthSession } from "@/lib/auth"
-import { db } from "@/lib/db"
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthSession } from "@/lib/auth";
+import { db } from "@/lib/db";
 
 // GET /api/feedback/[id]
 // Get feature details with comments and vote count
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params
-    const session = await getAuthSession()
-    const userId = session?.user?.id
+    const { id } = await params;
+    const session = await getAuthSession();
+    const userId = session?.user?.id;
 
     const feature = await db.featureRequest.findUnique({
       where: { id },
@@ -37,15 +34,15 @@ export async function GET(
           },
         }),
       },
-    })
+    });
 
     if (!feature) {
-      return NextResponse.json({ error: "Feature not found" }, { status: 404 })
+      return NextResponse.json({ error: "Feature not found" }, { status: 404 });
     }
 
     // Only show public features to non-superadmins
     if (!feature.isPublic && !session?.user?.isSuperAdmin) {
-      return NextResponse.json({ error: "Feature not found" }, { status: 404 })
+      return NextResponse.json({ error: "Feature not found" }, { status: 404 });
     }
 
     return NextResponse.json({
@@ -57,11 +54,13 @@ export async function GET(
       targetDate: feature.targetDate,
       statusChangedAt: feature.statusChangedAt,
       createdAt: feature.createdAt,
-      author: feature.user ? {
-        id: feature.user.id,
-        name: feature.user.name,
-        avatar: feature.user.avatar,
-      } : null,
+      author: feature.user
+        ? {
+            id: feature.user.id,
+            name: feature.user.name,
+            avatar: feature.user.avatar,
+          }
+        : null,
       voteCount: feature._count.votes,
       hasVoted: userId ? (feature as any).votes?.length > 0 : false,
       comments: feature.comments.map((c) => ({
@@ -76,12 +75,9 @@ export async function GET(
           isStaff: c.user.isSuperAdmin || c.isStaffReply,
         },
       })),
-    })
+    });
   } catch (error) {
-    console.error("Error fetching feature:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch feature" },
-      { status: 500 }
-    )
+    console.error("Error fetching feature:", error);
+    return NextResponse.json({ error: "Failed to fetch feature" }, { status: 500 });
   }
 }

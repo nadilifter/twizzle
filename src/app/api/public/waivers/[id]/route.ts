@@ -4,10 +4,7 @@ import { resolvePublicRequest } from "@/lib/public-api";
 
 // GET /api/public/waivers/[id]?organizationId=xxx
 // Public endpoint - fetch waiver content for signing
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const { searchParams } = new URL(request.url);
@@ -35,10 +32,7 @@ export async function GET(
     });
 
     if (!waiver) {
-      return NextResponse.json(
-        { error: "Waiver not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Waiver not found" }, { status: 404 });
     }
 
     return NextResponse.json({
@@ -48,9 +42,6 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error fetching public waiver:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch waiver" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch waiver" }, { status: 500 });
   }
 }

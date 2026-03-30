@@ -1,16 +1,10 @@
-import { db, getScopedDb } from "@/lib/db"
-import type { ActionItem, ActionItemsResponse } from "@/types/onboarding"
+import { db, getScopedDb } from "@/lib/db";
+import type { ActionItem, ActionItemsResponse } from "@/types/onboarding";
 
 export async function getActionItems(organizationId: string): Promise<ActionItemsResponse> {
-  const scopedDb = getScopedDb(organizationId)
+  const scopedDb = getScopedDb(organizationId);
 
-  const [
-    programCount,
-    memberCount,
-    eventCount,
-    websiteConfig,
-    adyenAccount,
-  ] = await Promise.all([
+  const [programCount, memberCount, eventCount, websiteConfig, adyenAccount] = await Promise.all([
     scopedDb.program.count(),
     scopedDb.organizationMember.count(),
     scopedDb.event.count(),
@@ -22,7 +16,7 @@ export async function getActionItems(organizationId: string): Promise<ActionItem
       where: { organizationId },
       select: { onboardingStatus: true },
     }),
-  ])
+  ]);
 
   const items: ActionItem[] = [
     {
@@ -57,14 +51,14 @@ export async function getActionItems(organizationId: string): Promise<ActionItem
       isComplete: adyenAccount?.onboardingStatus === "VERIFIED",
       icon: "CreditCard",
     },
-  ]
+  ];
 
-  const completedCount = items.filter((item) => item.isComplete).length
+  const completedCount = items.filter((item) => item.isComplete).length;
 
   return {
     items,
     completedCount,
     totalCount: items.length,
     allComplete: completedCount === items.length,
-  }
+  };
 }

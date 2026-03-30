@@ -1,7 +1,7 @@
-import { db } from "@/lib/db"
-import Link from "next/link"
-import { notFound } from "next/navigation"
-import { Metadata } from "next"
+import { db } from "@/lib/db";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Metadata } from "next";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -9,14 +9,26 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Building2, Users, FileText, Globe, ExternalLink, LayoutDashboard, CreditCard, AlertTriangle, Trophy, Ban, Receipt } from "lucide-react"
-import { InvoiceActions } from "@/app/superadmin/subscription-billing/invoice-actions"
-import { GracePeriodManager } from "./grace-period-manager"
-import { DeletePaymentMethodButton } from "./delete-payment-method-button"
+} from "@/components/ui/breadcrumb";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Building2,
+  Users,
+  FileText,
+  Globe,
+  ExternalLink,
+  LayoutDashboard,
+  CreditCard,
+  AlertTriangle,
+  Trophy,
+  Ban,
+  Receipt,
+} from "lucide-react";
+import { InvoiceActions } from "@/app/superadmin/subscription-billing/invoice-actions";
+import { GracePeriodManager } from "./grace-period-manager";
+import { DeletePaymentMethodButton } from "./delete-payment-method-button";
 import {
   Table,
   TableBody,
@@ -24,80 +36,87 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { SubscriptionManager } from "./subscription-manager"
-import { FeatureOverrides } from "./feature-overrides"
-import { DeactivationDialog } from "./deactivation-dialog"
-import { ReactivationDialog } from "./reactivation-dialog"
-import { AdyenPlatformCard } from "./adyen-platform-card"
-import { getSubdomainUrl } from "@/lib/env-domains"
+} from "@/components/ui/table";
+import { SubscriptionManager } from "./subscription-manager";
+import { FeatureOverrides } from "./feature-overrides";
+import { DeactivationDialog } from "./deactivation-dialog";
+import { ReactivationDialog } from "./reactivation-dialog";
+import { AdyenPlatformCard } from "./adyen-platform-card";
+import { getSubdomainUrl } from "@/lib/env-domains";
 
-function getMarketingSiteUrl(slug: string, websiteConfig: { domain?: string | null; subdomain?: string | null } | null): string {
+function getMarketingSiteUrl(
+  slug: string,
+  websiteConfig: { domain?: string | null; subdomain?: string | null } | null
+): string {
   // Custom domain takes priority (always external)
   if (websiteConfig?.domain) {
-    return `https://${websiteConfig.domain}`
+    return `https://${websiteConfig.domain}`;
   }
-  
+
   // Subdomain on platform - use env-aware URL
   if (websiteConfig?.subdomain) {
-    return getSubdomainUrl(websiteConfig.subdomain)
+    return getSubdomainUrl(websiteConfig.subdomain);
   }
-  
+
   // Fallback to slug-based URL
-  return getSubdomainUrl(slug)
+  return getSubdomainUrl(slug);
 }
 
 function getAdminDashboardSwitchUrl(orgId: string, orgName: string): string {
-  const adminBase = getSubdomainUrl('admin')
-  return `${adminBase}/dashboard/switch-org?orgId=${encodeURIComponent(orgId)}&orgName=${encodeURIComponent(orgName)}`
+  const adminBase = getSubdomainUrl("admin");
+  return `${adminBase}/dashboard/switch-org?orgId=${encodeURIComponent(orgId)}&orgName=${encodeURIComponent(orgName)}`;
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const { slug } = await params
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
   const organization = await db.organization.findUnique({
     where: { slug },
-    select: { name: true }
-  })
-  
+    select: { name: true },
+  });
+
   return {
-    title: organization ? `${organization.name} | Superadmin` : 'Organization | Superadmin'
-  }
+    title: organization ? `${organization.name} | Superadmin` : "Organization | Superadmin",
+  };
 }
 
 interface Props {
-  params: Promise<{ slug: string }>
+  params: Promise<{ slug: string }>;
 }
 
 export default async function OrganizationDetailPage({ params }: Props) {
-  const { slug } = await params
-  
+  const { slug } = await params;
+
   const organization = await db.organization.findUnique({
     where: { slug },
     include: {
       _count: {
-        select: { 
-          members: true, 
+        select: {
+          members: true,
           invoices: true,
           programs: true,
           events: true,
           organizationAthletes: true,
-        }
+        },
       },
       members: {
         include: {
-          user: true
+          user: true,
         },
         take: 5,
-        orderBy: { joinedAt: 'desc' }
+        orderBy: { joinedAt: "desc" },
       },
       invoices: {
         take: 5,
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: "desc" },
       },
       subscription: {
         include: {
-          plan: true
-        }
+          plan: true,
+        },
       },
       websiteConfig: true,
       sports: {
@@ -110,10 +129,7 @@ export default async function OrganizationDetailPage({ params }: Props) {
       },
       organizationPaymentMethods: {
         where: { isActive: true },
-        orderBy: [
-          { isDefault: "desc" },
-          { createdAt: "desc" },
-        ],
+        orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
       },
       subscriptionInvoices: {
         take: 10,
@@ -134,11 +150,11 @@ export default async function OrganizationDetailPage({ params }: Props) {
         include: { user: { select: { name: true, email: true } } },
       },
       adyenPlatformAccount: true,
-    }
-  })
+    },
+  });
 
   if (!organization) {
-    notFound()
+    notFound();
   }
 
   return (
@@ -180,7 +196,8 @@ export default async function OrganizationDetailPage({ params }: Props) {
               Reason: {organization.deactivationReason || "Not specified"}
               {organization.deactivationNotes && ` — ${organization.deactivationNotes}`}
               {" · "}
-              {organization.deactivatedAt && new Date(organization.deactivatedAt).toLocaleDateString()}
+              {organization.deactivatedAt &&
+                new Date(organization.deactivatedAt).toLocaleDateString()}
               {organization.statusLogs[0]?.user && ` by ${organization.statusLogs[0].user.name}`}
             </p>
           </div>
@@ -193,22 +210,28 @@ export default async function OrganizationDetailPage({ params }: Props) {
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className={`flex h-16 w-16 items-center justify-center rounded-lg ${organization.isActive ? "bg-primary/10" : "bg-destructive/10"}`}>
-            <Building2 className={`h-8 w-8 ${organization.isActive ? "text-primary" : "text-destructive"}`} />
+          <div
+            className={`flex h-16 w-16 items-center justify-center rounded-lg ${organization.isActive ? "bg-primary/10" : "bg-destructive/10"}`}
+          >
+            <Building2
+              className={`h-8 w-8 ${organization.isActive ? "text-primary" : "text-destructive"}`}
+            />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold">{organization.name}</h1>
-              {!organization.isActive && (
-                <Badge variant="destructive">Deactivated</Badge>
-              )}
+              {!organization.isActive && <Badge variant="destructive">Deactivated</Badge>}
             </div>
             <p className="text-muted-foreground">{organization.slug}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Button asChild variant="outline">
-            <a href={getMarketingSiteUrl(organization.slug, organization.websiteConfig)} target="_blank" rel="noopener noreferrer">
+            <a
+              href={getMarketingSiteUrl(organization.slug, organization.websiteConfig)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <Globe className="mr-2 h-4 w-4" />
               Marketing Site
               <ExternalLink className="ml-2 h-3 w-3" />
@@ -290,29 +313,30 @@ export default async function OrganizationDetailPage({ params }: Props) {
       <SubscriptionManager
         organizationId={organization.id}
         organizationName={organization.name}
-        initialSubscription={organization.subscription ? {
-          id: organization.subscription.id,
-          planId: organization.subscription.planId,
-          status: organization.subscription.status,
-          billingCycle: organization.subscription.billingCycle,
-          isLocked: organization.subscription.isLocked,
-          lockedReason: organization.subscription.lockedReason,
-          currentPeriodStart: organization.subscription.currentPeriodStart.toISOString(),
-          currentPeriodEnd: organization.subscription.currentPeriodEnd.toISOString(),
-          plan: {
-            id: organization.subscription.plan.id,
-            name: organization.subscription.plan.name,
-            slug: organization.subscription.plan.slug,
-            monthlyPrice: organization.subscription.plan.monthlyPrice.toString(),
-          }
-        } : null}
+        initialSubscription={
+          organization.subscription
+            ? {
+                id: organization.subscription.id,
+                planId: organization.subscription.planId,
+                status: organization.subscription.status,
+                billingCycle: organization.subscription.billingCycle,
+                isLocked: organization.subscription.isLocked,
+                lockedReason: organization.subscription.lockedReason,
+                currentPeriodStart: organization.subscription.currentPeriodStart.toISOString(),
+                currentPeriodEnd: organization.subscription.currentPeriodEnd.toISOString(),
+                plan: {
+                  id: organization.subscription.plan.id,
+                  name: organization.subscription.plan.name,
+                  slug: organization.subscription.plan.slug,
+                  monthlyPrice: organization.subscription.plan.monthlyPrice.toString(),
+                },
+              }
+            : null
+        }
       />
 
       {/* Feature Overrides */}
-      <FeatureOverrides
-        organizationId={organization.id}
-        organizationName={organization.name}
-      />
+      <FeatureOverrides organizationId={organization.id} organizationName={organization.name} />
 
       {/* Organization Details */}
       <div className="grid gap-6 md:grid-cols-2">
@@ -366,7 +390,7 @@ export default async function OrganizationDetailPage({ params }: Props) {
               <CardTitle>Recent Members</CardTitle>
               <CardDescription>Latest members to join</CardDescription>
             </div>
-            <Link 
+            <Link
               href={`/superadmin/organizations/${slug}/members`}
               className="text-sm text-primary hover:underline"
             >
@@ -402,7 +426,7 @@ export default async function OrganizationDetailPage({ params }: Props) {
             <CardTitle>Recent Invoices</CardTitle>
             <CardDescription>Latest invoices for this organization</CardDescription>
           </div>
-          <Link 
+          <Link
             href={`/superadmin/organizations/${slug}/invoices`}
             className="text-sm text-primary hover:underline"
           >
@@ -424,11 +448,13 @@ export default async function OrganizationDetailPage({ params }: Props) {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium">${invoice.total.toString()}</span>
-                    <Badge 
+                    <Badge
                       variant={
-                        invoice.status === "PAID" ? "default" : 
-                        invoice.status === "OVERDUE" ? "destructive" : 
-                        "secondary"
+                        invoice.status === "PAID"
+                          ? "default"
+                          : invoice.status === "OVERDUE"
+                            ? "destructive"
+                            : "secondary"
                       }
                     >
                       {invoice.status}
@@ -481,33 +507,55 @@ export default async function OrganizationDetailPage({ params }: Props) {
           ) : (
             <div className="space-y-3">
               {organization.organizationPaymentMethods.map((method) => {
-                const isExpired = method.expiryMonth && method.expiryYear ? 
-                  new Date() > new Date(parseInt(method.expiryYear), parseInt(method.expiryMonth), 0) : false
-                const isExpiringSoon = method.expiryMonth && method.expiryYear ? (() => {
-                  const expiryDate = new Date(parseInt(method.expiryYear), parseInt(method.expiryMonth), 0)
-                  const twoMonthsFromNow = new Date()
-                  twoMonthsFromNow.setMonth(twoMonthsFromNow.getMonth() + 2)
-                  return !isExpired && expiryDate <= twoMonthsFromNow
-                })() : false
+                const isExpired =
+                  method.expiryMonth && method.expiryYear
+                    ? new Date() >
+                      new Date(parseInt(method.expiryYear), parseInt(method.expiryMonth), 0)
+                    : false;
+                const isExpiringSoon =
+                  method.expiryMonth && method.expiryYear
+                    ? (() => {
+                        const expiryDate = new Date(
+                          parseInt(method.expiryYear),
+                          parseInt(method.expiryMonth),
+                          0
+                        );
+                        const twoMonthsFromNow = new Date();
+                        twoMonthsFromNow.setMonth(twoMonthsFromNow.getMonth() + 2);
+                        return !isExpired && expiryDate <= twoMonthsFromNow;
+                      })()
+                    : false;
 
                 return (
-                  <div key={method.id} className={`flex items-center justify-between p-3 border rounded-lg ${
-                    isExpired ? "border-destructive/50 bg-destructive/5" : 
-                    isExpiringSoon ? "border-amber-500/50 bg-amber-500/5" : ""
-                  }`}>
+                  <div
+                    key={method.id}
+                    className={`flex items-center justify-between p-3 border rounded-lg ${
+                      isExpired
+                        ? "border-destructive/50 bg-destructive/5"
+                        : isExpiringSoon
+                          ? "border-amber-500/50 bg-amber-500/5"
+                          : ""
+                    }`}
+                  >
                     <div className="flex items-center gap-3">
                       <CreditCard className="h-5 w-5 text-muted-foreground" />
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-medium capitalize">{method.brand || method.type}</span>
+                          <span className="font-medium capitalize">
+                            {method.brand || method.type}
+                          </span>
                           <span className="text-muted-foreground">•••• {method.lastFour}</span>
                           {method.isDefault && (
-                            <Badge variant="secondary" className="text-xs">Default</Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              Default
+                            </Badge>
                           )}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           {method.expiryMonth && method.expiryYear && (
-                            <span>Expires {method.expiryMonth}/{method.expiryYear.slice(-2)}</span>
+                            <span>
+                              Expires {method.expiryMonth}/{method.expiryYear.slice(-2)}
+                            </span>
                           )}
                           {method.holderName && (
                             <>
@@ -541,7 +589,7 @@ export default async function OrganizationDetailPage({ params }: Props) {
                       />
                     </div>
                   </div>
-                )
+                );
               })}
             </div>
           )}
@@ -578,16 +626,24 @@ export default async function OrganizationDetailPage({ params }: Props) {
                   <TableRow key={inv.id}>
                     <TableCell className="font-medium font-mono text-sm">{inv.reference}</TableCell>
                     <TableCell className="text-sm">
-                      {new Date(inv.periodStart).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                      {new Date(inv.periodStart).toLocaleDateString("en-US", {
+                        month: "short",
+                        year: "numeric",
+                      })}
                     </TableCell>
                     <TableCell className="text-sm">{inv.plan.name}</TableCell>
                     <TableCell>
-                      <Badge variant={
-                        inv.status === "PAID" ? "default" :
-                        inv.status === "FAILED" ? "destructive" :
-                        inv.status === "PROCESSING" ? "outline" :
-                        "secondary"
-                      }>
+                      <Badge
+                        variant={
+                          inv.status === "PAID"
+                            ? "default"
+                            : inv.status === "FAILED"
+                              ? "destructive"
+                              : inv.status === "PROCESSING"
+                                ? "outline"
+                                : "secondary"
+                        }
+                      >
                         {inv.status}
                       </Badge>
                     </TableCell>
@@ -601,14 +657,24 @@ export default async function OrganizationDetailPage({ params }: Props) {
                         <div className="space-y-1">
                           {inv.paymentAttempts.map((attempt) => (
                             <div key={attempt.id} className="flex items-center gap-2 text-xs">
-                              <span className={attempt.status === "SUCCESS" ? "text-green-600" : "text-destructive"}>
+                              <span
+                                className={
+                                  attempt.status === "SUCCESS"
+                                    ? "text-green-600"
+                                    : "text-destructive"
+                                }
+                              >
                                 {attempt.status === "SUCCESS" ? "Paid" : "Failed"}
                               </span>
                               <span className="text-muted-foreground">
-                                {attempt.paymentMethod.brand ?? "card"} ••{attempt.paymentMethod.lastFour}
+                                {attempt.paymentMethod.brand ?? "card"} ••
+                                {attempt.paymentMethod.lastFour}
                               </span>
                               {attempt.failureReason && (
-                                <span className="text-muted-foreground truncate max-w-[150px]" title={attempt.failureReason}>
+                                <span
+                                  className="text-muted-foreground truncate max-w-[150px]"
+                                  title={attempt.failureReason}
+                                >
                                   ({attempt.failureReason})
                                 </span>
                               )}
@@ -635,5 +701,5 @@ export default async function OrganizationDetailPage({ params }: Props) {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

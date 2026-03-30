@@ -17,10 +17,7 @@ async function verifyGuardian(athleteId: string, email: string): Promise<boolean
  *
  * Returns existing custom info responses for the athlete+org, with validity check.
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: athleteId } = await params;
     const { searchParams } = new URL(request.url);
@@ -54,12 +51,14 @@ export async function GET(
     });
 
     const now = new Date();
-    const isCurrent = responses.length > 0 && responses.every((r) => {
-      if (r.question.validityDays == null) return true;
-      const cutoff = new Date(now);
-      cutoff.setDate(cutoff.getDate() - r.question.validityDays);
-      return new Date(r.respondedAt) >= cutoff;
-    });
+    const isCurrent =
+      responses.length > 0 &&
+      responses.every((r) => {
+        if (r.question.validityDays == null) return true;
+        const cutoff = new Date(now);
+        cutoff.setDate(cutoff.getDate() - r.question.validityDays);
+        return new Date(r.respondedAt) >= cutoff;
+      });
 
     return NextResponse.json({
       responses,
@@ -73,11 +72,13 @@ export async function GET(
 
 const responseSchema = z.object({
   organizationId: z.string(),
-  responses: z.array(z.object({
-    questionId: z.string(),
-    responseValue: z.string().nullable().optional(),
-    signatureData: z.string().nullable().optional(),
-  })),
+  responses: z.array(
+    z.object({
+      questionId: z.string(),
+      responseValue: z.string().nullable().optional(),
+      signatureData: z.string().nullable().optional(),
+    })
+  ),
 });
 
 /**
@@ -86,10 +87,7 @@ const responseSchema = z.object({
  * Upserts custom info responses for an athlete within an organization.
  * Requires authentication.
  */
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.email) {

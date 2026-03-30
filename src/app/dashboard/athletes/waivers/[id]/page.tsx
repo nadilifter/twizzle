@@ -1,46 +1,46 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useParams } from "next/navigation"
-import { WaiverBuilder } from "../waiver-builder"
-import { Loader2 } from "lucide-react"
-import { DashboardPageHeader } from "@/components/dashboard-page-header"
-import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
-import type { Waiver } from "@/types/waivers"
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { WaiverBuilder } from "../waiver-builder";
+import { Loader2 } from "lucide-react";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
+import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
+import type { Waiver } from "@/types/waivers";
 
 export default function EditWaiverPage() {
-  const params = useParams()
-  const [waiver, setWaiver] = useState<Waiver | null>(null)
-  const [loading, setLoading] = useState(true)
+  const params = useParams();
+  const [waiver, setWaiver] = useState<Waiver | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useBreadcrumbOverride(
     waiver ? `/dashboard/athletes/waivers/${params.id}` : undefined,
-    waiver?.title,
-  )
+    waiver?.title
+  );
 
   useEffect(() => {
     const fetchWaiver = async () => {
       try {
-        const response = await fetch(`/api/waivers/${params.id}`)
+        const response = await fetch(`/api/waivers/${params.id}`);
         if (response.ok) {
-          const data = await response.json()
-          setWaiver(data)
+          const data = await response.json();
+          setWaiver(data);
         }
       } catch (error) {
-        console.error("Failed to fetch waiver:", error)
+        console.error("Failed to fetch waiver:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    fetchWaiver()
-  }, [params.id])
+    };
+    fetchWaiver();
+  }, [params.id]);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
-    )
+    );
   }
 
   if (!waiver) {
@@ -48,7 +48,7 @@ export default function EditWaiverPage() {
       <div className="flex flex-col gap-6 p-6">
         <p className="text-muted-foreground">Waiver not found.</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -56,5 +56,5 @@ export default function EditWaiverPage() {
       <DashboardPageHeader title="Edit Waiver" variant="small" />
       <WaiverBuilder waiver={waiver} />
     </div>
-  )
+  );
 }

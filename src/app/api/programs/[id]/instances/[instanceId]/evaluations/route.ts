@@ -12,14 +12,16 @@ const bulkUpdateSchema = z.object({
         .enum(["PENDING", "IN_PROGRESS", "PASS", "RETRY", "EXCELLENT", "SATISFACTORY"])
         .optional(),
       notes: z.string().optional(),
-      skillRatings: z.array(
-        z.object({
-          skillId: z.string().min(1),
-          attemptStatus: z.enum(["NOT_ATTEMPTED", "ATTEMPTED", "SUCCEEDED"]).optional(),
-          pointScore: z.number().int().optional().nullable(),
-          passed: z.boolean().optional(),
-        })
-      ).optional(),
+      skillRatings: z
+        .array(
+          z.object({
+            skillId: z.string().min(1),
+            attemptStatus: z.enum(["NOT_ATTEMPTED", "ATTEMPTED", "SUCCEEDED"]).optional(),
+            pointScore: z.number().int().optional().nullable(),
+            passed: z.boolean().optional(),
+          })
+        )
+        .optional(),
     })
   ),
 });
@@ -85,10 +87,7 @@ export async function GET(
     return NextResponse.json({ data: evaluations });
   } catch (error) {
     console.error("Error fetching instance evaluations:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch evaluations" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch evaluations" }, { status: 500 });
   }
 }
 
@@ -168,9 +167,7 @@ export async function POST(
       select: { athleteId: true },
     });
     const existingAthleteIds = new Set(existing.map((e) => e.athleteId));
-    const athletesToCreate = registeredAthleteIds.filter(
-      (id) => !existingAthleteIds.has(id)
-    );
+    const athletesToCreate = registeredAthleteIds.filter((id) => !existingAthleteIds.has(id));
 
     if (athletesToCreate.length === 0) {
       return NextResponse.json({
@@ -213,10 +210,7 @@ export async function POST(
     });
   } catch (error) {
     console.error("Error generating instance evaluations:", error);
-    return NextResponse.json(
-      { error: "Failed to generate evaluations" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to generate evaluations" }, { status: 500 });
   }
 }
 
@@ -324,9 +318,7 @@ export async function PUT(
             .filter((s): s is number => s != null);
           if (pointScores.length > 0) {
             overallScore =
-              Math.round(
-                (pointScores.reduce((a, b) => a + b, 0) / pointScores.length) * 10
-              ) / 10;
+              Math.round((pointScores.reduce((a, b) => a + b, 0) / pointScores.length) * 10) / 10;
           }
         } else {
           const succeededCount = allSkillRatings.filter(
@@ -337,16 +329,12 @@ export async function PUT(
           ).length;
           overallScore =
             skillCount > 0
-              ? Math.round(
-                  ((succeededCount * 10 + attemptedCount * 5) / skillCount) * 10
-                ) / 10
+              ? Math.round(((succeededCount * 10 + attemptedCount * 5) / skillCount) * 10) / 10
               : 0;
         }
 
         // Determine status
-        const hasAnyAttempt = allSkillRatings.some(
-          (sr) => sr.attemptStatus !== "NOT_ATTEMPTED"
-        );
+        const hasAnyAttempt = allSkillRatings.some((sr) => sr.attemptStatus !== "NOT_ATTEMPTED");
         let newStatus = evalUpdate.status || existing.status;
         if (!evalUpdate.status && hasAnyAttempt && existing.status === "PENDING") {
           newStatus = "IN_PROGRESS";
@@ -370,7 +358,11 @@ export async function PUT(
     // Check for achievements after bulk update
     for (const evalUpdate of evaluations) {
       const existing = existingMap.get(evalUpdate.evaluationId);
-      if (existing && evalUpdate.status && !["PENDING", "IN_PROGRESS"].includes(evalUpdate.status)) {
+      if (
+        existing &&
+        evalUpdate.status &&
+        !["PENDING", "IN_PROGRESS"].includes(evalUpdate.status)
+      ) {
         try {
           await checkAndAwardAchievements(evalUpdate.evaluationId);
         } catch {
@@ -382,15 +374,9 @@ export async function PUT(
     return NextResponse.json({ updated: results.length });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error bulk updating evaluations:", error);
-    return NextResponse.json(
-      { error: "Failed to update evaluations" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update evaluations" }, { status: 500 });
   }
 }

@@ -33,7 +33,10 @@ export async function POST(request: NextRequest) {
     const { firstName, lastName, email, phone, relationship } = body;
 
     if (!firstName || !lastName || !email || !phone) {
-      return NextResponse.json({ error: "firstName, lastName, email, and phone are required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "firstName, lastName, email, and phone are required" },
+        { status: 400 }
+      );
     }
 
     if (phone && !isValidPhoneNumber(phone)) {

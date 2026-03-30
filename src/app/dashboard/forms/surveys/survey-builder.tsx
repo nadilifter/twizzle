@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Plus, Trash2, GripVertical } from "lucide-react"
+import * as React from "react";
+import { Plus, Trash2, GripVertical } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -10,40 +10,40 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
-} from "@dnd-kit/core"
+} from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
   useSortable,
-} from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
-type QuestionType = "text" | "multiple_choice" | "checkbox" | "rating"
+type QuestionType = "text" | "multiple_choice" | "checkbox" | "rating";
 
 interface Question {
-  id: string
-  text: string
-  type: QuestionType
-  options: string[]
-  required: boolean
+  id: string;
+  text: string;
+  type: QuestionType;
+  options: string[];
+  required: boolean;
 }
 
 function SortableQuestion({
@@ -52,34 +52,26 @@ function SortableQuestion({
   updateQuestion,
   removeQuestion,
 }: {
-  question: Question
-  index: number
-  updateQuestion: (id: string, field: keyof Question, value: any) => void
-  removeQuestion: (id: string) => void
+  question: Question;
+  index: number;
+  updateQuestion: (id: string, field: keyof Question, value: any) => void;
+  removeQuestion: (id: string) => void;
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({ id: question.id })
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+    id: question.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-  }
+  };
 
   return (
     <div ref={setNodeRef} style={style} className="mb-4">
       <Card>
         <CardContent className="p-4 space-y-4">
           <div className="flex items-start gap-2">
-            <div
-              {...attributes}
-              {...listeners}
-              className="mt-2 cursor-move text-muted-foreground"
-            >
+            <div {...attributes} {...listeners} className="mt-2 cursor-move text-muted-foreground">
               <GripVertical className="h-5 w-5" />
             </div>
             <div className="flex-1 space-y-4">
@@ -88,9 +80,7 @@ function SortableQuestion({
                 <Input
                   id={`q-${question.id}-text`}
                   value={question.text}
-                  onChange={(e) =>
-                    updateQuestion(question.id, "text", e.target.value)
-                  }
+                  onChange={(e) => updateQuestion(question.id, "text", e.target.value)}
                   placeholder="Enter your question here"
                 />
               </div>
@@ -99,18 +89,14 @@ function SortableQuestion({
                   <Label htmlFor={`q-${question.id}-type`}>Type</Label>
                   <Select
                     value={question.type}
-                    onValueChange={(value) =>
-                      updateQuestion(question.id, "type", value)
-                    }
+                    onValueChange={(value) => updateQuestion(question.id, "type", value)}
                   >
                     <SelectTrigger id={`q-${question.id}-type`}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="text">Short Answer</SelectItem>
-                      <SelectItem value="multiple_choice">
-                        Multiple Choice
-                      </SelectItem>
+                      <SelectItem value="multiple_choice">Multiple Choice</SelectItem>
                       <SelectItem value="checkbox">Checkboxes</SelectItem>
                       <SelectItem value="rating">Rating</SelectItem>
                     </SelectContent>
@@ -120,16 +106,13 @@ function SortableQuestion({
                   <Switch
                     id={`q-${question.id}-required`}
                     checked={question.required}
-                    onCheckedChange={(checked) =>
-                      updateQuestion(question.id, "required", checked)
-                    }
+                    onCheckedChange={(checked) => updateQuestion(question.id, "required", checked)}
                   />
                   <Label htmlFor={`q-${question.id}-required`}>Required</Label>
                 </div>
               </div>
 
-              {(question.type === "multiple_choice" ||
-                question.type === "checkbox") && (
+              {(question.type === "multiple_choice" || question.type === "checkbox") && (
                 <div className="space-y-2">
                   <Label>Options</Label>
                   {question.options.map((option, optIndex) => (
@@ -137,9 +120,9 @@ function SortableQuestion({
                       <Input
                         value={option}
                         onChange={(e) => {
-                          const newOptions = [...question.options]
-                          newOptions[optIndex] = e.target.value
-                          updateQuestion(question.id, "options", newOptions)
+                          const newOptions = [...question.options];
+                          newOptions[optIndex] = e.target.value;
+                          updateQuestion(question.id, "options", newOptions);
                         }}
                         placeholder={`Option ${optIndex + 1}`}
                       />
@@ -147,10 +130,8 @@ function SortableQuestion({
                         variant="ghost"
                         size="icon"
                         onClick={() => {
-                          const newOptions = question.options.filter(
-                            (_, i) => i !== optIndex
-                          )
-                          updateQuestion(question.id, "options", newOptions)
+                          const newOptions = question.options.filter((_, i) => i !== optIndex);
+                          updateQuestion(question.id, "options", newOptions);
                         }}
                       >
                         <Trash2 className="h-4 w-4 text-muted-foreground" />
@@ -161,10 +142,7 @@ function SortableQuestion({
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      updateQuestion(question.id, "options", [
-                        ...question.options,
-                        "",
-                      ])
+                      updateQuestion(question.id, "options", [...question.options, ""])
                     }
                   >
                     Add Option
@@ -184,12 +162,12 @@ function SortableQuestion({
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
 
 export function SurveyBuilder() {
-  const [title, setTitle] = React.useState("")
-  const [description, setDescription] = React.useState("")
+  const [title, setTitle] = React.useState("");
+  const [description, setDescription] = React.useState("");
   const [questions, setQuestions] = React.useState<Question[]>([
     {
       id: "1",
@@ -198,30 +176,30 @@ export function SurveyBuilder() {
       options: [],
       required: false,
     },
-  ])
+  ]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
-  )
+  );
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
+    const { active, over } = event;
 
     if (over && active.id !== over.id) {
       setQuestions((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id)
-        const newIndex = items.findIndex((item) => item.id === over.id)
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
 
-        return arrayMove(items, oldIndex, newIndex)
-      })
+        return arrayMove(items, oldIndex, newIndex);
+      });
     }
-  }
+  };
 
   const addQuestion = () => {
-    const newId = Math.random().toString(36).substr(2, 9)
+    const newId = Math.random().toString(36).substr(2, 9);
     setQuestions([
       ...questions,
       {
@@ -231,18 +209,16 @@ export function SurveyBuilder() {
         options: [],
         required: false,
       },
-    ])
-  }
+    ]);
+  };
 
   const updateQuestion = (id: string, field: keyof Question, value: any) => {
-    setQuestions(
-      questions.map((q) => (q.id === id ? { ...q, [field]: value } : q))
-    )
-  }
+    setQuestions(questions.map((q) => (q.id === id ? { ...q, [field]: value } : q)));
+  };
 
   const removeQuestion = (id: string) => {
-    setQuestions(questions.filter((q) => q.id !== id))
-  }
+    setQuestions(questions.filter((q) => q.id !== id));
+  };
 
   return (
     <div className="max-w-3xl mx-auto py-8 space-y-8">
@@ -280,11 +256,7 @@ export function SurveyBuilder() {
           </Button>
         </div>
 
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext
             items={questions.map((q) => q.id)}
             strategy={verticalListSortingStrategy}
@@ -306,22 +278,12 @@ export function SurveyBuilder() {
         <Button variant="outline" onClick={() => window.history.back()}>
           Cancel
         </Button>
-        <Button onClick={() => toast.info("Surveys are not yet available — this feature is coming soon.")}>
+        <Button
+          onClick={() => toast.info("Surveys are not yet available — this feature is coming soon.")}
+        >
           Save Survey
         </Button>
       </div>
     </div>
-  )
+  );
 }
-
-
-
-
-
-
-
-
-
-
-
-

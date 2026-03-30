@@ -1,7 +1,7 @@
-export const dynamic = "force-dynamic"
+export const dynamic = "force-dynamic";
 
-import { db } from "@/lib/db"
-import Link from "next/link"
+import { db } from "@/lib/db";
+import Link from "next/link";
 import {
   Table,
   TableBody,
@@ -9,16 +9,16 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Globe, Shield, ExternalLink } from "lucide-react"
-import { getSubdomainUrl, getEnvConfig } from "@/lib/env-domains"
+} from "@/components/ui/table";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Globe, Shield, ExternalLink } from "lucide-react";
+import { getSubdomainUrl, getEnvConfig } from "@/lib/env-domains";
 
 // Helper to get proper site URL using middleware-compatible subdomain
 function getSiteUrl(subdomain: string): string {
-  return getSubdomainUrl(subdomain)
+  return getSubdomainUrl(subdomain);
 }
 
 export default async function AdminDomainsPage() {
@@ -30,19 +30,19 @@ export default async function AdminDomainsPage() {
           id: true,
           name: true,
           slug: true,
-        }
-      }
+        },
+      },
     },
-    orderBy: { createdAt: 'desc' }
-  })
+    orderBy: { createdAt: "desc" },
+  });
 
   // Fetch reserved domain count
-  const reservedCount = await db.reservedDomain.count()
+  const reservedCount = await db.reservedDomain.count();
 
   // Stats
-  const totalDomains = websiteConfigs.length
-  const publishedDomains = websiteConfigs.filter(c => c.isPublished).length
-  const customDomains = websiteConfigs.filter(c => c.domain).length
+  const totalDomains = websiteConfigs.length;
+  const publishedDomains = websiteConfigs.filter((c) => c.isPublished).length;
+  const customDomains = websiteConfigs.filter((c) => c.domain).length;
 
   return (
     <div className="flex flex-col gap-6 p-4">
@@ -128,7 +128,7 @@ export default async function AdminDomainsPage() {
                 {websiteConfigs.map((config) => (
                   <TableRow key={config.id}>
                     <TableCell className="font-medium">
-                      <Link 
+                      <Link
                         href={`/superadmin/organizations/${config.organization.slug}`}
                         className="text-primary hover:underline"
                       >
@@ -146,16 +146,16 @@ export default async function AdminDomainsPage() {
                     </TableCell>
                     <TableCell>
                       {config.domain ? (
-                        <code className="px-2 py-1 bg-muted rounded text-sm">
-                          {config.domain}
-                        </code>
+                        <code className="px-2 py-1 bg-muted rounded text-sm">{config.domain}</code>
                       ) : (
                         <span className="text-muted-foreground">Not set</span>
                       )}
                     </TableCell>
                     <TableCell>
                       {config.isPublished ? (
-                        <Badge variant="default" className="bg-green-600">Published</Badge>
+                        <Badge variant="default" className="bg-green-600">
+                          Published
+                        </Badge>
                       ) : (
                         <Badge variant="secondary">Draft</Badge>
                       )}
@@ -164,7 +164,7 @@ export default async function AdminDomainsPage() {
                     <TableCell className="text-right">
                       {config.subdomain && config.isPublished && (
                         <Button variant="ghost" size="sm" asChild>
-                          <a 
+                          <a
                             href={getSiteUrl(config.subdomain)}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -182,5 +182,5 @@ export default async function AdminDomainsPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

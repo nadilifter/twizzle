@@ -46,9 +46,7 @@ export async function checkMemberCertifications(
     },
   });
 
-  const memberCertMap = new Map(
-    memberCerts.map((mc) => [mc.certificationId, mc])
-  );
+  const memberCertMap = new Map(memberCerts.map((mc) => [mc.certificationId, mc]));
 
   const now = new Date();
   const missing: CertCheckFailure[] = [];
@@ -138,7 +136,11 @@ export async function checkAllMembersCertifications(
     for (const cert of requiredCerts) {
       const mc = certById.get(cert.id);
       if (!mc) {
-        missing.push({ certificationId: cert.id, certificationName: cert.name, reason: "not_granted" });
+        missing.push({
+          certificationId: cert.id,
+          certificationName: cert.name,
+          reason: "not_granted",
+        });
       } else if (!mc.passed) {
         missing.push({ certificationId: cert.id, certificationName: cert.name, reason: "failed" });
       } else if (mc.expiresAt && mc.expiresAt < now) {

@@ -20,20 +20,14 @@ export async function POST(
   try {
     const session = await getAuthSession();
     if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
     const { slug, id: competitionId } = await params;
     const { athleteId } = await request.json();
 
     if (!athleteId) {
-      return NextResponse.json(
-        { error: "athleteId is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "athleteId is required" }, { status: 400 });
     }
 
     // Look up site config
@@ -54,7 +48,9 @@ export async function POST(
           where: { isActive: true },
           include: {
             sportEvent: { select: { id: true, name: true, code: true } },
-            ageCategory: { select: { id: true, name: true, code: true, minAge: true, maxAge: true } },
+            ageCategory: {
+              select: { id: true, name: true, code: true, minAge: true, maxAge: true },
+            },
             individualEntry: { select: { hasGenderRestriction: true, allowedGenders: true } },
             combinationEntry: {
               select: {
@@ -107,8 +103,8 @@ export async function POST(
           competition.minAge != null && competition.maxAge != null
             ? `ages ${competition.minAge}–${competition.maxAge}`
             : competition.minAge != null
-            ? `ages ${competition.minAge}+`
-            : `up to age ${competition.maxAge}`;
+              ? `ages ${competition.minAge}+`
+              : `up to age ${competition.maxAge}`;
         reasons.push(`Athlete age (${age}) does not meet the requirement (${ageLabel})`);
       }
     }
@@ -158,8 +154,9 @@ export async function POST(
           const group = instance.group;
 
           // Check purchase window
-          const purchaseStart = instance.purchaseStartDate
-            ?? (group.purchaseWindowDays != null
+          const purchaseStart =
+            instance.purchaseStartDate ??
+            (group.purchaseWindowDays != null
               ? new Date(instance.startDate.getTime() - group.purchaseWindowDays * 86400000)
               : new Date(0));
           const purchaseEnd = instance.purchaseEndDate ?? instance.endDate;
@@ -194,7 +191,9 @@ export async function POST(
         if (availableMemberships.length > 0) {
           requiresMembershipPurchase = true;
         } else {
-          reasons.push("Athlete does not have the required membership and is not eligible to purchase one");
+          reasons.push(
+            "Athlete does not have the required membership and is not eligible to purchase one"
+          );
         }
       }
     }
@@ -221,7 +220,10 @@ export async function POST(
       }
 
       // Gender check from individual entry template
-      if (category.individualEntry?.hasGenderRestriction && category.individualEntry.allowedGenders.length > 0) {
+      if (
+        category.individualEntry?.hasGenderRestriction &&
+        category.individualEntry.allowedGenders.length > 0
+      ) {
         if (!athlete.gender || !category.individualEntry.allowedGenders.includes(athlete.gender)) {
           continue;
         }
@@ -230,7 +232,12 @@ export async function POST(
       // Gender check from combination entry template (restriction axis)
       if (category.combinationEntry) {
         const axis = category.combinationEntry.template?.restrictionAxis;
-        const restrictionValue = axis === "ROW" ? category.combinationEntry.rowValue : axis === "COLUMN" ? category.combinationEntry.colValue : null;
+        const restrictionValue =
+          axis === "ROW"
+            ? category.combinationEntry.rowValue
+            : axis === "COLUMN"
+              ? category.combinationEntry.colValue
+              : null;
         if (restrictionValue && restrictionValue.allowedGenders.length > 0) {
           if (!athlete.gender || !restrictionValue.allowedGenders.includes(athlete.gender)) {
             continue;
@@ -260,9 +267,6 @@ export async function POST(
     });
   } catch (error) {
     console.error("Competition Eligibility Error:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

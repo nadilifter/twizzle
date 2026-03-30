@@ -68,7 +68,9 @@ export function ContactForm({ slug }: ContactFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="name" className="block text-sm font-medium mb-1 text-foreground">Name</label>
+        <label htmlFor="name" className="block text-sm font-medium mb-1 text-foreground">
+          Name
+        </label>
         <input
           type="text"
           id="name"
@@ -80,7 +82,9 @@ export function ContactForm({ slug }: ContactFormProps) {
         />
       </div>
       <div>
-        <label htmlFor="email" className="block text-sm font-medium mb-1 text-foreground">Email</label>
+        <label htmlFor="email" className="block text-sm font-medium mb-1 text-foreground">
+          Email
+        </label>
         <input
           type="email"
           id="email"
@@ -92,7 +96,9 @@ export function ContactForm({ slug }: ContactFormProps) {
         />
       </div>
       <div>
-        <label htmlFor="message" className="block text-sm font-medium mb-1 text-foreground">Message</label>
+        <label htmlFor="message" className="block text-sm font-medium mb-1 text-foreground">
+          Message
+        </label>
         <textarea
           id="message"
           rows={4}

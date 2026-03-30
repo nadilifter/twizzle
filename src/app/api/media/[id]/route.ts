@@ -11,10 +11,7 @@ const updateMediaSchema = z.object({
 });
 
 // GET /api/media/[id]
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -57,18 +54,12 @@ export async function GET(
     return NextResponse.json(media);
   } catch (error) {
     console.error("Error fetching media:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch media" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch media" }, { status: 500 });
   }
 }
 
 // PATCH /api/media/[id]
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -90,7 +81,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    
+
     let validatedData;
     try {
       validatedData = updateMediaSchema.parse(body);
@@ -166,10 +157,7 @@ export async function PATCH(
     return NextResponse.json(media);
   } catch (error) {
     console.error("Error updating media:", error);
-    return NextResponse.json(
-      { error: "Failed to update media" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update media" }, { status: 500 });
   }
 }
 
@@ -206,9 +194,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting media:", error);
-    return NextResponse.json(
-      { error: "Failed to delete media" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete media" }, { status: 500 });
   }
 }

@@ -21,8 +21,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ data: [] });
     }
 
-    const search =
-      request.nextUrl.searchParams.get("search")?.slice(0, 200) || undefined;
+    const search = request.nextUrl.searchParams.get("search")?.slice(0, 200) || undefined;
 
     const guardians = await getCoachConversationGuardians(
       effectiveUser.userId,
@@ -33,9 +32,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data: guardians });
   } catch (error) {
     console.error("Error fetching coach chat guardians:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch guardians" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch guardians" }, { status: 500 });
   }
 }

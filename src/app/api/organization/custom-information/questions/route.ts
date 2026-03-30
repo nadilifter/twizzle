@@ -6,47 +6,61 @@ import { z } from "zod";
 
 const scopeSchema = z.object({
   scopeType: z.enum([
-    "ALL_PROGRAMS", "ALL_EVENTS", "ALL_COMPETITIONS", "ALL_MEMBERSHIPS", "ALL_PASSES",
-    "PROGRAM", "EVENT", "COMPETITION", "MEMBERSHIP", "PASS", "SEASON",
+    "ALL_PROGRAMS",
+    "ALL_EVENTS",
+    "ALL_COMPETITIONS",
+    "ALL_MEMBERSHIPS",
+    "ALL_PASSES",
+    "PROGRAM",
+    "EVENT",
+    "COMPETITION",
+    "MEMBERSHIP",
+    "PASS",
+    "SEASON",
   ]),
   targetId: z.string().nullable().optional(),
 });
 
-const createQuestionSchema = z.object({
-  questionText: z.string().min(1, "Question text is required"),
-  description: z.string().nullable().optional(),
-  questionType: z.enum(["VALUE", "BOOLEAN", "SIGNATURE", "SHORT_TEXT", "LONG_TEXT", "IMAGE"]),
-  required: z.boolean().default(true),
-  displayOrder: z.number().int().default(0),
-  valueMin: z.number().nullable().optional(),
-  valueMax: z.number().nullable().optional(),
-  allowDecimals: z.boolean().default(false),
-  requireSignatureOnYes: z.boolean().default(false),
-  validityDays: z.number().int().min(1).max(3650).nullable().optional(),
-  scopes: z.array(scopeSchema).min(1, "At least one scope is required"),
-}).refine(
-  (data) => {
-    if (data.questionType === "VALUE") {
-      return data.valueMin != null && data.valueMax != null;
-    }
-    return true;
-  },
-  { message: "Value questions require a min and max range", path: ["valueMin"] }
-).refine(
-  (data) => {
-    if (data.questionType === "VALUE" && data.valueMin != null && data.valueMax != null) {
-      return data.valueMax > data.valueMin;
-    }
-    return true;
-  },
-  { message: "Max must be greater than min", path: ["valueMax"] }
-);
+const createQuestionSchema = z
+  .object({
+    questionText: z.string().min(1, "Question text is required"),
+    description: z.string().nullable().optional(),
+    questionType: z.enum(["VALUE", "BOOLEAN", "SIGNATURE", "SHORT_TEXT", "LONG_TEXT", "IMAGE"]),
+    required: z.boolean().default(true),
+    displayOrder: z.number().int().default(0),
+    valueMin: z.number().nullable().optional(),
+    valueMax: z.number().nullable().optional(),
+    allowDecimals: z.boolean().default(false),
+    requireSignatureOnYes: z.boolean().default(false),
+    validityDays: z.number().int().min(1).max(3650).nullable().optional(),
+    scopes: z.array(scopeSchema).min(1, "At least one scope is required"),
+  })
+  .refine(
+    (data) => {
+      if (data.questionType === "VALUE") {
+        return data.valueMin != null && data.valueMax != null;
+      }
+      return true;
+    },
+    { message: "Value questions require a min and max range", path: ["valueMin"] }
+  )
+  .refine(
+    (data) => {
+      if (data.questionType === "VALUE" && data.valueMin != null && data.valueMax != null) {
+        return data.valueMax > data.valueMin;
+      }
+      return true;
+    },
+    { message: "Max must be greater than min", path: ["valueMax"] }
+  );
 
 const updateQuestionSchema = z.object({
   id: z.string(),
   questionText: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
-  questionType: z.enum(["VALUE", "BOOLEAN", "SIGNATURE", "SHORT_TEXT", "LONG_TEXT", "IMAGE"]).optional(),
+  questionType: z
+    .enum(["VALUE", "BOOLEAN", "SIGNATURE", "SHORT_TEXT", "LONG_TEXT", "IMAGE"])
+    .optional(),
   required: z.boolean().optional(),
   displayOrder: z.number().int().optional(),
   isActive: z.boolean().optional(),
@@ -59,13 +73,17 @@ const updateQuestionSchema = z.object({
 });
 
 const reorderSchema = z.object({
-  questions: z.array(z.object({
-    id: z.string(),
-    displayOrder: z.number().int(),
-  })),
+  questions: z.array(
+    z.object({
+      id: z.string(),
+      displayOrder: z.number().int(),
+    })
+  ),
 });
 
-async function requireAdmin(session: { user: { id: string; organizationId: string; isSuperAdmin?: boolean } }) {
+async function requireAdmin(session: {
+  user: { id: string; organizationId: string; isSuperAdmin?: boolean };
+}) {
   if (session.user.isSuperAdmin === true) return;
   const membership = await db.organizationMember.findUnique({
     where: {
@@ -133,7 +151,9 @@ export async function POST(request: NextRequest) {
     if (gate) return gate;
 
     try {
-      await requireAdmin(session as { user: { id: string; organizationId: string; isSuperAdmin?: boolean } });
+      await requireAdmin(
+        session as { user: { id: string; organizationId: string; isSuperAdmin?: boolean } }
+      );
     } catch {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
@@ -159,10 +179,14 @@ export async function POST(request: NextRequest) {
           questionType: validatedData.questionType,
           required: validatedData.required,
           displayOrder: validatedData.displayOrder,
-          valueMin: validatedData.questionType === "VALUE" ? validatedData.valueMin ?? null : null,
-          valueMax: validatedData.questionType === "VALUE" ? validatedData.valueMax ?? null : null,
-          allowDecimals: validatedData.questionType === "VALUE" ? validatedData.allowDecimals : false,
-          requireSignatureOnYes: validatedData.questionType === "BOOLEAN" ? validatedData.requireSignatureOnYes : false,
+          valueMin:
+            validatedData.questionType === "VALUE" ? (validatedData.valueMin ?? null) : null,
+          valueMax:
+            validatedData.questionType === "VALUE" ? (validatedData.valueMax ?? null) : null,
+          allowDecimals:
+            validatedData.questionType === "VALUE" ? validatedData.allowDecimals : false,
+          requireSignatureOnYes:
+            validatedData.questionType === "BOOLEAN" ? validatedData.requireSignatureOnYes : false,
           validityDays: validatedData.validityDays ?? null,
         },
       });
@@ -209,7 +233,9 @@ export async function PATCH(request: NextRequest) {
     if (gate) return gate;
 
     try {
-      await requireAdmin(session as { user: { id: string; organizationId: string; isSuperAdmin?: boolean } });
+      await requireAdmin(
+        session as { user: { id: string; organizationId: string; isSuperAdmin?: boolean } }
+      );
     } catch {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
@@ -308,7 +334,9 @@ export async function DELETE(request: NextRequest) {
     if (gate) return gate;
 
     try {
-      await requireAdmin(session as { user: { id: string; organizationId: string; isSuperAdmin?: boolean } });
+      await requireAdmin(
+        session as { user: { id: string; organizationId: string; isSuperAdmin?: boolean } }
+      );
     } catch {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }

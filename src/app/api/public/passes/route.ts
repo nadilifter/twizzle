@@ -36,12 +36,24 @@ export async function GET(request: NextRequest) {
       orderBy: { name: "asc" },
     });
 
-    let allActivePrograms: Array<{ id: string; name: string; basePrice: any; perSessionPrice: any; pricingModel: string }> | null = null;
+    let allActivePrograms: Array<{
+      id: string;
+      name: string;
+      basePrice: any;
+      perSessionPrice: any;
+      pricingModel: string;
+    }> | null = null;
     const hasAnyAllPrograms = passes.some((p) => p.coversAllPrograms);
     if (hasAnyAllPrograms) {
       allActivePrograms = await db.program.findMany({
         where: { organizationId, status: "ACTIVE" },
-        select: { id: true, name: true, basePrice: true, perSessionPrice: true, pricingModel: true },
+        select: {
+          id: true,
+          name: true,
+          basePrice: true,
+          perSessionPrice: true,
+          pricingModel: true,
+        },
       });
     }
 

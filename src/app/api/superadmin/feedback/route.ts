@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getAuthSession } from "@/lib/auth"
-import { db } from "@/lib/db"
-import { parseDateOnly } from "@/lib/date-utils"
-import { z } from "zod"
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthSession } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { parseDateOnly } from "@/lib/date-utils";
+import { z } from "zod";
 
 const createFeatureSchema = z.object({
   title: z.string().min(1, "Title is required").max(200, "Title too long"),
@@ -11,36 +11,36 @@ const createFeatureSchema = z.object({
   isPublic: z.boolean().default(true),
   categories: z.array(z.string()).default([]),
   targetDate: z.string().datetime().optional().nullable(),
-})
+});
 
 // GET /api/superadmin/feedback
 // List all features (both submissions and approved)
 export async function GET(request: NextRequest) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session?.user?.isSuperAdmin) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { searchParams } = new URL(request.url)
-    const tab = searchParams.get("tab") || "all" // all, submissions, live
-    const search = searchParams.get("search") || ""
-    const status = searchParams.get("status")
-    const limit = parseInt(searchParams.get("limit") || "100")
-    const offset = parseInt(searchParams.get("offset") || "0")
+    const { searchParams } = new URL(request.url);
+    const tab = searchParams.get("tab") || "all"; // all, submissions, live
+    const search = searchParams.get("search") || "";
+    const status = searchParams.get("status");
+    const limit = parseInt(searchParams.get("limit") || "100");
+    const offset = parseInt(searchParams.get("offset") || "0");
 
-    let where: any = {}
+    let where: any = {};
 
     // Filter by tab
     if (tab === "submissions") {
       where = {
         status: "SUBMITTED",
         isPublic: false,
-      }
+      };
     } else if (tab === "live") {
       where = {
         isPublic: true,
-      }
+      };
     }
 
     // Add search filter
@@ -51,12 +51,12 @@ export async function GET(request: NextRequest) {
           { title: { contains: search, mode: "insensitive" } },
           { description: { contains: search, mode: "insensitive" } },
         ],
-      }
+      };
     }
 
     // Add status filter
     if (status && status !== "all") {
-      where.status = status
+      where.status = status;
     }
 
     const [features, total] = await Promise.all([
@@ -70,14 +70,12 @@ export async function GET(request: NextRequest) {
             select: { votes: true, comments: true, mergedFrom: true },
           },
         },
-        orderBy: [
-          { createdAt: "desc" },
-        ],
+        orderBy: [{ createdAt: "desc" }],
         take: limit,
         skip: offset,
       }),
       db.featureRequest.count({ where }),
-    ])
+    ]);
 
     return NextResponse.json({
       data: features.map((f) => ({
@@ -91,12 +89,14 @@ export async function GET(request: NextRequest) {
         statusChangedAt: f.statusChangedAt,
         createdAt: f.createdAt,
         updatedAt: f.updatedAt,
-        author: f.user ? {
-          id: f.user.id,
-          name: f.user.name,
-          email: f.user.email,
-          avatar: f.user.avatar,
-        } : null,
+        author: f.user
+          ? {
+              id: f.user.id,
+              name: f.user.name,
+              email: f.user.email,
+              avatar: f.user.avatar,
+            }
+          : null,
         voteCount: f._count.votes,
         commentCount: f._count.comments,
         mergedCount: f._count.mergedFrom,
@@ -104,13 +104,10 @@ export async function GET(request: NextRequest) {
       total,
       limit,
       offset,
-    })
+    });
   } catch (error) {
-    console.error("Error fetching feedback for superadmin:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch feedback" },
-      { status: 500 }
-    )
+    console.error("Error fetching feedback for superadmin:", error);
+    return NextResponse.json({ error: "Failed to fetch feedback" }, { status: 500 });
   }
 }
 
@@ -118,13 +115,13 @@ export async function GET(request: NextRequest) {
 // Create a new feature directly (superadmin only)
 export async function POST(request: NextRequest) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session?.user?.isSuperAdmin) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const body = await request.json()
-    const validatedData = createFeatureSchema.parse(body)
+    const body = await request.json();
+    const validatedData = createFeatureSchema.parse(body);
 
     const feature = await db.featureRequest.create({
       data: {
@@ -137,23 +134,17 @@ export async function POST(request: NextRequest) {
         statusChangedAt: new Date(),
         userId: session.user.id, // Created by superadmin
       },
-    })
+    });
 
     return NextResponse.json({
       success: true,
       data: feature,
-    })
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    console.error("Error creating feature:", error)
-    return NextResponse.json(
-      { error: "Failed to create feature" },
-      { status: 500 }
-    )
+    console.error("Error creating feature:", error);
+    return NextResponse.json({ error: "Failed to create feature" }, { status: 500 });
   }
 }

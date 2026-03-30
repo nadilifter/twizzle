@@ -19,16 +19,16 @@ interface UseProgramsReturn {
   // Data
   programs: ProgramWithRelations[];
   total: number;
-  
+
   // Loading states
   isLoading: boolean;
   isCreating: boolean;
   isUpdating: boolean;
   isDeleting: boolean;
-  
+
   // Error state
   error: string | null;
-  
+
   // Actions
   fetchPrograms: (params?: ProgramsQueryParams) => Promise<void>;
   createProgram: (data: CreateProgramPayload) => Promise<ProgramWithRelations | null>;
@@ -65,7 +65,7 @@ export function usePrograms(options: UseProgramsOptions = {}): UseProgramsReturn
   // Fetch programs list
   const fetchPrograms = useCallback(async (params?: ProgramsQueryParams) => {
     const queryParams = params ?? currentParamsRef.current;
-    
+
     if (params) {
       setCurrentParams(queryParams);
     }
@@ -87,50 +87,53 @@ export function usePrograms(options: UseProgramsOptions = {}): UseProgramsReturn
   }, []);
 
   // Create program
-  const createProgram = useCallback(async (data: CreateProgramPayload): Promise<ProgramWithRelations | null> => {
-    setIsCreating(true);
-    setError(null);
+  const createProgram = useCallback(
+    async (data: CreateProgramPayload): Promise<ProgramWithRelations | null> => {
+      setIsCreating(true);
+      setError(null);
 
-    try {
-      const newProgram = await api.post<ProgramWithRelations>("/api/programs", data);
-      // Add to local state
-      setPrograms((prev) => [...prev, newProgram]);
-      setTotal((prev) => prev + 1);
-      return newProgram;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to create program";
-      setError(message);
-      console.error("Error creating program:", err);
-      return null;
-    } finally {
-      setIsCreating(false);
-    }
-  }, []);
+      try {
+        const newProgram = await api.post<ProgramWithRelations>("/api/programs", data);
+        // Add to local state
+        setPrograms((prev) => [...prev, newProgram]);
+        setTotal((prev) => prev + 1);
+        return newProgram;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to create program";
+        setError(message);
+        console.error("Error creating program:", err);
+        return null;
+      } finally {
+        setIsCreating(false);
+      }
+    },
+    []
+  );
 
   // Update program
-  const updateProgram = useCallback(async (
-    id: string,
-    data: UpdateProgramPayload
-  ): Promise<ProgramWithRelations | null> => {
-    setIsUpdating(true);
-    setError(null);
+  const updateProgram = useCallback(
+    async (id: string, data: UpdateProgramPayload): Promise<ProgramWithRelations | null> => {
+      setIsUpdating(true);
+      setError(null);
 
-    try {
-      const updatedProgram = await api.patch<ProgramWithRelations>(`/api/programs/${id}`, data);
-      // Update local state
-      setPrograms((prev) =>
-        prev.map((program) => (program.id === id ? updatedProgram : program))
-      );
-      return updatedProgram;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to update program";
-      setError(message);
-      console.error("Error updating program:", err);
-      return null;
-    } finally {
-      setIsUpdating(false);
-    }
-  }, []);
+      try {
+        const updatedProgram = await api.patch<ProgramWithRelations>(`/api/programs/${id}`, data);
+        // Update local state
+        setPrograms((prev) =>
+          prev.map((program) => (program.id === id ? updatedProgram : program))
+        );
+        return updatedProgram;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to update program";
+        setError(message);
+        console.error("Error updating program:", err);
+        return null;
+      } finally {
+        setIsUpdating(false);
+      }
+    },
+    []
+  );
 
   // Delete program
   const deleteProgram = useCallback(async (id: string): Promise<boolean> => {

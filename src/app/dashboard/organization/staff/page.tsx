@@ -1,20 +1,20 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { 
-  Plus, 
-  Search, 
-  Mail, 
-  Phone, 
-  MoreHorizontal, 
+import { useState, useEffect } from "react";
+import {
+  Plus,
+  Search,
+  Mail,
+  Phone,
+  MoreHorizontal,
   Filter,
   Loader2,
-  AlertCircle
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { PhoneInput } from "@/components/ui/phone-input"
-import { formatPhoneNumberIntl } from "react-phone-number-input"
+  AlertCircle,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { formatPhoneNumberIntl } from "react-phone-number-input";
 import {
   Table,
   TableBody,
@@ -22,7 +22,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,9 +30,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
   SheetClose,
@@ -42,16 +42,16 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/sheet";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,17 +61,17 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useStaff } from "@/hooks/use-staff"
-import { api } from "@/lib/api-client"
-import type { 
-  MemberWithUser, 
-  EmploymentType, 
+} from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useStaff } from "@/hooks/use-staff";
+import { api } from "@/lib/api-client";
+import type {
+  MemberWithUser,
+  EmploymentType,
   Certification,
   CreateMemberPayload,
-  UpdateMemberPayload 
-} from "@/types/staff"
+  UpdateMemberPayload,
+} from "@/types/staff";
 
 // Common certifications
 const CERTIFICATIONS = [
@@ -79,21 +79,21 @@ const CERTIFICATIONS = [
   { id: "cpr-first-aid", name: "CPR / First Aid" },
   { id: "safesport", name: "SafeSport Trained" },
   { id: "background-check", name: "Background Check Cleared" },
-]
+];
 
 const EMPLOYMENT_TYPE_LABELS: Record<EmploymentType, string> = {
   FULL_TIME: "Full-time",
   PART_TIME: "Part-time",
   CONTRACTOR: "Contractor",
   VOLUNTEER: "Volunteer",
-}
+};
 
 interface User {
-  id: string
-  name: string
-  email: string
-  role: string
-  status: string
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
 }
 
 function getInitials(name: string): string {
@@ -102,77 +102,88 @@ function getInitials(name: string): string {
     .map((n) => n[0])
     .join("")
     .toUpperCase()
-    .slice(0, 2)
+    .slice(0, 2);
 }
 
 export default function StaffPage() {
-  const { staff, isLoading, isCreating, isUpdating, isDeleting, error, fetchStaff, createStaff, updateStaff, deleteStaff, clearError } = useStaff()
-  const [searchQuery, setSearchQuery] = useState("")
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const [editingStaff, setEditingStaff] = useState<MemberWithUser | null>(null)
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [staffToDelete, setStaffToDelete] = useState<MemberWithUser | null>(null)
-  
+  const {
+    staff,
+    isLoading,
+    isCreating,
+    isUpdating,
+    isDeleting,
+    error,
+    fetchStaff,
+    createStaff,
+    updateStaff,
+    deleteStaff,
+    clearError,
+  } = useStaff();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<MemberWithUser | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [staffToDelete, setStaffToDelete] = useState<MemberWithUser | null>(null);
+
   // Available users (users in org without staff profiles)
-  const [availableUsers, setAvailableUsers] = useState<User[]>([])
-  const [loadingUsers, setLoadingUsers] = useState(false)
-  
+  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
   // Form state
-  const [formUserId, setFormUserId] = useState("")
-  const [formTitle, setFormTitle] = useState("")
-  const [formEmploymentType, setFormEmploymentType] = useState<EmploymentType>("FULL_TIME")
-  const [formPhone, setFormPhone] = useState("")
-  const [formHourlyRate, setFormHourlyRate] = useState("")
-  const [formCertifications, setFormCertifications] = useState<string[]>([])
+  const [formUserId, setFormUserId] = useState("");
+  const [formTitle, setFormTitle] = useState("");
+  const [formEmploymentType, setFormEmploymentType] = useState<EmploymentType>("FULL_TIME");
+  const [formPhone, setFormPhone] = useState("");
+  const [formHourlyRate, setFormHourlyRate] = useState("");
+  const [formCertifications, setFormCertifications] = useState<string[]>([]);
 
   // Fetch available users when sheet opens
   useEffect(() => {
     if (sheetOpen && !editingStaff) {
-      fetchAvailableUsers()
+      fetchAvailableUsers();
     }
-  }, [sheetOpen, editingStaff])
+  }, [sheetOpen, editingStaff]);
 
   const fetchAvailableUsers = async () => {
-    setLoadingUsers(true)
+    setLoadingUsers(true);
     try {
-      const users = await api.get<User[]>("/api/users")
+      const users = await api.get<User[]>("/api/users");
       // Filter out users who already have staff profiles
-      const staffUserIds = new Set(staff.map(s => s.userId))
-      setAvailableUsers(users.filter(u => !staffUserIds.has(u.id)))
+      const staffUserIds = new Set(staff.map((s) => s.userId));
+      setAvailableUsers(users.filter((u) => !staffUserIds.has(u.id)));
     } catch (err) {
-      console.error("Failed to fetch users:", err)
+      console.error("Failed to fetch users:", err);
     } finally {
-      setLoadingUsers(false)
+      setLoadingUsers(false);
     }
-  }
+  };
 
-  const filteredStaff = staff.filter(person => 
-    person.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (person.title?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
-    person.user.email.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredStaff = staff.filter(
+    (person) =>
+      person.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (person.title?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
+      person.user.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const resetForm = () => {
-    setFormUserId("")
-    setFormTitle("")
-    setFormEmploymentType("FULL_TIME")
-    setFormPhone("")
-    setFormHourlyRate("")
-    setFormCertifications([])
-    setEditingStaff(null)
-  }
+    setFormUserId("");
+    setFormTitle("");
+    setFormEmploymentType("FULL_TIME");
+    setFormPhone("");
+    setFormHourlyRate("");
+    setFormCertifications([]);
+    setEditingStaff(null);
+  };
 
   const openEditSheet = (staffMember: MemberWithUser) => {
-    setEditingStaff(staffMember)
-    setFormTitle(staffMember.title || "")
-    setFormEmploymentType(staffMember.employmentType)
-    setFormPhone(staffMember.phone || "")
-    setFormHourlyRate(staffMember.hourlyRate?.toString() || "")
-    setFormCertifications(
-      staffMember.certifications?.map((c: Certification) => c.name) || []
-    )
-    setSheetOpen(true)
-  }
+    setEditingStaff(staffMember);
+    setFormTitle(staffMember.title || "");
+    setFormEmploymentType(staffMember.employmentType);
+    setFormPhone(staffMember.phone || "");
+    setFormHourlyRate(staffMember.hourlyRate?.toString() || "");
+    setFormCertifications(staffMember.certifications?.map((c: Certification) => c.name) || []);
+    setSheetOpen(true);
+  };
 
   const handleSubmit = async () => {
     if (editingStaff) {
@@ -182,48 +193,46 @@ export default function StaffPage() {
         employmentType: formEmploymentType,
         phone: formPhone || null,
         hourlyRate: formHourlyRate ? parseFloat(formHourlyRate) : null,
-        certifications: formCertifications.map(name => ({ name, verified: true })),
-      }
-      const result = await updateStaff(editingStaff.id, data)
+        certifications: formCertifications.map((name) => ({ name, verified: true })),
+      };
+      const result = await updateStaff(editingStaff.id, data);
       if (result) {
-        setSheetOpen(false)
-        resetForm()
+        setSheetOpen(false);
+        resetForm();
       }
     } else {
       // Create new staff
-      if (!formUserId) return
+      if (!formUserId) return;
       const data: CreateMemberPayload = {
         userId: formUserId,
         title: formTitle || null,
         employmentType: formEmploymentType,
         phone: formPhone || null,
         hourlyRate: formHourlyRate ? parseFloat(formHourlyRate) : null,
-        certifications: formCertifications.map(name => ({ name, verified: true })),
-      }
-      const result = await createStaff(data)
+        certifications: formCertifications.map((name) => ({ name, verified: true })),
+      };
+      const result = await createStaff(data);
       if (result) {
-        setSheetOpen(false)
-        resetForm()
+        setSheetOpen(false);
+        resetForm();
       }
     }
-  }
+  };
 
   const handleDelete = async () => {
-    if (!staffToDelete) return
-    const success = await deleteStaff(staffToDelete.id)
+    if (!staffToDelete) return;
+    const success = await deleteStaff(staffToDelete.id);
     if (success) {
-      setDeleteConfirmOpen(false)
-      setStaffToDelete(null)
+      setDeleteConfirmOpen(false);
+      setStaffToDelete(null);
     }
-  }
+  };
 
   const toggleCertification = (certName: string) => {
-    setFormCertifications(prev => 
-      prev.includes(certName)
-        ? prev.filter(c => c !== certName)
-        : [...prev, certName]
-    )
-  }
+    setFormCertifications((prev) =>
+      prev.includes(certName) ? prev.filter((c) => c !== certName) : [...prev, certName]
+    );
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -234,10 +243,13 @@ export default function StaffPage() {
             Manage your coaches, administrators, and support staff.
           </p>
         </div>
-        <Sheet open={sheetOpen} onOpenChange={(open) => {
-          setSheetOpen(open)
-          if (!open) resetForm()
-        }}>
+        <Sheet
+          open={sheetOpen}
+          onOpenChange={(open) => {
+            setSheetOpen(open);
+            if (!open) resetForm();
+          }}
+        >
           <SheetTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
@@ -248,10 +260,9 @@ export default function StaffPage() {
             <SheetHeader>
               <SheetTitle>{editingStaff ? "Edit Staff Member" : "Add New Staff Member"}</SheetTitle>
               <SheetDescription>
-                {editingStaff 
+                {editingStaff
                   ? "Update staff profile details."
-                  : "Create a staff profile for an existing user."
-                }
+                  : "Create a staff profile for an existing user."}
               </SheetDescription>
             </SheetHeader>
             <div className="grid gap-4 py-4">
@@ -285,16 +296,19 @@ export default function StaffPage() {
               )}
               <div className="grid gap-2">
                 <Label htmlFor="title">Job Title</Label>
-                <Input 
-                  id="title" 
-                  placeholder="e.g. Head Coach, Front Desk" 
+                <Input
+                  id="title"
+                  placeholder="e.g. Head Coach, Front Desk"
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
                 />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="employmentType">Employment Type</Label>
-                <Select value={formEmploymentType} onValueChange={(v) => setFormEmploymentType(v as EmploymentType)}>
+                <Select
+                  value={formEmploymentType}
+                  onValueChange={(v) => setFormEmploymentType(v as EmploymentType)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
@@ -317,11 +331,11 @@ export default function StaffPage() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="hourlyRate">Hourly Rate ($)</Label>
-                <Input 
-                  id="hourlyRate" 
+                <Input
+                  id="hourlyRate"
                   type="number"
                   step="0.01"
-                  placeholder="0.00" 
+                  placeholder="0.00"
                   value={formHourlyRate}
                   onChange={(e) => setFormHourlyRate(e.target.value)}
                 />
@@ -331,8 +345,8 @@ export default function StaffPage() {
                 <div className="flex flex-col gap-2">
                   {CERTIFICATIONS.map((cert) => (
                     <div key={cert.id} className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={cert.id} 
+                      <Checkbox
+                        id={cert.id}
                         checked={formCertifications.includes(cert.name)}
                         onCheckedChange={() => toggleCertification(cert.name)}
                       />
@@ -343,7 +357,7 @@ export default function StaffPage() {
               </div>
             </div>
             <SheetFooter>
-              <Button 
+              <Button
                 onClick={handleSubmit}
                 disabled={(!editingStaff && !formUserId) || isCreating || isUpdating}
               >
@@ -411,24 +425,31 @@ export default function StaffPage() {
               </TableRow>
             ) : (
               filteredStaff.map((person) => {
-                const certifications = (person.certifications as Certification[]) || []
+                const certifications = (person.certifications as Certification[]) || [];
                 return (
                   <TableRow key={person.id}>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-3">
                         <Avatar>
-                          <AvatarImage src={person.user.avatar || undefined} alt={person.user.name} />
+                          <AvatarImage
+                            src={person.user.avatar || undefined}
+                            alt={person.user.name}
+                          />
                           <AvatarFallback>{getInitials(person.user.name)}</AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col">
                           <span>{person.user.name}</span>
-                          <span className="text-xs text-muted-foreground md:hidden">{person.title || "Staff"}</span>
+                          <span className="text-xs text-muted-foreground md:hidden">
+                            {person.title || "Staff"}
+                          </span>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">{person.title || "—"}</TableCell>
                     <TableCell>
-                      <Badge variant={person.employmentType === "FULL_TIME" ? "default" : "secondary"}>
+                      <Badge
+                        variant={person.employmentType === "FULL_TIME" ? "default" : "secondary"}
+                      >
                         {EMPLOYMENT_TYPE_LABELS[person.employmentType]}
                       </Badge>
                     </TableCell>
@@ -450,7 +471,11 @@ export default function StaffPage() {
                       <div className="flex flex-wrap gap-1">
                         {certifications.length > 0 ? (
                           certifications.map((cert) => (
-                            <Badge key={cert.name} variant="outline" className="text-xs font-normal">
+                            <Badge
+                              key={cert.name}
+                              variant="outline"
+                              className="text-xs font-normal"
+                            >
                               {cert.name}
                             </Badge>
                           ))
@@ -474,11 +499,11 @@ export default function StaffPage() {
                           </DropdownMenuItem>
                           <DropdownMenuItem>Manage Schedule</DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             className="text-red-600"
                             onClick={() => {
-                              setStaffToDelete(person)
-                              setDeleteConfirmOpen(true)
+                              setStaffToDelete(person);
+                              setDeleteConfirmOpen(true);
                             }}
                           >
                             Remove Staff Profile
@@ -487,7 +512,7 @@ export default function StaffPage() {
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                )
+                );
               })
             )}
           </TableBody>
@@ -499,14 +524,14 @@ export default function StaffPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Staff Profile?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the staff profile for {staffToDelete?.user.name}. 
-              The user account will remain but they will no longer have a staff profile.
-              This action cannot be undone.
+              This will remove the staff profile for {staffToDelete?.user.name}. The user account
+              will remain but they will no longer have a staff profile. This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleDelete}
               className="bg-red-600 hover:bg-red-700"
               disabled={isDeleting}
@@ -518,5 +543,5 @@ export default function StaffPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
+  );
 }

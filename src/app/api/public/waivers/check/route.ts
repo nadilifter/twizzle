@@ -16,17 +16,11 @@ export async function POST(request: NextRequest) {
     const { organizationId } = result;
 
     if (!waiverIds?.length) {
-      return NextResponse.json(
-        { error: "waiverIds is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "waiverIds is required" }, { status: 400 });
     }
 
     if (!userId && !email) {
-      return NextResponse.json(
-        { error: "userId or email is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "userId or email is required" }, { status: 400 });
     }
 
     // Resolve userId from email if not provided directly
@@ -92,9 +86,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error checking public waiver status:", error);
-    return NextResponse.json(
-      { error: "Failed to check waiver status" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to check waiver status" }, { status: 500 });
   }
 }

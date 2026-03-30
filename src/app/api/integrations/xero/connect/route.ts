@@ -20,10 +20,7 @@ export async function GET(request: NextRequest) {
     if (gate) return gate;
 
     if (!isXeroConfigured()) {
-      return NextResponse.json(
-        { error: "Xero integration is not configured" },
-        { status: 503 }
-      );
+      return NextResponse.json({ error: "Xero integration is not configured" }, { status: 503 });
     }
 
     const state = createSignedState(organizationId);
@@ -32,9 +29,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(authUrl);
   } catch (error) {
     console.error("[Xero Connect] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to initiate Xero connection" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to initiate Xero connection" }, { status: 500 });
   }
 }

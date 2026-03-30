@@ -4,11 +4,7 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Clock, Users, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,9 +39,7 @@ export function SchedulePopover({ children }: SchedulePopoverProps) {
         <div className="space-y-4">
           <div>
             <h4 className="text-sm font-semibold mb-3">Schedule Meeting</h4>
-            <p className="text-xs text-muted-foreground mb-4">
-              Quick schedule a meeting or event
-            </p>
+            <p className="text-xs text-muted-foreground mb-4">Quick schedule a meeting or event</p>
           </div>
 
           <div className="space-y-3">
@@ -111,19 +105,11 @@ export function SchedulePopover({ children }: SchedulePopoverProps) {
             <Separator />
 
             <div className="flex flex-col gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 justify-start gap-2 text-xs"
-              >
+              <Button variant="outline" size="sm" className="h-8 justify-start gap-2 text-xs">
                 <Users className="size-3.5" />
                 <span>Add participants</span>
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 justify-start gap-2 text-xs"
-              >
+              <Button variant="outline" size="sm" className="h-8 justify-start gap-2 text-xs">
                 <Video className="size-3.5" />
                 <span>Add video call</span>
               </Button>
@@ -153,4 +139,3 @@ export function SchedulePopover({ children }: SchedulePopoverProps) {
     </Popover>
   );
 }
-

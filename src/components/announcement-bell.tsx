@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import { Bell } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { AnnouncementsTray } from "./announcements-tray"
-import { useState } from "react"
+import { Bell } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { AnnouncementsTray } from "./announcements-tray";
+import { useState } from "react";
 
 interface AnnouncementBellProps extends React.ComponentPropsWithoutRef<"button"> {
-  unreadCount?: number
-  onClose?: () => void
+  unreadCount?: number;
+  onClose?: () => void;
 }
 
 export function AnnouncementBell({
@@ -16,12 +16,12 @@ export function AnnouncementBell({
   onClose,
   ...props
 }: AnnouncementBellProps) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false);
 
   const handleOpenChange = (value: boolean) => {
-    setOpen(value)
-    if (!value) onClose?.()
-  }
+    setOpen(value);
+    if (!value) onClose?.();
+  };
 
   return (
     <AnnouncementsTray open={open} onOpenChange={handleOpenChange}>
@@ -42,5 +42,5 @@ export function AnnouncementBell({
         <span className="sr-only">View announcements</span>
       </button>
     </AnnouncementsTray>
-  )
+  );
 }

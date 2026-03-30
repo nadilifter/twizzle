@@ -5,15 +5,7 @@ import { format } from "date-fns";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Trophy,
-  CalendarDays,
-  MapPin,
-  Users,
-  UserCheck,
-  Shield,
-  Tag,
-} from "lucide-react";
+import { Trophy, CalendarDays, MapPin, Users, UserCheck, Shield, Tag } from "lucide-react";
 import { getRegistrationStatus } from "@/lib/registration-utils";
 
 interface CompetitionCardProps {
@@ -27,7 +19,12 @@ interface CompetitionCardProps {
     endTime: string;
     city?: string | null;
     stateProvince?: string | null;
-    facility?: { id: string; name: string; city?: string | null; stateProvince?: string | null } | null;
+    facility?: {
+      id: string;
+      name: string;
+      city?: string | null;
+      stateProvince?: string | null;
+    } | null;
     pricingMode: string;
     entryFee?: number | string | null;
     hasAgeRestriction?: boolean;
@@ -125,8 +122,8 @@ export function CompetitionCard({ competition, primaryColor }: CompetitionCardPr
       ? competition.minAge != null && competition.maxAge != null
         ? `Ages ${competition.minAge}–${competition.maxAge}`
         : competition.minAge != null
-        ? `Ages ${competition.minAge}+`
-        : `Up to age ${competition.maxAge}`
+          ? `Ages ${competition.minAge}+`
+          : `Up to age ${competition.maxAge}`
       : null;
 
   const totalCapacity = competition.capacity || 0;
@@ -203,7 +200,9 @@ export function CompetitionCard({ competition, primaryColor }: CompetitionCardPr
           )}
         </div>
 
-        {(ageLabel || (competition.hasCapacityRestriction && totalCapacity > 0) || competition.hasMembershipRestriction) && (
+        {(ageLabel ||
+          (competition.hasCapacityRestriction && totalCapacity > 0) ||
+          competition.hasMembershipRestriction) && (
           <div className="mt-3 flex flex-wrap gap-1.5">
             {ageLabel && (
               <div className="inline-flex items-center gap-1 text-[10px] font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 px-2 py-0.5 rounded-full">
@@ -214,7 +213,9 @@ export function CompetitionCard({ competition, primaryColor }: CompetitionCardPr
             {competition.hasCapacityRestriction && totalCapacity > 0 && (
               <div className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-700 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/50 px-2 py-0.5 rounded-full">
                 <Users className="h-3 w-3" />
-                {spotsAvailable !== null ? `${spotsAvailable} spot${spotsAvailable !== 1 ? "s" : ""} left` : `${totalCapacity} spots`}
+                {spotsAvailable !== null
+                  ? `${spotsAvailable} spot${spotsAvailable !== 1 ? "s" : ""} left`
+                  : `${totalCapacity} spots`}
               </div>
             )}
             {competition.hasMembershipRestriction && (
@@ -241,10 +242,10 @@ export function CompetitionCard({ competition, primaryColor }: CompetitionCardPr
           {registrationStatus === "closed"
             ? "Registration Closed"
             : registrationStatus === "scheduled" && competition.registrationStartDate
-            ? `Opens ${format(new Date(competition.registrationStartDate), "MMM d")}`
-            : spotsAvailable === 0
-            ? "Currently Full"
-            : "Register"}
+              ? `Opens ${format(new Date(competition.registrationStartDate), "MMM d")}`
+              : spotsAvailable === 0
+                ? "Currently Full"
+                : "Register"}
         </Button>
       </CardFooter>
     </Card>

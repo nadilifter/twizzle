@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { toast } from "sonner"
-import { Loader2, Search } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import * as React from "react";
+import { toast } from "sonner";
+import { Loader2, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,98 +11,104 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 interface LinkableItem {
-  id: string
-  name: string
+  id: string;
+  name: string;
 }
 
 interface LinkItemDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  seasonId: string
-  type: "program" | "membership" | "competition"
-  onLinked: () => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  seasonId: string;
+  type: "program" | "membership" | "competition";
+  onLinked: () => void;
 }
 
 const TYPE_CONFIG = {
   program: { label: "Program", plural: "Programs", endpoint: "/api/programs" },
   membership: { label: "Membership", plural: "Memberships", endpoint: "/api/memberships" },
   competition: { label: "Competition", plural: "Competitions", endpoint: "/api/competitions" },
-} as const
+} as const;
 
-export function LinkItemDialog({ open, onOpenChange, seasonId, type, onLinked }: LinkItemDialogProps) {
-  const config = TYPE_CONFIG[type]
-  const [items, setItems] = React.useState<LinkableItem[]>([])
-  const [loading, setLoading] = React.useState(false)
-  const [linking, setLinking] = React.useState(false)
-  const [search, setSearch] = React.useState("")
-  const [selectedId, setSelectedId] = React.useState<string | null>(null)
+export function LinkItemDialog({
+  open,
+  onOpenChange,
+  seasonId,
+  type,
+  onLinked,
+}: LinkItemDialogProps) {
+  const config = TYPE_CONFIG[type];
+  const [items, setItems] = React.useState<LinkableItem[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [linking, setLinking] = React.useState(false);
+  const [search, setSearch] = React.useState("");
+  const [selectedId, setSelectedId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (!open) {
-      setItems([])
-      setSearch("")
-      setSelectedId(null)
-      return
+      setItems([]);
+      setSearch("");
+      setSelectedId(null);
+      return;
     }
 
     const fetchItems = async () => {
-      setLoading(true)
+      setLoading(true);
       try {
-        const res = await fetch(`${config.endpoint}?limit=200`)
+        const res = await fetch(`${config.endpoint}?limit=200`);
         if (res.ok) {
-          const data = await res.json()
+          const data = await res.json();
           const all: LinkableItem[] = (data.data ?? []).map((item: any) => ({
             id: item.id,
             name: item.name,
             seasonId: item.seasonId,
-          }))
-          setItems(all.filter((item: any) => !item.seasonId))
+          }));
+          setItems(all.filter((item: any) => !item.seasonId));
         }
       } catch {
-        toast.error(`Failed to load ${config.plural.toLowerCase()}`)
+        toast.error(`Failed to load ${config.plural.toLowerCase()}`);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchItems()
-  }, [open, config.endpoint, config.plural])
+    fetchItems();
+  }, [open, config.endpoint, config.plural]);
 
   const filteredItems = React.useMemo(() => {
-    if (!search) return items
-    const q = search.toLowerCase()
-    return items.filter((item) => item.name.toLowerCase().includes(q))
-  }, [items, search])
+    if (!search) return items;
+    const q = search.toLowerCase();
+    return items.filter((item) => item.name.toLowerCase().includes(q));
+  }, [items, search]);
 
   const handleLink = async () => {
-    if (!selectedId) return
-    setLinking(true)
+    if (!selectedId) return;
+    setLinking(true);
     try {
       const res = await fetch(`/api/seasons/${seasonId}/items`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type, itemId: selectedId }),
-      })
+      });
       if (res.ok) {
-        toast.success(`${config.label} added to season`)
-        onLinked()
-        onOpenChange(false)
+        toast.success(`${config.label} added to season`);
+        onLinked();
+        onOpenChange(false);
       } else {
-        const err = await res.json()
-        toast.error(err.error || `Failed to add ${config.label.toLowerCase()}`)
+        const err = await res.json();
+        toast.error(err.error || `Failed to add ${config.label.toLowerCase()}`);
       }
     } catch {
-      toast.error(`Failed to add ${config.label.toLowerCase()}`)
+      toast.error(`Failed to add ${config.label.toLowerCase()}`);
     } finally {
-      setLinking(false)
+      setLinking(false);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -168,5 +174,5 @@ export function LinkItemDialog({ open, onOpenChange, seasonId, type, onLinked }:
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

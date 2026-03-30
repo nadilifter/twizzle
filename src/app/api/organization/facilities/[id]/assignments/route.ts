@@ -9,10 +9,7 @@ const createAssignmentSchema = z.object({
 });
 
 // GET - List all staff assignments for a facility
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -48,10 +45,7 @@ export async function GET(
           },
         },
       },
-      orderBy: [
-        { isPrimary: "desc" },
-        { createdAt: "asc" },
-      ],
+      orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
     });
 
     return NextResponse.json(assignments);
@@ -62,10 +56,7 @@ export async function GET(
 }
 
 // POST - Assign a user to a facility
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -101,7 +92,10 @@ export async function POST(
     });
 
     if (!orgMember) {
-      return NextResponse.json({ error: "User is not a member of this organization" }, { status: 400 });
+      return NextResponse.json(
+        { error: "User is not a member of this organization" },
+        { status: 400 }
+      );
     }
 
     // Check if assignment already exists
@@ -113,7 +107,10 @@ export async function POST(
     });
 
     if (existingAssignment) {
-      return NextResponse.json({ error: "User is already assigned to this facility" }, { status: 400 });
+      return NextResponse.json(
+        { error: "User is already assigned to this facility" },
+        { status: 400 }
+      );
     }
 
     // If this is set as primary, unset other primaries for this user (scoped to this facility)

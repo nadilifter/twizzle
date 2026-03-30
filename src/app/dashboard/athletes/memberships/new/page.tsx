@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { MembershipStepper } from "../components/membership-stepper"
-import { ArrowLeft } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
+import { MembershipStepper } from "../components/membership-stepper";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function NewMembershipPage() {
   return (
@@ -24,5 +24,5 @@ export default function NewMembershipPage() {
 
       <MembershipStepper />
     </div>
-  )
+  );
 }

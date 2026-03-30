@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { useParams } from "next/navigation"
-import { format } from "date-fns"
-import { toast } from "sonner"
+import * as React from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { format } from "date-fns";
+import { toast } from "sonner";
 import {
   ArrowLeft,
   AlertCircle,
@@ -20,102 +20,131 @@ import {
   Trophy,
   User,
   XCircle,
-} from "lucide-react"
-import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
-import { Separator } from "@/components/ui/separator"
-import { api, ApiError } from "@/lib/api-client"
-import type { EvaluationWithRelations, EvaluationSkillRating, Level } from "@/types/evaluations"
+} from "lucide-react";
+import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { api, ApiError } from "@/lib/api-client";
+import type { EvaluationWithRelations, EvaluationSkillRating, Level } from "@/types/evaluations";
 
 // ─── Status Config ──────────────────────────────────────────────────
 
-const EVALUATION_STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle2; className: string }> = {
-  PENDING: { label: "Pending", icon: Clock, className: "bg-yellow-50 text-yellow-700 border-yellow-200" },
-  IN_PROGRESS: { label: "In Progress", icon: Loader2, className: "bg-blue-50 text-blue-700 border-blue-200" },
-  PASS: { label: "Pass", icon: CheckCircle2, className: "bg-green-50 text-green-700 border-green-200" },
-  RETRY: { label: "Retry", icon: AlertCircle, className: "bg-red-50 text-destructive border-red-200" },
-  EXCELLENT: { label: "Excellent", icon: Star, className: "bg-purple-50 text-purple-700 border-purple-200" },
-  SATISFACTORY: { label: "Satisfactory", icon: CheckCircle2, className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-}
+const EVALUATION_STATUS_CONFIG: Record<
+  string,
+  { label: string; icon: typeof CheckCircle2; className: string }
+> = {
+  PENDING: {
+    label: "Pending",
+    icon: Clock,
+    className: "bg-yellow-50 text-yellow-700 border-yellow-200",
+  },
+  IN_PROGRESS: {
+    label: "In Progress",
+    icon: Loader2,
+    className: "bg-blue-50 text-blue-700 border-blue-200",
+  },
+  PASS: {
+    label: "Pass",
+    icon: CheckCircle2,
+    className: "bg-green-50 text-green-700 border-green-200",
+  },
+  RETRY: {
+    label: "Retry",
+    icon: AlertCircle,
+    className: "bg-red-50 text-destructive border-red-200",
+  },
+  EXCELLENT: {
+    label: "Excellent",
+    icon: Star,
+    className: "bg-purple-50 text-purple-700 border-purple-200",
+  },
+  SATISFACTORY: {
+    label: "Satisfactory",
+    icon: CheckCircle2,
+    className: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  },
+};
 
-const ATTEMPT_STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle2; className: string }> = {
+const ATTEMPT_STATUS_CONFIG: Record<
+  string,
+  { label: string; icon: typeof CheckCircle2; className: string }
+> = {
   NOT_ATTEMPTED: { label: "Not Attempted", icon: XCircle, className: "text-muted-foreground" },
   ATTEMPTED: { label: "Attempted", icon: Target, className: "text-yellow-600" },
   SUCCEEDED: { label: "Succeeded", icon: CheckCircle2, className: "text-green-600" },
-}
+};
 
 function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase() || "?"
+  return (
+    name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "?"
+  );
 }
 
 // ─── Page Component ─────────────────────────────────────────────────
 
 export default function EvaluationDetailPage() {
-  const params = useParams()
-  const athleteId = typeof params.id === "string" ? params.id : ""
-  const evaluationId = typeof params.evaluationId === "string" ? params.evaluationId : ""
+  const params = useParams();
+  const athleteId = typeof params.id === "string" ? params.id : "";
+  const evaluationId = typeof params.evaluationId === "string" ? params.evaluationId : "";
 
-  const [evaluation, setEvaluation] = React.useState<EvaluationWithRelations | null>(null)
-  const [loading, setLoading] = React.useState(true)
-  const [error, setError] = React.useState<string | null>(null)
+  const [evaluation, setEvaluation] = React.useState<EvaluationWithRelations | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
-  const athleteName = evaluation?.athlete?.name
-  const templateName = evaluation?.template?.name
-  const evalDate = evaluation ? format(new Date(evaluation.date), "MMM d, yyyy") : undefined
-  const breadcrumbLabel = templateName
-    ? `${templateName} – ${evalDate}`
-    : evalDate
+  const athleteName = evaluation?.athlete?.name;
+  const templateName = evaluation?.template?.name;
+  const evalDate = evaluation ? format(new Date(evaluation.date), "MMM d, yyyy") : undefined;
+  const breadcrumbLabel = templateName ? `${templateName} – ${evalDate}` : evalDate;
 
-  useBreadcrumbOverride(
-    evaluation ? `/dashboard/athletes/${athleteId}` : undefined,
-    athleteName,
-  )
+  useBreadcrumbOverride(evaluation ? `/dashboard/athletes/${athleteId}` : undefined, athleteName);
   useBreadcrumbOverride(
     evaluation ? `/dashboard/athletes/${athleteId}/evaluations/${evaluationId}` : undefined,
-    breadcrumbLabel,
-  )
+    breadcrumbLabel
+  );
 
   React.useEffect(() => {
-    let cancelled = false
-    setLoading(true)
-    setError(null)
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
     api
       .get<EvaluationWithRelations>(`/api/evaluations/${evaluationId}`)
       .then((data) => {
-        if (!cancelled) setEvaluation(data)
+        if (!cancelled) setEvaluation(data);
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(err instanceof ApiError ? err.message : "Failed to load evaluation")
-          toast.error("Failed to load evaluation details")
+          setError(err instanceof ApiError ? err.message : "Failed to load evaluation");
+          toast.error("Failed to load evaluation details");
         }
       })
       .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => { cancelled = true }
-  }, [evaluationId])
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [evaluationId]);
 
-  const skillRatings = evaluation?.skillRatings ?? []
+  const skillRatings = evaluation?.skillRatings ?? [];
 
   const groupedSkills = React.useMemo(() => {
-    const groups: Record<string, EvaluationSkillRating[]> = {}
+    const groups: Record<string, EvaluationSkillRating[]> = {};
     for (const rating of skillRatings) {
-      const category = rating.skill?.category ?? "Uncategorized"
-      if (!groups[category]) groups[category] = []
-      groups[category].push(rating)
+      const category = rating.skill?.category ?? "Uncategorized";
+      if (!groups[category]) groups[category] = [];
+      groups[category].push(rating);
     }
-    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b))
-  }, [skillRatings])
+    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+  }, [skillRatings]);
 
   if (loading) {
     return (
@@ -125,7 +154,7 @@ export default function EvaluationDetailPage() {
           <p className="text-muted-foreground">Loading evaluation...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (error || !evaluation) {
@@ -133,9 +162,7 @@ export default function EvaluationDetailPage() {
       <div className="flex flex-col items-center justify-center h-full p-6 gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
         <h1 className="text-2xl font-bold">Evaluation Not Found</h1>
-        <p className="text-muted-foreground">
-          {error ?? "Could not load this evaluation."}
-        </p>
+        <p className="text-muted-foreground">{error ?? "Could not load this evaluation."}</p>
         <Button variant="outline" asChild>
           <Link href={`/dashboard/athletes/${athleteId}?tab=evaluations`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -143,20 +170,20 @@ export default function EvaluationDetailPage() {
           </Link>
         </Button>
       </div>
-    )
+    );
   }
 
-  const level = evaluation.level ?? evaluation.template?.level ?? null
-  const passedCount = skillRatings.filter((r) => r.passed).length
-  const totalSkills = skillRatings.length
-  const passRate = totalSkills > 0 ? Math.round((passedCount / totalSkills) * 100) : 0
+  const level = evaluation.level ?? evaluation.template?.level ?? null;
+  const passedCount = skillRatings.filter((r) => r.passed).length;
+  const totalSkills = skillRatings.length;
+  const passRate = totalSkills > 0 ? Math.round((passedCount / totalSkills) * 100) : 0;
   const statusConfig = EVALUATION_STATUS_CONFIG[evaluation.status] ?? {
     label: evaluation.status,
     icon: AlertCircle,
     className: "bg-muted text-muted-foreground",
-  }
-  const StatusIcon = statusConfig.icon
-  const achievements = evaluation.athleteAchievements ?? []
+  };
+  const StatusIcon = statusConfig.icon;
+  const achievements = evaluation.athleteAchievements ?? [];
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -177,7 +204,10 @@ export default function EvaluationDetailPage() {
             {/* Left: Athlete + Evaluation Info */}
             <div className="flex items-start gap-4">
               <Avatar className="h-14 w-14 border-2 border-background shadow-sm shrink-0">
-                <AvatarImage src={evaluation.athlete?.avatar ?? undefined} alt={athleteName ?? ""} />
+                <AvatarImage
+                  src={evaluation.athlete?.avatar ?? undefined}
+                  alt={athleteName ?? ""}
+                />
                 <AvatarFallback className="text-lg font-bold bg-primary/10">
                   {getInitials(athleteName ?? "?")}
                 </AvatarFallback>
@@ -226,15 +256,24 @@ export default function EvaluationDetailPage() {
             <div className="flex items-center gap-6 sm:text-right shrink-0">
               {Number(evaluation.overallScore) > 0 && (
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Score</p>
-                  <p className="text-3xl font-bold tabular-nums">{Number(evaluation.overallScore).toFixed(1)}</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                    Score
+                  </p>
+                  <p className="text-3xl font-bold tabular-nums">
+                    {Number(evaluation.overallScore).toFixed(1)}
+                  </p>
                 </div>
               )}
               {totalSkills > 0 && (
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Skills Passed</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                    Skills Passed
+                  </p>
                   <p className="text-3xl font-bold tabular-nums">
-                    {passedCount}<span className="text-lg text-muted-foreground font-normal">/{totalSkills}</span>
+                    {passedCount}
+                    <span className="text-lg text-muted-foreground font-normal">
+                      /{totalSkills}
+                    </span>
                   </p>
                 </div>
               )}
@@ -253,8 +292,12 @@ export default function EvaluationDetailPage() {
                   <p className="text-sm font-medium text-muted-foreground">Pass Rate</p>
                   <p className="text-2xl font-bold">{passRate}%</p>
                 </div>
-                <div className={`rounded-full p-2.5 ${passRate >= 80 ? "bg-green-100" : passRate >= 50 ? "bg-yellow-100" : "bg-red-100"}`}>
-                  <Target className={`h-5 w-5 ${passRate >= 80 ? "text-green-700" : passRate >= 50 ? "text-yellow-700" : "text-red-700"}`} />
+                <div
+                  className={`rounded-full p-2.5 ${passRate >= 80 ? "bg-green-100" : passRate >= 50 ? "bg-yellow-100" : "bg-red-100"}`}
+                >
+                  <Target
+                    className={`h-5 w-5 ${passRate >= 80 ? "text-green-700" : passRate >= 50 ? "text-yellow-700" : "text-red-700"}`}
+                  />
                 </div>
               </div>
               <Progress value={passRate} className="mt-3 h-2" />
@@ -306,7 +349,7 @@ export default function EvaluationDetailPage() {
       {groupedSkills.length > 0 ? (
         <div className="flex flex-col gap-6">
           {groupedSkills.map(([category, ratings]) => {
-            const catPassed = ratings.filter((r) => r.passed).length
+            const catPassed = ratings.filter((r) => r.passed).length;
             return (
               <Card key={category}>
                 <CardHeader className="pb-3">
@@ -332,7 +375,7 @@ export default function EvaluationDetailPage() {
                   </div>
                 </CardContent>
               </Card>
-            )
+            );
           })}
         </div>
       ) : (
@@ -358,7 +401,8 @@ export default function EvaluationDetailPage() {
               Achievements Earned
             </CardTitle>
             <CardDescription>
-              {achievements.length} achievement{achievements.length === 1 ? "" : "s"} earned from this evaluation
+              {achievements.length} achievement{achievements.length === 1 ? "" : "s"} earned from
+              this evaluation
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -403,24 +447,23 @@ export default function EvaluationDetailPage() {
         </Card>
       )}
     </div>
-  )
+  );
 }
 
 // ─── Skill Rating Row ───────────────────────────────────────────────
 
 function SkillRatingRow({ rating }: { rating: EvaluationSkillRating }) {
-  const attemptConfig = ATTEMPT_STATUS_CONFIG[rating.attemptStatus] ?? ATTEMPT_STATUS_CONFIG.NOT_ATTEMPTED
-  const AttemptIcon = attemptConfig.icon
+  const attemptConfig =
+    ATTEMPT_STATUS_CONFIG[rating.attemptStatus] ?? ATTEMPT_STATUS_CONFIG.NOT_ATTEMPTED;
+  const AttemptIcon = attemptConfig.icon;
 
   return (
     <div className="flex items-center justify-between gap-4 py-3">
       <div className="flex items-center gap-3 min-w-0">
-        <div className={`shrink-0 ${rating.passed ? "text-green-600" : "text-muted-foreground/50"}`}>
-          {rating.passed ? (
-            <CheckCircle2 className="h-5 w-5" />
-          ) : (
-            <XCircle className="h-5 w-5" />
-          )}
+        <div
+          className={`shrink-0 ${rating.passed ? "text-green-600" : "text-muted-foreground/50"}`}
+        >
+          {rating.passed ? <CheckCircle2 className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
         </div>
         <div className="min-w-0">
           <p className={`text-sm font-medium ${rating.passed ? "" : "text-muted-foreground"}`}>
@@ -446,7 +489,7 @@ function SkillRatingRow({ rating }: { rating: EvaluationSkillRating }) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 // ─── Level Badge ────────────────────────────────────────────────────
@@ -456,9 +499,13 @@ function LevelBadge({ level }: { level: Level }) {
     <Badge
       variant="outline"
       className="text-[10px] uppercase tracking-wider font-semibold"
-      style={level.color ? { borderColor: level.color, color: level.color, backgroundColor: `${level.color}15` } : undefined}
+      style={
+        level.color
+          ? { borderColor: level.color, color: level.color, backgroundColor: `${level.color}15` }
+          : undefined
+      }
     >
       {level.name}
     </Badge>
-  )
+  );
 }

@@ -1,45 +1,41 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { format, isValid, parse } from "date-fns"
-import type { DateRange } from "react-day-picker"
-import { CalendarIcon } from "lucide-react"
+import * as React from "react";
+import { format, isValid, parse } from "date-fns";
+import type { DateRange } from "react-day-picker";
+import { CalendarIcon } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-const DISPLAY_FORMAT = "MM/dd/yyyy"
-const VALUE_FORMAT = "yyyy-MM-dd"
+const DISPLAY_FORMAT = "MM/dd/yyyy";
+const VALUE_FORMAT = "yyyy-MM-dd";
 
 function parseDisplayDate(str: string): Date | null {
-  let d = parse(str, "MM/dd/yyyy", new Date())
-  if (isValid(d) && d.getFullYear() > 1000) return d
-  d = parse(str, "yyyy-MM-dd", new Date())
-  if (isValid(d) && d.getFullYear() > 1000) return d
-  return null
+  let d = parse(str, "MM/dd/yyyy", new Date());
+  if (isValid(d) && d.getFullYear() > 1000) return d;
+  d = parse(str, "yyyy-MM-dd", new Date());
+  if (isValid(d) && d.getFullYear() > 1000) return d;
+  return null;
 }
 
 function valueToDisplay(value: string | null): string {
-  if (!value) return ""
-  const d = parse(value, VALUE_FORMAT, new Date())
-  if (!isValid(d)) return ""
-  return format(d, DISPLAY_FORMAT)
+  if (!value) return "";
+  const d = parse(value, VALUE_FORMAT, new Date());
+  if (!isValid(d)) return "";
+  return format(d, DISPLAY_FORMAT);
 }
 
 export interface DateRangePickerProps {
-  startDate: string | null
-  endDate: string | null
-  onStartChange: (value: string | null) => void
-  onEndChange: (value: string | null) => void
-  endDateOptional?: boolean
-  disabled?: (date: Date) => boolean
-  className?: string
+  startDate: string | null;
+  endDate: string | null;
+  onStartChange: (value: string | null) => void;
+  onEndChange: (value: string | null) => void;
+  endDateOptional?: boolean;
+  disabled?: (date: Date) => boolean;
+  className?: string;
 }
 
 export function DateRangePicker({
@@ -51,83 +47,82 @@ export function DateRangePicker({
   disabled,
   className,
 }: DateRangePickerProps) {
-  const [open, setOpen] = React.useState(false)
-  const [startInput, setStartInput] = React.useState(() => valueToDisplay(startDate))
-  const [endInput, setEndInput] = React.useState(() => valueToDisplay(endDate))
+  const [open, setOpen] = React.useState(false);
+  const [startInput, setStartInput] = React.useState(() => valueToDisplay(startDate));
+  const [endInput, setEndInput] = React.useState(() => valueToDisplay(endDate));
 
   React.useEffect(() => {
-    setStartInput(valueToDisplay(startDate))
-  }, [startDate])
+    setStartInput(valueToDisplay(startDate));
+  }, [startDate]);
 
   React.useEffect(() => {
-    setEndInput(valueToDisplay(endDate))
-  }, [endDate])
+    setEndInput(valueToDisplay(endDate));
+  }, [endDate]);
 
   const selectedRange = React.useMemo((): DateRange | undefined => {
-    const from = startDate ? parse(startDate, VALUE_FORMAT, new Date()) : undefined
-    const to = endDate ? parse(endDate, VALUE_FORMAT, new Date()) : undefined
-    if (!from || !isValid(from)) return undefined
-    return { from, to: to && isValid(to) ? to : undefined }
-  }, [startDate, endDate])
+    const from = startDate ? parse(startDate, VALUE_FORMAT, new Date()) : undefined;
+    const to = endDate ? parse(endDate, VALUE_FORMAT, new Date()) : undefined;
+    if (!from || !isValid(from)) return undefined;
+    return { from, to: to && isValid(to) ? to : undefined };
+  }, [startDate, endDate]);
 
   function handleStartBlur() {
-    const raw = startInput.trim()
+    const raw = startInput.trim();
     if (!raw) {
-      onStartChange(null)
-      setStartInput("")
-      return
+      onStartChange(null);
+      setStartInput("");
+      return;
     }
-    const parsed = parseDisplayDate(raw)
+    const parsed = parseDisplayDate(raw);
     if (parsed) {
-      onStartChange(format(parsed, VALUE_FORMAT))
-      setStartInput(format(parsed, DISPLAY_FORMAT))
+      onStartChange(format(parsed, VALUE_FORMAT));
+      setStartInput(format(parsed, DISPLAY_FORMAT));
     } else {
-      setStartInput(valueToDisplay(startDate))
+      setStartInput(valueToDisplay(startDate));
     }
   }
 
   function handleEndBlur() {
-    const raw = endInput.trim()
+    const raw = endInput.trim();
     if (!raw) {
-      onEndChange(null)
-      setEndInput("")
-      return
+      onEndChange(null);
+      setEndInput("");
+      return;
     }
-    const parsed = parseDisplayDate(raw)
+    const parsed = parseDisplayDate(raw);
     if (parsed) {
-      onEndChange(format(parsed, VALUE_FORMAT))
-      setEndInput(format(parsed, DISPLAY_FORMAT))
+      onEndChange(format(parsed, VALUE_FORMAT));
+      setEndInput(format(parsed, DISPLAY_FORMAT));
     } else {
-      setEndInput(valueToDisplay(endDate))
+      setEndInput(valueToDisplay(endDate));
     }
   }
 
   function handleCalendarSelect(range: DateRange | undefined) {
     if (!range?.from) {
-      onStartChange(null)
-      onEndChange(null)
-      setStartInput("")
-      setEndInput("")
-      return
+      onStartChange(null);
+      onEndChange(null);
+      setStartInput("");
+      setEndInput("");
+      return;
     }
 
     // react-day-picker v9 sends { from: A, to: A } on a single-date click and
     // { from: A, to: B } (where B ≠ A) only once the user has picked a second
     // date. Use that distinction to keep the calendar open for the end date.
-    const isRangeComplete =
-      range.to != null && range.to.getTime() !== range.from.getTime()
+    const isRangeComplete = range.to != null && range.to.getTime() !== range.from.getTime();
 
-    onStartChange(format(range.from, VALUE_FORMAT))
-    setStartInput(format(range.from, DISPLAY_FORMAT))
+    onStartChange(format(range.from, VALUE_FORMAT));
+    setStartInput(format(range.from, DISPLAY_FORMAT));
 
     if (isRangeComplete) {
-      onEndChange(format(range.to!, VALUE_FORMAT))
-      setEndInput(format(range.to!, DISPLAY_FORMAT))
-      setOpen(false)
+      onEndChange(format(range.to!, VALUE_FORMAT));
+      setEndInput(format(range.to!, DISPLAY_FORMAT));
+      setOpen(false);
     } else {
       // First click: start date chosen, waiting for end date
-      onEndChange(null)
-      setEndInput("")
+      onEndChange(null);
+      setEndInput("");
     }
   }
 
@@ -182,5 +177,5 @@ export function DateRangePicker({
         />
       </PopoverContent>
     </Popover>
-  )
+  );
 }

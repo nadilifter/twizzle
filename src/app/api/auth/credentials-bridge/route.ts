@@ -7,16 +7,16 @@ import { logger } from "@/lib/logger";
 
 /**
  * Credentials Bridge Endpoint
- * 
+ *
  * LOCAL DEVELOPMENT ONLY:
  * This endpoint is called after credentials login completes on a local subdomain.
  * It reads the session (which was set on the exact hostname) and creates a bridge
  * token to transfer to the session-bridge, which sets the cookie with the correct
  * shared domain (.uplifterinc.localhost).
- * 
+ *
  * This is needed because NextAuth sets cookies on the exact hostname by default
  * in local development, but we need cookies shared across all subdomains.
- * 
+ *
  * PRODUCTION/STAGING:
  * In production/staging, cookies are set with domain=.upliftergymnastics.com
  * which is automatically shared across all subdomains. This bridge is not needed
@@ -38,8 +38,8 @@ export async function GET(req: NextRequest) {
   // PRODUCTION/STAGING PASSTHROUGH:
   // In production/staging, cookies are already shared across subdomains via the
   // domain attribute (.upliftergymnastics.com). No bridge is needed - just redirect.
-  if (currentEnv !== 'local') {
-    if (process.env.AUTH_DEBUG === 'true') {
+  if (currentEnv !== "local") {
+    if (process.env.AUTH_DEBUG === "true") {
       logger.debug("Credentials bridge: production passthrough", { callbackUrl });
     }
     return NextResponse.redirect(new URL(callbackUrl, req.nextUrl.origin));
@@ -50,20 +50,26 @@ export async function GET(req: NextRequest) {
     const sessionCookieName = getSessionCookieName();
     const sessionCookie = req.cookies.get(sessionCookieName);
 
-    if (process.env.AUTH_DEBUG === 'true') {
-      logger.debug("Credentials bridge: cookies", { cookies: allCookies.map(c => c.name) });
-      logger.debug("Credentials bridge: session cookie check", { present: !!sessionCookie, cookieName: sessionCookieName });
+    if (process.env.AUTH_DEBUG === "true") {
+      logger.debug("Credentials bridge: cookies", { cookies: allCookies.map((c) => c.name) });
+      logger.debug("Credentials bridge: session cookie check", {
+        present: !!sessionCookie,
+        cookieName: sessionCookieName,
+      });
     }
-    
+
     // Get the JWT token from the current session
-    const token = await getToken({ 
-      req, 
+    const token = await getToken({
+      req,
       secret: process.env.NEXTAUTH_SECRET,
       cookieName: sessionCookieName,
     });
 
-    if (process.env.AUTH_DEBUG === 'true') {
-      logger.debug("Credentials bridge: token result", { found: !!token, email: token?.email ?? null });
+    if (process.env.AUTH_DEBUG === "true") {
+      logger.debug("Credentials bridge: token result", {
+        found: !!token,
+        email: token?.email ?? null,
+      });
     }
 
     if (!token || !token.email) {
@@ -93,12 +99,12 @@ export async function GET(req: NextRequest) {
     const bridgeToken = Buffer.from(JSON.stringify(tokenData)).toString("base64url");
 
     // Redirect to session-bridge to set cookie with correct domain
-    const protocol = config.useHttps ? 'https' : 'http';
+    const protocol = config.useHttps ? "https" : "http";
     const bridgeUrl = new URL(`${protocol}://${config.baseDomain}/api/auth/session-bridge`);
     bridgeUrl.searchParams.set("token", bridgeToken);
     bridgeUrl.searchParams.set("callbackUrl", callbackUrl);
 
-    if (process.env.AUTH_DEBUG === 'true') {
+    if (process.env.AUTH_DEBUG === "true") {
       logger.info("Credentials bridge: redirecting to session bridge", { email });
     }
     return NextResponse.redirect(bridgeUrl);

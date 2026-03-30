@@ -8,10 +8,10 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
-  
+
   source:
     repoURL: https://github.com/YOUR_ORG/uplifter.git
-    targetRevision: develop  # Deploy from develop branch
+    targetRevision: develop # Deploy from develop branch
     path: charts/uplifter
     helm:
       valueFiles:

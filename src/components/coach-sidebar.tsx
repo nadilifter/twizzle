@@ -1,23 +1,23 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { usePathname } from "next/navigation"
-import { 
+import * as React from "react";
+import { usePathname } from "next/navigation";
+import {
   ClipboardCheck,
   Eye,
-  LayoutDashboard, 
+  LayoutDashboard,
   MessageSquare,
   UserCheck,
   Star,
   Camera,
   CalendarDays,
   GraduationCap,
-} from "lucide-react"
-import { useSession } from "next-auth/react"
+} from "lucide-react";
+import { useSession } from "next-auth/react";
 
-import { NavUser } from "@/components/nav-user"
-import { useFeatures } from "@/components/feature-context"
-import type { FeatureKey } from "@/lib/feature-toggles"
+import { NavUser } from "@/components/nav-user";
+import { useFeatures } from "@/components/feature-context";
+import type { FeatureKey } from "@/lib/feature-toggles";
 import {
   Sidebar,
   SidebarContent,
@@ -30,50 +30,52 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
-const CHAT_UNREAD_CACHE_MS = 60_000
-let chatUnreadCache: { count: number; fetchedAt: number } | null = null
+const CHAT_UNREAD_CACHE_MS = 60_000;
+let chatUnreadCache: { count: number; fetchedAt: number } | null = null;
 
 function CoachChatUnreadBadge() {
   const [count, setCount] = React.useState(() =>
     chatUnreadCache && Date.now() - chatUnreadCache.fetchedAt < CHAT_UNREAD_CACHE_MS
       ? chatUnreadCache.count
       : 0
-  )
+  );
 
   React.useEffect(() => {
     if (chatUnreadCache && Date.now() - chatUnreadCache.fetchedAt < CHAT_UNREAD_CACHE_MS) {
-      setCount(chatUnreadCache.count)
-      return
+      setCount(chatUnreadCache.count);
+      return;
     }
 
-    let cancelled = false
+    let cancelled = false;
     fetch("/api/coach/chat/unread-count")
-      .then((res) => res.ok ? res.json() : null)
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (cancelled || !data) return
-        chatUnreadCache = { count: data.unreadCount, fetchedAt: Date.now() }
-        setCount(data.unreadCount)
+        if (cancelled || !data) return;
+        chatUnreadCache = { count: data.unreadCount, fetchedAt: Date.now() };
+        setCount(data.unreadCount);
       })
-      .catch(() => {})
-    return () => { cancelled = true }
-  }, [])
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  if (count <= 0) return null
+  if (count <= 0) return null;
   return (
     <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-medium text-destructive-foreground">
       {count}
     </span>
-  )
+  );
 }
 
 // Coach navigation data
 const navItems: {
-  title: string
-  url: string
-  icon: React.ComponentType<{ className?: string }>
-  requiredFeature?: FeatureKey
+  title: string;
+  url: string;
+  icon: React.ComponentType<{ className?: string }>;
+  requiredFeature?: FeatureKey;
 }[] = [
   {
     title: "Overview",
@@ -111,7 +113,7 @@ const navItems: {
     url: "/coach/media",
     icon: Camera,
   },
-]
+];
 
 const superadminItems = [
   {
@@ -119,27 +121,29 @@ const superadminItems = [
     url: "/coach/admin/view-as-user",
     icon: Eye,
   },
-]
+];
 
 export function CoachSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const pathname = usePathname()
-  const { data: session, status } = useSession()
-  const { isFeatureEnabled } = useFeatures()
+  const pathname = usePathname();
+  const { data: session, status } = useSession();
+  const { isFeatureEnabled } = useFeatures();
 
-  const isSuperAdmin = session?.user?.isSuperAdmin === true
+  const isSuperAdmin = session?.user?.isSuperAdmin === true;
 
   const filteredNavItems = navItems.filter(
     (item) => !item.requiredFeature || isFeatureEnabled(item.requiredFeature)
-  )
+  );
 
   // Get user data from session
-  const user = session?.user ? {
-    name: session.user.name || "User",
-    email: session.user.email || "",
-    avatar: session.user.image || null,
-  } : null
+  const user = session?.user
+    ? {
+        name: session.user.name || "User",
+        email: session.user.email || "",
+        avatar: session.user.image || null,
+      }
+    : null;
 
-  const isLoading = status === "loading"
+  const isLoading = status === "loading";
 
   return (
     <Sidebar {...props}>
@@ -160,10 +164,9 @@ export function CoachSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
           <SidebarGroupContent>
             <SidebarMenu>
               {filteredNavItems.map((item) => {
-                const isActive = item.url === "/coach" 
-                  ? pathname === "/coach"
-                  : pathname.startsWith(item.url)
-                
+                const isActive =
+                  item.url === "/coach" ? pathname === "/coach" : pathname.startsWith(item.url);
+
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={isActive}>
@@ -174,7 +177,7 @@ export function CoachSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
                     </SidebarMenuButton>
                     {item.url === "/coach/chat" && <CoachChatUnreadBadge />}
                   </SidebarMenuItem>
-                )
+                );
               })}
             </SidebarMenu>
           </SidebarGroupContent>
@@ -186,7 +189,7 @@ export function CoachSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
             <SidebarGroupContent>
               <SidebarMenu>
                 {superadminItems.map((item) => {
-                  const isActive = pathname.startsWith(item.url)
+                  const isActive = pathname.startsWith(item.url);
                   return (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild isActive={isActive}>
@@ -196,7 +199,7 @@ export function CoachSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
                         </a>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                  )
+                  );
                 })}
               </SidebarMenu>
             </SidebarGroupContent>
@@ -218,5 +221,5 @@ export function CoachSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }

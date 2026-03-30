@@ -23,7 +23,7 @@ export async function GET() {
     }
 
     const organizationId = session.user.organizationId;
-    
+
     if (!organizationId) {
       return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
@@ -67,14 +67,14 @@ export async function PUT(request: NextRequest) {
     }
 
     const organizationId = session.user.organizationId;
-    
+
     if (!organizationId) {
       return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
     // Super admins bypass permission checks
     const isSuperAdmin = session.user.isSuperAdmin === true;
-    
+
     if (!isSuperAdmin) {
       // Check if user has admin permissions
       const membership = await db.organizationMember.findUnique({

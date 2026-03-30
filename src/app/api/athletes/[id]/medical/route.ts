@@ -14,10 +14,14 @@ const upsertMedicalInfoSchema = z.object({
   emergencyContactPhone: z.string().optional().nullable(),
   emergencyContactRelation: z.string().optional().nullable(),
   additionalNotes: z.string().optional().nullable(),
-  customResponses: z.array(z.object({
-    questionId: z.string(),
-    response: z.string(),
-  })).optional(),
+  customResponses: z
+    .array(
+      z.object({
+        questionId: z.string(),
+        response: z.string(),
+      })
+    )
+    .optional(),
 });
 
 async function canAccessAthlete(session: any, athleteId: string): Promise<boolean> {
@@ -44,10 +48,7 @@ async function canAccessAthlete(session: any, athleteId: string): Promise<boolea
   const athlete = await db.athlete.findFirst({
     where: {
       id: athleteId,
-      OR: [
-        { guardians: { some: { userId: session.user.id } } },
-        { userId: session.user.id },
-      ],
+      OR: [{ guardians: { some: { userId: session.user.id } } }, { userId: session.user.id }],
     },
   });
   return !!athlete;
@@ -67,10 +68,7 @@ async function isParentOfAthlete(session: any, athleteId: string): Promise<boole
 
 // GET /api/athletes/[id]/medical
 // Returns the athlete's medical information with custom question responses
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -146,19 +144,13 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error fetching athlete medical info:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch medical info" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch medical info" }, { status: 500 });
   }
 }
 
 // PUT /api/athletes/[id]/medical
 // Create or update the athlete's medical information
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -177,7 +169,7 @@ export async function PUT(
     const isParent = await isParentOfAthlete(session, athleteId);
     const permissions = session.user.permissions ?? [];
     const isSuperAdmin = session.user.isSuperAdmin === true;
-    const hasEditPermission = 
+    const hasEditPermission =
       isSuperAdmin ||
       permissions.includes("*") ||
       permissions.includes("athletes.edit") ||
@@ -267,15 +259,9 @@ export async function PUT(
     return NextResponse.json(updatedInfo);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error updating athlete medical info:", error);
-    return NextResponse.json(
-      { error: "Failed to update medical info" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update medical info" }, { status: 500 });
   }
 }

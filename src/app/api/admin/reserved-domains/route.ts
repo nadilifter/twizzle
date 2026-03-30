@@ -4,7 +4,8 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 
 const createReservedDomainSchema = z.object({
-  pattern: z.string()
+  pattern: z
+    .string()
     .min(1, "Pattern is required")
     .regex(/^[a-z0-9-]+$/, "Pattern must only contain lowercase letters, numbers, and hyphens"),
   type: z.enum(["EXACT", "PREFIX"]),
@@ -20,7 +21,7 @@ export async function GET() {
     }
 
     const reservedDomains = await db.reservedDomain.findMany({
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
 
     return NextResponse.json(reservedDomains);
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     // Check if pattern already exists
     const existing = await db.reservedDomain.findUnique({
-      where: { pattern: validated.pattern }
+      where: { pattern: validated.pattern },
     });
 
     if (existing) {
@@ -52,20 +53,23 @@ export async function POST(request: NextRequest) {
 
     // Check if this pattern would conflict with existing subdomains
     const conflictingConfigs = await checkExistingConflicts(validated.pattern, validated.type);
-    
+
     const reservedDomain = await db.reservedDomain.create({
       data: {
         pattern: validated.pattern,
         type: validated.type,
         reason: validated.reason || null,
         createdBy: session.user.id,
-      }
+      },
     });
 
-    return NextResponse.json({
-      ...reservedDomain,
-      conflicts: conflictingConfigs
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        ...reservedDomain,
+        conflicts: conflictingConfigs,
+      },
+      { status: 201 }
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
@@ -76,11 +80,14 @@ export async function POST(request: NextRequest) {
 }
 
 // Helper to check if any existing subdomains would conflict
-async function checkExistingConflicts(pattern: string, type: "EXACT" | "PREFIX"): Promise<string[]> {
+async function checkExistingConflicts(
+  pattern: string,
+  type: "EXACT" | "PREFIX"
+): Promise<string[]> {
   if (type === "EXACT") {
     const existing = await db.websiteConfig.findUnique({
       where: { subdomain: pattern },
-      select: { subdomain: true }
+      select: { subdomain: true },
     });
     return existing ? [existing.subdomain!] : [];
   } else {
@@ -88,11 +95,11 @@ async function checkExistingConflicts(pattern: string, type: "EXACT" | "PREFIX")
     const existing = await db.websiteConfig.findMany({
       where: {
         subdomain: {
-          startsWith: pattern
-        }
+          startsWith: pattern,
+        },
       },
-      select: { subdomain: true }
+      select: { subdomain: true },
     });
-    return existing.map(e => e.subdomain!).filter(Boolean);
+    return existing.map((e) => e.subdomain!).filter(Boolean);
   }
 }

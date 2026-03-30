@@ -11,10 +11,7 @@ const grantCertificationSchema = z.object({
   grantedAt: z.string().optional(),
 });
 
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -64,10 +61,7 @@ export async function GET(
   }
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -113,9 +107,7 @@ export async function POST(
       );
     }
 
-    const grantedAt = validatedData.grantedAt
-      ? new Date(validatedData.grantedAt)
-      : new Date();
+    const grantedAt = validatedData.grantedAt ? new Date(validatedData.grantedAt) : new Date();
 
     let expiresAt: Date | null = null;
     if (certification.renewalPeriodMonths && validatedData.passed) {

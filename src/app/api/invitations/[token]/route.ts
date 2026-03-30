@@ -4,19 +4,21 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { passwordSchema } from "@/lib/password";
 
-const acceptInvitationSchema = z.object({
-  password: passwordSchema.optional(),
-  confirmPassword: z.string().optional(),
-}).refine(
-  (data) => {
-    // If password is provided, confirmPassword must match
-    if (data.password && data.confirmPassword) {
-      return data.password === data.confirmPassword;
-    }
-    return true;
-  },
-  { message: "Passwords do not match", path: ["confirmPassword"] }
-);
+const acceptInvitationSchema = z
+  .object({
+    password: passwordSchema.optional(),
+    confirmPassword: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      // If password is provided, confirmPassword must match
+      if (data.password && data.confirmPassword) {
+        return data.password === data.confirmPassword;
+      }
+      return true;
+    },
+    { message: "Passwords do not match", path: ["confirmPassword"] }
+  );
 
 // GET /api/invitations/[token] - Validate invitation and return details
 export async function GET(
@@ -41,10 +43,10 @@ export async function GET(
 
     if (!invitation) {
       return NextResponse.json(
-        { 
-          valid: false, 
+        {
+          valid: false,
           error: "Invalid invitation link",
-          errorCode: "INVALID_TOKEN"
+          errorCode: "INVALID_TOKEN",
         },
         { status: 404 }
       );
@@ -53,10 +55,10 @@ export async function GET(
     // Check if already accepted
     if (invitation.status === "ACCEPTED") {
       return NextResponse.json(
-        { 
-          valid: false, 
+        {
+          valid: false,
           error: "This invitation has already been accepted",
-          errorCode: "ALREADY_ACCEPTED"
+          errorCode: "ALREADY_ACCEPTED",
         },
         { status: 400 }
       );
@@ -71,10 +73,11 @@ export async function GET(
       });
 
       return NextResponse.json(
-        { 
-          valid: false, 
-          error: "This invitation has expired. Please contact the administrator for a new invitation.",
-          errorCode: "EXPIRED"
+        {
+          valid: false,
+          error:
+            "This invitation has expired. Please contact the administrator for a new invitation.",
+          errorCode: "EXPIRED",
         },
         { status: 400 }
       );
@@ -83,10 +86,10 @@ export async function GET(
     // Check if cancelled
     if (invitation.status === "CANCELLED") {
       return NextResponse.json(
-        { 
-          valid: false, 
+        {
+          valid: false,
           error: "This invitation has been cancelled",
-          errorCode: "CANCELLED"
+          errorCode: "CANCELLED",
         },
         { status: 400 }
       );
@@ -95,10 +98,10 @@ export async function GET(
     // Check if user already exists (to determine if they need to set password)
     const existingUser = await db.user.findUnique({
       where: { email: invitation.email },
-      select: { 
-        id: true, 
-        name: true, 
-        email: true, 
+      select: {
+        id: true,
+        name: true,
+        email: true,
         passwordHash: true,
         status: true,
       },
@@ -182,18 +185,15 @@ export async function POST(
     // Find the user
     const user = await db.user.findUnique({
       where: { email: invitation.email },
-      select: { 
-        id: true, 
-        passwordHash: true, 
+      select: {
+        id: true,
+        passwordHash: true,
         status: true,
       },
     });
 
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: "User not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
     }
 
     const needsPassword = !user.passwordHash || user.status === "INVITED";
@@ -255,12 +255,12 @@ export async function POST(
     } else {
       // Existing user flow - verify they are authenticated
       const session = await getAuthSession();
-      
+
       if (!session) {
         // Return special code so frontend knows to redirect to login
         return NextResponse.json(
-          { 
-            success: false, 
+          {
+            success: false,
             error: "Please log in to accept this invitation",
             requiresAuth: true,
             redirectUrl: `/login?callbackUrl=/accept-invitation?token=${token}`,
@@ -272,8 +272,8 @@ export async function POST(
       // Verify the logged-in user matches the invitation email
       if (session.user.email !== invitation.email) {
         return NextResponse.json(
-          { 
-            success: false, 
+          {
+            success: false,
             error: `This invitation was sent to ${invitation.email}. Please log in with that account.`,
           },
           { status: 403 }
@@ -317,10 +317,7 @@ export async function POST(
     }
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { success: false, error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error accepting invitation:", error);
     return NextResponse.json(

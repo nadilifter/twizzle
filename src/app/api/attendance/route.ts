@@ -13,11 +13,13 @@ const createAttendanceSchema = z.object({
 
 const bulkAttendanceSchema = z.object({
   eventId: z.string().min(1, "Event is required"),
-  attendances: z.array(z.object({
-    athleteId: z.string().min(1),
-    status: z.enum(["REGISTERED", "PRESENT", "ABSENT", "LATE", "EXCUSED"]),
-    notes: z.string().optional(),
-  })),
+  attendances: z.array(
+    z.object({
+      athleteId: z.string().min(1),
+      status: z.enum(["REGISTERED", "PRESENT", "ABSENT", "LATE", "EXCUSED"]),
+      notes: z.string().optional(),
+    })
+  ),
 });
 
 // GET /api/attendance
@@ -44,12 +46,13 @@ export async function GET(request: NextRequest) {
       organizationId: session.user.organizationId,
       ...(programId && { programId }),
       ...(coachId && { coachId }),
-      ...(startDate && endDate && {
-        date: {
-          gte: new Date(startDate),
-          lte: new Date(endDate),
-        },
-      }),
+      ...(startDate &&
+        endDate && {
+          date: {
+            gte: new Date(startDate),
+            lte: new Date(endDate),
+          },
+        }),
     };
 
     const where = {
@@ -118,10 +121,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching attendance:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch attendance" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch attendance" }, { status: 500 });
   }
 }
 
@@ -280,15 +280,9 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating attendance:", error);
-    return NextResponse.json(
-      { error: "Failed to record attendance" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to record attendance" }, { status: 500 });
   }
 }

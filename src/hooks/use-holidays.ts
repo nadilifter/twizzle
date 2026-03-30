@@ -85,66 +85,72 @@ export function useHolidays(options: UseHolidaysOptions = {}): UseHolidaysReturn
   const [error, setError] = useState<string | null>(null);
   const [year, setYear] = useState(initialYear);
 
-  const fetchHolidays = useCallback(async (fetchYear?: number) => {
-    const targetYear = fetchYear ?? year;
-    setIsLoading(true);
-    setError(null);
-    setHolidays([]);
+  const fetchHolidays = useCallback(
+    async (fetchYear?: number) => {
+      const targetYear = fetchYear ?? year;
+      setIsLoading(true);
+      setError(null);
+      setHolidays([]);
 
-    try {
-      const response = await api.get<HolidaysListResponse>("/api/holidays", { year: targetYear });
-      setHolidays(response.data);
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to fetch holidays";
-      setError(message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [year]);
+      try {
+        const response = await api.get<HolidaysListResponse>("/api/holidays", { year: targetYear });
+        setHolidays(response.data);
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to fetch holidays";
+        setError(message);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [year]
+  );
 
-  const toggleHoliday = useCallback(async (
-    id: string,
-    isEnabled: boolean,
-    cancelInstanceIds?: string[],
-    createInstancesForProgramIds?: string[]
-  ): Promise<OrganizationHoliday | null> => {
-    setError(null);
+  const toggleHoliday = useCallback(
+    async (
+      id: string,
+      isEnabled: boolean,
+      cancelInstanceIds?: string[],
+      createInstancesForProgramIds?: string[]
+    ): Promise<OrganizationHoliday | null> => {
+      setError(null);
 
-    try {
-      const updated = await api.patch<OrganizationHoliday>(`/api/holidays/${id}`, {
-        isEnabled,
-        cancelInstanceIds,
-        createInstancesForProgramIds,
-      });
-      setHolidays((prev) => prev.map((h) => (h.id === id ? updated : h)));
-      return updated;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to update holiday";
-      setError(message);
-      return null;
-    }
-  }, []);
-
-  const addCustomClosure = useCallback(async (
-    name: string,
-    date: string
-  ): Promise<OrganizationHoliday | null> => {
-    setError(null);
-
-    try {
-      const newHoliday = await api.post<OrganizationHoliday>("/api/holidays", { name, date });
-      setHolidays((prev) => {
-        const updated = [...prev, newHoliday];
-        updated.sort((a, b) => a.date.localeCompare(b.date));
+      try {
+        const updated = await api.patch<OrganizationHoliday>(`/api/holidays/${id}`, {
+          isEnabled,
+          cancelInstanceIds,
+          createInstancesForProgramIds,
+        });
+        setHolidays((prev) => prev.map((h) => (h.id === id ? updated : h)));
         return updated;
-      });
-      return newHoliday;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to add closure";
-      setError(message);
-      return null;
-    }
-  }, []);
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to update holiday";
+        setError(message);
+        return null;
+      }
+    },
+    []
+  );
+
+  const addCustomClosure = useCallback(
+    async (name: string, date: string): Promise<OrganizationHoliday | null> => {
+      setError(null);
+
+      try {
+        const newHoliday = await api.post<OrganizationHoliday>("/api/holidays", { name, date });
+        setHolidays((prev) => {
+          const updated = [...prev, newHoliday];
+          updated.sort((a, b) => a.date.localeCompare(b.date));
+          return updated;
+        });
+        return newHoliday;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to add closure";
+        setError(message);
+        return null;
+      }
+    },
+    []
+  );
 
   const deleteHoliday = useCallback(async (id: string): Promise<boolean> => {
     setError(null);
@@ -160,18 +166,18 @@ export function useHolidays(options: UseHolidaysOptions = {}): UseHolidaysReturn
     }
   }, []);
 
-  const checkConflicts = useCallback(async (
-    date: string,
-    action: "enable" | "disable"
-  ): Promise<ConflictsResponse | null> => {
-    try {
-      return await api.get<ConflictsResponse>("/api/holidays/conflicts", { date, action });
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to check conflicts";
-      setError(message);
-      return null;
-    }
-  }, []);
+  const checkConflicts = useCallback(
+    async (date: string, action: "enable" | "disable"): Promise<ConflictsResponse | null> => {
+      try {
+        return await api.get<ConflictsResponse>("/api/holidays/conflicts", { date, action });
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to check conflicts";
+        setError(message);
+        return null;
+      }
+    },
+    []
+  );
 
   const refresh = useCallback(async () => {
     await fetchHolidays(year);

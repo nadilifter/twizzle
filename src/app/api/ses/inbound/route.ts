@@ -69,7 +69,10 @@ export async function POST(request: NextRequest) {
     try {
       snsMessage = await validateSnsMessage(parsed);
     } catch (error) {
-      console.error("[SES INBOUND] SNS signature verification failed:", error instanceof Error ? error.message : error);
+      console.error(
+        "[SES INBOUND] SNS signature verification failed:",
+        error instanceof Error ? error.message : error
+      );
       return NextResponse.json({ error: "Invalid SNS signature" }, { status: 403 });
     }
 

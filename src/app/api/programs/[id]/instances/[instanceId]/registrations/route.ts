@@ -11,11 +11,13 @@ const createRegistrationSchema = z.object({
 });
 
 const bulkCreateSchema = z.object({
-  registrations: z.array(z.object({
-    athleteId: z.string(),
-    userId: z.string().optional().nullable(),
-    status: z.enum(["REGISTERED", "WAITLISTED", "CANCELLED"]).default("REGISTERED"),
-  })),
+  registrations: z.array(
+    z.object({
+      athleteId: z.string(),
+      userId: z.string().optional().nullable(),
+      status: z.enum(["REGISTERED", "WAITLISTED", "CANCELLED"]).default("REGISTERED"),
+    })
+  ),
 });
 
 // GET /api/programs/[id]/instances/[instanceId]/registrations
@@ -70,10 +72,7 @@ export async function GET(
     return NextResponse.json(registrations);
   } catch (error) {
     console.error("Error fetching registrations:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch registrations" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch registrations" }, { status: 500 });
   }
 }
 
@@ -123,14 +122,14 @@ export async function POST(
         const existingAthleteIds = await tx.instanceRegistration.findMany({
           where: {
             programInstanceId: instanceId,
-            athleteId: { in: validated.registrations.map(r => r.athleteId) },
+            athleteId: { in: validated.registrations.map((r) => r.athleteId) },
           },
           select: { athleteId: true },
         });
 
-        const existingSet = new Set(existingAthleteIds.map(e => e.athleteId));
+        const existingSet = new Set(existingAthleteIds.map((e) => e.athleteId));
         const newRegistrations = validated.registrations.filter(
-          r => !existingSet.has(r.athleteId)
+          (r) => !existingSet.has(r.athleteId)
         );
 
         if (newRegistrations.length === 0) {
@@ -149,13 +148,13 @@ export async function POST(
           const sessionUserId = session.user.id;
           const created = await tx.instanceRegistration.createMany({
             data: [
-              ...toRegister.map(r => ({
+              ...toRegister.map((r) => ({
                 programInstanceId: instanceId,
                 athleteId: r.athleteId,
                 userId: r.userId ?? sessionUserId,
                 status: "REGISTERED" as const,
               })),
-              ...toWaitlist.map(r => ({
+              ...toWaitlist.map((r) => ({
                 programInstanceId: instanceId,
                 athleteId: r.athleteId,
                 userId: r.userId ?? sessionUserId,
@@ -174,7 +173,7 @@ export async function POST(
 
         const sessionUserId = session.user.id;
         const created = await tx.instanceRegistration.createMany({
-          data: newRegistrations.map(r => ({
+          data: newRegistrations.map((r) => ({
             programInstanceId: instanceId,
             athleteId: r.athleteId,
             userId: r.userId ?? sessionUserId,
@@ -248,15 +247,9 @@ export async function POST(
     }
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating registration:", error);
-    return NextResponse.json(
-      { error: "Failed to create registration" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create registration" }, { status: 500 });
   }
 }

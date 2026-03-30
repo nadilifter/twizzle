@@ -1,24 +1,12 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import {
-  Plus,
-  Search,
-  MoreHorizontal,
-  Loader2,
-  Pencil,
-  Trash2,
-  Award,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from "@/components/ui/card"
+import { useState, useEffect, useCallback } from "react";
+import { Plus, Search, MoreHorizontal, Loader2, Pencil, Trash2, Award } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -26,8 +14,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
   SheetContent,
@@ -35,22 +23,22 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet"
+} from "@/components/ui/sheet";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -58,15 +46,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Slider } from "@/components/ui/slider"
-import { toast } from "sonner"
-import type {
-  Certification,
-  CertificationEvaluationMethod,
-} from "@/types/certifications"
+} from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/slider";
+import { toast } from "sonner";
+import type { Certification, CertificationEvaluationMethod } from "@/types/certifications";
 
 const RENEWAL_OPTIONS = [
   { label: "None (one-time)", value: "none" },
@@ -77,30 +62,30 @@ const RENEWAL_OPTIONS = [
   { label: "2 years", value: "24" },
   { label: "3 years", value: "36" },
   { label: "Custom", value: "custom" },
-]
+];
 
 function formatRenewalPeriod(months: number | null): string {
-  if (months === null) return "One-time"
-  if (months === 1) return "1 month"
-  if (months < 12) return `${months} months`
-  if (months === 12) return "1 year"
-  if (months % 12 === 0) return `${months / 12} years`
-  return `${months} months`
+  if (months === null) return "One-time";
+  if (months === 1) return "1 month";
+  if (months < 12) return `${months} months`;
+  if (months === 12) return "1 year";
+  if (months % 12 === 0) return `${months / 12} years`;
+  return `${months} months`;
 }
 
 interface CertFormData {
-  name: string
-  description: string
-  criteria: string
-  evaluationMethod: CertificationEvaluationMethod
-  pointScaleMin: number
-  pointScaleMax: number
-  passThreshold: number
-  renewalPeriodMonths: number | null
-  requiredForPrograms: boolean
-  requiredForEvents: boolean
-  requiredForCompetitions: boolean
-  isActive: boolean
+  name: string;
+  description: string;
+  criteria: string;
+  evaluationMethod: CertificationEvaluationMethod;
+  pointScaleMin: number;
+  pointScaleMax: number;
+  passThreshold: number;
+  renewalPeriodMonths: number | null;
+  requiredForPrograms: boolean;
+  requiredForEvents: boolean;
+  requiredForCompetitions: boolean;
+  isActive: boolean;
 }
 
 const defaultFormData: CertFormData = {
@@ -116,52 +101,54 @@ const defaultFormData: CertFormData = {
   requiredForEvents: false,
   requiredForCompetitions: false,
   isActive: true,
-}
+};
 
 export default function CertificationsPage() {
-  const [certifications, setCertifications] = useState<(Certification & { _count: { memberCertifications: number } })[]>([])
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [search, setSearch] = useState("")
+  const [certifications, setCertifications] = useState<
+    (Certification & { _count: { memberCertifications: number } })[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
 
   // Form state
-  const [formOpen, setFormOpen] = useState(false)
-  const [editingCert, setEditingCert] = useState<Certification | null>(null)
-  const [formData, setFormData] = useState<CertFormData>(defaultFormData)
-  const [renewalOption, setRenewalOption] = useState("none")
-  const [customRenewal, setCustomRenewal] = useState("")
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingCert, setEditingCert] = useState<Certification | null>(null);
+  const [formData, setFormData] = useState<CertFormData>(defaultFormData);
+  const [renewalOption, setRenewalOption] = useState("none");
+  const [customRenewal, setCustomRenewal] = useState("");
 
   // Delete dialog
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [certToDelete, setCertToDelete] = useState<Certification | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [certToDelete, setCertToDelete] = useState<Certification | null>(null);
 
   const fetchCertifications = useCallback(async () => {
     try {
-      const res = await fetch("/api/organization/certifications")
-      if (!res.ok) throw new Error("Failed to fetch certifications")
-      const data = await res.json()
-      setCertifications(data)
+      const res = await fetch("/api/organization/certifications");
+      if (!res.ok) throw new Error("Failed to fetch certifications");
+      const data = await res.json();
+      setCertifications(data);
     } catch {
-      toast.error("Failed to load certifications")
+      toast.error("Failed to load certifications");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    fetchCertifications()
-  }, [fetchCertifications])
+    fetchCertifications();
+  }, [fetchCertifications]);
 
   const openCreateForm = () => {
-    setEditingCert(null)
-    setFormData(defaultFormData)
-    setRenewalOption("none")
-    setCustomRenewal("")
-    setFormOpen(true)
-  }
+    setEditingCert(null);
+    setFormData(defaultFormData);
+    setRenewalOption("none");
+    setCustomRenewal("");
+    setFormOpen(true);
+  };
 
   const openEditForm = (cert: Certification) => {
-    setEditingCert(cert)
+    setEditingCert(cert);
     setFormData({
       name: cert.name,
       description: cert.description || "",
@@ -175,41 +162,41 @@ export default function CertificationsPage() {
       requiredForEvents: cert.requiredForEvents,
       requiredForCompetitions: cert.requiredForCompetitions,
       isActive: cert.isActive,
-    })
+    });
 
-    const months = cert.renewalPeriodMonths
+    const months = cert.renewalPeriodMonths;
     if (months === null) {
-      setRenewalOption("none")
+      setRenewalOption("none");
     } else if (RENEWAL_OPTIONS.find((o) => o.value === String(months))) {
-      setRenewalOption(String(months))
+      setRenewalOption(String(months));
     } else {
-      setRenewalOption("custom")
-      setCustomRenewal(String(months))
+      setRenewalOption("custom");
+      setCustomRenewal(String(months));
     }
-    setFormOpen(true)
-  }
+    setFormOpen(true);
+  };
 
   const handleRenewalChange = (value: string) => {
-    setRenewalOption(value)
+    setRenewalOption(value);
     if (value === "none") {
-      setFormData((prev) => ({ ...prev, renewalPeriodMonths: null }))
+      setFormData((prev) => ({ ...prev, renewalPeriodMonths: null }));
     } else if (value === "custom") {
       setFormData((prev) => ({
         ...prev,
         renewalPeriodMonths: customRenewal ? parseInt(customRenewal) : null,
-      }))
+      }));
     } else {
-      setFormData((prev) => ({ ...prev, renewalPeriodMonths: parseInt(value) }))
+      setFormData((prev) => ({ ...prev, renewalPeriodMonths: parseInt(value) }));
     }
-  }
+  };
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
-      toast.error("Name is required")
-      return
+      toast.error("Name is required");
+      return;
     }
 
-    setSaving(true)
+    setSaving(true);
     try {
       const payload = {
         ...formData,
@@ -219,58 +206,58 @@ export default function CertificationsPage() {
           renewalOption === "custom" && customRenewal
             ? parseInt(customRenewal)
             : formData.renewalPeriodMonths,
-      }
+      };
 
       const url = editingCert
         ? `/api/organization/certifications/${editingCert.id}`
-        : "/api/organization/certifications"
-      const method = editingCert ? "PUT" : "POST"
+        : "/api/organization/certifications";
+      const method = editingCert ? "PUT" : "POST";
 
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      })
+      });
 
       if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || "Failed to save")
+        const err = await res.json();
+        throw new Error(err.error || "Failed to save");
       }
 
-      toast.success(editingCert ? "Certification updated" : "Certification created")
-      setFormOpen(false)
-      fetchCertifications()
+      toast.success(editingCert ? "Certification updated" : "Certification created");
+      setFormOpen(false);
+      fetchCertifications();
     } catch (error) {
-      toast.error((error as Error).message)
+      toast.error((error as Error).message);
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleDelete = async () => {
-    if (!certToDelete) return
-    setSaving(true)
+    if (!certToDelete) return;
+    setSaving(true);
     try {
       const res = await fetch(`/api/organization/certifications/${certToDelete.id}`, {
         method: "DELETE",
-      })
-      if (!res.ok) throw new Error("Failed to delete")
-      toast.success("Certification deleted")
-      setDeleteDialogOpen(false)
-      setCertToDelete(null)
-      fetchCertifications()
+      });
+      if (!res.ok) throw new Error("Failed to delete");
+      toast.success("Certification deleted");
+      setDeleteDialogOpen(false);
+      setCertToDelete(null);
+      fetchCertifications();
     } catch {
-      toast.error("Failed to delete certification")
+      toast.error("Failed to delete certification");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const filtered = certifications.filter(
     (c) =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       (c.description || "").toLowerCase().includes(search.toLowerCase())
-  )
+  );
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
@@ -278,8 +265,8 @@ export default function CertificationsPage() {
         <div>
           <h1 className="text-2xl font-bold">Certifications</h1>
           <p className="text-muted-foreground">
-            Define certification requirements for your organization.
-            Assign certifications to individual staff from their profile page.
+            Define certification requirements for your organization. Assign certifications to
+            individual staff from their profile page.
           </p>
         </div>
         <Button onClick={openCreateForm}>
@@ -359,17 +346,25 @@ export default function CertificationsPage() {
                       <TableCell>
                         <div className="flex gap-1 flex-wrap">
                           {cert.requiredForPrograms && (
-                            <Badge variant="outline" className="text-xs">Programs</Badge>
+                            <Badge variant="outline" className="text-xs">
+                              Programs
+                            </Badge>
                           )}
                           {cert.requiredForEvents && (
-                            <Badge variant="outline" className="text-xs">Events</Badge>
+                            <Badge variant="outline" className="text-xs">
+                              Events
+                            </Badge>
                           )}
                           {cert.requiredForCompetitions && (
-                            <Badge variant="outline" className="text-xs">Competitions</Badge>
+                            <Badge variant="outline" className="text-xs">
+                              Competitions
+                            </Badge>
                           )}
-                          {!cert.requiredForPrograms && !cert.requiredForEvents && !cert.requiredForCompetitions && (
-                            <span className="text-xs text-muted-foreground">None</span>
-                          )}
+                          {!cert.requiredForPrograms &&
+                            !cert.requiredForEvents &&
+                            !cert.requiredForCompetitions && (
+                              <span className="text-xs text-muted-foreground">None</span>
+                            )}
                         </div>
                       </TableCell>
                       <TableCell className="text-center">
@@ -402,8 +397,8 @@ export default function CertificationsPage() {
                             <DropdownMenuItem
                               className="text-destructive"
                               onClick={() => {
-                                setCertToDelete(cert)
-                                setDeleteDialogOpen(true)
+                                setCertToDelete(cert);
+                                setDeleteDialogOpen(true);
                               }}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
@@ -425,9 +420,7 @@ export default function CertificationsPage() {
       <Sheet open={formOpen} onOpenChange={setFormOpen}>
         <SheetContent className="sm:max-w-lg overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>
-              {editingCert ? "Edit Certification" : "New Certification"}
-            </SheetTitle>
+            <SheetTitle>{editingCert ? "Edit Certification" : "New Certification"}</SheetTitle>
             <SheetDescription>
               {editingCert
                 ? "Update certification details and requirements."
@@ -451,9 +444,7 @@ export default function CertificationsPage() {
               <Textarea
                 id="description"
                 value={formData.description}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, description: e.target.value }))
-                }
+                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                 placeholder="Brief description of this certification"
                 rows={2}
               />
@@ -464,9 +455,7 @@ export default function CertificationsPage() {
               <Textarea
                 id="criteria"
                 value={formData.criteria}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, criteria: e.target.value }))
-                }
+                onChange={(e) => setFormData((prev) => ({ ...prev, criteria: e.target.value }))}
                 placeholder="What is required to earn this certification? e.g. Complete ARC CPR course and pass written exam"
                 rows={3}
               />
@@ -529,9 +518,7 @@ export default function CertificationsPage() {
                   </div>
                 </div>
                 <div className="grid gap-1">
-                  <Label className="text-xs">
-                    Pass Threshold: {formData.passThreshold}
-                  </Label>
+                  <Label className="text-xs">Pass Threshold: {formData.passThreshold}</Label>
                   <Slider
                     min={formData.pointScaleMin}
                     max={formData.pointScaleMax}
@@ -565,11 +552,11 @@ export default function CertificationsPage() {
                   placeholder="Months"
                   value={customRenewal}
                   onChange={(e) => {
-                    setCustomRenewal(e.target.value)
+                    setCustomRenewal(e.target.value);
                     setFormData((prev) => ({
                       ...prev,
                       renewalPeriodMonths: e.target.value ? parseInt(e.target.value) : null,
-                    }))
+                    }));
                   }}
                 />
               )}
@@ -646,8 +633,8 @@ export default function CertificationsPage() {
           <DialogHeader>
             <DialogTitle>Delete Certification</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &ldquo;{certToDelete?.name}&rdquo;? This will
-              also remove all member certification records. This action cannot be undone.
+              Are you sure you want to delete &ldquo;{certToDelete?.name}&rdquo;? This will also
+              remove all member certification records. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -662,5 +649,5 @@ export default function CertificationsPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

@@ -58,30 +58,30 @@ export interface Program {
   organizationId: string;
   createdAt: string;
   updatedAt: string;
-  
+
   // Pricing
   pricingModel: PricingModel;
   basePrice: number | null;
   perSessionPrice: number | null;
   billingInterval: BillingInterval;
   recurringPrice: number | null;
-  
+
   // Registration style
   registrationType: RegistrationType;
-  
+
   // Schedule
   startDate: string | null;
   endDate: string | null;
   startTime: string | null;
   duration: number | null;
   rrule: string | null;
-  
+
   // Location
   facilityId: string | null;
-  
+
   // Display
   showCoachOnSite: boolean;
-  
+
   // Capacity
   capacity: number | null;
 
@@ -89,11 +89,11 @@ export interface Program {
   waitlistEnabled: boolean;
   waitlistAutoPromote: boolean;
   waitlistCapacity: number | null;
-  
+
   // Age restrictions
   minAge: number | null;
   maxAge: number | null;
-  
+
   // Space capacity
   hasSpaceRestriction: boolean;
   spaceCapacityMode: SpaceCapacityMode;
@@ -107,10 +107,10 @@ export interface Program {
   hasPassRestriction: boolean;
   hasWaiverRestriction: boolean;
   hasMedicalRequirement: boolean;
-  
+
   // Gender restriction values
   allowedGenders: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[];
-  
+
   // Registration Window
   registrationStartDate: string | null;
   registrationStartTime: string | null;
@@ -151,7 +151,7 @@ export interface ProgramInstance {
   organizationId: string;
   createdAt: string;
   updatedAt: string;
-  
+
   // Relations
   program?: Program;
   facility?: {
@@ -175,7 +175,7 @@ export interface InstanceRegistration {
   status: RegistrationStatus;
   createdAt: string;
   updatedAt: string;
-  
+
   // Relations
   programInstance?: ProgramInstance;
   athlete?: {

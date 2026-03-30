@@ -40,19 +40,18 @@ const createRuleSchema = z.object({
     smsBody: z.string().optional(),
   }),
   recipientConfig: z.object({
-    recipientType: z.enum([
-      "GUARDIANS",
-      "MEMBERSHIP_HOLDERS",
-      "INTERNAL_USERS",
-      "CUSTOM",
-    ]).default("GUARDIANS"),
-    filters: z.object({
-      membershipGroupIds: z.array(z.string()).optional(),
-      membershipStatuses: z.array(z.string()).optional(),
-      athleteStatuses: z.array(z.string()).optional(),
-      userRoles: z.array(z.string()).optional(),
-      includeInactive: z.boolean().optional(),
-    }).optional(),
+    recipientType: z
+      .enum(["GUARDIANS", "MEMBERSHIP_HOLDERS", "INTERNAL_USERS", "CUSTOM"])
+      .default("GUARDIANS"),
+    filters: z
+      .object({
+        membershipGroupIds: z.array(z.string()).optional(),
+        membershipStatuses: z.array(z.string()).optional(),
+        athleteStatuses: z.array(z.string()).optional(),
+        userRoles: z.array(z.string()).optional(),
+        includeInactive: z.boolean().optional(),
+      })
+      .optional(),
     ccEmails: z.array(z.string().email()).optional(),
   }),
 });
@@ -86,10 +85,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching notification rules:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch notification rules" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch notification rules" }, { status: 500 });
   }
 }
 
@@ -128,15 +124,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(rule);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating notification rule:", error);
-    return NextResponse.json(
-      { error: "Failed to create notification rule" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create notification rule" }, { status: 500 });
   }
 }

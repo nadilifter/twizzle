@@ -20,8 +20,20 @@ export function generateInstanceDates(
   try {
     const rruleWithDtstart = `DTSTART:${formatDtstartUTC(startDate)}\nRRULE:${rruleString}`;
     const rule = RRule.fromString(rruleWithDtstart);
-    const startBound = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate(), 0, 0, 0));
-    const endBound = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate(), 23, 59, 59, 999));
+    const startBound = new Date(
+      Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate(), 0, 0, 0)
+    );
+    const endBound = new Date(
+      Date.UTC(
+        endDate.getUTCFullYear(),
+        endDate.getUTCMonth(),
+        endDate.getUTCDate(),
+        23,
+        59,
+        59,
+        999
+      )
+    );
     return rule.between(startBound, endBound, true);
   } catch (error) {
     console.error("Error parsing RRULE:", error);

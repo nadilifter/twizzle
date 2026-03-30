@@ -15,7 +15,7 @@ const TOKEN_EXPIRATION_MS = 60 * 60 * 1000;
 
 /**
  * POST /api/auth/forgot-password
- * 
+ *
  * Request a password reset email. Always returns success to prevent user enumeration.
  * If the user exists, sends a reset email. If not, sends a "no account" notification.
  */
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     // Apply rate limiting
     const ip = getClientIp(request);
     const rateLimit = await checkRateLimit(ip, "password-reset", RATE_LIMITS.passwordReset);
-    
+
     if (!rateLimit.success) {
       return NextResponse.json(
         {
@@ -104,7 +104,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        message: "If an account exists with this email, you will receive a password reset link shortly.",
+        message:
+          "If an account exists with this email, you will receive a password reset link shortly.",
       },
       {
         headers: rateLimitHeaders(rateLimit),
@@ -112,10 +113,7 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Forgot password error:", error);
     return NextResponse.json(

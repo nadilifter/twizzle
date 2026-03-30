@@ -1,15 +1,22 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useSession } from "next-auth/react"
-import { useParams, useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { PhoneInput } from "@/components/ui/phone-input"
-import { isValidPhoneNumber } from "react-phone-number-input"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useParams, useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { isValidPhoneNumber } from "react-phone-number-input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -18,29 +25,29 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Loader2, Plus, Pencil, Trash2, Star, MapPin, User } from "lucide-react"
-import { toast } from "sonner"
+} from "@/components/ui/dialog";
+import { Loader2, Plus, Pencil, Trash2, Star, MapPin, User } from "lucide-react";
+import { toast } from "sonner";
 
 interface UserContact {
-  id: string
-  firstName: string
-  lastName: string
-  email: string
-  phone: string
-  relationship: string | null
-  isPrimary: boolean
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  relationship: string | null;
+  isPrimary: boolean;
 }
 
 interface UserBillingAddress {
-  id: string
-  label: string | null
-  street: string
-  city: string
-  stateProvince: string | null
-  postalCode: string
-  country: string
-  isPrimary: boolean
+  id: string;
+  label: string | null;
+  street: string;
+  city: string;
+  stateProvince: string | null;
+  postalCode: string;
+  country: string;
+  isPrimary: boolean;
 }
 
 const emptyContact = {
@@ -49,7 +56,7 @@ const emptyContact = {
   email: "",
   phone: "",
   relationship: "",
-}
+};
 
 const emptyAddress = {
   label: "",
@@ -57,133 +64,138 @@ const emptyAddress = {
   city: "",
   stateProvince: "",
   postalCode: "",
-}
+};
 
 export default function AccountPage() {
-  const { slug } = useParams<{ slug: string }>()
-  const { data: session, status } = useSession()
-  const router = useRouter()
+  const { slug } = useParams<{ slug: string }>();
+  const { data: session, status } = useSession();
+  const router = useRouter();
 
-  const [contacts, setContacts] = useState<UserContact[]>([])
-  const [addresses, setAddresses] = useState<UserBillingAddress[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [contacts, setContacts] = useState<UserContact[]>([]);
+  const [addresses, setAddresses] = useState<UserBillingAddress[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Contact form state
-  const [contactDialogOpen, setContactDialogOpen] = useState(false)
-  const [editingContact, setEditingContact] = useState<UserContact | null>(null)
-  const [contactForm, setContactForm] = useState(emptyContact)
-  const [isSavingContact, setIsSavingContact] = useState(false)
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState<UserContact | null>(null);
+  const [contactForm, setContactForm] = useState(emptyContact);
+  const [isSavingContact, setIsSavingContact] = useState(false);
 
   // Address form state
-  const [addressDialogOpen, setAddressDialogOpen] = useState(false)
-  const [editingAddress, setEditingAddress] = useState<UserBillingAddress | null>(null)
-  const [addressForm, setAddressForm] = useState(emptyAddress)
-  const [isSavingAddress, setIsSavingAddress] = useState(false)
+  const [addressDialogOpen, setAddressDialogOpen] = useState(false);
+  const [editingAddress, setEditingAddress] = useState<UserBillingAddress | null>(null);
+  const [addressForm, setAddressForm] = useState(emptyAddress);
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/")
+      router.push("/");
     }
-  }, [status, slug, router])
+  }, [status, slug, router]);
 
   // Fetch contacts & addresses
   useEffect(() => {
-    if (!session?.user?.email) return
+    if (!session?.user?.email) return;
     const fetchData = async () => {
-      setIsLoading(true)
+      setIsLoading(true);
       try {
         const [contactsRes, addressesRes] = await Promise.all([
           fetch(`/api/user/contacts`),
           fetch(`/api/user/billing-addresses`),
-        ])
+        ]);
         if (contactsRes.ok) {
-          const data = await contactsRes.json()
-          setContacts(data.contacts || [])
+          const data = await contactsRes.json();
+          setContacts(data.contacts || []);
         }
         if (addressesRes.ok) {
-          const data = await addressesRes.json()
-          setAddresses(data.addresses || [])
+          const data = await addressesRes.json();
+          setAddresses(data.addresses || []);
         }
       } catch {
-        toast.error("Failed to load account data")
+        toast.error("Failed to load account data");
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
-    fetchData()
-  }, [session, slug])
+    };
+    fetchData();
+  }, [session, slug]);
 
   // ---- Contact CRUD ----
 
   const openNewContact = () => {
-    setEditingContact(null)
-    setContactForm(emptyContact)
-    setContactDialogOpen(true)
-  }
+    setEditingContact(null);
+    setContactForm(emptyContact);
+    setContactDialogOpen(true);
+  };
 
   const openEditContact = (contact: UserContact) => {
-    setEditingContact(contact)
+    setEditingContact(contact);
     setContactForm({
       firstName: contact.firstName,
       lastName: contact.lastName,
       email: contact.email,
       phone: contact.phone,
       relationship: contact.relationship || "",
-    })
-    setContactDialogOpen(true)
-  }
+    });
+    setContactDialogOpen(true);
+  };
 
   const saveContact = async () => {
-    if (!contactForm.firstName || !contactForm.lastName || !contactForm.email || !contactForm.phone) {
-      toast.error("Please fill in all required fields")
-      return
+    if (
+      !contactForm.firstName ||
+      !contactForm.lastName ||
+      !contactForm.email ||
+      !contactForm.phone
+    ) {
+      toast.error("Please fill in all required fields");
+      return;
     }
     if (!isValidPhoneNumber(contactForm.phone)) {
-      toast.error("Please enter a valid phone number")
-      return
+      toast.error("Please enter a valid phone number");
+      return;
     }
-    setIsSavingContact(true)
+    setIsSavingContact(true);
     try {
       if (editingContact) {
         const res = await fetch(`/api/user/contacts/${editingContact.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(contactForm),
-        })
-        if (!res.ok) throw new Error("Failed to update contact")
-        const { contact } = await res.json()
-        setContacts((prev) => prev.map((c) => (c.id === contact.id ? contact : c)))
-        toast.success("Contact updated")
+        });
+        if (!res.ok) throw new Error("Failed to update contact");
+        const { contact } = await res.json();
+        setContacts((prev) => prev.map((c) => (c.id === contact.id ? contact : c)));
+        toast.success("Contact updated");
       } else {
         const res = await fetch(`/api/user/contacts`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...contactForm, isPrimary: contacts.length === 0 }),
-        })
-        if (!res.ok) throw new Error("Failed to create contact")
-        const { contact } = await res.json()
-        setContacts((prev) => [...prev, contact])
-        toast.success("Contact added")
+        });
+        if (!res.ok) throw new Error("Failed to create contact");
+        const { contact } = await res.json();
+        setContacts((prev) => [...prev, contact]);
+        toast.success("Contact added");
       }
-      setContactDialogOpen(false)
+      setContactDialogOpen(false);
     } catch {
-      toast.error("Failed to save contact")
+      toast.error("Failed to save contact");
     } finally {
-      setIsSavingContact(false)
+      setIsSavingContact(false);
     }
-  }
+  };
 
   const deleteContact = async (contactId: string) => {
     try {
-      const res = await fetch(`/api/user/contacts/${contactId}`, { method: "DELETE" })
-      if (!res.ok) throw new Error("Failed to delete")
-      setContacts((prev) => prev.filter((c) => c.id !== contactId))
-      toast.success("Contact removed")
+      const res = await fetch(`/api/user/contacts/${contactId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
+      setContacts((prev) => prev.filter((c) => c.id !== contactId));
+      toast.success("Contact removed");
     } catch {
-      toast.error("Failed to delete contact")
+      toast.error("Failed to delete contact");
     }
-  }
+  };
 
   const setPrimaryContact = async (contactId: string) => {
     try {
@@ -191,83 +203,81 @@ export default function AccountPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isPrimary: true }),
-      })
-      if (!res.ok) throw new Error("Failed to update")
-      setContacts((prev) =>
-        prev.map((c) => ({ ...c, isPrimary: c.id === contactId }))
-      )
-      toast.success("Primary contact updated")
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      setContacts((prev) => prev.map((c) => ({ ...c, isPrimary: c.id === contactId })));
+      toast.success("Primary contact updated");
     } catch {
-      toast.error("Failed to set primary contact")
+      toast.error("Failed to set primary contact");
     }
-  }
+  };
 
   // ---- Address CRUD ----
 
   const openNewAddress = () => {
-    setEditingAddress(null)
-    setAddressForm(emptyAddress)
-    setAddressDialogOpen(true)
-  }
+    setEditingAddress(null);
+    setAddressForm(emptyAddress);
+    setAddressDialogOpen(true);
+  };
 
   const openEditAddress = (address: UserBillingAddress) => {
-    setEditingAddress(address)
+    setEditingAddress(address);
     setAddressForm({
       label: address.label || "",
       street: address.street,
       city: address.city,
       stateProvince: address.stateProvince || "",
       postalCode: address.postalCode,
-    })
-    setAddressDialogOpen(true)
-  }
+    });
+    setAddressDialogOpen(true);
+  };
 
   const saveAddress = async () => {
     if (!addressForm.street || !addressForm.city || !addressForm.postalCode) {
-      toast.error("Please fill in street, city, and postal code")
-      return
+      toast.error("Please fill in street, city, and postal code");
+      return;
     }
-    setIsSavingAddress(true)
+    setIsSavingAddress(true);
     try {
       if (editingAddress) {
         const res = await fetch(`/api/user/billing-addresses/${editingAddress.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(addressForm),
-        })
-        if (!res.ok) throw new Error("Failed to update address")
-        const { address } = await res.json()
-        setAddresses((prev) => prev.map((a) => (a.id === address.id ? address : a)))
-        toast.success("Address updated")
+        });
+        if (!res.ok) throw new Error("Failed to update address");
+        const { address } = await res.json();
+        setAddresses((prev) => prev.map((a) => (a.id === address.id ? address : a)));
+        toast.success("Address updated");
       } else {
         const res = await fetch(`/api/user/billing-addresses`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...addressForm, isPrimary: addresses.length === 0 }),
-        })
-        if (!res.ok) throw new Error("Failed to create address")
-        const { address } = await res.json()
-        setAddresses((prev) => [...prev, address])
-        toast.success("Address added")
+        });
+        if (!res.ok) throw new Error("Failed to create address");
+        const { address } = await res.json();
+        setAddresses((prev) => [...prev, address]);
+        toast.success("Address added");
       }
-      setAddressDialogOpen(false)
+      setAddressDialogOpen(false);
     } catch {
-      toast.error("Failed to save address")
+      toast.error("Failed to save address");
     } finally {
-      setIsSavingAddress(false)
+      setIsSavingAddress(false);
     }
-  }
+  };
 
   const deleteAddress = async (addressId: string) => {
     try {
-      const res = await fetch(`/api/user/billing-addresses/${addressId}`, { method: "DELETE" })
-      if (!res.ok) throw new Error("Failed to delete")
-      setAddresses((prev) => prev.filter((a) => a.id !== addressId))
-      toast.success("Address removed")
+      const res = await fetch(`/api/user/billing-addresses/${addressId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
+      setAddresses((prev) => prev.filter((a) => a.id !== addressId));
+      toast.success("Address removed");
     } catch {
-      toast.error("Failed to delete address")
+      toast.error("Failed to delete address");
     }
-  }
+  };
 
   const setPrimaryAddress = async (addressId: string) => {
     try {
@@ -275,16 +285,14 @@ export default function AccountPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isPrimary: true }),
-      })
-      if (!res.ok) throw new Error("Failed to update")
-      setAddresses((prev) =>
-        prev.map((a) => ({ ...a, isPrimary: a.id === addressId }))
-      )
-      toast.success("Primary address updated")
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      setAddresses((prev) => prev.map((a) => ({ ...a, isPrimary: a.id === addressId })));
+      toast.success("Primary address updated");
     } catch {
-      toast.error("Failed to set primary address")
+      toast.error("Failed to set primary address");
     }
-  }
+  };
 
   if (status === "loading" || isLoading) {
     return (
@@ -292,14 +300,15 @@ export default function AccountPage() {
         <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
         <p className="text-muted-foreground">Loading your account...</p>
       </div>
-    )
+    );
   }
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-4xl">
       <h1 className="text-3xl font-bold mb-2">My Account</h1>
       <p className="text-muted-foreground mb-8">
-        Manage your contact information and billing addresses. These will be pre-filled during checkout.
+        Manage your contact information and billing addresses. These will be pre-filled during
+        checkout.
       </p>
 
       {/* Contacts Section */}
@@ -371,7 +380,9 @@ export default function AccountPage() {
                     id="contact-relationship"
                     placeholder="e.g. Parent, Guardian, Sibling"
                     value={contactForm.relationship}
-                    onChange={(e) => setContactForm((f) => ({ ...f, relationship: e.target.value }))}
+                    onChange={(e) =>
+                      setContactForm((f) => ({ ...f, relationship: e.target.value }))
+                    }
                   />
                 </div>
               </div>
@@ -507,7 +518,9 @@ export default function AccountPage() {
                       id="address-stateProvince"
                       autoComplete="address-level1"
                       value={addressForm.stateProvince}
-                      onChange={(e) => setAddressForm((f) => ({ ...f, stateProvince: e.target.value }))}
+                      onChange={(e) =>
+                        setAddressForm((f) => ({ ...f, stateProvince: e.target.value }))
+                      }
                     />
                   </div>
                 </div>
@@ -563,8 +576,7 @@ export default function AccountPage() {
                   <p>{address.street}</p>
                   <p>
                     {address.city}
-                    {address.stateProvince ? `, ${address.stateProvince}` : ""}{" "}
-                    {address.postalCode}
+                    {address.stateProvince ? `, ${address.stateProvince}` : ""} {address.postalCode}
                   </p>
                   <p>{address.country}</p>
                 </CardContent>
@@ -595,5 +607,5 @@ export default function AccountPage() {
         )}
       </div>
     </div>
-  )
+  );
 }

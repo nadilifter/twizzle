@@ -38,9 +38,7 @@ interface UseVisitorMetricsReturn {
  * Hook to fetch visitor metrics from the analytics API
  * Returns daily breakdown by device type (mobile vs desktop)
  */
-export function useVisitorMetrics(
-  options: UseVisitorMetricsOptions = {}
-): UseVisitorMetricsReturn {
+export function useVisitorMetrics(options: UseVisitorMetricsOptions = {}): UseVisitorMetricsReturn {
   const { startDate, endDate, autoFetch = true } = options;
 
   const [data, setData] = useState<VisitorMetrics | null>(null);

@@ -13,10 +13,7 @@ const featureOverrideSchema = z.object({
  * GET /api/superadmin/organizations/[id]/features
  * Returns the plan defaults, overrides, and resolved features for an organization.
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.isSuperAdmin) {
@@ -48,9 +45,7 @@ export async function GET(
     const resolved = await getOrganizationFeatures(id);
 
     return NextResponse.json({
-      plan: subscription?.plan
-        ? { id: subscription.plan.id, name: subscription.plan.name }
-        : null,
+      plan: subscription?.plan ? { id: subscription.plan.id, name: subscription.plan.name } : null,
       planDefaults: planToggles,
       overrides: override?.featureToggles ?? null,
       resolved,
@@ -59,10 +54,7 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error fetching org features:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch features" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch features" }, { status: 500 });
   }
 }
 
@@ -71,10 +63,7 @@ export async function GET(
  * Set feature overrides for an organization.
  * Send only the keys you want to override; send empty object to clear all overrides.
  */
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.isSuperAdmin) {
@@ -101,10 +90,7 @@ export async function PUT(
     for (const [key, value] of Object.entries(rawToggles)) {
       const remappedKey = LEGACY_KEY_MAP[key] || key;
       if (!FEATURE_KEYS.includes(remappedKey as any)) {
-        return NextResponse.json(
-          { error: `Invalid feature key: ${key}` },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: `Invalid feature key: ${key}` }, { status: 400 });
       }
       featureToggles[remappedKey] = value;
     }
@@ -133,9 +119,6 @@ export async function PUT(
     return NextResponse.json({ resolved });
   } catch (error: any) {
     console.error("Error updating org features:", error);
-    return NextResponse.json(
-      { error: "Failed to update features" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update features" }, { status: 500 });
   }
 }

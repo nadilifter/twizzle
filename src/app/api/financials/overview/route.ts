@@ -11,11 +11,11 @@ export async function GET(request: NextRequest) {
     }
 
     const organizationId = session.user.organizationId;
-    
+
     if (!organizationId) {
       return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
-    
+
     const now = new Date();
     const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -172,7 +172,10 @@ export async function GET(request: NextRequest) {
     const monthlyRevenueMap = new Map<string, number>();
     for (const payment of paymentsForChart) {
       if (payment.processedAt) {
-        const monthKey = payment.processedAt.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+        const monthKey = payment.processedAt.toLocaleDateString("en-US", {
+          month: "short",
+          year: "numeric",
+        });
         const current = monthlyRevenueMap.get(monthKey) || 0;
         monthlyRevenueMap.set(monthKey, current + Number(payment.amount));
       }
@@ -226,9 +229,8 @@ export async function GET(request: NextRequest) {
     // Calculate month-over-month change
     const currentRevenue = Number(revenueThisMonth._sum.amount || 0);
     const previousRevenue = Number(revenueLastMonth._sum.amount || 0);
-    const revenueChange = previousRevenue > 0 
-      ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 
-      : 0;
+    const revenueChange =
+      previousRevenue > 0 ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 : 0;
 
     return NextResponse.json({
       revenue: {
@@ -284,9 +286,6 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Error fetching financial overview:", error);
     console.error("Stack trace:", error instanceof Error ? error.stack : "No stack");
-    return NextResponse.json(
-      { error: "Failed to fetch financial overview" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch financial overview" }, { status: 500 });
   }
 }

@@ -1,8 +1,17 @@
-import { Check, Download, AlertCircle, Lock, MessageSquare, Mail, HardDrive, Tag } from "lucide-react"
-import { redirect } from "next/navigation"
+import {
+  Check,
+  Download,
+  AlertCircle,
+  Lock,
+  MessageSquare,
+  Mail,
+  HardDrive,
+  Tag,
+} from "lucide-react";
+import { redirect } from "next/navigation";
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -10,9 +19,9 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
-import { Separator } from "@/components/ui/separator"
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -20,32 +29,28 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert"
-import { getAuthSession } from "@/lib/auth"
-import { db } from "@/lib/db"
-import { PlanSelector } from "./plan-selector"
-import { getUsageStats } from "@/lib/sms-service"
-import { getEmailUsageStats, checkEmailUsageLimits } from "@/lib/email-campaign-service"
-import { PaymentMethodsCard } from "@/components/billing/payment-methods-card"
-import { syncPaymentMethodsFromAdyen } from "@/lib/payment-method-sync"
+} from "@/components/ui/table";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { getAuthSession } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { PlanSelector } from "./plan-selector";
+import { getUsageStats } from "@/lib/sms-service";
+import { getEmailUsageStats, checkEmailUsageLimits } from "@/lib/email-campaign-service";
+import { PaymentMethodsCard } from "@/components/billing/payment-methods-card";
+import { syncPaymentMethodsFromAdyen } from "@/lib/payment-method-sync";
 
 export default async function BillingPage() {
-  const session = await getAuthSession()
-  
+  const session = await getAuthSession();
+
   if (!session?.user?.organizationId) {
-    redirect("/login")
+    redirect("/login");
   }
 
   // Sync payment methods with Adyen before reading local records
   try {
-    await syncPaymentMethodsFromAdyen(session.user.organizationId)
+    await syncPaymentMethodsFromAdyen(session.user.organizationId);
   } catch (error) {
-    console.error("Adyen payment method sync failed:", error)
+    console.error("Adyen payment method sync failed:", error);
   }
 
   // Fetch organization with subscription and payment methods
@@ -60,19 +65,16 @@ export default async function BillingPage() {
             members: true,
             programs: true,
             events: true,
-          }
+          },
         },
         subscription: {
           include: {
-            plan: true
-          }
+            plan: true,
+          },
         },
         organizationPaymentMethods: {
           where: { isActive: true },
-          orderBy: [
-            { isDefault: "desc" },
-            { createdAt: "desc" },
-          ],
+          orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
         },
       },
     }),
@@ -81,7 +83,7 @@ export default async function BillingPage() {
         isActive: true,
         isPublic: true,
       },
-      orderBy: { displayOrder: "asc" }
+      orderBy: { displayOrder: "asc" },
     }),
     db.invoice.aggregate({
       where: {
@@ -90,25 +92,25 @@ export default async function BillingPage() {
       },
       _sum: { total: true },
     }),
-  ])
+  ]);
 
   if (!organization) {
-    redirect("/login")
+    redirect("/login");
   }
 
-  const totalRevenue = Number(totalCollected._sum.total ?? 0)
-  
-  const currentPlan = organization.subscription?.plan
-  const subscription = organization.subscription
+  const totalRevenue = Number(totalCollected._sum.total ?? 0);
+
+  const currentPlan = organization.subscription?.plan;
+  const subscription = organization.subscription;
 
   // Get SMS usage
-  const smsUsage = await getUsageStats(session.user.organizationId)
+  const smsUsage = await getUsageStats(session.user.organizationId);
 
   // Get Email usage
   const [emailStats, emailLimits] = await Promise.all([
     getEmailUsageStats(session.user.organizationId),
     checkEmailUsageLimits(session.user.organizationId),
-  ])
+  ]);
 
   // Get Storage usage (aggregate Media.fileSize + RegistrationFile.fileSize)
   const [mediaStorageUsage, regFileStorageUsage] = await Promise.all([
@@ -122,26 +124,27 @@ export default async function BillingPage() {
       _sum: { fileSize: true },
       _count: true,
     }),
-  ])
-  const storageUsedBytes = (mediaStorageUsage._sum.fileSize || 0) + (regFileStorageUsage._sum.fileSize || 0)
-  const storageUsedMB = Math.round(storageUsedBytes / (1024 * 1024) * 100) / 100
-  const totalFileCount = mediaStorageUsage._count + regFileStorageUsage._count
+  ]);
+  const storageUsedBytes =
+    (mediaStorageUsage._sum.fileSize || 0) + (regFileStorageUsage._sum.fileSize || 0);
+  const storageUsedMB = Math.round((storageUsedBytes / (1024 * 1024)) * 100) / 100;
+  const totalFileCount = mediaStorageUsage._count + regFileStorageUsage._count;
 
   // Get Membership types count
   const membershipTypesCount = await db.membershipGroup.count({
     where: { organizationId: session.user.organizationId },
-  })
+  });
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount)
-  }
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(amount);
+  };
 
   const formatPercent = (amount: number) => {
-    return `${(amount * 100).toFixed(1)}%`
-  }
+    return `${(amount * 100).toFixed(1)}%`;
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -159,7 +162,8 @@ export default async function BillingPage() {
           <Lock className="h-4 w-4" />
           <AlertTitle>Subscription Locked</AlertTitle>
           <AlertDescription>
-            {subscription.lockedReason || "Your subscription has been locked by an administrator. Contact support if you need to make changes."}
+            {subscription.lockedReason ||
+              "Your subscription has been locked by an administrator. Contact support if you need to make changes."}
           </AlertDescription>
         </Alert>
       )}
@@ -169,7 +173,8 @@ export default async function BillingPage() {
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>No Subscription</AlertTitle>
           <AlertDescription>
-            Your organization does not have an active subscription. During the beta period, all features are available. Select a plan below to get started.
+            Your organization does not have an active subscription. During the beta period, all
+            features are available. Select a plan below to get started.
           </AlertDescription>
         </Alert>
       )}
@@ -183,7 +188,8 @@ export default async function BillingPage() {
               <CardDescription>
                 {currentPlan ? (
                   <>
-                    {organization.name} is on the <span className="font-medium text-foreground">{currentPlan.name}</span> plan.
+                    {organization.name} is on the{" "}
+                    <span className="font-medium text-foreground">{currentPlan.name}</span> plan.
                   </>
                 ) : (
                   <>No plan selected. Using beta access.</>
@@ -208,8 +214,12 @@ export default async function BillingPage() {
               <>
                 <div className="flex items-center justify-between">
                   <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-bold">{formatCurrency(Number(currentPlan.monthlyPrice))}</span>
-                    <span className="text-muted-foreground">/{subscription?.billingCycle.toLowerCase()}</span>
+                    <span className="text-3xl font-bold">
+                      {formatCurrency(Number(currentPlan.monthlyPrice))}
+                    </span>
+                    <span className="text-muted-foreground">
+                      /{subscription?.billingCycle.toLowerCase()}
+                    </span>
                   </div>
                   {subscription && (
                     <div className="text-sm text-muted-foreground">
@@ -217,14 +227,17 @@ export default async function BillingPage() {
                     </div>
                   )}
                 </div>
-                
+
                 <div className="grid gap-2 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-primary" />
                     <span>
-                      Transaction Fee: <strong>
-                        {formatPercent(Number(currentPlan.transactionFee))} + {formatCurrency(Number(currentPlan.perTransactionFee))}
-                      </strong> per transaction
+                      Transaction Fee:{" "}
+                      <strong>
+                        {formatPercent(Number(currentPlan.transactionFee))} +{" "}
+                        {formatCurrency(Number(currentPlan.perTransactionFee))}
+                      </strong>{" "}
+                      per transaction
                     </span>
                   </div>
                   {(currentPlan.features as string[]).map((feature, index) => (
@@ -243,9 +256,9 @@ export default async function BillingPage() {
           </CardContent>
           {!subscription?.isLocked && (
             <CardFooter>
-              <PlanSelector 
+              <PlanSelector
                 currentPlanId={subscription?.planId || null}
-                plans={availablePlans.map(p => ({
+                plans={availablePlans.map((p) => ({
                   id: p.id,
                   name: p.name,
                   slug: p.slug,
@@ -289,29 +302,43 @@ export default async function BillingPage() {
             <div className="flex items-baseline justify-between">
               <span className="text-sm font-medium">Athletes</span>
               <div className="text-right">
-                <span className="text-2xl font-bold">{organization._count.organizationAthletes}</span>
-                <span className="text-sm text-muted-foreground"> / {currentPlan?.maxAthletes ?? "∞"}</span>
+                <span className="text-2xl font-bold">
+                  {organization._count.organizationAthletes}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {" "}
+                  / {currentPlan?.maxAthletes ?? "∞"}
+                </span>
               </div>
             </div>
             <div className="flex items-baseline justify-between">
               <span className="text-sm font-medium">Users</span>
               <div className="text-right">
                 <span className="text-2xl font-bold">{organization._count.members}</span>
-                <span className="text-sm text-muted-foreground"> / {currentPlan?.maxUsers ?? "∞"}</span>
+                <span className="text-sm text-muted-foreground">
+                  {" "}
+                  / {currentPlan?.maxUsers ?? "∞"}
+                </span>
               </div>
             </div>
             <div className="flex items-baseline justify-between">
               <span className="text-sm font-medium">Programs</span>
               <div className="text-right">
                 <span className="text-2xl font-bold">{organization._count.programs}</span>
-                <span className="text-sm text-muted-foreground"> / {currentPlan?.maxPrograms ?? "∞"}</span>
+                <span className="text-sm text-muted-foreground">
+                  {" "}
+                  / {currentPlan?.maxPrograms ?? "∞"}
+                </span>
               </div>
             </div>
             <div className="flex items-baseline justify-between">
               <span className="text-sm font-medium">Events</span>
               <div className="text-right">
                 <span className="text-2xl font-bold">{organization._count.events}</span>
-                <span className="text-sm text-muted-foreground"> / {currentPlan?.maxEvents ?? "∞"}</span>
+                <span className="text-sm text-muted-foreground">
+                  {" "}
+                  / {currentPlan?.maxEvents ?? "∞"}
+                </span>
               </div>
             </div>
             <div className="flex items-baseline justify-between">
@@ -325,18 +352,27 @@ export default async function BillingPage() {
               <span className="text-sm font-medium">Membership Types</span>
               <div className="text-right">
                 <span className="text-2xl font-bold">{membershipTypesCount}</span>
-                <span className="text-sm text-muted-foreground"> / {currentPlan?.maxMembershipTypes ?? "∞"}</span>
+                <span className="text-sm text-muted-foreground">
+                  {" "}
+                  / {currentPlan?.maxMembershipTypes ?? "∞"}
+                </span>
               </div>
             </div>
             <Separator />
             <div className="flex items-baseline justify-between">
               <span className="text-sm font-medium">Storage Used</span>
               <div className="text-right">
-                <span className="text-2xl font-bold">{storageUsedMB >= 1000 ? `${(storageUsedMB / 1000).toFixed(1)} GB` : `${storageUsedMB} MB`}</span>
+                <span className="text-2xl font-bold">
+                  {storageUsedMB >= 1000
+                    ? `${(storageUsedMB / 1000).toFixed(1)} GB`
+                    : `${storageUsedMB} MB`}
+                </span>
                 <span className="text-sm text-muted-foreground">
                   {" / "}
-                  {currentPlan?.maxStorageMB 
-                    ? (currentPlan.maxStorageMB >= 1000 ? `${currentPlan.maxStorageMB / 1000} GB` : `${currentPlan.maxStorageMB} MB`)
+                  {currentPlan?.maxStorageMB
+                    ? currentPlan.maxStorageMB >= 1000
+                      ? `${currentPlan.maxStorageMB / 1000} GB`
+                      : `${currentPlan.maxStorageMB} MB`
                     : "∞"}
                 </span>
               </div>
@@ -360,9 +396,7 @@ export default async function BillingPage() {
                   <MessageSquare className="h-5 w-5" />
                   SMS Usage
                 </CardTitle>
-                <CardDescription>
-                  Your SMS messaging usage for this billing period
-                </CardDescription>
+                <CardDescription>Your SMS messaging usage for this billing period</CardDescription>
               </div>
               {smsUsage && smsUsage.overageMessages > 0 && (
                 <Badge variant="outline" className="text-amber-600 border-amber-300">
@@ -379,8 +413,11 @@ export default async function BillingPage() {
                   {smsUsage?.messagesSent ?? 0} / {currentPlan.smsIncluded}
                 </span>
               </div>
-              <Progress 
-                value={Math.min(100, ((smsUsage?.messagesSent ?? 0) / currentPlan.smsIncluded) * 100)} 
+              <Progress
+                value={Math.min(
+                  100,
+                  ((smsUsage?.messagesSent ?? 0) / currentPlan.smsIncluded) * 100
+                )}
                 className="h-2"
               />
             </div>
@@ -400,7 +437,12 @@ export default async function BillingPage() {
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold">
-                  {smsUsage ? Math.round((smsUsage.messagesDelivered / Math.max(1, smsUsage.messagesSent)) * 100) : 0}%
+                  {smsUsage
+                    ? Math.round(
+                        (smsUsage.messagesDelivered / Math.max(1, smsUsage.messagesSent)) * 100
+                      )
+                    : 0}
+                  %
                 </div>
                 <div className="text-xs text-muted-foreground">Delivery Rate</div>
               </div>
@@ -411,8 +453,9 @@ export default async function BillingPage() {
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Overage Charges</AlertTitle>
                 <AlertDescription>
-                  You&apos;ve sent {smsUsage.overageMessages} messages over your plan limit.
-                  Overage cost: {formatCurrency(smsUsage.overageCost)} ({formatCurrency(Number(currentPlan.smsOverageRate))}/message)
+                  You&apos;ve sent {smsUsage.overageMessages} messages over your plan limit. Overage
+                  cost: {formatCurrency(smsUsage.overageCost)} (
+                  {formatCurrency(Number(currentPlan.smsOverageRate))}/message)
                 </AlertDescription>
               </Alert>
             )}
@@ -430,9 +473,7 @@ export default async function BillingPage() {
                   <Mail className="h-5 w-5" />
                   Email Usage
                 </CardTitle>
-                <CardDescription>
-                  Your email campaign usage for this billing period
-                </CardDescription>
+                <CardDescription>Your email campaign usage for this billing period</CardDescription>
               </div>
               {emailLimits && emailLimits.used > emailLimits.included && (
                 <Badge variant="outline" className="text-amber-600 border-amber-300">
@@ -449,8 +490,8 @@ export default async function BillingPage() {
                   {emailLimits?.used ?? 0} / {currentPlan.emailIncluded}
                 </span>
               </div>
-              <Progress 
-                value={Math.min(100, ((emailLimits?.used ?? 0) / currentPlan.emailIncluded) * 100)} 
+              <Progress
+                value={Math.min(100, ((emailLimits?.used ?? 0) / currentPlan.emailIncluded) * 100)}
                 className="h-2"
               />
             </div>
@@ -484,16 +525,23 @@ export default async function BillingPage() {
               </div>
             )}
 
-            {emailLimits && emailLimits.used > emailLimits.included && currentPlan.emailOverageRate && (
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Overage Charges</AlertTitle>
-                <AlertDescription>
-                  You&apos;ve sent {emailLimits.used - emailLimits.included} emails over your plan limit.
-                  Overage cost: {formatCurrency((emailLimits.used - emailLimits.included) * Number(currentPlan.emailOverageRate))} ({formatCurrency(Number(currentPlan.emailOverageRate))}/email)
-                </AlertDescription>
-              </Alert>
-            )}
+            {emailLimits &&
+              emailLimits.used > emailLimits.included &&
+              currentPlan.emailOverageRate && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Overage Charges</AlertTitle>
+                  <AlertDescription>
+                    You&apos;ve sent {emailLimits.used - emailLimits.included} emails over your plan
+                    limit. Overage cost:{" "}
+                    {formatCurrency(
+                      (emailLimits.used - emailLimits.included) *
+                        Number(currentPlan.emailOverageRate)
+                    )}{" "}
+                    ({formatCurrency(Number(currentPlan.emailOverageRate))}/email)
+                  </AlertDescription>
+                </Alert>
+              )}
           </CardContent>
         </Card>
       )}
@@ -508,9 +556,7 @@ export default async function BillingPage() {
                   <HardDrive className="h-5 w-5" />
                   Storage Usage
                 </CardTitle>
-                <CardDescription>
-                  Your file storage usage
-                </CardDescription>
+                <CardDescription>Your file storage usage</CardDescription>
               </div>
               {storageUsedMB > currentPlan.maxStorageMB && (
                 <Badge variant="outline" className="text-amber-600 border-amber-300">
@@ -524,20 +570,24 @@ export default async function BillingPage() {
               <div className="flex justify-between text-sm">
                 <span>Storage Used</span>
                 <span className="font-medium">
-                  {storageUsedMB >= 1000 ? `${(storageUsedMB / 1000).toFixed(2)} GB` : `${storageUsedMB} MB`} / {currentPlan.maxStorageMB >= 1000 ? `${currentPlan.maxStorageMB / 1000} GB` : `${currentPlan.maxStorageMB} MB`}
+                  {storageUsedMB >= 1000
+                    ? `${(storageUsedMB / 1000).toFixed(2)} GB`
+                    : `${storageUsedMB} MB`}{" "}
+                  /{" "}
+                  {currentPlan.maxStorageMB >= 1000
+                    ? `${currentPlan.maxStorageMB / 1000} GB`
+                    : `${currentPlan.maxStorageMB} MB`}
                 </span>
               </div>
-              <Progress 
-                value={Math.min(100, (storageUsedMB / currentPlan.maxStorageMB) * 100)} 
+              <Progress
+                value={Math.min(100, (storageUsedMB / currentPlan.maxStorageMB) * 100)}
                 className="h-2"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4 pt-2">
               <div className="text-center">
-                <div className="text-2xl font-bold">
-                  {totalFileCount}
-                </div>
+                <div className="text-2xl font-bold">{totalFileCount}</div>
                 <div className="text-xs text-muted-foreground">Total Files</div>
               </div>
               <div className="text-center">
@@ -553,7 +603,8 @@ export default async function BillingPage() {
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Storage Limit Exceeded</AlertTitle>
                 <AlertDescription>
-                  You&apos;ve exceeded your storage limit. Please delete some files or upgrade your plan to continue uploading.
+                  You&apos;ve exceeded your storage limit. Please delete some files or upgrade your
+                  plan to continue uploading.
                 </AlertDescription>
               </Alert>
             )}
@@ -563,7 +614,7 @@ export default async function BillingPage() {
 
       <div className="grid gap-6 md:grid-cols-2">
         <PaymentMethodsCard
-          paymentMethods={organization.organizationPaymentMethods.map(pm => ({
+          paymentMethods={organization.organizationPaymentMethods.map((pm) => ({
             id: pm.id,
             storedPaymentMethodId: pm.storedPaymentMethodId,
             type: pm.type,
@@ -590,7 +641,9 @@ export default async function BillingPage() {
               <div className="text-center">
                 <Download className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                 <p className="font-medium">No invoices yet</p>
-                <p className="text-sm">Billing history will appear here once subscription billing begins.</p>
+                <p className="text-sm">
+                  Billing history will appear here once subscription billing begins.
+                </p>
               </div>
             </div>
           </CardContent>
@@ -623,16 +676,17 @@ export default async function BillingPage() {
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       {plan.name}
-                      {plan.isPopular && (
-                        <Badge variant="secondary">Popular</Badge>
-                      )}
+                      {plan.isPopular && <Badge variant="secondary">Popular</Badge>}
                     </div>
                   </TableCell>
                   <TableCell>
-                    {Number(plan.monthlyPrice) === 0 ? "Free" : `${formatCurrency(Number(plan.monthlyPrice))}/mo`}
+                    {Number(plan.monthlyPrice) === 0
+                      ? "Free"
+                      : `${formatCurrency(Number(plan.monthlyPrice))}/mo`}
                   </TableCell>
                   <TableCell>
-                    {formatPercent(Number(plan.transactionFee))} + {formatCurrency(Number(plan.perTransactionFee))}
+                    {formatPercent(Number(plan.transactionFee))} +{" "}
+                    {formatCurrency(Number(plan.perTransactionFee))}
                   </TableCell>
                   <TableCell>
                     <span className="text-sm text-muted-foreground">
@@ -653,7 +707,7 @@ export default async function BillingPage() {
                     ) : (
                       <PlanSelector
                         currentPlanId={subscription?.planId || null}
-                        plans={availablePlans.map(p => ({
+                        plans={availablePlans.map((p) => ({
                           id: p.id,
                           name: p.name,
                           slug: p.slug,
@@ -694,5 +748,5 @@ export default async function BillingPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { ClipboardList, Users, CalendarOff, ArrowRight } from "lucide-react"
-import Link from "next/link"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ClipboardList, Users, CalendarOff, ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 export default function RegistrationsPage() {
   return (
@@ -30,7 +30,7 @@ export default function RegistrationsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Create and manage programs that athletes can register for. Set up membership tiers, 
+              Create and manage programs that athletes can register for. Set up membership tiers,
               requirements, and assign coaches.
             </p>
             <Button asChild variant="outline" className="w-full">
@@ -56,8 +56,8 @@ export default function RegistrationsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Manage national holidays and custom closures. Programs will not create sessions
-              on enabled holiday dates.
+              Manage national holidays and custom closures. Programs will not create sessions on
+              enabled holiday dates.
             </p>
             <Button asChild variant="outline" className="w-full">
               <Link href="/dashboard/registrations/holidays">
@@ -82,8 +82,8 @@ export default function RegistrationsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Configure registration queues to manage high-traffic registration periods. 
-              Set reservation timeouts and control concurrent registrations.
+              Configure registration queues to manage high-traffic registration periods. Set
+              reservation timeouts and control concurrent registrations.
             </p>
             <Button asChild variant="outline" className="w-full">
               <Link href="/dashboard/registrations/queues">
@@ -95,5 +95,5 @@ export default function RegistrationsPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

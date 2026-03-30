@@ -1,43 +1,40 @@
-"use client"
+"use client";
 
-import { TrendingUpIcon, TrendingDownIcon, AlertTriangle } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import {
-  Card,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { TrendingUpIcon, TrendingDownIcon, AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 export interface SmsStatsProps {
-  messagesSent: number
-  messagesDelivered: number
-  messagesFailed: number
-  deliveryRate: number
-  totalCost: number
-  includedMessages: number
-  overageMessages: number
-  overageCost: number
-  overageRate: number | null
-  periodEnd: Date | null
-  configured: boolean
+  messagesSent: number;
+  messagesDelivered: number;
+  messagesFailed: number;
+  deliveryRate: number;
+  totalCost: number;
+  includedMessages: number;
+  overageMessages: number;
+  overageCost: number;
+  overageRate: number | null;
+  periodEnd: Date | null;
+  configured: boolean;
 }
 
 export function SmsStatsCards({ stats }: { stats?: SmsStatsProps }) {
   // Calculate days until renewal
   const daysUntilRenewal = stats?.periodEnd
-    ? Math.max(0, Math.ceil((new Date(stats.periodEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
-    : null
+    ? Math.max(
+        0,
+        Math.ceil((new Date(stats.periodEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      )
+    : null;
 
   // Calculate usage percentage
   const usagePercent = stats?.includedMessages
     ? Math.min(100, (stats.messagesSent / stats.includedMessages) * 100)
-    : 0
+    : 0;
 
   // Determine if approaching limit
-  const isApproachingLimit = usagePercent >= 80
-  const isOverLimit = stats?.overageMessages ? stats.overageMessages > 0 : false
+  const isApproachingLimit = usagePercent >= 80;
+  const isOverLimit = stats?.overageMessages ? stats.overageMessages > 0 : false;
 
   if (!stats?.configured) {
     return (
@@ -51,7 +48,7 @@ export function SmsStatsCards({ stats }: { stats?: SmsStatsProps }) {
           </CardHeader>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -72,9 +69,7 @@ export function SmsStatsCards({ stats }: { stats?: SmsStatsProps }) {
           <div className="line-clamp-1 flex gap-2 font-medium">
             {stats?.messagesFailed ?? 0} failed
           </div>
-          <div className="text-muted-foreground">
-            This billing cycle
-          </div>
+          <div className="text-muted-foreground">This billing cycle</div>
         </CardFooter>
       </Card>
 
@@ -112,9 +107,7 @@ export function SmsStatsCards({ stats }: { stats?: SmsStatsProps }) {
               "No messages sent"
             )}
           </div>
-          <div className="text-muted-foreground">
-            Based on webhook callbacks
-          </div>
+          <div className="text-muted-foreground">Based on webhook callbacks</div>
         </CardFooter>
       </Card>
 
@@ -130,9 +123,7 @@ export function SmsStatsCards({ stats }: { stats?: SmsStatsProps }) {
                 ${stats.overageRate.toFixed(2)}/overage
               </span>
             ) : (
-              <span className="text-xs font-mono text-muted-foreground">
-                Included in plan
-              </span>
+              <span className="text-xs font-mono text-muted-foreground">Included in plan</span>
             )}
           </div>
         </CardHeader>
@@ -158,7 +149,10 @@ export function SmsStatsCards({ stats }: { stats?: SmsStatsProps }) {
           </CardTitle>
           <div className="absolute right-4 top-4">
             {isApproachingLimit ? (
-              <Badge variant="outline" className="flex gap-1 rounded-lg text-xs text-amber-600 border-amber-300">
+              <Badge
+                variant="outline"
+                className="flex gap-1 rounded-lg text-xs text-amber-600 border-amber-300"
+              >
                 <AlertTriangle className="size-3" />
                 {isOverLimit ? "Over limit" : "Near limit"}
               </Badge>
@@ -171,7 +165,8 @@ export function SmsStatsCards({ stats }: { stats?: SmsStatsProps }) {
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            {stats?.messagesSent?.toLocaleString() ?? 0} / {stats?.includedMessages?.toLocaleString() ?? 0} used
+            {stats?.messagesSent?.toLocaleString() ?? 0} /{" "}
+            {stats?.includedMessages?.toLocaleString() ?? 0} used
           </div>
           <div className="text-muted-foreground">
             {daysUntilRenewal !== null ? `Renews in ${daysUntilRenewal} days` : "No plan limit"}
@@ -179,5 +174,5 @@ export function SmsStatsCards({ stats }: { stats?: SmsStatsProps }) {
         </CardFooter>
       </Card>
     </div>
-  )
+  );
 }

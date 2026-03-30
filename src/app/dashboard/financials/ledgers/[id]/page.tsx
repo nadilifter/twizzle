@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import { useParams, useRouter } from "next/navigation"
-import Link from "next/link"
-import { format } from "date-fns"
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { format } from "date-fns";
 import {
   ArrowLeft,
   Edit,
@@ -14,21 +14,21 @@ import {
   Layers,
   Save,
   X,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Separator } from "@/components/ui/separator"
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -36,81 +36,81 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
-import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
-import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
-import { toast } from "sonner"
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs";
+import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
+import { toast } from "sonner";
 
 interface AssignedProgram {
-  id: string
-  name: string
-  status: string
-  basePrice: number | null
+  id: string;
+  name: string;
+  status: string;
+  basePrice: number | null;
 }
 
 interface AssignedEvent {
-  id: string
-  title: string
-  date: string
-  type: string
+  id: string;
+  title: string;
+  date: string;
+  type: string;
 }
 
 interface AssignedCompetition {
-  id: string
-  name: string
-  status: string
-  startDate: string
+  id: string;
+  name: string;
+  status: string;
+  startDate: string;
 }
 
 interface AssignedProduct {
-  id: string
-  name: string
-  price: number
-  isActive: boolean
+  id: string;
+  name: string;
+  price: number;
+  isActive: boolean;
 }
 
 interface AssignedMembershipGroup {
-  id: string
-  name: string
-  defaultPrice: number | null
+  id: string;
+  name: string;
+  defaultPrice: number | null;
 }
 
 interface AssignedPass {
-  id: string
-  name: string
-  price: number
-  status: string
+  id: string;
+  name: string;
+  price: number;
+  status: string;
 }
 
 interface GLCodeDetail {
-  id: string
-  code: string
-  description: string
-  type: string
-  status: string
-  isDefault: boolean
-  defaultForType: string | null
-  createdAt: string
-  updatedAt: string
-  programs: AssignedProgram[]
-  events: AssignedEvent[]
-  competitions: AssignedCompetition[]
-  products: AssignedProduct[]
-  membershipGroups: AssignedMembershipGroup[]
-  passes: AssignedPass[]
+  id: string;
+  code: string;
+  description: string;
+  type: string;
+  status: string;
+  isDefault: boolean;
+  defaultForType: string | null;
+  createdAt: string;
+  updatedAt: string;
+  programs: AssignedProgram[];
+  events: AssignedEvent[];
+  competitions: AssignedCompetition[];
+  products: AssignedProduct[];
+  membershipGroups: AssignedMembershipGroup[];
+  passes: AssignedPass[];
   _count: {
-    programs: number
-    events: number
-    competitions: number
-    products: number
-    membershipGroups: number
-    passes: number
-    lineItems: number
-    ledgerEntries: number
-  }
-  totalAmount: number
-  transactionCount: number
+    programs: number;
+    events: number;
+    competitions: number;
+    products: number;
+    membershipGroups: number;
+    passes: number;
+    lineItems: number;
+    ledgerEntries: number;
+  };
+  totalAmount: number;
+  transactionCount: number;
 }
 
 const TYPE_BADGE_COLORS: Record<string, string> = {
@@ -119,7 +119,7 @@ const TYPE_BADGE_COLORS: Record<string, string> = {
   LIABILITY: "bg-amber-500 hover:bg-amber-600 border-amber-500/50 text-white",
   ASSET: "bg-blue-500 hover:bg-blue-600 border-blue-500/50 text-white",
   EQUITY: "bg-purple-500 hover:bg-purple-600 border-purple-500/50 text-white",
-}
+};
 
 const ENTITY_TYPE_LABELS: Record<string, string> = {
   PROGRAM: "Programs",
@@ -128,77 +128,77 @@ const ENTITY_TYPE_LABELS: Record<string, string> = {
   MEMBERSHIP: "Memberships",
   PASS: "Passes",
   PRODUCT: "Products",
-}
+};
 
 export default function GLCodeDetailPage() {
-  const params = useParams()
-  const router = useRouter()
-  const id = params.id as string
+  const params = useParams();
+  const router = useRouter();
+  const id = params.id as string;
 
-  const [glCode, setGlCode] = useState<GLCodeDetail | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState("overview")
-  const [editing, setEditing] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [editForm, setEditForm] = useState({ code: "", description: "", type: "", status: "" })
+  const [glCode, setGlCode] = useState<GLCodeDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editForm, setEditForm] = useState({ code: "", description: "", type: "", status: "" });
 
   useBreadcrumbOverride(
     `/dashboard/financials/ledgers/${id}`,
     glCode ? `${glCode.code} - ${glCode.description}` : "GL Code"
-  )
+  );
 
   const fetchGlCode = useCallback(async () => {
     try {
-      const response = await fetch(`/api/ledgers/${id}`)
+      const response = await fetch(`/api/ledgers/${id}`);
       if (!response.ok) {
         if (response.status === 404) {
-          toast.error("GL code not found")
-          router.push("/dashboard/financials/ledgers")
-          return
+          toast.error("GL code not found");
+          router.push("/dashboard/financials/ledgers");
+          return;
         }
-        throw new Error("Failed to fetch GL code")
+        throw new Error("Failed to fetch GL code");
       }
-      const data = await response.json()
-      setGlCode(data)
+      const data = await response.json();
+      setGlCode(data);
       setEditForm({
         code: data.code,
         description: data.description,
         type: data.type,
         status: data.status,
-      })
+      });
     } catch (error) {
-      console.error("Error fetching GL code:", error)
-      toast.error("Failed to load GL code")
+      console.error("Error fetching GL code:", error);
+      toast.error("Failed to load GL code");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [id, router])
+  }, [id, router]);
 
   useEffect(() => {
-    fetchGlCode()
-  }, [fetchGlCode])
+    fetchGlCode();
+  }, [fetchGlCode]);
 
   const handleSave = async () => {
-    setSaving(true)
+    setSaving(true);
     try {
       const response = await fetch(`/api/ledgers/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editForm),
-      })
+      });
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to update")
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update");
       }
-      toast.success("GL code updated")
-      setEditing(false)
-      fetchGlCode()
+      toast.success("GL code updated");
+      setEditing(false);
+      fetchGlCode();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update GL code")
+      toast.error(error instanceof Error ? error.message : "Failed to update GL code");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -214,7 +214,7 @@ export default function GLCodeDetailPage() {
         </div>
         <Skeleton className="h-96" />
       </div>
-    )
+    );
   }
 
   if (!glCode) {
@@ -225,7 +225,7 @@ export default function GLCodeDetailPage() {
           <Link href="/dashboard/financials/ledgers">Back to Ledgers</Link>
         </Button>
       </div>
-    )
+    );
   }
 
   const totalAssignedEntities =
@@ -234,7 +234,7 @@ export default function GLCodeDetailPage() {
     glCode._count.competitions +
     glCode._count.products +
     glCode._count.membershipGroups +
-    glCode._count.passes
+    glCode._count.passes;
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -272,13 +272,18 @@ export default function GLCodeDetailPage() {
               )}
               <div className="flex items-center gap-2 mt-1">
                 {editing ? (
-                  <Select value={editForm.type} onValueChange={(v) => setEditForm((p) => ({ ...p, type: v }))}>
+                  <Select
+                    value={editForm.type}
+                    onValueChange={(v) => setEditForm((p) => ({ ...p, type: v }))}
+                  >
                     <SelectTrigger className="w-32 h-7 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {["REVENUE", "EXPENSE", "LIABILITY", "ASSET", "EQUITY"].map((t) => (
-                        <SelectItem key={t} value={t}>{t.charAt(0) + t.slice(1).toLowerCase()}</SelectItem>
+                        <SelectItem key={t} value={t}>
+                          {t.charAt(0) + t.slice(1).toLowerCase()}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -288,7 +293,10 @@ export default function GLCodeDetailPage() {
                   </Badge>
                 )}
                 {editing ? (
-                  <Select value={editForm.status} onValueChange={(v) => setEditForm((p) => ({ ...p, status: v }))}>
+                  <Select
+                    value={editForm.status}
+                    onValueChange={(v) => setEditForm((p) => ({ ...p, status: v }))}
+                  >
                     <SelectTrigger className="w-28 h-7 text-xs">
                       <SelectValue />
                     </SelectTrigger>
@@ -298,13 +306,14 @@ export default function GLCodeDetailPage() {
                     </SelectContent>
                   </Select>
                 ) : (
-                  <Badge variant={glCode.status === "ACTIVE" ? "default" : "secondary"} className={glCode.status === "ACTIVE" ? "bg-green-500 hover:bg-green-600" : ""}>
+                  <Badge
+                    variant={glCode.status === "ACTIVE" ? "default" : "secondary"}
+                    className={glCode.status === "ACTIVE" ? "bg-green-500 hover:bg-green-600" : ""}
+                  >
                     {glCode.status === "ACTIVE" ? "Active" : "Inactive"}
                   </Badge>
                 )}
-                {glCode.isDefault && (
-                  <Badge variant="outline">System Default</Badge>
-                )}
+                {glCode.isDefault && <Badge variant="outline">System Default</Badge>}
                 {glCode.defaultForType && (
                   <Badge variant="outline" className="text-muted-foreground">
                     Default for {ENTITY_TYPE_LABELS[glCode.defaultForType] || glCode.defaultForType}
@@ -317,12 +326,21 @@ export default function GLCodeDetailPage() {
           <div className="flex items-center gap-2">
             {editing ? (
               <>
-                <Button variant="outline" size="sm" onClick={() => setEditing(false)} disabled={saving}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditing(false)}
+                  disabled={saving}
+                >
                   <X className="mr-2 h-4 w-4" />
                   Cancel
                 </Button>
                 <Button size="sm" onClick={handleSave} disabled={saving}>
-                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  {saving ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-2 h-4 w-4" />
+                  )}
                   Save
                 </Button>
               </>
@@ -344,8 +362,12 @@ export default function GLCodeDetailPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${glCode.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-            <p className="text-xs text-muted-foreground">From {glCode.transactionCount} line items</p>
+            <div className="text-2xl font-bold">
+              ${glCode.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              From {glCode.transactionCount} line items
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -482,17 +504,27 @@ export default function GLCodeDetailPage() {
                     {glCode.programs.map((program) => (
                       <TableRow key={program.id}>
                         <TableCell>
-                          <Link href={`/dashboard/registrations/programs/${program.id}`} className="text-primary hover:underline font-medium">
+                          <Link
+                            href={`/dashboard/registrations/programs/${program.id}`}
+                            className="text-primary hover:underline font-medium"
+                          >
                             {program.name}
                           </Link>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={program.status === "ACTIVE" ? "default" : "secondary"} className={program.status === "ACTIVE" ? "bg-green-500 hover:bg-green-600" : ""}>
+                          <Badge
+                            variant={program.status === "ACTIVE" ? "default" : "secondary"}
+                            className={
+                              program.status === "ACTIVE" ? "bg-green-500 hover:bg-green-600" : ""
+                            }
+                          >
                             {program.status}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right font-mono">
-                          {program.basePrice != null ? `$${Number(program.basePrice).toFixed(2)}` : "-"}
+                          {program.basePrice != null
+                            ? `$${Number(program.basePrice).toFixed(2)}`
+                            : "-"}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -520,7 +552,10 @@ export default function GLCodeDetailPage() {
                     {glCode.events.map((event) => (
                       <TableRow key={event.id}>
                         <TableCell>
-                          <Link href={`/dashboard/events/${event.id}`} className="text-primary hover:underline font-medium">
+                          <Link
+                            href={`/dashboard/events/${event.id}`}
+                            className="text-primary hover:underline font-medium"
+                          >
                             {event.title}
                           </Link>
                         </TableCell>
@@ -539,7 +574,9 @@ export default function GLCodeDetailPage() {
           {glCode.competitions.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Competitions ({glCode.competitions.length})</CardTitle>
+                <CardTitle className="text-base">
+                  Competitions ({glCode.competitions.length})
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -554,7 +591,10 @@ export default function GLCodeDetailPage() {
                     {glCode.competitions.map((comp) => (
                       <TableRow key={comp.id}>
                         <TableCell>
-                          <Link href={`/dashboard/competitions/${comp.id}`} className="text-primary hover:underline font-medium">
+                          <Link
+                            href={`/dashboard/competitions/${comp.id}`}
+                            className="text-primary hover:underline font-medium"
+                          >
                             {comp.name}
                           </Link>
                         </TableCell>
@@ -573,7 +613,9 @@ export default function GLCodeDetailPage() {
           {glCode.membershipGroups.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Memberships ({glCode.membershipGroups.length})</CardTitle>
+                <CardTitle className="text-base">
+                  Memberships ({glCode.membershipGroups.length})
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -588,7 +630,9 @@ export default function GLCodeDetailPage() {
                       <TableRow key={group.id}>
                         <TableCell className="font-medium">{group.name}</TableCell>
                         <TableCell className="text-right font-mono">
-                          {group.defaultPrice != null ? `$${Number(group.defaultPrice).toFixed(2)}` : "-"}
+                          {group.defaultPrice != null
+                            ? `$${Number(group.defaultPrice).toFixed(2)}`
+                            : "-"}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -617,11 +661,18 @@ export default function GLCodeDetailPage() {
                       <TableRow key={pass.id}>
                         <TableCell className="font-medium">{pass.name}</TableCell>
                         <TableCell>
-                          <Badge variant={pass.status === "ACTIVE" ? "default" : "secondary"} className={pass.status === "ACTIVE" ? "bg-green-500 hover:bg-green-600" : ""}>
+                          <Badge
+                            variant={pass.status === "ACTIVE" ? "default" : "secondary"}
+                            className={
+                              pass.status === "ACTIVE" ? "bg-green-500 hover:bg-green-600" : ""
+                            }
+                          >
                             {pass.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right font-mono">${Number(pass.price).toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono">
+                          ${Number(pass.price).toFixed(2)}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -649,11 +700,16 @@ export default function GLCodeDetailPage() {
                       <TableRow key={product.id}>
                         <TableCell className="font-medium">{product.name}</TableCell>
                         <TableCell>
-                          <Badge variant={product.isActive ? "default" : "secondary"} className={product.isActive ? "bg-green-500 hover:bg-green-600" : ""}>
+                          <Badge
+                            variant={product.isActive ? "default" : "secondary"}
+                            className={product.isActive ? "bg-green-500 hover:bg-green-600" : ""}
+                          >
                             {product.isActive ? "Active" : "Inactive"}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right font-mono">${Number(product.price).toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono">
+                          ${Number(product.price).toFixed(2)}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -697,7 +753,8 @@ export default function GLCodeDetailPage() {
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  {glCode.transactionCount} line items totaling ${glCode.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  {glCode.transactionCount} line items totaling $
+                  {glCode.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </p>
               )}
             </CardContent>
@@ -705,5 +762,5 @@ export default function GLCodeDetailPage() {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }

@@ -12,6 +12,7 @@ To test subdomains locally, you need to alias the domains to `127.0.0.1` in your
 **Windows:** `C:\Windows\System32\drivers\etc\hosts`
 
 Add the following lines:
+
 ```
 127.0.0.1   test.localhost
 127.0.0.1   gym.localhost

@@ -28,12 +28,8 @@ export function EventCard({ event, style, onClick }: EventCardProps) {
         onClick={onClick}
       >
         <div className="size-1.5 rounded-full bg-cyan-500 shrink-0" />
-        <h4 className="text-[10px] font-semibold text-foreground truncate flex-1">
-          {event.title}
-        </h4>
-        <span className="text-[9px] text-muted-foreground shrink-0">
-          {event.startTime}
-        </span>
+        <h4 className="text-[10px] font-semibold text-foreground truncate flex-1">{event.title}</h4>
+        <span className="text-[9px] text-muted-foreground shrink-0">{event.startTime}</span>
       </div>
     );
   }
@@ -52,9 +48,7 @@ export function EventCard({ event, style, onClick }: EventCardProps) {
               {event.title}
             </h4>
           </div>
-          <p className="text-[9px] text-muted-foreground uppercase tracking-wide">
-            {timeStr}
-          </p>
+          <p className="text-[9px] text-muted-foreground uppercase tracking-wide">{timeStr}</p>
         </div>
       </div>
     );
@@ -83,10 +77,7 @@ export function EventCard({ event, style, onClick }: EventCardProps) {
             <div className="flex items-center gap-1.5 mb-2">
               <div className="flex -space-x-1.5">
                 {event.participants.slice(0, 3).map((participant, idx) => (
-                  <Avatar
-                    key={idx}
-                    className="size-5 border-2 border-background"
-                  >
+                  <Avatar key={idx} className="size-5 border-2 border-background">
                     <AvatarImage
                       src={`https://api.dicebear.com/9.x/glass/svg?seed=${participant}`}
                     />

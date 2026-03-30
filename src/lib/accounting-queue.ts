@@ -1,5 +1,9 @@
 import { db } from "@/lib/db";
-import type { AccountingEntityType, AccountingSyncAction, AccountingProvider } from "@prisma/client";
+import type {
+  AccountingEntityType,
+  AccountingSyncAction,
+  AccountingProvider,
+} from "@prisma/client";
 
 export async function enqueueSync(
   organizationId: string,

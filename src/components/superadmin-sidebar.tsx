@@ -1,18 +1,18 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { usePathname } from "next/navigation"
-import { 
+import * as React from "react";
+import { usePathname } from "next/navigation";
+import {
   Activity,
   Bell,
-  Building2, 
+  Building2,
   CreditCard,
   DollarSign,
-  Globe, 
+  Globe,
   Layers,
-  LayoutDashboard, 
+  LayoutDashboard,
   Package,
-  ShieldCheck, 
+  ShieldCheck,
   Timer,
   Trophy,
   Users,
@@ -23,11 +23,11 @@ import {
   LogIn,
   Home,
   Megaphone,
-  MessageSquare
-} from "lucide-react"
-import { useSession } from "next-auth/react"
+  MessageSquare,
+} from "lucide-react";
+import { useSession } from "next-auth/react";
 
-import { NavUser } from "@/components/nav-user"
+import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
   SidebarContent,
@@ -40,47 +40,47 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
 // Helper to construct subdomain URLs based on current hostname
 function getSubdomainUrl(subdomain: string | null): string {
-  if (typeof window === 'undefined') return '/'
-  
-  const { hostname, port, protocol } = window.location
-  
+  if (typeof window === "undefined") return "/";
+
+  const { hostname, port, protocol } = window.location;
+
   // Parse current hostname to extract base domain
-  const parts = hostname.split('.')
-  
+  const parts = hostname.split(".");
+
   // Handle local development (e.g., superadmin.uplifterinc.localhost:3000)
-  if (hostname.includes('localhost')) {
+  if (hostname.includes("localhost")) {
     // Find the base domain pattern (e.g., uplifterinc.localhost)
-    const localhostIndex = parts.findIndex(p => p.includes('localhost'))
+    const localhostIndex = parts.findIndex((p) => p.includes("localhost"));
     if (localhostIndex > 0) {
       // Has subdomain structure like subdomain.uplifterinc.localhost
-      const baseParts = parts.slice(1) // Remove current subdomain
+      const baseParts = parts.slice(1); // Remove current subdomain
       if (subdomain) {
-        return `${protocol}//${subdomain}.${baseParts.join('.')}${port && !hostname.includes(':') ? ':' + port : ''}`
+        return `${protocol}//${subdomain}.${baseParts.join(".")}${port && !hostname.includes(":") ? ":" + port : ""}`;
       } else {
         // Main domain (no subdomain)
-        return `${protocol}//${baseParts.join('.')}${port && !hostname.includes(':') ? ':' + port : ''}`
+        return `${protocol}//${baseParts.join(".")}${port && !hostname.includes(":") ? ":" + port : ""}`;
       }
     }
     // Fallback for plain localhost
-    return subdomain ? `${protocol}//${subdomain}.localhost:3000` : `${protocol}//localhost:3000`
+    return subdomain ? `${protocol}//${subdomain}.localhost:3000` : `${protocol}//localhost:3000`;
   }
-  
+
   // Handle production/staging domains (e.g., superadmin.uplifterinc.com)
   if (parts.length >= 2) {
-    const baseParts = parts.slice(1) // Remove current subdomain
+    const baseParts = parts.slice(1); // Remove current subdomain
     if (subdomain) {
-      return `${protocol}//${subdomain}.${baseParts.join('.')}`
+      return `${protocol}//${subdomain}.${baseParts.join(".")}`;
     } else {
       // Main domain (no subdomain)
-      return `${protocol}//${baseParts.join('.')}`
+      return `${protocol}//${baseParts.join(".")}`;
     }
   }
-  
-  return '/'
+
+  return "/";
 }
 
 // Quick link configuration with subdomain info
@@ -94,15 +94,15 @@ const quickLinkConfig = [
   { title: "Athletes Portal", subdomain: "athletes", path: "/", icon: Users },
   { title: "Events Portal", subdomain: "events", path: "/", icon: Calendar },
   { title: "Feedback", subdomain: "feedback", path: "/", icon: MessageSquare },
-]
+];
 
 // Org Signup link: startup subdomain (not superadmin)
 function OrgSignupLink({ getUrl }: { getUrl: (subdomain: string | null) => string }) {
-  const url = getUrl("startup")
+  const url = getUrl("startup");
 
   return (
     <SidebarMenuButton asChild>
-      <a 
+      <a
         href={url}
         target="_blank"
         rel="noopener noreferrer"
@@ -115,7 +115,7 @@ function OrgSignupLink({ getUrl }: { getUrl: (subdomain: string | null) => strin
         <ExternalLink className="h-3 w-3 text-muted-foreground" />
       </a>
     </SidebarMenuButton>
-  )
+  );
 }
 
 // Superadmin navigation data
@@ -195,31 +195,35 @@ const navItems = [
     url: "/superadmin/usage",
     icon: Activity,
   },
-]
+];
 
 export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const pathname = usePathname()
-  const { data: session, status } = useSession()
-  const [quickLinks, setQuickLinks] = React.useState<Array<{ title: string; url: string; icon: typeof Home }>>([])
+  const pathname = usePathname();
+  const { data: session, status } = useSession();
+  const [quickLinks, setQuickLinks] = React.useState<
+    Array<{ title: string; url: string; icon: typeof Home }>
+  >([]);
 
   // Build quick links with proper subdomain URLs on client side
   React.useEffect(() => {
-    const links = quickLinkConfig.map(item => ({
+    const links = quickLinkConfig.map((item) => ({
       title: item.title,
       url: getSubdomainUrl(item.subdomain) + (item.path === "/" ? "" : item.path),
       icon: item.icon,
-    }))
-    setQuickLinks(links)
-  }, [])
+    }));
+    setQuickLinks(links);
+  }, []);
 
   // Get user data from session
-  const user = session?.user ? {
-    name: session.user.name || "User",
-    email: session.user.email || "",
-    avatar: session.user.image || null,
-  } : null
+  const user = session?.user
+    ? {
+        name: session.user.name || "User",
+        email: session.user.email || "",
+        avatar: session.user.image || null,
+      }
+    : null;
 
-  const isLoading = status === "loading"
+  const isLoading = status === "loading";
 
   return (
     <Sidebar {...props}>
@@ -240,10 +244,11 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => {
-                const isActive = item.url === "/superadmin" 
-                  ? pathname === "/superadmin"
-                  : pathname.startsWith(item.url)
-                
+                const isActive =
+                  item.url === "/superadmin"
+                    ? pathname === "/superadmin"
+                    : pathname.startsWith(item.url);
+
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={isActive}>
@@ -253,7 +258,7 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
                       </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                )
+                );
               })}
             </SidebarMenu>
           </SidebarGroupContent>
@@ -297,5 +302,5 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }

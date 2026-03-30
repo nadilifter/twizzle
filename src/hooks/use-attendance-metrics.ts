@@ -2,10 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { api, ApiError } from "@/lib/api-client";
-import type {
-  AttendanceMetricsResponse,
-  AttendanceGroupBy,
-} from "@/types/attendance";
+import type { AttendanceMetricsResponse, AttendanceGroupBy } from "@/types/attendance";
 
 interface UseAttendanceMetricsFilters {
   groupBy?: AttendanceGroupBy;
@@ -43,11 +40,11 @@ export function useAttendanceMetrics(
   const fetchMetrics = useCallback(async (filters?: UseAttendanceMetricsFilters) => {
     setIsLoading(true);
     setError(null);
-    
+
     // Merge and store filters in ref (doesn't trigger re-render)
     const mergedFilters = { ...currentFiltersRef.current, ...filters };
     currentFiltersRef.current = mergedFilters;
-    
+
     try {
       // Build query params, filtering out undefined/null values
       const queryParams = Object.fromEntries(
@@ -89,28 +86,41 @@ export function useAttendanceMetrics(
 }
 
 // Helper hook for specific groupings
-export function useAttendanceMetricsByAthlete(athleteId?: string, options: Omit<UseAttendanceMetricsOptions, 'initialFilters'> = {}) {
+export function useAttendanceMetricsByAthlete(
+  athleteId?: string,
+  options: Omit<UseAttendanceMetricsOptions, "initialFilters"> = {}
+) {
   return useAttendanceMetrics({
     ...options,
     initialFilters: { groupBy: "athlete", athleteId },
   });
 }
 
-export function useAttendanceMetricsByProgram(programId?: string, options: Omit<UseAttendanceMetricsOptions, 'initialFilters'> = {}) {
+export function useAttendanceMetricsByProgram(
+  programId?: string,
+  options: Omit<UseAttendanceMetricsOptions, "initialFilters"> = {}
+) {
   return useAttendanceMetrics({
     ...options,
     initialFilters: { groupBy: "program", programId },
   });
 }
 
-export function useAttendanceMetricsByCoach(coachId?: string, options: Omit<UseAttendanceMetricsOptions, 'initialFilters'> = {}) {
+export function useAttendanceMetricsByCoach(
+  coachId?: string,
+  options: Omit<UseAttendanceMetricsOptions, "initialFilters"> = {}
+) {
   return useAttendanceMetrics({
     ...options,
     initialFilters: { groupBy: "coach", coachId },
   });
 }
 
-export function useAttendanceMetricsByDate(startDate?: string, endDate?: string, options: Omit<UseAttendanceMetricsOptions, 'initialFilters'> = {}) {
+export function useAttendanceMetricsByDate(
+  startDate?: string,
+  endDate?: string,
+  options: Omit<UseAttendanceMetricsOptions, "initialFilters"> = {}
+) {
   return useAttendanceMetrics({
     ...options,
     initialFilters: { groupBy: "date", startDate, endDate },

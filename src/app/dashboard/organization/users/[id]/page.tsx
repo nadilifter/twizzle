@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useParams, useRouter } from "next/navigation"
-import { format } from "date-fns"
+import * as React from "react";
+import { useParams, useRouter } from "next/navigation";
+import { format } from "date-fns";
 import {
   ArrowLeft,
   Mail,
@@ -20,38 +20,32 @@ import {
   ShieldAlert,
   MoreHorizontal,
   Trash2,
-} from "lucide-react"
-import Link from "next/link"
+} from "lucide-react";
+import Link from "next/link";
 
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Calendar as CalendarPicker } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
-import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Input } from "@/components/ui/input"
-import { PhoneInput } from "@/components/ui/phone-input"
-import { formatPhoneNumberIntl } from "react-phone-number-input"
-import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { formatPhoneNumberIntl } from "react-phone-number-input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { Separator } from "@/components/ui/separator"
-import { Textarea } from "@/components/ui/textarea"
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -59,273 +53,283 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { toast } from "sonner"
-import { useFeatures } from "@/components/feature-context"
-import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
-import {
-  PERMISSION_GROUPS,
-  PERMISSION_FEATURE_MAP,
-  ROLE_PERMISSIONS,
-} from "@/lib/permissions"
-import type { FeatureKey } from "@/lib/feature-toggles"
+} from "@/components/ui/dropdown-menu";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { toast } from "sonner";
+import { useFeatures } from "@/components/feature-context";
+import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
+import { PERMISSION_GROUPS, PERMISSION_FEATURE_MAP, ROLE_PERMISSIONS } from "@/lib/permissions";
+import type { FeatureKey } from "@/lib/feature-toggles";
 
-const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 const CERTIFICATIONS_LIST = [
   "USAG Safety Certification",
   "CPR / First Aid",
   "SafeSport Trained",
   "Background Check Cleared",
-]
+];
 
 interface MemberData {
-  id: string
-  organizationId: string
-  userId: string
-  role: string
-  status: string
-  joinedAt: string
-  employmentType: string | null
-  title: string | null
-  hourlyRate: number | null
-  hireDate: string | null
-  certifications: Array<{ name: string; expiresAt?: string | null; verified?: boolean }> | null
-  phone: string | null
-  emergencyContact: { name: string; phone: string; relationship?: string } | null
+  id: string;
+  organizationId: string;
+  userId: string;
+  role: string;
+  status: string;
+  joinedAt: string;
+  employmentType: string | null;
+  title: string | null;
+  hourlyRate: number | null;
+  hireDate: string | null;
+  certifications: Array<{ name: string; expiresAt?: string | null; verified?: boolean }> | null;
+  phone: string | null;
+  emergencyContact: { name: string; phone: string; relationship?: string } | null;
   user: {
-    id: string
-    name: string
-    email: string
-    avatar: string | null
-    phone: string | null
-    status: string
-    createdAt: string
-    lastActiveAt: string | null
-  }
-  permissions: Array<{ id: string; permission: string }>
+    id: string;
+    name: string;
+    email: string;
+    avatar: string | null;
+    phone: string | null;
+    status: string;
+    createdAt: string;
+    lastActiveAt: string | null;
+  };
+  permissions: Array<{ id: string; permission: string }>;
   availability: Array<{
-    id: string
-    dayOfWeek: number
-    startTime: string
-    endTime: string
-    isAvailable: boolean
-  }>
+    id: string;
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    isAvailable: boolean;
+  }>;
   shifts: Array<{
-    id: string
-    date: string
-    startTime: string
-    endTime: string
-    shiftType: string
-    status: string
-    facility: { name: string } | null
-  }>
+    id: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    shiftType: string;
+    status: string;
+    facility: { name: string } | null;
+  }>;
   programAssignments: Array<{
-    id: string
-    role: string
-    isPrimary: boolean
-    program: { id: string; name: string }
-  }>
+    id: string;
+    role: string;
+    isPrimary: boolean;
+    program: { id: string; name: string };
+  }>;
   _count: {
-    shifts: number
-    eventAssignments: number
-    programAssignments: number
-  }
+    shifts: number;
+    eventAssignments: number;
+    programAssignments: number;
+  };
 }
 
 function isPermissionAvailable(
   permissionId: string,
   isFeatureEnabled: (key: FeatureKey) => boolean
 ): boolean {
-  const requiredFeature = PERMISSION_FEATURE_MAP[permissionId as keyof typeof PERMISSION_FEATURE_MAP]
-  if (!requiredFeature) return true
-  return isFeatureEnabled(requiredFeature)
+  const requiredFeature =
+    PERMISSION_FEATURE_MAP[permissionId as keyof typeof PERMISSION_FEATURE_MAP];
+  if (!requiredFeature) return true;
+  return isFeatureEnabled(requiredFeature);
 }
 
 export default function UserDetailPage() {
-  const params = useParams()
-  const router = useRouter()
-  const { isFeatureEnabled } = useFeatures()
-  const memberId = params.id as string
+  const params = useParams();
+  const router = useRouter();
+  const { isFeatureEnabled } = useFeatures();
+  const memberId = params.id as string;
 
-  const [activeTab, setActiveTab] = React.useState("profile")
-  const [member, setMember] = React.useState<MemberData | null>(null)
-  const [isLoading, setIsLoading] = React.useState(true)
-  const [isSaving, setIsSaving] = React.useState(false)
+  const [activeTab, setActiveTab] = React.useState("profile");
+  const [member, setMember] = React.useState<MemberData | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isSaving, setIsSaving] = React.useState(false);
 
   // Employment form state
-  const [employmentType, setEmploymentType] = React.useState<string>("")
-  const [title, setTitle] = React.useState("")
-  const [hourlyRate, setHourlyRate] = React.useState("")
-  const [hireDate, setHireDate] = React.useState("")
-  const [phone, setPhone] = React.useState("")
-  const [emergencyContactName, setEmergencyContactName] = React.useState("")
-  const [emergencyContactPhone, setEmergencyContactPhone] = React.useState("")
-  const [emergencyContactRelationship, setEmergencyContactRelationship] = React.useState("")
+  const [employmentType, setEmploymentType] = React.useState<string>("");
+  const [title, setTitle] = React.useState("");
+  const [hourlyRate, setHourlyRate] = React.useState("");
+  const [hireDate, setHireDate] = React.useState("");
+  const [phone, setPhone] = React.useState("");
+  const [emergencyContactName, setEmergencyContactName] = React.useState("");
+  const [emergencyContactPhone, setEmergencyContactPhone] = React.useState("");
+  const [emergencyContactRelationship, setEmergencyContactRelationship] = React.useState("");
 
   // Certifications state (normalized)
   const [certStatuses, setCertStatuses] = React.useState<
     Array<{
       certification: {
-        id: string; name: string; evaluationMethod: string;
-        pointScaleMin?: number; pointScaleMax?: number; passThreshold?: number;
-        renewalPeriodMonths: number | null; requiredForPrograms: boolean; requiredForEvents: boolean
-      }
-      memberCertification: { id: string; passed: boolean; score: number | null; grantedAt: string; expiresAt: string | null; notes: string | null } | null
-      status: "active" | "expired" | "failed" | "not_granted"
+        id: string;
+        name: string;
+        evaluationMethod: string;
+        pointScaleMin?: number;
+        pointScaleMax?: number;
+        passThreshold?: number;
+        renewalPeriodMonths: number | null;
+        requiredForPrograms: boolean;
+        requiredForEvents: boolean;
+      };
+      memberCertification: {
+        id: string;
+        passed: boolean;
+        score: number | null;
+        grantedAt: string;
+        expiresAt: string | null;
+        notes: string | null;
+      } | null;
+      status: "active" | "expired" | "failed" | "not_granted";
     }>
-  >([])
+  >([]);
 
   // Grant/revoke certification dialog state
-  const [grantDialogOpen, setGrantDialogOpen] = React.useState(false)
+  const [grantDialogOpen, setGrantDialogOpen] = React.useState(false);
   const [grantingCert, setGrantingCert] = React.useState<{
-    id: string; name: string; evaluationMethod: string;
-    pointScaleMin?: number; pointScaleMax?: number; passThreshold?: number;
-  } | null>(null)
+    id: string;
+    name: string;
+    evaluationMethod: string;
+    pointScaleMin?: number;
+    pointScaleMax?: number;
+    passThreshold?: number;
+  } | null>(null);
   const [grantForm, setGrantForm] = React.useState({
     passed: true,
     score: null as number | null,
     notes: "",
     grantedAt: new Date().toISOString().split("T")[0],
-  })
+  });
 
   // Legacy certifications state (kept for backward compatibility during migration)
   const [certifications, setCertifications] = React.useState<
     Array<{ name: string; expiresAt: string; verified: boolean }>
-  >([])
+  >([]);
 
   // Permissions state
-  const [selectedRole, setSelectedRole] = React.useState<string>("")
-  const [selectedPermissions, setSelectedPermissions] = React.useState<string[]>([])
+  const [selectedRole, setSelectedRole] = React.useState<string>("");
+  const [selectedPermissions, setSelectedPermissions] = React.useState<string[]>([]);
 
   // Availability state
   const [availability, setAvailability] = React.useState<
     Array<{ dayOfWeek: number; startTime: string; endTime: string; isAvailable: boolean }>
-  >([])
+  >([]);
 
   useBreadcrumbOverride(
     member ? `/dashboard/organization/users/${memberId}` : undefined,
-    member?.user.name,
-  )
+    member?.user.name
+  );
 
   const fetchCertStatuses = React.useCallback(async () => {
     try {
-      const res = await fetch(`/api/organization/members/${memberId}/certifications`)
+      const res = await fetch(`/api/organization/members/${memberId}/certifications`);
       if (res.ok) {
-        const data = await res.json()
-        setCertStatuses(data)
+        const data = await res.json();
+        setCertStatuses(data);
       }
     } catch {
       // Silently fail - cert statuses are supplementary
     }
-  }, [memberId])
+  }, [memberId]);
 
-  const openGrantDialog = (cert: typeof certStatuses[number]["certification"]) => {
-    setGrantingCert(cert)
+  const openGrantDialog = (cert: (typeof certStatuses)[number]["certification"]) => {
+    setGrantingCert(cert);
     setGrantForm({
       passed: true,
       score: null,
       notes: "",
       grantedAt: new Date().toISOString().split("T")[0],
-    })
-    setGrantDialogOpen(true)
-  }
+    });
+    setGrantDialogOpen(true);
+  };
 
   const handleGrantCert = async () => {
-    if (!grantingCert || !memberId) return
-    setIsSaving(true)
+    if (!grantingCert || !memberId) return;
+    setIsSaving(true);
     try {
-      const res = await fetch(
-        `/api/organization/certifications/${grantingCert.id}/members`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            memberId,
-            passed: grantForm.passed,
-            score: grantForm.score,
-            notes: grantForm.notes || null,
-            grantedAt: grantForm.grantedAt,
-          }),
-        }
-      )
+      const res = await fetch(`/api/organization/certifications/${grantingCert.id}/members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          memberId,
+          passed: grantForm.passed,
+          score: grantForm.score,
+          notes: grantForm.notes || null,
+          grantedAt: grantForm.grantedAt,
+        }),
+      });
       if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || "Failed to grant certification")
+        const err = await res.json();
+        throw new Error(err.error || "Failed to grant certification");
       }
-      toast.success("Certification granted")
-      setGrantDialogOpen(false)
-      fetchCertStatuses()
+      toast.success("Certification granted");
+      setGrantDialogOpen(false);
+      fetchCertStatuses();
     } catch (error) {
-      toast.error((error as Error).message)
+      toast.error((error as Error).message);
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const handleRevokeCert = async (certId: string) => {
-    setIsSaving(true)
+    setIsSaving(true);
     try {
-      const res = await fetch(
-        `/api/organization/certifications/${certId}/members/${memberId}`,
-        { method: "DELETE" }
-      )
-      if (!res.ok) throw new Error("Failed to revoke certification")
-      toast.success("Certification revoked")
-      fetchCertStatuses()
+      const res = await fetch(`/api/organization/certifications/${certId}/members/${memberId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to revoke certification");
+      toast.success("Certification revoked");
+      fetchCertStatuses();
     } catch {
-      toast.error("Failed to revoke certification")
+      toast.error("Failed to revoke certification");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   React.useEffect(() => {
-    fetchMember()
-    fetchCertStatuses()
-  }, [memberId])
+    fetchMember();
+    fetchCertStatuses();
+  }, [memberId]);
 
   const fetchMember = async () => {
     try {
-      setIsLoading(true)
-      const response = await fetch(`/api/organization/members/${memberId}`)
-      if (!response.ok) throw new Error("Failed to fetch member")
-      const data: MemberData = await response.json()
-      setMember(data)
-      populateFormState(data)
+      setIsLoading(true);
+      const response = await fetch(`/api/organization/members/${memberId}`);
+      if (!response.ok) throw new Error("Failed to fetch member");
+      const data: MemberData = await response.json();
+      setMember(data);
+      populateFormState(data);
     } catch {
-      toast.error("Failed to load user details")
-      router.push("/dashboard/organization/users")
+      toast.error("Failed to load user details");
+      router.push("/dashboard/organization/users");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const populateFormState = (data: MemberData) => {
-    setEmploymentType(data.employmentType || "")
-    setTitle(data.title || "")
-    setHourlyRate(data.hourlyRate?.toString() || "")
-    setHireDate(data.hireDate ? data.hireDate.split("T")[0] : "")
-    setPhone(data.phone || "")
-    setEmergencyContactName(data.emergencyContact?.name || "")
-    setEmergencyContactPhone(data.emergencyContact?.phone || "")
-    setEmergencyContactRelationship(data.emergencyContact?.relationship || "")
+    setEmploymentType(data.employmentType || "");
+    setTitle(data.title || "");
+    setHourlyRate(data.hourlyRate?.toString() || "");
+    setHireDate(data.hireDate ? data.hireDate.split("T")[0] : "");
+    setPhone(data.phone || "");
+    setEmergencyContactName(data.emergencyContact?.name || "");
+    setEmergencyContactPhone(data.emergencyContact?.phone || "");
+    setEmergencyContactRelationship(data.emergencyContact?.relationship || "");
     setCertifications(
       (data.certifications || []).map((c) => ({
         name: c.name,
         expiresAt: c.expiresAt || "",
         verified: c.verified || false,
       }))
-    )
-    setSelectedRole(data.role.toLowerCase())
-    setSelectedPermissions(data.permissions.map((p) => p.permission))
+    );
+    setSelectedRole(data.role.toLowerCase());
+    setSelectedPermissions(data.permissions.map((p) => p.permission));
     setAvailability(
       data.availability.map((a) => ({
         dayOfWeek: a.dayOfWeek,
@@ -333,11 +337,11 @@ export default function UserDetailPage() {
         endTime: a.endTime,
         isAvailable: a.isAvailable,
       }))
-    )
-  }
+    );
+  };
 
   const handleSaveEmployment = async () => {
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       const response = await fetch(`/api/organization/members/${memberId}`, {
         method: "PATCH",
@@ -357,20 +361,20 @@ export default function UserDetailPage() {
                 }
               : null,
         }),
-      })
-      if (!response.ok) throw new Error("Failed to save")
-      const updated = await response.json()
-      setMember(updated)
-      toast.success("Employment details saved")
+      });
+      if (!response.ok) throw new Error("Failed to save");
+      const updated = await response.json();
+      setMember(updated);
+      toast.success("Employment details saved");
     } catch {
-      toast.error("Failed to save employment details")
+      toast.error("Failed to save employment details");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const handleSaveCertifications = async () => {
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       const response = await fetch(`/api/organization/members/${memberId}`, {
         method: "PATCH",
@@ -378,20 +382,20 @@ export default function UserDetailPage() {
         body: JSON.stringify({
           certifications: certifications.length > 0 ? certifications : null,
         }),
-      })
-      if (!response.ok) throw new Error("Failed to save")
-      const updated = await response.json()
-      setMember(updated)
-      toast.success("Certifications saved")
+      });
+      if (!response.ok) throw new Error("Failed to save");
+      const updated = await response.json();
+      setMember(updated);
+      toast.success("Certifications saved");
     } catch {
-      toast.error("Failed to save certifications")
+      toast.error("Failed to save certifications");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const handleSavePermissions = async () => {
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       const response = await fetch(`/api/organization/members/${memberId}`, {
         method: "PATCH",
@@ -400,73 +404,67 @@ export default function UserDetailPage() {
           role: selectedRole.toUpperCase(),
           permissions: selectedPermissions,
         }),
-      })
-      if (!response.ok) throw new Error("Failed to save")
-      const updated = await response.json()
-      setMember(updated)
-      toast.success("Permissions saved")
+      });
+      if (!response.ok) throw new Error("Failed to save");
+      const updated = await response.json();
+      setMember(updated);
+      toast.success("Permissions saved");
     } catch {
-      toast.error("Failed to save permissions")
+      toast.error("Failed to save permissions");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const handleSaveAvailability = async () => {
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       const response = await fetch(`/api/organization/members/${memberId}/availability`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(availability),
-      })
-      if (!response.ok) throw new Error("Failed to save")
-      toast.success("Availability saved")
+      });
+      if (!response.ok) throw new Error("Failed to save");
+      toast.success("Availability saved");
     } catch {
-      toast.error("Failed to save availability")
+      toast.error("Failed to save availability");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const handleRoleChange = (roleId: string) => {
-    setSelectedRole(roleId)
+    setSelectedRole(roleId);
     if (roleId !== "custom") {
-      const roleKey = roleId.toUpperCase()
+      const roleKey = roleId.toUpperCase();
       const permissions = (ROLE_PERMISSIONS[roleKey] || []).filter((p) =>
         isPermissionAvailable(p, isFeatureEnabled)
-      )
-      setSelectedPermissions([...permissions])
+      );
+      setSelectedPermissions([...permissions]);
     }
-  }
+  };
 
   const togglePermission = (permId: string) => {
     setSelectedPermissions((prev) =>
       prev.includes(permId) ? prev.filter((p) => p !== permId) : [...prev, permId]
-    )
-  }
+    );
+  };
 
   const toggleCertification = (certName: string) => {
     setCertifications((prev) => {
-      const existing = prev.find((c) => c.name === certName)
+      const existing = prev.find((c) => c.name === certName);
       if (existing) {
-        return prev.filter((c) => c.name !== certName)
+        return prev.filter((c) => c.name !== certName);
       }
-      return [...prev, { name: certName, expiresAt: "", verified: false }]
-    })
-  }
+      return [...prev, { name: certName, expiresAt: "", verified: false }];
+    });
+  };
 
-  const updateAvailabilityDay = (
-    dayOfWeek: number,
-    field: string,
-    value: string | boolean
-  ) => {
+  const updateAvailabilityDay = (dayOfWeek: number, field: string, value: string | boolean) => {
     setAvailability((prev) => {
-      const existing = prev.find((a) => a.dayOfWeek === dayOfWeek)
+      const existing = prev.find((a) => a.dayOfWeek === dayOfWeek);
       if (existing) {
-        return prev.map((a) =>
-          a.dayOfWeek === dayOfWeek ? { ...a, [field]: value } : a
-        )
+        return prev.map((a) => (a.dayOfWeek === dayOfWeek ? { ...a, [field]: value } : a));
       }
       return [
         ...prev,
@@ -477,19 +475,19 @@ export default function UserDetailPage() {
           isAvailable: true,
           [field]: value,
         },
-      ]
-    })
-  }
+      ];
+    });
+  };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-    )
+    );
   }
 
-  if (!member) return null
+  if (!member) return null;
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -504,7 +502,10 @@ export default function UserDetailPage() {
           <Avatar className="h-16 w-16 border-2 border-background shadow">
             <AvatarImage src={member.user.avatar || undefined} alt={member.user.name} />
             <AvatarFallback className="text-lg">
-              {member.user.name.split(" ").map((n) => n[0]).join("")}
+              {member.user.name
+                .split(" ")
+                .map((n) => n[0])
+                .join("")}
             </AvatarFallback>
           </Avatar>
           <div>
@@ -517,12 +518,16 @@ export default function UserDetailPage() {
               {(member.phone || member.user.phone) && (
                 <span className="flex items-center gap-1">
                   <Phone className="h-3.5 w-3.5" />
-                  {formatPhoneNumberIntl(member.phone || member.user.phone || "") || member.phone || member.user.phone}
+                  {formatPhoneNumberIntl(member.phone || member.user.phone || "") ||
+                    member.phone ||
+                    member.user.phone}
                 </span>
               )}
             </div>
             <div className="flex items-center gap-2 mt-1">
-              <Badge variant="secondary" className="capitalize">{member.role.toLowerCase()}</Badge>
+              <Badge variant="secondary" className="capitalize">
+                {member.role.toLowerCase()}
+              </Badge>
               {member.title && <Badge variant="outline">{member.title}</Badge>}
               {member.employmentType && (
                 <Badge variant="outline" className="capitalize">
@@ -590,14 +595,17 @@ export default function UserDetailPage() {
             <CardHeader>
               <CardTitle>Role & Permissions</CardTitle>
               <CardDescription>
-                Configure the role template and granular permissions for this user in this organization.
+                Configure the role template and granular permissions for this user in this
+                organization.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <Label className="text-base">Role Template</Label>
-                  <p className="text-xs text-muted-foreground">Select a role to pre-fill permissions</p>
+                  <p className="text-xs text-muted-foreground">
+                    Select a role to pre-fill permissions
+                  </p>
                 </div>
                 <Select value={selectedRole} onValueChange={handleRoleChange}>
                   <SelectTrigger className="w-[200px]">
@@ -620,8 +628,8 @@ export default function UserDetailPage() {
                 {PERMISSION_GROUPS.map((group) => {
                   const availableItems = group.items.filter((perm) =>
                     isPermissionAvailable(perm.id, isFeatureEnabled)
-                  )
-                  if (availableItems.length === 0) return null
+                  );
+                  if (availableItems.length === 0) return null;
                   return (
                     <div key={group.category} className="space-y-3">
                       <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
@@ -631,7 +639,7 @@ export default function UserDetailPage() {
                         {availableItems.map((perm) => {
                           const isChecked =
                             selectedPermissions.includes(perm.id) ||
-                            selectedPermissions.includes("*")
+                            selectedPermissions.includes("*");
                           return (
                             <div
                               key={perm.id}
@@ -653,17 +661,21 @@ export default function UserDetailPage() {
                                 disabled={selectedPermissions.includes("*")}
                               />
                             </div>
-                          )
+                          );
                         })}
                       </div>
                     </div>
-                  )
+                  );
                 })}
               </div>
 
               <div className="flex justify-end">
                 <Button onClick={handleSavePermissions} disabled={isSaving}>
-                  {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  {isSaving ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-2 h-4 w-4" />
+                  )}
                   Save Permissions
                 </Button>
               </div>
@@ -723,10 +735,15 @@ export default function UserDetailPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        className={cn("w-full justify-start text-left font-normal", !hireDate && "text-muted-foreground")}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !hireDate && "text-muted-foreground"
+                        )}
                       >
                         <Calendar className="mr-2 h-4 w-4" />
-                        {hireDate ? format(new Date(hireDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                        {hireDate
+                          ? format(new Date(hireDate + "T12:00:00Z"), "PPP")
+                          : "Pick a date"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -794,7 +811,11 @@ export default function UserDetailPage() {
 
               <div className="flex justify-end">
                 <Button onClick={handleSaveEmployment} disabled={isSaving}>
-                  {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  {isSaving ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-2 h-4 w-4" />
+                  )}
                   Save Employment
                 </Button>
               </div>
@@ -808,11 +829,15 @@ export default function UserDetailPage() {
             <CardHeader>
               <CardTitle>Certifications</CardTitle>
               <CardDescription>
-                Grant, view, and revoke certifications for this member.
-                Certification definitions are managed on the{" "}
-                <Link href="/dashboard/organization/certifications" className="text-primary underline">
+                Grant, view, and revoke certifications for this member. Certification definitions
+                are managed on the{" "}
+                <Link
+                  href="/dashboard/organization/certifications"
+                  className="text-primary underline"
+                >
                   Certifications page
-                </Link>.
+                </Link>
+                .
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -848,25 +873,38 @@ export default function UserDetailPage() {
                         <div className="font-medium">{cs.certification.name}</div>
                         <div className="flex gap-1 mt-0.5">
                           {cs.certification.requiredForPrograms && (
-                            <Badge variant="outline" className="text-xs py-0">Programs</Badge>
+                            <Badge variant="outline" className="text-xs py-0">
+                              Programs
+                            </Badge>
                           )}
                           {cs.certification.requiredForEvents && (
-                            <Badge variant="outline" className="text-xs py-0">Events</Badge>
+                            <Badge variant="outline" className="text-xs py-0">
+                              Events
+                            </Badge>
                           )}
                         </div>
                         {cs.memberCertification?.grantedAt && (
-                          <div className="text-xs text-muted-foreground mt-1" suppressHydrationWarning>
-                            Granted: {format(new Date(cs.memberCertification.grantedAt), "MMM d, yyyy")}
+                          <div
+                            className="text-xs text-muted-foreground mt-1"
+                            suppressHydrationWarning
+                          >
+                            Granted:{" "}
+                            {format(new Date(cs.memberCertification.grantedAt), "MMM d, yyyy")}
                             {cs.memberCertification.expiresAt && (
-                              <> &middot; Expires: {format(new Date(cs.memberCertification.expiresAt), "MMM d, yyyy")}</>
+                              <>
+                                {" "}
+                                &middot; Expires:{" "}
+                                {format(new Date(cs.memberCertification.expiresAt), "MMM d, yyyy")}
+                              </>
                             )}
                           </div>
                         )}
-                        {cs.memberCertification?.score !== null && cs.memberCertification?.score !== undefined && (
-                          <div className="text-xs text-muted-foreground">
-                            Score: {cs.memberCertification.score}
-                          </div>
-                        )}
+                        {cs.memberCertification?.score !== null &&
+                          cs.memberCertification?.score !== undefined && (
+                            <div className="text-xs text-muted-foreground">
+                              Score: {cs.memberCertification.score}
+                            </div>
+                          )}
                         {cs.memberCertification?.notes && (
                           <div className="text-xs text-muted-foreground">
                             Notes: {cs.memberCertification.notes}
@@ -877,16 +915,25 @@ export default function UserDetailPage() {
                     <div className="flex items-center gap-2">
                       <Badge
                         variant={
-                          cs.status === "active" ? "default"
-                          : cs.status === "expired" ? "destructive"
-                          : "secondary"
+                          cs.status === "active"
+                            ? "default"
+                            : cs.status === "expired"
+                              ? "destructive"
+                              : "secondary"
                         }
-                        className={cs.status === "active" ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : ""}
+                        className={
+                          cs.status === "active"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                            : ""
+                        }
                       >
-                        {cs.status === "active" ? "Active"
-                         : cs.status === "expired" ? "Expired"
-                         : cs.status === "failed" ? "Failed"
-                         : "Not Granted"}
+                        {cs.status === "active"
+                          ? "Active"
+                          : cs.status === "expired"
+                            ? "Expired"
+                            : cs.status === "failed"
+                              ? "Failed"
+                              : "Not Granted"}
                       </Badge>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -895,7 +942,9 @@ export default function UserDetailPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          {cs.status === "not_granted" || cs.status === "expired" || cs.status === "failed" ? (
+                          {cs.status === "not_granted" ||
+                          cs.status === "expired" ||
+                          cs.status === "failed" ? (
                             <DropdownMenuItem onClick={() => openGrantDialog(cs.certification)}>
                               <Award className="mr-2 h-4 w-4" />
                               {cs.status === "not_granted" ? "Grant" : "Re-grant"}
@@ -925,19 +974,14 @@ export default function UserDetailPage() {
           <Card>
             <CardHeader>
               <CardTitle>Weekly Availability</CardTitle>
-              <CardDescription>
-                Set available hours for each day of the week.
-              </CardDescription>
+              <CardDescription>Set available hours for each day of the week.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {DAYS.map((day, idx) => {
-                const dayAvail = availability.find((a) => a.dayOfWeek === idx)
-                const isAvailable = dayAvail?.isAvailable ?? false
+                const dayAvail = availability.find((a) => a.dayOfWeek === idx);
+                const isAvailable = dayAvail?.isAvailable ?? false;
                 return (
-                  <div
-                    key={day}
-                    className="flex flex-row items-center gap-4 rounded-lg border p-3"
-                  >
+                  <div key={day} className="flex flex-row items-center gap-4 rounded-lg border p-3">
                     <div className="w-28 font-medium text-sm">{day}</div>
                     <Switch
                       checked={isAvailable}
@@ -951,28 +995,28 @@ export default function UserDetailPage() {
                           type="time"
                           className="w-32"
                           value={dayAvail?.startTime || "09:00"}
-                          onChange={(e) =>
-                            updateAvailabilityDay(idx, "startTime", e.target.value)
-                          }
+                          onChange={(e) => updateAvailabilityDay(idx, "startTime", e.target.value)}
                         />
                         <span className="text-muted-foreground">to</span>
                         <Input
                           type="time"
                           className="w-32"
                           value={dayAvail?.endTime || "17:00"}
-                          onChange={(e) =>
-                            updateAvailabilityDay(idx, "endTime", e.target.value)
-                          }
+                          onChange={(e) => updateAvailabilityDay(idx, "endTime", e.target.value)}
                         />
                       </>
                     )}
                   </div>
-                )
+                );
               })}
 
               <div className="flex justify-end pt-4">
                 <Button onClick={handleSaveAvailability} disabled={isSaving}>
-                  {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  {isSaving ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-2 h-4 w-4" />
+                  )}
                   Save Availability
                 </Button>
               </div>
@@ -996,11 +1040,16 @@ export default function UserDetailPage() {
                 ) : (
                   <div className="space-y-2">
                     {member.programAssignments.map((pa) => (
-                      <div key={pa.id} className="flex items-center justify-between rounded-lg border p-3">
+                      <div
+                        key={pa.id}
+                        className="flex items-center justify-between rounded-lg border p-3"
+                      >
                         <div>
                           <span className="font-medium">{pa.program.name}</span>
                           {pa.isPrimary && (
-                            <Badge variant="secondary" className="ml-2">Primary</Badge>
+                            <Badge variant="secondary" className="ml-2">
+                              Primary
+                            </Badge>
                           )}
                         </div>
                         <Badge variant="outline" className="capitalize">
@@ -1026,7 +1075,10 @@ export default function UserDetailPage() {
                 ) : (
                   <div className="space-y-2">
                     {member.shifts.map((shift) => (
-                      <div key={shift.id} className="flex items-center justify-between rounded-lg border p-3">
+                      <div
+                        key={shift.id}
+                        className="flex items-center justify-between rounded-lg border p-3"
+                      >
                         <div>
                           <span className="font-medium" suppressHydrationWarning>
                             {format(new Date(shift.date), "EEE, MMM d")}
@@ -1080,18 +1132,23 @@ export default function UserDetailPage() {
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="pass" id="grant_pass" />
-                    <Label htmlFor="grant_pass" className="font-normal">Pass</Label>
+                    <Label htmlFor="grant_pass" className="font-normal">
+                      Pass
+                    </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="fail" id="grant_fail" />
-                    <Label htmlFor="grant_fail" className="font-normal">Fail</Label>
+                    <Label htmlFor="grant_fail" className="font-normal">
+                      Fail
+                    </Label>
                   </div>
                 </RadioGroup>
               </div>
             ) : grantingCert?.evaluationMethod === "POINT_SCALE" ? (
               <div className="grid gap-2">
                 <Label>
-                  Score ({grantingCert.pointScaleMin ?? 1}-{grantingCert.pointScaleMax ?? 10}, pass: {grantingCert.passThreshold ?? 7})
+                  Score ({grantingCert.pointScaleMin ?? 1}-{grantingCert.pointScaleMax ?? 10}, pass:{" "}
+                  {grantingCert.passThreshold ?? 7})
                 </Label>
                 <Input
                   type="number"
@@ -1099,12 +1156,12 @@ export default function UserDetailPage() {
                   max={grantingCert.pointScaleMax ?? 10}
                   value={grantForm.score ?? ""}
                   onChange={(e) => {
-                    const score = e.target.value ? parseInt(e.target.value) : null
+                    const score = e.target.value ? parseInt(e.target.value) : null;
                     setGrantForm((prev) => ({
                       ...prev,
                       score,
                       passed: score !== null ? score >= (grantingCert?.passThreshold ?? 0) : false,
-                    }))
+                    }));
                   }}
                 />
               </div>
@@ -1117,17 +1174,29 @@ export default function UserDetailPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className={cn("w-full justify-start text-left font-normal", !grantForm.grantedAt && "text-muted-foreground")}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !grantForm.grantedAt && "text-muted-foreground"
+                    )}
                   >
                     <Calendar className="mr-2 h-4 w-4" />
-                    {grantForm.grantedAt ? format(new Date(grantForm.grantedAt + "T12:00:00Z"), "PPP") : "Pick a date"}
+                    {grantForm.grantedAt
+                      ? format(new Date(grantForm.grantedAt + "T12:00:00Z"), "PPP")
+                      : "Pick a date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <CalendarPicker
                     mode="single"
-                    selected={grantForm.grantedAt ? new Date(grantForm.grantedAt + "T12:00:00Z") : undefined}
-                    onSelect={(date) => setGrantForm((prev) => ({ ...prev, grantedAt: date ? format(date, "yyyy-MM-dd") : "" }))}
+                    selected={
+                      grantForm.grantedAt ? new Date(grantForm.grantedAt + "T12:00:00Z") : undefined
+                    }
+                    onSelect={(date) =>
+                      setGrantForm((prev) => ({
+                        ...prev,
+                        grantedAt: date ? format(date, "yyyy-MM-dd") : "",
+                      }))
+                    }
                     initialFocus
                   />
                 </PopoverContent>
@@ -1138,9 +1207,7 @@ export default function UserDetailPage() {
               <Label>Notes</Label>
               <Textarea
                 value={grantForm.notes}
-                onChange={(e) =>
-                  setGrantForm((prev) => ({ ...prev, notes: e.target.value }))
-                }
+                onChange={(e) => setGrantForm((prev) => ({ ...prev, notes: e.target.value }))}
                 placeholder="Optional notes about this certification"
                 rows={2}
               />
@@ -1158,5 +1225,5 @@ export default function UserDetailPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

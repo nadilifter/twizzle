@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import { Loader2, AlertTriangle } from "lucide-react"
-import { toast } from "sonner"
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { Loader2, AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -15,16 +15,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 const DEACTIVATION_REASONS = [
   "Non-payment",
@@ -32,66 +32,60 @@ const DEACTIVATION_REASONS = [
   "Policy violation",
   "Inactivity",
   "Other",
-] as const
+] as const;
 
 interface DeactivationDialogProps {
-  organizationId: string
-  organizationName: string
+  organizationId: string;
+  organizationName: string;
 }
 
-export function DeactivationDialog({
-  organizationId,
-  organizationName,
-}: DeactivationDialogProps) {
-  const router = useRouter()
-  const [open, setOpen] = React.useState(false)
-  const [step, setStep] = React.useState<1 | 2>(1)
-  const [reason, setReason] = React.useState("")
-  const [notes, setNotes] = React.useState("")
-  const [isSubmitting, setIsSubmitting] = React.useState(false)
+export function DeactivationDialog({ organizationId, organizationName }: DeactivationDialogProps) {
+  const router = useRouter();
+  const [open, setOpen] = React.useState(false);
+  const [step, setStep] = React.useState<1 | 2>(1);
+  const [reason, setReason] = React.useState("");
+  const [notes, setNotes] = React.useState("");
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const resetState = () => {
-    setStep(1)
-    setReason("")
-    setNotes("")
-    setIsSubmitting(false)
-  }
+    setStep(1);
+    setReason("");
+    setNotes("");
+    setIsSubmitting(false);
+  };
 
   const handleOpenChange = (nextOpen: boolean) => {
-    setOpen(nextOpen)
-    if (!nextOpen) resetState()
-  }
+    setOpen(nextOpen);
+    if (!nextOpen) resetState();
+  };
 
   const handleConfirm = async () => {
-    setIsSubmitting(true)
+    setIsSubmitting(true);
     try {
-      const res = await fetch(
-        `/api/superadmin/organizations/${organizationId}/status`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "deactivate",
-            reason,
-            notes: notes || undefined,
-          }),
-        }
-      )
+      const res = await fetch(`/api/superadmin/organizations/${organizationId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "deactivate",
+          reason,
+          notes: notes || undefined,
+        }),
+      });
 
       if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || "Failed to deactivate organization")
+        const data = await res.json();
+        throw new Error(data.error || "Failed to deactivate organization");
       }
 
-      toast.success(`${organizationName} has been deactivated`)
-      setOpen(false)
-      resetState()
-      router.refresh()
+      toast.success(`${organizationName} has been deactivated`);
+      setOpen(false);
+      resetState();
+      router.refresh();
     } catch (error: any) {
-      toast.error(error.message || "Failed to deactivate organization")
-      setIsSubmitting(false)
+      toast.error(error.message || "Failed to deactivate organization");
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
@@ -107,8 +101,8 @@ export function DeactivationDialog({
             <AlertDialogHeader>
               <AlertDialogTitle>Deactivate {organizationName}</AlertDialogTitle>
               <AlertDialogDescription>
-                Select a reason for deactivating this organization. You can also
-                add optional notes for internal records.
+                Select a reason for deactivating this organization. You can also add optional notes
+                for internal records.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="space-y-4 py-4">
@@ -140,11 +134,7 @@ export function DeactivationDialog({
             </div>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <Button
-                variant="destructive"
-                onClick={() => setStep(2)}
-                disabled={!reason}
-              >
+              <Button variant="destructive" onClick={() => setStep(2)} disabled={!reason}>
                 Continue
               </Button>
             </AlertDialogFooter>
@@ -160,8 +150,7 @@ export function DeactivationDialog({
               </AlertDialogTitle>
               <AlertDialogDescription className="space-y-2">
                 <span className="block">
-                  You are about to deactivate <strong>{organizationName}</strong>.
-                  This will:
+                  You are about to deactivate <strong>{organizationName}</strong>. This will:
                 </span>
                 <ul className="list-disc pl-5 space-y-1 text-sm">
                   <li>Pause all recurring billing</li>
@@ -169,23 +158,15 @@ export function DeactivationDialog({
                   <li>Take down the organization&apos;s marketing site</li>
                   <li>Halt all automated notifications</li>
                 </ul>
-                <span className="block font-medium">
-                  Reason: {reason}
-                </span>
+                <span className="block font-medium">Reason: {reason}</span>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <Button variant="outline" onClick={() => setStep(1)} disabled={isSubmitting}>
                 Back
               </Button>
-              <Button
-                variant="destructive"
-                onClick={handleConfirm}
-                disabled={isSubmitting}
-              >
-                {isSubmitting && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
+              <Button variant="destructive" onClick={handleConfirm} disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Yes, Deactivate
               </Button>
             </AlertDialogFooter>
@@ -193,5 +174,5 @@ export function DeactivationDialog({
         )}
       </AlertDialogContent>
     </AlertDialog>
-  )
+  );
 }

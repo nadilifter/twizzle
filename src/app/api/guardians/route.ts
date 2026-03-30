@@ -90,9 +90,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data, total, limit, offset });
   } catch (error) {
     console.error("Error fetching guardians:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch guardians" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch guardians" }, { status: 500 });
   }
 }

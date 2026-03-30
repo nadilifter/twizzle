@@ -1,26 +1,18 @@
-"use client"
+"use client";
 
-import { useState, useCallback, useEffect } from "react"
-import Link from "next/link"
-import {
-  Plus,
-  MapPin,
-  Building,
-  Star,
-  Loader2,
-  MoreHorizontal,
-  Trash2,
-} from "lucide-react"
-import { COUNTRIES, getRegionsForCountry } from "@/lib/location-data"
-import { DashboardPageHeader } from "@/components/dashboard-page-header"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { PhoneInput } from "@/components/ui/phone-input"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { StateProvinceCombobox } from "@/components/ui/state-province-combobox"
-import { Badge } from "@/components/ui/badge"
+import { useState, useCallback, useEffect } from "react";
+import Link from "next/link";
+import { Plus, MapPin, Building, Star, Loader2, MoreHorizontal, Trash2 } from "lucide-react";
+import { COUNTRIES, getRegionsForCountry } from "@/lib/location-data";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StateProvinceCombobox } from "@/components/ui/state-province-combobox";
+import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
   SheetContent,
@@ -28,22 +20,22 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet"
+} from "@/components/ui/sheet";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { Separator } from "@/components/ui/separator"
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -51,67 +43,67 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { toast } from "sonner"
-import { MultiLocationMap } from "@/components/location-map"
-import type { FacilityListItem } from "@/types/facilities"
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { MultiLocationMap } from "@/components/location-map";
+import type { FacilityListItem } from "@/types/facilities";
 
 function getStatusBadgeVariant(status: string) {
   switch (status) {
     case "ACTIVE":
-      return "outline" as const
+      return "outline" as const;
     case "MAINTENANCE":
-      return "secondary" as const
+      return "secondary" as const;
     default:
-      return "destructive" as const
+      return "destructive" as const;
   }
 }
 
 export default function FacilitiesPage() {
-  const [facilities, setFacilities] = useState<FacilityListItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [facilities, setFacilities] = useState<FacilityListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const [formOpen, setFormOpen] = useState(false)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [facilityToDelete, setFacilityToDelete] = useState<FacilityListItem | null>(null)
+  const [formOpen, setFormOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [facilityToDelete, setFacilityToDelete] = useState<FacilityListItem | null>(null);
 
-  const [country, setCountry] = useState("US")
-  const [stateProvince, setStateProvince] = useState("")
-  const [phone, setPhone] = useState("")
-  const [status, setStatus] = useState("ACTIVE")
-  const [isDefault, setIsDefault] = useState(false)
+  const [country, setCountry] = useState("US");
+  const [stateProvince, setStateProvince] = useState("");
+  const [phone, setPhone] = useState("");
+  const [status, setStatus] = useState("ACTIVE");
+  const [isDefault, setIsDefault] = useState(false);
 
   const fetchFacilities = useCallback(async () => {
     try {
-      const res = await fetch("/api/organization/facilities")
-      if (!res.ok) throw new Error("Failed to fetch facilities")
-      setFacilities(await res.json())
+      const res = await fetch("/api/organization/facilities");
+      if (!res.ok) throw new Error("Failed to fetch facilities");
+      setFacilities(await res.json());
     } catch {
-      toast.error("Failed to load facilities")
+      toast.error("Failed to load facilities");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    fetchFacilities()
-  }, [fetchFacilities])
+    fetchFacilities();
+  }, [fetchFacilities]);
 
   const openCreateForm = () => {
-    setCountry("US")
-    setStateProvince("")
-    setPhone("")
-    setStatus("ACTIVE")
-    setIsDefault(false)
-    setFormOpen(true)
-  }
+    setCountry("US");
+    setStateProvince("");
+    setPhone("");
+    setStatus("ACTIVE");
+    setIsDefault(false);
+    setFormOpen(true);
+  };
 
   const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setSaving(true)
+    e.preventDefault();
+    setSaving(true);
 
-    const formData = new FormData(e.currentTarget)
+    const formData = new FormData(e.currentTarget);
     const data = {
       name: formData.get("name") as string,
       street: (formData.get("street") as string) || null,
@@ -126,58 +118,60 @@ export default function FacilitiesPage() {
       description: (formData.get("description") as string) || null,
       status,
       isDefault,
-    }
+    };
 
     try {
       const res = await fetch("/api/organization/facilities", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
-      })
+      });
       if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || "Failed to create facility")
+        const error = await res.json();
+        throw new Error(error.error || "Failed to create facility");
       }
 
-      toast.success("Facility created")
-      setFormOpen(false)
-      await fetchFacilities()
+      toast.success("Facility created");
+      setFormOpen(false);
+      await fetchFacilities();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to create facility")
+      toast.error(error instanceof Error ? error.message : "Failed to create facility");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleDelete = async () => {
-    if (!facilityToDelete) return
-    setSaving(true)
+    if (!facilityToDelete) return;
+    setSaving(true);
     try {
-      const res = await fetch(`/api/organization/facilities/${facilityToDelete.id}`, { method: "DELETE" })
+      const res = await fetch(`/api/organization/facilities/${facilityToDelete.id}`, {
+        method: "DELETE",
+      });
       if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || "Failed to delete facility")
+        const error = await res.json();
+        throw new Error(error.error || "Failed to delete facility");
       }
-      toast.success("Facility deleted")
-      setDeleteDialogOpen(false)
-      setFacilityToDelete(null)
-      await fetchFacilities()
+      toast.success("Facility deleted");
+      setDeleteDialogOpen(false);
+      setFacilityToDelete(null);
+      await fetchFacilities();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete facility")
+      toast.error(error instanceof Error ? error.message : "Failed to delete facility");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-    )
+    );
   }
 
-  const mappable = facilities.filter((f) => f.latitude != null && f.longitude != null)
+  const mappable = facilities.filter((f) => f.latitude != null && f.longitude != null);
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -214,13 +208,21 @@ export default function FacilitiesPage() {
               <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
                 <div className="flex items-center gap-2">
                   <Building className="h-4 w-4 text-muted-foreground" />
-                  <CardTitle className="text-sm font-medium line-clamp-1">{facility.name}</CardTitle>
+                  <CardTitle className="text-sm font-medium line-clamp-1">
+                    {facility.name}
+                  </CardTitle>
                 </div>
                 <div className="flex items-center gap-1">
-                  {facility.isDefault && <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />}
+                  {facility.isDefault && (
+                    <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                  )}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild onClick={(e) => e.preventDefault()}>
-                      <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        className="h-8 w-8 p-0"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -228,10 +230,10 @@ export default function FacilitiesPage() {
                       <DropdownMenuItem
                         className="text-red-600"
                         onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          setFacilityToDelete(facility)
-                          setDeleteDialogOpen(true)
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setFacilityToDelete(facility);
+                          setDeleteDialogOpen(true);
                         }}
                       >
                         <Trash2 className="mr-2 h-4 w-4" /> Delete
@@ -247,7 +249,9 @@ export default function FacilitiesPage() {
                       <MapPin className="h-3 w-3" />
                       <span>
                         {facility.city},{" "}
-                        {getRegionsForCountry(facility.country || "").find((r) => r.code === facility.stateProvince)?.name ?? facility.stateProvince}
+                        {getRegionsForCountry(facility.country || "").find(
+                          (r) => r.code === facility.stateProvince
+                        )?.name ?? facility.stateProvince}
                       </span>
                     </>
                   )}
@@ -267,7 +271,9 @@ export default function FacilitiesPage() {
           <Card className="col-span-full">
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Building className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground text-center">No facilities yet. Add your first facility to get started.</p>
+              <p className="text-muted-foreground text-center">
+                No facilities yet. Add your first facility to get started.
+              </p>
               <Button className="mt-4" onClick={openCreateForm}>
                 <Plus className="mr-2 h-4 w-4" /> Add Facility
               </Button>
@@ -299,22 +305,52 @@ export default function FacilitiesPage() {
                   <Input id="city" name="city" />
                 </div>
                 <div className="grid gap-2">
-                  <Label>{country === "CA" ? "Province" : country === "US" ? "State" : "State / Province"}</Label>
-                  <StateProvinceCombobox country={country} value={stateProvince} onChange={setStateProvince} />
+                  <Label>
+                    {country === "CA"
+                      ? "Province"
+                      : country === "US"
+                        ? "State"
+                        : "State / Province"}
+                  </Label>
+                  <StateProvinceCombobox
+                    country={country}
+                    value={stateProvince}
+                    onChange={setStateProvince}
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="postalCode">{country === "CA" ? "Postal Code" : country === "US" ? "ZIP Code" : "Postal Code"}</Label>
-                  <Input id="postalCode" name="postalCode" placeholder={country === "CA" ? "A1A 1A1" : country === "US" ? "12345" : ""} />
+                  <Label htmlFor="postalCode">
+                    {country === "CA"
+                      ? "Postal Code"
+                      : country === "US"
+                        ? "ZIP Code"
+                        : "Postal Code"}
+                  </Label>
+                  <Input
+                    id="postalCode"
+                    name="postalCode"
+                    placeholder={country === "CA" ? "A1A 1A1" : country === "US" ? "12345" : ""}
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label>Country</Label>
-                  <Select value={country} onValueChange={(v) => { setCountry(v); if (country !== v) setStateProvince("") }}>
-                    <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
+                  <Select
+                    value={country}
+                    onValueChange={(v) => {
+                      setCountry(v);
+                      if (country !== v) setStateProvince("");
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select country" />
+                    </SelectTrigger>
                     <SelectContent>
                       {COUNTRIES.map((c) => (
-                        <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+                        <SelectItem key={c.code} value={c.code}>
+                          {c.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -324,7 +360,11 @@ export default function FacilitiesPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label>Phone</Label>
-                  <PhoneInput defaultCountry="US" value={phone} onChange={(v) => setPhone(v || "")} />
+                  <PhoneInput
+                    defaultCountry="US"
+                    value={phone}
+                    onChange={(v) => setPhone(v || "")}
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
@@ -350,7 +390,9 @@ export default function FacilitiesPage() {
                 <div className="grid gap-2">
                   <Label>Status</Label>
                   <Select value={status} onValueChange={setStatus}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ACTIVE">Active</SelectItem>
                       <SelectItem value="INACTIVE">Inactive</SelectItem>
@@ -362,7 +404,9 @@ export default function FacilitiesPage() {
                   <Label>Default Facility</Label>
                   <div className="flex items-center gap-2 h-9">
                     <Switch checked={isDefault} onCheckedChange={setIsDefault} />
-                    <span className="text-sm text-muted-foreground">{isDefault ? "Yes" : "No"}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {isDefault ? "Yes" : "No"}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -383,11 +427,15 @@ export default function FacilitiesPage() {
           <DialogHeader>
             <DialogTitle>Delete Facility</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &quot;{facilityToDelete?.name}&quot;? This will also delete all spaces and equipment associated with this facility. This action cannot be undone.
+              Are you sure you want to delete &quot;{facilityToDelete?.name}&quot;? This will also
+              delete all spaces and equipment associated with this facility. This action cannot be
+              undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={saving}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete
@@ -396,5 +444,5 @@ export default function FacilitiesPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

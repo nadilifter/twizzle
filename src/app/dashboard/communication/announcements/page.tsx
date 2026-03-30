@@ -1,19 +1,19 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import { useFeatures } from "@/components/feature-context"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Label } from "@/components/ui/label"
+import { useState, useEffect, useCallback } from "react";
+import { useFeatures } from "@/components/feature-context";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -30,39 +30,56 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Eye, Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Loader2, Archive } from "lucide-react"
-import { format } from "date-fns"
-import { toast } from "sonner"
+} from "@/components/ui/dropdown-menu";
+import {
+  Plus,
+  Search,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Eye,
+  Bold,
+  Italic,
+  Underline as UnderlineIcon,
+  List,
+  ListOrdered,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Loader2,
+  Archive,
+} from "lucide-react";
+import { format } from "date-fns";
+import { toast } from "sonner";
 
 // Tiptap imports
-import { useEditor, EditorContent } from "@tiptap/react"
-import StarterKit from "@tiptap/starter-kit"
-import Placeholder from "@tiptap/extension-placeholder"
-import Link from "@tiptap/extension-link"
-import Underline from "@tiptap/extension-underline"
-import TextAlign from "@tiptap/extension-text-align"
-import { cn } from "@/lib/utils"
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Placeholder from "@tiptap/extension-placeholder";
+import Link from "@tiptap/extension-link";
+import Underline from "@tiptap/extension-underline";
+import TextAlign from "@tiptap/extension-text-align";
+import { cn } from "@/lib/utils";
 
 interface Announcement {
-  id: string
-  title: string
-  content: string
-  targetScope: "ALL" | "PROGRAM" | "EVENT" | "GUARDIAN"
-  targetProgramId: string | null
-  targetEventId: string | null
-  priority: "LOW" | "NORMAL" | "HIGH" | "URGENT"
-  status: "DRAFT" | "PUBLISHED" | "ARCHIVED"
-  publishedAt: string | null
-  createdAt: string
-  program?: { id: string; name: string } | null
-  event?: { id: string; name: string } | null
+  id: string;
+  title: string;
+  content: string;
+  targetScope: "ALL" | "PROGRAM" | "EVENT" | "GUARDIAN";
+  targetProgramId: string | null;
+  targetEventId: string | null;
+  priority: "LOW" | "NORMAL" | "HIGH" | "URGENT";
+  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+  publishedAt: string | null;
+  createdAt: string;
+  program?: { id: string; name: string } | null;
+  event?: { id: string; name: string } | null;
 }
 
 const priorityColors = {
@@ -70,36 +87,36 @@ const priorityColors = {
   NORMAL: "bg-secondary text-secondary-foreground",
   HIGH: "bg-orange-500 text-white",
   URGENT: "bg-destructive text-destructive-foreground",
-}
+};
 
 const statusColors = {
   DRAFT: "bg-muted text-muted-foreground",
   PUBLISHED: "bg-green-500 text-white",
   ARCHIVED: "bg-gray-500 text-white",
-}
+};
 
 export default function AnnouncementsPage() {
-  const { isFeatureEnabled } = useFeatures()
-  const eventsEnabled = isFeatureEnabled("events")
-  const [announcements, setAnnouncements] = useState<Announcement[]>([])
-  const [loading, setLoading] = useState(true)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [saving, setSaving] = useState(false)
+  const { isFeatureEnabled } = useFeatures();
+  const eventsEnabled = isFeatureEnabled("events");
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [saving, setSaving] = useState(false);
 
   // Reference data
-  const [programs, setPrograms] = useState<{ id: string; name: string }[]>([])
-  const [events, setEvents] = useState<{ id: string; name: string }[]>([])
-  
+  const [programs, setPrograms] = useState<{ id: string; name: string }[]>([]);
+  const [events, setEvents] = useState<{ id: string; name: string }[]>([]);
+
   // Form State
-  const [title, setTitle] = useState("")
-  const [targetScope, setTargetScope] = useState<"ALL" | "PROGRAM" | "EVENT" | "GUARDIAN">("ALL")
-  const [targetProgramId, setTargetProgramId] = useState("")
-  const [targetEventId, setTargetEventId] = useState("")
-  const [priority, setPriority] = useState<"LOW" | "NORMAL" | "HIGH" | "URGENT">("NORMAL")
-  const [status, setStatus] = useState<"DRAFT" | "PUBLISHED" | "ARCHIVED">("DRAFT")
+  const [title, setTitle] = useState("");
+  const [targetScope, setTargetScope] = useState<"ALL" | "PROGRAM" | "EVENT" | "GUARDIAN">("ALL");
+  const [targetProgramId, setTargetProgramId] = useState("");
+  const [targetEventId, setTargetEventId] = useState("");
+  const [priority, setPriority] = useState<"LOW" | "NORMAL" | "HIGH" | "URGENT">("NORMAL");
+  const [status, setStatus] = useState<"DRAFT" | "PUBLISHED" | "ARCHIVED">("DRAFT");
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -122,140 +139,154 @@ export default function AnnouncementsPage() {
     content: "",
     editorProps: {
       attributes: {
-        class: "min-h-[150px] w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 overflow-y-auto prose prose-sm max-w-none dark:prose-invert",
+        class:
+          "min-h-[150px] w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 overflow-y-auto prose prose-sm max-w-none dark:prose-invert",
       },
     },
-  })
+  });
 
   const fetchAnnouncements = useCallback(async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const params = new URLSearchParams()
-      if (searchQuery) params.set("search", searchQuery)
-      if (statusFilter !== "all") params.set("status", statusFilter)
-      const response = await fetch(`/api/announcements?${params}`)
+      const params = new URLSearchParams();
+      if (searchQuery) params.set("search", searchQuery);
+      if (statusFilter !== "all") params.set("status", statusFilter);
+      const response = await fetch(`/api/announcements?${params}`);
       if (response.ok) {
-        const data = await response.json()
-        setAnnouncements(data.data || [])
+        const data = await response.json();
+        setAnnouncements(data.data || []);
       }
     } catch (error) {
-      console.error("Failed to fetch announcements:", error)
-      toast.error("Failed to fetch announcements")
+      console.error("Failed to fetch announcements:", error);
+      toast.error("Failed to fetch announcements");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [searchQuery, statusFilter])
+  }, [searchQuery, statusFilter]);
 
   useEffect(() => {
-    fetchAnnouncements()
-  }, [fetchAnnouncements])
+    fetchAnnouncements();
+  }, [fetchAnnouncements]);
 
   useEffect(() => {
     fetch("/api/programs")
       .then((r) => r.json())
-      .then((data) => setPrograms((data.data || data.programs || []).map((p: any) => ({ id: p.id, name: p.name }))))
-      .catch((err) => console.error("Failed to load programs:", err))
-  }, [])
+      .then((data) =>
+        setPrograms(
+          (data.data || data.programs || []).map((p: any) => ({ id: p.id, name: p.name }))
+        )
+      )
+      .catch((err) => console.error("Failed to load programs:", err));
+  }, []);
 
   useEffect(() => {
-    if (!eventsEnabled) return
+    if (!eventsEnabled) return;
     fetch("/api/events")
       .then((r) => r.json())
-      .then((data) => setEvents((data.data || data.events || []).map((e: any) => ({ id: e.id, name: e.title || e.name }))))
-      .catch((err) => console.error("Failed to load events:", err))
-  }, [eventsEnabled])
+      .then((data) =>
+        setEvents(
+          (data.data || data.events || []).map((e: any) => ({ id: e.id, name: e.title || e.name }))
+        )
+      )
+      .catch((err) => console.error("Failed to load events:", err));
+  }, [eventsEnabled]);
 
   const resetForm = () => {
-    setTitle("")
-    setTargetScope("ALL")
-    setTargetProgramId("")
-    setTargetEventId("")
-    setPriority("NORMAL")
-    setStatus("DRAFT")
-    editor?.commands.clearContent()
-    setEditingAnnouncement(null)
-  }
+    setTitle("");
+    setTargetScope("ALL");
+    setTargetProgramId("");
+    setTargetEventId("");
+    setPriority("NORMAL");
+    setStatus("DRAFT");
+    editor?.commands.clearContent();
+    setEditingAnnouncement(null);
+  };
 
   const handleOpenDialog = (announcement?: Announcement) => {
     if (announcement) {
-      setEditingAnnouncement(announcement)
-      setTitle(announcement.title)
-      setTargetScope(announcement.targetScope)
-      setTargetProgramId(announcement.targetProgramId || "")
-      setTargetEventId(announcement.targetEventId || "")
-      setPriority(announcement.priority)
-      setStatus(announcement.status)
-      editor?.commands.setContent(announcement.content)
+      setEditingAnnouncement(announcement);
+      setTitle(announcement.title);
+      setTargetScope(announcement.targetScope);
+      setTargetProgramId(announcement.targetProgramId || "");
+      setTargetEventId(announcement.targetEventId || "");
+      setPriority(announcement.priority);
+      setStatus(announcement.status);
+      editor?.commands.setContent(announcement.content);
     } else {
-      resetForm()
+      resetForm();
     }
-    setIsDialogOpen(true)
-  }
+    setIsDialogOpen(true);
+  };
 
   const handleSave = async () => {
     if (!title || !editor?.getHTML()) {
-      toast.error("Title and content are required")
-      return
+      toast.error("Title and content are required");
+      return;
     }
 
-    setSaving(true)
+    setSaving(true);
     try {
       const payload = {
         title,
         content: editor.getHTML(),
         targetScope,
-        targetProgramId: targetScope === "PROGRAM" && targetProgramId && targetProgramId !== "all" ? targetProgramId : null,
+        targetProgramId:
+          targetScope === "PROGRAM" && targetProgramId && targetProgramId !== "all"
+            ? targetProgramId
+            : null,
         targetEventId: targetScope === "EVENT" && targetEventId ? targetEventId : null,
         priority,
         status,
-      }
+      };
 
       const url = editingAnnouncement
         ? `/api/announcements/${editingAnnouncement.id}`
-        : "/api/announcements"
-      
+        : "/api/announcements";
+
       const response = await fetch(url, {
         method: editingAnnouncement ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      })
+      });
 
       if (response.ok) {
-        toast.success(editingAnnouncement
-          ? "Announcement updated successfully"
-          : "Announcement created successfully")
-        setIsDialogOpen(false)
-        resetForm()
-        fetchAnnouncements()
+        toast.success(
+          editingAnnouncement
+            ? "Announcement updated successfully"
+            : "Announcement created successfully"
+        );
+        setIsDialogOpen(false);
+        resetForm();
+        fetchAnnouncements();
       } else {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to save announcement")
+        const error = await response.json();
+        throw new Error(error.error || "Failed to save announcement");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save announcement")
+      toast.error(error instanceof Error ? error.message : "Failed to save announcement");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this announcement?")) return
+    if (!confirm("Are you sure you want to delete this announcement?")) return;
 
     try {
       const response = await fetch(`/api/announcements/${id}`, {
         method: "DELETE",
-      })
+      });
 
       if (response.ok) {
-        toast.success("Announcement deleted successfully")
-        fetchAnnouncements()
+        toast.success("Announcement deleted successfully");
+        fetchAnnouncements();
       } else {
-        throw new Error("Failed to delete announcement")
+        throw new Error("Failed to delete announcement");
       }
     } catch (error) {
-      toast.error("Failed to delete announcement")
+      toast.error("Failed to delete announcement");
     }
-  }
+  };
 
   const handlePublish = async (id: string) => {
     try {
@@ -263,18 +294,18 @@ export default function AnnouncementsPage() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "PUBLISHED" }),
-      })
+      });
 
       if (response.ok) {
-        toast.success("Announcement published successfully")
-        fetchAnnouncements()
+        toast.success("Announcement published successfully");
+        fetchAnnouncements();
       } else {
-        throw new Error("Failed to publish announcement")
+        throw new Error("Failed to publish announcement");
       }
     } catch (error) {
-      toast.error("Failed to publish announcement")
+      toast.error("Failed to publish announcement");
     }
-  }
+  };
 
   const handleArchive = async (id: string) => {
     try {
@@ -282,25 +313,30 @@ export default function AnnouncementsPage() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "ARCHIVED" }),
-      })
+      });
 
       if (response.ok) {
-        toast.success("Announcement archived")
-        fetchAnnouncements()
+        toast.success("Announcement archived");
+        fetchAnnouncements();
       } else {
-        throw new Error("Failed to archive announcement")
+        throw new Error("Failed to archive announcement");
       }
     } catch (error) {
-      toast.error("Failed to archive announcement")
+      toast.error("Failed to archive announcement");
     }
-  }
+  };
 
   const scopeLabel = (a: Announcement) => {
-    if (a.targetScope === "PROGRAM" && a.program) return a.program.name
-    if (a.targetScope === "EVENT" && a.event) return a.event.name
-    const labels: Record<string, string> = { ALL: "All Members", GUARDIAN: "Guardians", PROGRAM: "All Program Registrants", EVENT: "Event" }
-    return labels[a.targetScope] || a.targetScope
-  }
+    if (a.targetScope === "PROGRAM" && a.program) return a.program.name;
+    if (a.targetScope === "EVENT" && a.event) return a.event.name;
+    const labels: Record<string, string> = {
+      ALL: "All Members",
+      GUARDIAN: "Guardians",
+      PROGRAM: "All Program Registrants",
+      EVENT: "Event",
+    };
+    return labels[a.targetScope] || a.targetScope;
+  };
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -311,10 +347,13 @@ export default function AnnouncementsPage() {
             Broadcast updates, news, and alerts to your community.
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={(open) => {
-          setIsDialogOpen(open)
-          if (!open) resetForm()
-        }}>
+        <Dialog
+          open={isDialogOpen}
+          onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) resetForm();
+          }}
+        >
           <DialogTrigger asChild>
             <Button onClick={() => handleOpenDialog()}>
               <Plus className="mr-2 h-4 w-4" />
@@ -342,15 +381,18 @@ export default function AnnouncementsPage() {
                   placeholder="e.g. Important Facility Update"
                 />
               </div>
-              
+
               <div className="grid grid-cols-3 gap-4">
                 <div className="grid gap-2">
                   <Label>Audience</Label>
-                  <Select value={targetScope} onValueChange={(val: any) => {
-                    setTargetScope(val)
-                    if (val !== "PROGRAM") setTargetProgramId("")
-                    if (val !== "EVENT") setTargetEventId("")
-                  }}>
+                  <Select
+                    value={targetScope}
+                    onValueChange={(val: any) => {
+                      setTargetScope(val);
+                      if (val !== "PROGRAM") setTargetProgramId("");
+                      if (val !== "EVENT") setTargetEventId("");
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -401,7 +443,9 @@ export default function AnnouncementsPage() {
                     <SelectContent>
                       <SelectItem value="all">All Program Registrants</SelectItem>
                       {programs.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -422,7 +466,9 @@ export default function AnnouncementsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {events.map((e) => (
-                        <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
+                        <SelectItem key={e.id} value={e.id}>
+                          {e.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -470,7 +516,10 @@ export default function AnnouncementsPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => editor.chain().focus().setTextAlign("left").run()}
-                        className={cn("h-8 w-8 p-0", editor.isActive({ textAlign: "left" }) && "bg-muted")}
+                        className={cn(
+                          "h-8 w-8 p-0",
+                          editor.isActive({ textAlign: "left" }) && "bg-muted"
+                        )}
                       >
                         <AlignLeft className="h-4 w-4" />
                       </Button>
@@ -479,7 +528,10 @@ export default function AnnouncementsPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => editor.chain().focus().setTextAlign("center").run()}
-                        className={cn("h-8 w-8 p-0", editor.isActive({ textAlign: "center" }) && "bg-muted")}
+                        className={cn(
+                          "h-8 w-8 p-0",
+                          editor.isActive({ textAlign: "center" }) && "bg-muted"
+                        )}
                       >
                         <AlignCenter className="h-4 w-4" />
                       </Button>
@@ -488,7 +540,10 @@ export default function AnnouncementsPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => editor.chain().focus().setTextAlign("right").run()}
-                        className={cn("h-8 w-8 p-0", editor.isActive({ textAlign: "right" }) && "bg-muted")}
+                        className={cn(
+                          "h-8 w-8 p-0",
+                          editor.isActive({ textAlign: "right" }) && "bg-muted"
+                        )}
                       >
                         <AlignRight className="h-4 w-4" />
                       </Button>
@@ -568,7 +623,9 @@ export default function AnnouncementsPage() {
                   : "No announcements yet."}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                {!searchQuery && statusFilter === "all" && "Create your first announcement to get started."}
+                {!searchQuery &&
+                  statusFilter === "all" &&
+                  "Create your first announcement to get started."}
               </p>
             </div>
           ) : (
@@ -645,5 +702,5 @@ export default function AnnouncementsPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

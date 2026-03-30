@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import Image from "next/image"
+import * as React from "react";
+import Link from "next/link";
+import Image from "next/image";
 import {
   DndContext,
   KeyboardSensor,
@@ -12,23 +12,17 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
-} from "@dnd-kit/core"
-import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers"
+} from "@dnd-kit/core";
+import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
 import {
   SortableContext,
   arrayMove,
   useSortable,
   verticalListSortingStrategy,
-} from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -36,13 +30,23 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
-  Plus, Search, Loader2, AlertCircle, Pencil, Trash2,
-  BookOpen, CalendarDays, Trophy, ImageIcon, GripVertical, ArrowUpDown,
-} from "lucide-react"
+  Plus,
+  Search,
+  Loader2,
+  AlertCircle,
+  Pencil,
+  Trash2,
+  BookOpen,
+  CalendarDays,
+  Trophy,
+  ImageIcon,
+  GripVertical,
+  ArrowUpDown,
+} from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,25 +57,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { useCategories, type Category } from "@/hooks/use-categories"
-import { useFeatures } from "@/components/feature-context"
-import { toast } from "sonner"
+} from "@/components/ui/alert-dialog";
+import { useCategories, type Category } from "@/hooks/use-categories";
+import { useFeatures } from "@/components/feature-context";
+import { toast } from "sonner";
 
 function SortableCategoryItem({ category }: { category: Category }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: category.id })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: category.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-  }
+  };
 
   return (
     <div
@@ -106,90 +105,91 @@ function SortableCategoryItem({ category }: { category: Category }) {
         </Badge>
       </div>
     </div>
-  )
+  );
 }
 
 export default function CategoriesPage() {
-  const { categories, isLoading, isDeleting, error, fetchCategories, deleteCategory } = useCategories({ autoFetch: false })
-  const { isFeatureEnabled } = useFeatures()
-  const competitionsEnabled = isFeatureEnabled("competitions")
-  const [searchTerm, setSearchTerm] = React.useState("")
+  const { categories, isLoading, isDeleting, error, fetchCategories, deleteCategory } =
+    useCategories({ autoFetch: false });
+  const { isFeatureEnabled } = useFeatures();
+  const competitionsEnabled = isFeatureEnabled("competitions");
+  const [searchTerm, setSearchTerm] = React.useState("");
 
-  const [isReorderDialogOpen, setIsReorderDialogOpen] = React.useState(false)
-  const [reorderCategories, setReorderCategories] = React.useState<Category[]>([])
-  const [isSavingOrder, setIsSavingOrder] = React.useState(false)
+  const [isReorderDialogOpen, setIsReorderDialogOpen] = React.useState(false);
+  const [reorderCategories, setReorderCategories] = React.useState<Category[]>([]);
+  const [isSavingOrder, setIsSavingOrder] = React.useState(false);
 
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
     useSensor(TouchSensor, {}),
     useSensor(KeyboardSensor, {})
-  )
+  );
 
-  const hasFetched = React.useRef(false)
+  const hasFetched = React.useRef(false);
   React.useEffect(() => {
-    const params = { search: searchTerm }
+    const params = { search: searchTerm };
     if (!hasFetched.current) {
-      hasFetched.current = true
-      fetchCategories(params)
-      return
+      hasFetched.current = true;
+      fetchCategories(params);
+      return;
     }
-    const timer = setTimeout(() => fetchCategories(params), 500)
-    return () => clearTimeout(timer)
-  }, [searchTerm, fetchCategories])
+    const timer = setTimeout(() => fetchCategories(params), 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm, fetchCategories]);
 
   const handleDelete = async (id: string) => {
-    const success = await deleteCategory(id)
+    const success = await deleteCategory(id);
     if (success) {
-      toast.success("Category deleted")
+      toast.success("Category deleted");
     } else {
-      toast.error("Failed to delete category")
+      toast.error("Failed to delete category");
     }
-  }
+  };
 
   const handleOpenReorder = () => {
-    setReorderCategories([...categories])
-    setIsReorderDialogOpen(true)
-  }
+    setReorderCategories([...categories]);
+    setIsReorderDialogOpen(true);
+  };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
+    const { active, over } = event;
     if (over && active.id !== over.id) {
       setReorderCategories((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id)
-        const newIndex = items.findIndex((item) => item.id === over.id)
-        return arrayMove(items, oldIndex, newIndex)
-      })
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
     }
-  }
+  };
 
   const handleSaveOrder = async () => {
-    setIsSavingOrder(true)
+    setIsSavingOrder(true);
     try {
       const updates = reorderCategories.map((category, index) => ({
         id: category.id,
         displayOrder: index,
-      }))
+      }));
 
       const response = await fetch("/api/categories/reorder", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ categories: updates }),
-      })
+      });
 
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || "Failed to save order")
+        const data = await response.json();
+        throw new Error(data.error || "Failed to save order");
       }
 
-      toast.success("Category order updated")
-      setIsReorderDialogOpen(false)
-      fetchCategories({ search: searchTerm })
+      toast.success("Category order updated");
+      setIsReorderDialogOpen(false);
+      fetchCategories({ search: searchTerm });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save order")
+      toast.error(error instanceof Error ? error.message : "Failed to save order");
     } finally {
-      setIsSavingOrder(false)
+      setIsSavingOrder(false);
     }
-  }
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -224,7 +224,7 @@ export default function CategoriesPage() {
             placeholder="Search categories..."
             className="pl-8"
             value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
       </div>
@@ -272,7 +272,8 @@ export default function CategoriesPage() {
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="secondary" className="gap-1">
                     <BookOpen className="h-3 w-3" />
-                    {category._count.programs} {category._count.programs === 1 ? "Program" : "Programs"}
+                    {category._count.programs}{" "}
+                    {category._count.programs === 1 ? "Program" : "Programs"}
                   </Badge>
                   <Badge variant="secondary" className="gap-1">
                     <CalendarDays className="h-3 w-3" />
@@ -281,7 +282,8 @@ export default function CategoriesPage() {
                   {competitionsEnabled && (
                     <Badge variant="secondary" className="gap-1">
                       <Trophy className="h-3 w-3" />
-                      {category._count.competitions} {category._count.competitions === 1 ? "Competition" : "Competitions"}
+                      {category._count.competitions}{" "}
+                      {category._count.competitions === 1 ? "Competition" : "Competitions"}
                     </Badge>
                   )}
                 </div>
@@ -295,7 +297,12 @@ export default function CategoriesPage() {
                 </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" disabled={isDeleting}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      disabled={isDeleting}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </AlertDialogTrigger>
@@ -303,8 +310,8 @@ export default function CategoriesPage() {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Delete category?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will remove the category &ldquo;{category.name}&rdquo;. Programs, events, and competitions
-                        in this category will become uncategorized.
+                        This will remove the category &ldquo;{category.name}&rdquo;. Programs,
+                        events, and competitions in this category will become uncategorized.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -320,7 +327,9 @@ export default function CategoriesPage() {
           ))}
           {categories.length === 0 && (
             <div className="col-span-full text-center py-12 text-muted-foreground">
-              {searchTerm ? "No categories match your search." : "No categories found. Create one to get started."}
+              {searchTerm
+                ? "No categories match your search."
+                : "No categories found. Create one to get started."}
             </div>
           )}
         </div>
@@ -368,5 +377,5 @@ export default function CategoriesPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

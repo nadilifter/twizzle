@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server"
-import { db } from "@/lib/db"
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
 
-export const dynamic = "force-dynamic"
+export const dynamic = "force-dynamic";
 
 // Predefined categories for consistency
 const PREDEFINED_CATEGORIES = [
@@ -18,7 +18,7 @@ const PREDEFINED_CATEGORIES = [
   "Programs",
   "Financials",
   "Other",
-]
+];
 
 // GET /api/feedback/categories
 // List all available categories
@@ -33,19 +33,19 @@ export async function GET(request: NextRequest) {
       select: {
         categories: true,
       },
-    })
+    });
 
     // Collect unique categories from features
-    const usedCategories = new Set<string>()
+    const usedCategories = new Set<string>();
     features.forEach((f) => {
-      f.categories.forEach((cat) => usedCategories.add(cat))
-    })
+      f.categories.forEach((cat) => usedCategories.add(cat));
+    });
 
     // Combine predefined and used categories
-    const allCategories = new Set([...PREDEFINED_CATEGORIES, ...usedCategories])
+    const allCategories = new Set([...PREDEFINED_CATEGORIES, ...usedCategories]);
 
     // Count features per category
-    const categoryCounts: Record<string, number> = {}
+    const categoryCounts: Record<string, number> = {};
     for (const category of allCategories) {
       const count = await db.featureRequest.count({
         where: {
@@ -53,8 +53,8 @@ export async function GET(request: NextRequest) {
           status: { not: "SUBMITTED" },
           categories: { has: category },
         },
-      })
-      categoryCounts[category] = count
+      });
+      categoryCounts[category] = count;
     }
 
     // Return categories sorted alphabetically with counts
@@ -63,17 +63,14 @@ export async function GET(request: NextRequest) {
       .map((name) => ({
         name,
         count: categoryCounts[name] || 0,
-      }))
+      }));
 
     return NextResponse.json({
       data: categoriesWithCounts,
       predefined: PREDEFINED_CATEGORIES,
-    })
+    });
   } catch (error) {
-    console.error("Error fetching categories:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch categories" },
-      { status: 500 }
-    )
+    console.error("Error fetching categories:", error);
+    return NextResponse.json({ error: "Failed to fetch categories" }, { status: 500 });
   }
 }

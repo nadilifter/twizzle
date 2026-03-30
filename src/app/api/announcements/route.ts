@@ -51,12 +51,19 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Resolve program and event names for display
-    const programIds = [...new Set(announcements.map((a) => a.targetProgramId).filter(Boolean))] as string[];
-    const eventIds = [...new Set(announcements.map((a) => a.targetEventId).filter(Boolean))] as string[];
+    const programIds = [
+      ...new Set(announcements.map((a) => a.targetProgramId).filter(Boolean)),
+    ] as string[];
+    const eventIds = [
+      ...new Set(announcements.map((a) => a.targetEventId).filter(Boolean)),
+    ] as string[];
 
     const [programs, events] = await Promise.all([
       programIds.length > 0
-        ? db.program.findMany({ where: { id: { in: programIds } }, select: { id: true, name: true } })
+        ? db.program.findMany({
+            where: { id: { in: programIds } },
+            select: { id: true, name: true },
+          })
         : Promise.resolve([]),
       eventIds.length > 0
         ? db.event.findMany({ where: { id: { in: eventIds } }, select: { id: true, title: true } })
@@ -80,10 +87,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching announcements:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch announcements" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch announcements" }, { status: 500 });
   }
 }
 
@@ -150,15 +154,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(announcement);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating announcement:", error);
-    return NextResponse.json(
-      { error: "Failed to create announcement" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create announcement" }, { status: 500 });
   }
 }

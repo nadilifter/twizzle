@@ -1,38 +1,32 @@
-import crypto from "crypto"
+import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import {
   processAllOrganizations,
   cleanupOldDeduplicationRecords,
 } from "@/lib/notification-scheduler";
-import { logger } from "@/lib/logger"
+import { logger } from "@/lib/logger";
 
-export const dynamic = "force-dynamic"
-export const maxDuration = 300
+export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
 function verifyCronSecret(authHeader: string | null): boolean {
-  if (!CRON_SECRET || !authHeader) return false
-  const expected = `Bearer ${CRON_SECRET}`
-  if (authHeader.length !== expected.length) return false
-  return crypto.timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected))
+  if (!CRON_SECRET || !authHeader) return false;
+  const expected = `Bearer ${CRON_SECRET}`;
+  if (authHeader.length !== expected.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected));
 }
 
 export async function GET(request: NextRequest) {
   try {
     if (!CRON_SECRET) {
       logger.error("CRON_SECRET is not configured");
-      return NextResponse.json(
-        { error: "Server misconfiguration" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
     }
 
     if (!verifyCronSecret(request.headers.get("authorization"))) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Check for dry-run mode (for testing)

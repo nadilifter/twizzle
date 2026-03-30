@@ -15,8 +15,8 @@ export function FeatureList({ features, onVote, onSelect, isLoggedIn }: FeatureL
   return (
     <div className="flex flex-col gap-3">
       {features.map((feature) => (
-        <div 
-          key={feature.id} 
+        <div
+          key={feature.id}
           className="flex items-start gap-5 rounded-xl border bg-card p-5 transition-all hover:shadow-md hover:border-primary/30 cursor-pointer group"
           onClick={() => onSelect(feature)}
         >
@@ -25,15 +25,21 @@ export function FeatureList({ features, onVote, onSelect, isLoggedIn }: FeatureL
             variant={feature.hasVoted ? "default" : "outline"}
             size="sm"
             className={`h-auto w-14 shrink-0 flex flex-col items-center gap-0.5 py-2.5 rounded-lg ${
-              feature.hasVoted 
-                ? "" 
+              feature.hasVoted
+                ? ""
                 : "hover:bg-primary/10 hover:text-primary hover:border-primary/40"
             }`}
             onClick={(e) => {
               e.stopPropagation();
               onVote(feature.id);
             }}
-            title={isLoggedIn ? (feature.hasVoted ? "Remove vote" : "Vote for this feature") : "Sign in to vote"}
+            title={
+              isLoggedIn
+                ? feature.hasVoted
+                  ? "Remove vote"
+                  : "Vote for this feature"
+                : "Sign in to vote"
+            }
           >
             <ChevronUp className="h-4 w-4" />
             <span className="font-semibold text-base leading-none">{feature.voteCount}</span>
@@ -49,19 +55,26 @@ export function FeatureList({ features, onVote, onSelect, isLoggedIn }: FeatureL
                 {formatStatus(feature.status)}
               </Badge>
             </div>
-            
+
             <p className="text-muted-foreground text-sm leading-relaxed line-clamp-2">
               {feature.description}
             </p>
-            
+
             <div className="flex items-center gap-3 pt-1 text-xs text-muted-foreground flex-wrap">
-              {feature.categories.slice(0, 3).map(cat => (
-                <Badge key={cat} variant="secondary" className="text-[11px] h-5 px-2 font-normal rounded-full">
+              {feature.categories.slice(0, 3).map((cat) => (
+                <Badge
+                  key={cat}
+                  variant="secondary"
+                  className="text-[11px] h-5 px-2 font-normal rounded-full"
+                >
                   {cat}
                 </Badge>
               ))}
               {feature.categories.length > 3 && (
-                <Badge variant="secondary" className="text-[11px] h-5 px-2 font-normal rounded-full">
+                <Badge
+                  variant="secondary"
+                  className="text-[11px] h-5 px-2 font-normal rounded-full"
+                >
                   +{feature.categories.length - 3}
                 </Badge>
               )}

@@ -45,12 +45,13 @@ export async function GET(request: NextRequest) {
       }),
       ...(type && { type }),
       ...(programId && { programId }),
-      ...(startDate && endDate && {
-        date: {
-          gte: new Date(startDate),
-          lte: new Date(endDate),
-        },
-      }),
+      ...(startDate &&
+        endDate && {
+          date: {
+            gte: new Date(startDate),
+            lte: new Date(endDate),
+          },
+        }),
     };
 
     const [events, total] = await Promise.all([
@@ -90,9 +91,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching coach events:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch events" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch events" }, { status: 500 });
   }
 }

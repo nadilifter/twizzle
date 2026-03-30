@@ -1,7 +1,16 @@
 "use client";
 
 import { format } from "date-fns";
-import { CalendarDays, Clock, Users, Award, UserCircle, CalendarRange, Layers, X } from "lucide-react";
+import {
+  CalendarDays,
+  Clock,
+  Users,
+  Award,
+  UserCircle,
+  CalendarRange,
+  Layers,
+  X,
+} from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
@@ -77,7 +86,11 @@ export function countActiveFilters(
   { hideDateRange = false }: { hideDateRange?: boolean } = {}
 ): number {
   let count = 0;
-  if (filters.ageRange[0] !== DEFAULT_FILTERS.ageRange[0] || filters.ageRange[1] !== DEFAULT_FILTERS.ageRange[1]) count++;
+  if (
+    filters.ageRange[0] !== DEFAULT_FILTERS.ageRange[0] ||
+    filters.ageRange[1] !== DEFAULT_FILTERS.ageRange[1]
+  )
+    count++;
   if (!hideDateRange && filters.dateRange?.from) count++;
   if (filters.timeRange[0] || filters.timeRange[1]) count++;
   if (filters.selectedLevels.length > 0) count++;
@@ -212,7 +225,9 @@ export function ProgramFiltersContent({
               <SelectContent>
                 <SelectItem value="__all__">All Categories</SelectItem>
                 {categories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -321,10 +336,7 @@ export function ProgramFiltersContent({
           Time Range
         </Label>
         <div className="flex items-center gap-2">
-          <Select
-            value={filters.timeRange[0] || "__any__"}
-            onValueChange={handleTimeStartChange}
-          >
+          <Select value={filters.timeRange[0] || "__any__"} onValueChange={handleTimeStartChange}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="From" />
             </SelectTrigger>
@@ -338,10 +350,7 @@ export function ProgramFiltersContent({
             </SelectContent>
           </Select>
           <span className="text-sm text-muted-foreground shrink-0">to</span>
-          <Select
-            value={filters.timeRange[1] || "__any__"}
-            onValueChange={handleTimeEndChange}
-          >
+          <Select value={filters.timeRange[1] || "__any__"} onValueChange={handleTimeEndChange}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="To" />
             </SelectTrigger>
@@ -389,11 +398,11 @@ export function ProgramFiltersContent({
                               color: "#fff",
                             }
                           : level.color
-                          ? {
-                              borderColor: `${level.color}60`,
-                              color: level.color,
-                            }
-                          : undefined
+                            ? {
+                                borderColor: `${level.color}60`,
+                                color: level.color,
+                              }
+                            : undefined
                       }
                     >
                       {level.name}
@@ -445,11 +454,7 @@ export function ProgramFiltersContent({
       {activeFilterCount > 0 && (
         <>
           <Separator />
-          <Button
-            variant="outline"
-            onClick={clearAll}
-            className="w-full gap-2"
-          >
+          <Button variant="outline" onClick={clearAll} className="w-full gap-2">
             <X className="h-4 w-4" />
             Clear All Filters
           </Button>

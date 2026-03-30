@@ -115,10 +115,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching discounts:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch discounts" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch discounts" }, { status: 500 });
   }
 }
 
@@ -180,15 +177,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(discount);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating discount:", error);
-    return NextResponse.json(
-      { error: "Failed to create discount" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create discount" }, { status: 500 });
   }
 }

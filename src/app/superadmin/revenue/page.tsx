@@ -1,15 +1,15 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { 
+import * as React from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -17,92 +17,92 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Tabs, TabsTrigger } from "@/components/ui/tabs"
-import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Loader2, 
-  DollarSign, 
-  Users, 
+} from "@/components/ui/table";
+import { Tabs, TabsTrigger } from "@/components/ui/tabs";
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs";
+import {
+  TrendingUp,
+  TrendingDown,
+  Loader2,
+  DollarSign,
+  Users,
   CreditCard,
   Building2,
   Repeat,
-  PieChart as PieChartIcon
-} from "lucide-react"
-import { 
-  Bar, 
-  BarChart, 
-  CartesianGrid, 
-  XAxis, 
+  PieChart as PieChartIcon,
+} from "lucide-react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  XAxis,
   YAxis,
-  Pie, 
-  PieChart, 
-  Cell, 
+  Pie,
+  PieChart,
+  Cell,
   Label,
   Area,
   AreaChart,
   Legend,
-} from "recharts"
-import { 
-  ChartConfig, 
-  ChartContainer, 
-  ChartTooltip, 
+} from "recharts";
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
   ChartTooltipContent,
   ChartLegend,
   ChartLegendContent,
-} from "@/components/ui/chart"
-import { toast } from "sonner"
-import Link from "next/link"
+} from "@/components/ui/chart";
+import { toast } from "sonner";
+import Link from "next/link";
 
 interface RevenueData {
   kpis: {
-    mrr: number
-    arr: number
-    totalTransactionFeeRevenue: number
-    totalPlatformRevenue: number
-    activePayingCustomers: number
-    arpu: number
-    revenueGrowth: number
-    totalTransactionVolume: number
-    transactionCount: number
-  }
+    mrr: number;
+    arr: number;
+    totalTransactionFeeRevenue: number;
+    totalPlatformRevenue: number;
+    activePayingCustomers: number;
+    arpu: number;
+    revenueGrowth: number;
+    totalTransactionVolume: number;
+    transactionCount: number;
+  };
   revenueOverTime: Array<{
-    period: string
-    subscriptionRevenue: number
-    transactionFeeRevenue: number
-    totalRevenue: number
-  }>
+    period: string;
+    subscriptionRevenue: number;
+    transactionFeeRevenue: number;
+    totalRevenue: number;
+  }>;
   revenueBySource: Array<{
-    source: string
-    amount: number
-  }>
+    source: string;
+    amount: number;
+  }>;
   planDistribution: Array<{
-    planId: string
-    planName: string
-    count: number
-    revenue: number
-  }>
+    planId: string;
+    planName: string;
+    count: number;
+    revenue: number;
+  }>;
   revenueByOrg: Array<{
-    organizationId: string
-    organizationName: string
-    subscriptionRevenue: number
-    transactionFeeRevenue: number
-    totalRevenue: number
-    planName: string
-    transactionCount: number
-    transactionVolume: number
-  }>
+    organizationId: string;
+    organizationName: string;
+    subscriptionRevenue: number;
+    transactionFeeRevenue: number;
+    totalRevenue: number;
+    planName: string;
+    transactionCount: number;
+    transactionVolume: number;
+  }>;
   summary: {
-    totalOrganizations: number
-    totalPlans: number
+    totalOrganizations: number;
+    totalPlans: number;
     dateRange: {
-      start: string
-      end: string
-      granularity: string
-    }
-  }
+      start: string;
+      end: string;
+      granularity: string;
+    };
+  };
 }
 
 const revenueOverTimeConfig = {
@@ -114,17 +114,17 @@ const revenueOverTimeConfig = {
     label: "Transaction Fees",
     color: "hsl(var(--chart-2))",
   },
-} satisfies ChartConfig
+} satisfies ChartConfig;
 
 const revenueBySourceConfig = {
   amount: { label: "Revenue" },
   Subscriptions: { label: "Subscriptions", color: "hsl(var(--chart-1))" },
   "Transaction Fees": { label: "Transaction Fees", color: "hsl(var(--chart-2))" },
-} satisfies ChartConfig
+} satisfies ChartConfig;
 
 const planDistributionConfig = {
   count: { label: "Organizations" },
-} satisfies ChartConfig
+} satisfies ChartConfig;
 
 const CHART_COLORS = [
   "hsl(var(--chart-1))",
@@ -132,64 +132,64 @@ const CHART_COLORS = [
   "hsl(var(--chart-3))",
   "hsl(var(--chart-4))",
   "hsl(var(--chart-5))",
-]
+];
 
-type DateRange = "7d" | "30d" | "90d" | "12m" | "all"
-type Granularity = "day" | "month" | "year"
+type DateRange = "7d" | "30d" | "90d" | "12m" | "all";
+type Granularity = "day" | "month" | "year";
 
 export default function SuperadminRevenuePage() {
-  const [data, setData] = React.useState<RevenueData | null>(null)
-  const [loading, setLoading] = React.useState(true)
-  const [dateRange, setDateRange] = React.useState<DateRange>("12m")
-  const [granularity, setGranularity] = React.useState<Granularity>("month")
+  const [data, setData] = React.useState<RevenueData | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [dateRange, setDateRange] = React.useState<DateRange>("12m");
+  const [granularity, setGranularity] = React.useState<Granularity>("month");
 
   const fetchData = React.useCallback(async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const params = new URLSearchParams()
-      params.set("granularity", granularity)
+      const params = new URLSearchParams();
+      params.set("granularity", granularity);
 
       // Calculate date range
-      const now = new Date()
-      let startDate: Date
+      const now = new Date();
+      let startDate: Date;
 
       switch (dateRange) {
         case "7d":
-          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-          break
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
         case "30d":
-          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-          break
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
         case "90d":
-          startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
-          break
+          startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          break;
         case "12m":
-          startDate = new Date(now.getFullYear(), now.getMonth() - 11, 1)
-          break
+          startDate = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+          break;
         case "all":
-          startDate = new Date(2020, 0, 1) // Far back enough
-          break
+          startDate = new Date(2020, 0, 1); // Far back enough
+          break;
       }
 
-      params.set("startDate", startDate.toISOString())
-      params.set("endDate", now.toISOString())
+      params.set("startDate", startDate.toISOString());
+      params.set("endDate", now.toISOString());
 
-      const response = await fetch(`/api/superadmin/revenue?${params.toString()}`)
-      if (!response.ok) throw new Error("Failed to fetch revenue data")
+      const response = await fetch(`/api/superadmin/revenue?${params.toString()}`);
+      if (!response.ok) throw new Error("Failed to fetch revenue data");
 
-      const result = await response.json()
-      setData(result)
+      const result = await response.json();
+      setData(result);
     } catch (error) {
-      console.error("Error fetching revenue data:", error)
-      toast.error("Failed to load revenue data")
+      console.error("Error fetching revenue data:", error);
+      toast.error("Failed to load revenue data");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [dateRange, granularity])
+  }, [dateRange, granularity]);
 
   React.useEffect(() => {
-    fetchData()
-  }, [fetchData])
+    fetchData();
+  }, [fetchData]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -197,28 +197,28 @@ export default function SuperadminRevenuePage() {
       currency: "USD",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(amount)
-  }
+    }).format(amount);
+  };
 
   const formatCurrencyCompact = (amount: number) => {
     if (amount >= 1000000) {
-      return `$${(amount / 1000000).toFixed(1)}M`
+      return `$${(amount / 1000000).toFixed(1)}M`;
     }
     if (amount >= 1000) {
-      return `$${(amount / 1000).toFixed(1)}K`
+      return `$${(amount / 1000).toFixed(1)}K`;
     }
-    return formatCurrency(amount)
-  }
+    return formatCurrency(amount);
+  };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-    )
+    );
   }
 
-  const totalSourceRevenue = data?.revenueBySource.reduce((sum, item) => sum + item.amount, 0) || 0
+  const totalSourceRevenue = data?.revenueBySource.reduce((sum, item) => sum + item.amount, 0) || 0;
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -244,7 +244,10 @@ export default function SuperadminRevenuePage() {
             </SelectContent>
           </Select>
           <Tabs value={granularity} onValueChange={(value) => setGranularity(value as Granularity)}>
-            <ResponsiveTabsList value={granularity} onValueChange={(value) => setGranularity(value as Granularity)}>
+            <ResponsiveTabsList
+              value={granularity}
+              onValueChange={(value) => setGranularity(value as Granularity)}
+            >
               <TabsTrigger value="day">Daily</TabsTrigger>
               <TabsTrigger value="month">Monthly</TabsTrigger>
               <TabsTrigger value="year">Yearly</TabsTrigger>
@@ -261,14 +264,22 @@ export default function SuperadminRevenuePage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrencyCompact(data?.kpis.totalPlatformRevenue || 0)}</div>
+            <div className="text-2xl font-bold">
+              {formatCurrencyCompact(data?.kpis.totalPlatformRevenue || 0)}
+            </div>
             <div className="flex items-center text-xs">
               {(data?.kpis.revenueGrowth || 0) >= 0 ? (
                 <TrendingUp className="mr-1 h-3 w-3 text-green-600" />
               ) : (
                 <TrendingDown className="mr-1 h-3 w-3 text-red-600" />
               )}
-              <span className={data?.kpis.revenueGrowth && data.kpis.revenueGrowth >= 0 ? "text-green-600" : "text-red-600"}>
+              <span
+                className={
+                  data?.kpis.revenueGrowth && data.kpis.revenueGrowth >= 0
+                    ? "text-green-600"
+                    : "text-red-600"
+                }
+              >
                 {data?.kpis.revenueGrowth?.toFixed(1)}%
               </span>
               <span className="text-muted-foreground ml-1">vs prev period</span>
@@ -304,7 +315,9 @@ export default function SuperadminRevenuePage() {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrencyCompact(data?.kpis.totalTransactionFeeRevenue || 0)}</div>
+            <div className="text-2xl font-bold">
+              {formatCurrencyCompact(data?.kpis.totalTransactionFeeRevenue || 0)}
+            </div>
             <p className="text-xs text-muted-foreground">
               {data?.kpis.transactionCount.toLocaleString()} transactions
             </p>
@@ -354,15 +367,15 @@ export default function SuperadminRevenuePage() {
                   axisLine={false}
                   tickFormatter={(value) => {
                     if (granularity === "month") {
-                      const [year, month] = value.split("-")
-                      const date = new Date(parseInt(year), parseInt(month) - 1)
-                      return date.toLocaleDateString("en-US", { month: "short" })
+                      const [year, month] = value.split("-");
+                      const date = new Date(parseInt(year), parseInt(month) - 1);
+                      return date.toLocaleDateString("en-US", { month: "short" });
                     }
                     if (granularity === "day") {
-                      const date = new Date(value)
-                      return date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                      const date = new Date(value);
+                      return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
                     }
-                    return value
+                    return value;
                   }}
                 />
                 <YAxis
@@ -370,14 +383,14 @@ export default function SuperadminRevenuePage() {
                   axisLine={false}
                   tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
                 />
-                <ChartTooltip 
+                <ChartTooltip
                   content={
-                    <ChartTooltipContent 
+                    <ChartTooltipContent
                       formatter={(value, name) => (
                         <span className="font-medium">{formatCurrency(Number(value))}</span>
                       )}
                     />
-                  } 
+                  }
                 />
                 <Area
                   type="monotone"
@@ -404,12 +417,13 @@ export default function SuperadminRevenuePage() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Revenue by Source</CardTitle>
-            <CardDescription>
-              SaaS vs Transaction Fee Revenue
-            </CardDescription>
+            <CardDescription>SaaS vs Transaction Fee Revenue</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={revenueBySourceConfig} className="mx-auto aspect-square max-h-[250px]">
+            <ChartContainer
+              config={revenueBySourceConfig}
+              className="mx-auto aspect-square max-h-[250px]"
+            >
               <PieChart>
                 <ChartTooltip
                   cursor={false}
@@ -435,10 +449,7 @@ export default function SuperadminRevenuePage() {
                   strokeWidth={2}
                 >
                   {(data?.revenueBySource || []).map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={CHART_COLORS[index % CHART_COLORS.length]} 
-                    />
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                   ))}
                   <Label
                     content={({ viewBox }) => {
@@ -465,7 +476,7 @@ export default function SuperadminRevenuePage() {
                               Total
                             </tspan>
                           </text>
-                        )
+                        );
                       }
                     }}
                   />
@@ -485,49 +496,46 @@ export default function SuperadminRevenuePage() {
         <Card className="lg:col-span-4">
           <CardHeader>
             <CardTitle>Top Organizations by Revenue</CardTitle>
-            <CardDescription>
-              Revenue breakdown for top 10 paying organizations
-            </CardDescription>
+            <CardDescription>Revenue breakdown for top 10 paying organizations</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={revenueOverTimeConfig} className="min-h-[300px] w-full">
-              <BarChart 
-                data={(data?.revenueByOrg || []).slice(0, 10)} 
+              <BarChart
+                data={(data?.revenueByOrg || []).slice(0, 10)}
                 layout="vertical"
                 margin={{ left: 20 }}
               >
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis 
-                  type="number" 
-                  tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-                />
-                <YAxis 
-                  type="category" 
-                  dataKey="organizationName" 
+                <XAxis type="number" tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`} />
+                <YAxis
+                  type="category"
+                  dataKey="organizationName"
                   tickLine={false}
                   axisLine={false}
                   width={120}
-                  tickFormatter={(value) => value.length > 15 ? `${value.slice(0, 15)}...` : value}
+                  tickFormatter={(value) =>
+                    value.length > 15 ? `${value.slice(0, 15)}...` : value
+                  }
                 />
-                <ChartTooltip 
+                <ChartTooltip
                   content={
-                    <ChartTooltipContent 
+                    <ChartTooltipContent
                       formatter={(value, name) => (
                         <span className="font-medium">{formatCurrency(Number(value))}</span>
                       )}
                     />
-                  } 
+                  }
                 />
-                <Bar 
-                  dataKey="subscriptionRevenue" 
-                  stackId="a" 
-                  fill="var(--color-subscriptionRevenue)" 
+                <Bar
+                  dataKey="subscriptionRevenue"
+                  stackId="a"
+                  fill="var(--color-subscriptionRevenue)"
                   radius={[0, 0, 0, 0]}
                 />
-                <Bar 
-                  dataKey="transactionFeeRevenue" 
-                  stackId="a" 
-                  fill="var(--color-transactionFeeRevenue)" 
+                <Bar
+                  dataKey="transactionFeeRevenue"
+                  stackId="a"
+                  fill="var(--color-transactionFeeRevenue)"
                   radius={[0, 4, 4, 0]}
                 />
               </BarChart>
@@ -538,12 +546,13 @@ export default function SuperadminRevenuePage() {
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>Subscription Plan Distribution</CardTitle>
-            <CardDescription>
-              Organizations by subscription plan
-            </CardDescription>
+            <CardDescription>Organizations by subscription plan</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={planDistributionConfig} className="mx-auto aspect-square max-h-[280px]">
+            <ChartContainer
+              config={planDistributionConfig}
+              className="mx-auto aspect-square max-h-[280px]"
+            >
               <PieChart>
                 <ChartTooltip
                   cursor={false}
@@ -571,10 +580,7 @@ export default function SuperadminRevenuePage() {
                   labelLine={false}
                 >
                   {(data?.planDistribution || []).map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={CHART_COLORS[index % CHART_COLORS.length]} 
-                    />
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                   ))}
                 </Pie>
               </PieChart>
@@ -587,9 +593,7 @@ export default function SuperadminRevenuePage() {
       <Card>
         <CardHeader>
           <CardTitle>Revenue by Organization</CardTitle>
-          <CardDescription>
-            Detailed breakdown of revenue sources by organization
-          </CardDescription>
+          <CardDescription>Detailed breakdown of revenue sources by organization</CardDescription>
         </CardHeader>
         <CardContent>
           {!data?.revenueByOrg.length ? (
@@ -646,5 +650,5 @@ export default function SuperadminRevenuePage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

@@ -1,17 +1,5 @@
-import { redirect } from "next/navigation"
+import { redirect } from "next/navigation";
 
 export default function FormsPage() {
-  redirect("/dashboard/forms/surveys")
+  redirect("/dashboard/forms/surveys");
 }
-
-
-
-
-
-
-
-
-
-
-
-

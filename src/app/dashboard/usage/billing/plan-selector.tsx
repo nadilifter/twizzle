@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import { Check, Loader2, AlertTriangle } from "lucide-react"
-import { toast } from "sonner"
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { Check, Loader2, AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -13,204 +13,222 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { AdyenCheckoutComponent } from "@/components/sites/adyen-checkout"
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { AdyenCheckoutComponent } from "@/components/sites/adyen-checkout";
 
 interface Plan {
-  id: string
-  name: string
-  slug: string
-  monthlyPrice: number
-  yearlyPrice: number | null
-  transactionFee: number
-  perTransactionFee: number
-  maxAthletes: number | null
-  maxUsers: number | null
-  maxPrograms: number | null
-  maxEvents: number | null
-  smsIncluded: number | null
-  emailIncluded: number | null
-  maxStorageMB: number | null
-  maxMembershipTypes: number | null
-  features: string[]
-  isPopular: boolean
+  id: string;
+  name: string;
+  slug: string;
+  monthlyPrice: number;
+  yearlyPrice: number | null;
+  transactionFee: number;
+  perTransactionFee: number;
+  maxAthletes: number | null;
+  maxUsers: number | null;
+  maxPrograms: number | null;
+  maxEvents: number | null;
+  smsIncluded: number | null;
+  emailIncluded: number | null;
+  maxStorageMB: number | null;
+  maxMembershipTypes: number | null;
+  features: string[];
+  isPopular: boolean;
 }
 
 interface Props {
-  currentPlanId: string | null
-  plans: Plan[]
+  currentPlanId: string | null;
+  plans: Plan[];
   currentUsage: {
-    athletes: number
-    users: number
-    programs: number
-    events: number
-    storageMB?: number
-    membershipTypes?: number
-  }
-  billingCycle: string
-  variant?: "default" | "compact"
-  targetPlanId?: string
-  hasPaymentMethod: boolean
+    athletes: number;
+    users: number;
+    programs: number;
+    events: number;
+    storageMB?: number;
+    membershipTypes?: number;
+  };
+  billingCycle: string;
+  variant?: "default" | "compact";
+  targetPlanId?: string;
+  hasPaymentMethod: boolean;
 }
 
-export function PlanSelector({ 
-  currentPlanId, 
-  plans, 
-  currentUsage, 
+export function PlanSelector({
+  currentPlanId,
+  plans,
+  currentUsage,
   billingCycle: initialBillingCycle,
   variant = "default",
   targetPlanId,
   hasPaymentMethod,
 }: Props) {
-  const router = useRouter()
-  const [isDialogOpen, setIsDialogOpen] = React.useState(false)
-  const [selectedPlanId, setSelectedPlanId] = React.useState(targetPlanId || currentPlanId || "")
+  const router = useRouter();
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [selectedPlanId, setSelectedPlanId] = React.useState(targetPlanId || currentPlanId || "");
   const [billingCycle, setBillingCycle] = React.useState<"MONTHLY" | "YEARLY">(
     initialBillingCycle as "MONTHLY" | "YEARLY"
-  )
-  const [isSaving, setIsSaving] = React.useState(false)
-  const [showPaymentForm, setShowPaymentForm] = React.useState(false)
-  const [isLoadingSession, setIsLoadingSession] = React.useState(false)
-  const [sessionId, setSessionId] = React.useState<string | null>(null)
-  const [sessionData, setSessionData] = React.useState<string | null>(null)
-  const [paymentMethodJustAdded, setPaymentMethodJustAdded] = React.useState(false)
-  const [cancelStep, setCancelStep] = React.useState<0 | 1 | 2>(0)
-  const [isCancelling, setIsCancelling] = React.useState(false)
+  );
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [showPaymentForm, setShowPaymentForm] = React.useState(false);
+  const [isLoadingSession, setIsLoadingSession] = React.useState(false);
+  const [sessionId, setSessionId] = React.useState<string | null>(null);
+  const [sessionData, setSessionData] = React.useState<string | null>(null);
+  const [paymentMethodJustAdded, setPaymentMethodJustAdded] = React.useState(false);
+  const [cancelStep, setCancelStep] = React.useState<0 | 1 | 2>(0);
+  const [isCancelling, setIsCancelling] = React.useState(false);
 
-  const selectedPlan = plans.find(p => p.id === selectedPlanId)
-  
+  const selectedPlan = plans.find((p) => p.id === selectedPlanId);
+
   // Check if selected plan would exceed limits
-  const limitWarnings: string[] = []
+  const limitWarnings: string[] = [];
   if (selectedPlan) {
     if (selectedPlan.maxAthletes && currentUsage.athletes > selectedPlan.maxAthletes) {
-      limitWarnings.push(`This plan allows ${selectedPlan.maxAthletes} athletes, but you have ${currentUsage.athletes}`)
+      limitWarnings.push(
+        `This plan allows ${selectedPlan.maxAthletes} athletes, but you have ${currentUsage.athletes}`
+      );
     }
     if (selectedPlan.maxUsers && currentUsage.users > selectedPlan.maxUsers) {
-      limitWarnings.push(`This plan allows ${selectedPlan.maxUsers} users, but you have ${currentUsage.users}`)
+      limitWarnings.push(
+        `This plan allows ${selectedPlan.maxUsers} users, but you have ${currentUsage.users}`
+      );
     }
     if (selectedPlan.maxPrograms && currentUsage.programs > selectedPlan.maxPrograms) {
-      limitWarnings.push(`This plan allows ${selectedPlan.maxPrograms} programs, but you have ${currentUsage.programs}`)
+      limitWarnings.push(
+        `This plan allows ${selectedPlan.maxPrograms} programs, but you have ${currentUsage.programs}`
+      );
     }
     if (selectedPlan.maxEvents && currentUsage.events > selectedPlan.maxEvents) {
-      limitWarnings.push(`This plan allows ${selectedPlan.maxEvents} events, but you have ${currentUsage.events}`)
+      limitWarnings.push(
+        `This plan allows ${selectedPlan.maxEvents} events, but you have ${currentUsage.events}`
+      );
     }
-    if (selectedPlan.maxStorageMB && currentUsage.storageMB && currentUsage.storageMB > selectedPlan.maxStorageMB) {
-      const usedGB = (currentUsage.storageMB / 1000).toFixed(1)
-      const limitGB = (selectedPlan.maxStorageMB / 1000).toFixed(1)
-      limitWarnings.push(`This plan allows ${limitGB} GB storage, but you're using ${usedGB} GB`)
+    if (
+      selectedPlan.maxStorageMB &&
+      currentUsage.storageMB &&
+      currentUsage.storageMB > selectedPlan.maxStorageMB
+    ) {
+      const usedGB = (currentUsage.storageMB / 1000).toFixed(1);
+      const limitGB = (selectedPlan.maxStorageMB / 1000).toFixed(1);
+      limitWarnings.push(`This plan allows ${limitGB} GB storage, but you're using ${usedGB} GB`);
     }
-    if (selectedPlan.maxMembershipTypes && currentUsage.membershipTypes && currentUsage.membershipTypes > selectedPlan.maxMembershipTypes) {
-      limitWarnings.push(`This plan allows ${selectedPlan.maxMembershipTypes} membership types, but you have ${currentUsage.membershipTypes}`)
+    if (
+      selectedPlan.maxMembershipTypes &&
+      currentUsage.membershipTypes &&
+      currentUsage.membershipTypes > selectedPlan.maxMembershipTypes
+    ) {
+      limitWarnings.push(
+        `This plan allows ${selectedPlan.maxMembershipTypes} membership types, but you have ${currentUsage.membershipTypes}`
+      );
     }
   }
 
   const handleOpenDialog = () => {
-    setSelectedPlanId(targetPlanId || currentPlanId || "")
-    setIsDialogOpen(true)
-  }
+    setSelectedPlanId(targetPlanId || currentPlanId || "");
+    setIsDialogOpen(true);
+  };
 
   const isPaidPlan = (planId: string) => {
-    const plan = plans.find(p => p.id === planId)
-    return plan ? plan.monthlyPrice > 0 : false
-  }
+    const plan = plans.find((p) => p.id === planId);
+    return plan ? plan.monthlyPrice > 0 : false;
+  };
 
   const createPaymentSession = async () => {
-    setIsLoadingSession(true)
-    setShowPaymentForm(true)
+    setIsLoadingSession(true);
+    setShowPaymentForm(true);
     try {
       const response = await fetch("/api/payment-methods/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ returnUrl: window.location.href }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to create payment session")
+        throw new Error("Failed to create payment session");
       }
 
-      const data = await response.json()
-      setSessionId(data.sessionId)
-      setSessionData(data.sessionData)
+      const data = await response.json();
+      setSessionId(data.sessionId);
+      setSessionData(data.sessionData);
     } catch (error) {
-      toast.error("Failed to initialize payment form")
-      setShowPaymentForm(false)
+      toast.error("Failed to initialize payment form");
+      setShowPaymentForm(false);
     } finally {
-      setIsLoadingSession(false)
+      setIsLoadingSession(false);
     }
-  }
+  };
 
   const handlePaymentCompleted = async (result: { resultCode: string }) => {
     if (result.resultCode === "Authorised" || result.resultCode === "Pending") {
-      toast.success("Payment method added!")
-      setPaymentMethodJustAdded(true)
-      setShowPaymentForm(false)
-      setSessionId(null)
-      setSessionData(null)
-      await savePlanChange()
+      toast.success("Payment method added!");
+      setPaymentMethodJustAdded(true);
+      setShowPaymentForm(false);
+      setSessionId(null);
+      setSessionData(null);
+      await savePlanChange();
     } else {
-      toast.error(`Failed to add payment method: ${result.resultCode}`)
+      toast.error(`Failed to add payment method: ${result.resultCode}`);
     }
-  }
+  };
 
   const handlePaymentError = (error: { message?: string }) => {
-    toast.error(error?.message || "Failed to add payment method")
-  }
+    toast.error(error?.message || "Failed to add payment method");
+  };
 
   const resetPaymentForm = () => {
-    setShowPaymentForm(false)
-    setSessionId(null)
-    setSessionData(null)
-    setCancelStep(0)
-  }
+    setShowPaymentForm(false);
+    setSessionId(null);
+    setSessionData(null);
+    setCancelStep(0);
+  };
 
   const handleCancelPlan = async () => {
-    setIsCancelling(true)
+    setIsCancelling(true);
     try {
       const response = await fetch("/api/organization/subscription/cancel", {
         method: "POST",
-      })
+      });
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to cancel plan")
+        const error = await response.json();
+        throw new Error(error.error || "Failed to cancel plan");
       }
 
-      toast.success("Your plan has been cancelled.")
-      setIsDialogOpen(false)
-      router.refresh()
+      toast.success("Your plan has been cancelled.");
+      setIsDialogOpen(false);
+      router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to cancel plan")
+      toast.error(error instanceof Error ? error.message : "Failed to cancel plan");
     } finally {
-      setIsCancelling(false)
+      setIsCancelling(false);
     }
-  }
+  };
 
   const handleSave = async () => {
     if (limitWarnings.length > 0) {
-      toast.error("Please reduce your usage before switching to this plan")
-      return
+      toast.error("Please reduce your usage before switching to this plan");
+      return;
     }
 
     if (isPaidPlan(selectedPlanId) && !hasPaymentMethod && !paymentMethodJustAdded) {
-      await createPaymentSession()
-      return
+      await createPaymentSession();
+      return;
     }
 
-    await savePlanChange()
-  }
+    await savePlanChange();
+  };
 
   const savePlanChange = async () => {
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       const response = await fetch("/api/organization/subscription", {
         method: "PATCH",
@@ -219,33 +237,33 @@ export function PlanSelector({
           planId: selectedPlanId,
           billingCycle,
         }),
-      })
+      });
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to change plan")
+        const error = await response.json();
+        throw new Error(error.error || "Failed to change plan");
       }
 
-      toast.success("Plan updated successfully!")
-      setIsDialogOpen(false)
-      router.refresh()
+      toast.success("Plan updated successfully!");
+      setIsDialogOpen(false);
+      router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to change plan")
+      toast.error(error instanceof Error ? error.message : "Failed to change plan");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
-    }).format(amount)
-  }
+    }).format(amount);
+  };
 
   const formatPercent = (amount: number) => {
-    return `${(amount * 100).toFixed(1)}%`
-  }
+    return `${(amount * 100).toFixed(1)}%`;
+  };
 
   if (variant === "compact") {
     return (
@@ -255,7 +273,7 @@ export function PlanSelector({
         </Button>
         <PlanDialog />
       </>
-    )
+    );
   }
 
   return (
@@ -265,14 +283,17 @@ export function PlanSelector({
       </Button>
       <PlanDialog />
     </>
-  )
+  );
 
   function PlanDialog() {
     return (
-      <Dialog open={isDialogOpen} onOpenChange={(open) => {
-        setIsDialogOpen(open)
-        if (!open) resetPaymentForm()
-      }}>
+      <Dialog
+        open={isDialogOpen}
+        onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) resetPaymentForm();
+        }}
+      >
         <DialogContent className="max-w-lg">
           {cancelStep === 1 ? (
             <>
@@ -311,12 +332,14 @@ export function PlanSelector({
                   Confirm Cancellation
                 </DialogTitle>
                 <DialogDescription>
-                  This action takes effect immediately. You can reactivate your organization later from the deactivation page.
+                  This action takes effect immediately. You can reactivate your organization later
+                  from the deactivation page.
                 </DialogDescription>
               </DialogHeader>
               <div className="py-4">
                 <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-                  Your organization will be deactivated and your subscription will be cancelled. Any pending invoices will be voided.
+                  Your organization will be deactivated and your subscription will be cancelled. Any
+                  pending invoices will be voided.
                 </div>
               </div>
               <DialogFooter>
@@ -334,7 +357,8 @@ export function PlanSelector({
               <DialogHeader>
                 <DialogTitle>Payment Method Required</DialogTitle>
                 <DialogDescription>
-                  A payment method is required to subscribe to the {selectedPlan?.name} plan. Add one below to continue.
+                  A payment method is required to subscribe to the {selectedPlan?.name} plan. Add
+                  one below to continue.
                 </DialogDescription>
               </DialogHeader>
               <div className="py-4">
@@ -365,9 +389,7 @@ export function PlanSelector({
             <>
               <DialogHeader>
                 <DialogTitle>Change Subscription Plan</DialogTitle>
-                <DialogDescription>
-                  Select a new plan for your organization
-                </DialogDescription>
+                <DialogDescription>Select a new plan for your organization</DialogDescription>
               </DialogHeader>
 
               <div className="grid gap-4 py-4">
@@ -383,10 +405,14 @@ export function PlanSelector({
                           <div className="flex items-center gap-2">
                             {plan.name} - {formatCurrency(plan.monthlyPrice)}/mo
                             {plan.isPopular && (
-                              <Badge variant="secondary" className="ml-2">Popular</Badge>
+                              <Badge variant="secondary" className="ml-2">
+                                Popular
+                              </Badge>
                             )}
                             {plan.id === currentPlanId && (
-                              <Badge variant="outline" className="ml-2">Current</Badge>
+                              <Badge variant="outline" className="ml-2">
+                                Current
+                              </Badge>
                             )}
                           </div>
                         </SelectItem>
@@ -397,14 +423,20 @@ export function PlanSelector({
 
                 <div className="space-y-2">
                   <Label>Billing Cycle</Label>
-                  <Select value={billingCycle} onValueChange={(v) => setBillingCycle(v as "MONTHLY" | "YEARLY")}>
+                  <Select
+                    value={billingCycle}
+                    onValueChange={(v) => setBillingCycle(v as "MONTHLY" | "YEARLY")}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="MONTHLY">Monthly</SelectItem>
                       <SelectItem value="YEARLY">
-                        Yearly {selectedPlan?.yearlyPrice ? `(${formatCurrency(selectedPlan.yearlyPrice)})` : ""}
+                        Yearly{" "}
+                        {selectedPlan?.yearlyPrice
+                          ? `(${formatCurrency(selectedPlan.yearlyPrice)})`
+                          : ""}
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -419,16 +451,19 @@ export function PlanSelector({
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Price</span>
                           <span className="font-medium">
-                            {formatCurrency(billingCycle === "YEARLY" && selectedPlan.yearlyPrice 
-                              ? selectedPlan.yearlyPrice 
-                              : selectedPlan.monthlyPrice * (billingCycle === "YEARLY" ? 12 : 1)
-                            )}/{billingCycle.toLowerCase()}
+                            {formatCurrency(
+                              billingCycle === "YEARLY" && selectedPlan.yearlyPrice
+                                ? selectedPlan.yearlyPrice
+                                : selectedPlan.monthlyPrice * (billingCycle === "YEARLY" ? 12 : 1)
+                            )}
+                            /{billingCycle.toLowerCase()}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Transaction Fee</span>
                           <span className="font-medium">
-                            {formatPercent(selectedPlan.transactionFee)} + {formatCurrency(selectedPlan.perTransactionFee)}
+                            {formatPercent(selectedPlan.transactionFee)} +{" "}
+                            {formatCurrency(selectedPlan.perTransactionFee)}
                           </span>
                         </div>
                         <div className="flex justify-between">
@@ -451,23 +486,19 @@ export function PlanSelector({
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">SMS/month</span>
-                          <span className="font-medium">
-                            {selectedPlan.smsIncluded || "—"}
-                          </span>
+                          <span className="font-medium">{selectedPlan.smsIncluded || "—"}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Emails/month</span>
-                          <span className="font-medium">
-                            {selectedPlan.emailIncluded || "—"}
-                          </span>
+                          <span className="font-medium">{selectedPlan.emailIncluded || "—"}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Storage</span>
                           <span className="font-medium">
-                            {selectedPlan.maxStorageMB 
-                              ? (selectedPlan.maxStorageMB >= 1000 
-                                  ? `${selectedPlan.maxStorageMB / 1000} GB` 
-                                  : `${selectedPlan.maxStorageMB} MB`)
+                            {selectedPlan.maxStorageMB
+                              ? selectedPlan.maxStorageMB >= 1000
+                                ? `${selectedPlan.maxStorageMB / 1000} GB`
+                                : `${selectedPlan.maxStorageMB} MB`
                               : "Unlimited"}
                           </span>
                         </div>
@@ -527,9 +558,14 @@ export function PlanSelector({
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Close
                 </Button>
-                <Button 
-                  onClick={handleSave} 
-                  disabled={isSaving || !selectedPlanId || selectedPlanId === currentPlanId || limitWarnings.length > 0}
+                <Button
+                  onClick={handleSave}
+                  disabled={
+                    isSaving ||
+                    !selectedPlanId ||
+                    selectedPlanId === currentPlanId ||
+                    limitWarnings.length > 0
+                  }
                 >
                   {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Confirm Change
@@ -539,6 +575,6 @@ export function PlanSelector({
           )}
         </DialogContent>
       </Dialog>
-    )
+    );
   }
 }

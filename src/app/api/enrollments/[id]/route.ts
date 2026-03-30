@@ -30,10 +30,7 @@ async function getOrgEnrollment(enrollmentId: string, organizationId: string) {
 }
 
 // GET /api/enrollments/[id]
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -50,18 +47,12 @@ export async function GET(
     return NextResponse.json(enrollment);
   } catch (error) {
     console.error("Error fetching enrollment:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch enrollment" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch enrollment" }, { status: 500 });
   }
 }
 
 // PATCH /api/enrollments/[id]
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -70,11 +61,7 @@ export async function PATCH(
 
     const permissions = session.user.permissions ?? [];
     const isSuperAdmin = session.user.isSuperAdmin === true;
-    if (
-      !isSuperAdmin &&
-      !permissions.includes("*") &&
-      !permissions.includes("athletes.edit")
-    ) {
+    if (!isSuperAdmin && !permissions.includes("*") && !permissions.includes("athletes.edit")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -125,16 +112,10 @@ export async function PATCH(
     return NextResponse.json(enrollment);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error updating enrollment:", error);
-    return NextResponse.json(
-      { error: "Failed to update enrollment" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update enrollment" }, { status: 500 });
   }
 }
 
@@ -151,11 +132,7 @@ export async function DELETE(
 
     const permissions = session.user.permissions ?? [];
     const isSuperAdmin = session.user.isSuperAdmin === true;
-    if (
-      !isSuperAdmin &&
-      !permissions.includes("*") &&
-      !permissions.includes("athletes.delete")
-    ) {
+    if (!isSuperAdmin && !permissions.includes("*") && !permissions.includes("athletes.delete")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -190,9 +167,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting enrollment:", error);
-    return NextResponse.json(
-      { error: "Failed to delete enrollment" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete enrollment" }, { status: 500 });
   }
 }

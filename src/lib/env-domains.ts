@@ -1,11 +1,11 @@
 /**
  * Environment-based domain and service configuration
- * 
+ *
  * This module provides centralized configuration for all environment-specific
  * settings including domains, S3 buckets, CDN URLs, and service endpoints.
  */
 
-export type Environment = 'production' | 'staging' | 'development' | 'local';
+export type Environment = "production" | "staging" | "development" | "local";
 
 export interface EnvironmentConfig {
   /** Base domain without protocol (e.g., 'uplifterinc.com') */
@@ -26,53 +26,44 @@ export interface EnvironmentConfig {
 
 export const ENV_CONFIG: Record<Environment, EnvironmentConfig> = {
   production: {
-    baseDomain: 'uplifterinc.com',
-    cookieDomain: '.uplifterinc.com',
-    s3Bucket: 'uplifter-assets-prod',
-    s3DocumentsBucket: 'uplifter-documents-prod',
-    cdnUrl: 'https://cdn.uplifterinc.com',
+    baseDomain: "uplifterinc.com",
+    cookieDomain: ".uplifterinc.com",
+    s3Bucket: "uplifter-assets-prod",
+    s3DocumentsBucket: "uplifter-documents-prod",
+    cdnUrl: "https://cdn.uplifterinc.com",
     useHttps: true,
-    corsOrigins: [
-      'https://uplifterinc.com',
-      'https://*.uplifterinc.com',
-    ],
+    corsOrigins: ["https://uplifterinc.com", "https://*.uplifterinc.com"],
   },
   staging: {
-    baseDomain: 'upliftergymnastics.com',
-    cookieDomain: '.upliftergymnastics.com',
-    s3Bucket: 'uplifter-gymnastics-assets',
-    s3DocumentsBucket: 'uplifter-gymnastics-docs',
-    cdnUrl: 'https://assets.upliftergymnastics.com',
+    baseDomain: "upliftergymnastics.com",
+    cookieDomain: ".upliftergymnastics.com",
+    s3Bucket: "uplifter-gymnastics-assets",
+    s3DocumentsBucket: "uplifter-gymnastics-docs",
+    cdnUrl: "https://assets.upliftergymnastics.com",
     useHttps: true,
-    corsOrigins: [
-      'https://upliftergymnastics.com',
-      'https://*.upliftergymnastics.com',
-    ],
+    corsOrigins: ["https://upliftergymnastics.com", "https://*.upliftergymnastics.com"],
   },
   development: {
-    baseDomain: 'uplifterdev.com',
-    cookieDomain: '.uplifterdev.com',
-    s3Bucket: 'uplifter-assets-dev',
-    s3DocumentsBucket: 'uplifter-documents-dev',
+    baseDomain: "uplifterdev.com",
+    cookieDomain: ".uplifterdev.com",
+    s3Bucket: "uplifter-assets-dev",
+    s3DocumentsBucket: "uplifter-documents-dev",
     cdnUrl: null,
     useHttps: true,
-    corsOrigins: [
-      'https://uplifterdev.com',
-      'https://*.uplifterdev.com',
-    ],
+    corsOrigins: ["https://uplifterdev.com", "https://*.uplifterdev.com"],
   },
   local: {
-    baseDomain: 'uplifterinc.localhost:3000',
-    cookieDomain: 'localhost',
-    s3Bucket: 'local-assets',
-    s3DocumentsBucket: 'local-documents',
+    baseDomain: "uplifterinc.localhost:3000",
+    cookieDomain: "localhost",
+    s3Bucket: "local-assets",
+    s3DocumentsBucket: "local-documents",
     cdnUrl: null,
     useHttps: false,
     corsOrigins: [
-      'http://localhost:3000',
-      'http://*.localhost:3000',
-      'http://uplifterinc.localhost:3000',
-      'http://*.uplifterinc.localhost:3000',
+      "http://localhost:3000",
+      "http://*.localhost:3000",
+      "http://uplifterinc.localhost:3000",
+      "http://*.uplifterinc.localhost:3000",
     ],
   },
 };
@@ -87,10 +78,10 @@ export function getCurrentEnvironment(): Environment {
     return env as Environment;
   }
   // Fallback detection based on NODE_ENV
-  if (process.env.NODE_ENV === 'production') {
-    return 'production';
+  if (process.env.NODE_ENV === "production") {
+    return "production";
   }
-  return 'local';
+  return "local";
 }
 
 /**
@@ -105,7 +96,7 @@ export function getEnvConfig(): EnvironmentConfig {
  */
 export function getSubdomainUrl(subdomain: string): string {
   const config = getEnvConfig();
-  const protocol = config.useHttps ? 'https' : 'http';
+  const protocol = config.useHttps ? "https" : "http";
   return `${protocol}://${subdomain}.${config.baseDomain}`;
 }
 
@@ -114,7 +105,7 @@ export function getSubdomainUrl(subdomain: string): string {
  */
 export function getBaseUrl(): string {
   const config = getEnvConfig();
-  const protocol = config.useHttps ? 'https' : 'http';
+  const protocol = config.useHttps ? "https" : "http";
   return `${protocol}://${config.baseDomain}`;
 }
 
@@ -123,14 +114,14 @@ export function getBaseUrl(): string {
  * Use these for help/documentation/contact links so they always point to the real
  * marketing site, not a nonexistent staging/dev marketing site.
  */
-export const MARKETING_DOCS_URL = 'https://learn.uplifterinc.com/';
-export const MARKETING_CONTACT_URL = 'https://www.uplifterinc.com/contact-us';
+export const MARKETING_DOCS_URL = "https://learn.uplifterinc.com/";
+export const MARKETING_CONTACT_URL = "https://www.uplifterinc.com/contact-us";
 
 /**
  * Get the login portal URL
  */
 export function getLoginUrl(callbackUrl?: string): string {
-  const loginUrl = getSubdomainUrl('login');
+  const loginUrl = getSubdomainUrl("login");
   if (callbackUrl) {
     return `${loginUrl}?callbackUrl=${encodeURIComponent(callbackUrl)}`;
   }
@@ -146,16 +137,16 @@ export function getLoginUrlForHost(hostHeader: string | null): string {
   if (!hostHeader) {
     return getLoginUrl();
   }
-  const [hostname, port] = hostHeader.split(':');
-  const parts = hostname.split('.');
-  const useHttps = !hostname.includes('localhost');
-  const protocol = useHttps ? 'https' : 'http';
+  const [hostname, port] = hostHeader.split(":");
+  const parts = hostname.split(".");
+  const useHttps = !hostname.includes("localhost");
+  const protocol = useHttps ? "https" : "http";
   let baseDomain: string;
-  if (hostname.includes('localhost')) {
-    baseDomain = parts.length >= 2 ? parts.slice(-2).join('.') : 'uplifterinc.localhost';
+  if (hostname.includes("localhost")) {
+    baseDomain = parts.length >= 2 ? parts.slice(-2).join(".") : "uplifterinc.localhost";
     if (port) baseDomain += `:${port}`;
   } else {
-    baseDomain = parts.length >= 2 ? parts.slice(-2).join('.') : 'uplifterinc.com';
+    baseDomain = parts.length >= 2 ? parts.slice(-2).join(".") : "uplifterinc.com";
   }
   return `${protocol}://login.${baseDomain}`;
 }
@@ -166,7 +157,7 @@ export function getLoginUrlForHost(hostHeader: string | null): string {
  */
 export function getSessionCookieName(): string {
   const currentEnv = getCurrentEnvironment();
-  const isLocal = currentEnv === 'local';
+  const isLocal = currentEnv === "local";
   return isLocal ? "next-auth.session-token" : "__Secure-next-auth.session-token";
 }
 
@@ -175,10 +166,12 @@ export function getSessionCookieName(): string {
  */
 export function isValidDomain(hostname: string): boolean {
   const config = getEnvConfig();
-  const baseDomain = config.baseDomain.split(':')[0]; // Remove port if present
-  return hostname === baseDomain || 
-         hostname.endsWith(`.${baseDomain}`) ||
-         hostname === `www.${baseDomain}`;
+  const baseDomain = config.baseDomain.split(":")[0]; // Remove port if present
+  return (
+    hostname === baseDomain ||
+    hostname.endsWith(`.${baseDomain}`) ||
+    hostname === `www.${baseDomain}`
+  );
 }
 
 /**
@@ -187,17 +180,17 @@ export function isValidDomain(hostname: string): boolean {
  */
 export function extractSubdomain(hostname: string): string | null {
   const config = getEnvConfig();
-  const baseDomain = config.baseDomain.split(':')[0]; // Remove port if present
-  
+  const baseDomain = config.baseDomain.split(":")[0]; // Remove port if present
+
   if (hostname === baseDomain || hostname === `www.${baseDomain}`) {
     return null;
   }
-  
+
   if (hostname.endsWith(`.${baseDomain}`)) {
     const subdomain = hostname.slice(0, -(baseDomain.length + 1));
     return subdomain || null;
   }
-  
+
   return null;
 }
 
@@ -207,42 +200,41 @@ export function extractSubdomain(hostname: string): string | null {
  */
 export function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false;
-  
+
   const config = getEnvConfig();
   const currentEnv = getCurrentEnvironment();
-  const baseDomain = config.baseDomain.split(':')[0]; // Remove port if present
-  
+  const baseDomain = config.baseDomain.split(":")[0]; // Remove port if present
+
   // Local environment allows localhost variations
-  if (currentEnv === 'local') {
+  if (currentEnv === "local") {
     if (origin.includes("localhost")) return true;
     if (origin.includes("uplifterinc.localhost")) return true;
   }
-  
+
   // Check against the current environment's domain
-  const protocol = config.useHttps ? 'https' : 'http';
-  if (origin === `${protocol}://${baseDomain}` || 
-      origin === `${protocol}://www.${baseDomain}`) {
+  const protocol = config.useHttps ? "https" : "http";
+  if (origin === `${protocol}://${baseDomain}` || origin === `${protocol}://www.${baseDomain}`) {
     return true;
   }
-  
+
   // Check subdomains
   if (origin.endsWith(`.${baseDomain}`)) {
     return true;
   }
-  
+
   // Check explicitly configured CORS origins
   if (config.corsOrigins.includes(origin)) {
     return true;
   }
-  
+
   // Wildcard check for corsOrigins
   for (const allowed of config.corsOrigins) {
-    if (allowed.includes('*')) {
-      const regex = new RegExp('^' + allowed.replace(/\./g, '\\.').replace(/\*/g, '.*') + '$');
+    if (allowed.includes("*")) {
+      const regex = new RegExp("^" + allowed.replace(/\./g, "\\.").replace(/\*/g, ".*") + "$");
       if (regex.test(origin)) return true;
     }
   }
-  
+
   return false;
 }
 
@@ -252,9 +244,9 @@ export function isAllowedOrigin(origin: string | null): boolean {
 export function getAssetUrl(path: string): string {
   const config = getEnvConfig();
   if (config.cdnUrl) {
-    return `${config.cdnUrl}${path.startsWith('/') ? path : `/${path}`}`;
+    return `${config.cdnUrl}${path.startsWith("/") ? path : `/${path}`}`;
   }
   // Fallback to direct S3 URL
-  const region = process.env.AWS_S3_REGION || 'us-east-1';
-  return `https://${config.s3Bucket}.s3.${region}.amazonaws.com${path.startsWith('/') ? path : `/${path}`}`;
+  const region = process.env.AWS_S3_REGION || "us-east-1";
+  return `https://${config.s3Bucket}.s3.${region}.amazonaws.com${path.startsWith("/") ? path : `/${path}`}`;
 }

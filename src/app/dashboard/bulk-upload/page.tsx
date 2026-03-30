@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Download, Upload, FileSpreadsheet, CheckCircle2 } from "lucide-react"
+import * as React from "react";
+import { Download, Upload, FileSpreadsheet, CheckCircle2 } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -11,94 +11,124 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 
 const SAMPLES = {
   members: {
     filename: "members_template.csv",
-    content: "Name,Email,Phone,Status,JoinDate\nJohn Doe,john@example.com,555-0123,Active,2023-01-01\nJane Smith,jane@example.com,555-0124,Active,2023-02-15"
+    content:
+      "Name,Email,Phone,Status,JoinDate\nJohn Doe,john@example.com,555-0123,Active,2023-01-01\nJane Smith,jane@example.com,555-0124,Active,2023-02-15",
   },
   results: {
     filename: "results_template.csv",
-    content: "AthleteID,AthleteName,Event,Score,Date,Competition\nATH-001,Sophia Miller,Vault,9.5,2023-10-15,Fall Classic\nATH-002,Olivia Chen,Bars,9.2,2023-10-15,Fall Classic"
+    content:
+      "AthleteID,AthleteName,Event,Score,Date,Competition\nATH-001,Sophia Miller,Vault,9.5,2023-10-15,Fall Classic\nATH-002,Olivia Chen,Bars,9.2,2023-10-15,Fall Classic",
   },
   payments: {
     filename: "payments_template.csv",
-    content: "Date,Description,Amount,Method,Status,Reference\n2023-11-26,Tuition - Elite Squad,150.00,Visa,Settled,REF123456\n2023-11-25,Uniform Purchase,85.50,Mastercard,Authorised,REF123457"
+    content:
+      "Date,Description,Amount,Method,Status,Reference\n2023-11-26,Tuition - Elite Squad,150.00,Visa,Settled,REF123456\n2023-11-25,Uniform Purchase,85.50,Mastercard,Authorised,REF123457",
   },
   skills: {
     filename: "skills_template.csv",
-    content: "Name,Event,Level,Difficulty,Description\nBack Handspring,Floor,Advanced,C,Jump backwards onto hands and push off to land on feet\nCast Handstand,Bars,Advanced,C,Cast from support to handstand position"
+    content:
+      "Name,Event,Level,Difficulty,Description\nBack Handspring,Floor,Advanced,C,Jump backwards onto hands and push off to land on feet\nCast Handstand,Bars,Advanced,C,Cast from support to handstand position",
   },
   athletes: {
     filename: "athletes_template.csv",
-    content: "Name,Level,Group,Status,Email,Parent\nSophia Miller,Level 8,Elite Squad,Active,sophia.m@example.com,Sarah Miller\nOlivia Chen,Elite,National Team,Active,olivia.c@example.com,David Chen"
+    content:
+      "Name,Level,Group,Status,Email,Parent\nSophia Miller,Level 8,Elite Squad,Active,sophia.m@example.com,Sarah Miller\nOlivia Chen,Elite,National Team,Active,olivia.c@example.com,David Chen",
   },
   users: {
     filename: "users_template.csv",
-    content: "Name,Email,Role,Status\nAndrew Karzel,andrew@uplifterinc.com,Admin,Active\nCoach Mike,mike@uplifterinc.com,Coach,Active"
-  }
-}
+    content:
+      "Name,Email,Role,Status\nAndrew Karzel,andrew@uplifterinc.com,Admin,Active\nCoach Mike,mike@uplifterinc.com,Coach,Active",
+  },
+};
 
-type UploadType = keyof typeof SAMPLES
+type UploadType = keyof typeof SAMPLES;
 
 const UPLOAD_OPTIONS: { value: UploadType; label: string; description: string }[] = [
-  { value: "members", label: "Members", description: "Import new members or update existing member details." },
-  { value: "results", label: "Results", description: "Bulk import competition results and scores for athletes." },
-  { value: "payments", label: "Payments", description: "Import historical payment records or external transactions." },
-  { value: "skills", label: "Skills", description: "Add new skills to the training database in bulk." },
-  { value: "athletes", label: "Athletes", description: "Register multiple athletes at once. Requires parent information." },
-  { value: "users", label: "Users", description: "Create system user accounts for staff, coaches, and admins." },
-]
+  {
+    value: "members",
+    label: "Members",
+    description: "Import new members or update existing member details.",
+  },
+  {
+    value: "results",
+    label: "Results",
+    description: "Bulk import competition results and scores for athletes.",
+  },
+  {
+    value: "payments",
+    label: "Payments",
+    description: "Import historical payment records or external transactions.",
+  },
+  {
+    value: "skills",
+    label: "Skills",
+    description: "Add new skills to the training database in bulk.",
+  },
+  {
+    value: "athletes",
+    label: "Athletes",
+    description: "Register multiple athletes at once. Requires parent information.",
+  },
+  {
+    value: "users",
+    label: "Users",
+    description: "Create system user accounts for staff, coaches, and admins.",
+  },
+];
 
 export default function BulkUploadPage() {
-  const [activeType, setActiveType] = React.useState<UploadType | null>(null)
-  const [isUploading, setIsUploading] = React.useState(false)
-  const [uploadStatus, setUploadStatus] = React.useState<"idle" | "success" | "error">("idle")
+  const [activeType, setActiveType] = React.useState<UploadType | null>(null);
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [uploadStatus, setUploadStatus] = React.useState<"idle" | "success" | "error">("idle");
 
   const handleDownloadSample = (type: UploadType) => {
-    const sample = SAMPLES[type]
-    const blob = new Blob([sample.content], { type: "text/csv;charset=utf-8;" })
-    const link = document.createElement("a")
+    const sample = SAMPLES[type];
+    const blob = new Blob([sample.content], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
     if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob)
-      link.setAttribute("href", url)
-      link.setAttribute("download", sample.filename)
-      link.style.visibility = "hidden"
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", sample.filename);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
-  }
+  };
 
   const handleUpload = (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsUploading(true)
-    setUploadStatus("idle")
+    e.preventDefault();
+    setIsUploading(true);
+    setUploadStatus("idle");
 
     // Simulate upload delay
     setTimeout(() => {
-      setIsUploading(false)
-      setUploadStatus("success")
-      
+      setIsUploading(false);
+      setUploadStatus("success");
+
       // Reset status after 3 seconds
       setTimeout(() => {
-        setUploadStatus("idle")
-      }, 3000)
-    }, 1500)
-  }
+        setUploadStatus("idle");
+      }, 3000);
+    }, 1500);
+  };
 
-  const activeOption = activeType ? UPLOAD_OPTIONS.find(opt => opt.value === activeType) : null
+  const activeOption = activeType ? UPLOAD_OPTIONS.find((opt) => opt.value === activeType) : null;
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -111,7 +141,9 @@ export default function BulkUploadPage() {
 
       <div className="flex flex-col gap-4">
         <div className="w-full max-w-xs">
-          <Label htmlFor="upload-type" className="mb-2 block">Select Upload Type</Label>
+          <Label htmlFor="upload-type" className="mb-2 block">
+            Select Upload Type
+          </Label>
           <Select onValueChange={(v) => setActiveType(v as UploadType)}>
             <SelectTrigger id="upload-type">
               <SelectValue placeholder="Choose what to upload..." />
@@ -144,7 +176,11 @@ export default function BulkUploadPage() {
                       </p>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => handleDownloadSample(activeType!)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDownloadSample(activeType!)}
+                  >
                     <Download className="mr-2 h-4 w-4" />
                     Download Sample
                   </Button>
@@ -187,5 +223,5 @@ export default function BulkUploadPage() {
         )}
       </div>
     </div>
-  )
+  );
 }

@@ -1,15 +1,15 @@
-import { db } from "@/lib/db"
+import { db } from "@/lib/db";
 
 export interface SettlementSummary {
-  organizationId: string
-  organizationName: string
-  period: { start: Date; end: Date }
-  grossPayments: number
-  refunds: number
-  chargebacks: number
-  netSettlement: number
-  payoutsCompleted: number
-  payoutsPending: number
+  organizationId: string;
+  organizationName: string;
+  period: { start: Date; end: Date };
+  grossPayments: number;
+  refunds: number;
+  chargebacks: number;
+  netSettlement: number;
+  payoutsCompleted: number;
+  payoutsPending: number;
 }
 
 export async function getSettlementSummary(
@@ -36,27 +36,27 @@ export async function getSettlementSummary(
       },
       select: { amount: true, fees: true, net: true, status: true },
     }),
-  ])
+  ]);
 
   const grossPayments = transactions
     .filter((t) => t.type === "PAYMENT" && t.status === "SETTLED")
-    .reduce((sum, t) => sum + Number(t.amount), 0)
+    .reduce((sum, t) => sum + Number(t.amount), 0);
 
   const refunds = transactions
     .filter((t) => t.type === "REFUND")
-    .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0)
+    .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
 
   const chargebacks = transactions
     .filter((t) => t.type === "CHARGEBACK")
-    .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0)
+    .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
 
   const payoutsCompleted = payouts
     .filter((p) => p.status === "PAID")
-    .reduce((sum, p) => sum + Number(p.net), 0)
+    .reduce((sum, p) => sum + Number(p.net), 0);
 
   const payoutsPending = payouts
     .filter((p) => p.status === "PENDING" || p.status === "SCHEDULED")
-    .reduce((sum, p) => sum + Number(p.net), 0)
+    .reduce((sum, p) => sum + Number(p.net), 0);
 
   return {
     organizationId,
@@ -68,56 +68,55 @@ export async function getSettlementSummary(
     netSettlement: grossPayments - refunds - chargebacks,
     payoutsCompleted,
     payoutsPending,
-  }
+  };
 }
 
 export interface SuperadminOverview {
-  totalGrossVolume: number
-  totalRefunds: number
-  totalChargebacks: number
-  totalPayouts: number
-  orgCount: number
-  orgsWithNegativeBalance: number
+  totalGrossVolume: number;
+  totalRefunds: number;
+  totalChargebacks: number;
+  totalPayouts: number;
+  orgCount: number;
+  orgsWithNegativeBalance: number;
 }
 
 export async function getSuperadminOverview(
   startDate: Date,
   endDate: Date
 ): Promise<SuperadminOverview> {
-  const [transactions, payouts, orgCount] =
-    await Promise.all([
-      db.transaction.findMany({
-        where: {
-          createdAt: { gte: startDate, lte: endDate },
-        },
-        select: { type: true, amount: true, status: true },
-      }),
-      db.payout.aggregate({
-        where: {
-          status: "PAID",
-          createdAt: { gte: startDate, lte: endDate },
-        },
-        _sum: { net: true },
-      }),
-      db.organization.count({ where: { isActive: true } }),
-    ])
+  const [transactions, payouts, orgCount] = await Promise.all([
+    db.transaction.findMany({
+      where: {
+        createdAt: { gte: startDate, lte: endDate },
+      },
+      select: { type: true, amount: true, status: true },
+    }),
+    db.payout.aggregate({
+      where: {
+        status: "PAID",
+        createdAt: { gte: startDate, lte: endDate },
+      },
+      _sum: { net: true },
+    }),
+    db.organization.count({ where: { isActive: true } }),
+  ]);
 
   // Negative balance count requires querying Adyen's Balance API or
   // storing negative balance webhook events -- not yet implemented.
   // Return 0 until negative balance state tracking is added.
-  const negativeBalanceCount = 0
+  const negativeBalanceCount = 0;
 
   const totalGrossVolume = transactions
     .filter((t) => t.type === "PAYMENT" && t.status === "SETTLED")
-    .reduce((sum, t) => sum + Number(t.amount), 0)
+    .reduce((sum, t) => sum + Number(t.amount), 0);
 
   const totalRefunds = transactions
     .filter((t) => t.type === "REFUND")
-    .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0)
+    .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
 
   const totalChargebacks = transactions
     .filter((t) => t.type === "CHARGEBACK")
-    .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0)
+    .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
 
   return {
     totalGrossVolume,
@@ -126,19 +125,19 @@ export async function getSuperadminOverview(
     totalPayouts: Number(payouts._sum.net || 0),
     orgCount,
     orgsWithNegativeBalance: negativeBalanceCount,
-  }
+  };
 }
 
 export interface PayoutHistoryEntry {
-  id: string
-  amount: number
-  fees: number
-  net: number
-  status: string
-  bankAccount: string | null
-  scheduledAt: Date | null
-  paidAt: Date | null
-  createdAt: Date
+  id: string;
+  amount: number;
+  fees: number;
+  net: number;
+  status: string;
+  bankAccount: string | null;
+  scheduledAt: Date | null;
+  paidAt: Date | null;
+  createdAt: Date;
 }
 
 export async function getPayoutHistory(
@@ -160,7 +159,7 @@ export async function getPayoutHistory(
       paidAt: true,
       createdAt: true,
     },
-  })
+  });
 
   return payouts.map((p) => ({
     id: p.id,
@@ -172,5 +171,5 @@ export async function getPayoutHistory(
     scheduledAt: p.scheduledAt,
     paidAt: p.paidAt,
     createdAt: p.createdAt,
-  }))
+  }));
 }

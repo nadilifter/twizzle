@@ -22,10 +22,12 @@ const updateQuestionSchema = z.object({
 });
 
 const reorderSchema = z.object({
-  questions: z.array(z.object({
-    id: z.string(),
-    displayOrder: z.number().int(),
-  })),
+  questions: z.array(
+    z.object({
+      id: z.string(),
+      displayOrder: z.number().int(),
+    })
+  ),
 });
 
 // GET /api/organization/medical-questions
@@ -38,7 +40,7 @@ export async function GET(request: NextRequest) {
     }
 
     const organizationId = session.user.organizationId;
-    
+
     if (!organizationId) {
       return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
@@ -73,14 +75,14 @@ export async function POST(request: NextRequest) {
     }
 
     const organizationId = session.user.organizationId;
-    
+
     if (!organizationId) {
       return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
     // Super admins bypass permission checks
     const isSuperAdmin = session.user.isSuperAdmin === true;
-    
+
     if (!isSuperAdmin) {
       // Check if user has admin permissions
       const membership = await db.organizationMember.findUnique({
@@ -140,14 +142,14 @@ export async function PATCH(request: NextRequest) {
     }
 
     const organizationId = session.user.organizationId;
-    
+
     if (!organizationId) {
       return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
     // Super admins bypass permission checks
     const isSuperAdmin = session.user.isSuperAdmin === true;
-    
+
     if (!isSuperAdmin) {
       // Check if user has admin permissions
       const membership = await db.organizationMember.findUnique({
@@ -169,12 +171,13 @@ export async function PATCH(request: NextRequest) {
     // Check if this is a reorder request
     if (body.questions && Array.isArray(body.questions)) {
       const validatedData = reorderSchema.parse(body);
-      
+
       // Update all questions in a transaction
       await db.$transaction(
         validatedData.questions.map((q) =>
-          db.customMedicalQuestion.update({ // tenant-isolation-ok: organizationId in where clause
-            where: { 
+          db.customMedicalQuestion.update({
+            // tenant-isolation-ok: organizationId in where clause
+            where: {
               id: q.id,
               organizationId: organizationId,
             },
@@ -233,14 +236,14 @@ export async function DELETE(request: NextRequest) {
     }
 
     const organizationId = session.user.organizationId;
-    
+
     if (!organizationId) {
       return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
     // Super admins bypass permission checks
     const isSuperAdmin = session.user.isSuperAdmin === true;
-    
+
     if (!isSuperAdmin) {
       // Check if user has admin permissions
       const membership = await db.organizationMember.findUnique({

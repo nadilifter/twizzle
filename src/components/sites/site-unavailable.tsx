@@ -9,13 +9,10 @@ export function SiteUnavailablePage({ organizationName }: SiteUnavailablePagePro
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 text-center">
       <div className="mx-auto max-w-md space-y-6">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            Site Unavailable
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Site Unavailable</h1>
           <p className="text-muted-foreground">
-            The site for <strong>{organizationName}</strong> is currently
-            unavailable. If you believe this is an error, please contact the
-            organization directly.
+            The site for <strong>{organizationName}</strong> is currently unavailable. If you
+            believe this is an error, please contact the organization directly.
           </p>
         </div>
         <div>

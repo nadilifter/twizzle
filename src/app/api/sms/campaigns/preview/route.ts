@@ -75,10 +75,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check limits
-    const limits = await checkUsageLimits(
-      session.user.organizationId,
-      recipientCount || 1
-    );
+    const limits = await checkUsageLimits(session.user.organizationId, recipientCount || 1);
 
     return NextResponse.json({
       previewBody,
@@ -103,9 +100,6 @@ export async function POST(request: NextRequest) {
       );
     }
     console.error("Error generating SMS preview:", error);
-    return NextResponse.json(
-      { error: "Failed to generate preview" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to generate preview" }, { status: 500 });
   }
 }

@@ -1,21 +1,21 @@
-import { unstable_cache } from "next/cache"
-import { db } from "@/lib/db"
-import { notFound } from "next/navigation"
-import { Users, User, ArrowRight } from "lucide-react"
-import Link from "next/link"
-import { ProgressiveImage } from "@/components/ui/progressive-image"
-import { getHeroContrastStyles } from "@/lib/color-utils"
+import { unstable_cache } from "next/cache";
+import { db } from "@/lib/db";
+import { notFound } from "next/navigation";
+import { Users, User, ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { ProgressiveImage } from "@/components/ui/progressive-image";
+import { getHeroContrastStyles } from "@/lib/color-utils";
 
 const getCachedSiteConfig = unstable_cache(
   async (slug: string) => {
     return db.websiteConfig.findUnique({
       where: { subdomain: slug },
       include: { organization: true },
-    })
+    });
   },
   ["site-config"],
   { revalidate: 30 }
-)
+);
 
 const getCachedTeamMembers = unstable_cache(
   async (organizationId: string) => {
@@ -35,10 +35,7 @@ const getCachedTeamMembers = unstable_cache(
               where: {
                 passed: true,
                 certification: { isActive: true },
-                OR: [
-                  { expiresAt: null },
-                  { expiresAt: { gt: new Date() } },
-                ],
+                OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
               },
               include: {
                 certification: { select: { name: true } },
@@ -48,7 +45,7 @@ const getCachedTeamMembers = unstable_cache(
         },
       },
       orderBy: { displayOrder: "asc" },
-    })
+    });
 
     return highlights.map((h) => ({
       id: h.id,
@@ -60,28 +57,22 @@ const getCachedTeamMembers = unstable_cache(
       name: h.member.user.name,
       avatar: h.member.user.avatar,
       programCount: h.member.programAssignments.length,
-      certifications: h.member.memberCertifications.map(
-        (mc) => mc.certification.name
-      ),
-    }))
+      certifications: h.member.memberCertifications.map((mc) => mc.certification.name),
+    }));
   },
   ["site-team"],
   { revalidate: 30 }
-)
+);
 
-export default async function TeamPage({
-  params,
-}: {
-  params: { slug: string }
-}) {
-  const config = await getCachedSiteConfig(params.slug)
+export default async function TeamPage({ params }: { params: { slug: string } }) {
+  const config = await getCachedSiteConfig(params.slug);
 
-  if (!config || !config.showTeam) return notFound()
+  if (!config || !config.showTeam) return notFound();
 
-  const primaryColor = config.primaryColor || "#000000"
-  const hero = getHeroContrastStyles(primaryColor)
-  const showCertifications = config.showTeamCertifications ?? false
-  const teamMembers = await getCachedTeamMembers(config.organizationId)
+  const primaryColor = config.primaryColor || "#000000";
+  const hero = getHeroContrastStyles(primaryColor);
+  const showCertifications = config.showTeamCertifications ?? false;
+  const teamMembers = await getCachedTeamMembers(config.organizationId);
 
   return (
     <div className="min-h-screen">
@@ -110,19 +101,15 @@ export default async function TeamPage({
         {teamMembers.length > 0 ? (
           <div className="space-y-16">
             {teamMembers.map((member, index) => {
-              const isReversed = index % 2 === 1
-              const imageUrl = member.overrideImage || member.avatar
+              const isReversed = index % 2 === 1;
+              const imageUrl = member.overrideImage || member.avatar;
 
               return (
                 <article
                   key={member.id}
                   className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden"
                 >
-                  <div
-                    className={`grid md:grid-cols-2 ${
-                      isReversed ? "md:[direction:rtl]" : ""
-                    }`}
-                  >
+                  <div className={`grid md:grid-cols-2 ${isReversed ? "md:[direction:rtl]" : ""}`}>
                     {/* Image Panel */}
                     <div
                       className={`bg-muted flex items-start justify-center overflow-hidden ${
@@ -153,29 +140,24 @@ export default async function TeamPage({
                       }`}
                     >
                       <div className="mb-5">
-                        <p className="text-sm text-muted-foreground">
-                          {member.title}
-                        </p>
-                        <h2 className="text-2xl font-bold tracking-tight">
-                          {member.name}
-                        </h2>
-                        {showCertifications &&
-                          member.certifications.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 mt-2">
-                              {member.certifications.map((cert) => (
-                                <span
-                                  key={cert}
-                                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
-                                  style={{
-                                    backgroundColor: `${primaryColor}15`,
-                                    color: primaryColor,
-                                  }}
-                                >
-                                  {cert}
-                                </span>
-                              ))}
-                            </div>
-                          )}
+                        <p className="text-sm text-muted-foreground">{member.title}</p>
+                        <h2 className="text-2xl font-bold tracking-tight">{member.name}</h2>
+                        {showCertifications && member.certifications.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {member.certifications.map((cert) => (
+                              <span
+                                key={cert}
+                                className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
+                                style={{
+                                  backgroundColor: `${primaryColor}15`,
+                                  color: primaryColor,
+                                }}
+                              >
+                                {cert}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       {member.bio && (
@@ -199,7 +181,7 @@ export default async function TeamPage({
                     </div>
                   </div>
                 </article>
-              )
+              );
             })}
           </div>
         ) : (
@@ -209,12 +191,11 @@ export default async function TeamPage({
               No Team Members Available
             </h2>
             <p className="text-muted-foreground max-w-md mx-auto">
-              Team information is not available at this time. Please check back
-              later.
+              Team information is not available at this time. Please check back later.
             </p>
           </div>
         )}
       </section>
     </div>
-  )
+  );
 }

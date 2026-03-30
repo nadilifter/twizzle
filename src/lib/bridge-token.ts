@@ -1,6 +1,6 @@
 /**
  * Bridge Token Utilities
- * 
+ *
  * Helper functions for creating and validating session bridge tokens
  * for cross-domain authentication.
  */

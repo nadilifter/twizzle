@@ -25,13 +25,13 @@ This approach matches the pattern used by other open-source projects including [
 
 All date utilities live in [`src/lib/date-utils.ts`](../src/lib/date-utils.ts):
 
-| Function | Signature | Purpose |
-|---|---|---|
-| `parseDateOnly` | `(str: string \| null) => Date \| null` | Parse a `YYYY-MM-DD` string to noon UTC. Falls back to `new Date()` for ISO datetime strings. |
-| `normalizeToNoonUTC` | `(date: Date \| null) => Date \| null` | Shift an existing Date to noon UTC. Useful for fixing legacy midnight-UTC data. |
-| `formatDateOnly` | `(date: Date \| string \| null, tz?: string) => string` | Format a Date as `YYYY-MM-DD`, optionally in a specific timezone. |
-| `getTodayNoonUTC` | `() => Date` | Returns today's date at noon UTC. |
-| `isSameDay` | `(d1: Date, d2: Date) => boolean` | Compare two dates by calendar day in UTC. |
+| Function             | Signature                                               | Purpose                                                                                       |
+| -------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `parseDateOnly`      | `(str: string \| null) => Date \| null`                 | Parse a `YYYY-MM-DD` string to noon UTC. Falls back to `new Date()` for ISO datetime strings. |
+| `normalizeToNoonUTC` | `(date: Date \| null) => Date \| null`                  | Shift an existing Date to noon UTC. Useful for fixing legacy midnight-UTC data.               |
+| `formatDateOnly`     | `(date: Date \| string \| null, tz?: string) => string` | Format a Date as `YYYY-MM-DD`, optionally in a specific timezone.                             |
+| `getTodayNoonUTC`    | `() => Date`                                            | Returns today's date at noon UTC.                                                             |
+| `isSameDay`          | `(d1: Date, d2: Date) => boolean`                       | Compare two dates by calendar day in UTC.                                                     |
 
 ## Correct Patterns
 
@@ -65,11 +65,11 @@ birthDate: noonUTC("2016-03-15"),
 
 ```typescript
 // Safe: construct from ISO string (already noon UTC from DB)
-format(new Date(event.date), "MMM d, yyyy")
+format(new Date(event.date), "MMM d, yyyy");
 
 // Safe: construct with explicit noon UTC for display
 const dateObj = new Date(dateString + "T12:00:00Z");
-format(dateObj, "EEE, MMM d, yyyy")
+format(dateObj, "EEE, MMM d, yyyy");
 ```
 
 ### Frontend — `<input type="date">` Handlers
@@ -90,12 +90,12 @@ onChange={e => {
 
 ## Common Mistakes
 
-| Mistake | Why It's Wrong | Fix |
-|---|---|---|
-| `new Date("2026-01-23")` | Creates midnight UTC — shifts in western timezones | `parseDateOnly("2026-01-23")` |
-| `new Date(e.target.value)` | Same as above — `<input type="date">` yields `YYYY-MM-DD` | Use noon UTC or keep as string |
-| `new Date(str + "T00:00:00")` | Creates midnight local time — inconsistent across timezones | `new Date(str + "T12:00:00Z")` |
-| `date.toISOString().split("T")[0]` | Only safe when the stored value is at noon UTC | Use `formatDateOnly(date)` |
+| Mistake                            | Why It's Wrong                                              | Fix                            |
+| ---------------------------------- | ----------------------------------------------------------- | ------------------------------ |
+| `new Date("2026-01-23")`           | Creates midnight UTC — shifts in western timezones          | `parseDateOnly("2026-01-23")`  |
+| `new Date(e.target.value)`         | Same as above — `<input type="date">` yields `YYYY-MM-DD`   | Use noon UTC or keep as string |
+| `new Date(str + "T00:00:00")`      | Creates midnight local time — inconsistent across timezones | `new Date(str + "T12:00:00Z")` |
+| `date.toISOString().split("T")[0]` | Only safe when the stored value is at noon UTC              | Use `formatDateOnly(date)`     |
 
 ## Date-Only vs. Datetime Fields
 

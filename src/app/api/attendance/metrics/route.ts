@@ -6,7 +6,7 @@ type StatusKey = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED" | "REGISTERED";
 
 function addStatus(
   stats: { total: number; present: number; absent: number; late: number; excused: number },
-  status: string,
+  status: string
 ) {
   stats.total++;
   if (status === "PRESENT") stats.present++;
@@ -37,9 +37,8 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
-    const dateFilter = startDate && endDate
-      ? { gte: new Date(startDate), lte: new Date(endDate) }
-      : undefined;
+    const dateFilter =
+      startDate && endDate ? { gte: new Date(startDate), lte: new Date(endDate) } : undefined;
 
     // ── Event-based Attendance where clause ──
     const eventWhere: any = {
@@ -68,11 +67,13 @@ export async function GET(request: NextRequest) {
     const [eventCounts, instanceCounts] = await Promise.all([
       Promise.all([
         db.attendance.count({ where: eventWhere }),
-        ...statusList.map(s => db.attendance.count({ where: { ...eventWhere, status: s } })),
+        ...statusList.map((s) => db.attendance.count({ where: { ...eventWhere, status: s } })),
       ]),
       Promise.all([
         db.instanceAttendance.count({ where: instanceWhere }),
-        ...statusList.map(s => db.instanceAttendance.count({ where: { ...instanceWhere, status: s } })),
+        ...statusList.map((s) =>
+          db.instanceAttendance.count({ where: { ...instanceWhere, status: s } })
+        ),
       ]),
     ]);
 
@@ -97,11 +98,17 @@ export async function GET(request: NextRequest) {
     let breakdown: any[] = [];
 
     if (groupBy === "athlete") {
-      const statsMap = new Map<string, { total: number; present: number; absent: number; late: number; excused: number }>();
+      const statsMap = new Map<
+        string,
+        { total: number; present: number; absent: number; late: number; excused: number }
+      >();
 
       const [eventAtts, instanceAtts] = await Promise.all([
         db.attendance.findMany({ where: eventWhere, select: { athleteId: true, status: true } }),
-        db.instanceAttendance.findMany({ where: instanceWhere, select: { athleteId: true, status: true } }),
+        db.instanceAttendance.findMany({
+          where: instanceWhere,
+          select: { athleteId: true, status: true },
+        }),
       ]);
 
       for (const att of [...eventAtts, ...instanceAtts]) {
@@ -126,32 +133,53 @@ export async function GET(request: NextRequest) {
             },
           },
         });
-        const athleteMap = new Map(athletes.map(a => [a.id, a]));
+        const athleteMap = new Map(athletes.map((a) => [a.id, a]));
 
-        breakdown = athleteIds.map(id => {
-          const s = statsMap.get(id)!;
-          const athlete = athleteMap.get(id);
-          return {
-            id,
-            name: athlete?.name || "Unknown",
-            avatar: athlete?.avatar || null,
-            level: athlete?.organizationAthletes?.[0]?.level || null,
-            ...s,
-            rate: calcRate(s),
-          };
-        }).sort((a, b) => b.total - a.total);
+        breakdown = athleteIds
+          .map((id) => {
+            const s = statsMap.get(id)!;
+            const athlete = athleteMap.get(id);
+            return {
+              id,
+              name: athlete?.name || "Unknown",
+              avatar: athlete?.avatar || null,
+              level: athlete?.organizationAthletes?.[0]?.level || null,
+              ...s,
+              rate: calcRate(s),
+            };
+          })
+          .sort((a, b) => b.total - a.total);
       }
     } else if (groupBy === "program") {
-      const programStats = new Map<string, { id: string; name: string; total: number; present: number; absent: number; late: number; excused: number }>();
+      const programStats = new Map<
+        string,
+        {
+          id: string;
+          name: string;
+          total: number;
+          present: number;
+          absent: number;
+          late: number;
+          excused: number;
+        }
+      >();
 
       const [eventAtts, instanceAtts] = await Promise.all([
         db.attendance.findMany({
           where: eventWhere,
-          select: { status: true, event: { select: { programId: true, program: { select: { id: true, name: true } } } } },
+          select: {
+            status: true,
+            event: { select: { programId: true, program: { select: { id: true, name: true } } } },
+          },
         }),
         db.instanceAttendance.findMany({
           where: instanceWhere,
-          select: { status: true, programInstance: { select: { programId: true, program: { select: { id: true, name: true } } } } },
+          select: {
+            status: true,
+            programInstance: {
+              select: { programId: true, program: { select: { id: true, name: true } } },
+            },
+          },
         }),
       ]);
 
@@ -159,44 +187,101 @@ export async function GET(request: NextRequest) {
         const pid = att.event.programId;
         if (!pid) continue;
         if (!programStats.has(pid)) {
-          programStats.set(pid, { id: pid, name: att.event.program?.name || "Unknown", total: 0, present: 0, absent: 0, late: 0, excused: 0 });
+          programStats.set(pid, {
+            id: pid,
+            name: att.event.program?.name || "Unknown",
+            total: 0,
+            present: 0,
+            absent: 0,
+            late: 0,
+            excused: 0,
+          });
         }
         addStatus(programStats.get(pid)!, att.status);
       }
       for (const att of instanceAtts) {
         const pid = att.programInstance.programId;
         if (!programStats.has(pid)) {
-          programStats.set(pid, { id: pid, name: att.programInstance.program.name, total: 0, present: 0, absent: 0, late: 0, excused: 0 });
+          programStats.set(pid, {
+            id: pid,
+            name: att.programInstance.program.name,
+            total: 0,
+            present: 0,
+            absent: 0,
+            late: 0,
+            excused: 0,
+          });
         }
         addStatus(programStats.get(pid)!, att.status);
       }
 
       breakdown = Array.from(programStats.values())
-        .map(s => ({ ...s, rate: calcRate(s) }))
+        .map((s) => ({ ...s, rate: calcRate(s) }))
         .sort((a, b) => b.total - a.total);
     } else if (groupBy === "coach") {
       // Coach breakdown only applies to Event-based attendance (events have a coach; instances don't)
-      const coachStats = new Map<string, { id: string; name: string; email: string | null; avatar: string | null; total: number; present: number; absent: number; late: number; excused: number }>();
+      const coachStats = new Map<
+        string,
+        {
+          id: string;
+          name: string;
+          email: string | null;
+          avatar: string | null;
+          total: number;
+          present: number;
+          absent: number;
+          late: number;
+          excused: number;
+        }
+      >();
 
       const eventAtts = await db.attendance.findMany({
         where: eventWhere,
-        select: { status: true, event: { select: { coachId: true, coach: { select: { id: true, name: true, email: true, avatar: true } } } } },
+        select: {
+          status: true,
+          event: {
+            select: {
+              coachId: true,
+              coach: { select: { id: true, name: true, email: true, avatar: true } },
+            },
+          },
+        },
       });
 
       for (const att of eventAtts) {
         const cid = att.event.coachId;
         if (!cid) continue;
         if (!coachStats.has(cid)) {
-          coachStats.set(cid, { id: cid, name: att.event.coach?.name || "Unknown", email: att.event.coach?.email || null, avatar: att.event.coach?.avatar || null, total: 0, present: 0, absent: 0, late: 0, excused: 0 });
+          coachStats.set(cid, {
+            id: cid,
+            name: att.event.coach?.name || "Unknown",
+            email: att.event.coach?.email || null,
+            avatar: att.event.coach?.avatar || null,
+            total: 0,
+            present: 0,
+            absent: 0,
+            late: 0,
+            excused: 0,
+          });
         }
         addStatus(coachStats.get(cid)!, att.status);
       }
 
       breakdown = Array.from(coachStats.values())
-        .map(s => ({ ...s, rate: calcRate(s) }))
+        .map((s) => ({ ...s, rate: calcRate(s) }))
         .sort((a, b) => b.total - a.total);
     } else if (groupBy === "date") {
-      const dateStats = new Map<string, { date: string; total: number; present: number; absent: number; late: number; excused: number }>();
+      const dateStats = new Map<
+        string,
+        {
+          date: string;
+          total: number;
+          present: number;
+          absent: number;
+          late: number;
+          excused: number;
+        }
+      >();
 
       const [eventAtts, instanceAtts] = await Promise.all([
         db.attendance.findMany({
@@ -213,17 +298,19 @@ export async function GET(request: NextRequest) {
 
       for (const att of eventAtts) {
         const d = att.event.date.toISOString().split("T")[0];
-        if (!dateStats.has(d)) dateStats.set(d, { date: d, total: 0, present: 0, absent: 0, late: 0, excused: 0 });
+        if (!dateStats.has(d))
+          dateStats.set(d, { date: d, total: 0, present: 0, absent: 0, late: 0, excused: 0 });
         addStatus(dateStats.get(d)!, att.status);
       }
       for (const att of instanceAtts) {
         const d = att.programInstance.date.toISOString().split("T")[0];
-        if (!dateStats.has(d)) dateStats.set(d, { date: d, total: 0, present: 0, absent: 0, late: 0, excused: 0 });
+        if (!dateStats.has(d))
+          dateStats.set(d, { date: d, total: 0, present: 0, absent: 0, late: 0, excused: 0 });
         addStatus(dateStats.get(d)!, att.status);
       }
 
       breakdown = Array.from(dateStats.values())
-        .map(s => ({ ...s, rate: calcRate(s) }))
+        .map((s) => ({ ...s, rate: calcRate(s) }))
         .sort((a, b) => a.date.localeCompare(b.date));
     }
 
@@ -234,9 +321,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching attendance metrics:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch attendance metrics" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch attendance metrics" }, { status: 500 });
   }
 }

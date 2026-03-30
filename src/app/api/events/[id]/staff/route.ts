@@ -11,10 +11,7 @@ const addEventStaffSchema = z.object({
 });
 
 // GET - List all staff assigned to an event
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -67,10 +64,7 @@ export async function GET(
 }
 
 // POST - Add staff to an event
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -144,7 +138,10 @@ export async function POST(
     });
 
     if (existingAssignment) {
-      return NextResponse.json({ error: "Staff member is already assigned to this event" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Staff member is already assigned to this event" },
+        { status: 400 }
+      );
     }
 
     const eventStaff = await db.eventStaff.create({

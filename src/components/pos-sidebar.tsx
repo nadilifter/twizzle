@@ -1,15 +1,11 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { usePathname } from "next/navigation"
-import { 
-  ShoppingCart,
-  CreditCard,
-  LayoutDashboard,
-} from "lucide-react"
-import { useSession } from "next-auth/react"
+import * as React from "react";
+import { usePathname } from "next/navigation";
+import { ShoppingCart, CreditCard, LayoutDashboard } from "lucide-react";
+import { useSession } from "next-auth/react";
 
-import { NavUser } from "@/components/nav-user"
+import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
   SidebarContent,
@@ -22,23 +18,23 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-} from "@/components/ui/sidebar"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/sidebar";
+import { Badge } from "@/components/ui/badge";
 
 // Helper to construct subdomain URLs
 function getAdminUrl(): string {
-  if (typeof window === 'undefined') return '/dashboard'
-  
-  const { hostname, port, protocol } = window.location
-  
-  const parts = hostname.split('.')
+  if (typeof window === "undefined") return "/dashboard";
+
+  const { hostname, port, protocol } = window.location;
+
+  const parts = hostname.split(".");
   if (parts.length >= 3) {
-    parts[0] = 'admin'
-    const newHostname = parts.join('.')
-    return `${protocol}//${newHostname}${port ? ':' + port : ''}`
+    parts[0] = "admin";
+    const newHostname = parts.join(".");
+    return `${protocol}//${newHostname}${port ? ":" + port : ""}`;
   }
-  
-  return '/dashboard'
+
+  return "/dashboard";
 }
 
 // POS navigation data
@@ -48,28 +44,30 @@ const navItems = [
     url: "/pos",
     icon: ShoppingCart,
   },
-]
+];
 
-export function POSSidebar({ 
+export function POSSidebar({
   organizationName,
-  ...props 
+  ...props
 }: React.ComponentProps<typeof Sidebar> & { organizationName?: string }) {
-  const pathname = usePathname()
-  const { data: session, status } = useSession()
-  const [adminUrl, setAdminUrl] = React.useState('/dashboard')
+  const pathname = usePathname();
+  const { data: session, status } = useSession();
+  const [adminUrl, setAdminUrl] = React.useState("/dashboard");
 
   React.useEffect(() => {
-    setAdminUrl(getAdminUrl())
-  }, [])
+    setAdminUrl(getAdminUrl());
+  }, []);
 
   // Get user data from session
-  const user = session?.user ? {
-    name: session.user.name || "User",
-    email: session.user.email || "",
-    avatar: session.user.image || null,
-  } : null
+  const user = session?.user
+    ? {
+        name: session.user.name || "User",
+        email: session.user.email || "",
+        avatar: session.user.image || null,
+      }
+    : null;
 
-  const isLoading = status === "loading"
+  const isLoading = status === "loading";
 
   return (
     <Sidebar {...props}>
@@ -81,7 +79,9 @@ export function POSSidebar({
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center gap-2">
               <span className="font-semibold">POS Terminal</span>
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">BETA</Badge>
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                BETA
+              </Badge>
             </div>
             <span className="text-xs text-muted-foreground truncate max-w-[160px]">
               {organizationName || "Uplifter"}
@@ -95,10 +95,9 @@ export function POSSidebar({
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => {
-                const isActive = item.url === "/pos" 
-                  ? pathname === "/pos"
-                  : pathname.startsWith(item.url)
-                
+                const isActive =
+                  item.url === "/pos" ? pathname === "/pos" : pathname.startsWith(item.url);
+
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={isActive}>
@@ -108,12 +107,12 @@ export function POSSidebar({
                       </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                )
+                );
               })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        
+
         <SidebarGroup className="mt-auto">
           <SidebarGroupLabel>Quick Links</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -145,5 +144,5 @@ export function POSSidebar({
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }

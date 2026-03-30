@@ -3,10 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
 import { checkFeatureGate } from "@/lib/feature-resolver";
 import { z } from "zod";
-import {
-  createSmsCampaign,
-  getExpandedSmsCampaignRecipients,
-} from "@/lib/sms-campaign-service";
+import { createSmsCampaign, getExpandedSmsCampaignRecipients } from "@/lib/sms-campaign-service";
 import { checkUsageLimits } from "@/lib/sms-service";
 import { isTwilioConfigured, calculateSegments } from "@/lib/twilio";
 import type { SmsTargetType } from "@prisma/client";
@@ -119,10 +116,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching SMS campaigns:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch campaigns" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch campaigns" }, { status: 500 });
   }
 }
 
@@ -151,16 +145,22 @@ export async function POST(request: NextRequest) {
     // Validate targeting foreign keys belong to this org
     const scopedDb = getScopedDb(session.user.organizationId);
     if (validatedData.targetProgramId) {
-      const program = await scopedDb.program.findUnique({ where: { id: validatedData.targetProgramId } });
-      if (!program) return NextResponse.json({ error: "Target program not found" }, { status: 404 });
+      const program = await scopedDb.program.findUnique({
+        where: { id: validatedData.targetProgramId },
+      });
+      if (!program)
+        return NextResponse.json({ error: "Target program not found" }, { status: 404 });
     }
     if (validatedData.targetEventId) {
       const event = await scopedDb.event.findUnique({ where: { id: validatedData.targetEventId } });
       if (!event) return NextResponse.json({ error: "Target event not found" }, { status: 404 });
     }
     if (validatedData.targetProgramInstanceId) {
-      const instance = await scopedDb.programInstance.findUnique({ where: { id: validatedData.targetProgramInstanceId } });
-      if (!instance) return NextResponse.json({ error: "Target program instance not found" }, { status: 404 });
+      const instance = await scopedDb.programInstance.findUnique({
+        where: { id: validatedData.targetProgramInstanceId },
+      });
+      if (!instance)
+        return NextResponse.json({ error: "Target program instance not found" }, { status: 404 });
     }
     if (validatedData.targetMembershipGroupIds?.length) {
       const valid = await scopedDb.membershipGroup.findMany({
@@ -168,7 +168,10 @@ export async function POST(request: NextRequest) {
         select: { id: true },
       });
       if (valid.length !== validatedData.targetMembershipGroupIds.length) {
-        return NextResponse.json({ error: "One or more target membership groups not found" }, { status: 404 });
+        return NextResponse.json(
+          { error: "One or more target membership groups not found" },
+          { status: 404 }
+        );
       }
     }
 
@@ -196,7 +199,8 @@ export async function POST(request: NextRequest) {
 
     if (
       validatedData.targetType === "MEMBERSHIP_HOLDERS" &&
-      (!validatedData.targetMembershipGroupIds || validatedData.targetMembershipGroupIds.length === 0)
+      (!validatedData.targetMembershipGroupIds ||
+        validatedData.targetMembershipGroupIds.length === 0)
     ) {
       return NextResponse.json(
         { error: "At least one membership group is required for membership-targeted campaigns" },
@@ -216,9 +220,7 @@ export async function POST(request: NextRequest) {
       targetProgramInstanceId: validatedData.targetProgramInstanceId,
       targetMembershipGroupIds: validatedData.targetMembershipGroupIds,
       createdById: session.user.id,
-      scheduledAt: validatedData.scheduledAt
-        ? new Date(validatedData.scheduledAt)
-        : undefined,
+      scheduledAt: validatedData.scheduledAt ? new Date(validatedData.scheduledAt) : undefined,
       sendImmediately: validatedData.sendImmediately,
     });
 
@@ -239,9 +241,6 @@ export async function POST(request: NextRequest) {
       );
     }
     console.error("Error creating SMS campaign:", error);
-    return NextResponse.json(
-      { error: "Failed to create campaign" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create campaign" }, { status: 500 });
   }
 }

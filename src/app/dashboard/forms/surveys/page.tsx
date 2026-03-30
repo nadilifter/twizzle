@@ -1,5 +1,5 @@
-import { Survey, SurveyTable } from "./survey-table"
-import { DashboardPageHeader } from "@/components/dashboard-page-header"
+import { Survey, SurveyTable } from "./survey-table";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 
 const data: Survey[] = [
   {
@@ -23,7 +23,7 @@ const data: Survey[] = [
     responses: 0,
     createdAt: "2024-02-01",
   },
-]
+];
 
 export default function SurveysPage() {
   return (
@@ -33,5 +33,5 @@ export default function SurveysPage() {
         <SurveyTable data={data} />
       </div>
     </div>
-  )
+  );
 }

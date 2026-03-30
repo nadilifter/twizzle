@@ -1,7 +1,7 @@
-import { db } from "@/lib/db"
-import Link from "next/link"
-import { notFound } from "next/navigation"
-import { formatDistanceToNow } from "date-fns"
+import { db } from "@/lib/db";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { formatDistanceToNow } from "date-fns";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -9,11 +9,11 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+} from "@/components/ui/breadcrumb";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Table,
   TableBody,
@@ -21,54 +21,59 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { 
-  User as UserIcon, 
-  Building2, 
-  Mail, 
-  Calendar, 
-  Clock, 
+} from "@/components/ui/table";
+import {
+  User as UserIcon,
+  Building2,
+  Mail,
+  Calendar,
+  Clock,
   Shield,
   ExternalLink,
   LayoutDashboard,
-} from "lucide-react"
+} from "lucide-react";
 
 interface Props {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }
 
 // Helper function for role badge variants
-const getRoleBadgeVariant = (role: string, isSuperAdmin: boolean): "default" | "secondary" | "destructive" | "outline" => {
-  if (isSuperAdmin) return "destructive"
+const getRoleBadgeVariant = (
+  role: string,
+  isSuperAdmin: boolean
+): "default" | "secondary" | "destructive" | "outline" => {
+  if (isSuperAdmin) return "destructive";
   switch (role) {
     case "ADMIN":
-      return "destructive"
+      return "destructive";
     case "COACH":
-      return "default"
+      return "default";
     case "VOLUNTEER":
     case "ACCOUNTANT":
     case "PARENT":
-      return "secondary"
+      return "secondary";
     case "CUSTOM":
-      return "outline"
+      return "outline";
     default:
-      return "secondary"
+      return "secondary";
   }
-}
+};
 
 // Helper function for status badge variants
-const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
+const getStatusBadgeVariant = (
+  status: string
+): "default" | "secondary" | "destructive" | "outline" => {
   switch (status) {
     case "ACTIVE":
-      return "default"
+      return "default";
     case "INVITED":
-      return "outline"
+      return "outline";
     case "INACTIVE":
-      return "secondary"
+      return "secondary";
     default:
-      return "secondary"
+      return "secondary";
   }
-}
+};
 
 // Helper function for initials
 const getInitials = (name: string) => {
@@ -77,51 +82,51 @@ const getInitials = (name: string) => {
     .map((n) => n[0])
     .join("")
     .toUpperCase()
-    .slice(0, 2)
-}
+    .slice(0, 2);
+};
 
 // Format last active date
 const formatLastActive = (date: Date | null) => {
-  if (!date) return "Never"
+  if (!date) return "Never";
   try {
-    return formatDistanceToNow(date, { addSuffix: true })
+    return formatDistanceToNow(date, { addSuffix: true });
   } catch {
-    return "Unknown"
+    return "Unknown";
   }
-}
+};
 
-import { getSubdomainUrl } from "@/lib/env-domains"
+import { getSubdomainUrl } from "@/lib/env-domains";
 
 function getImpersonationUrl(userId: string, userName: string): string {
-  const adminBase = getSubdomainUrl('admin')
-  return `${adminBase}/dashboard/impersonate?userId=${encodeURIComponent(userId)}&userName=${encodeURIComponent(userName)}`
+  const adminBase = getSubdomainUrl("admin");
+  return `${adminBase}/dashboard/impersonate?userId=${encodeURIComponent(userId)}&userName=${encodeURIComponent(userName)}`;
 }
 
 export default async function UserDetailPage({ params }: Props) {
-  const { id } = await params
-  
+  const { id } = await params;
+
   const user = await db.user.findUnique({
     where: { id },
     include: {
       memberships: {
         include: {
-          organization: true
+          organization: true,
         },
-        orderBy: { joinedAt: 'desc' }
+        orderBy: { joinedAt: "desc" },
       },
       _count: {
         select: {
           memberships: true,
-        }
-      }
-    }
-  })
+        },
+      },
+    },
+  });
 
   if (!user) {
-    notFound()
+    notFound();
   }
 
-  const displayRole = user.isSuperAdmin ? "Super Admin" : user.role
+  const displayRole = user.isSuperAdmin ? "Super Admin" : user.role;
 
   return (
     <div className="flex flex-col gap-6 p-4">
@@ -151,9 +156,7 @@ export default async function UserDetailPage({ params }: Props) {
         <div className="flex items-center gap-4">
           <Avatar className="h-16 w-16">
             <AvatarImage src={user.avatar || undefined} />
-            <AvatarFallback className="text-lg">
-              {getInitials(user.name)}
-            </AvatarFallback>
+            <AvatarFallback className="text-lg">{getInitials(user.name)}</AvatarFallback>
           </Avatar>
           <div>
             <div className="flex items-center gap-2">
@@ -161,9 +164,7 @@ export default async function UserDetailPage({ params }: Props) {
               <Badge variant={getRoleBadgeVariant(user.role, user.isSuperAdmin)}>
                 {displayRole}
               </Badge>
-              <Badge variant={getStatusBadgeVariant(user.status)}>
-                {user.status}
-              </Badge>
+              <Badge variant={getStatusBadgeVariant(user.status)}>{user.status}</Badge>
             </div>
             <p className="text-muted-foreground">{user.email}</p>
           </div>
@@ -190,9 +191,7 @@ export default async function UserDetailPage({ params }: Props) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{user._count.memberships}</div>
-            <p className="text-xs text-muted-foreground">
-              Organization memberships
-            </p>
+            <p className="text-xs text-muted-foreground">Organization memberships</p>
           </CardContent>
         </Card>
 
@@ -203,9 +202,7 @@ export default async function UserDetailPage({ params }: Props) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{displayRole}</div>
-            <p className="text-xs text-muted-foreground">
-              Base platform permissions
-            </p>
+            <p className="text-xs text-muted-foreground">Base platform permissions</p>
           </CardContent>
         </Card>
 
@@ -218,9 +215,7 @@ export default async function UserDetailPage({ params }: Props) {
             <div className="text-2xl font-bold">
               {user.lastActiveAt ? formatLastActive(user.lastActiveAt) : "Never"}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Last login activity
-            </p>
+            <p className="text-xs text-muted-foreground">Last login activity</p>
           </CardContent>
         </Card>
 
@@ -230,12 +225,8 @@ export default async function UserDetailPage({ params }: Props) {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {user.createdAt.toLocaleDateString()}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Account created
-            </p>
+            <div className="text-2xl font-bold">{user.createdAt.toLocaleDateString()}</div>
+            <p className="text-xs text-muted-foreground">Account created</p>
           </CardContent>
         </Card>
       </div>
@@ -272,9 +263,7 @@ export default async function UserDetailPage({ params }: Props) {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Status</p>
-                <Badge variant={getStatusBadgeVariant(user.status)}>
-                  {user.status}
-                </Badge>
+                <Badge variant={getStatusBadgeVariant(user.status)}>{user.status}</Badge>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Created</p>
@@ -287,10 +276,9 @@ export default async function UserDetailPage({ params }: Props) {
               <div>
                 <p className="text-sm text-muted-foreground">Last Active</p>
                 <p className="font-medium">
-                  {user.lastActiveAt 
+                  {user.lastActiveAt
                     ? `${user.lastActiveAt.toLocaleDateString()} (${formatLastActive(user.lastActiveAt)})`
-                    : "Never"
-                  }
+                    : "Never"}
                 </p>
               </div>
               <div>
@@ -330,7 +318,7 @@ export default async function UserDetailPage({ params }: Props) {
                   {user.memberships.map((membership) => (
                     <TableRow key={membership.id}>
                       <TableCell>
-                        <Link 
+                        <Link
                           href={`/superadmin/organizations/${membership.organization.slug}`}
                           className="font-medium hover:underline"
                         >
@@ -354,5 +342,5 @@ export default async function UserDetailPage({ params }: Props) {
         </Card>
       </div>
     </div>
-  )
+  );
 }

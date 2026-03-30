@@ -27,9 +27,7 @@ function getLemClient() {
 
   const apiKey = process.env.ADYEN_LEM_API_KEY;
   if (!apiKey) {
-    throw new Error(
-      "ADYEN_LEM_API_KEY is not set. Required for Legal Entity Management API."
-    );
+    throw new Error("ADYEN_LEM_API_KEY is not set. Required for Legal Entity Management API.");
   }
 
   const { Client } = require("@adyen/api-library");
@@ -79,9 +77,7 @@ function getManagementClient() {
 
   const apiKey = process.env.ADYEN_API_KEY;
   if (!apiKey) {
-    throw new Error(
-      "ADYEN_API_KEY is not set. Required for Management API (stores)."
-    );
+    throw new Error("ADYEN_API_KEY is not set. Required for Management API (stores).");
   }
 
   const { Client } = require("@adyen/api-library");
@@ -261,10 +257,7 @@ export async function createSweep(
   }
 ): Promise<{ id: string; [key: string]: any }> {
   try {
-    return await getConfigApi().BalanceAccountsApi.createSweep(
-      balanceAccountId,
-      data
-    );
+    return await getConfigApi().BalanceAccountsApi.createSweep(balanceAccountId, data);
   } catch (error: any) {
     console.error("adyen-platform: createSweep failed", {
       balanceAccountId,
@@ -287,13 +280,9 @@ export async function getTransferInstrumentLast4(
   transferInstrumentId: string
 ): Promise<string | null> {
   try {
-    const response = await getLemApi().TransferInstrumentsApi.getTransferInstrument(
-      transferInstrumentId
-    );
-    const accountNumber =
-      response?.bankAccount?.accountNumber ||
-      response?.bankAccount?.iban ||
-      "";
+    const response =
+      await getLemApi().TransferInstrumentsApi.getTransferInstrument(transferInstrumentId);
+    const accountNumber = response?.bankAccount?.accountNumber || response?.bankAccount?.iban || "";
     if (accountNumber.length >= 4) {
       return accountNumber.slice(-4);
     }
@@ -315,21 +304,17 @@ export async function refundPayment(
   pspReference: string,
   amount: { value: number; currency: string },
   merchantAccount?: string,
-  reference?: string,
+  reference?: string
 ): Promise<{ pspReference: string; status: string; [key: string]: any }> {
   try {
     const { CheckoutAPI } = require("@adyen/api-library");
     const checkoutApi = new CheckoutAPI(getManagementClient());
 
-    const response = await checkoutApi.ModificationsApi.refundCapturedPayment(
-      pspReference,
-      {
-        amount,
-        merchantAccount: merchantAccount
-          || process.env.ADYEN_MERCHANT_ACCOUNT!,
-        reference: reference || `refund-${pspReference}-${Date.now()}`,
-      }
-    );
+    const response = await checkoutApi.ModificationsApi.refundCapturedPayment(pspReference, {
+      amount,
+      merchantAccount: merchantAccount || process.env.ADYEN_MERCHANT_ACCOUNT!,
+      reference: reference || `refund-${pspReference}-${Date.now()}`,
+    });
 
     return response;
   } catch (error: any) {

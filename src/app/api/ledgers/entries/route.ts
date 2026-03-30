@@ -4,37 +4,47 @@ import { db } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
-const createLedgerEntrySchema = z.object({
-  date: z.string().min(1, "Date is required"),
-  description: z.string().min(1, "Description is required"),
-  glCodeId: z.string().min(1, "GL code is required"),
-  reference: z.string().optional(),
-  debit: z.number().optional(),
-  credit: z.number().optional(),
-  status: z.enum(["POSTED", "PENDING"]).default("PENDING"),
-}).refine(
-  (data) => (data.debit !== undefined && data.debit > 0) || (data.credit !== undefined && data.credit > 0),
-  { message: "Either debit or credit must be provided" }
-);
-
-const createJournalEntrySchema = z.object({
-  date: z.string().min(1, "Date is required"),
-  description: z.string().min(1, "Description is required"),
-  reference: z.string().optional(),
-  entries: z.array(z.object({
-    glCodeId: z.string().min(1),
+const createLedgerEntrySchema = z
+  .object({
+    date: z.string().min(1, "Date is required"),
+    description: z.string().min(1, "Description is required"),
+    glCodeId: z.string().min(1, "GL code is required"),
+    reference: z.string().optional(),
     debit: z.number().optional(),
     credit: z.number().optional(),
-  })).min(2, "At least two entries are required"),
-  status: z.enum(["POSTED", "PENDING"]).default("PENDING"),
-}).refine(
-  (data) => {
-    const totalDebits = data.entries.reduce((sum, e) => sum + (e.debit || 0), 0);
-    const totalCredits = data.entries.reduce((sum, e) => sum + (e.credit || 0), 0);
-    return Math.abs(totalDebits - totalCredits) < 0.01; // Allow for floating point errors
-  },
-  { message: "Debits and credits must balance" }
-);
+    status: z.enum(["POSTED", "PENDING"]).default("PENDING"),
+  })
+  .refine(
+    (data) =>
+      (data.debit !== undefined && data.debit > 0) ||
+      (data.credit !== undefined && data.credit > 0),
+    { message: "Either debit or credit must be provided" }
+  );
+
+const createJournalEntrySchema = z
+  .object({
+    date: z.string().min(1, "Date is required"),
+    description: z.string().min(1, "Description is required"),
+    reference: z.string().optional(),
+    entries: z
+      .array(
+        z.object({
+          glCodeId: z.string().min(1),
+          debit: z.number().optional(),
+          credit: z.number().optional(),
+        })
+      )
+      .min(2, "At least two entries are required"),
+    status: z.enum(["POSTED", "PENDING"]).default("PENDING"),
+  })
+  .refine(
+    (data) => {
+      const totalDebits = data.entries.reduce((sum, e) => sum + (e.debit || 0), 0);
+      const totalCredits = data.entries.reduce((sum, e) => sum + (e.credit || 0), 0);
+      return Math.abs(totalDebits - totalCredits) < 0.01; // Allow for floating point errors
+    },
+    { message: "Debits and credits must balance" }
+  );
 
 // GET /api/ledgers/entries - List ledger entries
 export async function GET(request: NextRequest) {
@@ -132,10 +142,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching ledger entries:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch ledger entries" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch ledger entries" }, { status: 500 });
   }
 }
 
@@ -170,10 +177,7 @@ export async function POST(request: NextRequest) {
       });
 
       if (existingCodes.length !== glCodeIds.length) {
-        return NextResponse.json(
-          { error: "One or more GL codes not found" },
-          { status: 404 }
-        );
+        return NextResponse.json({ error: "One or more GL codes not found" }, { status: 404 });
       }
 
       // Create all entries in a transaction
@@ -215,10 +219,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!glCode) {
-      return NextResponse.json(
-        { error: "GL code not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "GL code not found" }, { status: 404 });
     }
 
     const entry = await db.ledgerEntry.create({
@@ -240,16 +241,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(entry);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating ledger entry:", error);
-    return NextResponse.json(
-      { error: "Failed to create ledger entry" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create ledger entry" }, { status: 500 });
   }
 }
 
@@ -293,10 +288,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json(entry);
   } catch (error) {
     console.error("Error updating ledger entry:", error);
-    return NextResponse.json(
-      { error: "Failed to update ledger entry" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update ledger entry" }, { status: 500 });
   }
 }
 
@@ -347,9 +339,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting ledger entry:", error);
-    return NextResponse.json(
-      { error: "Failed to delete ledger entry" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete ledger entry" }, { status: 500 });
   }
 }

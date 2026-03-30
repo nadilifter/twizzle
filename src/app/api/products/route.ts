@@ -96,10 +96,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching products:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch products" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });
   }
 }
 
@@ -159,7 +156,9 @@ export async function POST(request: NextRequest) {
     }
 
     // When variants exist, inventory is managed at variant level
-    const currentInventory = hasVariants ? null : (validatedData.currentInventory ?? validatedData.maxInventory);
+    const currentInventory = hasVariants
+      ? null
+      : (validatedData.currentInventory ?? validatedData.maxInventory);
     const maxInventory = hasVariants ? null : validatedData.maxInventory;
 
     const product = await db.$transaction(async (tx) => {
@@ -203,15 +202,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(product);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating product:", error);
-    return NextResponse.json(
-      { error: "Failed to create product" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create product" }, { status: 500 });
   }
 }

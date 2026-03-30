@@ -44,7 +44,10 @@ export async function DELETE(
     const isRequired = program.requiredMemberships.some((m) => m.id === instanceId);
 
     if (!isRequired) {
-      return NextResponse.json({ error: "Membership is not a requirement for this program" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Membership is not a requirement for this program" },
+        { status: 404 }
+      );
     }
 
     // Remove the requirement via disconnect

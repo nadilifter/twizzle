@@ -12,9 +12,9 @@ interface RoadmapBoardProps {
 const COLUMNS: Status[] = ["PLANNED", "IN_PROGRESS", "DONE"];
 
 export function RoadmapBoard({ features, onSelect }: RoadmapBoardProps) {
-  const getFeaturesByStatus = (status: Status) => 
+  const getFeaturesByStatus = (status: Status) =>
     features
-      .filter(f => f.status === status)
+      .filter((f) => f.status === status)
       .sort((a, b) => getQuarterSortValue(a.targetDate) - getQuarterSortValue(b.targetDate));
 
   return (
@@ -28,11 +28,11 @@ export function RoadmapBoard({ features, onSelect }: RoadmapBoardProps) {
               {getFeaturesByStatus(status).length}
             </span>
           </div>
-          
+
           <div className="p-3 flex flex-col gap-3">
             {getFeaturesByStatus(status).map((feature) => (
-              <Card 
-                key={feature.id} 
+              <Card
+                key={feature.id}
                 className="cursor-pointer border-transparent shadow-sm hover:shadow-md hover:border-primary/20 transition-all"
                 onClick={() => onSelect(feature)}
               >
@@ -50,8 +50,12 @@ export function RoadmapBoard({ features, onSelect }: RoadmapBoardProps) {
                 </CardContent>
                 <CardFooter className="px-4 pb-3 pt-0 flex items-center justify-between">
                   <div className="flex items-center gap-3 text-muted-foreground">
-                    <div className={`inline-flex items-center gap-1 text-xs ${feature.hasVoted ? "text-primary" : ""}`}>
-                      <ChevronUp className={`h-3.5 w-3.5 ${feature.hasVoted ? "fill-current" : ""}`} />
+                    <div
+                      className={`inline-flex items-center gap-1 text-xs ${feature.hasVoted ? "text-primary" : ""}`}
+                    >
+                      <ChevronUp
+                        className={`h-3.5 w-3.5 ${feature.hasVoted ? "fill-current" : ""}`}
+                      />
                       <span className="font-medium">{feature.voteCount}</span>
                     </div>
                     <div className="inline-flex items-center gap-1 text-xs">
@@ -63,9 +67,7 @@ export function RoadmapBoard({ features, onSelect }: RoadmapBoardProps) {
               </Card>
             ))}
             {getFeaturesByStatus(status).length === 0 && (
-              <div className="text-center text-sm text-muted-foreground py-12">
-                No features yet
-              </div>
+              <div className="text-center text-sm text-muted-foreground py-12">No features yet</div>
             )}
           </div>
         </div>

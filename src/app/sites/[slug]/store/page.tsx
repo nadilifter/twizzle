@@ -1,42 +1,42 @@
-import { unstable_cache } from "next/cache"
-import { db } from "@/lib/db"
-import { notFound } from "next/navigation"
-import { StoreProductList } from "@/components/sites/store-product-list"
-import { isFeatureEnabled } from "@/lib/feature-resolver"
+import { unstable_cache } from "next/cache";
+import { db } from "@/lib/db";
+import { notFound } from "next/navigation";
+import { StoreProductList } from "@/components/sites/store-product-list";
+import { isFeatureEnabled } from "@/lib/feature-resolver";
 
 const getCachedSiteConfig = unstable_cache(
   async (slug: string) => {
     return db.websiteConfig.findUnique({
       where: { subdomain: slug },
       select: { organizationId: true, primaryColor: true, showStore: true },
-    })
+    });
   },
   ["site-config-store"],
   { revalidate: 30 }
-)
+);
 
 const getCachedHasActiveProducts = unstable_cache(
   async (organizationId: string) => {
     const count = await db.product.count({
       where: { organizationId, isActive: true },
-    })
-    return count > 0
+    });
+    return count > 0;
   },
   ["site-has-active-products"],
   { revalidate: 30 }
-)
+);
 
 export default async function StorePage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params
-  const config = await getCachedSiteConfig(slug)
+  const { slug } = await params;
+  const config = await getCachedSiteConfig(slug);
 
-  if (!config || !config.showStore) return notFound()
+  if (!config || !config.showStore) return notFound();
 
-  const storeEnabled = await isFeatureEnabled(config.organizationId, "store")
-  if (!storeEnabled) return notFound()
+  const storeEnabled = await isFeatureEnabled(config.organizationId, "store");
+  if (!storeEnabled) return notFound();
 
-  const hasProducts = await getCachedHasActiveProducts(config.organizationId)
-  if (!hasProducts) return notFound()
+  const hasProducts = await getCachedHasActiveProducts(config.organizationId);
+  if (!hasProducts) return notFound();
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 md:px-8 py-12">
@@ -50,5 +50,5 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
         primaryColor={config.primaryColor || undefined}
       />
     </div>
-  )
+  );
 }

@@ -1,14 +1,8 @@
-"use client"
+"use client";
 
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartConfig,
   ChartContainer,
@@ -16,15 +10,15 @@ import {
   ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
-} from "@/components/ui/chart"
+} from "@/components/ui/chart";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { useState } from "react"
+} from "@/components/ui/select";
+import { useState } from "react";
 
 const chartData = [
   { date: "2025-10-01", sent: 400, opened: 180 },
@@ -57,7 +51,7 @@ const chartData = [
   { date: "2025-10-28", sent: 1150, opened: 550 },
   { date: "2025-10-29", sent: 850, opened: 400 },
   { date: "2025-10-30", sent: 600, opened: 290 },
-]
+];
 
 const chartConfig = {
   sent: {
@@ -68,23 +62,23 @@ const chartConfig = {
     label: "Opened",
     color: "hsl(var(--chart-2))",
   },
-} satisfies ChartConfig
+} satisfies ChartConfig;
 
 export function EmailChartAreaInteractive() {
-  const [timeRange, setTimeRange] = useState("90d")
+  const [timeRange, setTimeRange] = useState("90d");
 
   const filteredData = chartData.filter((item) => {
-    const date = new Date(item.date)
-    const now = new Date()
-    let daysToSubtract = 90
+    const date = new Date(item.date);
+    const now = new Date();
+    let daysToSubtract = 90;
     if (timeRange === "30d") {
-      daysToSubtract = 30
+      daysToSubtract = 30;
     } else if (timeRange === "7d") {
-      daysToSubtract = 7
+      daysToSubtract = 7;
     }
-    const startDate = new Date(now.setDate(now.getDate() - daysToSubtract))
-    return date >= startDate
-  })
+    const startDate = new Date(now.setDate(now.getDate() - daysToSubtract));
+    return date >= startDate;
+  });
 
   return (
     <Card>
@@ -96,10 +90,7 @@ export function EmailChartAreaInteractive() {
           </CardDescription>
         </div>
         <Select value={timeRange} onValueChange={setTimeRange}>
-          <SelectTrigger
-            className="w-[160px] rounded-lg sm:ml-auto"
-            aria-label="Select a value"
-          >
+          <SelectTrigger className="w-[160px] rounded-lg sm:ml-auto" aria-label="Select a value">
             <SelectValue placeholder="Last 3 months" />
           </SelectTrigger>
           <SelectContent className="rounded-xl">
@@ -116,35 +107,16 @@ export function EmailChartAreaInteractive() {
         </Select>
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
-        <ChartContainer
-          config={chartConfig}
-          className="aspect-auto h-[250px] w-full"
-        >
+        <ChartContainer config={chartConfig} className="aspect-auto h-[250px] w-full">
           <AreaChart data={filteredData}>
             <defs>
               <linearGradient id="fillSent" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-sent)"
-                  stopOpacity={0.8}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-sent)"
-                  stopOpacity={0.1}
-                />
+                <stop offset="5%" stopColor="var(--color-sent)" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="var(--color-sent)" stopOpacity={0.1} />
               </linearGradient>
               <linearGradient id="fillOpened" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-opened)"
-                  stopOpacity={0.8}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-opened)"
-                  stopOpacity={0.1}
-                />
+                <stop offset="5%" stopColor="var(--color-opened)" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="var(--color-opened)" stopOpacity={0.1} />
               </linearGradient>
             </defs>
             <CartesianGrid vertical={false} />
@@ -155,11 +127,11 @@ export function EmailChartAreaInteractive() {
               tickMargin={8}
               minTickGap={32}
               tickFormatter={(value) => {
-                const date = new Date(value)
+                const date = new Date(value);
                 return date.toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
-                })
+                });
               }}
             />
             <ChartTooltip
@@ -170,7 +142,7 @@ export function EmailChartAreaInteractive() {
                     return new Date(value).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
-                    })
+                    });
                   }}
                   indicator="dot"
                 />
@@ -195,7 +167,5 @@ export function EmailChartAreaInteractive() {
         </ChartContainer>
       </CardContent>
     </Card>
-  )
+  );
 }
-
-

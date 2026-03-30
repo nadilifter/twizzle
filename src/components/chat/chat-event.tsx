@@ -38,16 +38,8 @@
  */
 
 import { cn } from "@/lib/utils";
-import {
-  AvatarFallbackProps,
-  AvatarImageProps,
-  AvatarProps,
-} from "@radix-ui/react-avatar";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar";
+import { AvatarFallbackProps, AvatarImageProps, AvatarProps } from "@radix-ui/react-avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useMemo } from "react";
 
 /**
@@ -59,12 +51,7 @@ import { useMemo } from "react";
  * - `"longDate"` — long date (e.g. "January 1, 2024")
  * - `"relative"` — relative time (e.g. "2 hours ago", "yesterday")
  */
-export type ChatEventTimeFormat =
-  | "time"
-  | "date"
-  | "dateTime"
-  | "longDate"
-  | "relative";
+export type ChatEventTimeFormat = "time" | "date" | "dateTime" | "longDate" | "relative";
 
 export interface ChatEventTimeProps extends React.ComponentProps<"time"> {
   /** Unix timestamp (ms) or Date object. */
@@ -77,14 +64,13 @@ export interface ChatEventTimeProps extends React.ComponentProps<"time"> {
   formatOptions?: Intl.DateTimeFormatOptions;
 }
 
-const FORMAT_PRESETS: Record<ChatEventTimeFormat, Intl.DateTimeFormatOptions> =
-  {
-    time: { timeStyle: "short" },
-    date: { dateStyle: "medium" },
-    dateTime: { dateStyle: "medium", timeStyle: "short" },
-    longDate: { dateStyle: "long" },
-    relative: { dateStyle: "medium", timeStyle: "short" },
-  };
+const FORMAT_PRESETS: Record<ChatEventTimeFormat, Intl.DateTimeFormatOptions> = {
+  time: { timeStyle: "short" },
+  date: { dateStyle: "medium" },
+  dateTime: { dateStyle: "medium", timeStyle: "short" },
+  longDate: { dateStyle: "long" },
+  relative: { dateStyle: "medium", timeStyle: "short" },
+};
 
 export interface ChatEventProps extends React.ComponentProps<"div"> {}
 
@@ -157,17 +143,10 @@ export interface ChatEventAddonProps extends React.ComponentProps<"div"> {}
  * </ChatEventAddon>
  * ```
  */
-export function ChatEventAddon({
-  children,
-  className,
-  ...props
-}: ChatEventAddonProps) {
+export function ChatEventAddon({ children, className, ...props }: ChatEventAddonProps) {
   return (
     <div
-      className={cn(
-        "w-10 @md/chat:w-12 h-full flex justify-center pt-1 shrink-0",
-        className,
-      )}
+      className={cn("w-10 @md/chat:w-12 h-full flex justify-center pt-1 shrink-0", className)}
       {...props}
     >
       {children}
@@ -193,11 +172,7 @@ export interface ChatEventBodyProps extends React.ComponentProps<"div"> {}
  * </ChatEventBody>
  * ```
  */
-export function ChatEventBody({
-  children,
-  className,
-  ...props
-}: ChatEventBodyProps) {
+export function ChatEventBody({ children, className, ...props }: ChatEventBodyProps) {
   return (
     <div className={cn("flex-1 flex flex-col", className)} {...props}>
       {children}
@@ -216,11 +191,7 @@ export interface ChatEventContentProps extends React.ComponentProps<"div"> {}
  * <ChatEventContent>Hello, world!</ChatEventContent>
  * ```
  */
-export function ChatEventContent({
-  children,
-  className,
-  ...props
-}: ChatEventContentProps) {
+export function ChatEventContent({ children, className, ...props }: ChatEventContentProps) {
   return (
     <div className={cn("text-sm @md/chat:text-base", className)} {...props}>
       {children}
@@ -242,16 +213,9 @@ export interface ChatEventTitleProps extends React.ComponentProps<"div"> {}
  * </ChatEventTitle>
  * ```
  */
-export function ChatEventTitle({
-  children,
-  className,
-  ...props
-}: ChatEventTitleProps) {
+export function ChatEventTitle({ children, className, ...props }: ChatEventTitleProps) {
   return (
-    <div
-      className={cn("flex items-center gap-2 text-sm", className)}
-      {...props}
-    >
+    <div className={cn("flex items-center gap-2 text-sm", className)} {...props}>
       {children}
     </div>
   );
@@ -295,14 +259,9 @@ export function ChatEventAvatar({
   ...props
 }: ChatEventAvatarProps) {
   return (
-    <Avatar
-      className={cn("rounded-full size-8 @md/chat:size-10", className)}
-      {...props}
-    >
+    <Avatar className={cn("rounded-full size-8 @md/chat:size-10", className)} {...props}>
       <AvatarImage src={src} alt={alt} {...imageProps} />
-      {fallback && (
-        <AvatarFallback {...fallbackProps}>{fallback}</AvatarFallback>
-      )}
+      {fallback && <AvatarFallback {...fallbackProps}>{fallback}</AvatarFallback>}
     </Avatar>
   );
 }
@@ -379,7 +338,7 @@ export function ChatEventTime({
 }: ChatEventTimeProps) {
   const date = useMemo(
     () => (timestamp instanceof Date ? timestamp : new Date(timestamp)),
-    [timestamp],
+    [timestamp]
   );
 
   const resolvedLocale =

@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { checkFeatureGate } from "@/lib/feature-resolver";
 import { z } from "zod";
-import {
-  listConversations,
-  getOrCreateConversation,
-} from "@/lib/conversation-service";
+import { listConversations, getOrCreateConversation } from "@/lib/conversation-service";
 import { db } from "@/lib/db";
 
 // GET /api/sms/conversations - List conversations
@@ -42,10 +39,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error fetching conversations:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch conversations" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch conversations" }, { status: 500 });
   }
 }
 
@@ -104,16 +98,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (!user.phone) {
-      return NextResponse.json(
-        { error: "User does not have a phone number" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "User does not have a phone number" }, { status: 400 });
     }
 
-    const conversationId = await getOrCreateConversation(
-      session.user.organizationId,
-      userId
-    );
+    const conversationId = await getOrCreateConversation(session.user.organizationId, userId);
 
     return NextResponse.json({
       success: true,
@@ -127,9 +115,6 @@ export async function POST(request: NextRequest) {
       );
     }
     console.error("Error creating conversation:", error);
-    return NextResponse.json(
-      { error: "Failed to create conversation" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create conversation" }, { status: 500 });
   }
 }

@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getAuthSession } from "@/lib/auth"
-import { db } from "@/lib/db"
-import { disableStoredPaymentMethod } from "@/lib/adyen"
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthSession } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { disableStoredPaymentMethod } from "@/lib/adyen";
 
 /**
  * DELETE /api/payment-methods/[id]
- * 
+ *
  * Delete (disable) a payment method for the current organization
  */
 export async function DELETE(
@@ -13,13 +13,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getAuthSession()
-    
+    const session = await getAuthSession();
+
     if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await params
+    const { id } = await params;
 
     // Find the payment method and verify ownership
     const paymentMethod = await db.organizationPaymentMethod.findFirst({
@@ -28,10 +28,10 @@ export async function DELETE(
         organizationId: session.user.organizationId,
         isActive: true,
       },
-    })
+    });
 
     if (!paymentMethod) {
-      return NextResponse.json({ error: "Payment method not found" }, { status: 404 })
+      return NextResponse.json({ error: "Payment method not found" }, { status: 404 });
     }
 
     // Disable in Adyen
@@ -39,9 +39,9 @@ export async function DELETE(
       await disableStoredPaymentMethod(
         paymentMethod.shopperReference,
         paymentMethod.storedPaymentMethodId
-      )
+      );
     } catch (error) {
-      console.error("Failed to disable payment method in Adyen:", error)
+      console.error("Failed to disable payment method in Adyen:", error);
       // Continue with local deletion even if Adyen fails
     }
 
@@ -52,7 +52,7 @@ export async function DELETE(
         isActive: false,
         isDefault: false,
       },
-    })
+    });
 
     // If this was the default, set another as default
     if (paymentMethod.isDefault) {
@@ -62,34 +62,31 @@ export async function DELETE(
           isActive: true,
         },
         orderBy: { createdAt: "asc" },
-      })
+      });
 
       if (nextDefault) {
         await db.organizationPaymentMethod.update({
           where: { id: nextDefault.id },
           data: { isDefault: true },
-        })
+        });
 
         // Update subscription with new default
         await db.organizationSubscription.updateMany({
           where: { organizationId: session.user.organizationId },
           data: { adyenRecurringDetailRef: nextDefault.storedPaymentMethodId },
-        })
+        });
       } else {
         // No more payment methods - clear subscription reference
         await db.organizationSubscription.updateMany({
           where: { organizationId: session.user.organizationId },
           data: { adyenRecurringDetailRef: null },
-        })
+        });
       }
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting payment method:", error)
-    return NextResponse.json(
-      { error: "Failed to delete payment method" },
-      { status: 500 }
-    )
+    console.error("Error deleting payment method:", error);
+    return NextResponse.json({ error: "Failed to delete payment method" }, { status: 500 });
   }
 }

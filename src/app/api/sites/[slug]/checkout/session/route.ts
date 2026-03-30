@@ -21,28 +21,30 @@ const cartItemSchema = z.object({
   quantity: z.number().int().min(1),
   athleteId: z.string().optional(),
   athleteName: z.string().max(500).optional(),
-  details: z.object({
-    programId: z.string().optional(),
-    instanceId: z.string().optional(),
-    membershipInstanceId: z.string().optional(),
-    passId: z.string().optional(),
-    athleteId: z.string().optional(),
-    level: z.string().optional(),
-    interval: z.string().optional(),
-    billingInterval: z.string().optional(),
-    requiredMemberships: z.array(z.string()).optional(),
-    competitionId: z.string().optional(),
-    competitionName: z.string().optional(),
-    categoryIds: z.array(z.string()).optional(),
-    pricingMode: z.string().optional(),
-    entryFee: z.number().nullable().optional(),
-    seedMarks: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
-    waitlist: z.boolean().optional(),
-    earlyAccessCode: z.string().optional(),
-    variantId: z.string().optional(),
-    variantLabel: z.string().optional(),
-    typeName: z.string().optional(),
-  }).optional(),
+  details: z
+    .object({
+      programId: z.string().optional(),
+      instanceId: z.string().optional(),
+      membershipInstanceId: z.string().optional(),
+      passId: z.string().optional(),
+      athleteId: z.string().optional(),
+      level: z.string().optional(),
+      interval: z.string().optional(),
+      billingInterval: z.string().optional(),
+      requiredMemberships: z.array(z.string()).optional(),
+      competitionId: z.string().optional(),
+      competitionName: z.string().optional(),
+      categoryIds: z.array(z.string()).optional(),
+      pricingMode: z.string().optional(),
+      entryFee: z.number().nullable().optional(),
+      seedMarks: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
+      waitlist: z.boolean().optional(),
+      earlyAccessCode: z.string().optional(),
+      variantId: z.string().optional(),
+      variantLabel: z.string().optional(),
+      typeName: z.string().optional(),
+    })
+    .optional(),
 });
 
 const checkoutBodySchema = z.object({
@@ -51,7 +53,12 @@ const checkoutBodySchema = z.object({
     firstName: z.string().min(1).max(255),
     lastName: z.string().min(1).max(255),
     email: z.string().email().max(320),
-    phone: z.string().max(30).refine((val) => !val || isValidPhoneNumber(val), "Please enter a valid phone number").optional().default(""),
+    phone: z
+      .string()
+      .max(30)
+      .refine((val) => !val || isValidPhoneNumber(val), "Please enter a valid phone number")
+      .optional()
+      .default(""),
     address: z.string().max(500).optional().default(""),
     city: z.string().max(255).optional().default(""),
     stateProvince: z.string().max(255).optional().default(""),
@@ -97,10 +104,7 @@ interface CartItem {
   };
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { slug: string } }
-) {
+export async function POST(request: NextRequest, { params }: { params: { slug: string } }) {
   const rateLimitResponse = await checkApiRateLimit(request, "checkout", RATE_LIMITS.sensitive);
   if (rateLimitResponse) return rateLimitResponse;
 
@@ -113,7 +117,15 @@ export async function POST(
         { status: 400 }
       );
     }
-    const { items: validatedItems, userDetails, contactId, billingAddressId, editingContact, editingAddress, discountCode } = parsed.data;
+    const {
+      items: validatedItems,
+      userDetails,
+      contactId,
+      billingAddressId,
+      editingContact,
+      editingAddress,
+      discountCode,
+    } = parsed.data;
     const items = validatedItems as CartItem[];
     const subdomain = params.slug;
 
@@ -183,12 +195,14 @@ export async function POST(
       });
 
       // Batch waiver acceptance check: single query instead of one per cart item
-      const allRequiredWaiverIds = [...new Set(
-        programItems.flatMap((item: CartItem) => {
-          const pId = item.details?.programId || item.referenceId;
-          return programWaiverMap[pId] || [];
-        })
-      )];
+      const allRequiredWaiverIds = [
+        ...new Set(
+          programItems.flatMap((item: CartItem) => {
+            const pId = item.details?.programId || item.referenceId;
+            return programWaiverMap[pId] || [];
+          })
+        ),
+      ];
 
       if (allRequiredWaiverIds.length > 0) {
         if (!authUserId) {
@@ -197,7 +211,9 @@ export async function POST(
             return (programWaiverMap[pId] || []).length > 0;
           });
           return NextResponse.json(
-            { error: `Required waivers have not been signed for athlete ${firstItem?.athleteName || firstItem?.athleteId || firstItem?.details?.athleteId}. Please sign all waivers before proceeding to payment.` },
+            {
+              error: `Required waivers have not been signed for athlete ${firstItem?.athleteName || firstItem?.athleteId || firstItem?.details?.athleteId}. Please sign all waivers before proceeding to payment.`,
+            },
             { status: 400 }
           );
         }
@@ -230,7 +246,9 @@ export async function POST(
 
           if (unsignedWaivers.length > 0) {
             return NextResponse.json(
-              { error: `Required waivers have not been signed for athlete ${item.athleteName || athleteId}. Please sign all waivers before proceeding to payment.` },
+              {
+                error: `Required waivers have not been signed for athlete ${item.athleteName || athleteId}. Please sign all waivers before proceeding to payment.`,
+              },
               { status: 400 }
             );
           }
@@ -245,7 +263,13 @@ export async function POST(
         .map((item: CartItem) => item.details?.programId || item.referenceId)
         .filter(Boolean);
 
-      const [programsWithMedical, programsWithFiles, programsWithMembership, programsForRegCheck, programsWithGender] = await Promise.all([
+      const [
+        programsWithMedical,
+        programsWithFiles,
+        programsWithMembership,
+        programsForRegCheck,
+        programsWithGender,
+      ] = await Promise.all([
         db.program.findMany({
           where: { id: { in: programIds }, organizationId, hasMedicalRequirement: true },
           select: { id: true },
@@ -289,27 +313,28 @@ export async function POST(
           const code = item.details?.earlyAccessCode;
           const hasValidCode = code && prog.earlyAccessCode && code === prog.earlyAccessCode;
           if (!hasValidCode) {
-            const reason = status === "closed" ? "Registration has closed" : "Registration is not yet open";
-            return NextResponse.json(
-              { error: `${reason} for "${prog.name}".` },
-              { status: 400 }
-            );
+            const reason =
+              status === "closed" ? "Registration has closed" : "Registration is not yet open";
+            return NextResponse.json({ error: `${reason} for "${prog.name}".` }, { status: 400 });
           }
         }
       }
 
       // Gender restriction check
       if (programsWithGender.length > 0) {
-        const genderProgramMap = new Map(
-          programsWithGender.map((p) => [p.id, p])
-        );
+        const genderProgramMap = new Map(programsWithGender.map((p) => [p.id, p]));
 
-        const genderCheckPairs: { athleteId: string; programId: string; athleteLabel: string }[] = [];
+        const genderCheckPairs: { athleteId: string; programId: string; athleteLabel: string }[] =
+          [];
         for (const item of programItems) {
           const pid = item.details?.programId || item.referenceId;
           const athleteId = item.athleteId || item.details?.athleteId;
           if (!pid || !athleteId || !genderProgramMap.has(pid)) continue;
-          genderCheckPairs.push({ athleteId, programId: pid, athleteLabel: item.athleteName || athleteId });
+          genderCheckPairs.push({
+            athleteId,
+            programId: pid,
+            athleteLabel: item.athleteName || athleteId,
+          });
         }
 
         if (genderCheckPairs.length > 0) {
@@ -326,7 +351,9 @@ export async function POST(
             const athleteGender = athleteGenderMap.get(athleteId);
             if (!athleteGender || !prog.allowedGenders.includes(athleteGender)) {
               return NextResponse.json(
-                { error: `Athlete "${athleteLabel}" does not meet the gender requirement for "${prog.name}".` },
+                {
+                  error: `Athlete "${athleteLabel}" does not meet the gender requirement for "${prog.name}".`,
+                },
                 { status: 400 }
               );
             }
@@ -337,15 +364,17 @@ export async function POST(
       // Medical info check (already batched)
       if (programsWithMedical.length > 0) {
         const medicalProgramIds = new Set(programsWithMedical.map((p) => p.id));
-        const athleteIds = [...new Set(
-          programItems
-            .filter((item: CartItem) => {
-              const pid = item.details?.programId || item.referenceId;
-              return pid && medicalProgramIds.has(pid);
-            })
-            .map((item: CartItem) => item.athleteId || item.details?.athleteId)
-            .filter(Boolean) as string[]
-        )];
+        const athleteIds = [
+          ...new Set(
+            programItems
+              .filter((item: CartItem) => {
+                const pid = item.details?.programId || item.referenceId;
+                return pid && medicalProgramIds.has(pid);
+              })
+              .map((item: CartItem) => item.athleteId || item.details?.athleteId)
+              .filter(Boolean) as string[]
+          ),
+        ];
 
         if (athleteIds.length > 0) {
           const medicalInfoRecords = await db.athleteMedicalInfo.findMany({
@@ -358,7 +387,10 @@ export async function POST(
 
           if (athletesMissing.length > 0) {
             return NextResponse.json(
-              { error: "Medical information is required for all athletes. Please complete the medical information forms before proceeding to payment." },
+              {
+                error:
+                  "Medical information is required for all athletes. Please complete the medical information forms before proceeding to payment.",
+              },
               { status: 400 }
             );
           }
@@ -374,8 +406,11 @@ export async function POST(
             athleteId: item.athleteId || item.details?.athleteId,
             athleteName: item.athleteName,
           }))
-          .filter((p) => !!(p.programId && fileProgramIds.has(p.programId) && p.athleteId)) as
-          { programId: string; athleteId: string; athleteName: string | undefined }[];
+          .filter((p) => !!(p.programId && fileProgramIds.has(p.programId) && p.athleteId)) as {
+          programId: string;
+          athleteId: string;
+          athleteName: string | undefined;
+        }[];
 
         if (fileCheckPairs.length > 0) {
           const allFiles = await db.registrationFile.findMany({
@@ -392,7 +427,9 @@ export async function POST(
           for (const pair of fileCheckPairs) {
             if (!fileSet.has(`${pair.athleteId}:${pair.programId}`)) {
               return NextResponse.json(
-                { error: `A required file upload is missing for ${pair.athleteName || "an athlete"}. Please complete the file upload step before proceeding.` },
+                {
+                  error: `A required file upload is missing for ${pair.athleteName || "an athlete"}. Please complete the file upload step before proceeding.`,
+                },
                 { status: 400 }
               );
             }
@@ -402,9 +439,7 @@ export async function POST(
 
       // Membership requirement check — single batch query instead of per-item
       if (programsWithMembership.length > 0) {
-        const membershipProgramMap = new Map(
-          programsWithMembership.map((p) => [p.id, p])
-        );
+        const membershipProgramMap = new Map(programsWithMembership.map((p) => [p.id, p]));
 
         // Collect all unique athlete IDs and required membership instance IDs
         const membershipCheckPairs: { item: CartItem; programId: string; athleteId: string }[] = [];
@@ -439,8 +474,8 @@ export async function POST(
             const prog = membershipProgramMap.get(programId)!;
             const requiredIds = prog.requiredMemberships.map((m) => m.id);
             const athleteLabel = item.athleteName || athleteId || "unknown";
-            const hasActiveMembership = requiredIds.some(
-              (rid) => membershipSet.has(`${athleteId}:${rid}`)
+            const hasActiveMembership = requiredIds.some((rid) =>
+              membershipSet.has(`${athleteId}:${rid}`)
             );
 
             if (!hasActiveMembership) {
@@ -453,7 +488,9 @@ export async function POST(
 
               if (!membershipInCart) {
                 return NextResponse.json(
-                  { error: `Athlete "${athleteLabel}" does not have the required membership for "${prog.name}". Please add the membership to your cart or contact the organization.` },
+                  {
+                    error: `Athlete "${athleteLabel}" does not have the required membership for "${prog.name}". Please add the membership to your cart or contact the organization.`,
+                  },
                   { status: 400 }
                 );
               }
@@ -505,14 +542,17 @@ export async function POST(
         // Check instance is ACTIVE
         if (instance.status !== "ACTIVE") {
           return NextResponse.json(
-            { error: `Membership "${item.name}" is not currently available for purchase (status: ${instance.status}).` },
+            {
+              error: `Membership "${item.name}" is not currently available for purchase (status: ${instance.status}).`,
+            },
             { status: 400 }
           );
         }
 
         // Check purchase window
-        const purchaseStart = instance.purchaseStartDate
-          ?? (instance.group.purchaseWindowDays != null
+        const purchaseStart =
+          instance.purchaseStartDate ??
+          (instance.group.purchaseWindowDays != null
             ? subDays(instance.startDate, instance.group.purchaseWindowDays)
             : new Date(0));
         const purchaseEnd = instance.purchaseEndDate ?? instance.endDate;
@@ -525,13 +565,21 @@ export async function POST(
         }
 
         // Registration window check (additional gate alongside legacy purchase window)
-        if (instance.registrationStartDate || instance.registrationEndDate || !instance.registrationOpen) {
+        if (
+          instance.registrationStartDate ||
+          instance.registrationEndDate ||
+          !instance.registrationOpen
+        ) {
           const memRegStatus = getRegistrationStatus(instance);
           if (memRegStatus !== "open") {
             const code = item.details?.earlyAccessCode;
-            const hasValidCode = code && instance.earlyAccessCode && code === instance.earlyAccessCode;
+            const hasValidCode =
+              code && instance.earlyAccessCode && code === instance.earlyAccessCode;
             if (!hasValidCode) {
-              const reason = memRegStatus === "closed" ? "Registration has closed" : "Registration is not yet open";
+              const reason =
+                memRegStatus === "closed"
+                  ? "Registration has closed"
+                  : "Registration is not yet open";
               return NextResponse.json(
                 { error: `${reason} for membership "${instance.name}".` },
                 { status: 400 }
@@ -543,7 +591,10 @@ export async function POST(
         // Check capacity
         if (instance.group.hasCapacityRestriction) {
           const effectiveCapacity = instance.capacity ?? instance.group.capacity;
-          if (effectiveCapacity != null && instance._count.athleteMemberships >= effectiveCapacity) {
+          if (
+            effectiveCapacity != null &&
+            instance._count.athleteMemberships >= effectiveCapacity
+          ) {
             return NextResponse.json(
               { error: `Membership "${item.name}" has reached its capacity limit.` },
               { status: 400 }
@@ -562,7 +613,9 @@ export async function POST(
           });
           if (existing) {
             return NextResponse.json(
-              { error: `Athlete "${athleteLabel}" already has an active membership for "${item.name}".` },
+              {
+                error: `Athlete "${athleteLabel}" already has an active membership for "${item.name}".`,
+              },
               { status: 400 }
             );
           }
@@ -592,7 +645,9 @@ export async function POST(
           if (instance.group.hasGenderRestriction && instance.group.allowedGenders.length > 0) {
             if (!athlete.gender || !instance.group.allowedGenders.includes(athlete.gender)) {
               return NextResponse.json(
-                { error: `Athlete "${athleteLabel}" does not meet the gender requirement for "${item.name}".` },
+                {
+                  error: `Athlete "${athleteLabel}" does not meet the gender requirement for "${item.name}".`,
+                },
                 { status: 400 }
               );
             }
@@ -603,7 +658,9 @@ export async function POST(
             const age = calculateAge(athlete.birthDate);
             if (!isAgeEligible(age, instance.group.minAge, instance.group.maxAge)) {
               return NextResponse.json(
-                { error: `Athlete "${athleteLabel}" does not meet the age requirement for "${item.name}" (ages ${instance.group.minAge ?? 0}-${instance.group.maxAge ?? "any"}).` },
+                {
+                  error: `Athlete "${athleteLabel}" does not meet the age requirement for "${item.name}" (ages ${instance.group.minAge ?? 0}-${instance.group.maxAge ?? "any"}).`,
+                },
                 { status: 400 }
               );
             }
@@ -615,7 +672,9 @@ export async function POST(
             const mAthleteLevel = athlete.organizationAthletes[0]?.level ?? null;
             if (!mAthleteLevel || !allowedLevelIds.some((lid) => mAthleteLevel === lid)) {
               return NextResponse.json(
-                { error: `Athlete "${athleteLabel}" does not meet the level requirement for "${item.name}".` },
+                {
+                  error: `Athlete "${athleteLabel}" does not meet the level requirement for "${item.name}".`,
+                },
                 { status: 400 }
               );
             }
@@ -639,7 +698,9 @@ export async function POST(
 
               if (unsigned.length > 0) {
                 return NextResponse.json(
-                  { error: `Required waivers have not been signed for athlete "${athleteLabel}" for membership "${item.name}". Please sign all waivers before proceeding to payment.` },
+                  {
+                    error: `Required waivers have not been signed for athlete "${athleteLabel}" for membership "${item.name}". Please sign all waivers before proceeding to payment.`,
+                  },
                   { status: 400 }
                 );
               }
@@ -655,7 +716,9 @@ export async function POST(
 
             if (!medicalInfo) {
               return NextResponse.json(
-                { error: `Medical information is required for athlete "${athleteLabel}" for membership "${item.name}". Please complete the medical information form before proceeding to payment.` },
+                {
+                  error: `Medical information is required for athlete "${athleteLabel}" for membership "${item.name}". Please complete the medical information form before proceeding to payment.`,
+                },
                 { status: 400 }
               );
             }
@@ -736,9 +799,13 @@ export async function POST(
         const compRegStatus = getRegistrationStatus(competition);
         if (compRegStatus !== "open") {
           const code = item.details?.earlyAccessCode;
-          const hasValidCode = code && competition.earlyAccessCode && code === competition.earlyAccessCode;
+          const hasValidCode =
+            code && competition.earlyAccessCode && code === competition.earlyAccessCode;
           if (!hasValidCode) {
-            const reason = compRegStatus === "closed" ? "Registration has closed" : "Registration is not yet open";
+            const reason =
+              compRegStatus === "closed"
+                ? "Registration has closed"
+                : "Registration is not yet open";
             return NextResponse.json(
               { error: `${reason} for "${competition.name}".` },
               { status: 400 }
@@ -749,7 +816,9 @@ export async function POST(
         // Verify all requested categories exist and are active
         if (competition.categories.length !== categoryIds.length) {
           return NextResponse.json(
-            { error: `One or more selected events are no longer available for "${competition.name}".` },
+            {
+              error: `One or more selected events are no longer available for "${competition.name}".`,
+            },
             { status: 400 }
           );
         }
@@ -785,7 +854,9 @@ export async function POST(
         if (competition.hasAgeRestriction) {
           if (!isAgeEligible(age, competition.minAge, competition.maxAge)) {
             return NextResponse.json(
-              { error: `Athlete "${athleteLabel}" does not meet the age requirement for "${competition.name}".` },
+              {
+                error: `Athlete "${athleteLabel}" does not meet the age requirement for "${competition.name}".`,
+              },
               { status: 400 }
             );
           }
@@ -795,13 +866,18 @@ export async function POST(
           const cAthleteLevel = athlete.organizationAthletes[0]?.level ?? null;
           if (!cAthleteLevel || !competition.levelRequirementIds.includes(cAthleteLevel)) {
             return NextResponse.json(
-              { error: `Athlete "${athleteLabel}" does not meet the level requirement for "${competition.name}".` },
+              {
+                error: `Athlete "${athleteLabel}" does not meet the level requirement for "${competition.name}".`,
+              },
               { status: 400 }
             );
           }
         }
 
-        if (competition.hasMembershipRestriction && competition.membershipRequirementIds.length > 0) {
+        if (
+          competition.hasMembershipRestriction &&
+          competition.membershipRequirementIds.length > 0
+        ) {
           const activeMembershipIds = athlete.memberships.map((m) => m.membershipInstanceId);
           const hasRequired = competition.membershipRequirementIds.some((id) =>
             activeMembershipIds.includes(id)
@@ -819,7 +895,9 @@ export async function POST(
             });
             if (!membershipInCart) {
               return NextResponse.json(
-                { error: `Athlete "${athleteLabel}" does not have the required membership for "${competition.name}".` },
+                {
+                  error: `Athlete "${athleteLabel}" does not have the required membership for "${competition.name}".`,
+                },
                 { status: 400 }
               );
             }
@@ -830,7 +908,9 @@ export async function POST(
         if (competition.hasWaiverRestriction && competition.waiverRequirementIds.length > 0) {
           if (!authUserId) {
             return NextResponse.json(
-              { error: `Required waivers have not been signed for athlete ${athleteLabel} for "${competition.name}". Please sign all waivers before proceeding.` },
+              {
+                error: `Required waivers have not been signed for athlete ${athleteLabel} for "${competition.name}". Please sign all waivers before proceeding.`,
+              },
               { status: 400 }
             );
           }
@@ -851,7 +931,9 @@ export async function POST(
 
           if (unsignedWaivers.length > 0) {
             return NextResponse.json(
-              { error: `Required waivers have not been signed for athlete ${athleteLabel} for "${competition.name}". Please sign all waivers before proceeding.` },
+              {
+                error: `Required waivers have not been signed for athlete ${athleteLabel} for "${competition.name}". Please sign all waivers before proceeding.`,
+              },
               { status: 400 }
             );
           }
@@ -866,7 +948,9 @@ export async function POST(
 
           if (!medicalInfo) {
             return NextResponse.json(
-              { error: `Medical information is required for athlete ${athleteLabel} for "${competition.name}". Please complete the medical form before proceeding.` },
+              {
+                error: `Medical information is required for athlete ${athleteLabel} for "${competition.name}". Please complete the medical form before proceeding.`,
+              },
               { status: 400 }
             );
           }
@@ -880,7 +964,9 @@ export async function POST(
           });
           if (!regFile) {
             return NextResponse.json(
-              { error: `A required file upload is missing for athlete ${athleteLabel} for "${competition.name}". Please complete the file upload step before proceeding.` },
+              {
+                error: `A required file upload is missing for athlete ${athleteLabel} for "${competition.name}". Please complete the file upload step before proceeding.`,
+              },
               { status: 400 }
             );
           }
@@ -891,17 +977,24 @@ export async function POST(
           if (cat.ageCategory) {
             if (!isAgeEligible(age, cat.ageCategory.minAge, cat.ageCategory.maxAge)) {
               return NextResponse.json(
-                { error: `Athlete "${athleteLabel}" is not eligible for one of the selected events in "${competition.name}".` },
+                {
+                  error: `Athlete "${athleteLabel}" is not eligible for one of the selected events in "${competition.name}".`,
+                },
                 { status: 400 }
               );
             }
           }
 
           // Gender check from individual entry template
-          if (cat.individualEntry?.hasGenderRestriction && cat.individualEntry.allowedGenders.length > 0) {
+          if (
+            cat.individualEntry?.hasGenderRestriction &&
+            cat.individualEntry.allowedGenders.length > 0
+          ) {
             if (!athlete.gender || !cat.individualEntry.allowedGenders.includes(athlete.gender)) {
               return NextResponse.json(
-                { error: `Athlete "${athleteLabel}" does not meet the gender requirement for one of the selected events in "${competition.name}".` },
+                {
+                  error: `Athlete "${athleteLabel}" does not meet the gender requirement for one of the selected events in "${competition.name}".`,
+                },
                 { status: 400 }
               );
             }
@@ -910,11 +1003,18 @@ export async function POST(
           // Gender check from combination entry template (restriction axis)
           if (cat.combinationEntry) {
             const axis = cat.combinationEntry.template?.restrictionAxis;
-            const restrictionValue = axis === "ROW" ? cat.combinationEntry.rowValue : axis === "COLUMN" ? cat.combinationEntry.colValue : null;
+            const restrictionValue =
+              axis === "ROW"
+                ? cat.combinationEntry.rowValue
+                : axis === "COLUMN"
+                  ? cat.combinationEntry.colValue
+                  : null;
             if (restrictionValue && restrictionValue.allowedGenders.length > 0) {
               if (!athlete.gender || !restrictionValue.allowedGenders.includes(athlete.gender)) {
                 return NextResponse.json(
-                  { error: `Athlete "${athleteLabel}" does not meet the gender requirement for one of the selected events in "${competition.name}".` },
+                  {
+                    error: `Athlete "${athleteLabel}" does not meet the gender requirement for one of the selected events in "${competition.name}".`,
+                  },
                   { status: 400 }
                 );
               }
@@ -935,7 +1035,9 @@ export async function POST(
 
         if (existingEntries.length > 0) {
           return NextResponse.json(
-            { error: `Athlete "${athleteLabel}" is already registered for one or more selected events in "${competition.name}".` },
+            {
+              error: `Athlete "${athleteLabel}" is already registered for one or more selected events in "${competition.name}".`,
+            },
             { status: 400 }
           );
         }
@@ -958,7 +1060,10 @@ export async function POST(
             const tiers = competition.pricingTiers;
             let applicableTier = tiers[0];
             for (const tier of tiers) {
-              if (eventCount >= tier.minEvents && (tier.maxEvents === null || eventCount <= tier.maxEvents)) {
+              if (
+                eventCount >= tier.minEvents &&
+                (tier.maxEvents === null || eventCount <= tier.maxEvents)
+              ) {
                 applicableTier = tier;
               }
             }
@@ -996,7 +1101,11 @@ export async function POST(
           const eventId = item.referenceId;
           const athleteId = item.athleteId || item.details?.athleteId;
           if (!eventId || !athleteId || !eventGenderMap.has(eventId)) continue;
-          genderCheckPairs.push({ athleteId, eventId, athleteLabel: item.athleteName || athleteId });
+          genderCheckPairs.push({
+            athleteId,
+            eventId,
+            athleteLabel: item.athleteName || athleteId,
+          });
         }
 
         if (genderCheckPairs.length > 0) {
@@ -1013,7 +1122,9 @@ export async function POST(
             const athleteGender = athleteGenderMap.get(athleteId);
             if (!athleteGender || !evt.allowedGenders.includes(athleteGender)) {
               return NextResponse.json(
-                { error: `Athlete "${athleteLabel}" does not meet the gender requirement for "${evt.title}".` },
+                {
+                  error: `Athlete "${athleteLabel}" does not meet the gender requirement for "${evt.title}".`,
+                },
                 { status: 400 }
               );
             }
@@ -1025,7 +1136,9 @@ export async function POST(
     // 2f. Server-side pass gender restriction validation
     const passItems = items.filter((item: CartItem) => item.type === "pass");
     if (passItems.length > 0) {
-      const passIds = passItems.map((item: CartItem) => item.details?.passId || item.referenceId).filter(Boolean);
+      const passIds = passItems
+        .map((item: CartItem) => item.details?.passId || item.referenceId)
+        .filter(Boolean);
       const passesWithGender = await db.pass.findMany({
         where: { id: { in: passIds }, organizationId, hasGenderRestriction: true },
         select: { id: true, name: true, allowedGenders: true },
@@ -1033,13 +1146,18 @@ export async function POST(
 
       if (passesWithGender.length > 0) {
         const passGenderMap = new Map(passesWithGender.map((p) => [p.id, p]));
-        const passGenderCheckPairs: { athleteId: string; passId: string; athleteLabel: string }[] = [];
+        const passGenderCheckPairs: { athleteId: string; passId: string; athleteLabel: string }[] =
+          [];
 
         for (const item of passItems) {
           const pId = item.details?.passId || item.referenceId;
           const athleteId = item.athleteId || item.details?.athleteId;
           if (!pId || !athleteId || !passGenderMap.has(pId)) continue;
-          passGenderCheckPairs.push({ athleteId, passId: pId, athleteLabel: item.athleteName || athleteId });
+          passGenderCheckPairs.push({
+            athleteId,
+            passId: pId,
+            athleteLabel: item.athleteName || athleteId,
+          });
         }
 
         if (passGenderCheckPairs.length > 0) {
@@ -1056,7 +1174,9 @@ export async function POST(
             const athleteGender = athleteGenderMap.get(athleteId);
             if (!athleteGender || !p.allowedGenders.includes(athleteGender)) {
               return NextResponse.json(
-                { error: `Athlete "${athleteLabel}" does not meet the gender requirement for "${p.name}".` },
+                {
+                  error: `Athlete "${athleteLabel}" does not meet the gender requirement for "${p.name}".`,
+                },
                 { status: 400 }
               );
             }
@@ -1077,16 +1197,39 @@ export async function POST(
     const programItemsForPrice = items
       .map((item: CartItem, index: number) => ({ item, index }))
       .filter(({ item }) => item.type === "program");
-    const programPriceMap = new Map<string, { id: string; basePrice: any; perSessionPrice: any; pricingModel: string; billingInterval: string; recurringPrice: any }>();
+    const programPriceMap = new Map<
+      string,
+      {
+        id: string;
+        basePrice: any;
+        perSessionPrice: any;
+        pricingModel: string;
+        billingInterval: string;
+        recurringPrice: any;
+      }
+    >();
     if (programItemsForPrice.length > 0) {
-      const allProgramIds = [...new Set(
-        programItemsForPrice.map(({ item }) => item.details?.programId || item.referenceId).filter(Boolean)
-      )] as string[];
+      const allProgramIds = [
+        ...new Set(
+          programItemsForPrice
+            .map(({ item }) => item.details?.programId || item.referenceId)
+            .filter(Boolean)
+        ),
+      ] as string[];
       const programsForPrice = await db.program.findMany({
         where: { id: { in: allProgramIds }, organizationId },
-        select: { id: true, basePrice: true, perSessionPrice: true, pricingModel: true, billingInterval: true, recurringPrice: true },
+        select: {
+          id: true,
+          basePrice: true,
+          perSessionPrice: true,
+          pricingModel: true,
+          billingInterval: true,
+          recurringPrice: true,
+        },
       });
-      for (const p of programsForPrice) { programPriceMap.set(p.id, p); }
+      for (const p of programsForPrice) {
+        programPriceMap.set(p.id, p);
+      }
       for (const { item, index } of programItemsForPrice) {
         const programId = item.details?.programId || item.referenceId;
         const prog = programPriceMap.get(programId);
@@ -1110,14 +1253,18 @@ export async function POST(
       .map((item: CartItem, index: number) => ({ item, index }))
       .filter(({ item }) => item.type === "membership");
     if (membershipItemsForPrice.length > 0) {
-      const allMembershipIds = [...new Set(
-        membershipItemsForPrice.map(({ item }) => item.details?.membershipInstanceId || item.referenceId).filter(Boolean)
-      )] as string[];
+      const allMembershipIds = [
+        ...new Set(
+          membershipItemsForPrice
+            .map(({ item }) => item.details?.membershipInstanceId || item.referenceId)
+            .filter(Boolean)
+        ),
+      ] as string[];
       const instancesForPrice = await db.membershipInstance.findMany({
         where: { id: { in: allMembershipIds } },
         select: { id: true, price: true },
       });
-      const membershipPriceMap = new Map(instancesForPrice.map(m => [m.id, Number(m.price)]));
+      const membershipPriceMap = new Map(instancesForPrice.map((m) => [m.id, Number(m.price)]));
       for (const { item, index } of membershipItemsForPrice) {
         const instanceId = item.details?.membershipInstanceId || item.referenceId;
         const price = membershipPriceMap.get(instanceId);
@@ -1132,14 +1279,18 @@ export async function POST(
       .map((item: CartItem, index: number) => ({ item, index }))
       .filter(({ item }) => item.type === "pass");
     if (passItemsForPrice.length > 0) {
-      const allPassIds = [...new Set(
-        passItemsForPrice.map(({ item }) => item.details?.passId || item.referenceId).filter(Boolean)
-      )] as string[];
+      const allPassIds = [
+        ...new Set(
+          passItemsForPrice
+            .map(({ item }) => item.details?.passId || item.referenceId)
+            .filter(Boolean)
+        ),
+      ] as string[];
       const passesForPrice = await db.pass.findMany({
         where: { id: { in: allPassIds }, organizationId },
         select: { id: true, price: true },
       });
-      const passPriceMap = new Map(passesForPrice.map(p => [p.id, Number(p.price)]));
+      const passPriceMap = new Map(passesForPrice.map((p) => [p.id, Number(p.price)]));
       for (const { item, index } of passItemsForPrice) {
         const passId = item.details?.passId || item.referenceId;
         const price = passPriceMap.get(passId);
@@ -1154,14 +1305,23 @@ export async function POST(
       .map((item: CartItem, index: number) => ({ item, index }))
       .filter(({ item }) => item.type === "item");
     if (productItemsForPrice.length > 0) {
-      const allProductIds = [...new Set(
-        productItemsForPrice.map(({ item }) => item.referenceId).filter(Boolean)
-      )] as string[];
+      const allProductIds = [
+        ...new Set(productItemsForPrice.map(({ item }) => item.referenceId).filter(Boolean)),
+      ] as string[];
       const productsForPrice = await db.product.findMany({
         where: { id: { in: allProductIds }, organizationId, isActive: true },
-        select: { id: true, price: true, currentInventory: true, name: true, typeName: true, variants: { select: { id: true, label: true, price: true, currentInventory: true, isActive: true } } },
+        select: {
+          id: true,
+          price: true,
+          currentInventory: true,
+          name: true,
+          typeName: true,
+          variants: {
+            select: { id: true, label: true, price: true, currentInventory: true, isActive: true },
+          },
+        },
       });
-      const productPriceMap = new Map(productsForPrice.map(p => [p.id, p]));
+      const productPriceMap = new Map(productsForPrice.map((p) => [p.id, p]));
 
       for (const { item, index } of productItemsForPrice) {
         const product = productPriceMap.get(item.referenceId);
@@ -1174,7 +1334,7 @@ export async function POST(
 
         const variantId = item.details?.variantId as string | undefined;
         if (variantId) {
-          const variant = product.variants.find(v => v.id === variantId);
+          const variant = product.variants.find((v) => v.id === variantId);
           if (!variant || !variant.isActive) {
             return NextResponse.json(
               { error: `Variant for "${item.name}" is no longer available` },
@@ -1186,7 +1346,9 @@ export async function POST(
 
           if (variant.currentInventory !== null && variant.currentInventory < item.quantity) {
             return NextResponse.json(
-              { error: `Insufficient stock for "${product.name}" (${variant.label}). Only ${variant.currentInventory} available.` },
+              {
+                error: `Insufficient stock for "${product.name}" (${variant.label}). Only ${variant.currentInventory} available.`,
+              },
               { status: 400 }
             );
           }
@@ -1195,7 +1357,9 @@ export async function POST(
 
           if (product.currentInventory !== null && product.currentInventory < item.quantity) {
             return NextResponse.json(
-              { error: `Insufficient stock for "${product.name}". Only ${product.currentInventory} available.` },
+              {
+                error: `Insufficient stock for "${product.name}". Only ${product.currentInventory} available.`,
+              },
               { status: 400 }
             );
           }
@@ -1204,19 +1368,15 @@ export async function POST(
     }
 
     // Calculate totals using server-verified prices
-    const taxRate = config.organization.taxEnabled !== false
-      ? Number(config.organization.taxRate ?? 0)
-      : 0;
+    const taxRate =
+      config.organization.taxEnabled !== false ? Number(config.organization.taxRate ?? 0) : 0;
 
-    const subtotal = items.reduce(
-      (sum: number, item: CartItem, index: number) => {
-        if (serverPrices.has(index)) {
-          return sum + serverPrices.get(index)!;
-        }
-        return sum + Number(item.price) * item.quantity;
-      },
-      0
-    );
+    const subtotal = items.reduce((sum: number, item: CartItem, index: number) => {
+      if (serverPrices.has(index)) {
+        return sum + serverPrices.get(index)!;
+      }
+      return sum + Number(item.price) * item.quantity;
+    }, 0);
     // 3b. Validate and apply discount code
     let discountRecord: { id: string; type: string; amount: any; name: string } | null = null;
     let discountLineAmount = 0;
@@ -1231,9 +1391,7 @@ export async function POST(
         const validFrom = new Date(discount.validFrom);
         const validTo = discount.validTo ? new Date(discount.validTo) : null;
         const isValid =
-          discount.status !== "DRAFT" &&
-          validFrom <= now &&
-          (!validTo || validTo >= now);
+          discount.status !== "DRAFT" && validFrom <= now && (!validTo || validTo >= now);
 
         if (isValid) {
           // Atomically claim a usage slot: increment only if under the limit
@@ -1258,9 +1416,11 @@ export async function POST(
               name: discount.name,
             };
             if (discount.type === "PERCENTAGE") {
-              discountLineAmount = Math.round((subtotal * Number(discount.amount)) / 100 * 100) / 100;
+              discountLineAmount =
+                Math.round(((subtotal * Number(discount.amount)) / 100) * 100) / 100;
             } else {
-              discountLineAmount = Math.round(Math.min(Number(discount.amount), subtotal) * 100) / 100;
+              discountLineAmount =
+                Math.round(Math.min(Number(discount.amount), subtotal) * 100) / 100;
             }
           }
         }
@@ -1298,7 +1458,10 @@ export async function POST(
     if (contactId) {
       if (editingContact) {
         if (!authUserId) {
-          return NextResponse.json({ error: "Authentication required to update contact" }, { status: 401 });
+          return NextResponse.json(
+            { error: "Authentication required to update contact" },
+            { status: 401 }
+          );
         }
         const ownedContact = await db.userContact.findFirst({
           where: { id: contactId, userId: authUserId },
@@ -1346,7 +1509,10 @@ export async function POST(
     if (billingAddressId) {
       if (editingAddress) {
         if (!authUserId) {
-          return NextResponse.json({ error: "Authentication required to update address" }, { status: 401 });
+          return NextResponse.json(
+            { error: "Authentication required to update address" },
+            { status: 401 }
+          );
         }
         const ownedAddress = await db.userBillingAddress.findFirst({
           where: { id: billingAddressId, userId: authUserId },
@@ -1371,7 +1537,9 @@ export async function POST(
           },
         });
       } else {
-        const savedAddress = await db.userBillingAddress.findUnique({ where: { id: billingAddressId } });
+        const savedAddress = await db.userBillingAddress.findUnique({
+          where: { id: billingAddressId },
+        });
         if (savedAddress) {
           resolvedAddress = {
             street: savedAddress.street,
@@ -1415,7 +1583,9 @@ export async function POST(
           },
         });
         if (!existingUserAddress) {
-          const hasAnyUserAddresses = await db.userBillingAddress.count({ where: { userId: authUserId } });
+          const hasAnyUserAddresses = await db.userBillingAddress.count({
+            where: { userId: authUserId },
+          });
           await db.userBillingAddress.create({
             data: {
               userId: authUserId,
@@ -1435,85 +1605,112 @@ export async function POST(
     // 5. Create Invoice with metadata for post-payment processing
     const membershipInvoiceItems = items.filter((item: CartItem) => item.type === "membership");
     const passInvoiceItems = items.filter((item: CartItem) => item.type === "pass");
-    
+
     // Build metadata for webhook processing
     const invoiceMetadata = {
-      membershipPurchases: membershipInvoiceItems.map(item => ({
+      membershipPurchases: membershipInvoiceItems.map((item) => ({
         membershipInstanceId: item.details?.membershipInstanceId || item.referenceId,
         athleteId: item.athleteId || item.details?.athleteId,
         quantity: item.quantity,
       })),
-      passPurchases: passInvoiceItems.map(item => ({
+      passPurchases: passInvoiceItems.map((item) => ({
         passId: item.details?.passId || item.referenceId,
         athleteId: item.athleteId || item.details?.athleteId,
         billingInterval: item.details?.billingInterval,
       })),
-      programRegistrations: programItems.map(item => ({
+      programRegistrations: programItems.map((item) => ({
         programId: item.details?.programId,
         requiredMemberships: item.details?.requiredMemberships || [],
       })),
-      competitionRegistrations: competitionItems.map(item => ({
+      competitionRegistrations: competitionItems.map((item) => ({
         competitionId: item.details?.competitionId || item.referenceId,
         athleteId: item.athleteId || item.details?.athleteId,
         categoryIds: item.details?.categoryIds || [],
         seedMarks: item.details?.seedMarks || {},
       })),
     };
-    
+
     const invoice = await db.invoice.create({
-        data: {
-            reference: `INV-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
-            userId: authUserId,
-            organizationId,
-            subtotal: discountedSubtotal,
-            tax,
-            processingFee,
-            total,
-            status: "DRAFT",
-            dueDate: new Date(),
-            notes: JSON.stringify(invoiceMetadata),
-        }
+      data: {
+        reference: `INV-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
+        userId: authUserId,
+        organizationId,
+        subtotal: discountedSubtotal,
+        tax,
+        processingFee,
+        total,
+        status: "DRAFT",
+        dueDate: new Date(),
+        notes: JSON.stringify(invoiceMetadata),
+      },
     });
 
     // 6. Resolve GL codes and product data for line items (all queries run in parallel)
     const glCodeMap = new Map<string, string | null>();
-    const glProgramIds = items.filter((i: CartItem) => i.type === "program" && i.details?.programId).map((i: CartItem) => i.details!.programId!);
-    const glPassIds = items.filter((i: CartItem) => i.type === "pass").map((i: CartItem) => i.details?.passId || i.referenceId).filter(Boolean);
-    const glCompetitionIds = items.filter((i: CartItem) => i.type === "competition").map((i: CartItem) => i.details?.competitionId || i.referenceId).filter(Boolean);
-    const glMembershipInstanceIds = items.filter((i: CartItem) => i.type === "membership").map((i: CartItem) => i.details?.membershipInstanceId || i.referenceId).filter(Boolean);
-    const productItemIds = items.filter((i: CartItem) => i.type === "item").map((i: CartItem) => i.referenceId);
+    const glProgramIds = items
+      .filter((i: CartItem) => i.type === "program" && i.details?.programId)
+      .map((i: CartItem) => i.details!.programId!);
+    const glPassIds = items
+      .filter((i: CartItem) => i.type === "pass")
+      .map((i: CartItem) => i.details?.passId || i.referenceId)
+      .filter(Boolean);
+    const glCompetitionIds = items
+      .filter((i: CartItem) => i.type === "competition")
+      .map((i: CartItem) => i.details?.competitionId || i.referenceId)
+      .filter(Boolean);
+    const glMembershipInstanceIds = items
+      .filter((i: CartItem) => i.type === "membership")
+      .map((i: CartItem) => i.details?.membershipInstanceId || i.referenceId)
+      .filter(Boolean);
+    const productItemIds = items
+      .filter((i: CartItem) => i.type === "item")
+      .map((i: CartItem) => i.referenceId);
 
-    const [glPrograms, glPasses, glComps, glInstances, defaultCodes, storeProducts] = await Promise.all([
-      glProgramIds.length > 0
-        ? db.program.findMany({ where: { id: { in: glProgramIds } }, select: { id: true, glCodeId: true } })
-        : [],
-      glPassIds.length > 0
-        ? db.pass.findMany({ where: { id: { in: glPassIds as string[] } }, select: { id: true, glCodeId: true } })
-        : [],
-      glCompetitionIds.length > 0
-        ? db.competition.findMany({ where: { id: { in: glCompetitionIds as string[] } }, select: { id: true, glCodeId: true } })
-        : [],
-      glMembershipInstanceIds.length > 0
-        ? db.membershipInstance.findMany({ where: { id: { in: glMembershipInstanceIds as string[] } }, select: { id: true, group: { select: { glCodeId: true } } } })
-        : [],
-      db.gLCode.findMany({
-        where: { organizationId, isDefault: true, defaultForType: { not: null } },
-        select: { id: true, defaultForType: true },
-      }),
-      productItemIds.length > 0
-        ? db.product.findMany({
-            where: { id: { in: productItemIds }, organizationId },
-            select: { id: true, sku: true, imageUrl: true, glCodeId: true },
-          })
-        : [],
-    ]);
+    const [glPrograms, glPasses, glComps, glInstances, defaultCodes, storeProducts] =
+      await Promise.all([
+        glProgramIds.length > 0
+          ? db.program.findMany({
+              where: { id: { in: glProgramIds } },
+              select: { id: true, glCodeId: true },
+            })
+          : [],
+        glPassIds.length > 0
+          ? db.pass.findMany({
+              where: { id: { in: glPassIds as string[] } },
+              select: { id: true, glCodeId: true },
+            })
+          : [],
+        glCompetitionIds.length > 0
+          ? db.competition.findMany({
+              where: { id: { in: glCompetitionIds as string[] } },
+              select: { id: true, glCodeId: true },
+            })
+          : [],
+        glMembershipInstanceIds.length > 0
+          ? db.membershipInstance.findMany({
+              where: { id: { in: glMembershipInstanceIds as string[] } },
+              select: { id: true, group: { select: { glCodeId: true } } },
+            })
+          : [],
+        db.gLCode.findMany({
+          where: { organizationId, isDefault: true, defaultForType: { not: null } },
+          select: { id: true, defaultForType: true },
+        }),
+        productItemIds.length > 0
+          ? db.product.findMany({
+              where: { id: { in: productItemIds }, organizationId },
+              select: { id: true, sku: true, imageUrl: true, glCodeId: true },
+            })
+          : [],
+      ]);
 
     const productMap = new Map(storeProducts.map((p) => [p.id, p]));
 
     for (const p of glPrograms) if (p.glCodeId) glCodeMap.set(`program:${p.id}`, p.glCodeId);
     for (const p of glPasses) if (p.glCodeId) glCodeMap.set(`pass:${p.id}`, p.glCodeId);
     for (const c of glComps) if (c.glCodeId) glCodeMap.set(`competition:${c.id}`, c.glCodeId);
-    for (const i of glInstances) if (i.group.glCodeId) glCodeMap.set(`membership:${i.id}`, i.group.glCodeId);
+    for (const i of glInstances)
+      if (i.group.glCodeId) glCodeMap.set(`membership:${i.id}`, i.group.glCodeId);
     for (const p of storeProducts) if (p.glCodeId) glCodeMap.set(`item:${p.id}`, p.glCodeId);
 
     const entityTypeToDefault = new Map<string, string>();
@@ -1532,40 +1729,55 @@ export async function POST(
 
     // 7. Create Line Items with appropriate metadata
     await db.lineItem.createMany({
-        data: items.map((item: CartItem, index: number) => {
-            const serverPrice = serverPrices.has(index)
-              ? serverPrices.get(index)!
-              : Number(item.price) * item.quantity;
+      data: items.map((item: CartItem, index: number) => {
+        const serverPrice = serverPrices.has(index)
+          ? serverPrices.get(index)!
+          : Number(item.price) * item.quantity;
 
-            let glCodeId: string | undefined;
-            if (item.type === "program") glCodeId = glCodeMap.get(`program:${item.details?.programId}`) ?? undefined;
-            else if (item.type === "pass") glCodeId = glCodeMap.get(`pass:${item.details?.passId || item.referenceId}`) ?? undefined;
-            else if (item.type === "competition") glCodeId = glCodeMap.get(`competition:${item.details?.competitionId || item.referenceId}`) ?? undefined;
-            else if (item.type === "membership") glCodeId = glCodeMap.get(`membership:${item.details?.membershipInstanceId || item.referenceId}`) ?? undefined;
-            else if (item.type === "item") glCodeId = glCodeMap.get(`item:${item.referenceId}`) ?? undefined;
+        let glCodeId: string | undefined;
+        if (item.type === "program")
+          glCodeId = glCodeMap.get(`program:${item.details?.programId}`) ?? undefined;
+        else if (item.type === "pass")
+          glCodeId = glCodeMap.get(`pass:${item.details?.passId || item.referenceId}`) ?? undefined;
+        else if (item.type === "competition")
+          glCodeId =
+            glCodeMap.get(`competition:${item.details?.competitionId || item.referenceId}`) ??
+            undefined;
+        else if (item.type === "membership")
+          glCodeId =
+            glCodeMap.get(`membership:${item.details?.membershipInstanceId || item.referenceId}`) ??
+            undefined;
+        else if (item.type === "item")
+          glCodeId = glCodeMap.get(`item:${item.referenceId}`) ?? undefined;
 
-            // Fallback to org default for this entity type
-            if (!glCodeId) {
-              const entityType = ITEM_TYPE_TO_ENTITY_TYPE[item.type];
-              if (entityType) glCodeId = entityTypeToDefault.get(entityType);
-            }
+        // Fallback to org default for this entity type
+        if (!glCodeId) {
+          const entityType = ITEM_TYPE_TO_ENTITY_TYPE[item.type];
+          if (entityType) glCodeId = entityTypeToDefault.get(entityType);
+        }
 
-            return {
-              invoiceId: invoice.id,
-              description: item.name,
-              quantity: item.quantity,
-              unitPrice: serverPrices.has(index) ? serverPrice / item.quantity : item.price,
-              total: serverPrice,
-              programId: item.type === 'program' ? (item.details?.programId || undefined) : undefined,
-              membershipInstanceId: item.type === 'membership' ? (item.details?.membershipInstanceId || item.referenceId) : undefined,
-              passId: item.type === 'pass' ? (item.details?.passId || item.referenceId) : undefined,
-              competitionId: item.type === 'competition' ? (item.details?.competitionId || item.referenceId) : undefined,
-              productId: item.type === 'item' ? item.referenceId : undefined,
-              productVariantId: item.type === 'item' ? (item.details?.variantId || undefined) : undefined,
-              athleteId: item.athleteId || item.details?.athleteId || undefined,
-              glCodeId,
-            };
-        })
+        return {
+          invoiceId: invoice.id,
+          description: item.name,
+          quantity: item.quantity,
+          unitPrice: serverPrices.has(index) ? serverPrice / item.quantity : item.price,
+          total: serverPrice,
+          programId: item.type === "program" ? item.details?.programId || undefined : undefined,
+          membershipInstanceId:
+            item.type === "membership"
+              ? item.details?.membershipInstanceId || item.referenceId
+              : undefined,
+          passId: item.type === "pass" ? item.details?.passId || item.referenceId : undefined,
+          competitionId:
+            item.type === "competition"
+              ? item.details?.competitionId || item.referenceId
+              : undefined,
+          productId: item.type === "item" ? item.referenceId : undefined,
+          productVariantId: item.type === "item" ? item.details?.variantId || undefined : undefined,
+          athleteId: item.athleteId || item.details?.athleteId || undefined,
+          glCodeId,
+        };
+      }),
     });
 
     // 7b. Add discount line item (usage already claimed atomically during validation)
@@ -1728,20 +1940,30 @@ export async function POST(
       const host = request.headers.get("host");
       const receiptUrl = `${protocol}://${host}/receipt/${invoice.id}`;
       const lineItemsHtml = items
-        .map((item: CartItem) => `<tr><td style="padding: 4px 0;">${item.name}</td><td style="padding: 4px 0; text-align: right;">$${(Number(item.price) * item.quantity).toFixed(2)}</td></tr>`)
+        .map(
+          (item: CartItem) =>
+            `<tr><td style="padding: 4px 0;">${item.name}</td><td style="padding: 4px 0; text-align: right;">$${(Number(item.price) * item.quantity).toFixed(2)}</td></tr>`
+        )
         .join("");
       const lineItemsText = items
-        .map((item: CartItem) => `${item.name} — $${(Number(item.price) * item.quantity).toFixed(2)}`)
+        .map(
+          (item: CartItem) => `${item.name} — $${(Number(item.price) * item.quantity).toFixed(2)}`
+        )
         .join("\n");
 
-      const taxHtml = tax > 0 && taxPaidBy === "CUSTOMER"
-        ? `<tr><td style="padding: 4px 0;">Tax</td><td style="padding: 4px 0; text-align: right;">$${tax.toFixed(2)}</td></tr>`
-        : "";
-      const processingFeeHtml = processingFee > 0 && processingFeePaidBy === "CUSTOMER"
-        ? `<tr><td style="padding: 4px 0;">Processing Fee</td><td style="padding: 4px 0; text-align: right;">$${processingFee.toFixed(2)}</td></tr>`
-        : "";
+      const taxHtml =
+        tax > 0 && taxPaidBy === "CUSTOMER"
+          ? `<tr><td style="padding: 4px 0;">Tax</td><td style="padding: 4px 0; text-align: right;">$${tax.toFixed(2)}</td></tr>`
+          : "";
+      const processingFeeHtml =
+        processingFee > 0 && processingFeePaidBy === "CUSTOMER"
+          ? `<tr><td style="padding: 4px 0;">Processing Fee</td><td style="padding: 4px 0; text-align: right;">$${processingFee.toFixed(2)}</td></tr>`
+          : "";
       const taxText = tax > 0 && taxPaidBy === "CUSTOMER" ? `Tax: $${tax.toFixed(2)}` : "";
-      const processingFeeText = processingFee > 0 && processingFeePaidBy === "CUSTOMER" ? `Processing Fee: $${processingFee.toFixed(2)}` : "";
+      const processingFeeText =
+        processingFee > 0 && processingFeePaidBy === "CUSTOMER"
+          ? `Processing Fee: $${processingFee.toFixed(2)}`
+          : "";
 
       sendTemplatedEmail("checkout-receipt", [resolvedContact.email], {
         name: resolvedContact.firstName,
@@ -1772,7 +1994,10 @@ export async function POST(
     const taxPct = Math.round(customerTaxRate * 10000); // Adyen wants percentage × 100 (e.g. 6.25% = 625)
     const totalMinor = Math.round(total * 100);
     const customerTaxMinor = taxPaidBy === "CUSTOMER" ? Math.round(tax * 100) : 0;
-    const subtotalMinor = totalMinor - customerTaxMinor - (processingFeePaidBy === "CUSTOMER" ? Math.round(processingFee * 100) : 0);
+    const subtotalMinor =
+      totalMinor -
+      customerTaxMinor -
+      (processingFeePaidBy === "CUSTOMER" ? Math.round(processingFee * 100) : 0);
 
     const adyenLineItems: AdyenLineItem[] = items.map((item: CartItem, index: number) => {
       const itemTotal = serverPrices.has(index)
@@ -1846,44 +2071,46 @@ export async function POST(
       return prog && prog.billingInterval !== "ONE_TIME" && prog.recurringPrice;
     });
     const hasRecurringPass = passInvoiceItems.some(
-      (item: CartItem) => item.details?.billingInterval && item.details.billingInterval !== "ONE_TIME" && item.details.billingInterval !== "SESSION"
+      (item: CartItem) =>
+        item.details?.billingInterval &&
+        item.details.billingInterval !== "ONE_TIME" &&
+        item.details.billingInterval !== "SESSION"
     );
     const hasRecurringMembership = membershipInvoiceItems.some(
-      (item: CartItem) => item.details?.billingInterval && item.details.billingInterval !== "ONE_TIME" && item.details.billingInterval !== "SESSION"
+      (item: CartItem) =>
+        item.details?.billingInterval &&
+        item.details.billingInterval !== "ONE_TIME" &&
+        item.details.billingInterval !== "SESSION"
     );
     const hasRecurringItems = hasRecurringProgram || hasRecurringPass || hasRecurringMembership;
 
     const session = await createPaymentSession(
-        total,
-        "USD",
-        invoice.id,
-        returnUrl,
-        resolvedContact.email,
-        adyenLineItems,
-        authUserId
-          ? {
-              shopperReference: `user-${authUserId}`,
-              storePaymentMethodMode: hasRecurringItems ? "enabled" : "askForConsent",
-              recurringProcessingModel: hasRecurringItems ? "Subscription" : "CardOnFile",
-            }
-          : undefined
+      total,
+      "USD",
+      invoice.id,
+      returnUrl,
+      resolvedContact.email,
+      adyenLineItems,
+      authUserId
+        ? {
+            shopperReference: `user-${authUserId}`,
+            storePaymentMethodMode: hasRecurringItems ? "enabled" : "askForConsent",
+            recurringProcessingModel: hasRecurringItems ? "Subscription" : "CardOnFile",
+          }
+        : undefined
     );
 
     return NextResponse.json({
-        sessionId: session.id,
-        sessionData: session.sessionData,
-        invoiceId: invoice.id,
-        taxRate,
-        hasMembershipPurchases: membershipInvoiceItems.length > 0,
-        hasProgramRegistrations: programItems.length > 0,
-        hasCompetitionRegistrations: competitionItems.length > 0,
+      sessionId: session.id,
+      sessionData: session.sessionData,
+      invoiceId: invoice.id,
+      taxRate,
+      hasMembershipPurchases: membershipInvoiceItems.length > 0,
+      hasProgramRegistrations: programItems.length > 0,
+      hasCompetitionRegistrations: competitionItems.length > 0,
     });
-
   } catch (error) {
     console.error("Checkout Session Error:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

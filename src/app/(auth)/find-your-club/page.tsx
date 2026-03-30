@@ -1,7 +1,7 @@
-import { db } from "@/lib/db"
-import { FindYourClub } from "@/components/auth/find-your-club"
+import { db } from "@/lib/db";
+import { FindYourClub } from "@/components/auth/find-your-club";
 
-export const dynamic = "force-dynamic"
+export const dynamic = "force-dynamic";
 
 export default async function FindYourClubPage() {
   const [organizations, sports] = await Promise.all([
@@ -50,7 +50,7 @@ export default async function FindYourClubPage() {
       },
       orderBy: { displayOrder: "asc" },
     }),
-  ])
+  ]);
 
-  return <FindYourClub organizations={organizations} sports={sports} />
+  return <FindYourClub organizations={organizations} sports={sports} />;
 }

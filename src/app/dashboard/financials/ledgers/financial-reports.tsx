@@ -1,34 +1,46 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
-import { format } from "date-fns"
-import { TrendingUp, TrendingDown, Layers } from "lucide-react"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import * as React from "react";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { format } from "date-fns";
+import { TrendingUp, TrendingDown, Layers } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 
 interface RevenueByCode {
-  id: string
-  code: string
-  description: string
-  amount: number
+  id: string;
+  code: string;
+  description: string;
+  amount: number;
 }
 
 interface MonthlyRevenue {
-  month: string
-  total: number
+  month: string;
+  total: number;
 }
 
 interface FinancialReportsProps {
   stats: {
-    totalRevenue: number
-    totalExpenses: number
-    totalAssets: number
-    totalLiabilities: number
-    totalEquity: number
-  }
-  monthlyRevenue: MonthlyRevenue[]
-  revenueByCode: RevenueByCode[]
+    totalRevenue: number;
+    totalExpenses: number;
+    totalAssets: number;
+    totalLiabilities: number;
+    totalEquity: number;
+  };
+  monthlyRevenue: MonthlyRevenue[];
+  revenueByCode: RevenueByCode[];
 }
 
 const monthlyConfig = {
@@ -36,29 +48,29 @@ const monthlyConfig = {
     label: "Revenue",
     color: "hsl(var(--chart-1))",
   },
-} satisfies ChartConfig
+} satisfies ChartConfig;
 
 const revenueByCodeConfig = {
   amount: {
     label: "Amount",
     color: "hsl(var(--chart-1))",
   },
-} satisfies ChartConfig
+} satisfies ChartConfig;
 
 export function FinancialReports({ stats, monthlyRevenue, revenueByCode }: FinancialReportsProps) {
   const monthlyData = monthlyRevenue.map((m) => ({
     month: format(new Date(m.month), "MMM"),
     total: m.total,
-  }))
+  }));
 
   const codeData = revenueByCode.map((rc) => ({
     code: rc.code,
     description: rc.description,
     amount: rc.amount,
-  }))
+  }));
 
-  const netPosition = stats.totalRevenue - stats.totalExpenses
-  const profitMargin = stats.totalRevenue > 0 ? ((netPosition / stats.totalRevenue) * 100) : 0
+  const netPosition = stats.totalRevenue - stats.totalExpenses;
+  const profitMargin = stats.totalRevenue > 0 ? (netPosition / stats.totalRevenue) * 100 : 0;
 
   return (
     <div className="space-y-4">
@@ -66,29 +78,29 @@ export function FinancialReports({ stats, monthlyRevenue, revenueByCode }: Finan
         <Card>
           <CardHeader>
             <CardTitle>Monthly Revenue (YTD)</CardTitle>
-            <CardDescription>
-              Revenue from invoiced line items, by month.
-            </CardDescription>
+            <CardDescription>Revenue from invoiced line items, by month.</CardDescription>
           </CardHeader>
           <CardContent>
             {monthlyData.length > 0 ? (
               <ChartContainer config={monthlyConfig} className="h-[300px] w-full">
                 <BarChart data={monthlyData}>
                   <CartesianGrid vertical={false} />
-                  <XAxis
-                    dataKey="month"
-                    tickLine={false}
-                    tickMargin={10}
-                    axisLine={false}
-                  />
+                  <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} />
                   <ChartTooltip
                     content={
                       <ChartTooltipContent
-                        formatter={(value) => `$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+                        formatter={(value) =>
+                          `$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                        }
                       />
                     }
                   />
-                  <Bar dataKey="total" fill="var(--color-total)" radius={[4, 4, 0, 0]} name="Revenue" />
+                  <Bar
+                    dataKey="total"
+                    fill="var(--color-total)"
+                    radius={[4, 4, 0, 0]}
+                    name="Revenue"
+                  />
                 </BarChart>
               </ChartContainer>
             ) : (
@@ -104,7 +116,8 @@ export function FinancialReports({ stats, monthlyRevenue, revenueByCode }: Finan
           </CardContent>
           {monthlyData.length > 0 && (
             <CardFooter className="text-sm text-muted-foreground">
-              Showing {monthlyData.length} month{monthlyData.length !== 1 ? "s" : ""} of data for {new Date().getFullYear()}
+              Showing {monthlyData.length} month{monthlyData.length !== 1 ? "s" : ""} of data for{" "}
+              {new Date().getFullYear()}
             </CardFooter>
           )}
         </Card>
@@ -112,9 +125,7 @@ export function FinancialReports({ stats, monthlyRevenue, revenueByCode }: Finan
         <Card>
           <CardHeader>
             <CardTitle>Revenue by GL Code</CardTitle>
-            <CardDescription>
-              Total invoiced revenue per GL code.
-            </CardDescription>
+            <CardDescription>Total invoiced revenue per GL code.</CardDescription>
           </CardHeader>
           <CardContent>
             {codeData.length > 0 ? (
@@ -133,10 +144,13 @@ export function FinancialReports({ stats, monthlyRevenue, revenueByCode }: Finan
                   <ChartTooltip
                     content={
                       <ChartTooltipContent
-                        formatter={(value) => `$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+                        formatter={(value) =>
+                          `$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                        }
                         labelFormatter={(_, payload) => {
-                          if (payload?.[0]?.payload?.description) return payload[0].payload.description
-                          return _
+                          if (payload?.[0]?.payload?.description)
+                            return payload[0].payload.description;
+                          return _;
                         }}
                       />
                     }
@@ -171,21 +185,33 @@ export function FinancialReports({ stats, monthlyRevenue, revenueByCode }: Finan
             <div className="flex flex-col gap-1">
               <span className="text-sm font-medium text-muted-foreground">Total Revenue</span>
               <span className="text-2xl font-bold">
-                ${stats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                $
+                {stats.totalRevenue.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </span>
               <span className="text-xs text-muted-foreground">From invoiced line items</span>
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-sm font-medium text-muted-foreground">Total Expenses</span>
               <span className="text-2xl font-bold">
-                ${stats.totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                $
+                {stats.totalExpenses.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </span>
               <span className="text-xs text-muted-foreground">From ledger entries</span>
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-sm font-medium text-muted-foreground">Net Position</span>
               <span className="text-2xl font-bold">
-                ${netPosition.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                $
+                {netPosition.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </span>
               <div className="flex items-center gap-1">
                 {netPosition >= 0 ? (
@@ -193,7 +219,9 @@ export function FinancialReports({ stats, monthlyRevenue, revenueByCode }: Finan
                 ) : (
                   <TrendingDown className="h-3 w-3 text-rose-500" />
                 )}
-                <span className={`text-xs ${netPosition >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
+                <span
+                  className={`text-xs ${netPosition >= 0 ? "text-emerald-500" : "text-rose-500"}`}
+                >
                   Revenue minus expenses
                 </span>
               </div>
@@ -211,5 +239,5 @@ export function FinancialReports({ stats, monthlyRevenue, revenueByCode }: Finan
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

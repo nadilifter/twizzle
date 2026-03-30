@@ -1,12 +1,32 @@
-"use client"
+"use client";
 
-import { useEffect, useState, useCallback } from "react"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Skeleton } from "@/components/ui/skeleton"
+import { useEffect, useState, useCallback } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Check,
   ExternalLink,
@@ -18,87 +38,90 @@ import {
   Loader2,
   Unplug,
   ArrowRight,
-} from "lucide-react"
+} from "lucide-react";
 
-type Provider = "qbo" | "xero"
+type Provider = "qbo" | "xero";
 
 interface ConnectionStatus {
-  connected: boolean
-  setupComplete: boolean
-  companyName?: string
-  tenantId?: string
-  lastSyncAt?: string
-  connectedAt?: string
-  pendingSync?: number
-  failedSync?: number
-  mappingsCount?: number
+  connected: boolean;
+  setupComplete: boolean;
+  companyName?: string;
+  tenantId?: string;
+  lastSyncAt?: string;
+  connectedAt?: string;
+  pendingSync?: number;
+  failedSync?: number;
+  mappingsCount?: number;
 }
 
 interface ExternalAccount {
-  Id?: string
-  accountID?: string
-  Name?: string
-  name?: string
-  FullyQualifiedName?: string
-  AccountType?: string
-  type?: string
-  Active?: boolean
+  Id?: string;
+  accountID?: string;
+  Name?: string;
+  name?: string;
+  FullyQualifiedName?: string;
+  AccountType?: string;
+  type?: string;
+  Active?: boolean;
 }
 
 interface MappingSuggestion {
-  glCodeId: string
-  glCodeCode: string
-  glCodeDescription: string
-  glCodeType: string
-  suggestedAccountId: string | null
-  suggestedAccountName: string | null
-  confidence: "high" | "medium" | "low" | "none"
+  glCodeId: string;
+  glCodeCode: string;
+  glCodeDescription: string;
+  glCodeType: string;
+  suggestedAccountId: string | null;
+  suggestedAccountName: string | null;
+  confidence: "high" | "medium" | "low" | "none";
   candidates: Array<{
-    accountId: string
-    accountName: string
-    accountType: string
-    score: number
-  }>
+    accountId: string;
+    accountName: string;
+    accountType: string;
+    score: number;
+  }>;
 }
 
 interface SpecialAccountSuggestion {
-  mappingType: string
-  suggestedAccountId: string | null
-  suggestedAccountName: string | null
-  confidence: "high" | "medium" | "low" | "none"
+  mappingType: string;
+  suggestedAccountId: string | null;
+  suggestedAccountName: string | null;
+  confidence: "high" | "medium" | "low" | "none";
   candidates: Array<{
-    accountId: string
-    accountName: string
-    accountType: string
-  }>
+    accountId: string;
+    accountName: string;
+    accountType: string;
+  }>;
 }
 
 interface SyncLog {
-  id: string
-  entityType: string
-  uplifterEntityId: string
-  action: string
-  status: string
-  externalEntityId?: string
-  errorMessage?: string
-  durationMs?: number
-  createdAt: string
+  id: string;
+  entityType: string;
+  uplifterEntityId: string;
+  action: string;
+  status: string;
+  externalEntityId?: string;
+  errorMessage?: string;
+  durationMs?: number;
+  createdAt: string;
 }
 
 interface SyncStatus {
-  queue: { pending: number; processing: number; completed: number; failed: number }
-  recentLogs: SyncLog[]
-  lastSyncAt?: string
+  queue: { pending: number; processing: number; completed: number; failed: number };
+  recentLogs: SyncLog[];
+  lastSyncAt?: string;
 }
 
-const PROVIDER_CONFIG: Record<Provider, {
-  label: string
-  logoText: string
-  logoBg: string
-  buttonBg: string
-  description: string
-  features: string[]
-}> = {
+const PROVIDER_CONFIG: Record<
+  Provider,
+  {
+    label: string;
+    logoText: string;
+    logoBg: string;
+    buttonBg: string;
+    description: string;
+    features: string[];
+  }
+> = {
   qbo: {
     label: "QuickBooks Online",
     logoText: "qb",
@@ -129,50 +152,53 @@ const PROVIDER_CONFIG: Record<Provider, {
       "Bank transactions (payouts)",
     ],
   },
-}
+};
 
-function normalizeAccount(provider: Provider, raw: any): { id: string; name: string; type: string } {
+function normalizeAccount(
+  provider: Provider,
+  raw: any
+): { id: string; name: string; type: string } {
   if (provider === "qbo") {
-    return { id: raw.Id, name: raw.FullyQualifiedName || raw.Name, type: raw.AccountType }
+    return { id: raw.Id, name: raw.FullyQualifiedName || raw.Name, type: raw.AccountType };
   }
-  return { id: raw.accountID, name: raw.name, type: raw.type || raw.class }
+  return { id: raw.accountID, name: raw.name, type: raw.type || raw.class };
 }
 
 export default function IntegrationsPage() {
-  const [qboStatus, setQboStatus] = useState<ConnectionStatus | null>(null)
-  const [xeroStatus, setXeroStatus] = useState<ConnectionStatus | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [actionLoading, setActionLoading] = useState<Provider | null>(null)
+  const [qboStatus, setQboStatus] = useState<ConnectionStatus | null>(null);
+  const [xeroStatus, setXeroStatus] = useState<ConnectionStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<Provider | null>(null);
 
   const fetchStatuses = useCallback(async () => {
     try {
       const [qboRes, xeroRes] = await Promise.all([
         fetch("/api/integrations/qbo/status"),
         fetch("/api/integrations/xero/status"),
-      ])
-      if (qboRes.ok) setQboStatus(await qboRes.json())
-      if (xeroRes.ok) setXeroStatus(await xeroRes.json())
+      ]);
+      if (qboRes.ok) setQboStatus(await qboRes.json());
+      if (xeroRes.ok) setXeroStatus(await xeroRes.json());
     } catch {
       // Silently fail
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    fetchStatuses()
-  }, [fetchStatuses])
+    fetchStatuses();
+  }, [fetchStatuses]);
 
-  if (loading) return <IntegrationsLoading />
+  if (loading) return <IntegrationsLoading />;
 
   const getState = (status: ConnectionStatus | null): "disconnected" | "setup" | "connected" =>
-    !status?.connected ? "disconnected" : !status.setupComplete ? "setup" : "connected"
+    !status?.connected ? "disconnected" : !status.setupComplete ? "setup" : "connected";
 
-  const qboState = getState(qboStatus)
-  const xeroState = getState(xeroStatus)
+  const qboState = getState(qboStatus);
+  const xeroState = getState(xeroStatus);
 
-  const hasSetupInProgress = qboState === "setup" || xeroState === "setup"
-  const hasActiveConnection = qboState !== "disconnected" || xeroState !== "disconnected"
+  const hasSetupInProgress = qboState === "setup" || xeroState === "setup";
+  const hasActiveConnection = qboState !== "disconnected" || xeroState !== "disconnected";
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -184,60 +210,44 @@ export default function IntegrationsPage() {
       </div>
 
       {qboState === "setup" && qboStatus && (
-        <SetupView
-          provider="qbo"
-          status={qboStatus}
-          onComplete={fetchStatuses}
-        />
+        <SetupView provider="qbo" status={qboStatus} onComplete={fetchStatuses} />
       )}
 
       {xeroState === "setup" && xeroStatus && (
-        <SetupView
-          provider="xero"
-          status={xeroStatus}
-          onComplete={fetchStatuses}
-        />
+        <SetupView provider="xero" status={xeroStatus} onComplete={fetchStatuses} />
       )}
 
       {!hasSetupInProgress && (
         <div className={hasActiveConnection ? "flex flex-col gap-6" : "grid gap-6 md:grid-cols-2"}>
           {qboState === "connected" && qboStatus ? (
-            <ConnectedCard
-              provider="qbo"
-              status={qboStatus}
-              onDisconnect={fetchStatuses}
-            />
+            <ConnectedCard provider="qbo" status={qboStatus} onDisconnect={fetchStatuses} />
           ) : qboState === "disconnected" && !hasActiveConnection ? (
             <DisconnectedCard
               provider="qbo"
               actionLoading={actionLoading === "qbo"}
               onConnect={() => {
-                setActionLoading("qbo")
-                window.location.href = "/api/integrations/qbo/connect"
+                setActionLoading("qbo");
+                window.location.href = "/api/integrations/qbo/connect";
               }}
             />
           ) : null}
 
           {xeroState === "connected" && xeroStatus ? (
-            <ConnectedCard
-              provider="xero"
-              status={xeroStatus}
-              onDisconnect={fetchStatuses}
-            />
+            <ConnectedCard provider="xero" status={xeroStatus} onDisconnect={fetchStatuses} />
           ) : xeroState === "disconnected" && !hasActiveConnection ? (
             <DisconnectedCard
               provider="xero"
               actionLoading={actionLoading === "xero"}
               onConnect={() => {
-                setActionLoading("xero")
-                window.location.href = "/api/integrations/xero/connect"
+                setActionLoading("xero");
+                window.location.href = "/api/integrations/xero/connect";
               }}
             />
           ) : null}
         </div>
       )}
     </div>
-  )
+  );
 }
 
 function DisconnectedCard({
@@ -245,17 +255,19 @@ function DisconnectedCard({
   actionLoading,
   onConnect,
 }: {
-  provider: Provider
-  actionLoading: boolean
-  onConnect: () => void
+  provider: Provider;
+  actionLoading: boolean;
+  onConnect: () => void;
 }) {
-  const config = PROVIDER_CONFIG[provider]
+  const config = PROVIDER_CONFIG[provider];
 
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center gap-4">
-          <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${config.logoBg} text-white font-bold text-xl`}>
+          <div
+            className={`flex h-12 w-12 items-center justify-center rounded-lg ${config.logoBg} text-white font-bold text-xl`}
+          >
             {config.logoText}
           </div>
           <div>
@@ -273,8 +285,8 @@ function DisconnectedCard({
             ))}
           </ul>
           <p className="mt-3">
-            After connecting, you&apos;ll map your GL codes to {config.label} accounts.
-            We&apos;ll auto-suggest the best matches to save you time.
+            After connecting, you&apos;ll map your GL codes to {config.label} accounts. We&apos;ll
+            auto-suggest the best matches to save you time.
           </p>
         </div>
       </CardContent>
@@ -293,7 +305,7 @@ function DisconnectedCard({
         </Button>
       </CardFooter>
     </Card>
-  )
+  );
 }
 
 function SetupView({
@@ -301,21 +313,23 @@ function SetupView({
   status,
   onComplete,
 }: {
-  provider: Provider
-  status: ConnectionStatus
-  onComplete: () => void
+  provider: Provider;
+  status: ConnectionStatus;
+  onComplete: () => void;
 }) {
-  const config = PROVIDER_CONFIG[provider]
+  const config = PROVIDER_CONFIG[provider];
   const [suggestions, setSuggestions] = useState<{
-    glCodeMappings: MappingSuggestion[]
-    specialAccounts: SpecialAccountSuggestion[]
-  } | null>(null)
-  const [accounts, setAccounts] = useState<Array<{ id: string; name: string; type: string }>>([])
-  const [loadingSuggestions, setLoadingSuggestions] = useState(true)
-  const [saving, setSaving] = useState(false)
+    glCodeMappings: MappingSuggestion[];
+    specialAccounts: SpecialAccountSuggestion[];
+  } | null>(null);
+  const [accounts, setAccounts] = useState<Array<{ id: string; name: string; type: string }>>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const [glMappings, setGlMappings] = useState<Record<string, { id: string; name: string }>>({})
-  const [specialMappings, setSpecialMappings] = useState<Record<string, { id: string; name: string }>>({})
+  const [glMappings, setGlMappings] = useState<Record<string, { id: string; name: string }>>({});
+  const [specialMappings, setSpecialMappings] = useState<
+    Record<string, { id: string; name: string }>
+  >({});
 
   useEffect(() => {
     async function loadData() {
@@ -323,46 +337,49 @@ function SetupView({
         const [suggestRes, accountsRes] = await Promise.all([
           fetch(`/api/integrations/${provider}/mappings/auto-suggest`, { method: "POST" }),
           fetch(`/api/integrations/${provider}/accounts`),
-        ])
+        ]);
 
         if (suggestRes.ok && accountsRes.ok) {
-          const suggestData = await suggestRes.json()
-          const accountsData = await accountsRes.json()
+          const suggestData = await suggestRes.json();
+          const accountsData = await accountsRes.json();
 
-          setSuggestions(suggestData)
+          setSuggestions(suggestData);
 
-          const normalizedAccounts = (accountsData.accounts || []).map(
-            (a: any) => normalizeAccount(provider, a)
-          )
-          setAccounts(normalizedAccounts)
+          const normalizedAccounts = (accountsData.accounts || []).map((a: any) =>
+            normalizeAccount(provider, a)
+          );
+          setAccounts(normalizedAccounts);
 
-          const preGl: Record<string, { id: string; name: string }> = {}
+          const preGl: Record<string, { id: string; name: string }> = {};
           for (const s of suggestData.glCodeMappings) {
             if (s.suggestedAccountId && (s.confidence === "high" || s.confidence === "medium")) {
-              preGl[s.glCodeId] = { id: s.suggestedAccountId, name: s.suggestedAccountName || "" }
+              preGl[s.glCodeId] = { id: s.suggestedAccountId, name: s.suggestedAccountName || "" };
             }
           }
-          setGlMappings(preGl)
+          setGlMappings(preGl);
 
-          const preSp: Record<string, { id: string; name: string }> = {}
+          const preSp: Record<string, { id: string; name: string }> = {};
           for (const s of suggestData.specialAccounts) {
             if (s.suggestedAccountId && s.confidence !== "none") {
-              preSp[s.mappingType] = { id: s.suggestedAccountId, name: s.suggestedAccountName || "" }
+              preSp[s.mappingType] = {
+                id: s.suggestedAccountId,
+                name: s.suggestedAccountName || "",
+              };
             }
           }
-          setSpecialMappings(preSp)
+          setSpecialMappings(preSp);
         }
       } catch (error) {
-        console.error("Failed to load suggestions:", error)
+        console.error("Failed to load suggestions:", error);
       } finally {
-        setLoadingSuggestions(false)
+        setLoadingSuggestions(false);
       }
     }
-    loadData()
-  }, [provider])
+    loadData();
+  }, [provider]);
 
   const handleSave = async () => {
-    setSaving(true)
+    setSaving(true);
     try {
       const mappings = [
         ...Object.entries(glMappings).map(([glCodeId, acct]) => ({
@@ -377,47 +394,68 @@ function SetupView({
           externalAccountId: acct.id,
           externalAccountName: acct.name,
         })),
-      ]
+      ];
 
       const res = await fetch(`/api/integrations/${provider}/mappings`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mappings }),
-      })
+      });
 
       if (res.ok) {
-        await fetch(`/api/integrations/${provider}/sync`, { method: "POST" })
-        onComplete()
+        await fetch(`/api/integrations/${provider}/sync`, { method: "POST" });
+        onComplete();
       }
     } catch (error) {
-      console.error("Failed to save mappings:", error)
+      console.error("Failed to save mappings:", error);
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const confidenceBadge = (c: string) => {
     switch (c) {
       case "high":
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">Auto-matched</Badge>
+        return (
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+            Auto-matched
+          </Badge>
+        );
       case "medium":
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs">Suggested</Badge>
+        return (
+          <Badge
+            variant="outline"
+            className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs"
+          >
+            Suggested
+          </Badge>
+        );
       case "low":
-        return <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 text-xs">Review</Badge>
+        return (
+          <Badge
+            variant="outline"
+            className="bg-orange-50 text-orange-700 border-orange-200 text-xs"
+          >
+            Review
+          </Badge>
+        );
       default:
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs">Select account</Badge>
+        return (
+          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs">
+            Select account
+          </Badge>
+        );
     }
-  }
+  };
 
   const specialLabels: Record<string, { label: string; desc: string }> = {
     BANK_ACCOUNT: { label: "Bank Account", desc: "Where Adyen deposits land" },
     PROCESSING_FEES: { label: "Processing Fees", desc: "Adyen/card processing fees" },
     REFUNDS: { label: "Refunds Account", desc: "Account for refund transactions" },
     UNDEPOSITED_FUNDS: { label: "Undeposited Funds", desc: "Payments pending settlement" },
-  }
+  };
 
-  const getAccountsByType = (types: string[]) =>
-    accounts.filter((a) => types.includes(a.type))
+  const getAccountsByType = (types: string[]) => accounts.filter((a) => types.includes(a.type));
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -425,18 +463,24 @@ function SetupView({
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${config.logoBg} text-white font-bold`}>
+              <div
+                className={`flex h-10 w-10 items-center justify-center rounded-lg ${config.logoBg} text-white font-bold`}
+              >
                 {config.logoText}
               </div>
               <div>
                 <CardTitle className="text-lg">
                   Map Your Accounts
                   {status.companyName && (
-                    <span className="text-muted-foreground font-normal"> — {status.companyName}</span>
+                    <span className="text-muted-foreground font-normal">
+                      {" "}
+                      — {status.companyName}
+                    </span>
                   )}
                 </CardTitle>
                 <CardDescription>
-                  Review the suggested mappings below. Adjust any that don&apos;t look right, then confirm.
+                  Review the suggested mappings below. Adjust any that don&apos;t look right, then
+                  confirm.
                 </CardDescription>
               </div>
             </div>
@@ -468,17 +512,19 @@ function SetupView({
             <CardContent>
               <div className="space-y-4">
                 {suggestions?.specialAccounts.map((sa) => {
-                  const info = specialLabels[sa.mappingType]
-                  if (!info) return null
+                  const info = specialLabels[sa.mappingType];
+                  if (!info) return null;
 
-                  let accountOptions = sa.candidates
+                  let accountOptions = sa.candidates;
                   if (accountOptions.length === 0) {
                     if (sa.mappingType === "BANK_ACCOUNT") {
-                      accountOptions = getAccountsByType(provider === "qbo" ? ["Bank"] : ["BANK"]).map((a) => ({
+                      accountOptions = getAccountsByType(
+                        provider === "qbo" ? ["Bank"] : ["BANK"]
+                      ).map((a) => ({
                         accountId: a.id,
                         accountName: a.name,
                         accountType: a.type,
-                      }))
+                      }));
                     } else if (sa.mappingType === "PROCESSING_FEES") {
                       accountOptions = getAccountsByType(
                         provider === "qbo" ? ["Expense", "Other Expense"] : ["EXPENSE"]
@@ -486,13 +532,13 @@ function SetupView({
                         accountId: a.id,
                         accountName: a.name,
                         accountType: a.type,
-                      }))
+                      }));
                     } else {
                       accountOptions = accounts.map((a) => ({
                         accountId: a.id,
                         accountName: a.name,
                         accountType: a.type,
-                      }))
+                      }));
                     }
                   }
 
@@ -506,12 +552,12 @@ function SetupView({
                       <Select
                         value={specialMappings[sa.mappingType]?.id || ""}
                         onValueChange={(val) => {
-                          const acct = accountOptions.find((a) => a.accountId === val)
+                          const acct = accountOptions.find((a) => a.accountId === val);
                           if (acct) {
                             setSpecialMappings((prev) => ({
                               ...prev,
                               [sa.mappingType]: { id: acct.accountId, name: acct.accountName },
-                            }))
+                            }));
                           }
                         }}
                       >
@@ -528,7 +574,7 @@ function SetupView({
                       </Select>
                       {confidenceBadge(sa.confidence)}
                     </div>
-                  )
+                  );
                 })}
               </div>
             </CardContent>
@@ -562,7 +608,7 @@ function SetupView({
                             accountName: a.name,
                             accountType: a.type,
                             score: 0,
-                          }))
+                          }));
 
                     return (
                       <TableRow key={gl.glCodeId}>
@@ -577,12 +623,12 @@ function SetupView({
                           <Select
                             value={glMappings[gl.glCodeId]?.id || ""}
                             onValueChange={(val) => {
-                              const acct = options.find((a) => a.accountId === val)
+                              const acct = options.find((a) => a.accountId === val);
                               if (acct) {
                                 setGlMappings((prev) => ({
                                   ...prev,
                                   [gl.glCodeId]: { id: acct.accountId, name: acct.accountName },
-                                }))
+                                }));
                               }
                             }}
                           >
@@ -600,7 +646,7 @@ function SetupView({
                         </TableCell>
                         <TableCell>{confidenceBadge(gl.confidence)}</TableCell>
                       </TableRow>
-                    )
+                    );
                   })}
                 </TableBody>
               </Table>
@@ -611,7 +657,7 @@ function SetupView({
             <Button
               variant="outline"
               onClick={() => {
-                window.location.href = `/api/integrations/${provider}/connect`
+                window.location.href = `/api/integrations/${provider}/connect`;
               }}
             >
               Reconnect
@@ -632,7 +678,7 @@ function SetupView({
         </>
       )}
     </div>
-  )
+  );
 }
 
 function ConnectedCard({
@@ -640,50 +686,55 @@ function ConnectedCard({
   status,
   onDisconnect,
 }: {
-  provider: Provider
-  status: ConnectionStatus
-  onDisconnect: () => void
+  provider: Provider;
+  status: ConnectionStatus;
+  onDisconnect: () => void;
 }) {
-  const config = PROVIDER_CONFIG[provider]
-  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null)
-  const [loadingSync, setLoadingSync] = useState(true)
-  const [syncing, setSyncing] = useState(false)
-  const [disconnecting, setDisconnecting] = useState(false)
-  const [showLogs, setShowLogs] = useState(false)
+  const config = PROVIDER_CONFIG[provider];
+  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
+  const [loadingSync, setLoadingSync] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [showLogs, setShowLogs] = useState(false);
 
   useEffect(() => {
-    fetchSyncStatus()
-  }, [])
+    fetchSyncStatus();
+  }, []);
 
   async function fetchSyncStatus() {
     try {
-      const res = await fetch(`/api/integrations/${provider}/sync/status`)
-      if (res.ok) setSyncStatus(await res.json())
+      const res = await fetch(`/api/integrations/${provider}/sync/status`);
+      if (res.ok) setSyncStatus(await res.json());
     } catch {
       // ignore
     } finally {
-      setLoadingSync(false)
+      setLoadingSync(false);
     }
   }
 
   async function triggerSync() {
-    setSyncing(true)
+    setSyncing(true);
     try {
-      await fetch(`/api/integrations/${provider}/sync`, { method: "POST" })
-      await fetchSyncStatus()
+      await fetch(`/api/integrations/${provider}/sync`, { method: "POST" });
+      await fetchSyncStatus();
     } finally {
-      setSyncing(false)
+      setSyncing(false);
     }
   }
 
   async function handleDisconnect() {
-    if (!confirm(`Are you sure you want to disconnect ${config.label}? All sync mappings will be removed.`)) return
-    setDisconnecting(true)
+    if (
+      !confirm(
+        `Are you sure you want to disconnect ${config.label}? All sync mappings will be removed.`
+      )
+    )
+      return;
+    setDisconnecting(true);
     try {
-      await fetch(`/api/integrations/${provider}/disconnect`, { method: "POST" })
-      onDisconnect()
+      await fetch(`/api/integrations/${provider}/disconnect`, { method: "POST" });
+      onDisconnect();
     } finally {
-      setDisconnecting(false)
+      setDisconnecting(false);
     }
   }
 
@@ -692,18 +743,24 @@ function ConnectedCard({
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${config.logoBg} text-white font-bold`}>
+            <div
+              className={`flex h-10 w-10 items-center justify-center rounded-lg ${config.logoBg} text-white font-bold`}
+            >
               {config.logoText}
             </div>
             <div>
               <CardTitle className="text-lg">
                 {config.label}
                 {status.companyName && (
-                  <span className="text-muted-foreground font-normal text-sm"> — {status.companyName}</span>
+                  <span className="text-muted-foreground font-normal text-sm">
+                    {" "}
+                    — {status.companyName}
+                  </span>
                 )}
               </CardTitle>
               <CardDescription>
-                Connected {status.connectedAt && `since ${new Date(status.connectedAt).toLocaleDateString()}`}
+                Connected{" "}
+                {status.connectedAt && `since ${new Date(status.connectedAt).toLocaleDateString()}`}
               </CardDescription>
             </div>
           </div>
@@ -723,10 +780,26 @@ function ConnectedCard({
 
         {!loadingSync && syncStatus && (
           <div className="grid grid-cols-4 gap-2">
-            <MiniStatusCard label="Pending" count={syncStatus.queue.pending} icon={<Clock className="h-3.5 w-3.5 text-yellow-500" />} />
-            <MiniStatusCard label="Processing" count={syncStatus.queue.processing} icon={<Loader2 className="h-3.5 w-3.5 text-blue-500 animate-spin" />} />
-            <MiniStatusCard label="Completed" count={syncStatus.queue.completed} icon={<CheckCircle2 className="h-3.5 w-3.5 text-green-500" />} />
-            <MiniStatusCard label="Failed" count={syncStatus.queue.failed} icon={<XCircle className="h-3.5 w-3.5 text-red-500" />} />
+            <MiniStatusCard
+              label="Pending"
+              count={syncStatus.queue.pending}
+              icon={<Clock className="h-3.5 w-3.5 text-yellow-500" />}
+            />
+            <MiniStatusCard
+              label="Processing"
+              count={syncStatus.queue.processing}
+              icon={<Loader2 className="h-3.5 w-3.5 text-blue-500 animate-spin" />}
+            />
+            <MiniStatusCard
+              label="Completed"
+              count={syncStatus.queue.completed}
+              icon={<CheckCircle2 className="h-3.5 w-3.5 text-green-500" />}
+            />
+            <MiniStatusCard
+              label="Failed"
+              count={syncStatus.queue.failed}
+              icon={<XCircle className="h-3.5 w-3.5 text-red-500" />}
+            />
           </div>
         )}
 
@@ -770,12 +843,7 @@ function ConnectedCard({
         )}
       </CardContent>
       <CardFooter className="gap-2 flex-wrap">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={triggerSync}
-          disabled={syncing}
-        >
+        <Button variant="outline" size="sm" onClick={triggerSync} disabled={syncing}>
           {syncing ? (
             <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
           ) : (
@@ -783,11 +851,7 @@ function ConnectedCard({
           )}
           Sync Now
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowLogs(!showLogs)}
-        >
+        <Button variant="ghost" size="sm" onClick={() => setShowLogs(!showLogs)}>
           {showLogs ? "Hide" : "Show"} Logs
         </Button>
         <div className="flex-1" />
@@ -807,10 +871,18 @@ function ConnectedCard({
         </Button>
       </CardFooter>
     </Card>
-  )
+  );
 }
 
-function MiniStatusCard({ label, count, icon }: { label: string; count: number; icon: React.ReactNode }) {
+function MiniStatusCard({
+  label,
+  count,
+  icon,
+}: {
+  label: string;
+  count: number;
+  icon: React.ReactNode;
+}) {
   return (
     <div className="flex items-center gap-2 rounded-md border p-2">
       {icon}
@@ -819,7 +891,7 @@ function MiniStatusCard({ label, count, icon }: { label: string; count: number; 
         <div className="text-[10px] text-muted-foreground">{label}</div>
       </div>
     </div>
-  )
+  );
 }
 
 function IntegrationsLoading() {
@@ -834,5 +906,5 @@ function IntegrationsLoading() {
         <Skeleton className="h-64 w-full" />
       </div>
     </div>
-  )
+  );
 }

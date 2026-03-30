@@ -115,8 +115,7 @@ export function SiteCalendar({
 
   const isAdmin =
     status === "authenticated" &&
-    (session?.user?.role === "ADMIN" ||
-      session?.user?.permissions?.includes("*"));
+    (session?.user?.role === "ADMIN" || session?.user?.permissions?.includes("*"));
 
   const handleEventClick = useCallback(
     (event: CalendarEvent) => {
@@ -158,17 +157,13 @@ export function SiteCalendar({
 
       if (filters.selectedLevels.length > 0) {
         if (event.hasLevelRestriction && event.levelIds?.length) {
-          const hasMatch = event.levelIds.some((id) =>
-            filters.selectedLevels.includes(id)
-          );
+          const hasMatch = event.levelIds.some((id) => filters.selectedLevels.includes(id));
           if (!hasMatch) return false;
         }
       }
 
       if (filters.selectedCoaches.length > 0) {
-        const hasMatch = (event.coachIds ?? []).some((id) =>
-          filters.selectedCoaches.includes(id)
-        );
+        const hasMatch = (event.coachIds ?? []).some((id) => filters.selectedCoaches.includes(id));
         if (!hasMatch) return false;
       }
 
@@ -228,11 +223,7 @@ export function SiteCalendar({
             className="gap-2"
             onClick={() => setColorBy((prev) => (prev === "program" ? "level" : "program"))}
           >
-            {colorBy === "level" ? (
-              <Layers className="h-4 w-4" />
-            ) : (
-              <Palette className="h-4 w-4" />
-            )}
+            {colorBy === "level" ? <Layers className="h-4 w-4" /> : <Palette className="h-4 w-4" />}
             {colorBy === "level" ? "By Level" : "By Program"}
           </Button>
         )}
@@ -256,9 +247,7 @@ export function SiteCalendar({
               <DrawerHeader>
                 <DrawerTitle>Filter Calendar</DrawerTitle>
               </DrawerHeader>
-              <div className="px-4 pb-4 max-h-[70vh] overflow-y-auto">
-                {filtersContent}
-              </div>
+              <div className="px-4 pb-4 max-h-[70vh] overflow-y-auto">{filtersContent}</div>
               <DrawerFooter>
                 <DrawerClose asChild>
                   <Button>{resultLabel}</Button>
@@ -276,9 +265,7 @@ export function SiteCalendar({
                   Narrow down events by age, time, level, or coach
                 </SheetDescription>
               </SheetHeader>
-              <div className="mt-6 overflow-y-auto flex-1">
-                {filtersContent}
-              </div>
+              <div className="mt-6 overflow-y-auto flex-1">{filtersContent}</div>
               <SheetFooter className="mt-6">
                 <SheetClose asChild>
                   <Button className="w-full">{resultLabel}</Button>

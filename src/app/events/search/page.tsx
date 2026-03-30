@@ -1,138 +1,135 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { 
-  Search,
-  Check,
-  Clock4,
-  Loader2,
-  UserSearch,
-  Calendar,
-  UserCheck
-} from "lucide-react"
-import { format } from "date-fns"
-import { useAthletes } from "@/hooks/use-athletes"
-import { useEvents } from "@/hooks/use-events"
-import { useAttendance } from "@/hooks/use-attendance"
-import { toast } from "sonner"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Search, Check, Clock4, Loader2, UserSearch, Calendar, UserCheck } from "lucide-react";
+import { format } from "date-fns";
+import { useAthletes } from "@/hooks/use-athletes";
+import { useEvents } from "@/hooks/use-events";
+import { useAttendance } from "@/hooks/use-attendance";
+import { toast } from "sonner";
 
 function getInitials(name: string) {
-  const parts = name.split(" ")
+  const parts = name.split(" ");
   if (parts.length >= 2) {
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
   }
-  return name.substring(0, 2).toUpperCase()
+  return name.substring(0, 2).toUpperCase();
 }
 
 export default function AthleteSearchPage() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null)
-  const [processingEventId, setProcessingEventId] = useState<string | null>(null)
-  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
+  const [processingEventId, setProcessingEventId] = useState<string | null>(null);
+
   // Track last fetched values to prevent infinite loops
-  const lastFetchedSearch = useRef<string>("")
-  const lastFetchedAthleteId = useRef<string | null>(null)
-  const hasFetchedEvents = useRef(false)
-  
-  const { athletes, fetchAthletes, isLoading: athletesLoading } = useAthletes({ autoFetch: false })
-  const { events, fetchEvents, isLoading: eventsLoading } = useEvents({ autoFetch: false })
-  const { markAttendance, fetchAttendance, attendances, isUpdating } = useAttendance({ autoFetch: false })
+  const lastFetchedSearch = useRef<string>("");
+  const lastFetchedAthleteId = useRef<string | null>(null);
+  const hasFetchedEvents = useRef(false);
+
+  const { athletes, fetchAthletes, isLoading: athletesLoading } = useAthletes({ autoFetch: false });
+  const { events, fetchEvents, isLoading: eventsLoading } = useEvents({ autoFetch: false });
+  const { markAttendance, fetchAttendance, attendances, isUpdating } = useAttendance({
+    autoFetch: false,
+  });
 
   // Fetch today's events on mount (only once)
   useEffect(() => {
-    if (hasFetchedEvents.current) return
-    hasFetchedEvents.current = true
-    const today = format(new Date(), "yyyy-MM-dd")
-    fetchEvents({ startDate: today, endDate: today })
-  }, [fetchEvents])
+    if (hasFetchedEvents.current) return;
+    hasFetchedEvents.current = true;
+    const today = format(new Date(), "yyyy-MM-dd");
+    fetchEvents({ startDate: today, endDate: today });
+  }, [fetchEvents]);
 
   // Debounced search for athletes
   useEffect(() => {
-    const trimmedQuery = searchQuery.trim()
-    
+    const trimmedQuery = searchQuery.trim();
+
     // Skip if query hasn't changed or is too short
     if (trimmedQuery.length < 2 || trimmedQuery === lastFetchedSearch.current) {
-      return
+      return;
     }
-    
+
     const timer = setTimeout(() => {
-      lastFetchedSearch.current = trimmedQuery
-      fetchAthletes({ search: trimmedQuery })
-    }, 300)
-    
-    return () => clearTimeout(timer)
-  }, [searchQuery, fetchAthletes])
+      lastFetchedSearch.current = trimmedQuery;
+      fetchAthletes({ search: trimmedQuery });
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, fetchAthletes]);
 
   // Fetch attendance for selected athlete
   useEffect(() => {
     if (selectedAthleteId && selectedAthleteId !== lastFetchedAthleteId.current) {
-      lastFetchedAthleteId.current = selectedAthleteId
-      fetchAttendance({ athleteId: selectedAthleteId })
+      lastFetchedAthleteId.current = selectedAthleteId;
+      fetchAttendance({ athleteId: selectedAthleteId });
     }
-  }, [selectedAthleteId, fetchAttendance])
+  }, [selectedAthleteId, fetchAttendance]);
 
   // Filter athletes by search
   const filteredAthletes = useMemo(() => {
-    if (!searchQuery.trim() || searchQuery.trim().length < 2) return []
-    return athletes
-  }, [athletes, searchQuery])
+    if (!searchQuery.trim() || searchQuery.trim().length < 2) return [];
+    return athletes;
+  }, [athletes, searchQuery]);
 
   // Get athlete's registrations for today's events
   const athleteRegistrations = useMemo(() => {
-    if (!selectedAthleteId) return []
-    
-    return events.map(event => {
+    if (!selectedAthleteId) return [];
+
+    return events.map((event) => {
       const attendance = attendances.find(
-        a => a.eventId === event.id && a.athleteId === selectedAthleteId
-      )
+        (a) => a.eventId === event.id && a.athleteId === selectedAthleteId
+      );
       return {
         event,
         attendance,
         isRegistered: !!attendance,
-        isCheckedIn: attendance?.status === "PRESENT" || attendance?.status === "LATE"
-      }
-    })
-  }, [events, attendances, selectedAthleteId])
+        isCheckedIn: attendance?.status === "PRESENT" || attendance?.status === "LATE",
+      };
+    });
+  }, [events, attendances, selectedAthleteId]);
 
   const selectedAthlete = useMemo(() => {
-    return athletes.find(a => a.id === selectedAthleteId)
-  }, [athletes, selectedAthleteId])
+    return athletes.find((a) => a.id === selectedAthleteId);
+  }, [athletes, selectedAthleteId]);
 
-  const handleCheckin = useCallback(async (eventId: string, status: "PRESENT" | "LATE") => {
-    if (!selectedAthleteId) return
-    
-    setProcessingEventId(eventId)
-    
-    const result = await markAttendance({
-      athleteId: selectedAthleteId,
-      eventId,
-      status
-    })
-    
-    if (result) {
-      toast.success(`Checked in as ${status.toLowerCase()}`)
-      // Reset ref to allow refetching attendance
-      lastFetchedAthleteId.current = null
-      fetchAttendance({ athleteId: selectedAthleteId })
-      lastFetchedAthleteId.current = selectedAthleteId
-    } else {
-      toast.error("Failed to check in")
-    }
-    
-    setProcessingEventId(null)
-  }, [selectedAthleteId, markAttendance, fetchAttendance])
+  const handleCheckin = useCallback(
+    async (eventId: string, status: "PRESENT" | "LATE") => {
+      if (!selectedAthleteId) return;
+
+      setProcessingEventId(eventId);
+
+      const result = await markAttendance({
+        athleteId: selectedAthleteId,
+        eventId,
+        status,
+      });
+
+      if (result) {
+        toast.success(`Checked in as ${status.toLowerCase()}`);
+        // Reset ref to allow refetching attendance
+        lastFetchedAthleteId.current = null;
+        fetchAttendance({ athleteId: selectedAthleteId });
+        lastFetchedAthleteId.current = selectedAthleteId;
+      } else {
+        toast.error("Failed to check in");
+      }
+
+      setProcessingEventId(null);
+    },
+    [selectedAthleteId, markAttendance, fetchAttendance]
+  );
 
   const clearSelection = useCallback(() => {
-    setSelectedAthleteId(null)
-    setSearchQuery("")
-    lastFetchedSearch.current = ""
-    lastFetchedAthleteId.current = null
-  }, [])
+    setSelectedAthleteId(null);
+    setSearchQuery("");
+    lastFetchedSearch.current = "";
+    lastFetchedAthleteId.current = null;
+  }, []);
 
   return (
     <div className="p-4 md:p-6 lg:px-8 max-w-3xl mx-auto">
@@ -209,15 +206,16 @@ export default function AthleteSearchPage() {
       )}
 
       {/* No Results */}
-      {!selectedAthleteId && !athletesLoading && searchQuery.trim().length >= 2 && filteredAthletes.length === 0 && (
-        <Card className="p-8 text-center">
-          <UserSearch className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No Athletes Found</h3>
-          <p className="text-muted-foreground">
-            No athletes match &quot;{searchQuery}&quot;
-          </p>
-        </Card>
-      )}
+      {!selectedAthleteId &&
+        !athletesLoading &&
+        searchQuery.trim().length >= 2 &&
+        filteredAthletes.length === 0 && (
+          <Card className="p-8 text-center">
+            <UserSearch className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Athletes Found</h3>
+            <p className="text-muted-foreground">No athletes match &quot;{searchQuery}&quot;</p>
+          </Card>
+        )}
 
       {/* Selected Athlete View */}
       {selectedAthleteId && selectedAthlete && (
@@ -267,10 +265,10 @@ export default function AthleteSearchPage() {
               ) : (
                 <div className="divide-y">
                   {athleteRegistrations.map(({ event, attendance, isRegistered, isCheckedIn }) => {
-                    const isProcessing = processingEventId === event.id
-                    
+                    const isProcessing = processingEventId === event.id;
+
                     return (
-                      <div 
+                      <div
                         key={event.id}
                         className={`p-4 ${isCheckedIn ? "bg-green-50/50 dark:bg-green-950/30" : ""}`}
                       >
@@ -288,22 +286,21 @@ export default function AthleteSearchPage() {
                             </div>
                             <h3 className="font-semibold">{event.title}</h3>
                             {isRegistered && (
-                              <Badge 
-                                variant="outline" 
+                              <Badge
+                                variant="outline"
                                 className={`mt-2 ${
-                                  isCheckedIn 
-                                    ? "bg-green-100 text-green-700 border-green-300" 
+                                  isCheckedIn
+                                    ? "bg-green-100 text-green-700 border-green-300"
                                     : "bg-blue-50 text-blue-700 border-blue-200"
                                 }`}
                               >
-                                {isCheckedIn 
-                                  ? `Checked in at ${attendance?.checkedIn ? format(new Date(attendance.checkedIn), "h:mm a") : ""}` 
-                                  : "Registered"
-                                }
+                                {isCheckedIn
+                                  ? `Checked in at ${attendance?.checkedIn ? format(new Date(attendance.checkedIn), "h:mm a") : ""}`
+                                  : "Registered"}
                               </Badge>
                             )}
                           </div>
-                          
+
                           {isCheckedIn ? (
                             <div className="flex items-center gap-2 text-green-600 shrink-0">
                               <UserCheck className="h-5 w-5" />
@@ -341,7 +338,7 @@ export default function AthleteSearchPage() {
                           )}
                         </div>
                       </div>
-                    )
+                    );
                   })}
                 </div>
               )}
@@ -350,5 +347,5 @@ export default function AthleteSearchPage() {
         </>
       )}
     </div>
-  )
+  );
 }

@@ -3,10 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
 import { z } from "zod";
 import { cancelEmailCampaign } from "@/lib/email-campaign-service";
-import {
-  renderCampaignEmail,
-  getOrganizationBranding,
-} from "@/lib/email-template-renderer";
+import { renderCampaignEmail, getOrganizationBranding } from "@/lib/email-template-renderer";
 
 const updateCampaignSchema = z.object({
   name: z.string().min(1).optional(),
@@ -25,10 +22,7 @@ const updateCampaignSchema = z.object({
 });
 
 // GET /api/email/campaigns/[id] - Get a single campaign with messages
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.organizationId) {
@@ -86,15 +80,18 @@ export async function GET(
       bouncedCount: campaign.bouncedCount,
       complainedCount: campaign.complainedCount,
       failedCount: campaign.failedCount,
-      openRate: campaign.deliveredCount > 0 
-        ? ((campaign.openedCount / campaign.deliveredCount) * 100).toFixed(1)
-        : "0",
-      clickRate: campaign.deliveredCount > 0
-        ? ((campaign.clickedCount / campaign.deliveredCount) * 100).toFixed(1)
-        : "0",
-      bounceRate: campaign.sentCount > 0
-        ? ((campaign.bouncedCount / campaign.sentCount) * 100).toFixed(1)
-        : "0",
+      openRate:
+        campaign.deliveredCount > 0
+          ? ((campaign.openedCount / campaign.deliveredCount) * 100).toFixed(1)
+          : "0",
+      clickRate:
+        campaign.deliveredCount > 0
+          ? ((campaign.clickedCount / campaign.deliveredCount) * 100).toFixed(1)
+          : "0",
+      bounceRate:
+        campaign.sentCount > 0
+          ? ((campaign.bouncedCount / campaign.sentCount) * 100).toFixed(1)
+          : "0",
     };
 
     return NextResponse.json({
@@ -103,18 +100,12 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error fetching email campaign:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch campaign" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch campaign" }, { status: 500 });
   }
 }
 
 // PATCH /api/email/campaigns/[id] - Update or cancel a campaign
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.organizationId) {
@@ -151,10 +142,7 @@ export async function PATCH(
       if (validatedData.status === "CANCELLED") {
         const cancelled = await cancelEmailCampaign(id);
         if (!cancelled) {
-          return NextResponse.json(
-            { error: "Cannot cancel this campaign" },
-            { status: 400 }
-          );
+          return NextResponse.json({ error: "Cannot cancel this campaign" }, { status: 400 });
         }
         return NextResponse.json({ success: true, message: "Campaign cancelled" });
       }
@@ -169,17 +157,14 @@ export async function PATCH(
     if (validatedData.status === "CANCELLED") {
       const cancelled = await cancelEmailCampaign(id);
       if (!cancelled) {
-        return NextResponse.json(
-          { error: "Cannot cancel this campaign" },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: "Cannot cancel this campaign" }, { status: 400 });
       }
       return NextResponse.json({ success: true, message: "Campaign cancelled" });
     }
 
     // If htmlBody is being updated, re-render with branding
     let updateData: any = { ...validatedData };
-    
+
     if (validatedData.htmlBody) {
       const branding = await getOrganizationBranding(session.user.organizationId);
       const { html: renderedHtml, text: renderedText } = renderCampaignEmail({
@@ -211,10 +196,7 @@ export async function PATCH(
       );
     }
     console.error("Error updating email campaign:", error);
-    return NextResponse.json(
-      { error: "Failed to update campaign" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update campaign" }, { status: 500 });
   }
 }
 
@@ -253,10 +235,7 @@ export async function DELETE(
 
     // Only allow deletion of DRAFT campaigns
     if (campaign.status !== "DRAFT") {
-      return NextResponse.json(
-        { error: "Can only delete draft campaigns" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Can only delete draft campaigns" }, { status: 400 });
     }
 
     const scopedDb = getScopedDb(session.user.organizationId);
@@ -267,9 +246,6 @@ export async function DELETE(
     return NextResponse.json({ success: true, message: "Campaign deleted" });
   } catch (error) {
     console.error("Error deleting email campaign:", error);
-    return NextResponse.json(
-      { error: "Failed to delete campaign" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete campaign" }, { status: 500 });
   }
 }

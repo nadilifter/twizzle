@@ -3,10 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 // GET /api/athletes/[id]/evaluations - Get athlete's evaluations
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -43,10 +40,7 @@ export async function GET(
       athlete = await db.athlete.findFirst({
         where: {
           id: athleteId,
-          OR: [
-            { guardians: { some: { userId: session.user.id } } },
-            { userId: session.user.id },
-          ],
+          OR: [{ guardians: { some: { userId: session.user.id } } }, { userId: session.user.id }],
         },
       });
     }
@@ -59,15 +53,27 @@ export async function GET(
       athleteId,
       OR: [
         { program: { organizationId: session.user.organizationId } },
-        { programId: null, coach: { memberships: { some: { organizationId: session.user.organizationId } } } },
-      ],
-      ...(status && { status: status as "PENDING" | "IN_PROGRESS" | "PASS" | "RETRY" | "EXCELLENT" | "SATISFACTORY" }),
-      ...(startDate && endDate && {
-        date: {
-          gte: new Date(startDate),
-          lte: new Date(endDate),
+        {
+          programId: null,
+          coach: { memberships: { some: { organizationId: session.user.organizationId } } },
         },
+      ],
+      ...(status && {
+        status: status as
+          | "PENDING"
+          | "IN_PROGRESS"
+          | "PASS"
+          | "RETRY"
+          | "EXCELLENT"
+          | "SATISFACTORY",
       }),
+      ...(startDate &&
+        endDate && {
+          date: {
+            gte: new Date(startDate),
+            lte: new Date(endDate),
+          },
+        }),
     };
 
     const [evaluations, total] = await Promise.all([
@@ -106,8 +112,11 @@ export async function GET(
     // Calculate statistics
     const stats = {
       total,
-      pending: evaluations.filter((e) => e.status === "PENDING" || e.status === "IN_PROGRESS").length,
-      passed: evaluations.filter((e) => e.status === "PASS" || e.status === "EXCELLENT" || e.status === "SATISFACTORY").length,
+      pending: evaluations.filter((e) => e.status === "PENDING" || e.status === "IN_PROGRESS")
+        .length,
+      passed: evaluations.filter(
+        (e) => e.status === "PASS" || e.status === "EXCELLENT" || e.status === "SATISFACTORY"
+      ).length,
       retry: evaluations.filter((e) => e.status === "RETRY").length,
     };
 
@@ -120,9 +129,6 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error fetching athlete evaluations:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch athlete evaluations" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch athlete evaluations" }, { status: 500 });
   }
 }

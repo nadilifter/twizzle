@@ -52,9 +52,7 @@ export function ProtectedRoute({
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
         <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
-        <p className="text-muted-foreground">
-          You don&apos;t have permission to view this page.
-        </p>
+        <p className="text-muted-foreground">You don&apos;t have permission to view this page.</p>
       </div>
     );
   }
@@ -68,9 +66,7 @@ export function ProtectedRoute({
       return (
         <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
           <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
-          <p className="text-muted-foreground">
-            You don&apos;t have permission to view this page.
-          </p>
+          <p className="text-muted-foreground">You don&apos;t have permission to view this page.</p>
         </div>
       );
     }

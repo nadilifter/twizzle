@@ -78,7 +78,7 @@ export async function POST() {
 
       try {
         const twilioMessage = await getMessageStatus(msg.twilioSid);
-        
+
         if (!twilioMessage) {
           logger.info("No Twilio message found for SID", { twilioSid: msg.twilioSid });
           details.push({
@@ -92,7 +92,10 @@ export async function POST() {
           continue;
         }
 
-        logger.debug("Twilio message status", { twilioSid: msg.twilioSid, status: twilioMessage.status });
+        logger.debug("Twilio message status", {
+          twilioSid: msg.twilioSid,
+          status: twilioMessage.status,
+        });
         const newStatus = mapTwilioStatus(twilioMessage.status);
 
         details.push({
@@ -150,9 +153,6 @@ export async function POST() {
     });
   } catch (error) {
     console.error("Error syncing SMS statuses:", error);
-    return NextResponse.json(
-      { error: "Failed to sync message statuses" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to sync message statuses" }, { status: 500 });
   }
 }

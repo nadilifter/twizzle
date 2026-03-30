@@ -17,10 +17,7 @@ export async function GET(request: NextRequest) {
     const { organizationId } = result;
 
     if (!groupIdsParam) {
-      return NextResponse.json(
-        { error: "membershipGroupIds is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "membershipGroupIds is required" }, { status: 400 });
     }
 
     const groupIds = groupIdsParam.split(",").filter(Boolean);
@@ -54,9 +51,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ waiverIds, groupWaiverMap });
   } catch (error) {
     console.error("Error fetching membership waiver requirements:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch waiver requirements" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch waiver requirements" }, { status: 500 });
   }
 }

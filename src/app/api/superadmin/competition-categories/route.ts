@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getAuthSession } from "@/lib/auth"
-import { db } from "@/lib/db"
-import { z } from "zod"
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthSession } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { z } from "zod";
 
 const axisValueSchema = z.object({
   id: z.string().optional(),
@@ -10,17 +10,20 @@ const axisValueSchema = z.object({
   displayOrder: z.number().int().default(0),
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
-  allowedGenders: z.array(z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"])).optional().default([]),
+  allowedGenders: z
+    .array(z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]))
+    .optional()
+    .default([]),
   resultType: z.enum(["TIME", "DISTANCE", "HEIGHT", "SCORE"]).optional().nullable(),
   sortDirection: z.enum(["ASC", "DESC"]).optional().nullable(),
-})
+});
 
 const combinationEntrySchema = z.object({
   rowValueIndex: z.number().int().min(0),
   colValueIndex: z.number().int().min(0),
   isActive: z.boolean().default(true),
   name: z.string().optional().nullable(),
-})
+});
 
 const individualEntrySchema = z.object({
   id: z.string().optional(),
@@ -30,13 +33,16 @@ const individualEntrySchema = z.object({
   hasGenderRestriction: z.boolean().default(false),
   hasAgeRestriction: z.boolean().default(false),
   hasCapacityRestriction: z.boolean().default(false),
-  allowedGenders: z.array(z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"])).optional().default([]),
+  allowedGenders: z
+    .array(z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]))
+    .optional()
+    .default([]),
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
   capacity: z.number().int().min(1).optional().nullable(),
   resultType: z.enum(["TIME", "DISTANCE", "HEIGHT", "SCORE"]).optional().nullable(),
   sortDirection: z.enum(["ASC", "DESC"]).optional().nullable(),
-})
+});
 
 const createTemplateSchema = z.object({
   sportId: z.string().min(1, "Sport is required"),
@@ -53,22 +59,22 @@ const createTemplateSchema = z.object({
   disabledCombinations: z.array(combinationEntrySchema).optional().default([]),
   // INDIVIDUAL specific
   individualEntries: z.array(individualEntrySchema).optional().default([]),
-})
+});
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session?.user?.isSuperAdmin) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url)
-    const sportId = searchParams.get("sportId")
+    const { searchParams } = new URL(request.url);
+    const sportId = searchParams.get("sportId");
 
     const where: Record<string, unknown> = {
       sportId: sportId ? sportId : { not: null },
       organizationId: null,
-    }
+    };
 
     const templates = await db.competitionCategoryTemplate.findMany({
       where,
@@ -79,45 +85,42 @@ export async function GET(request: NextRequest) {
         individualEntries: { orderBy: { displayOrder: "asc" } },
       },
       orderBy: { displayOrder: "asc" },
-    })
+    });
 
     // Check if the sport has sport-specific structured data
-    let hasSportSpecificData = false
+    let hasSportSpecificData = false;
     if (sportId) {
-      const eventCount = await db.sportEvent.count({ where: { sportId } })
-      hasSportSpecificData = eventCount > 0
+      const eventCount = await db.sportEvent.count({ where: { sportId } });
+      hasSportSpecificData = eventCount > 0;
     }
 
-    return NextResponse.json({ templates, hasSportSpecificData })
+    return NextResponse.json({ templates, hasSportSpecificData });
   } catch (error) {
-    console.error("Error fetching competition category templates:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch templates" },
-      { status: 500 }
-    )
+    console.error("Error fetching competition category templates:", error);
+    return NextResponse.json({ error: "Failed to fetch templates" }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session?.user?.isSuperAdmin) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json()
-    const data = createTemplateSchema.parse(body)
+    const body = await request.json();
+    const data = createTemplateSchema.parse(body);
 
     // Verify sport exists
-    const sport = await db.sport.findUnique({ where: { id: data.sportId } })
+    const sport = await db.sport.findUnique({ where: { id: data.sportId } });
     if (!sport) {
-      return NextResponse.json({ error: "Sport not found" }, { status: 404 })
+      return NextResponse.json({ error: "Sport not found" }, { status: 404 });
     }
 
     if (data.type === "COMBINATION") {
       // Create template with axis values and combination entries
-      const rowValues = data.axisValues.filter((v) => v.axis === "ROW")
-      const colValues = data.axisValues.filter((v) => v.axis === "COLUMN")
+      const rowValues = data.axisValues.filter((v) => v.axis === "ROW");
+      const colValues = data.axisValues.filter((v) => v.axis === "COLUMN");
 
       const template = await db.competitionCategoryTemplate.create({
         data: {
@@ -146,35 +149,35 @@ export async function POST(request: NextRequest) {
         include: {
           axisValues: { orderBy: { displayOrder: "asc" } },
         },
-      })
+      });
 
       // Create combination entries for all row x column pairs
-      const createdRows = template.axisValues.filter((v) => v.axis === "ROW")
-      const createdCols = template.axisValues.filter((v) => v.axis === "COLUMN")
+      const createdRows = template.axisValues.filter((v) => v.axis === "ROW");
+      const createdCols = template.axisValues.filter((v) => v.axis === "COLUMN");
 
       // Build a set of disabled combinations
       const disabledSet = new Set(
         data.disabledCombinations
           .filter((c) => !c.isActive)
           .map((c) => `${c.rowValueIndex}:${c.colValueIndex}`)
-      )
+      );
 
-      const combEntries = []
+      const combEntries = [];
       for (let ri = 0; ri < createdRows.length; ri++) {
         for (let ci = 0; ci < createdCols.length; ci++) {
-          const isActive = !disabledSet.has(`${ri}:${ci}`)
+          const isActive = !disabledSet.has(`${ri}:${ci}`);
           combEntries.push({
             templateId: template.id,
             rowValueId: createdRows[ri].id,
             colValueId: createdCols[ci].id,
             isActive,
             name: `${createdRows[ri].name} - ${createdCols[ci].name}`,
-          })
+          });
         }
       }
 
       if (combEntries.length > 0) {
-        await db.categoryCombinationEntry.createMany({ data: combEntries })
+        await db.categoryCombinationEntry.createMany({ data: combEntries });
       }
 
       // Return full template
@@ -186,9 +189,9 @@ export async function POST(request: NextRequest) {
           combinationEntries: true,
           individualEntries: { orderBy: { displayOrder: "asc" } },
         },
-      })
+      });
 
-      return NextResponse.json(fullTemplate, { status: 201 })
+      return NextResponse.json(fullTemplate, { status: 201 });
     } else {
       // INDIVIDUAL template
       const template = await db.competitionCategoryTemplate.create({
@@ -222,19 +225,16 @@ export async function POST(request: NextRequest) {
           combinationEntries: true,
           individualEntries: { orderBy: { displayOrder: "asc" } },
         },
-      })
+      });
 
-      return NextResponse.json(template, { status: 201 })
+      return NextResponse.json(template, { status: 201 });
     }
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const message = error.issues?.[0]?.message || "Validation error"
-      return NextResponse.json({ error: message }, { status: 400 })
+      const message = error.issues?.[0]?.message || "Validation error";
+      return NextResponse.json({ error: message }, { status: 400 });
     }
-    console.error("Error creating competition category template:", error)
-    return NextResponse.json(
-      { error: "Failed to create template" },
-      { status: 500 }
-    )
+    console.error("Error creating competition category template:", error);
+    return NextResponse.json({ error: "Failed to create template" }, { status: 500 });
   }
 }

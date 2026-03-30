@@ -25,10 +25,7 @@ const deleteRequirementSchema = z.object({
 });
 
 // GET /api/memberships/[id]/restrictions - Get all restrictions for a membership group
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -86,10 +83,7 @@ export async function GET(
 }
 
 // POST /api/memberships/[id]/restrictions - Add a level or waiver requirement
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -100,10 +94,7 @@ export async function POST(
     if (gate) return gate;
 
     const permissions = session.user.permissions || [];
-    if (
-      !permissions.includes("*") &&
-      !permissions.includes("training.edit")
-    ) {
+    if (!permissions.includes("*") && !permissions.includes("training.edit")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -176,10 +167,7 @@ export async function POST(
 }
 
 // DELETE /api/memberships/[id]/restrictions?type=level|waiver&id=requirementId
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -190,10 +178,7 @@ export async function DELETE(
     if (gate) return gate;
 
     const permissions = session.user.permissions || [];
-    if (
-      !permissions.includes("*") &&
-      !permissions.includes("training.edit")
-    ) {
+    if (!permissions.includes("*") && !permissions.includes("training.edit")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

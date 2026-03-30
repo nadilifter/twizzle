@@ -33,13 +33,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Group placeholders by category for easier UI rendering
-    const grouped = placeholders.reduce((acc, placeholder) => {
-      if (!acc[placeholder.category]) {
-        acc[placeholder.category] = [];
-      }
-      acc[placeholder.category].push(placeholder);
-      return acc;
-    }, {} as Record<PlaceholderCategory, typeof placeholders>);
+    const grouped = placeholders.reduce(
+      (acc, placeholder) => {
+        if (!acc[placeholder.category]) {
+          acc[placeholder.category] = [];
+        }
+        acc[placeholder.category].push(placeholder);
+        return acc;
+      },
+      {} as Record<PlaceholderCategory, typeof placeholders>
+    );
 
     return NextResponse.json({
       placeholders,
@@ -48,9 +51,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching placeholders:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch placeholders" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch placeholders" }, { status: 500 });
   }
 }

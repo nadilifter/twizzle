@@ -16,10 +16,7 @@ export async function POST(
   try {
     const session = await getAuthSession();
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
     const { slug, id: athleteId } = await params;
@@ -36,7 +33,10 @@ export async function POST(
     }
 
     const athlete = await db.athlete.findFirst({
-      where: { id: athleteId, organizationAthletes: { some: { organizationId: config.organizationId } } },
+      where: {
+        id: athleteId,
+        organizationAthletes: { some: { organizationId: config.organizationId } },
+      },
       select: {
         id: true,
         firstName: true,
@@ -51,10 +51,7 @@ export async function POST(
     });
 
     if (!athlete) {
-      return NextResponse.json(
-        { error: "Athlete not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Athlete not found" }, { status: 404 });
     }
 
     if (athlete.userId) {
@@ -105,7 +102,10 @@ export async function POST(
 
     if (existingClaim) {
       return NextResponse.json(
-        { error: "You already have a pending claim request for this athlete", status: existingClaim.status },
+        {
+          error: "You already have a pending claim request for this athlete",
+          status: existingClaim.status,
+        },
         { status: 409 }
       );
     }
@@ -118,17 +118,18 @@ export async function POST(
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      instant: false,
-      claimRequest,
-      message: "Your request to be added as a guardian has been submitted. The primary guardian or an administrator will review your request.",
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        success: true,
+        instant: false,
+        claimRequest,
+        message:
+          "Your request to be added as a guardian has been submitted. The primary guardian or an administrator will review your request.",
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Claim athlete error:", error);
-    return NextResponse.json(
-      { error: "Failed to process claim request" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to process claim request" }, { status: 500 });
   }
 }

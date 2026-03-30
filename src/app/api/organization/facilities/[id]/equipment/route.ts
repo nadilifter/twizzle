@@ -16,10 +16,7 @@ const createEquipmentSchema = z.object({
 });
 
 // GET - List all equipment for a facility
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -60,10 +57,7 @@ export async function GET(
 }
 
 // POST - Create new equipment for a facility
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -108,7 +102,9 @@ export async function POST(
         status: validatedData.status ?? "ACTIVE",
         spaceId: validatedData.spaceId ?? null,
         purchaseDate: validatedData.purchaseDate ? parseDateOnly(validatedData.purchaseDate) : null,
-        lastInspectionDate: validatedData.lastInspectionDate ? parseDateOnly(validatedData.lastInspectionDate) : null,
+        lastInspectionDate: validatedData.lastInspectionDate
+          ? parseDateOnly(validatedData.lastInspectionDate)
+          : null,
         notes: validatedData.notes ?? null,
       },
       include: {

@@ -1,21 +1,21 @@
-import React from "react"
-import { unstable_cache } from "next/cache"
-import { db } from "@/lib/db"
-import { notFound } from "next/navigation"
-import { Trophy } from "lucide-react"
-import { CompetitionCard } from "@/components/sites/competition-card"
-import { getHeroContrastStyles } from "@/lib/color-utils"
+import React from "react";
+import { unstable_cache } from "next/cache";
+import { db } from "@/lib/db";
+import { notFound } from "next/navigation";
+import { Trophy } from "lucide-react";
+import { CompetitionCard } from "@/components/sites/competition-card";
+import { getHeroContrastStyles } from "@/lib/color-utils";
 
 const getCachedSiteConfig = unstable_cache(
   async (slug: string) => {
     return db.websiteConfig.findUnique({
       where: { subdomain: slug },
       include: { organization: true },
-    })
+    });
   },
   ["site-config"],
   { revalidate: 30 }
-)
+);
 
 const getCachedCompetitions = unstable_cache(
   async (organizationId: string) => {
@@ -29,7 +29,7 @@ const getCachedCompetitions = unstable_cache(
         _count: { select: { categories: true, entries: true } },
       },
       orderBy: { startDate: "asc" },
-    })
+    });
 
     return competitions.map((c) => ({
       id: c.id,
@@ -58,23 +58,24 @@ const getCachedCompetitions = unstable_cache(
         maxEvents: t.maxEvents,
         pricePerEvent: Number(t.pricePerEvent),
       })),
-    }))
+    }));
   },
   ["site-competitions"],
   { revalidate: 30 }
-)
+);
 
 export default async function CompetitionsPage({ params }: { params: { slug: string } }) {
-  const config = await getCachedSiteConfig(params.slug)
+  const config = await getCachedSiteConfig(params.slug);
 
-  if (!config || !config.showCompetitions) return notFound()
+  if (!config || !config.showCompetitions) return notFound();
 
-  const heading = config.competitionsHeading || "Competitions"
-  const description = config.competitionsDescription || "Browse our upcoming competitions and register today."
-  const primaryColor = config.primaryColor || "#000000"
-  const hero = getHeroContrastStyles(primaryColor)
+  const heading = config.competitionsHeading || "Competitions";
+  const description =
+    config.competitionsDescription || "Browse our upcoming competitions and register today.";
+  const primaryColor = config.primaryColor || "#000000";
+  const hero = getHeroContrastStyles(primaryColor);
 
-  const serialized = await getCachedCompetitions(config.organizationId)
+  const serialized = await getCachedCompetitions(config.organizationId);
 
   return (
     <div className="min-h-screen">
@@ -113,12 +114,12 @@ export default async function CompetitionsPage({ params }: { params: { slug: str
               No Competitions Available
             </h2>
             <p className="text-muted-foreground max-w-md mx-auto">
-              There are no upcoming competitions at this time. Please check back later
-              for new events and registration opportunities.
+              There are no upcoming competitions at this time. Please check back later for new
+              events and registration opportunities.
             </p>
           </div>
         )}
       </section>
     </div>
-  )
+  );
 }

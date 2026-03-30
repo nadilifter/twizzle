@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server"
-import { db } from "@/lib/db"
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
 
 export async function GET() {
   try {
@@ -13,14 +13,11 @@ export async function GET() {
         description: true,
         icon: true,
       },
-    })
+    });
 
-    return NextResponse.json(sports)
+    return NextResponse.json(sports);
   } catch (error) {
-    console.error("Failed to fetch sports:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch sports" },
-      { status: 500 }
-    )
+    console.error("Failed to fetch sports:", error);
+    return NextResponse.json({ error: "Failed to fetch sports" }, { status: 500 });
   }
 }

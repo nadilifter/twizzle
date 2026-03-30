@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
+import * as React from "react";
+import Link from "next/link";
 import {
   type ColumnDef,
   type ColumnFiltersState,
@@ -13,15 +13,15 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table"
-import { Check, Flag, Filter, Minus, Search, X } from "lucide-react"
+} from "@tanstack/react-table";
+import { Check, Flag, Filter, Minus, Search, X } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Input } from "@/components/ui/input"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Table,
   TableBody,
@@ -29,55 +29,55 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
-import { DataTablePagination } from "@/components/data-table/data-table-pagination"
-import { DataTableViewOptions } from "@/components/data-table/data-table-view-options"
+} from "@/components/ui/table";
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
 
 export interface EventCategory {
-  id: string
-  resultType: "TIME" | "DISTANCE" | "HEIGHT" | "SCORE"
-  sortDirection: "ASC" | "DESC"
-  precision: number
-  seedMarkRequired: boolean
-  isTeamEvent: boolean
-  teamSize: number | null
-  price: string | number | null
-  isActive: boolean
-  displayOrder: number
+  id: string;
+  resultType: "TIME" | "DISTANCE" | "HEIGHT" | "SCORE";
+  sortDirection: "ASC" | "DESC";
+  precision: number;
+  seedMarkRequired: boolean;
+  isTeamEvent: boolean;
+  teamSize: number | null;
+  price: string | number | null;
+  isActive: boolean;
+  displayOrder: number;
   combinationEntry: {
-    id: string
-    rowValue: { id: string; name: string }
-    colValue: { id: string; name: string }
-    template: { id: string; name: string }
-  } | null
+    id: string;
+    rowValue: { id: string; name: string };
+    colValue: { id: string; name: string };
+    template: { id: string; name: string };
+  } | null;
   individualEntry: {
-    id: string
-    name: string
-    template: { id: string; name: string }
-  } | null
-  sportEvent: { id: string; name: string; code: string } | null
-  ageCategory: { id: string; name: string; code: string } | null
-  _count: { entries: number; results: number }
+    id: string;
+    name: string;
+    template: { id: string; name: string };
+  } | null;
+  sportEvent: { id: string; name: string; code: string } | null;
+  ageCategory: { id: string; name: string; code: string } | null;
+  _count: { entries: number; results: number };
 }
 
 interface EventsTabProps {
-  categories: EventCategory[]
-  pricingMode: string
-  competitionId: string
+  categories: EventCategory[];
+  pricingMode: string;
+  competitionId: string;
 }
 
 export function getCategoryLabel(category: EventCategory): string {
   if (category.ageCategory && category.sportEvent) {
-    return `${category.ageCategory.code} ${category.sportEvent.name}`
+    return `${category.ageCategory.code} ${category.sportEvent.name}`;
   }
-  if (category.sportEvent) return category.sportEvent.name
-  if (category.ageCategory) return category.ageCategory.name
-  if (category.individualEntry?.name) return category.individualEntry.name
+  if (category.sportEvent) return category.sportEvent.name;
+  if (category.ageCategory) return category.ageCategory.name;
+  if (category.individualEntry?.name) return category.individualEntry.name;
   if (category.combinationEntry) {
-    return `${category.combinationEntry.rowValue.name} - ${category.combinationEntry.colValue.name}`
+    return `${category.combinationEntry.rowValue.name} - ${category.combinationEntry.colValue.name}`;
   }
-  return `Category ${category.id.slice(-4)}`
+  return `Category ${category.id.slice(-4)}`;
 }
 
 const RESULT_TYPE_LABELS: Record<string, string> = {
@@ -85,30 +85,28 @@ const RESULT_TYPE_LABELS: Record<string, string> = {
   DISTANCE: "Distance",
   HEIGHT: "Height",
   SCORE: "Score",
-}
+};
 
 function formatPrice(price: string | number | null): string {
-  if (price === null || price === undefined) return "-"
-  const num = typeof price === "string" ? parseFloat(price) : price
-  if (isNaN(num)) return "-"
-  return `$${num.toFixed(2)}`
+  if (price === null || price === undefined) return "-";
+  const num = typeof price === "string" ? parseFloat(price) : price;
+  if (isNaN(num)) return "-";
+  return `$${num.toFixed(2)}`;
 }
 
 export function EventsTab({ categories, pricingMode, competitionId }: EventsTabProps) {
-  const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
 
-  const showPrice = pricingMode === "PER_CATEGORY"
+  const showPrice = pricingMode === "PER_CATEGORY";
 
   const columns = React.useMemo<ColumnDef<EventCategory>[]>(() => {
     const cols: ColumnDef<EventCategory>[] = [
       {
         id: "event",
         accessorFn: (row) => getCategoryLabel(row),
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Event" />
-        ),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Event" />,
         cell: ({ row }) => (
           <Link
             href={`/dashboard/competitions/${competitionId}/events/${row.original.id}`}
@@ -122,49 +120,39 @@ export function EventsTab({ categories, pricingMode, competitionId }: EventsTabP
       {
         id: "registrants",
         accessorFn: (row) => row._count.entries,
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Registrants" />
-        ),
-        cell: ({ row }) => (
-          <Badge variant="secondary">{row.original._count.entries}</Badge>
-        ),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Registrants" />,
+        cell: ({ row }) => <Badge variant="secondary">{row.original._count.entries}</Badge>,
       },
       {
         id: "results",
         accessorFn: (row) => row._count.results,
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Results" />
-        ),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Results" />,
         cell: ({ row }) => {
-          const count = row.original._count.results
+          const count = row.original._count.results;
           return count > 0 ? (
             <Badge variant="outline">{count}</Badge>
           ) : (
             <span className="text-muted-foreground">0</span>
-          )
+          );
         },
       },
       {
         id: "resultType",
         accessorFn: (row) => row.resultType,
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Type" />
-        ),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
         cell: ({ row }) => (
           <Badge variant="outline">
             {RESULT_TYPE_LABELS[row.original.resultType] ?? row.original.resultType}
           </Badge>
         ),
         filterFn: (row, id, value) => {
-          return value.includes(row.getValue(id))
+          return value.includes(row.getValue(id));
         },
       },
       {
         id: "teamEvent",
         accessorFn: (row) => (row.isTeamEvent ? "Yes" : "No"),
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Team" />
-        ),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Team" />,
         cell: ({ row }) =>
           row.original.isTeamEvent ? (
             <div className="flex items-center gap-1.5">
@@ -177,15 +165,13 @@ export function EventsTab({ categories, pricingMode, competitionId }: EventsTabP
             <Minus className="h-4 w-4 text-muted-foreground" />
           ),
         filterFn: (row, id, value) => {
-          return value.includes(row.getValue(id))
+          return value.includes(row.getValue(id));
         },
       },
       {
         id: "seedMark",
         accessorFn: (row) => (row.seedMarkRequired ? "Required" : "None"),
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Seed Mark" />
-        ),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Seed Mark" />,
         cell: ({ row }) =>
           row.original.seedMarkRequired ? (
             <Badge variant="secondary">Required</Badge>
@@ -196,9 +182,7 @@ export function EventsTab({ categories, pricingMode, competitionId }: EventsTabP
       {
         id: "status",
         accessorFn: (row) => (row.isActive ? "Active" : "Inactive"),
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Status" />
-        ),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
             <div
@@ -206,35 +190,29 @@ export function EventsTab({ categories, pricingMode, competitionId }: EventsTabP
                 row.original.isActive ? "bg-green-500" : "bg-muted-foreground/40"
               }`}
             />
-            <span className="text-sm">
-              {row.original.isActive ? "Active" : "Inactive"}
-            </span>
+            <span className="text-sm">{row.original.isActive ? "Active" : "Inactive"}</span>
           </div>
         ),
         filterFn: (row, id, value) => {
-          return value.includes(row.getValue(id))
+          return value.includes(row.getValue(id));
         },
       },
-    ]
+    ];
 
     if (showPrice) {
       cols.splice(6, 0, {
         id: "price",
         accessorFn: (row) => {
-          if (row.price === null || row.price === undefined) return 0
-          return typeof row.price === "string" ? parseFloat(row.price) : row.price
+          if (row.price === null || row.price === undefined) return 0;
+          return typeof row.price === "string" ? parseFloat(row.price) : row.price;
         },
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Price" />
-        ),
-        cell: ({ row }) => (
-          <span className="text-sm">{formatPrice(row.original.price)}</span>
-        ),
-      })
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Price" />,
+        cell: ({ row }) => <span className="text-sm">{formatPrice(row.original.price)}</span>,
+      });
     }
 
-    return cols
-  }, [showPrice, competitionId])
+    return cols;
+  }, [showPrice, competitionId]);
 
   const table = useReactTable({
     data: categories,
@@ -250,24 +228,24 @@ export function EventsTab({ categories, pricingMode, competitionId }: EventsTabP
     initialState: {
       pagination: { pageSize: 20 },
     },
-  })
+  });
 
   const handleFilterChange = (columnId: string, value: string, checked: boolean) => {
-    const column = table.getColumn(columnId)
-    const filterValue = (column?.getFilterValue() as string[]) || []
+    const column = table.getColumn(columnId);
+    const filterValue = (column?.getFilterValue() as string[]) || [];
     if (checked) {
-      column?.setFilterValue([...filterValue, value])
+      column?.setFilterValue([...filterValue, value]);
     } else {
-      column?.setFilterValue(filterValue.filter((v) => v !== value))
+      column?.setFilterValue(filterValue.filter((v) => v !== value));
     }
-  }
+  };
 
-  const isFiltered = table.getState().columnFilters.some((f) => f.id !== "event")
+  const isFiltered = table.getState().columnFilters.some((f) => f.id !== "event");
 
   const resultTypes = React.useMemo(
     () => Array.from(new Set(categories.map((c) => c.resultType))).sort(),
-    [categories],
-  )
+    [categories]
+  );
 
   return (
     <Card>
@@ -314,8 +292,12 @@ export function EventsTab({ categories, pricingMode, competitionId }: EventsTabP
                           <div key={type} className="flex items-center space-x-2">
                             <Checkbox
                               id={`resultType-${type}`}
-                              checked={(table.getColumn("resultType")?.getFilterValue() as string[])?.includes(type)}
-                              onCheckedChange={(checked) => handleFilterChange("resultType", type, !!checked)}
+                              checked={(
+                                table.getColumn("resultType")?.getFilterValue() as string[]
+                              )?.includes(type)}
+                              onCheckedChange={(checked) =>
+                                handleFilterChange("resultType", type, !!checked)
+                              }
                             />
                             <label htmlFor={`resultType-${type}`} className="text-sm leading-none">
                               {RESULT_TYPE_LABELS[type] ?? type}
@@ -332,8 +314,12 @@ export function EventsTab({ categories, pricingMode, competitionId }: EventsTabP
                         <div key={val} className="flex items-center space-x-2">
                           <Checkbox
                             id={`teamEvent-${val}`}
-                            checked={(table.getColumn("teamEvent")?.getFilterValue() as string[])?.includes(val)}
-                            onCheckedChange={(checked) => handleFilterChange("teamEvent", val, !!checked)}
+                            checked={(
+                              table.getColumn("teamEvent")?.getFilterValue() as string[]
+                            )?.includes(val)}
+                            onCheckedChange={(checked) =>
+                              handleFilterChange("teamEvent", val, !!checked)
+                            }
                           />
                           <label htmlFor={`teamEvent-${val}`} className="text-sm leading-none">
                             {val}
@@ -349,8 +335,12 @@ export function EventsTab({ categories, pricingMode, competitionId }: EventsTabP
                         <div key={val} className="flex items-center space-x-2">
                           <Checkbox
                             id={`status-${val}`}
-                            checked={(table.getColumn("status")?.getFilterValue() as string[])?.includes(val)}
-                            onCheckedChange={(checked) => handleFilterChange("status", val, !!checked)}
+                            checked={(
+                              table.getColumn("status")?.getFilterValue() as string[]
+                            )?.includes(val)}
+                            onCheckedChange={(checked) =>
+                              handleFilterChange("status", val, !!checked)
+                            }
                           />
                           <label htmlFor={`status-${val}`} className="text-sm leading-none">
                             {val}
@@ -364,10 +354,10 @@ export function EventsTab({ categories, pricingMode, competitionId }: EventsTabP
                       variant="ghost"
                       className="w-full justify-center text-center h-8"
                       onClick={() => {
-                        const eventFilter = table.getColumn("event")?.getFilterValue()
-                        table.resetColumnFilters()
+                        const eventFilter = table.getColumn("event")?.getFilterValue();
+                        table.resetColumnFilters();
                         if (eventFilter) {
-                          table.getColumn("event")?.setFilterValue(eventFilter)
+                          table.getColumn("event")?.setFilterValue(eventFilter);
                         }
                       }}
                     >
@@ -411,10 +401,7 @@ export function EventsTab({ categories, pricingMode, competitionId }: EventsTabP
                 <TableBody>
                   {table.getRowModel().rows?.length ? (
                     table.getRowModel().rows.map((row) => (
-                      <TableRow
-                        key={row.id}
-                        data-state={row.getIsSelected() && "selected"}
-                      >
+                      <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                         {row.getVisibleCells().map((cell) => (
                           <TableCell key={cell.id}>
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -424,10 +411,7 @@ export function EventsTab({ categories, pricingMode, competitionId }: EventsTabP
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell
-                        colSpan={columns.length}
-                        className="h-24 text-center"
-                      >
+                      <TableCell colSpan={columns.length} className="h-24 text-center">
                         No results.
                       </TableCell>
                     </TableRow>
@@ -440,5 +424,5 @@ export function EventsTab({ categories, pricingMode, competitionId }: EventsTabP
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

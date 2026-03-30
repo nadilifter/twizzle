@@ -17,22 +17,22 @@ export function ColorPicker({ label, value, onChange, required = false }: ColorP
         {required && <span className="text-destructive ml-1">*</span>}
       </Label>
       <div className="flex items-center gap-2">
-        <div 
-            className="w-10 h-10 rounded-full border shadow-sm" 
-            style={{ backgroundColor: value }}
+        <div
+          className="w-10 h-10 rounded-full border shadow-sm"
+          style={{ backgroundColor: value }}
         />
-        <Input 
-            type="color" 
-            value={value} 
-            onChange={(e) => onChange(e.target.value)} 
-            className="w-full h-10 p-1 cursor-pointer"
+        <Input
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full h-10 p-1 cursor-pointer"
         />
-        <Input 
-            type="text" 
-            value={value} 
-            onChange={(e) => onChange(e.target.value)} 
-            className="w-32 font-mono"
-            placeholder="#000000"
+        <Input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-32 font-mono"
+          placeholder="#000000"
         />
       </div>
     </div>

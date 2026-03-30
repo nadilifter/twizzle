@@ -1,46 +1,45 @@
-"use client"
+"use client";
 
-import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
-import { Eye, X, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Eye, X, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface UserImpersonationBannerProps {
-  exitUrl?: string
+  exitUrl?: string;
 }
 
 /**
  * Banner displayed when a superadmin is viewing a portal as another user.
  */
-export function UserImpersonationBanner({ exitUrl = "/athletes/admin/view-as-user" }: UserImpersonationBannerProps) {
-  const { data: session, update: updateSession } = useSession()
-  const router = useRouter()
-  const [isExiting, setIsExiting] = useState(false)
+export function UserImpersonationBanner({
+  exitUrl = "/athletes/admin/view-as-user",
+}: UserImpersonationBannerProps) {
+  const { data: session, update: updateSession } = useSession();
+  const router = useRouter();
+  const [isExiting, setIsExiting] = useState(false);
 
-  const isImpersonating = !!(
-    session?.user?.isSuperAdmin &&
-    session?.user?.viewingAsUserId
-  )
+  const isImpersonating = !!(session?.user?.isSuperAdmin && session?.user?.viewingAsUserId);
 
   if (!isImpersonating) {
-    return null
+    return null;
   }
 
   const handleExit = async () => {
-    setIsExiting(true)
+    setIsExiting(true);
     try {
       await updateSession({
         viewingAsUserId: "",
         viewingAsUserName: "",
         viewingAsUserEmail: "",
-      })
-      router.push(exitUrl)
+      });
+      router.push(exitUrl);
     } catch (err) {
-      console.error("Failed to exit impersonation:", err)
-      setIsExiting(false)
+      console.error("Failed to exit impersonation:", err);
+      setIsExiting(false);
     }
-  }
+  };
 
   return (
     <div className="sticky top-0 z-50 w-full bg-amber-500 text-amber-950 px-4 py-2">
@@ -75,5 +74,5 @@ export function UserImpersonationBanner({ exitUrl = "/athletes/admin/view-as-use
         </Button>
       </div>
     </div>
-  )
+  );
 }

@@ -1,5 +1,5 @@
-import { db } from "@/lib/db"
-import Link from "next/link"
+import { db } from "@/lib/db";
+import Link from "next/link";
 import {
   Table,
   TableBody,
@@ -7,41 +7,39 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { LayoutDashboard } from "lucide-react"
-import { getSubdomainUrl } from "@/lib/env-domains"
-import { SportFilter } from "./sport-filter"
+} from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { LayoutDashboard } from "lucide-react";
+import { getSubdomainUrl } from "@/lib/env-domains";
+import { SportFilter } from "./sport-filter";
 
 function getAdminDashboardSwitchUrl(orgId: string, orgName: string): string {
-  const adminBase = getSubdomainUrl('admin')
-  return `${adminBase}/dashboard/switch-org?orgId=${encodeURIComponent(orgId)}&orgName=${encodeURIComponent(orgName)}`
+  const adminBase = getSubdomainUrl("admin");
+  return `${adminBase}/dashboard/switch-org?orgId=${encodeURIComponent(orgId)}&orgName=${encodeURIComponent(orgName)}`;
 }
 
-import { StatusFilter } from "./status-filter"
+import { StatusFilter } from "./status-filter";
 
 interface Props {
-  searchParams: Promise<{ sport?: string; status?: string }>
+  searchParams: Promise<{ sport?: string; status?: string }>;
 }
 
 export default async function AdminOrganizationsPage({ searchParams }: Props) {
-  const { sport: sportFilter, status: statusFilter } = await searchParams
+  const { sport: sportFilter, status: statusFilter } = await searchParams;
 
   const statusWhere =
     statusFilter === "active"
       ? { isActive: true }
       : statusFilter === "deactivated"
         ? { isActive: false }
-        : undefined
+        : undefined;
 
   const [organizations, allSports] = await Promise.all([
     db.organization.findMany({
       where: {
-        ...(sportFilter
-          ? { sports: { some: { sport: { slug: sportFilter } } } }
-          : undefined),
+        ...(sportFilter ? { sports: { some: { sport: { slug: sportFilter } } } } : undefined),
         ...statusWhere,
       },
       include: {
@@ -64,7 +62,7 @@ export default async function AdminOrganizationsPage({ searchParams }: Props) {
       orderBy: { displayOrder: "asc" },
       select: { id: true, name: true, slug: true },
     }),
-  ])
+  ]);
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -179,5 +177,5 @@ export default async function AdminOrganizationsPage({ searchParams }: Props) {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

@@ -46,7 +46,7 @@ export async function GET() {
     }
 
     const organizationId = session.user.organizationId;
-    
+
     if (!organizationId) {
       console.error("No organizationId in session for user:", session.user.email);
       return NextResponse.json({ error: "No organization selected" }, { status: 400 });
@@ -60,9 +60,9 @@ export async function GET() {
 
     // If config exists, mark the subdomain as owned by this org
     if (config) {
-      return NextResponse.json({ 
-        ...config, 
-        subdomainOwned: true // Flag to indicate this org owns the subdomain
+      return NextResponse.json({
+        ...config,
+        subdomainOwned: true, // Flag to indicate this org owns the subdomain
       });
     }
 

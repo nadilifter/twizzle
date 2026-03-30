@@ -16,17 +16,11 @@ const patchSchema = z.object({
  * current user's guardian link to an athlete.
  * Also allows toggling allowGuardianClaims on the athlete (only primary guardian can do this).
  */
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
     const { id: athleteId } = await params;
@@ -40,8 +34,7 @@ export async function PATCH(
       );
     }
 
-    const { shareRegistrations, shareFinancials, allowGuardianClaims } =
-      parsed.data;
+    const { shareRegistrations, shareFinancials, allowGuardianClaims } = parsed.data;
 
     const guardianLink = await db.athleteGuardian.findFirst({
       where: {
@@ -61,8 +54,7 @@ export async function PATCH(
     if (allowGuardianClaims !== undefined && !guardianLink.isPrimary) {
       return NextResponse.json(
         {
-          error:
-            "Only the primary guardian can update allowGuardianClaims setting",
+          error: "Only the primary guardian can update allowGuardianClaims setting",
         },
         { status: 403 }
       );
@@ -82,8 +74,7 @@ export async function PATCH(
       }
     }
 
-    const updates: { shareRegistrations?: boolean; shareFinancials?: boolean } =
-      {};
+    const updates: { shareRegistrations?: boolean; shareFinancials?: boolean } = {};
     if (shareRegistrations !== undefined) updates.shareRegistrations = shareRegistrations;
     if (shareFinancials !== undefined) updates.shareFinancials = shareFinancials;
 
@@ -111,9 +102,6 @@ export async function PATCH(
     });
   } catch (error) {
     console.error("PATCH /api/athletes/[id]/guardian-settings error:", error);
-    return NextResponse.json(
-      { error: "Failed to update guardian settings" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update guardian settings" }, { status: 500 });
   }
 }

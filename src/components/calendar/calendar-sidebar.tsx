@@ -38,17 +38,11 @@ import {
 } from "@/components/ui/sidebar";
 import Link from "next/link";
 import { useState } from "react";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export function CalendarSidebar({
-  ...props
-}: React.ComponentProps<typeof Sidebar>) {
+export function CalendarSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [featuredOpen, setFeaturedOpen] = useState(true);
 
   return (
@@ -225,11 +219,7 @@ export function CalendarSidebar({
 
       <SidebarFooter className="p-4">
         <Button className="w-full" asChild>
-          <Link
-            href="https://square.lndev.me"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <Link href="https://square.lndev.me" target="_blank" rel="noopener noreferrer">
             square.lndev.me
             <ArrowUpRight className="size-4" />
           </Link>

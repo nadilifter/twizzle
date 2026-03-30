@@ -1,44 +1,44 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { WaiverTable } from "./waiver-table"
-import { Loader2, Plus } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { DashboardPageHeader } from "@/components/dashboard-page-header"
-import type { Waiver } from "@/types/waivers"
+import { useEffect, useState } from "react";
+import { WaiverTable } from "./waiver-table";
+import { Loader2, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
+import type { Waiver } from "@/types/waivers";
 
 export default function WaiversPage() {
-  const [waivers, setWaivers] = useState<Waiver[]>([])
-  const [loading, setLoading] = useState(true)
+  const [waivers, setWaivers] = useState<Waiver[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const fetchWaivers = async () => {
     try {
-      const response = await fetch("/api/waivers")
+      const response = await fetch("/api/waivers");
       if (response.ok) {
-        const data = await response.json()
-        setWaivers(data.data || [])
+        const data = await response.json();
+        setWaivers(data.data || []);
       }
     } catch (error) {
-      console.error("Failed to fetch waivers:", error)
+      console.error("Failed to fetch waivers:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchWaivers()
-  }, [])
+    fetchWaivers();
+  }, []);
 
   const handleDelete = async (id: string) => {
     try {
-      const response = await fetch(`/api/waivers/${id}`, { method: "DELETE" })
+      const response = await fetch(`/api/waivers/${id}`, { method: "DELETE" });
       if (response.ok) {
-        setWaivers((prev) => prev.filter((w) => w.id !== id))
+        setWaivers((prev) => prev.filter((w) => w.id !== id));
       }
     } catch (error) {
-      console.error("Failed to delete waiver:", error)
+      console.error("Failed to delete waiver:", error);
     }
-  }
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -61,5 +61,5 @@ export default function WaiversPage() {
         <WaiverTable data={waivers} onDelete={handleDelete} />
       )}
     </div>
-  )
+  );
 }

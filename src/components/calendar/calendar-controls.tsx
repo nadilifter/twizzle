@@ -17,11 +17,7 @@ import { Button } from "@/components/ui/button";
 import { useCalendarStore } from "@/store/calendar-store";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
@@ -45,8 +41,7 @@ export function CalendarControls() {
     "MMM dd yyyy"
   );
 
-  const hasActiveFilters =
-    eventTypeFilter !== "all" || participantsFilter !== "all";
+  const hasActiveFilters = eventTypeFilter !== "all" || participantsFilter !== "all";
 
   return (
     <div className="px-3 md:px-6 py-4 border-b border-border">
@@ -68,11 +63,7 @@ export function CalendarControls() {
           </Button>
         </div>
 
-        <Button
-          variant="outline"
-          className="h-8 px-3 shrink-0"
-          onClick={goToToday}
-        >
+        <Button variant="outline" className="h-8 px-3 shrink-0" onClick={goToToday}>
           Today
         </Button>
 
@@ -116,15 +107,10 @@ export function CalendarControls() {
             >
               <SlidersHorizontal className="size-4" />
               <span className="hidden sm:inline text-xs">Filter</span>
-              {hasActiveFilters && (
-                <span className="size-1.5 rounded-full bg-primary" />
-              )}
+              {hasActiveFilters && <span className="size-1.5 rounded-full bg-primary" />}
             </Button>
           </PopoverTrigger>
-          <PopoverContent
-            className="p-4 w-[288px]! min-w-[288px]! max-w-[288px]!"
-            align="end"
-          >
+          <PopoverContent className="p-4 w-[288px]! min-w-[288px]! max-w-[288px]!" align="end">
             <div className="space-y-4 w-full">
               <div>
                 <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
@@ -139,9 +125,7 @@ export function CalendarControls() {
                     onClick={() => setEventTypeFilter("all")}
                   >
                     <span className="text-sm">All events</span>
-                    {eventTypeFilter === "all" && (
-                      <Check className="size-4 text-primary" />
-                    )}
+                    {eventTypeFilter === "all" && <Check className="size-4 text-primary" />}
                   </Button>
                   <Button
                     variant="ghost"
@@ -189,9 +173,7 @@ export function CalendarControls() {
                     onClick={() => setParticipantsFilter("all")}
                   >
                     <span className="text-sm">All</span>
-                    {participantsFilter === "all" && (
-                      <Check className="size-4 text-primary" />
-                    )}
+                    {participantsFilter === "all" && <Check className="size-4 text-primary" />}
                   </Button>
                   <Button
                     variant="ghost"
@@ -211,9 +193,7 @@ export function CalendarControls() {
                     variant="ghost"
                     size="sm"
                     className="w-full justify-between h-9 px-3"
-                    onClick={() =>
-                      setParticipantsFilter("without-participants")
-                    }
+                    onClick={() => setParticipantsFilter("without-participants")}
                   >
                     <div className="flex items-center gap-2.5">
                       <UserX className="size-4 text-muted-foreground" />

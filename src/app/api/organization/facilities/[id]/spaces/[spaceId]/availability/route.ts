@@ -95,10 +95,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // Check for duplicate days
     const days = slots.map((s) => s.dayOfWeek);
     if (new Set(days).size !== days.length) {
-      return NextResponse.json(
-        { error: "Duplicate day of week entries" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Duplicate day of week entries" }, { status: 400 });
     }
 
     const result = await db.$transaction(async (tx) => {

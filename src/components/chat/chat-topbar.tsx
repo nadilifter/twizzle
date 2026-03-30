@@ -38,8 +38,7 @@ export default function ChatTopbar({ selectedUser }: ChatTopbarProps) {
         </div>
       </div>
 
-      <div className="flex gap-2">
-      </div>
+      <div className="flex gap-2"></div>
     </div>
   );
 }

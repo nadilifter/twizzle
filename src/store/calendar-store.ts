@@ -1,10 +1,5 @@
 import { create } from "zustand";
-import {
-  startOfWeek,
-  addWeeks,
-  subWeeks,
-  addDays,
-} from "date-fns";
+import { startOfWeek, addWeeks, subWeeks, addDays } from "date-fns";
 
 interface CalendarState {
   currentWeekStart: Date;
@@ -16,12 +11,8 @@ interface CalendarState {
   goToToday: () => void;
   goToDate: (date: Date) => void;
   setSearchQuery: (query: string) => void;
-  setEventTypeFilter: (
-    filter: "all" | "with-meeting" | "without-meeting"
-  ) => void;
-  setParticipantsFilter: (
-    filter: "all" | "with-participants" | "without-participants"
-  ) => void;
+  setEventTypeFilter: (filter: "all" | "with-meeting" | "without-meeting") => void;
+  setParticipantsFilter: (filter: "all" | "with-participants" | "without-participants") => void;
   getWeekDays: () => Date[];
 }
 
@@ -54,9 +45,8 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
   setSearchQuery: (query: string) => set({ searchQuery: query }),
   setEventTypeFilter: (filter: "all" | "with-meeting" | "without-meeting") =>
     set({ eventTypeFilter: filter }),
-  setParticipantsFilter: (
-    filter: "all" | "with-participants" | "without-participants"
-  ) => set({ participantsFilter: filter }),
+  setParticipantsFilter: (filter: "all" | "with-participants" | "without-participants") =>
+    set({ participantsFilter: filter }),
 
   getWeekDays: () => {
     const state = get();

@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import { useFeatures } from "@/components/feature-context"
-import { FEATURE_LABELS, type FeatureKey } from "@/lib/feature-toggles"
-import { ShieldOff } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
+import { useFeatures } from "@/components/feature-context";
+import { FEATURE_LABELS, type FeatureKey } from "@/lib/feature-toggles";
+import { ShieldOff } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface FeatureGateProps {
-  feature: FeatureKey
-  children: React.ReactNode
-  fallback?: React.ReactNode
+  feature: FeatureKey;
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
 }
 
 /**
@@ -16,16 +16,16 @@ interface FeatureGateProps {
  * If the feature is disabled, shows a fallback message instead of the children.
  */
 export function FeatureGate({ feature, children, fallback }: FeatureGateProps) {
-  const { features, isLoaded } = useFeatures()
+  const { features, isLoaded } = useFeatures();
 
-  if (!isLoaded) return null
+  if (!isLoaded) return null;
 
   if (!features[feature]) {
-    if (fallback) return <>{fallback}</>
-    return <FeatureNotAvailable feature={feature} />
+    if (fallback) return <>{fallback}</>;
+    return <FeatureNotAvailable feature={feature} />;
   }
 
-  return <>{children}</>
+  return <>{children}</>;
 }
 
 /**
@@ -40,16 +40,14 @@ export function FeatureNotAvailable({ feature }: { feature: FeatureKey }) {
             <ShieldOff className="h-8 w-8 text-muted-foreground" />
           </div>
           <div className="space-y-2">
-            <h2 className="text-xl font-semibold">
-              {FEATURE_LABELS[feature]} Not Available
-            </h2>
+            <h2 className="text-xl font-semibold">{FEATURE_LABELS[feature]} Not Available</h2>
             <p className="text-sm text-muted-foreground">
-              This feature is not included in your current plan.
-              Contact your administrator to upgrade for access.
+              This feature is not included in your current plan. Contact your administrator to
+              upgrade for access.
             </p>
           </div>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

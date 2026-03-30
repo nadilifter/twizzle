@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getAuthSession } from "@/lib/auth"
-import { db, getScopedDb } from "@/lib/db"
-import { parseDateOnly } from "@/lib/date-utils"
-import { z } from "zod"
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthSession } from "@/lib/auth";
+import { db, getScopedDb } from "@/lib/db";
+import { parseDateOnly } from "@/lib/date-utils";
+import { z } from "zod";
 
 const createPayoutSchema = z.object({
   reference: z.string().min(1, "Reference is required"),
@@ -14,49 +14,49 @@ const createPayoutSchema = z.object({
   bankAccount: z.string().optional(),
   scheduledAt: z.string().optional(),
   paidAt: z.string().optional(),
-})
+});
 
 // GET /api/payouts - List payouts with filters
 export async function GET(request: NextRequest) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const organizationId = session.user.organizationId
-    const scopedDb = getScopedDb(organizationId)
+    const organizationId = session.user.organizationId;
+    const scopedDb = getScopedDb(organizationId);
 
-    const { searchParams } = new URL(request.url)
-    const status = searchParams.get("status")
-    const startDate = searchParams.get("startDate")
-    const endDate = searchParams.get("endDate")
-    const limit = parseInt(searchParams.get("limit") || "50")
-    const offset = parseInt(searchParams.get("offset") || "0")
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get("status");
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+    const limit = parseInt(searchParams.get("limit") || "50");
+    const offset = parseInt(searchParams.get("offset") || "0");
 
-    const where: Record<string, unknown> = {}
+    const where: Record<string, unknown> = {};
 
     if (status) {
-      where.status = status
+      where.status = status;
     }
 
     if (startDate || endDate) {
-      const createdAtFilter: Record<string, Date> = {}
+      const createdAtFilter: Record<string, Date> = {};
       if (startDate) {
-        const parsed = parseDateOnly(startDate)
-        if (parsed) createdAtFilter.gte = parsed
+        const parsed = parseDateOnly(startDate);
+        if (parsed) createdAtFilter.gte = parsed;
       }
       if (endDate) {
-        const parsed = parseDateOnly(endDate)
+        const parsed = parseDateOnly(endDate);
         if (parsed) {
           // Set to end of day for inclusive filtering
-          const endOfDay = new Date(parsed)
-          endOfDay.setUTCHours(23, 59, 59, 999)
-          createdAtFilter.lte = endOfDay
+          const endOfDay = new Date(parsed);
+          endOfDay.setUTCHours(23, 59, 59, 999);
+          createdAtFilter.lte = endOfDay;
         }
       }
       if (Object.keys(createdAtFilter).length > 0) {
-        where.createdAt = createdAtFilter
+        where.createdAt = createdAtFilter;
       }
     }
 
@@ -68,10 +68,10 @@ export async function GET(request: NextRequest) {
         skip: offset,
       }),
       scopedDb.payout.count({ where }),
-    ])
+    ]);
 
-    const currentYear = new Date().getFullYear()
-    const yearStart = new Date(currentYear, 0, 1)
+    const currentYear = new Date().getFullYear();
+    const yearStart = new Date(currentYear, 0, 1);
 
     // aggregate is not handled by getScopedDb -- scope manually
     const [pendingStats, paidYTD, nextPayout] = await Promise.all([
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
         where: { status: "SCHEDULED" },
         orderBy: { scheduledAt: "asc" },
       }),
-    ])
+    ]);
 
     const unsettledTransactions = await db.transaction.aggregate({
       where: {
@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
       },
       _sum: { amount: true },
       _count: true,
-    })
+    });
 
     return NextResponse.json({
       data: payouts,
@@ -120,42 +120,39 @@ export async function GET(request: NextRequest) {
         unsettledAmount: unsettledTransactions._sum.amount || 0,
         unsettledCount: unsettledTransactions._count || 0,
       },
-    })
+    });
   } catch (error) {
-    console.error("Error fetching payouts:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch payouts" },
-      { status: 500 }
-    )
+    console.error("Error fetching payouts:", error);
+    return NextResponse.json({ error: "Failed to fetch payouts" }, { status: 500 });
   }
 }
 
 // POST /api/payouts - Create payout (typically from webhook or manual)
 export async function POST(request: NextRequest) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     if (
       !session.user.permissions.includes("*") &&
       !session.user.permissions.includes("financials.create")
     ) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const scopedDb = getScopedDb(session.user.organizationId)
+    const scopedDb = getScopedDb(session.user.organizationId);
 
-    const body = await request.json()
-    const validatedData = createPayoutSchema.parse(body)
+    const body = await request.json();
+    const validatedData = createPayoutSchema.parse(body);
 
     const existing = await scopedDb.payout.findFirst({
       where: { reference: validatedData.reference },
-    })
+    });
 
     if (existing) {
-      return NextResponse.json(existing)
+      return NextResponse.json(existing);
     }
 
     const payout = await scopedDb.payout.create({
@@ -168,27 +165,17 @@ export async function POST(request: NextRequest) {
         currency: validatedData.currency,
         status: validatedData.status,
         bankAccount: validatedData.bankAccount,
-        scheduledAt: validatedData.scheduledAt
-          ? new Date(validatedData.scheduledAt)
-          : null,
-        paidAt: validatedData.paidAt
-          ? new Date(validatedData.paidAt)
-          : null,
+        scheduledAt: validatedData.scheduledAt ? new Date(validatedData.scheduledAt) : null,
+        paidAt: validatedData.paidAt ? new Date(validatedData.paidAt) : null,
       },
-    })
+    });
 
-    return NextResponse.json(payout)
+    return NextResponse.json(payout);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    console.error("Error creating payout:", error)
-    return NextResponse.json(
-      { error: "Failed to create payout" },
-      { status: 500 }
-    )
+    console.error("Error creating payout:", error);
+    return NextResponse.json({ error: "Failed to create payout" }, { status: 500 });
   }
 }

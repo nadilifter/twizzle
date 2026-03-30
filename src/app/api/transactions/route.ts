@@ -120,10 +120,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching transactions:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch transactions" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch transactions" }, { status: 500 });
   }
 }
 
@@ -179,15 +176,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(transaction);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating transaction:", error);
-    return NextResponse.json(
-      { error: "Failed to create transaction" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create transaction" }, { status: 500 });
   }
 }

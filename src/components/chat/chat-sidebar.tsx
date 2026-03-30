@@ -4,12 +4,7 @@ import Link from "next/link";
 import { MoreHorizontal, SquarePen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buttonVariants, Button } from "@/components/ui/button"; // Ensure Button is imported
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-  TooltipProvider,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { UserData, userData } from "@/components/chat/data"; // Import userData for the list
 import {
@@ -53,10 +48,7 @@ export function ChatSidebar({
               <DialogTrigger asChild>
                 <Link
                   href="#"
-                  className={cn(
-                    buttonVariants({ variant: "ghost", size: "icon" }),
-                    "h-9 w-9"
-                  )}
+                  className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "h-9 w-9")}
                 >
                   <SquarePen size={20} />
                 </Link>
@@ -64,9 +56,7 @@ export function ChatSidebar({
               <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                   <DialogTitle>New Chat</DialogTitle>
-                  <DialogDescription>
-                    Select a user to start a conversation with.
-                  </DialogDescription>
+                  <DialogDescription>Select a user to start a conversation with.</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   {/* Ideally this would be a searchable list or Select component */}
@@ -85,15 +75,15 @@ export function ChatSidebar({
                           // Let's keep it simple for now.
                         }}
                       >
-                         <Avatar className="flex justify-center items-center">
-                            <AvatarImage
-                                src={user.avatar}
-                                alt={user.avatar}
-                                width={6}
-                                height={6}
-                                className="w-10 h-10 "
-                            />
-                            <AvatarFallback>{user.name[0]}</AvatarFallback>
+                        <Avatar className="flex justify-center items-center">
+                          <AvatarImage
+                            src={user.avatar}
+                            alt={user.avatar}
+                            width={6}
+                            height={6}
+                            className="w-10 h-10 "
+                          />
+                          <AvatarFallback>{user.name[0]}</AvatarFallback>
                         </Avatar>
                         <span className="font-medium">{user.name}</span>
                       </Button>
@@ -114,9 +104,13 @@ export function ChatSidebar({
                   <div
                     onClick={() => onClick && onClick(link)}
                     className={cn(
-                      buttonVariants({ variant: link.id === selectedUser?.id ? "secondary" : "ghost", size: "icon" }),
+                      buttonVariants({
+                        variant: link.id === selectedUser?.id ? "secondary" : "ghost",
+                        size: "icon",
+                      }),
                       "h-11 w-11 md:h-16 md:w-16 cursor-pointer",
-                      link.id === selectedUser?.id && "dark:bg-muted dark:text-muted-foreground dark:hover:bg-muted dark:hover:text-white"
+                      link.id === selectedUser?.id &&
+                        "dark:bg-muted dark:text-muted-foreground dark:hover:bg-muted dark:hover:text-white"
                     )}
                   >
                     <Avatar className="flex justify-center items-center">
@@ -132,10 +126,7 @@ export function ChatSidebar({
                     <span className="sr-only">{link.name}</span>
                   </div>
                 </TooltipTrigger>
-                <TooltipContent
-                  side="right"
-                  className="flex items-center gap-4"
-                >
+                <TooltipContent side="right" className="flex items-center gap-4">
                   {link.name}
                 </TooltipContent>
               </Tooltip>
@@ -145,9 +136,13 @@ export function ChatSidebar({
               key={index}
               onClick={() => onClick && onClick(link)}
               className={cn(
-                buttonVariants({ variant: link.id === selectedUser?.id ? "secondary" : "ghost", size: "lg" }),
+                buttonVariants({
+                  variant: link.id === selectedUser?.id ? "secondary" : "ghost",
+                  size: "lg",
+                }),
                 "justify-start gap-4 px-2 md:px-4 py-8 md:py-6 cursor-pointer",
-                link.id === selectedUser?.id && "dark:bg-muted dark:text-white dark:hover:bg-muted dark:hover:text-white shrink-0"
+                link.id === selectedUser?.id &&
+                  "dark:bg-muted dark:text-white dark:hover:bg-muted dark:hover:text-white shrink-0"
               )}
             >
               <Avatar className="flex justify-center items-center">
@@ -171,8 +166,8 @@ export function ChatSidebar({
                 </div>
                 {link.messages && link.messages.length > 0 && (
                   <span className="text-xs text-zinc-300 truncate">
-                    {link.messages[link.messages.length - 1].name.split(" ")[0]}
-                    : {link.messages[link.messages.length - 1].message}
+                    {link.messages[link.messages.length - 1].name.split(" ")[0]}:{" "}
+                    {link.messages[link.messages.length - 1].message}
                   </span>
                 )}
               </div>

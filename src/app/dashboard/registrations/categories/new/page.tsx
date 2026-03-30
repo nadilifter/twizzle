@@ -1,48 +1,48 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { ImageUpload } from "@/components/ui/image-upload"
-import { ArrowLeft, Loader2 } from "lucide-react"
-import { useCategories } from "@/hooks/use-categories"
-import { toast } from "sonner"
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { ImageUpload } from "@/components/ui/image-upload";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { useCategories } from "@/hooks/use-categories";
+import { toast } from "sonner";
 
 export default function NewCategoryPage() {
-  const router = useRouter()
-  const { createCategory, isCreating } = useCategories({ autoFetch: false })
+  const router = useRouter();
+  const { createCategory, isCreating } = useCategories({ autoFetch: false });
   const [formData, setFormData] = React.useState({
     name: "",
     description: "",
     imageUrl: null as string | null,
-  })
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!formData.name.trim()) {
-      toast.error("Name is required")
-      return
+      toast.error("Name is required");
+      return;
     }
 
     const result = await createCategory({
       name: formData.name.trim(),
       description: formData.description.trim() || null,
       imageUrl: formData.imageUrl,
-    })
+    });
 
     if (result) {
-      toast.success("Category created")
-      router.push("/dashboard/registrations/categories")
+      toast.success("Category created");
+      router.push("/dashboard/registrations/categories");
     } else {
-      toast.error("Failed to create category")
+      toast.error("Failed to create category");
     }
-  }
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -71,7 +71,7 @@ export default function NewCategoryPage() {
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                 placeholder="e.g. Recreational Programs"
               />
             </div>
@@ -81,7 +81,7 @@ export default function NewCategoryPage() {
               <Textarea
                 id="description"
                 value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                 placeholder="A short description of what this category includes..."
                 rows={3}
               />
@@ -90,7 +90,7 @@ export default function NewCategoryPage() {
             <ImageUpload
               label="Category Image"
               value={formData.imageUrl}
-              onChange={(url) => setFormData(prev => ({ ...prev, imageUrl: url }))}
+              onChange={(url) => setFormData((prev) => ({ ...prev, imageUrl: url }))}
               type="category"
             />
 
@@ -107,5 +107,5 @@ export default function NewCategoryPage() {
         </Card>
       </form>
     </div>
-  )
+  );
 }

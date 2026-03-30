@@ -6,11 +6,15 @@ import { z } from "zod";
 const createWaiverSchema = z.object({
   title: z.string().min(1, "Title is required"),
   status: z.enum(["DRAFT", "ACTIVE", "ARCHIVED"]).default("DRAFT"),
-  pages: z.array(z.object({
-    pageNumber: z.number().int().min(1),
-    title: z.string().optional(),
-    content: z.string().min(1, "Page content is required"),
-  })).min(1, "At least one page is required"),
+  pages: z
+    .array(
+      z.object({
+        pageNumber: z.number().int().min(1),
+        title: z.string().optional(),
+        content: z.string().min(1, "Page content is required"),
+      })
+    )
+    .min(1, "At least one page is required"),
 });
 
 // GET /api/waivers - List all organization waivers
@@ -49,10 +53,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data: waivers });
   } catch (error) {
     console.error("Error fetching waivers:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch waivers" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch waivers" }, { status: 500 });
   }
 }
 
@@ -113,15 +114,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(waiver, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating waiver:", error);
-    return NextResponse.json(
-      { error: "Failed to create waiver" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create waiver" }, { status: 500 });
   }
 }

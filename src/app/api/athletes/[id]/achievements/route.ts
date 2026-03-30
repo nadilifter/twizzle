@@ -5,10 +5,7 @@ import { getAthleteAchievementProgress } from "@/lib/services/achievement";
 
 // GET /api/athletes/[id]/achievements
 // Get all achievements for an athlete, including earned and in-progress
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -132,15 +129,13 @@ export async function GET(
     });
 
     // Build achievement map for earned
-    const earnedMap = new Map(
-      earnedAchievements.map((ea) => [ea.achievementId, ea])
-    );
+    const earnedMap = new Map(earnedAchievements.map((ea) => [ea.achievementId, ea]));
 
     // Get progress for each template
     const achievementsWithProgress = await Promise.all(
       allAchievements.map(async (achievement) => {
         const earned = earnedMap.get(achievement.id);
-        
+
         if (earned) {
           return {
             id: achievement.id,
@@ -209,9 +204,6 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error fetching athlete achievements:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch athlete achievements" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch athlete achievements" }, { status: 500 });
   }
 }

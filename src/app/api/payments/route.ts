@@ -35,12 +35,13 @@ export async function GET(request: NextRequest) {
       ...(invoiceId && { invoiceId }),
       ...(status && { status: status as "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" }),
       ...(method && { method: method as "CARD" | "BANK" | "CASH" | "CHECK" }),
-      ...(startDate && endDate && {
-        createdAt: {
-          gte: new Date(startDate),
-          lte: new Date(endDate),
-        },
-      }),
+      ...(startDate &&
+        endDate && {
+          createdAt: {
+            gte: new Date(startDate),
+            lte: new Date(endDate),
+          },
+        }),
     };
 
     const [payments, total] = await Promise.all([
@@ -71,10 +72,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching payments:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch payments" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch payments" }, { status: 500 });
   }
 }
 
@@ -152,10 +150,7 @@ export async function POST(request: NextRequest) {
         });
 
         if (invoice) {
-          const totalPaid = invoice.payments.reduce(
-            (sum, p) => sum + Number(p.amount),
-            0
-          );
+          const totalPaid = invoice.payments.reduce((sum, p) => sum + Number(p.amount), 0);
 
           let newStatus = invoice.status;
           if (totalPaid >= Number(invoice.total)) {
@@ -182,15 +177,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(payment);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating payment:", error);
-    return NextResponse.json(
-      { error: "Failed to record payment" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to record payment" }, { status: 500 });
   }
 }

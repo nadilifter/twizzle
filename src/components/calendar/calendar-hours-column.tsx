@@ -7,10 +7,7 @@ interface CalendarHoursColumnProps {
   scrollRef: React.RefObject<HTMLDivElement>;
 }
 
-export function CalendarHoursColumn({
-  onScroll,
-  scrollRef,
-}: CalendarHoursColumnProps) {
+export function CalendarHoursColumn({ onScroll, scrollRef }: CalendarHoursColumnProps) {
   return (
     <div
       ref={scrollRef}
@@ -29,4 +26,3 @@ export function CalendarHoursColumn({
     </div>
   );
 }
-

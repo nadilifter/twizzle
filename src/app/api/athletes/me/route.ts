@@ -13,16 +13,14 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
     // Support superadmin impersonation: use viewingAsUserId if set
-    const userId = (session.user.isSuperAdmin && session.user.viewingAsUserId)
-      ? session.user.viewingAsUserId
-      : session.user.id;
+    const userId =
+      session.user.isSuperAdmin && session.user.viewingAsUserId
+        ? session.user.viewingAsUserId
+        : session.user.id;
 
     // Find athletes via User-based AthleteGuardian links
     const athleteSelect = {
@@ -106,15 +104,12 @@ export async function GET(request: NextRequest) {
           orgNames.add(ir.programInstance.organization.name);
       }
       for (const ce of a.competitionEntries ?? []) {
-        if (ce.competition?.organization?.name)
-          orgNames.add(ce.competition.organization.name);
+        if (ce.competition?.organization?.name) orgNames.add(ce.competition.organization.name);
       }
 
       const c = a._count;
       const registrationCount =
-        (c?.enrollments ?? 0) +
-        (c?.instanceRegistrations ?? 0) +
-        (c?.competitionEntries ?? 0);
+        (c?.enrollments ?? 0) + (c?.instanceRegistrations ?? 0) + (c?.competitionEntries ?? 0);
 
       // Use the first org-athlete link for portal-level status/level display
       const primaryOa = a.organizationAthletes?.[0];
@@ -139,10 +134,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ athletes });
   } catch (error) {
     console.error("GET /api/athletes/me error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch athletes" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch athletes" }, { status: 500 });
   }
 }
 
@@ -156,10 +148,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
     const userId = session.user.id;
@@ -175,10 +164,7 @@ export async function POST(request: NextRequest) {
 
     const validGenders = ["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"];
     if (!validGenders.includes(gender)) {
-      return NextResponse.json(
-        { error: "Invalid gender value" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid gender value" }, { status: 400 });
     }
 
     const currentUser = await db.user.findUnique({
@@ -204,10 +190,7 @@ export async function POST(request: NextRequest) {
         firstName: { equals: firstName, mode: "insensitive" },
         lastName: { equals: lastName, mode: "insensitive" },
         birthDate: { gte: startOfDay, lte: endOfDay },
-        OR: [
-          { guardians: { some: { userId } } },
-          { userId },
-        ],
+        OR: [{ guardians: { some: { userId } } }, { userId }],
       },
       select: { id: true, firstName: true, lastName: true },
     });
@@ -265,9 +248,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ athlete }, { status: 201 });
   } catch (error) {
     console.error("POST /api/athletes/me error:", error);
-    return NextResponse.json(
-      { error: "Failed to create athlete" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create athlete" }, { status: 500 });
   }
 }

@@ -1,7 +1,7 @@
 export const COUNTRIES = [
   { code: "US", name: "United States" },
   { code: "CA", name: "Canada" },
-] as const
+] as const;
 
 export const US_STATES = [
   { code: "AL", name: "Alabama" },
@@ -60,7 +60,7 @@ export const US_STATES = [
   { code: "MP", name: "Northern Mariana Islands" },
   { code: "PR", name: "Puerto Rico" },
   { code: "VI", name: "U.S. Virgin Islands" },
-] as const
+] as const;
 
 export const CA_PROVINCES = [
   { code: "AB", name: "Alberta" },
@@ -76,18 +76,18 @@ export const CA_PROVINCES = [
   { code: "QC", name: "Quebec" },
   { code: "SK", name: "Saskatchewan" },
   { code: "YT", name: "Yukon" },
-] as const
+] as const;
 
 export function getRegionsForCountry(countryCode: string) {
-  if (countryCode === "US") return US_STATES
-  if (countryCode === "CA") return CA_PROVINCES
-  return []
+  if (countryCode === "US") return US_STATES;
+  if (countryCode === "CA") return CA_PROVINCES;
+  return [];
 }
 
 export function isValidPostalCode(value: string, country: string): boolean {
-  const trimmed = value.trim().replace(/\s/g, "")
-  if (!trimmed) return false
-  if (country === "US") return /^\d{5}(-\d{4})?$/.test(trimmed)
-  if (country === "CA") return /^[A-Za-z]\d[A-Za-z]\d[A-Za-z]\d$/.test(trimmed)
-  return true
+  const trimmed = value.trim().replace(/\s/g, "");
+  if (!trimmed) return false;
+  if (country === "US") return /^\d{5}(-\d{4})?$/.test(trimmed);
+  if (country === "CA") return /^[A-Za-z]\d[A-Za-z]\d[A-Za-z]\d$/.test(trimmed);
+  return true;
 }

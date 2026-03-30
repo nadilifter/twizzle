@@ -100,9 +100,7 @@ function phoneVariants(phone: string): string[] {
   const normalized = normalizePhoneNumber(phone);
   const digitsOnly = normalized.replace(/\D/g, "");
   const withoutCountryCode =
-    digitsOnly.startsWith("1") && digitsOnly.length === 11
-      ? digitsOnly.substring(1)
-      : digitsOnly;
+    digitsOnly.startsWith("1") && digitsOnly.length === 11 ? digitsOnly.substring(1) : digitsOnly;
   return [normalized, digitsOnly, withoutCountryCode];
 }
 
@@ -116,10 +114,7 @@ function phoneVariants(phone: string): string[] {
  * 4. If pool is exhausted, log a warning and reuse the first pool number
  * 5. Create the assignment and return the number
  */
-export async function getPoolNumberForSend(
-  phone: string,
-  organizationId: string
-): Promise<string> {
+export async function getPoolNumberForSend(phone: string, organizationId: string): Promise<string> {
   const pool = await getVerifiedPool();
   if (pool.length === 0) {
     return process.env.TWILIO_PHONE_NUMBER || "";

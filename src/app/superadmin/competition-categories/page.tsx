@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   Plus,
   Pencil,
@@ -16,19 +16,13 @@ import {
   ArrowUpDown,
   Trophy,
   CheckCircle2,
-} from "lucide-react"
-import { Checkbox } from "@/components/ui/checkbox"
-import { toast } from "sonner"
+} from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -36,25 +30,25 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -62,7 +56,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -72,114 +66,114 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Separator } from "@/components/ui/separator"
-import { CombinationGrid } from "@/components/combination-grid"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/alert-dialog";
+import { Separator } from "@/components/ui/separator";
+import { CombinationGrid } from "@/components/combination-grid";
+import { cn } from "@/lib/utils";
 
 // ============================================
 // Types
 // ============================================
 
 interface Sport {
-  id: string
-  name: string
-  slug: string
-  isActive: boolean
+  id: string;
+  name: string;
+  slug: string;
+  isActive: boolean;
 }
 
 interface AxisValue {
-  id?: string
-  name: string
-  axis: "ROW" | "COLUMN"
-  displayOrder: number
-  minAge?: number | null
-  maxAge?: number | null
-  allowedGenders?: string[]
+  id?: string;
+  name: string;
+  axis: "ROW" | "COLUMN";
+  displayOrder: number;
+  minAge?: number | null;
+  maxAge?: number | null;
+  allowedGenders?: string[];
 }
 
 interface CombinationEntry {
-  id?: string
-  rowValueId: string
-  colValueId: string
-  isActive: boolean
-  name?: string | null
+  id?: string;
+  rowValueId: string;
+  colValueId: string;
+  isActive: boolean;
+  name?: string | null;
 }
 
 interface IndividualEntry {
-  id?: string
-  name: string
-  description?: string | null
-  displayOrder: number
-  hasGenderRestriction: boolean
-  hasAgeRestriction: boolean
-  hasCapacityRestriction: boolean
-  allowedGenders?: string[]
-  minAge?: number | null
-  maxAge?: number | null
-  capacity?: number | null
+  id?: string;
+  name: string;
+  description?: string | null;
+  displayOrder: number;
+  hasGenderRestriction: boolean;
+  hasAgeRestriction: boolean;
+  hasCapacityRestriction: boolean;
+  allowedGenders?: string[];
+  minAge?: number | null;
+  maxAge?: number | null;
+  capacity?: number | null;
 }
 
 interface Template {
-  id: string
-  sportId: string | null
-  name: string
-  description: string | null
-  type: "COMBINATION" | "INDIVIDUAL"
-  isActive: boolean
-  displayOrder: number
-  rowAxisLabel: string | null
-  columnAxisLabel: string | null
-  restrictionAxis: "ROW" | "COLUMN" | null
-  sport: { id: string; name: string; slug: string } | null
-  axisValues: (AxisValue & { id: string })[]
-  combinationEntries: (CombinationEntry & { id: string })[]
-  individualEntries: (IndividualEntry & { id: string })[]
+  id: string;
+  sportId: string | null;
+  name: string;
+  description: string | null;
+  type: "COMBINATION" | "INDIVIDUAL";
+  isActive: boolean;
+  displayOrder: number;
+  rowAxisLabel: string | null;
+  columnAxisLabel: string | null;
+  restrictionAxis: "ROW" | "COLUMN" | null;
+  sport: { id: string; name: string; slug: string } | null;
+  axisValues: (AxisValue & { id: string })[];
+  combinationEntries: (CombinationEntry & { id: string })[];
+  individualEntries: (IndividualEntry & { id: string })[];
 }
 
 interface TemplateFormData {
-  name: string
-  description: string
-  type: "COMBINATION" | "INDIVIDUAL"
-  isActive: boolean
-  displayOrder: number
-  rowAxisLabel: string
-  columnAxisLabel: string
-  restrictionAxis: "ROW" | "COLUMN"
-  axisValues: AxisValue[]
-  disabledCombinations: Set<string>
-  individualEntries: IndividualEntry[]
+  name: string;
+  description: string;
+  type: "COMBINATION" | "INDIVIDUAL";
+  isActive: boolean;
+  displayOrder: number;
+  rowAxisLabel: string;
+  columnAxisLabel: string;
+  restrictionAxis: "ROW" | "COLUMN";
+  axisValues: AxisValue[];
+  disabledCombinations: Set<string>;
+  individualEntries: IndividualEntry[];
 }
 
 // Sport-specific types
 interface SportEventData {
-  id: string
-  code: string
-  name: string
-  eventGroup: string
-  eventType: string
-  resultType: "TIME" | "DISTANCE" | "HEIGHT" | "SCORE"
-  sortDirection: "ASC" | "DESC"
-  defaultPrecision: number
-  isActive: boolean
-  displayOrder: number
+  id: string;
+  code: string;
+  name: string;
+  eventGroup: string;
+  eventType: string;
+  resultType: "TIME" | "DISTANCE" | "HEIGHT" | "SCORE";
+  sortDirection: "ASC" | "DESC";
+  defaultPrecision: number;
+  isActive: boolean;
+  displayOrder: number;
   eligibility: Array<{
-    id: string
-    sportEventId: string
-    ageCategoryId: string
-    isEnabled: boolean
-    ageCategory: { id: string; code: string; name: string }
-  }>
+    id: string;
+    sportEventId: string;
+    ageCategoryId: string;
+    isEnabled: boolean;
+    ageCategory: { id: string; code: string; name: string };
+  }>;
 }
 
 interface AgeCategoryData {
-  id: string
-  code: string
-  name: string
-  minAge: number
-  maxAge: number | null
-  isActive: boolean
-  displayOrder: number
+  id: string;
+  code: string;
+  name: string;
+  minAge: number;
+  maxAge: number | null;
+  isActive: boolean;
+  displayOrder: number;
 }
 
 const EVENT_GROUP_LABELS: Record<string, string> = {
@@ -193,14 +187,14 @@ const EVENT_GROUP_LABELS: Record<string, string> = {
   combined: "Combined Events",
   racewalk: "Race Walk",
   road: "Road",
-}
+};
 
 const RESULT_TYPE_ICON: Record<string, React.ReactNode> = {
   TIME: <Timer className="h-3 w-3" />,
   DISTANCE: <Ruler className="h-3 w-3" />,
   HEIGHT: <ArrowUpDown className="h-3 w-3" />,
   SCORE: <Trophy className="h-3 w-3" />,
-}
+};
 
 const initialFormData: TemplateFormData = {
   name: "",
@@ -214,175 +208,170 @@ const initialFormData: TemplateFormData = {
   axisValues: [],
   disabledCombinations: new Set(),
   individualEntries: [],
-}
+};
 
 // ============================================
 // Component
 // ============================================
 
 export default function SuperadminCompetitionCategoriesPage() {
-  const [sports, setSports] = React.useState<Sport[]>([])
-  const [selectedSportId, setSelectedSportId] = React.useState<string>("")
-  const [templates, setTemplates] = React.useState<Template[]>([])
-  const [loading, setLoading] = React.useState(true)
-  const [loadingTemplates, setLoadingTemplates] = React.useState(false)
-  const [saving, setSaving] = React.useState(false)
+  const [sports, setSports] = React.useState<Sport[]>([]);
+  const [selectedSportId, setSelectedSportId] = React.useState<string>("");
+  const [templates, setTemplates] = React.useState<Template[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [loadingTemplates, setLoadingTemplates] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
 
   // Sport-specific structured data state
-  const [hasSportSpecificData, setHasSportSpecificData] = React.useState(false)
-  const [sportEvents, setSportEvents] = React.useState<SportEventData[]>([])
-  const [ageCategories, setAgeCategories] = React.useState<AgeCategoryData[]>([])
-  const [savingEligibility, setSavingEligibility] = React.useState(false)
+  const [hasSportSpecificData, setHasSportSpecificData] = React.useState(false);
+  const [sportEvents, setSportEvents] = React.useState<SportEventData[]>([]);
+  const [ageCategories, setAgeCategories] = React.useState<AgeCategoryData[]>([]);
+  const [savingEligibility, setSavingEligibility] = React.useState(false);
 
-  const [dialogOpen, setDialogOpen] = React.useState(false)
-  const [editingTemplate, setEditingTemplate] = React.useState<Template | null>(null)
-  const [formData, setFormData] = React.useState<TemplateFormData>(initialFormData)
+  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [editingTemplate, setEditingTemplate] = React.useState<Template | null>(null);
+  const [formData, setFormData] = React.useState<TemplateFormData>(initialFormData);
 
-  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
-  const [deletingTemplate, setDeletingTemplate] = React.useState<Template | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [deletingTemplate, setDeletingTemplate] = React.useState<Template | null>(null);
 
   // New value inputs
-  const [newRowValue, setNewRowValue] = React.useState("")
-  const [newColValue, setNewColValue] = React.useState("")
-  const [newIndividualName, setNewIndividualName] = React.useState("")
+  const [newRowValue, setNewRowValue] = React.useState("");
+  const [newColValue, setNewColValue] = React.useState("");
+  const [newIndividualName, setNewIndividualName] = React.useState("");
 
   // Fetch sports
   React.useEffect(() => {
     const fetchSports = async () => {
       try {
-        const response = await fetch("/api/superadmin/sports")
-        if (!response.ok) throw new Error("Failed to fetch sports")
-        const data = await response.json()
-        setSports(data.filter((s: Sport) => s.isActive))
+        const response = await fetch("/api/superadmin/sports");
+        if (!response.ok) throw new Error("Failed to fetch sports");
+        const data = await response.json();
+        setSports(data.filter((s: Sport) => s.isActive));
       } catch (error) {
-        toast.error("Failed to load sports")
+        toast.error("Failed to load sports");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    fetchSports()
-  }, [])
+    };
+    fetchSports();
+  }, []);
 
   // Fetch templates and sport-specific data when sport is selected
   const fetchTemplates = React.useCallback(async (sportId: string) => {
-    if (!sportId) return
-    setLoadingTemplates(true)
+    if (!sportId) return;
+    setLoadingTemplates(true);
     try {
-      const response = await fetch(`/api/superadmin/competition-categories?sportId=${sportId}`)
-      if (!response.ok) throw new Error("Failed to fetch templates")
-      const data = await response.json()
-      setTemplates(data.templates || data)
-      setHasSportSpecificData(data.hasSportSpecificData || false)
+      const response = await fetch(`/api/superadmin/competition-categories?sportId=${sportId}`);
+      if (!response.ok) throw new Error("Failed to fetch templates");
+      const data = await response.json();
+      setTemplates(data.templates || data);
+      setHasSportSpecificData(data.hasSportSpecificData || false);
 
       // If sport has structured data, also fetch events & age categories
       if (data.hasSportSpecificData) {
-        const eventsRes = await fetch(`/api/superadmin/sports/${sportId}/events`)
+        const eventsRes = await fetch(`/api/superadmin/sports/${sportId}/events`);
         if (eventsRes.ok) {
-          const eventsData = await eventsRes.json()
-          setSportEvents(eventsData.events || [])
-          setAgeCategories(eventsData.ageCategories || [])
+          const eventsData = await eventsRes.json();
+          setSportEvents(eventsData.events || []);
+          setAgeCategories(eventsData.ageCategories || []);
         }
       } else {
-        setSportEvents([])
-        setAgeCategories([])
+        setSportEvents([]);
+        setAgeCategories([]);
       }
     } catch (error) {
-      toast.error("Failed to load templates")
+      toast.error("Failed to load templates");
     } finally {
-      setLoadingTemplates(false)
+      setLoadingTemplates(false);
     }
-  }, [])
+  }, []);
 
   React.useEffect(() => {
     if (selectedSportId) {
-      fetchTemplates(selectedSportId)
+      fetchTemplates(selectedSportId);
     } else {
-      setTemplates([])
-      setSportEvents([])
-      setAgeCategories([])
-      setHasSportSpecificData(false)
+      setTemplates([]);
+      setSportEvents([]);
+      setAgeCategories([]);
+      setHasSportSpecificData(false);
     }
-  }, [selectedSportId, fetchTemplates])
+  }, [selectedSportId, fetchTemplates]);
 
   // Toggle eligibility for sport-specific events
-  const handleToggleEligibility = React.useCallback(async (
-    sportEventId: string,
-    ageCategoryId: string,
-    currentlyEnabled: boolean
-  ) => {
-    setSavingEligibility(true)
-    try {
-      const response = await fetch(`/api/superadmin/sports/${selectedSportId}/eligibility`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          updates: [{ sportEventId, ageCategoryId, isEnabled: !currentlyEnabled }],
-        }),
-      })
-      if (!response.ok) throw new Error("Failed to update eligibility")
+  const handleToggleEligibility = React.useCallback(
+    async (sportEventId: string, ageCategoryId: string, currentlyEnabled: boolean) => {
+      setSavingEligibility(true);
+      try {
+        const response = await fetch(`/api/superadmin/sports/${selectedSportId}/eligibility`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            updates: [{ sportEventId, ageCategoryId, isEnabled: !currentlyEnabled }],
+          }),
+        });
+        if (!response.ok) throw new Error("Failed to update eligibility");
 
-      // Update local state
-      setSportEvents((prev) =>
-        prev.map((evt) => {
-          if (evt.id !== sportEventId) return evt
-          const existingElig = evt.eligibility.find(
-            (e) => e.ageCategoryId === ageCategoryId
-          )
-          if (existingElig) {
+        // Update local state
+        setSportEvents((prev) =>
+          prev.map((evt) => {
+            if (evt.id !== sportEventId) return evt;
+            const existingElig = evt.eligibility.find((e) => e.ageCategoryId === ageCategoryId);
+            if (existingElig) {
+              return {
+                ...evt,
+                eligibility: evt.eligibility.map((e) =>
+                  e.ageCategoryId === ageCategoryId ? { ...e, isEnabled: !currentlyEnabled } : e
+                ),
+              };
+            }
+            const ageCat = ageCategories.find((c) => c.id === ageCategoryId);
             return {
               ...evt,
-              eligibility: evt.eligibility.map((e) =>
-                e.ageCategoryId === ageCategoryId
-                  ? { ...e, isEnabled: !currentlyEnabled }
-                  : e
-              ),
-            }
-          }
-          const ageCat = ageCategories.find((c) => c.id === ageCategoryId)
-          return {
-            ...evt,
-            eligibility: [
-              ...evt.eligibility,
-              {
-                id: `new-${sportEventId}-${ageCategoryId}`,
-                sportEventId,
-                ageCategoryId,
-                isEnabled: true,
-                ageCategory: ageCat
-                  ? { id: ageCat.id, code: ageCat.code, name: ageCat.name }
-                  : { id: ageCategoryId, code: "", name: "" },
-              },
-            ],
-          }
-        })
-      )
-    } catch (error) {
-      toast.error("Failed to update eligibility")
-    } finally {
-      setSavingEligibility(false)
-    }
-  }, [selectedSportId, ageCategories])
+              eligibility: [
+                ...evt.eligibility,
+                {
+                  id: `new-${sportEventId}-${ageCategoryId}`,
+                  sportEventId,
+                  ageCategoryId,
+                  isEnabled: true,
+                  ageCategory: ageCat
+                    ? { id: ageCat.id, code: ageCat.code, name: ageCat.name }
+                    : { id: ageCategoryId, code: "", name: "" },
+                },
+              ],
+            };
+          })
+        );
+      } catch (error) {
+        toast.error("Failed to update eligibility");
+      } finally {
+        setSavingEligibility(false);
+      }
+    },
+    [selectedSportId, ageCategories]
+  );
 
   // Handlers
   const handleOpenCreate = () => {
-    setEditingTemplate(null)
+    setEditingTemplate(null);
     setFormData({
       ...initialFormData,
       displayOrder: templates.length,
-    })
-    setNewRowValue("")
-    setNewColValue("")
-    setNewIndividualName("")
-    setDialogOpen(true)
-  }
+    });
+    setNewRowValue("");
+    setNewColValue("");
+    setNewIndividualName("");
+    setDialogOpen(true);
+  };
 
   const handleOpenEdit = (template: Template) => {
-    setEditingTemplate(template)
+    setEditingTemplate(template);
 
-    const disabledSet = new Set<string>()
+    const disabledSet = new Set<string>();
     for (const entry of template.combinationEntries) {
       if (!entry.isActive) {
-        disabledSet.add(`${entry.rowValueId}:${entry.colValueId}`)
+        disabledSet.add(`${entry.rowValueId}:${entry.colValueId}`);
       }
     }
 
@@ -418,16 +407,16 @@ export default function SuperadminCompetitionCategoriesPage() {
         maxAge: e.maxAge,
         capacity: e.capacity,
       })),
-    })
-    setNewRowValue("")
-    setNewColValue("")
-    setNewIndividualName("")
-    setDialogOpen(true)
-  }
+    });
+    setNewRowValue("");
+    setNewColValue("");
+    setNewIndividualName("");
+    setDialogOpen(true);
+  };
 
   const handleAddRowValue = () => {
-    if (!newRowValue.trim()) return
-    const rows = formData.axisValues.filter((v) => v.axis === "ROW")
+    if (!newRowValue.trim()) return;
+    const rows = formData.axisValues.filter((v) => v.axis === "ROW");
     setFormData((prev) => ({
       ...prev,
       axisValues: [
@@ -441,13 +430,13 @@ export default function SuperadminCompetitionCategoriesPage() {
           allowedGenders: [],
         },
       ],
-    }))
-    setNewRowValue("")
-  }
+    }));
+    setNewRowValue("");
+  };
 
   const handleAddColValue = () => {
-    if (!newColValue.trim()) return
-    const cols = formData.axisValues.filter((v) => v.axis === "COLUMN")
+    if (!newColValue.trim()) return;
+    const cols = formData.axisValues.filter((v) => v.axis === "COLUMN");
     setFormData((prev) => ({
       ...prev,
       axisValues: [
@@ -461,16 +450,16 @@ export default function SuperadminCompetitionCategoriesPage() {
           allowedGenders: [],
         },
       ],
-    }))
-    setNewColValue("")
-  }
+    }));
+    setNewColValue("");
+  };
 
   const handleRemoveAxisValue = (index: number) => {
     setFormData((prev) => ({
       ...prev,
       axisValues: prev.axisValues.filter((_, i) => i !== index),
-    }))
-  }
+    }));
+  };
 
   const handleUpdateAxisRestriction = (
     index: number,
@@ -482,11 +471,11 @@ export default function SuperadminCompetitionCategoriesPage() {
       axisValues: prev.axisValues.map((v, i) =>
         i === index ? { ...v, [field]: value ? parseInt(value, 10) : null } : v
       ),
-    }))
-  }
+    }));
+  };
 
   const handleAddIndividualEntry = () => {
-    if (!newIndividualName.trim()) return
+    if (!newIndividualName.trim()) return;
     setFormData((prev) => ({
       ...prev,
       individualEntries: [
@@ -504,120 +493,128 @@ export default function SuperadminCompetitionCategoriesPage() {
           capacity: null,
         },
       ],
-    }))
-    setNewIndividualName("")
-  }
+    }));
+    setNewIndividualName("");
+  };
 
   const handleRemoveIndividualEntry = (index: number) => {
     setFormData((prev) => ({
       ...prev,
       individualEntries: prev.individualEntries.filter((_, i) => i !== index),
-    }))
-  }
+    }));
+  };
 
   const handleToggleCombination = (rowId: string, colId: string, isActive: boolean) => {
     setFormData((prev) => {
-      const key = `${rowId}:${colId}`
-      const newSet = new Set(prev.disabledCombinations)
+      const key = `${rowId}:${colId}`;
+      const newSet = new Set(prev.disabledCombinations);
       if (isActive) {
-        newSet.delete(key)
+        newSet.delete(key);
       } else {
-        newSet.add(key)
+        newSet.add(key);
       }
-      return { ...prev, disabledCombinations: newSet }
-    })
-  }
+      return { ...prev, disabledCombinations: newSet };
+    });
+  };
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
-      toast.error("Name is required")
-      return
+      toast.error("Name is required");
+      return;
     }
 
     if (formData.type === "COMBINATION") {
-      const rows = formData.axisValues.filter((v) => v.axis === "ROW")
-      const cols = formData.axisValues.filter((v) => v.axis === "COLUMN")
+      const rows = formData.axisValues.filter((v) => v.axis === "ROW");
+      const cols = formData.axisValues.filter((v) => v.axis === "COLUMN");
       if (rows.length === 0) {
-        toast.error("Add at least one row value")
-        return
+        toast.error("Add at least one row value");
+        return;
       }
       if (cols.length === 0) {
-        toast.error("Add at least one column value")
-        return
+        toast.error("Add at least one column value");
+        return;
       }
     }
 
     if (formData.type === "INDIVIDUAL" && formData.individualEntries.length === 0) {
-      toast.error("Add at least one entry")
-      return
+      toast.error("Add at least one entry");
+      return;
     }
 
-    setSaving(true)
+    setSaving(true);
     try {
       if (editingTemplate) {
         // Build combination updates for edit
-        const combinationUpdates: Array<{ rowValueId: string; colValueId: string; isActive: boolean }> = []
+        const combinationUpdates: Array<{
+          rowValueId: string;
+          colValueId: string;
+          isActive: boolean;
+        }> = [];
         if (formData.type === "COMBINATION") {
-          const rows = formData.axisValues.filter((v) => v.axis === "ROW")
-          const cols = formData.axisValues.filter((v) => v.axis === "COLUMN")
+          const rows = formData.axisValues.filter((v) => v.axis === "ROW");
+          const cols = formData.axisValues.filter((v) => v.axis === "COLUMN");
           for (const row of rows) {
             for (const col of cols) {
               if (row.id && col.id) {
-                const key = `${row.id}:${col.id}`
+                const key = `${row.id}:${col.id}`;
                 combinationUpdates.push({
                   rowValueId: row.id,
                   colValueId: col.id,
                   isActive: !formData.disabledCombinations.has(key),
-                })
+                });
               }
             }
           }
         }
 
-        const response = await fetch(`/api/superadmin/competition-categories/${editingTemplate.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: formData.name,
-            description: formData.description || null,
-            isActive: formData.isActive,
-            displayOrder: formData.displayOrder,
-            rowAxisLabel: formData.rowAxisLabel || null,
-            columnAxisLabel: formData.columnAxisLabel || null,
-            restrictionAxis: formData.type === "COMBINATION" ? formData.restrictionAxis : null,
-            axisValues: formData.type === "COMBINATION" ? formData.axisValues : undefined,
-            combinationUpdates: formData.type === "COMBINATION" ? combinationUpdates : undefined,
-            individualEntries: formData.type === "INDIVIDUAL" ? formData.individualEntries : undefined,
-          }),
-        })
+        const response = await fetch(
+          `/api/superadmin/competition-categories/${editingTemplate.id}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: formData.name,
+              description: formData.description || null,
+              isActive: formData.isActive,
+              displayOrder: formData.displayOrder,
+              rowAxisLabel: formData.rowAxisLabel || null,
+              columnAxisLabel: formData.columnAxisLabel || null,
+              restrictionAxis: formData.type === "COMBINATION" ? formData.restrictionAxis : null,
+              axisValues: formData.type === "COMBINATION" ? formData.axisValues : undefined,
+              combinationUpdates: formData.type === "COMBINATION" ? combinationUpdates : undefined,
+              individualEntries:
+                formData.type === "INDIVIDUAL" ? formData.individualEntries : undefined,
+            }),
+          }
+        );
 
         if (!response.ok) {
-          const data = await response.json()
-          throw new Error(data.error || "Failed to update template")
+          const data = await response.json();
+          throw new Error(data.error || "Failed to update template");
         }
 
-        toast.success("Template updated")
+        toast.success("Template updated");
       } else {
         // Build disabled combinations for create
-        const rows = formData.axisValues.filter((v) => v.axis === "ROW")
-        const cols = formData.axisValues.filter((v) => v.axis === "COLUMN")
+        const rows = formData.axisValues.filter((v) => v.axis === "ROW");
+        const cols = formData.axisValues.filter((v) => v.axis === "COLUMN");
 
         const disabledCombinations: Array<{
-          rowValueIndex: number
-          colValueIndex: number
-          isActive: boolean
-        }> = []
+          rowValueIndex: number;
+          colValueIndex: number;
+          isActive: boolean;
+        }> = [];
 
         for (let ri = 0; ri < rows.length; ri++) {
           for (let ci = 0; ci < cols.length; ci++) {
             // For new templates, we use temp IDs based on names
-            const key = `temp-row-${ri}:temp-col-${ci}`
+            const key = `temp-row-${ri}:temp-col-${ci}`;
             if (formData.disabledCombinations.has(key)) {
               disabledCombinations.push({
                 rowValueIndex: ri,
                 colValueIndex: ci,
                 isActive: false,
-              })
+              });
             }
           }
         }
@@ -632,77 +629,83 @@ export default function SuperadminCompetitionCategoriesPage() {
             type: formData.type,
             isActive: formData.isActive,
             displayOrder: formData.displayOrder,
-            rowAxisLabel: formData.type === "COMBINATION" ? (formData.rowAxisLabel || null) : null,
-            columnAxisLabel: formData.type === "COMBINATION" ? (formData.columnAxisLabel || null) : null,
+            rowAxisLabel: formData.type === "COMBINATION" ? formData.rowAxisLabel || null : null,
+            columnAxisLabel:
+              formData.type === "COMBINATION" ? formData.columnAxisLabel || null : null,
             restrictionAxis: formData.type === "COMBINATION" ? formData.restrictionAxis : null,
             axisValues: formData.type === "COMBINATION" ? formData.axisValues : [],
             disabledCombinations,
             individualEntries: formData.type === "INDIVIDUAL" ? formData.individualEntries : [],
           }),
-        })
+        });
 
         if (!response.ok) {
-          const data = await response.json()
-          throw new Error(data.error || "Failed to create template")
+          const data = await response.json();
+          throw new Error(data.error || "Failed to create template");
         }
 
-        toast.success("Template created")
+        toast.success("Template created");
       }
 
-      setDialogOpen(false)
-      fetchTemplates(selectedSportId)
+      setDialogOpen(false);
+      fetchTemplates(selectedSportId);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save template")
+      toast.error(error instanceof Error ? error.message : "Failed to save template");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleDelete = async () => {
-    if (!deletingTemplate) return
+    if (!deletingTemplate) return;
 
     try {
-      const response = await fetch(`/api/superadmin/competition-categories/${deletingTemplate.id}`, {
-        method: "DELETE",
-      })
+      const response = await fetch(
+        `/api/superadmin/competition-categories/${deletingTemplate.id}`,
+        {
+          method: "DELETE",
+        }
+      );
 
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || "Failed to delete template")
+        const data = await response.json();
+        throw new Error(data.error || "Failed to delete template");
       }
 
-      toast.success("Template deleted")
-      setDeleteDialogOpen(false)
-      setDeletingTemplate(null)
-      fetchTemplates(selectedSportId)
+      toast.success("Template deleted");
+      setDeleteDialogOpen(false);
+      setDeletingTemplate(null);
+      fetchTemplates(selectedSportId);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete template")
+      toast.error(error instanceof Error ? error.message : "Failed to delete template");
     }
-  }
+  };
 
   // Compute grid data for the form
   const formRows = formData.axisValues
     .map((v, i) => ({ ...v, _index: i }))
-    .filter((v) => v.axis === "ROW")
+    .filter((v) => v.axis === "ROW");
   const formCols = formData.axisValues
     .map((v, i) => ({ ...v, _index: i }))
-    .filter((v) => v.axis === "COLUMN")
+    .filter((v) => v.axis === "COLUMN");
 
   const gridRows = formRows.map((r) => ({
     id: r.id || `temp-row-${formRows.indexOf(r)}`,
     name: r.name,
-    restrictions: formData.restrictionAxis === "ROW"
-      ? { minAge: r.minAge, maxAge: r.maxAge, allowedGenders: r.allowedGenders }
-      : undefined,
-  }))
+    restrictions:
+      formData.restrictionAxis === "ROW"
+        ? { minAge: r.minAge, maxAge: r.maxAge, allowedGenders: r.allowedGenders }
+        : undefined,
+  }));
 
   const gridCols = formCols.map((c) => ({
     id: c.id || `temp-col-${formCols.indexOf(c)}`,
     name: c.name,
-    restrictions: formData.restrictionAxis === "COLUMN"
-      ? { minAge: c.minAge, maxAge: c.maxAge, allowedGenders: c.allowedGenders }
-      : undefined,
-  }))
+    restrictions:
+      formData.restrictionAxis === "COLUMN"
+        ? { minAge: c.minAge, maxAge: c.maxAge, allowedGenders: c.allowedGenders }
+        : undefined,
+  }));
 
   const gridEntries = gridRows.flatMap((r) =>
     gridCols.map((c) => ({
@@ -710,18 +713,18 @@ export default function SuperadminCompetitionCategoriesPage() {
       colId: c.id,
       isActive: !formData.disabledCombinations.has(`${r.id}:${c.id}`),
     }))
-  )
+  );
 
   // Stats
-  const combinationCount = templates.filter((t) => t.type === "COMBINATION").length
-  const individualCount = templates.filter((t) => t.type === "INDIVIDUAL").length
+  const combinationCount = templates.filter((t) => t.type === "COMBINATION").length;
+  const individualCount = templates.filter((t) => t.type === "INDIVIDUAL").length;
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-    )
+    );
   }
 
   return (
@@ -765,7 +768,9 @@ export default function SuperadminCompetitionCategoriesPage() {
             <div className="text-center text-muted-foreground">
               <Layers className="h-10 w-10 mx-auto mb-3 opacity-50" />
               <p className="font-medium">Select a Sport</p>
-              <p className="text-sm mt-1">Choose a sport above to view and configure its category templates.</p>
+              <p className="text-sm mt-1">
+                Choose a sport above to view and configure its category templates.
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -813,7 +818,10 @@ export default function SuperadminCompetitionCategoriesPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      {sportEvents.reduce((sum, evt) => sum + evt.eligibility.filter((e) => e.isEnabled).length, 0)}
+                      {sportEvents.reduce(
+                        (sum, evt) => sum + evt.eligibility.filter((e) => e.isEnabled).length,
+                        0
+                      )}
                     </div>
                     <p className="text-xs text-muted-foreground">
                       of {sportEvents.length * ageCategories.length} possible
@@ -836,7 +844,9 @@ export default function SuperadminCompetitionCategoriesPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="min-w-[200px] sticky left-0 bg-background z-10">Event</TableHead>
+                          <TableHead className="min-w-[200px] sticky left-0 bg-background z-10">
+                            Event
+                          </TableHead>
                           <TableHead className="text-center w-[80px]">Type</TableHead>
                           {ageCategories.map((cat) => (
                             <TableHead key={cat.id} className="min-w-[70px] px-0">
@@ -853,9 +863,9 @@ export default function SuperadminCompetitionCategoriesPage() {
                       <TableBody>
                         {Object.entries(
                           sportEvents.reduce<Record<string, SportEventData[]>>((groups, evt) => {
-                            if (!groups[evt.eventGroup]) groups[evt.eventGroup] = []
-                            groups[evt.eventGroup].push(evt)
-                            return groups
+                            if (!groups[evt.eventGroup]) groups[evt.eventGroup] = [];
+                            groups[evt.eventGroup].push(evt);
+                            return groups;
                           }, {})
                         ).map(([group, events]) => (
                           <React.Fragment key={group}>
@@ -886,8 +896,8 @@ export default function SuperadminCompetitionCategoriesPage() {
                                 {ageCategories.map((cat) => {
                                   const elig = evt.eligibility.find(
                                     (e) => e.ageCategoryId === cat.id
-                                  )
-                                  const isEnabled = elig?.isEnabled ?? false
+                                  );
+                                  const isEnabled = elig?.isEnabled ?? false;
                                   return (
                                     <TableCell key={cat.id} className="px-0">
                                       <div className="flex items-center justify-center w-full">
@@ -900,7 +910,7 @@ export default function SuperadminCompetitionCategoriesPage() {
                                         />
                                       </div>
                                     </TableCell>
-                                  )
+                                  );
                                 })}
                               </TableRow>
                             ))}
@@ -991,11 +1001,11 @@ export default function SuperadminCompetitionCategoriesPage() {
                         const entryCount =
                           template.type === "COMBINATION"
                             ? template.combinationEntries.filter((e) => e.isActive).length
-                            : template.individualEntries.length
+                            : template.individualEntries.length;
                         const totalCount =
                           template.type === "COMBINATION"
                             ? template.combinationEntries.length
-                            : template.individualEntries.length
+                            : template.individualEntries.length;
 
                         return (
                           <TableRow key={template.id}>
@@ -1010,11 +1020,17 @@ export default function SuperadminCompetitionCategoriesPage() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge variant={template.type === "COMBINATION" ? "default" : "secondary"}>
+                              <Badge
+                                variant={template.type === "COMBINATION" ? "default" : "secondary"}
+                              >
                                 {template.type === "COMBINATION" ? (
-                                  <><Grid3x3 className="mr-1 h-3 w-3" /> Combination</>
+                                  <>
+                                    <Grid3x3 className="mr-1 h-3 w-3" /> Combination
+                                  </>
                                 ) : (
-                                  <><List className="mr-1 h-3 w-3" /> Individual</>
+                                  <>
+                                    <List className="mr-1 h-3 w-3" /> Individual
+                                  </>
                                 )}
                               </Badge>
                             </TableCell>
@@ -1047,8 +1063,8 @@ export default function SuperadminCompetitionCategoriesPage() {
                                   <DropdownMenuItem
                                     className="text-destructive"
                                     onClick={() => {
-                                      setDeletingTemplate(template)
-                                      setDeleteDialogOpen(true)
+                                      setDeletingTemplate(template);
+                                      setDeleteDialogOpen(true);
                                     }}
                                   >
                                     <Trash2 className="mr-2 h-4 w-4" />
@@ -1058,7 +1074,7 @@ export default function SuperadminCompetitionCategoriesPage() {
                               </DropdownMenu>
                             </TableCell>
                           </TableRow>
-                        )
+                        );
                       })
                     )}
                   </TableBody>
@@ -1073,9 +1089,7 @@ export default function SuperadminCompetitionCategoriesPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {editingTemplate ? "Edit Template" : "Add Category Template"}
-            </DialogTitle>
+            <DialogTitle>{editingTemplate ? "Edit Template" : "Add Category Template"}</DialogTitle>
             <DialogDescription>
               {editingTemplate
                 ? "Update the category template details."
@@ -1091,9 +1105,7 @@ export default function SuperadminCompetitionCategoriesPage() {
                 <Input
                   id="template-name"
                   value={formData.name}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, name: e.target.value }))
-                  }
+                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                   placeholder="e.g., Age Group x Apparatus"
                 />
               </div>
@@ -1215,7 +1227,8 @@ export default function SuperadminCompetitionCategoriesPage() {
                     </label>
                   </RadioGroup>
                   <p className="text-xs text-muted-foreground">
-                    Restrictions (age, gender) will be set on each value of the selected axis and inherited by all combinations in that row/column.
+                    Restrictions (age, gender) will be set on each value of the selected axis and
+                    inherited by all combinations in that row/column.
                   </p>
                 </div>
 
@@ -1229,9 +1242,16 @@ export default function SuperadminCompetitionCategoriesPage() {
                       value={newRowValue}
                       onChange={(e) => setNewRowValue(e.target.value)}
                       placeholder={`Add ${formData.rowAxisLabel || "row"} value...`}
-                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddRowValue())}
+                      onKeyDown={(e) =>
+                        e.key === "Enter" && (e.preventDefault(), handleAddRowValue())
+                      }
                     />
-                    <Button type="button" size="sm" onClick={handleAddRowValue} disabled={!newRowValue.trim()}>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleAddRowValue}
+                      disabled={!newRowValue.trim()}
+                    >
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
@@ -1297,9 +1317,16 @@ export default function SuperadminCompetitionCategoriesPage() {
                       value={newColValue}
                       onChange={(e) => setNewColValue(e.target.value)}
                       placeholder={`Add ${formData.columnAxisLabel || "column"} value...`}
-                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddColValue())}
+                      onKeyDown={(e) =>
+                        e.key === "Enter" && (e.preventDefault(), handleAddColValue())
+                      }
                     />
-                    <Button type="button" size="sm" onClick={handleAddColValue} disabled={!newColValue.trim()}>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleAddColValue}
+                      disabled={!newColValue.trim()}
+                    >
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
@@ -1400,10 +1427,7 @@ export default function SuperadminCompetitionCategoriesPage() {
                 {formData.individualEntries.length > 0 && (
                   <div className="space-y-2">
                     {formData.individualEntries.map((entry, index) => (
-                      <div
-                        key={index}
-                        className="flex items-start gap-3 rounded-lg border p-3"
-                      >
+                      <div key={index} className="flex items-start gap-3 rounded-lg border p-3">
                         <div className="flex-1 space-y-2">
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-sm">{entry.name}</span>
@@ -1418,7 +1442,12 @@ export default function SuperadminCompetitionCategoriesPage() {
                                     ...prev,
                                     individualEntries: prev.individualEntries.map((e, i) =>
                                       i === index
-                                        ? { ...e, hasAgeRestriction: checked, minAge: checked ? e.minAge : null, maxAge: checked ? e.maxAge : null }
+                                        ? {
+                                            ...e,
+                                            hasAgeRestriction: checked,
+                                            minAge: checked ? e.minAge : null,
+                                            maxAge: checked ? e.maxAge : null,
+                                          }
                                         : e
                                     ),
                                   }))
@@ -1439,7 +1468,12 @@ export default function SuperadminCompetitionCategoriesPage() {
                                       ...prev,
                                       individualEntries: prev.individualEntries.map((ent, i) =>
                                         i === index
-                                          ? { ...ent, minAge: e.target.value ? parseInt(e.target.value) : null }
+                                          ? {
+                                              ...ent,
+                                              minAge: e.target.value
+                                                ? parseInt(e.target.value)
+                                                : null,
+                                            }
                                           : ent
                                       ),
                                     }))
@@ -1457,7 +1491,12 @@ export default function SuperadminCompetitionCategoriesPage() {
                                       ...prev,
                                       individualEntries: prev.individualEntries.map((ent, i) =>
                                         i === index
-                                          ? { ...ent, maxAge: e.target.value ? parseInt(e.target.value) : null }
+                                          ? {
+                                              ...ent,
+                                              maxAge: e.target.value
+                                                ? parseInt(e.target.value)
+                                                : null,
+                                            }
                                           : ent
                                       ),
                                     }))
@@ -1474,7 +1513,11 @@ export default function SuperadminCompetitionCategoriesPage() {
                                     ...prev,
                                     individualEntries: prev.individualEntries.map((e, i) =>
                                       i === index
-                                        ? { ...e, hasCapacityRestriction: checked, capacity: checked ? e.capacity : null }
+                                        ? {
+                                            ...e,
+                                            hasCapacityRestriction: checked,
+                                            capacity: checked ? e.capacity : null,
+                                          }
                                         : e
                                     ),
                                   }))
@@ -1494,7 +1537,12 @@ export default function SuperadminCompetitionCategoriesPage() {
                                     ...prev,
                                     individualEntries: prev.individualEntries.map((ent, i) =>
                                       i === index
-                                        ? { ...ent, capacity: e.target.value ? parseInt(e.target.value) : null }
+                                        ? {
+                                            ...ent,
+                                            capacity: e.target.value
+                                              ? parseInt(e.target.value)
+                                              : null,
+                                          }
                                         : ent
                                     ),
                                   }))
@@ -1554,9 +1602,9 @@ export default function SuperadminCompetitionCategoriesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Template</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{deletingTemplate?.name}&quot;? This
-              action cannot be undone. Organizations currently referencing this template will
-              lose access to it.
+              Are you sure you want to delete &quot;{deletingTemplate?.name}&quot;? This action
+              cannot be undone. Organizations currently referencing this template will lose access
+              to it.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1571,5 +1619,5 @@ export default function SuperadminCompetitionCategoriesPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
+  );
 }

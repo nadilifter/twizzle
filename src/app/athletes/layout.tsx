@@ -1,14 +1,10 @@
-import { AthletesSidebar } from "@/components/athletes-sidebar"
-import { SiteHeader } from "@/components/site-header"
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-import { BreadcrumbOverrideProvider } from "@/components/breadcrumb-context"
-import { UserImpersonationBanner } from "@/components/user-impersonation-banner"
+import { AthletesSidebar } from "@/components/athletes-sidebar";
+import { SiteHeader } from "@/components/site-header";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { BreadcrumbOverrideProvider } from "@/components/breadcrumb-context";
+import { UserImpersonationBanner } from "@/components/user-impersonation-banner";
 
-export default function AthletesLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function AthletesLayout({ children }: { children: React.ReactNode }) {
   return (
     <BreadcrumbOverrideProvider>
       <SidebarProvider>
@@ -16,11 +12,9 @@ export default function AthletesLayout({
         <SidebarInset>
           <UserImpersonationBanner />
           <SiteHeader />
-          <div className="flex flex-1 flex-col gap-4 p-4 md:p-6 pt-0">
-            {children}
-          </div>
+          <div className="flex flex-1 flex-col gap-4 p-4 md:p-6 pt-0">{children}</div>
         </SidebarInset>
       </SidebarProvider>
     </BreadcrumbOverrideProvider>
-  )
+  );
 }

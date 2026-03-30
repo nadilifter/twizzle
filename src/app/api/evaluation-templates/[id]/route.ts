@@ -14,31 +14,28 @@ const updateTemplateSchema = z.object({
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
   isActive: z.boolean().optional(),
-  
+
   // Auto-sync configuration
   autoSyncEnabled: z.boolean().optional(),
   autoSyncLevels: z.array(z.string()).optional(),
   autoSyncCategories: z.array(z.string()).optional(),
-  
+
   // Scoring configuration
   scoringType: scoringTypeEnum.optional(),
   pointScaleMin: z.number().int().min(0).max(100).optional(),
   pointScaleMax: z.number().int().min(1).max(100).optional(),
   pointScalePassThreshold: z.number().int().min(0).max(100).optional(),
-  
+
   // Completion requirements
   completionType: completionTypeEnum.optional(),
   completionThreshold: z.number().min(0).max(100).optional(),
-  
+
   // Skills (ignored if auto-sync enabled)
   skillIds: z.array(z.string()).optional(),
 });
 
 // GET /api/evaluation-templates/[id]
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -93,18 +90,12 @@ export async function GET(
     return NextResponse.json(template);
   } catch (error) {
     console.error("Error fetching evaluation template:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch evaluation template" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch evaluation template" }, { status: 500 });
   }
 }
 
 // PUT /api/evaluation-templates/[id]
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -145,7 +136,8 @@ export async function PUT(
     if (scoringType === "POINT_SCALE") {
       const min = templateData.pointScaleMin ?? existingTemplate.pointScaleMin;
       const max = templateData.pointScaleMax ?? existingTemplate.pointScaleMax;
-      const threshold = templateData.pointScalePassThreshold ?? existingTemplate.pointScalePassThreshold;
+      const threshold =
+        templateData.pointScalePassThreshold ?? existingTemplate.pointScalePassThreshold;
 
       if (min >= max) {
         return NextResponse.json(
@@ -171,10 +163,7 @@ export async function PUT(
       });
 
       if (skills.length !== skillIds.length) {
-        return NextResponse.json(
-          { error: "One or more skills not found" },
-          { status: 404 }
-        );
+        return NextResponse.json({ error: "One or more skills not found" }, { status: 404 });
       }
     }
 
@@ -247,13 +236,14 @@ export async function PUT(
     });
 
     // If auto-sync is enabled or auto-sync config changed, sync the skills
-    if (willAutoSync && (
-      validatedData.autoSyncEnabled !== undefined ||
-      validatedData.autoSyncLevels !== undefined ||
-      validatedData.autoSyncCategories !== undefined
-    )) {
+    if (
+      willAutoSync &&
+      (validatedData.autoSyncEnabled !== undefined ||
+        validatedData.autoSyncLevels !== undefined ||
+        validatedData.autoSyncCategories !== undefined)
+    ) {
       await syncTemplateSkills(id);
-      
+
       // Fetch the updated template with synced skills
       const updatedTemplate = await db.evaluationTemplate.findUnique({
         where: { id },
@@ -297,16 +287,10 @@ export async function PUT(
     return NextResponse.json(template);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error updating evaluation template:", error);
-    return NextResponse.json(
-      { error: "Failed to update evaluation template" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update evaluation template" }, { status: 500 });
   }
 }
 
@@ -352,7 +336,7 @@ export async function DELETE(
     // Warn if template is in use
     if (existingTemplate._count.evaluations > 0) {
       return NextResponse.json(
-        { 
+        {
           error: "Template is in use",
           message: `This template is used in ${existingTemplate._count.evaluations} evaluation(s). You can deactivate the template instead of deleting it.`,
         },
@@ -368,9 +352,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting evaluation template:", error);
-    return NextResponse.json(
-      { error: "Failed to delete evaluation template" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete evaluation template" }, { status: 500 });
   }
 }

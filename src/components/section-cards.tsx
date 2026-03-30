@@ -1,16 +1,18 @@
 "use client";
 
 import { useMemo } from "react";
-import { TrendingDownIcon, TrendingUpIcon, UsersIcon, CalendarIcon, UserPlusIcon, TrendingUpDownIcon, Loader2Icon } from "lucide-react";
+import {
+  TrendingDownIcon,
+  TrendingUpIcon,
+  UsersIcon,
+  CalendarIcon,
+  UserPlusIcon,
+  TrendingUpDownIcon,
+  Loader2Icon,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useVisitorMetrics } from "@/hooks/use-visitor-metrics";
 import { useEnrollmentMetrics } from "@/hooks/use-enrollment-metrics";
 
@@ -84,7 +86,8 @@ function TodayVisitorsCard() {
           <div className="absolute right-4 top-4">
             <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
               <TrendIcon className="size-3" />
-              {isPositive ? "+" : ""}{percentChange}%
+              {isPositive ? "+" : ""}
+              {percentChange}%
             </Badge>
           </div>
         )}
@@ -95,7 +98,9 @@ function TodayVisitorsCard() {
           {!loading && percentChange !== null && <TrendIcon className="size-4" />}
         </div>
         <div className="text-muted-foreground">
-          {loading ? "Fetching analytics..." : `${data?.total?.toLocaleString() ?? 0} visitors this week`}
+          {loading
+            ? "Fetching analytics..."
+            : `${data?.total?.toLocaleString() ?? 0} visitors this week`}
         </div>
       </CardFooter>
     </Card>
@@ -181,7 +186,8 @@ function TotalVisitorsCard() {
           <div className="absolute right-4 top-4">
             <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
               <TrendIcon className="size-3" />
-              {isPositive ? "+" : ""}{percentChange}%
+              {isPositive ? "+" : ""}
+              {percentChange}%
             </Badge>
           </div>
         )}
@@ -192,7 +198,9 @@ function TotalVisitorsCard() {
           {!loading && percentChange !== null && <TrendIcon className="size-4" />}
         </div>
         <div className="text-muted-foreground">
-          {loading ? "Calculating..." : `~${dailyAverage.toLocaleString()} daily avg (last 30 days)`}
+          {loading
+            ? "Calculating..."
+            : `~${dailyAverage.toLocaleString()} daily avg (last 30 days)`}
         </div>
       </CardFooter>
     </Card>
@@ -249,7 +257,8 @@ function NewEnrollmentsCard() {
           <div className="absolute right-4 top-4">
             <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
               <TrendIcon className="size-3" />
-              {isPositive ? "+" : ""}{percentChange}%
+              {isPositive ? "+" : ""}
+              {percentChange}%
             </Badge>
           </div>
         )}
@@ -259,9 +268,7 @@ function NewEnrollmentsCard() {
           {getFooterText()}
           {!loading && percentChange !== null && <TrendIcon className="size-4" />}
         </div>
-        <div className="text-muted-foreground">
-          {getSubText()}
-        </div>
+        <div className="text-muted-foreground">{getSubText()}</div>
       </CardFooter>
     </Card>
   );
@@ -317,7 +324,8 @@ function GrowthRateCard() {
           <div className="absolute right-4 top-4">
             <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
               <TrendIcon className="size-3" />
-              {isPositive ? "+" : ""}{growthRate}%
+              {isPositive ? "+" : ""}
+              {growthRate}%
             </Badge>
           </div>
         )}
@@ -327,9 +335,7 @@ function GrowthRateCard() {
           {getFooterText()}
           {!loading && growthRate !== null && <TrendIcon className="size-4" />}
         </div>
-        <div className="text-muted-foreground">
-          {getSubText()}
-        </div>
+        <div className="text-muted-foreground">{getSubText()}</div>
       </CardFooter>
     </Card>
   );

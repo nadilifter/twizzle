@@ -1,17 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { z } from "zod";
-import {
-  getConversationMessages,
-  sendAthleteReply,
-} from "@/lib/conversation-service";
+import { getConversationMessages, sendAthleteReply } from "@/lib/conversation-service";
 import { db } from "@/lib/db";
 
 // GET /api/athletes/chat/conversations/[id]/messages - Get messages
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.id) {
@@ -30,10 +24,7 @@ export async function GET(
     });
 
     if (!conversation || conversation.userId !== userId) {
-      return NextResponse.json(
-        { error: "Conversation not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
 
     const searchParams = request.nextUrl.searchParams;
@@ -45,26 +36,16 @@ export async function GET(
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error fetching athlete conversation messages:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch messages" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch messages" }, { status: 500 });
   }
 }
 
 const sendMessageSchema = z.object({
-  body: z
-    .string()
-    .trim()
-    .min(1, "Message body is required")
-    .max(5000, "Message too long"),
+  body: z.string().trim().min(1, "Message body is required").max(5000, "Message too long"),
 });
 
 // POST /api/athletes/chat/conversations/[id]/messages - Send a reply
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.id) {
@@ -98,9 +79,6 @@ export async function POST(
       );
     }
     console.error("Error sending athlete reply:", error);
-    return NextResponse.json(
-      { error: "Failed to send message" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to send message" }, { status: 500 });
   }
 }

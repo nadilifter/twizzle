@@ -1,18 +1,18 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getAuthSession } from "@/lib/auth"
-import { db } from "@/lib/db"
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthSession } from "@/lib/auth";
+import { db } from "@/lib/db";
 
 // POST /api/notifications/read-all
 // Mark all announcements as read for the current user
 export async function POST(request: NextRequest) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const organizationId = session.user.organizationId
-    const now = new Date()
+    const organizationId = session.user.organizationId;
+    const now = new Date();
 
     // Get all unread system announcements
     const systemAnnouncements = await db.systemAnnouncement.findMany({
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
         },
       },
       select: { id: true },
-    })
+    });
 
     // Get all unread org announcements
     const orgAnnouncements = organizationId
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
           },
           select: { id: true },
         })
-      : []
+      : [];
 
     // Create read records for all unread announcements
     await Promise.all([
@@ -77,17 +77,17 @@ export async function POST(request: NextRequest) {
           update: {},
         })
       ),
-    ])
+    ]);
 
     return NextResponse.json({
       success: true,
       markedRead: systemAnnouncements.length + orgAnnouncements.length,
-    })
+    });
   } catch (error) {
-    console.error("Error marking all notifications as read:", error)
+    console.error("Error marking all notifications as read:", error);
     return NextResponse.json(
       { error: "Failed to mark all notifications as read" },
       { status: 500 }
-    )
+    );
   }
 }

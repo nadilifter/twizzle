@@ -10,14 +10,11 @@ const TOKEN_EXPIRATION_MS = 60 * 60 * 1000;
 
 /**
  * POST /api/users/[id]/send-password-reset
- * 
+ *
  * Allows organization admins to send a password reset email to a user in their organization.
  * Requires users.manage permission or admin access.
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -25,7 +22,7 @@ export async function POST(
     }
 
     // Check permission - need admin access or users.manage permission
-    const hasPermission = 
+    const hasPermission =
       session.user.permissions.includes("*") ||
       session.user.permissions.includes("users.manage") ||
       session.user.permissions.includes("users.create");
@@ -50,10 +47,7 @@ export async function POST(
     });
 
     if (!membership) {
-      return NextResponse.json(
-        { error: "User not found in your organization" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found in your organization" }, { status: 404 });
     }
 
     const user = membership.user;
@@ -99,9 +93,6 @@ export async function POST(
     });
   } catch (error) {
     console.error("Error sending password reset email:", error);
-    return NextResponse.json(
-      { error: "Failed to send password reset email" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to send password reset email" }, { status: 500 });
   }
 }

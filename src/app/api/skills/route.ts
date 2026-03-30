@@ -50,16 +50,10 @@ export async function GET(request: NextRequest) {
       ...(levelId && { levelId }),
       // Filter skills appropriate for an athlete's age
       ...(minAge && {
-        OR: [
-          { minAge: null },
-          { minAge: { lte: parseInt(minAge) } },
-        ],
+        OR: [{ minAge: null }, { minAge: { lte: parseInt(minAge) } }],
       }),
       ...(maxAge && {
-        OR: [
-          { maxAge: null },
-          { maxAge: { gte: parseInt(maxAge) } },
-        ],
+        OR: [{ maxAge: null }, { maxAge: { gte: parseInt(maxAge) } }],
       }),
     };
 
@@ -82,13 +76,16 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Group by category for easier UI consumption
-    const grouped = skills.reduce((acc, skill) => {
-      if (!acc[skill.category]) {
-        acc[skill.category] = [];
-      }
-      acc[skill.category].push(skill);
-      return acc;
-    }, {} as Record<string, typeof skills>);
+    const grouped = skills.reduce(
+      (acc, skill) => {
+        if (!acc[skill.category]) {
+          acc[skill.category] = [];
+        }
+        acc[skill.category].push(skill);
+        return acc;
+      },
+      {} as Record<string, typeof skills>
+    );
 
     return NextResponse.json({
       data: skills,
@@ -100,10 +97,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching skills:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch skills" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch skills" }, { status: 500 });
   }
 }
 
@@ -138,15 +132,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(skill);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating skill:", error);
-    return NextResponse.json(
-      { error: "Failed to create skill" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create skill" }, { status: 500 });
   }
 }

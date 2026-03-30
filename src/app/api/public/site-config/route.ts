@@ -48,9 +48,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       organizationId: config.organizationId,
       organizationName: config.organization.name,
-      taxRate: config.organization.taxEnabled !== false
-        ? Number(config.organization.taxRate ?? 0)
-        : 0,
+      taxRate:
+        config.organization.taxEnabled !== false ? Number(config.organization.taxRate ?? 0) : 0,
       taxEnabled: config.organization.taxEnabled,
       taxPaidBy: config.organization.taxPaidBy,
       processingFeePaidBy: config.organization.processingFeePaidBy,
@@ -59,9 +58,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching site config:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch site config" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch site config" }, { status: 500 });
   }
 }

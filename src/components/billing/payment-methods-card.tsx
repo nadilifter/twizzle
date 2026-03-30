@@ -1,10 +1,20 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { CreditCard, Plus, Trash2, Check, AlertTriangle, Loader2, Wallet, Landmark, Smartphone } from "lucide-react"
-import { toast } from "sonner"
+import * as React from "react";
+import {
+  CreditCard,
+  Plus,
+  Trash2,
+  Check,
+  AlertTriangle,
+  Loader2,
+  Wallet,
+  Landmark,
+  Smartphone,
+} from "lucide-react";
+import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,8 +22,8 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -21,7 +31,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,27 +42,27 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { AdyenCheckoutComponent } from "@/components/sites/adyen-checkout"
+} from "@/components/ui/alert-dialog";
+import { AdyenCheckoutComponent } from "@/components/sites/adyen-checkout";
 
 interface PaymentMethod {
-  id: string
-  storedPaymentMethodId: string
-  type: string
-  brand: string | null
-  lastFour: string
-  expiryMonth: string | null
-  expiryYear: string | null
-  holderName: string | null
-  isDefault: boolean
-  isActive: boolean
-  createdAt: string
+  id: string;
+  storedPaymentMethodId: string;
+  type: string;
+  brand: string | null;
+  lastFour: string;
+  expiryMonth: string | null;
+  expiryYear: string | null;
+  holderName: string | null;
+  isDefault: boolean;
+  isActive: boolean;
+  createdAt: string;
 }
 
 interface PaymentMethodsCardProps {
-  paymentMethods: PaymentMethod[]
-  organizationId: string
-  hasSubscription: boolean
+  paymentMethods: PaymentMethod[];
+  organizationId: string;
+  hasSubscription: boolean;
 }
 
 export function PaymentMethodsCard({
@@ -60,19 +70,19 @@ export function PaymentMethodsCard({
   organizationId,
   hasSubscription,
 }: PaymentMethodsCardProps) {
-  const [paymentMethods, setPaymentMethods] = React.useState(initialPaymentMethods)
+  const [paymentMethods, setPaymentMethods] = React.useState(initialPaymentMethods);
   React.useEffect(() => {
-    setPaymentMethods(initialPaymentMethods)
-  }, [initialPaymentMethods])
-  const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
-  const [isLoading, setIsLoading] = React.useState(false)
-  const [sessionId, setSessionId] = React.useState<string | null>(null)
-  const [sessionData, setSessionData] = React.useState<string | null>(null)
-  const [deletingId, setDeletingId] = React.useState<string | null>(null)
-  const [settingDefaultId, setSettingDefaultId] = React.useState<string | null>(null)
+    setPaymentMethods(initialPaymentMethods);
+  }, [initialPaymentMethods]);
+  const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [sessionId, setSessionId] = React.useState<string | null>(null);
+  const [sessionData, setSessionData] = React.useState<string | null>(null);
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
+  const [settingDefaultId, setSettingDefaultId] = React.useState<string | null>(null);
 
   const handleAddPaymentMethod = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
       const response = await fetch("/api/payment-methods/session", {
         method: "POST",
@@ -80,153 +90,152 @@ export function PaymentMethodsCard({
         body: JSON.stringify({
           returnUrl: window.location.href,
         }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to create payment session")
+        throw new Error("Failed to create payment session");
       }
 
-      const data = await response.json()
-      setSessionId(data.sessionId)
-      setSessionData(data.sessionData)
+      const data = await response.json();
+      setSessionId(data.sessionId);
+      setSessionData(data.sessionData);
     } catch (error) {
-      toast.error("Failed to initialize payment form")
-      setIsAddDialogOpen(false)
+      toast.error("Failed to initialize payment form");
+      setIsAddDialogOpen(false);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handlePaymentCompleted = async (result: { resultCode: string }) => {
     if (result.resultCode === "Authorised" || result.resultCode === "Pending") {
-      toast.success("Payment method added successfully!")
-      setIsAddDialogOpen(false)
-      setSessionId(null)
-      setSessionData(null)
+      toast.success("Payment method added successfully!");
+      setIsAddDialogOpen(false);
+      setSessionId(null);
+      setSessionData(null);
       // Refresh payment methods
-      await refreshPaymentMethods()
+      await refreshPaymentMethods();
     } else {
-      toast.error(`Failed to add payment method: ${result.resultCode}`)
+      toast.error(`Failed to add payment method: ${result.resultCode}`);
     }
-  }
+  };
 
   const handlePaymentError = (error: { message?: string }) => {
-    toast.error(error?.message || "Failed to add payment method")
-  }
+    toast.error(error?.message || "Failed to add payment method");
+  };
 
   const refreshPaymentMethods = async () => {
     try {
-      const response = await fetch("/api/payment-methods")
+      const response = await fetch("/api/payment-methods");
       if (response.ok) {
-        const data = await response.json()
-        setPaymentMethods(data)
+        const data = await response.json();
+        setPaymentMethods(data);
       }
     } catch (error) {
-      console.error("Failed to refresh payment methods:", error)
+      console.error("Failed to refresh payment methods:", error);
     }
-  }
+  };
 
   const handleSetDefault = async (paymentMethodId: string) => {
-    setSettingDefaultId(paymentMethodId)
+    setSettingDefaultId(paymentMethodId);
     try {
       const response = await fetch(`/api/payment-methods/${paymentMethodId}/default`, {
         method: "POST",
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to set default payment method")
+        throw new Error("Failed to set default payment method");
       }
 
-      toast.success("Default payment method updated")
-      await refreshPaymentMethods()
+      toast.success("Default payment method updated");
+      await refreshPaymentMethods();
     } catch (error) {
-      toast.error("Failed to update default payment method")
+      toast.error("Failed to update default payment method");
     } finally {
-      setSettingDefaultId(null)
+      setSettingDefaultId(null);
     }
-  }
+  };
 
   const handleDelete = async (paymentMethodId: string) => {
-    setDeletingId(paymentMethodId)
+    setDeletingId(paymentMethodId);
     try {
       const response = await fetch(`/api/payment-methods/${paymentMethodId}`, {
         method: "DELETE",
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to delete payment method")
+        throw new Error("Failed to delete payment method");
       }
 
-      toast.success("Payment method removed")
-      await refreshPaymentMethods()
+      toast.success("Payment method removed");
+      await refreshPaymentMethods();
     } catch (error) {
-      toast.error("Failed to remove payment method")
+      toast.error("Failed to remove payment method");
     } finally {
-      setDeletingId(null)
+      setDeletingId(null);
     }
-  }
+  };
 
-  const isCardType = (method: PaymentMethod) =>
-    method.type === "scheme" || method.type === "card"
+  const isCardType = (method: PaymentMethod) => method.type === "scheme" || method.type === "card";
 
   const isWalletType = (method: PaymentMethod) =>
-    ["googlepay", "applepay", "paywithgoogle", "paypal"].includes(method.type)
+    ["googlepay", "applepay", "paywithgoogle", "paypal"].includes(method.type);
 
   const isBankType = (method: PaymentMethod) =>
-    ["ach", "sepadirectdebit", "directdebit_GB", "bankTransfer"].includes(method.type)
+    ["ach", "sepadirectdebit", "directdebit_GB", "bankTransfer"].includes(method.type);
 
   const getMethodIcon = (method: PaymentMethod) => {
-    if (isWalletType(method)) return <Smartphone className="h-6 w-6" />
-    if (isBankType(method)) return <Landmark className="h-6 w-6" />
-    return <CreditCard className="h-6 w-6" />
-  }
+    if (isWalletType(method)) return <Smartphone className="h-6 w-6" />;
+    if (isBankType(method)) return <Landmark className="h-6 w-6" />;
+    return <CreditCard className="h-6 w-6" />;
+  };
 
   const getMethodLabel = (method: PaymentMethod): string => {
-    if (method.type === "googlepay" || method.type === "paywithgoogle") return "Google Pay"
-    if (method.type === "applepay") return "Apple Pay"
-    if (method.type === "paypal") return "PayPal"
-    if (method.type === "ach") return "Bank Account (ACH)"
-    if (method.type === "sepadirectdebit") return "Bank Account (SEPA)"
-    if (method.type === "directdebit_GB") return "Bank Account (Direct Debit)"
-    if (method.brand) return method.brand
-    if (method.type === "scheme") return "Card"
-    return method.type
-  }
+    if (method.type === "googlepay" || method.type === "paywithgoogle") return "Google Pay";
+    if (method.type === "applepay") return "Apple Pay";
+    if (method.type === "paypal") return "PayPal";
+    if (method.type === "ach") return "Bank Account (ACH)";
+    if (method.type === "sepadirectdebit") return "Bank Account (SEPA)";
+    if (method.type === "directdebit_GB") return "Bank Account (Direct Debit)";
+    if (method.brand) return method.brand;
+    if (method.type === "scheme") return "Card";
+    return method.type;
+  };
 
   const getMethodIdentifier = (method: PaymentMethod): string => {
     if (method.lastFour && method.lastFour !== "****") {
-      return `•••• ${method.lastFour}`
+      return `•••• ${method.lastFour}`;
     }
-    if (method.holderName) return method.holderName
-    return ""
-  }
+    if (method.holderName) return method.holderName;
+    return "";
+  };
 
   const getDeleteDescription = (method: PaymentMethod): string => {
-    const label = getMethodLabel(method)
+    const label = getMethodLabel(method);
     if (method.lastFour && method.lastFour !== "****") {
-      return `${label} ending in ${method.lastFour}`
+      return `${label} ending in ${method.lastFour}`;
     }
-    return label
-  }
+    return label;
+  };
 
   const hasExpiry = (method: PaymentMethod) =>
-    isCardType(method) && method.expiryMonth && method.expiryYear
+    isCardType(method) && method.expiryMonth && method.expiryYear;
 
   const isExpired = (method: PaymentMethod): boolean => {
-    if (!hasExpiry(method)) return false
-    const now = new Date()
-    const expiryDate = new Date(parseInt(method.expiryYear!), parseInt(method.expiryMonth!), 0)
-    return now > expiryDate
-  }
+    if (!hasExpiry(method)) return false;
+    const now = new Date();
+    const expiryDate = new Date(parseInt(method.expiryYear!), parseInt(method.expiryMonth!), 0);
+    return now > expiryDate;
+  };
 
   const isExpiringSoon = (method: PaymentMethod): boolean => {
-    if (!hasExpiry(method)) return false
-    const now = new Date()
-    const expiryDate = new Date(parseInt(method.expiryYear!), parseInt(method.expiryMonth!), 0)
-    const twoMonthsFromNow = new Date()
-    twoMonthsFromNow.setMonth(twoMonthsFromNow.getMonth() + 2)
-    return now <= expiryDate && expiryDate <= twoMonthsFromNow
-  }
+    if (!hasExpiry(method)) return false;
+    const now = new Date();
+    const expiryDate = new Date(parseInt(method.expiryYear!), parseInt(method.expiryMonth!), 0);
+    const twoMonthsFromNow = new Date();
+    twoMonthsFromNow.setMonth(twoMonthsFromNow.getMonth() + 2);
+    return now <= expiryDate && expiryDate <= twoMonthsFromNow;
+  };
 
   return (
     <Card>
@@ -246,35 +255,38 @@ export function PaymentMethodsCard({
         ) : (
           <div className="space-y-3">
             {paymentMethods.map((method) => {
-              const expired = isExpired(method)
-              const expiringSoon = isExpiringSoon(method)
-              const identifier = getMethodIdentifier(method)
+              const expired = isExpired(method);
+              const expiringSoon = isExpiringSoon(method);
+              const identifier = getMethodIdentifier(method);
 
               return (
                 <div
                   key={method.id}
                   className={`flex items-center justify-between p-4 border rounded-lg ${
-                    expired ? "border-destructive/50 bg-destructive/5" : 
-                    expiringSoon ? "border-amber-500/50 bg-amber-500/5" : ""
+                    expired
+                      ? "border-destructive/50 bg-destructive/5"
+                      : expiringSoon
+                        ? "border-amber-500/50 bg-amber-500/5"
+                        : ""
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     {getMethodIcon(method)}
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium capitalize">
-                          {getMethodLabel(method)}
-                        </span>
-                        {identifier && (
-                          <span className="text-muted-foreground">{identifier}</span>
-                        )}
+                        <span className="font-medium capitalize">{getMethodLabel(method)}</span>
+                        {identifier && <span className="text-muted-foreground">{identifier}</span>}
                         {method.isDefault && (
-                          <Badge variant="secondary" className="text-xs">Default</Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            Default
+                          </Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         {hasExpiry(method) && (
-                          <span>Expires {method.expiryMonth}/{method.expiryYear!.slice(-2)}</span>
+                          <span>
+                            Expires {method.expiryMonth}/{method.expiryYear!.slice(-2)}
+                          </span>
                         )}
                         {method.holderName && (
                           <>
@@ -334,7 +346,8 @@ export function PaymentMethodsCard({
                           <AlertDialogTitle>Remove payment method?</AlertDialogTitle>
                           <AlertDialogDescription>
                             This will remove {getDeleteDescription(method)} from your account.
-                            {method.isDefault && " This is your default payment method - removing it may affect your subscription."}
+                            {method.isDefault &&
+                              " This is your default payment method - removing it may affect your subscription."}
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -350,7 +363,7 @@ export function PaymentMethodsCard({
                     </AlertDialog>
                   </div>
                 </div>
-              )
+              );
             })}
           </div>
         )}
@@ -358,11 +371,7 @@ export function PaymentMethodsCard({
       <CardFooter>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={handleAddPaymentMethod}
-            >
+            <Button variant="outline" className="w-full" onClick={handleAddPaymentMethod}>
               <Plus className="h-4 w-4 mr-2" />
               Add Payment Method
             </Button>
@@ -396,5 +405,5 @@ export function PaymentMethodsCard({
         </Dialog>
       </CardFooter>
     </Card>
-  )
+  );
 }

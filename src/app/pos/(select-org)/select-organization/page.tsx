@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Image from "next/image"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Check, ChevronsUpDown, Building2, Loader2, LogOut, CreditCard } from "lucide-react"
-import { useSession } from "next-auth/react"
-import { logout } from "@/lib/logout"
+import * as React from "react";
+import Image from "next/image";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Check, ChevronsUpDown, Building2, Loader2, LogOut, CreditCard } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { logout } from "@/lib/logout";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -16,112 +16,108 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { ShineBorder } from "@/components/ui/shine-border"
-import { GradientBackground } from "@/components/ui/gradient-background"
-import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler"
-import { getUserOrganizations, verifyOrganizationMembership } from "@/app/actions/organization"
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { ShineBorder } from "@/components/ui/shine-border";
+import { GradientBackground } from "@/components/ui/gradient-background";
+import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
+import { getUserOrganizations, verifyOrganizationMembership } from "@/app/actions/organization";
 
 type Organization = {
-  id: string
-  name: string
-  slug: string
-  logo: string | null
-}
+  id: string;
+  name: string;
+  slug: string;
+  logo: string | null;
+};
 
 function POSSelectOrganizationForm() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const preselect = searchParams.get("preselect")
-  
-  const { data: session, update } = useSession()
-  const [open, setOpen] = React.useState(false)
-  const [value, setValue] = React.useState("")
-  const [isLoading, setIsLoading] = React.useState(false)
-  const [organizations, setOrganizations] = React.useState<Organization[]>([])
-  const [fetching, setFetching] = React.useState(true)
-  const [autoSelectAttempted, setAutoSelectAttempted] = React.useState(false)
-  const buttonRef = React.useRef<HTMLButtonElement>(null)
-  const [popoverWidth, setPopoverWidth] = React.useState<number | undefined>(undefined)
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const preselect = searchParams.get("preselect");
+
+  const { data: session, update } = useSession();
+  const [open, setOpen] = React.useState(false);
+  const [value, setValue] = React.useState("");
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [organizations, setOrganizations] = React.useState<Organization[]>([]);
+  const [fetching, setFetching] = React.useState(true);
+  const [autoSelectAttempted, setAutoSelectAttempted] = React.useState(false);
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const [popoverWidth, setPopoverWidth] = React.useState<number | undefined>(undefined);
 
   // Fetch organizations when session is ready
   React.useEffect(() => {
     const fetchOrgs = async () => {
       try {
-        const orgs = await getUserOrganizations()
-        setOrganizations(orgs)
+        const orgs = await getUserOrganizations();
+        setOrganizations(orgs);
       } catch (error) {
-        console.error("Failed to fetch organizations", error)
+        console.error("Failed to fetch organizations", error);
       } finally {
-        setFetching(false)
+        setFetching(false);
       }
-    }
-    
+    };
+
     if (session?.user) {
-      fetchOrgs()
+      fetchOrgs();
     } else if (session === null) {
-      setFetching(false)
+      setFetching(false);
     }
-  }, [session])
+  }, [session]);
 
   // Handle auto-selection from preselect param
   React.useEffect(() => {
     const handleAutoSelect = async () => {
       if (autoSelectAttempted || fetching || !preselect || organizations.length === 0) {
-        return
+        return;
       }
-      
-      setAutoSelectAttempted(true)
-      
+
+      setAutoSelectAttempted(true);
+
       // Check if the preselected org is in the user's list
-      const preselectOrg = organizations.find(o => o.id === preselect)
-      
+      const preselectOrg = organizations.find((o) => o.id === preselect);
+
       if (preselectOrg) {
         // Verify membership server-side
-        const hasAccess = await verifyOrganizationMembership(preselect)
+        const hasAccess = await verifyOrganizationMembership(preselect);
         if (hasAccess) {
-          await handleSelect(preselect)
+          await handleSelect(preselect);
         }
       }
-    }
-    
-    handleAutoSelect()
-  }, [preselect, organizations, fetching, autoSelectAttempted])
+    };
+
+    handleAutoSelect();
+  }, [preselect, organizations, fetching, autoSelectAttempted]);
 
   React.useEffect(() => {
     if (buttonRef.current) {
-      setPopoverWidth(buttonRef.current.offsetWidth)
+      setPopoverWidth(buttonRef.current.offsetWidth);
     }
-  }, [fetching])
+  }, [fetching]);
 
   const handleSelect = async (orgId: string) => {
-    const selectedOrg = organizations.find(o => o.id === orgId)
-    if (!selectedOrg) return
+    const selectedOrg = organizations.find((o) => o.id === orgId);
+    if (!selectedOrg) return;
 
-    setValue(orgId)
-    setOpen(false)
-    setIsLoading(true)
-    
+    setValue(orgId);
+    setOpen(false);
+    setIsLoading(true);
+
     // Update session with new organization
-    await update({ 
-      organizationId: selectedOrg.id, 
-      organizationName: selectedOrg.name 
-    })
-    
+    await update({
+      organizationId: selectedOrg.id,
+      organizationName: selectedOrg.name,
+    });
+
     // Redirect to POS terminal
-    router.push("/pos")
-    router.refresh()
-  }
+    router.push("/pos");
+    router.refresh();
+  };
 
   const handleSignOut = () => {
-    logout("/login")
-  }
+    logout("/login");
+  };
 
   if (isLoading || fetching) {
     return (
@@ -136,15 +132,13 @@ function POSSelectOrganizationForm() {
           <h1 className="text-2xl font-bold">
             {fetching ? "Loading Organizations..." : "Switching Organization"}
           </h1>
-          <p className="text-sm text-muted-foreground">
-            Please wait...
-          </p>
+          <p className="text-sm text-muted-foreground">Please wait...</p>
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center py-8">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
@@ -157,11 +151,9 @@ function POSSelectOrganizationForm() {
           </div>
         </div>
         <h1 className="text-2xl font-bold">POS Terminal</h1>
-        <p className="text-sm text-muted-foreground">
-          Select an organization to continue
-        </p>
+        <p className="text-sm text-muted-foreground">Select an organization to continue</p>
       </CardHeader>
-      
+
       <CardContent className="grid gap-4">
         <div className="grid gap-2 text-left">
           <Popover open={open} onOpenChange={setOpen}>
@@ -179,8 +171,8 @@ function POSSelectOrganizationForm() {
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent 
-              className="p-0" 
+            <PopoverContent
+              className="p-0"
               align="start"
               style={popoverWidth ? { width: `${popoverWidth}px` } : undefined}
             >
@@ -211,35 +203,29 @@ function POSSelectOrganizationForm() {
             </PopoverContent>
           </Popover>
         </div>
-        
+
         <div className="flex flex-col gap-2">
           <div className="text-center text-sm text-muted-foreground">
             You will be taken to the POS terminal after selecting an organization.
           </div>
-          
+
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Or
-              </span>
+              <span className="bg-background px-2 text-muted-foreground">Or</span>
             </div>
           </div>
 
-          <Button 
-            variant="ghost" 
-            onClick={handleSignOut} 
-            className="w-full"
-          >
+          <Button variant="ghost" onClick={handleSignOut} className="w-full">
             <LogOut className="mr-2 h-4 w-4" />
             Log out
           </Button>
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 export default function POSSelectOrganizationPage() {
@@ -249,19 +235,21 @@ export default function POSSelectOrganizationPage() {
       <div className="absolute top-4 right-4 z-50">
         <AnimatedThemeToggler />
       </div>
-      
+
       <main className="flex flex-col items-center justify-center w-full flex-1 px-4 text-center z-10">
-        <React.Suspense fallback={
-          <Card className="relative overflow-hidden w-full max-w-[400px]">
-            <ShineBorder shineColor={["#5655ED", "#A07CFE"]} />
-            <CardContent className="flex flex-col items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </CardContent>
-          </Card>
-        }>
+        <React.Suspense
+          fallback={
+            <Card className="relative overflow-hidden w-full max-w-[400px]">
+              <ShineBorder shineColor={["#5655ED", "#A07CFE"]} />
+              <CardContent className="flex flex-col items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </CardContent>
+            </Card>
+          }
+        >
           <POSSelectOrganizationForm />
         </React.Suspense>
       </main>
     </div>
-  )
+  );
 }

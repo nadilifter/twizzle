@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback } from "react";
 import {
   DndContext,
   KeyboardSensor,
@@ -10,33 +10,20 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
-} from "@dnd-kit/core"
-import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers"
+} from "@dnd-kit/core";
+import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
 import {
   SortableContext,
   arrayMove,
   useSortable,
   verticalListSortingStrategy,
-} from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { 
-  Plus, 
-  Search, 
-  Loader2,
-  Pencil,
-  Trash2,
-  GripVertical,
-} from "lucide-react"
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Search, Loader2, Pencil, Trash2, GripVertical } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -44,7 +31,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
   Sheet,
   SheetContent,
@@ -53,7 +40,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet"
+} from "@/components/ui/sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,31 +50,31 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Switch } from "@/components/ui/switch"
-import { toast } from "sonner"
-import { api } from "@/lib/api-client"
-import { ColorSelector } from "@/components/color-selector"
+} from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
+import { api } from "@/lib/api-client";
+import { ColorSelector } from "@/components/color-selector";
 
 interface Level {
-  id: string
-  name: string
-  description: string | null
-  order: number
-  color: string | null
-  isDefault: boolean
-  createdAt: string
-  updatedAt: string
+  id: string;
+  name: string;
+  description: string | null;
+  order: number;
+  color: string | null;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface LevelFormData {
-  name: string
-  description: string
-  color: string
-  isDefault: boolean
+  name: string;
+  description: string;
+  color: string;
+  isDefault: boolean;
 }
 
 const initialFormData: LevelFormData = {
@@ -95,38 +82,28 @@ const initialFormData: LevelFormData = {
   description: "",
   color: "#3b82f6", // Default blue
   isDefault: false,
-}
-
+};
 
 function SortableLevelRow({
   level,
   onEdit,
   onDelete,
 }: {
-  level: Level
-  onEdit: (level: Level) => void
-  onDelete: (level: Level) => void
+  level: Level;
+  onEdit: (level: Level) => void;
+  onDelete: (level: Level) => void;
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: level.id })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: level.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-  }
+  };
 
   return (
-    <TableRow
-      ref={setNodeRef}
-      style={style}
-      className={isDragging ? "opacity-50" : ""}
-    >
+    <TableRow ref={setNodeRef} style={style} className={isDragging ? "opacity-50" : ""}>
       <TableCell>
         <div className="flex items-center gap-2">
           <button
@@ -147,7 +124,9 @@ function SortableLevelRow({
         <div className="flex items-center gap-2">
           <span className="font-medium">{level.name}</span>
           {level.isDefault && (
-            <Badge variant="secondary" className="text-xs">Default</Badge>
+            <Badge variant="secondary" className="text-xs">
+              Default
+            </Badge>
           )}
         </div>
       </TableCell>
@@ -156,151 +135,143 @@ function SortableLevelRow({
       </TableCell>
       <TableCell className="text-right">
         <div className="flex justify-end gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onEdit(level)}
-          >
+          <Button variant="ghost" size="icon" onClick={() => onEdit(level)}>
             <Pencil className="h-4 w-4" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onDelete(level)}
-          >
+          <Button variant="ghost" size="icon" onClick={() => onDelete(level)}>
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       </TableCell>
     </TableRow>
-  )
+  );
 }
 
 export default function LevelsPage() {
-  const [levels, setLevels] = useState<Level[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [isSheetOpen, setIsSheetOpen] = useState(false)
-  const [editingLevel, setEditingLevel] = useState<Level | null>(null)
-  const [formData, setFormData] = useState<LevelFormData>(initialFormData)
-  const [isSaving, setIsSaving] = useState(false)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [levelToDelete, setLevelToDelete] = useState<Level | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [isSavingOrder, setIsSavingOrder] = useState(false)
+  const [levels, setLevels] = useState<Level[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [editingLevel, setEditingLevel] = useState<Level | null>(null);
+  const [formData, setFormData] = useState<LevelFormData>(initialFormData);
+  const [isSaving, setIsSaving] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [levelToDelete, setLevelToDelete] = useState<Level | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
 
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
     useSensor(TouchSensor, {}),
     useSensor(KeyboardSensor, {})
-  )
+  );
 
   const fetchLevels = useCallback(async () => {
     try {
-      const data = await api.get<Level[]>("/api/levels", { search: searchQuery })
-      setLevels(data)
+      const data = await api.get<Level[]>("/api/levels", { search: searchQuery });
+      setLevels(data);
     } catch (error) {
-      console.error("Error fetching levels:", error)
-      toast.error("Failed to load levels")
+      console.error("Error fetching levels:", error);
+      toast.error("Failed to load levels");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [searchQuery])
+  }, [searchQuery]);
 
   useEffect(() => {
-    fetchLevels()
-  }, [fetchLevels])
+    fetchLevels();
+  }, [fetchLevels]);
 
   const handleOpenSheet = (level?: Level) => {
     if (level) {
-      setEditingLevel(level)
+      setEditingLevel(level);
       setFormData({
         name: level.name,
         description: level.description || "",
         color: level.color || "#3b82f6",
         isDefault: level.isDefault,
-      })
+      });
     } else {
-      setEditingLevel(null)
-      setFormData(initialFormData)
+      setEditingLevel(null);
+      setFormData(initialFormData);
     }
-    setIsSheetOpen(true)
-  }
+    setIsSheetOpen(true);
+  };
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
-      toast.error("Name is required")
-      return
+      toast.error("Name is required");
+      return;
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       if (editingLevel) {
-        await api.put(`/api/levels/${editingLevel.id}`, formData)
-        toast.success("Level updated successfully")
+        await api.put(`/api/levels/${editingLevel.id}`, formData);
+        toast.success("Level updated successfully");
       } else {
-        await api.post("/api/levels", formData)
-        toast.success("Level created successfully")
+        await api.post("/api/levels", formData);
+        toast.success("Level created successfully");
       }
-      setIsSheetOpen(false)
-      fetchLevels()
+      setIsSheetOpen(false);
+      fetchLevels();
     } catch (error) {
-      console.error("Error saving level:", error)
-      toast.error(editingLevel ? "Failed to update level" : "Failed to create level")
+      console.error("Error saving level:", error);
+      toast.error(editingLevel ? "Failed to update level" : "Failed to create level");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const handleDelete = async () => {
-    if (!levelToDelete) return
+    if (!levelToDelete) return;
 
-    setIsDeleting(true)
+    setIsDeleting(true);
     try {
-      await api.delete(`/api/levels/${levelToDelete.id}`)
-      toast.success("Level deleted successfully")
-      setDeleteDialogOpen(false)
-      setLevelToDelete(null)
-      fetchLevels()
+      await api.delete(`/api/levels/${levelToDelete.id}`);
+      toast.success("Level deleted successfully");
+      setDeleteDialogOpen(false);
+      setLevelToDelete(null);
+      fetchLevels();
     } catch (error: any) {
-      console.error("Error deleting level:", error)
-      const message = error?.error || "Failed to delete level"
-      toast.error(message)
+      console.error("Error deleting level:", error);
+      const message = error?.error || "Failed to delete level";
+      toast.error(message);
     } finally {
-      setIsDeleting(false)
+      setIsDeleting(false);
     }
-  }
+  };
 
   const openDeleteDialog = (level: Level) => {
-    setLevelToDelete(level)
-    setDeleteDialogOpen(true)
-  }
+    setLevelToDelete(level);
+    setDeleteDialogOpen(true);
+  };
 
   const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
 
-    const oldIndex = levels.findIndex((l) => l.id === active.id)
-    const newIndex = levels.findIndex((l) => l.id === over.id)
-    const reordered = arrayMove(levels, oldIndex, newIndex)
-    setLevels(reordered)
+    const oldIndex = levels.findIndex((l) => l.id === active.id);
+    const newIndex = levels.findIndex((l) => l.id === over.id);
+    const reordered = arrayMove(levels, oldIndex, newIndex);
+    setLevels(reordered);
 
-    setIsSavingOrder(true)
+    setIsSavingOrder(true);
     try {
       const updates = reordered.map((level, index) => ({
         id: level.id,
         order: index,
-      }))
-      await api.post("/api/levels/reorder", { levels: updates })
-      toast.success("Level order updated")
+      }));
+      await api.post("/api/levels/reorder", { levels: updates });
+      toast.success("Level order updated");
     } catch (error) {
-      console.error("Error saving level order:", error)
-      toast.error("Failed to save level order")
-      fetchLevels()
+      console.error("Error saving level order:", error);
+      toast.error("Failed to save level order");
+      fetchLevels();
     } finally {
-      setIsSavingOrder(false)
+      setIsSavingOrder(false);
     }
-  }
+  };
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -322,8 +293,8 @@ export default function LevelsPage() {
             <SheetHeader>
               <SheetTitle>{editingLevel ? "Edit Level" : "Create Level"}</SheetTitle>
               <SheetDescription>
-                {editingLevel 
-                  ? "Update the level details below." 
+                {editingLevel
+                  ? "Update the level details below."
                   : "Add a new level for programs and skills."}
               </SheetDescription>
             </SheetHeader>
@@ -361,10 +332,7 @@ export default function LevelsPage() {
               </div>
             </div>
             <SheetFooter>
-              <Button
-                onClick={handleSave}
-                disabled={isSaving || !formData.name.trim()}
-              >
+              <Button onClick={handleSave} disabled={isSaving || !formData.name.trim()}>
                 {isSaving ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -419,11 +387,7 @@ export default function LevelsPage() {
                 {searchQuery ? "No levels found matching your search." : "No levels created yet."}
               </p>
               {!searchQuery && (
-                <Button
-                  variant="outline"
-                  className="mt-4"
-                  onClick={() => handleOpenSheet()}
-                >
+                <Button variant="outline" className="mt-4" onClick={() => handleOpenSheet()}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create your first level
                 </Button>
@@ -471,7 +435,8 @@ export default function LevelsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Level</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{levelToDelete?.name}&quot;? This action cannot be undone.
+              Are you sure you want to delete &quot;{levelToDelete?.name}&quot;? This action cannot
+              be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -494,5 +459,5 @@ export default function LevelsPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
+  );
 }

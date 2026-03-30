@@ -1,20 +1,20 @@
-"use client"
+"use client";
 
-import { ReactNode } from "react"
-import { useParams } from "next/navigation"
-import { Loader2 } from "lucide-react"
-import { useQueueGate } from "@/hooks/use-queue-gate"
-import { ReservationTimer } from "./reservation-timer"
+import { ReactNode } from "react";
+import { useParams } from "next/navigation";
+import { Loader2 } from "lucide-react";
+import { useQueueGate } from "@/hooks/use-queue-gate";
+import { ReservationTimer } from "./reservation-timer";
 
 interface QueueGateWrapperProps {
-  children: ReactNode
-  programId?: string | null
+  children: ReactNode;
+  programId?: string | null;
 }
 
 export function QueueGateWrapper({ children, programId }: QueueGateWrapperProps) {
-  const params = useParams()
-  const slug = params.slug as string
-  const { isChecking, isAllowed, hasReservation, reservation } = useQueueGate(slug, programId)
+  const params = useParams();
+  const slug = params.slug as string;
+  const { isChecking, isAllowed, hasReservation, reservation } = useQueueGate(slug, programId);
 
   if (isChecking) {
     return (
@@ -24,7 +24,7 @@ export function QueueGateWrapper({ children, programId }: QueueGateWrapperProps)
           <p className="text-muted-foreground">Checking availability...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (!isAllowed) {
@@ -36,18 +36,15 @@ export function QueueGateWrapper({ children, programId }: QueueGateWrapperProps)
           <p className="text-muted-foreground">Redirecting to queue...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
     <>
       {children}
       {hasReservation && reservation && (
-        <ReservationTimer 
-          expiresAt={reservation.expiresAt} 
-          organizationSlug={slug}
-        />
+        <ReservationTimer expiresAt={reservation.expiresAt} organizationSlug={slug} />
       )}
     </>
-  )
+  );
 }

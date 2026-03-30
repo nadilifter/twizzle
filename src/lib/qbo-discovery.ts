@@ -43,9 +43,7 @@ export interface QboItem {
 
 export async function fetchCompanyInfo(connectionId: string): Promise<void> {
   const client = await getQboClient(connectionId);
-  const companies = await client.query<QboCompanyInfo>(
-    "SELECT * FROM CompanyInfo"
-  );
+  const companies = await client.query<QboCompanyInfo>("SELECT * FROM CompanyInfo");
 
   if (companies.length > 0) {
     await db.accountingConnection.update({
@@ -55,31 +53,21 @@ export async function fetchCompanyInfo(connectionId: string): Promise<void> {
   }
 }
 
-export async function fetchChartOfAccounts(
-  connectionId: string
-): Promise<QboAccount[]> {
+export async function fetchChartOfAccounts(connectionId: string): Promise<QboAccount[]> {
   const client = await getQboClient(connectionId);
-  return client.query<QboAccount>(
-    "SELECT * FROM Account WHERE Active = true MAXRESULTS 1000"
-  );
+  return client.query<QboAccount>("SELECT * FROM Account WHERE Active = true MAXRESULTS 1000");
 }
 
-export async function fetchExistingCustomers(
-  connectionId: string
-): Promise<QboCustomer[]> {
+export async function fetchExistingCustomers(connectionId: string): Promise<QboCustomer[]> {
   const client = await getQboClient(connectionId);
   return client.query<QboCustomer>(
     "SELECT Id, DisplayName, PrimaryEmailAddr, Active FROM Customer WHERE Active = true MAXRESULTS 1000"
   );
 }
 
-export async function fetchExistingItems(
-  connectionId: string
-): Promise<QboItem[]> {
+export async function fetchExistingItems(connectionId: string): Promise<QboItem[]> {
   const client = await getQboClient(connectionId);
-  return client.query<QboItem>(
-    "SELECT * FROM Item WHERE Active = true MAXRESULTS 1000"
-  );
+  return client.query<QboItem>("SELECT * FROM Item WHERE Active = true MAXRESULTS 1000");
 }
 
 const GL_TO_QBO_TYPE_MAP: Record<string, string[]> = {
@@ -136,9 +124,7 @@ function scoreName(glDescription: string, qboName: string): number {
 
   const aWords = glDescription.toLowerCase().split(/\s+/);
   const bWords = qboName.toLowerCase().split(/\s+/);
-  const commonWords = aWords.filter((w) =>
-    bWords.some((bw) => bw.includes(w) || w.includes(bw))
-  );
+  const commonWords = aWords.filter((w) => bWords.some((bw) => bw.includes(w) || w.includes(bw)));
 
   if (commonWords.length === 0) return 0;
   return Math.round((commonWords.length / Math.max(aWords.length, bWords.length)) * 60);
@@ -161,15 +147,10 @@ export async function autoSuggestMappings(
   return { glCodeMappings, specialAccounts };
 }
 
-function suggestGlCodeMappings(
-  glCodes: GLCode[],
-  qboAccounts: QboAccount[]
-): MappingSuggestion[] {
+function suggestGlCodeMappings(glCodes: GLCode[], qboAccounts: QboAccount[]): MappingSuggestion[] {
   return glCodes.map((gl) => {
     const allowedTypes = GL_TO_QBO_TYPE_MAP[gl.type] || [];
-    const typeMatchedAccounts = qboAccounts.filter((a) =>
-      allowedTypes.includes(a.AccountType)
-    );
+    const typeMatchedAccounts = qboAccounts.filter((a) => allowedTypes.includes(a.AccountType));
 
     const scored = typeMatchedAccounts
       .map((a) => ({
@@ -201,22 +182,18 @@ function suggestGlCodeMappings(
   });
 }
 
-function suggestSpecialAccounts(
-  qboAccounts: QboAccount[]
-): SpecialAccountSuggestion[] {
+function suggestSpecialAccounts(qboAccounts: QboAccount[]): SpecialAccountSuggestion[] {
   const suggestions: SpecialAccountSuggestion[] = [];
 
   const bankAccounts = qboAccounts.filter((a) => a.AccountType === "Bank");
-  const checkingAccount = bankAccounts.find(
-    (a) => normalizeForComparison(a.Name).includes("checking")
+  const checkingAccount = bankAccounts.find((a) =>
+    normalizeForComparison(a.Name).includes("checking")
   );
   suggestions.push({
     mappingType: "BANK_ACCOUNT",
     suggestedAccountId: checkingAccount?.Id ?? bankAccounts[0]?.Id ?? null,
     suggestedAccountName:
-      checkingAccount?.FullyQualifiedName ??
-      bankAccounts[0]?.FullyQualifiedName ??
-      null,
+      checkingAccount?.FullyQualifiedName ?? bankAccounts[0]?.FullyQualifiedName ?? null,
     confidence: checkingAccount ? "high" : bankAccounts.length > 0 ? "medium" : "none",
     candidates: bankAccounts.map((a) => ({
       accountId: a.Id,
@@ -261,9 +238,7 @@ function suggestSpecialAccounts(
     mappingType: "REFUNDS",
     suggestedAccountId: refundAccount?.Id ?? incomeAccounts[0]?.Id ?? null,
     suggestedAccountName:
-      refundAccount?.FullyQualifiedName ??
-      incomeAccounts[0]?.FullyQualifiedName ??
-      null,
+      refundAccount?.FullyQualifiedName ?? incomeAccounts[0]?.FullyQualifiedName ?? null,
     confidence: refundAccount ? "high" : "low",
     candidates: incomeAccounts.slice(0, 10).map((a) => ({
       accountId: a.Id,
@@ -275,9 +250,7 @@ function suggestSpecialAccounts(
   const undepositedFunds = qboAccounts.find(
     (a) => normalizeForComparison(a.Name) === "undepositedfunds"
   );
-  const otherCurrentAssets = qboAccounts.filter(
-    (a) => a.AccountType === "Other Current Asset"
-  );
+  const otherCurrentAssets = qboAccounts.filter((a) => a.AccountType === "Other Current Asset");
   suggestions.push({
     mappingType: "UNDEPOSITED_FUNDS",
     suggestedAccountId: undepositedFunds?.Id ?? null,

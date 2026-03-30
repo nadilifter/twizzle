@@ -1,15 +1,15 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -17,10 +17,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   MoreHorizontal,
   RotateCcw,
@@ -28,20 +28,20 @@ import {
   CheckCircle,
   DollarSign,
   MessageSquare,
-} from "lucide-react"
+} from "lucide-react";
 
-type InvoiceStatus = "PENDING" | "PROCESSING" | "PAID" | "FAILED" | "VOID"
+type InvoiceStatus = "PENDING" | "PROCESSING" | "PAID" | "FAILED" | "VOID";
 
 interface InvoiceActionsProps {
-  invoiceId: string
-  reference: string
-  status: InvoiceStatus
-  amount: number
-  orgName: string
-  notes?: string | null
+  invoiceId: string;
+  reference: string;
+  status: InvoiceStatus;
+  amount: number;
+  orgName: string;
+  notes?: string | null;
 }
 
-type DialogType = "void" | "mark-paid" | "adjust" | "add-note" | null
+type DialogType = "void" | "mark-paid" | "adjust" | "add-note" | null;
 
 export function InvoiceActions({
   invoiceId,
@@ -51,50 +51,50 @@ export function InvoiceActions({
   orgName,
   notes,
 }: InvoiceActionsProps) {
-  const router = useRouter()
-  const [activeDialog, setActiveDialog] = useState<DialogType>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [reason, setReason] = useState("")
-  const [newAmount, setNewAmount] = useState(amount.toFixed(2))
-  const [noteText, setNoteText] = useState("")
+  const router = useRouter();
+  const [activeDialog, setActiveDialog] = useState<DialogType>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [reason, setReason] = useState("");
+  const [newAmount, setNewAmount] = useState(amount.toFixed(2));
+  const [noteText, setNoteText] = useState("");
 
-  const isPaid = status === "PAID"
-  const isVoid = status === "VOID"
-  const canRetry = status === "FAILED" || status === "PENDING"
-  const canVoid = !isPaid && !isVoid
-  const canMarkPaid = !isPaid && !isVoid
-  const canAdjust = !isPaid && !isVoid
+  const isPaid = status === "PAID";
+  const isVoid = status === "VOID";
+  const canRetry = status === "FAILED" || status === "PENDING";
+  const canVoid = !isPaid && !isVoid;
+  const canMarkPaid = !isPaid && !isVoid;
+  const canAdjust = !isPaid && !isVoid;
 
   const resetForm = () => {
-    setReason("")
-    setNewAmount(amount.toFixed(2))
-    setNoteText("")
-    setActiveDialog(null)
-  }
+    setReason("");
+    setNewAmount(amount.toFixed(2));
+    setNoteText("");
+    setActiveDialog(null);
+  };
 
   const performAction = async (action: string, body: Record<string, unknown>) => {
-    setIsSubmitting(true)
+    setIsSubmitting(true);
     try {
       const res = await fetch(`/api/superadmin/subscription-invoices/${invoiceId}/action`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, ...body }),
-      })
-      const data = await res.json()
+      });
+      const data = await res.json();
 
       if (res.ok && data.success !== false) {
-        alert(data.message || "Action completed successfully.")
-        resetForm()
-        router.refresh()
+        alert(data.message || "Action completed successfully.");
+        resetForm();
+        router.refresh();
       } else {
-        alert(data.error || data.message || "Action failed.")
+        alert(data.error || data.message || "Action failed.");
       }
     } catch {
-      alert("An error occurred.")
+      alert("An error occurred.");
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <>
@@ -161,8 +161,8 @@ export function InvoiceActions({
             <DialogTitle>Void Invoice</DialogTitle>
             <DialogDescription>
               Void invoice <span className="font-mono">{reference}</span> for{" "}
-              <span className="font-medium">{orgName}</span>. This will cancel the
-              invoice without charging the customer.
+              <span className="font-medium">{orgName}</span>. This will cancel the invoice without
+              charging the customer.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -197,9 +197,9 @@ export function InvoiceActions({
           <DialogHeader>
             <DialogTitle>Mark as Paid</DialogTitle>
             <DialogDescription>
-              Manually mark invoice <span className="font-mono">{reference}</span> as
-              paid for <span className="font-medium">{orgName}</span>. This will clear
-              any grace period and restore the subscription to active.
+              Manually mark invoice <span className="font-mono">{reference}</span> as paid for{" "}
+              <span className="font-medium">{orgName}</span>. This will clear any grace period and
+              restore the subscription to active.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -321,5 +321,5 @@ export function InvoiceActions({
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }

@@ -178,10 +178,7 @@ export async function listConversations(
           },
         },
       },
-      orderBy: [
-        { unreadCount: "desc" },
-        { lastMessageAt: "desc" },
-      ],
+      orderBy: [{ unreadCount: "desc" }, { lastMessageAt: "desc" }],
       skip,
       take: limit,
     }),
@@ -276,10 +273,7 @@ export async function getConversationOwnership(conversationId: string) {
  * Get a single conversation with user details.
  * When organizationId is provided, enforces tenant isolation at the query level.
  */
-export async function getConversation(
-  conversationId: string,
-  organizationId?: string
-) {
+export async function getConversation(conversationId: string, organizationId?: string) {
   const where: any = { id: conversationId, coachId: null };
   if (organizationId) where.organizationId = organizationId;
 
@@ -692,16 +686,17 @@ export async function routeInboundMessage(params: {
 
   const digitsOnly = normalizedFrom.replace(/\D/g, "");
   const withoutCountryCode =
-    digitsOnly.startsWith("1") && digitsOnly.length === 11
-      ? digitsOnly.substring(1)
-      : digitsOnly;
+    digitsOnly.startsWith("1") && digitsOnly.length === 11 ? digitsOnly.substring(1) : digitsOnly;
   const phoneVariants = [normalizedFrom, digitsOnly, withoutCountryCode];
 
   const poolMatch = await resolveOrgFromInbound(from, to);
 
   if (poolMatch) {
     await routeToOrg(poolMatch.organizationId, poolMatch.userId, {
-      to, from: normalizedFrom, body, twilioSid,
+      to,
+      from: normalizedFrom,
+      body,
+      twilioSid,
     });
     return;
   }
@@ -718,7 +713,10 @@ export async function routeInboundMessage(params: {
 
   if (recentOutbound?.userId) {
     await routeToOrg(recentOutbound.organizationId, recentOutbound.userId, {
-      to, from: normalizedFrom, body, twilioSid,
+      to,
+      from: normalizedFrom,
+      body,
+      twilioSid,
     });
 
     const { getPoolNumberForSend: ensureAssignment } = await import("@/lib/sms-number-pool");
@@ -741,7 +739,10 @@ export async function routeInboundMessage(params: {
 
   if (member) {
     await routeToOrg(member.organizationId, member.userId, {
-      to, from: normalizedFrom, body, twilioSid,
+      to,
+      from: normalizedFrom,
+      body,
+      twilioSid,
     });
     return;
   }
@@ -816,20 +817,26 @@ export async function routeInboundEmail(params: {
   }
 
   if (conversation.channel !== "WEB_EMAIL") {
-    console.warn(`[EMAIL INBOUND] Conversation ${conversationId} is not an email conversation. Email dropped.`);
+    console.warn(
+      `[EMAIL INBOUND] Conversation ${conversationId} is not an email conversation. Email dropped.`
+    );
     return;
   }
 
   const expectedEmail = conversation.email || conversation.user?.email;
   if (!expectedEmail) {
-    console.warn(`[EMAIL INBOUND] Conversation ${conversationId} has no expected email address. Email dropped.`);
+    console.warn(
+      `[EMAIL INBOUND] Conversation ${conversationId} has no expected email address. Email dropped.`
+    );
     return;
   }
 
   const normalizedSender = senderEmail.toLowerCase().trim();
   const normalizedExpected = expectedEmail.toLowerCase().trim();
   if (normalizedSender !== normalizedExpected) {
-    console.warn(`[EMAIL INBOUND] Sender mismatch for conversation ${conversationId}: expected ${normalizedExpected}, got ${normalizedSender}. Email dropped.`);
+    console.warn(
+      `[EMAIL INBOUND] Sender mismatch for conversation ${conversationId}: expected ${normalizedExpected}, got ${normalizedSender}. Email dropped.`
+    );
     return;
   }
 
@@ -1024,10 +1031,7 @@ export async function listCoachConversations(
 /**
  * Get a single coach conversation with user and organization details.
  */
-export async function getCoachConversation(
-  conversationId: string,
-  coachId: string
-) {
+export async function getCoachConversation(conversationId: string, coachId: string) {
   const conversation = await db.conversation.findUnique({
     where: { id: conversationId },
     include: {
@@ -1069,12 +1073,7 @@ export async function sendCoachMessage(
   coachId: string,
   organizationId: string
 ): Promise<SendConversationMessageResult> {
-  return sendConversationMessage(
-    conversationId,
-    body,
-    organizationId,
-    coachId
-  );
+  return sendConversationMessage(conversationId, body, organizationId, coachId);
 }
 
 /**
@@ -1134,7 +1133,9 @@ export async function getCoachConversationGuardians(
 > {
   const orgIds = memberships.map((m) => m.organizationId);
   const memberIds = memberships.map((m) => m.memberId);
-  const orgNameMap = Object.fromEntries(memberships.map((m) => [m.organizationId, m.organizationName]));
+  const orgNameMap = Object.fromEntries(
+    memberships.map((m) => [m.organizationId, m.organizationName])
+  );
 
   const [staffAssignments, coachEvents] = await Promise.all([
     db.programStaff.findMany({

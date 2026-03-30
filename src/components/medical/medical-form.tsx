@@ -8,15 +8,28 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { 
-  Plus, 
-  X, 
+import {
+  Plus,
+  X,
   Loader2,
   AlertTriangle,
   Pill,
@@ -25,15 +38,15 @@ import {
   UtensilsCrossed,
   Shield,
 } from "lucide-react";
-import type { 
-  AthleteMedicalInfoWithResponses, 
-  MedicalFormConfig, 
+import type {
+  AthleteMedicalInfoWithResponses,
+  MedicalFormConfig,
   CustomMedicalQuestion,
   UpsertAthleteMedicalInfoPayload,
 } from "@/types/medical";
-import { 
-  COMMON_ALLERGIES, 
-  COMMON_CONDITIONS, 
+import {
+  COMMON_ALLERGIES,
+  COMMON_CONDITIONS,
   DIETARY_RESTRICTIONS,
   EMERGENCY_CONTACT_RELATIONSHIPS,
 } from "@/types/medical";
@@ -62,14 +75,24 @@ export function MedicalForm({
   const [newMedication, setNewMedication] = useState("");
   const [conditions, setConditions] = useState<string[]>(medicalInfo?.conditions || []);
   const [newCondition, setNewCondition] = useState("");
-  const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>(medicalInfo?.dietaryRestrictions || []);
+  const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>(
+    medicalInfo?.dietaryRestrictions || []
+  );
   const [insuranceProvider, setInsuranceProvider] = useState(medicalInfo?.insuranceProvider || "");
-  const [insurancePolicyNumber, setInsurancePolicyNumber] = useState(medicalInfo?.insurancePolicyNumber || "");
-  const [emergencyContactName, setEmergencyContactName] = useState(medicalInfo?.emergencyContactName || "");
-  const [emergencyContactPhone, setEmergencyContactPhone] = useState(medicalInfo?.emergencyContactPhone || "");
-  const [emergencyContactRelation, setEmergencyContactRelation] = useState(medicalInfo?.emergencyContactRelation || "");
+  const [insurancePolicyNumber, setInsurancePolicyNumber] = useState(
+    medicalInfo?.insurancePolicyNumber || ""
+  );
+  const [emergencyContactName, setEmergencyContactName] = useState(
+    medicalInfo?.emergencyContactName || ""
+  );
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState(
+    medicalInfo?.emergencyContactPhone || ""
+  );
+  const [emergencyContactRelation, setEmergencyContactRelation] = useState(
+    medicalInfo?.emergencyContactRelation || ""
+  );
   const [additionalNotes, setAdditionalNotes] = useState(medicalInfo?.additionalNotes || "");
-  
+
   // Custom responses state
   const [customResponses, setCustomResponses] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
@@ -127,7 +150,7 @@ export function MedicalForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const data: UpsertAthleteMedicalInfoPayload = {
       allergies,
       medications,
@@ -175,7 +198,7 @@ export function MedicalForm({
             value={value}
             onValueChange={(v) => handleCustomResponseChange(question.id, v)}
           >
-            {(question.options as string[] || []).map((option, i) => (
+            {((question.options as string[]) || []).map((option, i) => (
               <div key={i} className="flex items-center space-x-2">
                 <RadioGroupItem value={option} id={`${question.id}-${i}`} />
                 <Label htmlFor={`${question.id}-${i}`}>{option}</Label>
@@ -188,7 +211,7 @@ export function MedicalForm({
         const selectedOptions = value ? value.split(",").filter(Boolean) : [];
         return (
           <div className="space-y-2">
-            {(question.options as string[] || []).map((option, i) => (
+            {((question.options as string[]) || []).map((option, i) => (
               <div key={i} className="flex items-center space-x-2">
                 <Checkbox
                   id={`${question.id}-${i}`}
@@ -232,7 +255,7 @@ export function MedicalForm({
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Allergies */}
-          {(config?.collectAllergies !== false) && (
+          {config?.collectAllergies !== false && (
             <div className="space-y-3">
               <Label className="flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-amber-500" />
@@ -266,7 +289,9 @@ export function MedicalForm({
                   </SelectTrigger>
                   <SelectContent>
                     {COMMON_ALLERGIES.filter((a) => !allergies.includes(a)).map((a) => (
-                      <SelectItem key={a} value={a}>{a}</SelectItem>
+                      <SelectItem key={a} value={a}>
+                        {a}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -286,7 +311,7 @@ export function MedicalForm({
           )}
 
           {/* Medical Conditions */}
-          {(config?.collectConditions !== false) && (
+          {config?.collectConditions !== false && (
             <div className="space-y-3">
               <Label className="flex items-center gap-2">
                 <Heart className="h-4 w-4 text-red-500" />
@@ -320,7 +345,9 @@ export function MedicalForm({
                   </SelectTrigger>
                   <SelectContent>
                     {COMMON_CONDITIONS.filter((c) => !conditions.includes(c)).map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -340,7 +367,7 @@ export function MedicalForm({
           )}
 
           {/* Medications */}
-          {(config?.collectMedications !== false) && (
+          {config?.collectMedications !== false && (
             <div className="space-y-3">
               <Label className="flex items-center gap-2">
                 <Pill className="h-4 w-4 text-blue-500" />
@@ -375,7 +402,7 @@ export function MedicalForm({
           )}
 
           {/* Dietary Restrictions */}
-          {(config?.collectDietaryRestrictions !== false) && (
+          {config?.collectDietaryRestrictions !== false && (
             <div className="space-y-3">
               <Label className="flex items-center gap-2">
                 <UtensilsCrossed className="h-4 w-4 text-orange-500" />
@@ -401,7 +428,7 @@ export function MedicalForm({
           <Separator />
 
           {/* Emergency Contact */}
-          {(config?.collectEmergencyContact !== false) && (
+          {config?.collectEmergencyContact !== false && (
             <div className="space-y-4">
               <Label className="flex items-center gap-2">
                 <Phone className="h-4 w-4 text-green-500" />
@@ -437,7 +464,9 @@ export function MedicalForm({
                     </SelectTrigger>
                     <SelectContent>
                       {EMERGENCY_CONTACT_RELATIONSHIPS.map((rel) => (
-                        <SelectItem key={rel} value={rel}>{rel}</SelectItem>
+                        <SelectItem key={rel} value={rel}>
+                          {rel}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -447,7 +476,7 @@ export function MedicalForm({
           )}
 
           {/* Insurance */}
-          {(config?.collectInsuranceInfo !== false) && (
+          {config?.collectInsuranceInfo !== false && (
             <div className="space-y-4">
               <Label className="flex items-center gap-2">
                 <Shield className="h-4 w-4 text-purple-500" />

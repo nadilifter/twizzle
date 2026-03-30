@@ -24,10 +24,7 @@ function toDateKey(d: Date): string {
  *   programEndDate        - program date range end (ISO date)
  *   excludeProgramId      - exclude a program from conflict checks (edits)
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -36,10 +33,7 @@ export async function GET(
 
     const organizationId = session.user.organizationId;
     if (!organizationId) {
-      return NextResponse.json(
-        { error: "No organization selected" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
     const { id: facilityId } = await params;
@@ -56,10 +50,7 @@ export async function GET(
     });
 
     if (!facility) {
-      return NextResponse.json(
-        { error: "Facility not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Facility not found" }, { status: 404 });
     }
 
     const spaces = await db.space.findMany({
@@ -76,9 +67,7 @@ export async function GET(
     // Convert ISO weekday params to JS day-of-week values for filtering
     let jsDays: number[] = [];
     if (daysOfWeekParam) {
-      jsDays = daysOfWeekParam
-        .split(",")
-        .map((d) => isoWeekdayToJsDay(parseInt(d.trim())));
+      jsDays = daysOfWeekParam.split(",").map((d) => isoWeekdayToJsDay(parseInt(d.trim())));
     }
 
     // Per-space, per-date used capacity: { spaceId -> { "2026-03-05" -> usedCapacity } }
@@ -88,33 +77,32 @@ export async function GET(
       const spaceIds = spaces.map((s) => s.id);
 
       if (spaceIds.length > 0) {
-        const excludeFilter = excludeProgramId
-          ? { programId: { not: excludeProgramId } }
-          : {};
+        const excludeFilter = excludeProgramId ? { programId: { not: excludeProgramId } } : {};
 
         // Scope to the program's date range if provided
         const dateRangeFilter: Record<string, any> = {};
-        if (programStartDate) dateRangeFilter.date = { ...dateRangeFilter.date, gte: new Date(programStartDate) };
-        if (programEndDate) dateRangeFilter.date = { ...dateRangeFilter.date, lte: new Date(programEndDate) };
+        if (programStartDate)
+          dateRangeFilter.date = { ...dateRangeFilter.date, gte: new Date(programStartDate) };
+        if (programEndDate)
+          dateRangeFilter.date = { ...dateRangeFilter.date, lte: new Date(programEndDate) };
 
-        const instanceSpaceAssignments =
-          await db.programInstanceSpace.findMany({
-            where: {
-              spaceId: { in: spaceIds },
-              programInstance: {
-                status: "SCHEDULED",
-                startTime: { lt: endTime },
-                endTime: { gt: startTime },
-                ...dateRangeFilter,
-                ...excludeFilter,
-              },
+        const instanceSpaceAssignments = await db.programInstanceSpace.findMany({
+          where: {
+            spaceId: { in: spaceIds },
+            programInstance: {
+              status: "SCHEDULED",
+              startTime: { lt: endTime },
+              endTime: { gt: startTime },
+              ...dateRangeFilter,
+              ...excludeFilter,
             },
-            include: {
-              programInstance: {
-                select: { capacity: true, date: true },
-              },
+          },
+          include: {
+            programInstance: {
+              select: { capacity: true, date: true },
             },
-          });
+          },
+        });
 
         for (const a of instanceSpaceAssignments) {
           const instDate = new Date(a.programInstance.date);
@@ -122,8 +110,7 @@ export async function GET(
           const key = toDateKey(instDate);
           usedCapacityBySpaceDate[a.spaceId] ??= {};
           usedCapacityBySpaceDate[a.spaceId][key] =
-            (usedCapacityBySpaceDate[a.spaceId][key] ?? 0) +
-            (a.programInstance.capacity ?? 0);
+            (usedCapacityBySpaceDate[a.spaceId][key] ?? 0) + (a.programInstance.capacity ?? 0);
         }
 
         // Program-level space assignments for instances without overrides
@@ -169,8 +156,7 @@ export async function GET(
             const key = toDateKey(instDate);
             usedCapacityBySpaceDate[a.spaceId] ??= {};
             usedCapacityBySpaceDate[a.spaceId][key] =
-              (usedCapacityBySpaceDate[a.spaceId][key] ?? 0) +
-              (inst.capacity ?? 0);
+              (usedCapacityBySpaceDate[a.spaceId][key] ?? 0) + (inst.capacity ?? 0);
           }
         }
       }
@@ -193,8 +179,7 @@ export async function GET(
       // Aggregate stats
       const allUsed = Object.values(perDate);
       const worstUsed = allUsed.length > 0 ? Math.max(...allUsed) : 0;
-      const availableCapacity =
-        maxCapacity != null ? Math.max(0, maxCapacity - worstUsed) : null;
+      const availableCapacity = maxCapacity != null ? Math.max(0, maxCapacity - worstUsed) : null;
 
       // "Fully booked" means every single overlapping date is at capacity
       // For practical purposes: if there are conflicts AND worst-case is at capacity
@@ -212,7 +197,7 @@ export async function GET(
       const closedDays: Array<{ day: string; reason: string }> = [];
 
       if (space.availability.length > 0) {
-        const daysToCheck = jsDays.length > 0 ? jsDays : (hasTimeSlot ? [0, 1, 2, 3, 4, 5, 6] : []);
+        const daysToCheck = jsDays.length > 0 ? jsDays : hasTimeSlot ? [0, 1, 2, 3, 4, 5, 6] : [];
         for (const jsDay of daysToCheck) {
           const daySlot = space.availability.find((a) => a.dayOfWeek === jsDay);
           if (!daySlot) {
@@ -252,9 +237,6 @@ export async function GET(
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error fetching space availability:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch space availability" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch space availability" }, { status: 500 });
   }
 }

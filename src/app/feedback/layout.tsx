@@ -1,21 +1,31 @@
-import { Metadata } from "next"
-import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler"
-import { UplifterLogo } from "@/components/uplifter-logo"
+import { Metadata } from "next";
+import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
+import { UplifterLogo } from "@/components/uplifter-logo";
 
 export const metadata: Metadata = {
   title: "Product Feedback & Roadmap | Uplifter",
-  description: "See what features are in development, vote on your favorites, and suggest new features for the Uplifter platform. Shape the future of sports club management software.",
-  keywords: ["product roadmap", "feature requests", "feedback", "uplifter", "sports management", "club software"],
+  description:
+    "See what features are in development, vote on your favorites, and suggest new features for the Uplifter platform. Shape the future of sports club management software.",
+  keywords: [
+    "product roadmap",
+    "feature requests",
+    "feedback",
+    "uplifter",
+    "sports management",
+    "club software",
+  ],
   openGraph: {
     title: "Product Feedback & Roadmap | Uplifter",
-    description: "See what features are in development, vote on your favorites, and suggest new features for the Uplifter platform.",
+    description:
+      "See what features are in development, vote on your favorites, and suggest new features for the Uplifter platform.",
     type: "website",
     siteName: "Uplifter",
   },
   twitter: {
     card: "summary_large_image",
     title: "Product Feedback & Roadmap | Uplifter",
-    description: "See what features are in development, vote on your favorites, and suggest new features for the Uplifter platform.",
+    description:
+      "See what features are in development, vote on your favorites, and suggest new features for the Uplifter platform.",
   },
   robots: {
     index: true,
@@ -25,13 +35,9 @@ export const metadata: Metadata = {
       follow: true,
     },
   },
-}
+};
 
-export default function FeedbackLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function FeedbackLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur-sm">
@@ -40,9 +46,7 @@ export default function FeedbackLayout({
           <AnimatedThemeToggler />
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-6 py-8">
-        {children}
-      </main>
+      <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
     </div>
-  )
+  );
 }

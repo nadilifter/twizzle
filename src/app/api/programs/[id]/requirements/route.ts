@@ -8,10 +8,7 @@ const addRequirementSchema = z.object({
 });
 
 // GET - Get program requirements (required memberships)
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -54,10 +51,7 @@ export async function GET(
 }
 
 // POST - Add a membership requirement to a program
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -122,7 +116,10 @@ export async function POST(
     );
 
     if (alreadyRequired) {
-      return NextResponse.json({ error: "Membership is already required for this program" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Membership is already required for this program" },
+        { status: 400 }
+      );
     }
 
     // Add the requirement via connect

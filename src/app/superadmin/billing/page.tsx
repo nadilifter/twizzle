@@ -1,7 +1,7 @@
-export const dynamic = "force-dynamic"
+export const dynamic = "force-dynamic";
 
-import { db } from "@/lib/db"
-import Link from "next/link"
+import { db } from "@/lib/db";
+import Link from "next/link";
 import {
   Table,
   TableBody,
@@ -9,10 +9,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { DollarSign, FileText, TrendingUp, AlertCircle } from "lucide-react"
+} from "@/components/ui/table";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { DollarSign, FileText, TrendingUp, AlertCircle } from "lucide-react";
 
 export default async function SuperadminBillingPage() {
   // Get all invoices across the platform
@@ -21,12 +21,12 @@ export default async function SuperadminBillingPage() {
       organization: true,
       user: { select: { id: true, name: true, email: true } },
       _count: {
-        select: { lineItems: true, payments: true }
-      }
+        select: { lineItems: true, payments: true },
+      },
     },
-    orderBy: { createdAt: 'desc' },
-    take: 50
-  })
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
 
   // Get all payments across the platform
   const payments = await db.payment.findMany({
@@ -34,88 +34,88 @@ export default async function SuperadminBillingPage() {
       user: { select: { id: true, name: true, email: true } },
       invoice: {
         include: {
-          organization: true
-        }
-      }
+          organization: true,
+        },
+      },
     },
-    orderBy: { createdAt: 'desc' },
-    take: 20
-  })
+    orderBy: { createdAt: "desc" },
+    take: 20,
+  });
 
   // Calculate platform-wide statistics
-  const totalInvoices = await db.invoice.count()
-  const paidInvoices = await db.invoice.count({ where: { status: 'PAID' }})
-  const overdueInvoices = await db.invoice.count({ where: { status: 'OVERDUE' }})
-  const pendingInvoices = await db.invoice.count({ where: { status: { in: ['DRAFT', 'SENT'] }}})
+  const totalInvoices = await db.invoice.count();
+  const paidInvoices = await db.invoice.count({ where: { status: "PAID" } });
+  const overdueInvoices = await db.invoice.count({ where: { status: "OVERDUE" } });
+  const pendingInvoices = await db.invoice.count({ where: { status: { in: ["DRAFT", "SENT"] } } });
 
   // Revenue calculations
   const allPaidInvoices = await db.invoice.findMany({
-    where: { status: 'PAID' },
-    select: { total: true }
-  })
-  const totalRevenue = allPaidInvoices.reduce((sum, inv) => sum + Number(inv.total), 0)
+    where: { status: "PAID" },
+    select: { total: true },
+  });
+  const totalRevenue = allPaidInvoices.reduce((sum, inv) => sum + Number(inv.total), 0);
 
   const allOutstandingInvoices = await db.invoice.findMany({
-    where: { status: { in: ['SENT', 'OVERDUE', 'PARTIAL'] }},
-    select: { total: true }
-  })
-  const outstandingAmount = allOutstandingInvoices.reduce((sum, inv) => sum + Number(inv.total), 0)
+    where: { status: { in: ["SENT", "OVERDUE", "PARTIAL"] } },
+    select: { total: true },
+  });
+  const outstandingAmount = allOutstandingInvoices.reduce((sum, inv) => sum + Number(inv.total), 0);
 
   // Revenue by organization
   const revenueByOrg = await db.invoice.groupBy({
-    by: ['organizationId'],
-    where: { status: 'PAID' },
+    by: ["organizationId"],
+    where: { status: "PAID" },
     _sum: { total: true },
-    _count: true
-  })
+    _count: true,
+  });
 
   // Get organization names for the grouped data
-  const orgIds = revenueByOrg.map(r => r.organizationId)
+  const orgIds = revenueByOrg.map((r) => r.organizationId);
   const organizations = await db.organization.findMany({
-    where: { id: { in: orgIds }},
-    select: { id: true, name: true }
-  })
+    where: { id: { in: orgIds } },
+    select: { id: true, name: true },
+  });
 
-  const orgMap = new Map(organizations.map(o => [o.id, o.name]))
+  const orgMap = new Map(organizations.map((o) => [o.id, o.name]));
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount)
-  }
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(amount);
+  };
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case 'PAID':
-        return 'default'
-      case 'OVERDUE':
-        return 'destructive'
-      case 'SENT':
-        return 'outline'
-      case 'PARTIAL':
-        return 'secondary'
-      case 'CANCELLED':
-        return 'secondary'
+      case "PAID":
+        return "default";
+      case "OVERDUE":
+        return "destructive";
+      case "SENT":
+        return "outline";
+      case "PARTIAL":
+        return "secondary";
+      case "CANCELLED":
+        return "secondary";
       default:
-        return 'outline'
+        return "outline";
     }
-  }
+  };
 
   const getPaymentStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case 'COMPLETED':
-        return 'default'
-      case 'PENDING':
-        return 'outline'
-      case 'FAILED':
-        return 'destructive'
-      case 'REFUNDED':
-        return 'secondary'
+      case "COMPLETED":
+        return "default";
+      case "PENDING":
+        return "outline";
+      case "FAILED":
+        return "destructive";
+      case "REFUNDED":
+        return "secondary";
       default:
-        return 'outline'
+        return "outline";
     }
-  }
+  };
 
   return (
     <div className="flex flex-col gap-6 p-4">
@@ -145,7 +145,9 @@ export default async function SuperadminBillingPage() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{formatCurrency(outstandingAmount)}</div>
+            <div className="text-2xl font-bold text-orange-600">
+              {formatCurrency(outstandingAmount)}
+            </div>
             <p className="text-xs text-muted-foreground">{pendingInvoices} pending invoices</p>
           </CardContent>
         </Card>
@@ -191,11 +193,11 @@ export default async function SuperadminBillingPage() {
                   .map((item) => (
                     <div key={item.organizationId} className="flex items-center justify-between">
                       <div>
-                        <Link 
+                        <Link
                           href={`/superadmin/organizations/${item.organizationId}`}
                           className="font-medium hover:underline"
                         >
-                          {orgMap.get(item.organizationId) || 'Unknown'}
+                          {orgMap.get(item.organizationId) || "Unknown"}
                         </Link>
                         <p className="text-xs text-muted-foreground">{item._count} invoices</p>
                       </div>
@@ -223,14 +225,22 @@ export default async function SuperadminBillingPage() {
                 {payments.slice(0, 10).map((payment) => (
                   <div key={payment.id} className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium">{payment.user?.name ?? 'N/A'}</p>
+                      <p className="font-medium">{payment.user?.name ?? "N/A"}</p>
                       <p className="text-xs text-muted-foreground">
-                        {payment.invoice?.organization.name || 'N/A'} • {payment.method}
+                        {payment.invoice?.organization.name || "N/A"} • {payment.method}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{formatCurrency(Number(payment.amount))}</span>
-                      <Badge variant={getPaymentStatusBadgeVariant(payment.status) as "default" | "destructive" | "secondary" | "outline"}>
+                      <Badge
+                        variant={
+                          getPaymentStatusBadgeVariant(payment.status) as
+                            | "default"
+                            | "destructive"
+                            | "secondary"
+                            | "outline"
+                        }
+                      >
                         {payment.status}
                       </Badge>
                     </div>
@@ -246,15 +256,11 @@ export default async function SuperadminBillingPage() {
       <Card>
         <CardHeader>
           <CardTitle>Recent Invoices</CardTitle>
-          <CardDescription>
-            Latest invoices across all organizations
-          </CardDescription>
+          <CardDescription>Latest invoices across all organizations</CardDescription>
         </CardHeader>
         <CardContent>
           {invoices.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              No invoices found
-            </p>
+            <p className="text-center text-muted-foreground py-8">No invoices found</p>
           ) : (
             <Table>
               <TableHeader>
@@ -273,16 +279,24 @@ export default async function SuperadminBillingPage() {
                   <TableRow key={invoice.id}>
                     <TableCell className="font-medium">{invoice.reference}</TableCell>
                     <TableCell>
-                      <Link 
+                      <Link
                         href={`/superadmin/organizations/${invoice.organizationId}`}
                         className="text-primary hover:underline"
                       >
                         {invoice.organization.name}
                       </Link>
                     </TableCell>
-                    <TableCell>{invoice.user?.name ?? 'N/A'}</TableCell>
+                    <TableCell>{invoice.user?.name ?? "N/A"}</TableCell>
                     <TableCell>
-                      <Badge variant={getStatusBadgeVariant(invoice.status) as "default" | "destructive" | "secondary" | "outline"}>
+                      <Badge
+                        variant={
+                          getStatusBadgeVariant(invoice.status) as
+                            | "default"
+                            | "destructive"
+                            | "secondary"
+                            | "outline"
+                        }
+                      >
                         {invoice.status}
                       </Badge>
                     </TableCell>
@@ -299,5 +313,5 @@ export default async function SuperadminBillingPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

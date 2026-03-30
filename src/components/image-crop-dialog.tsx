@@ -47,11 +47,7 @@ async function getCroppedImg(
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Could not get canvas context");
 
-  const scale = Math.min(
-    maxWidth / pixelCrop.width,
-    maxHeight / pixelCrop.height,
-    1
-  );
+  const scale = Math.min(maxWidth / pixelCrop.width, maxHeight / pixelCrop.height, 1);
   canvas.width = Math.round(pixelCrop.width * scale);
   canvas.height = Math.round(pixelCrop.height * scale);
 
@@ -98,12 +94,9 @@ export function ImageCropDialog({
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleCropComplete = useCallback(
-    (_croppedArea: Area, croppedAreaPixels: Area) => {
-      setCroppedAreaPixels(croppedAreaPixels);
-    },
-    []
-  );
+  const handleCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
 
   const handleSave = async () => {
     if (!croppedAreaPixels) return;

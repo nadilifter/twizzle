@@ -73,8 +73,12 @@ export async function PUT(
       where: { id: discountId },
       data: {
         ...(validatedData.minQuantity !== undefined && { minQuantity: validatedData.minQuantity }),
-        ...(validatedData.discountType !== undefined && { discountType: validatedData.discountType }),
-        ...(validatedData.discountValue !== undefined && { discountValue: validatedData.discountValue }),
+        ...(validatedData.discountType !== undefined && {
+          discountType: validatedData.discountType,
+        }),
+        ...(validatedData.discountValue !== undefined && {
+          discountValue: validatedData.discountValue,
+        }),
         ...(validatedData.description !== undefined && { description: validatedData.description }),
       },
     });

@@ -63,14 +63,12 @@ async function main() {
   const nodeEnv = process.env.NODE_ENV || "development";
   const dbUrl = process.env.DATABASE_URL || "";
   const looksLikeProduction =
-    nodeEnv === "production" ||
-    dbUrl.includes("prod") ||
-    dbUrl.includes("uplifterinc.com");
+    nodeEnv === "production" || dbUrl.includes("prod") || dbUrl.includes("uplifterinc.com");
 
   if (looksLikeProduction && !forceFlag) {
     console.error(
       "SAFETY: This looks like a production database. " +
-      "Pass --yes-delete-production-data to confirm."
+        "Pass --yes-delete-production-data to confirm."
     );
     process.exit(1);
   }

@@ -40,9 +40,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching email usage:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch email usage" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch email usage" }, { status: 500 });
   }
 }

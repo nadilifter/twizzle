@@ -39,15 +39,15 @@
     --input: 0 0% 89.8%;
     --ring: 0 0% 3.9%;
     /* Custom Palette - Purple/Cyan Theme */
-    --chart-1: 264 97% 62%;  /* Purple #8A3FFC */
-    --chart-2: 204 86% 49%;  /* Cyan #1192E8 */
-    --chart-3: 310 85% 65%;  /* Pink/Magenta */
-    --chart-4: 180 75% 45%;  /* Teal */
-    --chart-5: 245 50% 50%;  /* Indigo */
-    --chart-6: 264 60% 75%;  /* Light Purple */
-    --chart-7: 204 60% 70%;  /* Light Cyan */
-    --chart-8: 310 60% 80%;  /* Light Pink */
-    --chart-9: 180 50% 70%;  /* Light Teal */
+    --chart-1: 264 97% 62%; /* Purple #8A3FFC */
+    --chart-2: 204 86% 49%; /* Cyan #1192E8 */
+    --chart-3: 310 85% 65%; /* Pink/Magenta */
+    --chart-4: 180 75% 45%; /* Teal */
+    --chart-5: 245 50% 50%; /* Indigo */
+    --chart-6: 264 60% 75%; /* Light Purple */
+    --chart-7: 204 60% 70%; /* Light Cyan */
+    --chart-8: 310 60% 80%; /* Light Pink */
+    --chart-9: 180 50% 70%; /* Light Teal */
     --chart-10: 245 40% 70%; /* Light Indigo */
 
     /* Carbon Analytics - KPIs/Highlights */
@@ -61,18 +61,18 @@
     --chart-seq-2: 203 100% 86%; /* Cyan 20 */
     --chart-seq-3: 203 100% 75%; /* Cyan 30 */
     --chart-seq-4: 203 100% 60%; /* Cyan 40 */
-    --chart-seq-5: 204 86% 49%;  /* Cyan 50 */
+    --chart-seq-5: 204 86% 49%; /* Cyan 50 */
     --chart-seq-6: 205 100% 38%; /* Cyan 60 */
     --chart-seq-7: 208 100% 30%; /* Cyan 70 */
     --chart-seq-8: 212 100% 20%; /* Cyan 80 */
 
     /* Carbon Diverging - Red (Negative) */
-    --chart-div-neg-1: 0 100% 97%;   /* Red 10 */
+    --chart-div-neg-1: 0 100% 97%; /* Red 10 */
     --chart-div-neg-2: 355 100% 92%; /* Red 20 */
     --chart-div-neg-3: 356 100% 85%; /* Red 30 */
     --chart-div-neg-4: 357 100% 76%; /* Red 40 */
-    --chart-div-neg-5: 357 95% 64%;  /* Red 50 */
-    --chart-div-neg-6: 355 74% 49%;  /* Red 60 */
+    --chart-div-neg-5: 357 95% 64%; /* Red 50 */
+    --chart-div-neg-6: 355 74% 49%; /* Red 60 */
 
     --radius: 0.5rem;
     --sidebar-background: 0 0% 98%;
@@ -139,7 +139,9 @@
 .leaflet-div-icon {
   @apply !bg-transparent !border-none;
 }
-.leaflet-popup-content-wrapper, .leaflet-popup-content, .leaflet-popup-content p {
+.leaflet-popup-content-wrapper,
+.leaflet-popup-content,
+.leaflet-popup-content p {
   all: unset !important;
 }
 .leaflet-popup {
@@ -148,7 +150,8 @@
 .leaflet-popup-close-button {
   @apply ring-offset-background focus:ring-ring bg-secondary rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:outline-none;
 }
-.leaflet-tooltip, .leaflet-draw-tooltip {
+.leaflet-tooltip,
+.leaflet-draw-tooltip {
   @apply !bg-foreground !text-background !animate-none !rounded-md !border-none !p-0 !px-3 !py-1.5 !shadow-none;
 }
 .leaflet-draw-tooltip:before {
@@ -163,7 +166,11 @@
 .leaflet-draw-tooltip-subtext {
   @apply !text-background;
 }
-.leaflet-popup-tip-container, .leaflet-tooltip-top:before, .leaflet-tooltip-bottom:before, .leaflet-tooltip-left:before, .leaflet-tooltip-right:before {
+.leaflet-popup-tip-container,
+.leaflet-tooltip-top:before,
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
   @apply !hidden;
 }
 .leaflet-control-attribution {
@@ -210,14 +217,14 @@
 
 @theme inline {
   @keyframes shine {
-  0% {
-    background-position: 0% 0%;
+    0% {
+      background-position: 0% 0%;
     }
-  50% {
-    background-position: 100% 100%;
+    50% {
+      background-position: 100% 100%;
     }
-  to {
-    background-position: 0% 0%;
+    to {
+      background-position: 0% 0%;
     }
   }
 }

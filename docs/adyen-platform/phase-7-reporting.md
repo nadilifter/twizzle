@@ -41,16 +41,17 @@ interface SettlementSummary {
 export async function getSettlementSummary(
   organizationId: string,
   startDate: Date,
-  endDate: Date,
-): Promise<SettlementSummary>
+  endDate: Date
+): Promise<SettlementSummary>;
 ```
 
 **Implementation approach**:
+
 ```typescript
 export async function getSettlementSummary(
   organizationId: string,
   startDate: Date,
-  endDate: Date,
+  endDate: Date
 ): Promise<SettlementSummary> {
   const org = await db.organization.findUnique({
     where: { id: organizationId },
@@ -74,23 +75,23 @@ export async function getSettlementSummary(
   });
 
   const grossPayments = transactions
-    .filter(t => t.type === "PAYMENT" && t.status === "SETTLED")
+    .filter((t) => t.type === "PAYMENT" && t.status === "SETTLED")
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
   const refunds = transactions
-    .filter(t => t.type === "REFUND")
+    .filter((t) => t.type === "REFUND")
     .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
 
   const chargebacks = transactions
-    .filter(t => t.type === "CHARGEBACK")
+    .filter((t) => t.type === "CHARGEBACK")
     .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
 
   const payoutsCompleted = payouts
-    .filter(p => p.status === "PAID")
+    .filter((p) => p.status === "PAID")
     .reduce((sum, p) => sum + Number(p.net), 0);
 
   const payoutsPending = payouts
-    .filter(p => p.status === "PENDING" || p.status === "SCHEDULED")
+    .filter((p) => p.status === "PENDING" || p.status === "SCHEDULED")
     .reduce((sum, p) => sum + Number(p.net), 0);
 
   return {
@@ -112,26 +113,28 @@ export async function getSettlementSummary(
 ```typescript
 export async function getSuperadminOverview(
   startDate: Date,
-  endDate: Date,
+  endDate: Date
 ): Promise<{
   totalGrossVolume: number;
   totalPayouts: number;
   orgCount: number;
   orgsWithNegativeBalance: number;
-}>
+}>;
 
 export async function getPayoutHistory(
   organizationId: string,
-  limit?: number,
-): Promise<Array<{
-  id: string;
-  amount: number;
-  fees: number;
-  net: number;
-  status: string;
-  scheduledAt: Date | null;
-  paidAt: Date | null;
-}>>
+  limit?: number
+): Promise<
+  Array<{
+    id: string;
+    amount: number;
+    fees: number;
+    net: number;
+    status: string;
+    scheduledAt: Date | null;
+    paidAt: Date | null;
+  }>
+>;
 ```
 
 ---
@@ -145,6 +148,7 @@ Add financial information for clubs.
 ### Changes
 
 1. **Fetch platform account data**: On page load, check if the org has an `AdyenPlatformAccount`:
+
    ```typescript
    const platformAccount = await db.adyenPlatformAccount.findUnique({
      where: { organizationId },
@@ -168,6 +172,7 @@ Add financial information for clubs.
 ### Data fetching approach
 
 Create a server action or API route:
+
 ```typescript
 // src/app/api/organization/financials/summary/route.ts
 export async function GET(request: NextRequest) {

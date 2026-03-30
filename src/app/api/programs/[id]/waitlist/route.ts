@@ -5,10 +5,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 // GET /api/programs/[id]/waitlist — list waitlisted enrollments
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -19,7 +16,12 @@ export async function GET(
 
     const program = await db.program.findFirst({
       where: { id: programId, organizationId: session.user.organizationId },
-      select: { id: true, waitlistEnabled: true, waitlistAutoPromote: true, waitlistCapacity: true },
+      select: {
+        id: true,
+        waitlistEnabled: true,
+        waitlistAutoPromote: true,
+        waitlistCapacity: true,
+      },
     });
 
     if (!program) {
@@ -64,10 +66,7 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error fetching waitlist:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch waitlist" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch waitlist" }, { status: 500 });
   }
 }
 
@@ -76,10 +75,7 @@ const promoteSchema = z.object({
 });
 
 // POST /api/programs/[id]/waitlist — promote a waitlisted enrollment
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -108,9 +104,7 @@ export async function POST(
 
     const result = await db.$transaction(async (tx) => {
       // Lock the Program row to serialize concurrent promotions
-      await tx.$queryRaw(
-        Prisma.sql`SELECT id FROM "Program" WHERE id = ${programId} FOR UPDATE`
-      );
+      await tx.$queryRaw(Prisma.sql`SELECT id FROM "Program" WHERE id = ${programId} FOR UPDATE`);
 
       const enrollment = enrollmentId
         ? await tx.enrollment.findFirst({
@@ -157,10 +151,7 @@ export async function POST(
     });
 
     if (!result) {
-      return NextResponse.json(
-        { error: "No waitlisted enrollment found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "No waitlisted enrollment found" }, { status: 404 });
     }
 
     return NextResponse.json({
@@ -170,15 +161,9 @@ export async function POST(
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error promoting from waitlist:", error);
-    return NextResponse.json(
-      { error: "Failed to promote from waitlist" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to promote from waitlist" }, { status: 500 });
   }
 }

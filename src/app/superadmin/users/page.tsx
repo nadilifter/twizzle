@@ -1,9 +1,9 @@
-import { db } from "@/lib/db"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { SuperadminUsersTable } from "@/components/superadmin/users-table"
+import { db } from "@/lib/db";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { SuperadminUsersTable } from "@/components/superadmin/users-table";
 
 // Force dynamic rendering - this page fetches from database
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default async function AdminUsersPage() {
   // Fetch users with memberships
@@ -15,13 +15,13 @@ export default async function AdminUsersPage() {
             select: {
               id: true,
               name: true,
-            }
-          }
-        }
-      }
+            },
+          },
+        },
+      },
     },
-    orderBy: { createdAt: 'desc' }
-  })
+    orderBy: { createdAt: "desc" },
+  });
 
   // Fetch all organizations for the filter dropdown
   const organizations = await db.organization.findMany({
@@ -29,8 +29,8 @@ export default async function AdminUsersPage() {
       id: true,
       name: true,
     },
-    orderBy: { name: 'asc' }
-  })
+    orderBy: { name: "asc" },
+  });
 
   // Transform data for the client component (serialize dates)
   const serializedUsers = users.map((user) => ({
@@ -49,9 +49,9 @@ export default async function AdminUsersPage() {
       organization: {
         id: m.organization.id,
         name: m.organization.name,
-      }
-    }))
-  }))
+      },
+    })),
+  }));
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -59,17 +59,12 @@ export default async function AdminUsersPage() {
       <Card>
         <CardHeader>
           <CardTitle>All Users</CardTitle>
-          <CardDescription>
-            Manage and view all platform users across organizations
-          </CardDescription>
+          <CardDescription>Manage and view all platform users across organizations</CardDescription>
         </CardHeader>
         <CardContent>
-          <SuperadminUsersTable 
-            users={serializedUsers} 
-            organizations={organizations}
-          />
+          <SuperadminUsersTable users={serializedUsers} organizations={organizations} />
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

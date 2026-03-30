@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   Command,
   CommandEmpty,
@@ -15,53 +15,53 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command"
-import { Badge } from "@/components/ui/badge"
-import { Loader2, MapPin, Calendar } from "lucide-react"
-import { format } from "date-fns"
+} from "@/components/ui/command";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, MapPin, Calendar } from "lucide-react";
+import { format } from "date-fns";
 
-type EntityType = "program" | "event" | "competition"
+type EntityType = "program" | "event" | "competition";
 
 interface EntityItem {
-  id: string
-  name: string
-  status?: string
-  type?: string
-  date?: string
-  startDate?: string
-  endDate?: string
-  facilityName?: string | null
+  id: string;
+  name: string;
+  status?: string;
+  type?: string;
+  date?: string;
+  startDate?: string;
+  endDate?: string;
+  facilityName?: string | null;
 }
 
 interface CopySettingsDialogProps {
-  entityType: EntityType
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onSelect: (id: string) => Promise<void>
+  entityType: EntityType;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSelect: (id: string) => Promise<void>;
 }
 
 const ENTITY_LABELS: Record<EntityType, string> = {
   program: "Program",
   event: "Event",
   competition: "Competition",
-}
+};
 
 function formatDateRange(startDate?: string, endDate?: string): string | null {
-  if (!startDate) return null
+  if (!startDate) return null;
   try {
-    const start = new Date(startDate + "T12:00:00Z")
-    const startStr = format(start, "MMM d, yyyy")
-    if (!endDate) return startStr
-    const end = new Date(endDate + "T12:00:00Z")
-    return `${startStr} – ${format(end, "MMM d, yyyy")}`
+    const start = new Date(startDate + "T12:00:00Z");
+    const startStr = format(start, "MMM d, yyyy");
+    if (!endDate) return startStr;
+    const end = new Date(endDate + "T12:00:00Z");
+    return `${startStr} – ${format(end, "MMM d, yyyy")}`;
   } catch {
-    return null
+    return null;
   }
 }
 
 function normalizeItems(entityType: EntityType, data: any): EntityItem[] {
   if (entityType === "program") {
-    const items = data.data || data
+    const items = data.data || data;
     return (items as any[]).map((p) => ({
       id: p.id,
       name: p.name,
@@ -69,22 +69,22 @@ function normalizeItems(entityType: EntityType, data: any): EntityItem[] {
       startDate: p.startDate?.slice?.(0, 10) || undefined,
       endDate: p.endDate?.slice?.(0, 10) || undefined,
       facilityName: p.facility?.name || null,
-    }))
+    }));
   }
 
   if (entityType === "event") {
-    const items = data.data || data
+    const items = data.data || data;
     return (items as any[]).map((e) => ({
       id: e.id,
       name: e.title,
       type: e.type,
       date: e.date?.slice?.(0, 10) || undefined,
       facilityName: e.facility?.name || null,
-    }))
+    }));
   }
 
   // competition
-  const items = Array.isArray(data) ? data : data.data || data
+  const items = Array.isArray(data) ? data : data.data || data;
   return (items as any[]).map((c) => ({
     id: c.id,
     name: c.name,
@@ -93,14 +93,14 @@ function normalizeItems(entityType: EntityType, data: any): EntityItem[] {
     startDate: c.startDate?.slice?.(0, 10) || undefined,
     endDate: c.endDate?.slice?.(0, 10) || undefined,
     facilityName: c.facility?.name || null,
-  }))
+  }));
 }
 
 const API_PATHS: Record<EntityType, string> = {
   program: "/api/programs?limit=200",
   event: "/api/events?limit=200",
   competition: "/api/competitions",
-}
+};
 
 export function CopySettingsDialog({
   entityType,
@@ -108,43 +108,46 @@ export function CopySettingsDialog({
   onOpenChange,
   onSelect,
 }: CopySettingsDialogProps) {
-  const [items, setItems] = React.useState<EntityItem[]>([])
-  const [loading, setLoading] = React.useState(false)
-  const [copying, setCopying] = React.useState(false)
-  const label = ENTITY_LABELS[entityType]
+  const [items, setItems] = React.useState<EntityItem[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [copying, setCopying] = React.useState(false);
+  const label = ENTITY_LABELS[entityType];
 
   React.useEffect(() => {
-    if (!open) return
-    let cancelled = false
-    setLoading(true)
+    if (!open) return;
+    let cancelled = false;
+    setLoading(true);
 
     fetch(API_PATHS[entityType])
       .then((res) => res.json())
       .then((data) => {
-        if (cancelled) return
-        setItems(normalizeItems(entityType, data))
+        if (cancelled) return;
+        setItems(normalizeItems(entityType, data));
       })
       .catch(() => {
-        if (!cancelled) setItems([])
+        if (!cancelled) setItems([]);
       })
       .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+        if (!cancelled) setLoading(false);
+      });
 
     return () => {
-      cancelled = true
-    }
-  }, [open, entityType])
+      cancelled = true;
+    };
+  }, [open, entityType]);
 
-  const handleSelect = React.useCallback(async (id: string) => {
-    setCopying(true)
-    try {
-      await onSelect(id)
-      onOpenChange(false)
-    } finally {
-      setCopying(false)
-    }
-  }, [onSelect, onOpenChange])
+  const handleSelect = React.useCallback(
+    async (id: string) => {
+      setCopying(true);
+      try {
+        await onSelect(id);
+        onOpenChange(false);
+      } finally {
+        setCopying(false);
+      }
+    },
+    [onSelect, onOpenChange]
+  );
 
   return (
     <Dialog open={open} onOpenChange={copying ? undefined : onOpenChange}>
@@ -165,9 +168,7 @@ export function CopySettingsDialog({
         {loading || copying ? (
           <div className="flex flex-col items-center justify-center gap-2 py-12">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            {copying && (
-              <p className="text-sm text-muted-foreground">Copying settings...</p>
-            )}
+            {copying && <p className="text-sm text-muted-foreground">Copying settings...</p>}
           </div>
         ) : (
           <Command className="border-t">
@@ -176,10 +177,9 @@ export function CopySettingsDialog({
               <CommandEmpty>No {label.toLowerCase()}s found.</CommandEmpty>
               <CommandGroup>
                 {items.map((item) => {
-                  const dateStr =
-                    item.date
-                      ? formatDateRange(item.date)
-                      : formatDateRange(item.startDate, item.endDate)
+                  const dateStr = item.date
+                    ? formatDateRange(item.date)
+                    : formatDateRange(item.startDate, item.endDate);
 
                   return (
                     <CommandItem
@@ -216,7 +216,7 @@ export function CopySettingsDialog({
                         )}
                       </div>
                     </CommandItem>
-                  )
+                  );
                 })}
               </CommandGroup>
             </CommandList>
@@ -224,5 +224,5 @@ export function CopySettingsDialog({
         )}
       </DialogContent>
     </Dialog>
-  )
+  );
 }

@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getAuthSession } from "@/lib/auth"
-import { db } from "@/lib/db"
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthSession } from "@/lib/auth";
+import { db } from "@/lib/db";
 
 // GET /api/notifications
 // Fetches combined system and organization announcements for the current user,
@@ -8,9 +8,9 @@ import { db } from "@/lib/db"
 // only reach the appropriate audience.
 export async function GET(request: NextRequest) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
 
-    const now = new Date()
+    const now = new Date();
 
     const systemAnnouncementsPromise = db.systemAnnouncement.findMany({
       where: {
@@ -28,10 +28,10 @@ export async function GET(request: NextRequest) {
       },
       orderBy: { publishedAt: "desc" },
       take: 50,
-    })
+    });
 
-    const effectiveOrgId = session?.user?.organizationId
-    const userId = session?.user?.id
+    const effectiveOrgId = session?.user?.organizationId;
+    const userId = session?.user?.id;
 
     const orgAnnouncementsPromise = effectiveOrgId
       ? db.announcement.findMany({
@@ -55,35 +55,33 @@ export async function GET(request: NextRequest) {
           orderBy: { publishedAt: "desc" },
           take: 100,
         })
-      : Promise.resolve([])
+      : Promise.resolve([]);
 
     const [systemAnnouncements, allOrgAnnouncements] = await Promise.all([
       systemAnnouncementsPromise,
       orgAnnouncementsPromise,
-    ])
+    ]);
 
     // Filter org announcements by audience targeting
-    let orgAnnouncements = allOrgAnnouncements
+    let orgAnnouncements = allOrgAnnouncements;
     if (userId && effectiveOrgId) {
       const needsProgramCheck = allOrgAnnouncements.some(
         (a) => a.targetScope === "PROGRAM" || a.targetScope === "EVENT"
-      )
-      const needsGuardianCheck = allOrgAnnouncements.some(
-        (a) => a.targetScope === "GUARDIAN"
-      )
+      );
+      const needsGuardianCheck = allOrgAnnouncements.some((a) => a.targetScope === "GUARDIAN");
 
-      let userProgramIds: Set<string> = new Set()
-      let userEventIds: Set<string> = new Set()
-      let isGuardian = false
+      let userProgramIds: Set<string> = new Set();
+      let userEventIds: Set<string> = new Set();
+      let isGuardian = false;
 
       if (needsProgramCheck || needsGuardianCheck) {
         // Find athletes this user is a guardian of
         const guardianLinks = await db.athleteGuardian.findMany({
           where: { userId },
           select: { athleteId: true },
-        })
-        const athleteIds = guardianLinks.map((g) => g.athleteId)
-        isGuardian = athleteIds.length > 0
+        });
+        const athleteIds = guardianLinks.map((g) => g.athleteId);
+        isGuardian = athleteIds.length > 0;
 
         if (athleteIds.length > 0 && needsProgramCheck) {
           const [enrollments, registrations, eventAttendances] = await Promise.all([
@@ -99,29 +97,29 @@ export async function GET(request: NextRequest) {
               where: { athleteId: { in: athleteIds } },
               select: { eventId: true },
             }),
-          ])
-          userProgramIds = new Set(enrollments.map((e) => e.programId))
-          registrations.forEach((r) => userProgramIds.add(r.programInstance.programId))
-          userEventIds = new Set(eventAttendances.map((a) => a.eventId))
+          ]);
+          userProgramIds = new Set(enrollments.map((e) => e.programId));
+          registrations.forEach((r) => userProgramIds.add(r.programInstance.programId));
+          userEventIds = new Set(eventAttendances.map((a) => a.eventId));
         }
       }
 
       orgAnnouncements = allOrgAnnouncements.filter((a) => {
         switch (a.targetScope) {
           case "ALL":
-            return true
+            return true;
           case "GUARDIAN":
-            return isGuardian
+            return isGuardian;
           case "PROGRAM":
-            if (!a.targetProgramId) return userProgramIds.size > 0
-            return userProgramIds.has(a.targetProgramId)
+            if (!a.targetProgramId) return userProgramIds.size > 0;
+            return userProgramIds.has(a.targetProgramId);
           case "EVENT":
-            if (!a.targetEventId) return userEventIds.size > 0
-            return userEventIds.has(a.targetEventId)
+            if (!a.targetEventId) return userEventIds.size > 0;
+            return userEventIds.has(a.targetEventId);
           default:
-            return true
+            return true;
         }
-      })
+      });
     }
 
     // Transform and combine
@@ -145,26 +143,23 @@ export async function GET(request: NextRequest) {
         publishedAt: a.publishedAt?.toISOString() || a.createdAt.toISOString(),
         organizationName: a.organization.name,
       })),
-    ]
+    ];
 
-    const priorityOrder = { URGENT: 4, HIGH: 3, NORMAL: 2, LOW: 1 }
+    const priorityOrder = { URGENT: 4, HIGH: 3, NORMAL: 2, LOW: 1 };
     announcements.sort((a, b) => {
-      const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority]
-      if (priorityDiff !== 0) return priorityDiff
-      return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-    })
+      const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
+      if (priorityDiff !== 0) return priorityDiff;
+      return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
+    });
 
-    const unreadCount = announcements.filter((a) => !a.isRead).length
+    const unreadCount = announcements.filter((a) => !a.isRead).length;
 
     return NextResponse.json({
       announcements,
       unreadCount,
-    })
+    });
   } catch (error) {
-    console.error("Error fetching notifications:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch notifications" },
-      { status: 500 }
-    )
+    console.error("Error fetching notifications:", error);
+    return NextResponse.json({ error: "Failed to fetch notifications" }, { status: 500 });
   }
 }

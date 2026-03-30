@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import { Suspense, useEffect, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { useSession } from "next-auth/react"
-import { Loader2 } from "lucide-react"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { Loader2 } from "lucide-react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 /**
  * Handles organization switching when coming from superadmin.
@@ -16,7 +16,7 @@ export default function SwitchOrgPage() {
     <Suspense fallback={<SwitchOrgLoading />}>
       <SwitchOrgContent />
     </Suspense>
-  )
+  );
 }
 
 function SwitchOrgLoading() {
@@ -31,56 +31,56 @@ function SwitchOrgLoading() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
 
 function SwitchOrgContent() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const { data: session, update } = useSession()
-  const [error, setError] = useState<string | null>(null)
-  const [switching, setSwitching] = useState(false)
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { data: session, update } = useSession();
+  const [error, setError] = useState<string | null>(null);
+  const [switching, setSwitching] = useState(false);
 
-  const orgId = searchParams.get("orgId")
-  const orgName = searchParams.get("orgName")
-  const redirect = searchParams.get("redirect")
+  const orgId = searchParams.get("orgId");
+  const orgName = searchParams.get("orgName");
+  const redirect = searchParams.get("redirect");
 
   useEffect(() => {
     async function switchOrg() {
       if (!orgId || !orgName) {
-        setError("Missing organization information")
-        return
+        setError("Missing organization information");
+        return;
       }
 
       if (!session?.user) {
         // Wait for session to load
-        return
+        return;
       }
 
-      if (switching) return
-      setSwitching(true)
+      if (switching) return;
+      setSwitching(true);
 
       try {
         // Update the session with the new organization
         await update({
           organizationId: orgId,
           organizationName: orgName,
-        })
+        });
 
         // Navigate to redirect target or dashboard, and refresh to pick up new session
-        router.push(redirect || "/dashboard")
-        router.refresh()
+        router.push(redirect || "/dashboard");
+        router.refresh();
       } catch (err) {
-        console.error("Failed to switch organization:", err)
-        setError("Failed to switch organization")
-        setSwitching(false)
+        console.error("Failed to switch organization:", err);
+        setError("Failed to switch organization");
+        setSwitching(false);
       }
     }
 
     if (session !== undefined) {
-      switchOrg()
+      switchOrg();
     }
-  }, [session, orgId, orgName, update, switching, router])
+  }, [session, orgId, orgName, update, switching, router]);
 
   if (error) {
     return (
@@ -100,7 +100,7 @@ function SwitchOrgContent() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -111,11 +111,9 @@ function SwitchOrgContent() {
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">
-            Switching to {orgName || "organization"}...
-          </p>
+          <p className="text-muted-foreground">Switching to {orgName || "organization"}...</p>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

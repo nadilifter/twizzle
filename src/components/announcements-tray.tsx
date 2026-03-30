@@ -1,24 +1,24 @@
-"use client"
+"use client";
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback } from "react";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetDescription,
-} from "@/components/ui/sheet"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { AnnouncementCard, type AnnouncementItem } from "./announcement-card"
-import { CheckCheck, Loader2 } from "lucide-react"
-import { Skeleton } from "@/components/ui/skeleton"
+} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { AnnouncementCard, type AnnouncementItem } from "./announcement-card";
+import { CheckCheck, Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface AnnouncementsTrayProps {
-  children: React.ReactNode
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  organizationId?: string
+  children: React.ReactNode;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  organizationId?: string;
 }
 
 export function AnnouncementsTray({
@@ -27,34 +27,34 @@ export function AnnouncementsTray({
   onOpenChange,
   organizationId,
 }: AnnouncementsTrayProps) {
-  const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([])
-  const [loading, setLoading] = useState(false)
-  const [markingAllRead, setMarkingAllRead] = useState(false)
+  const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [markingAllRead, setMarkingAllRead] = useState(false);
 
   const fetchAnnouncements = useCallback(async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const params = new URLSearchParams()
+      const params = new URLSearchParams();
       if (organizationId) {
-        params.set("organizationId", organizationId)
+        params.set("organizationId", organizationId);
       }
-      const response = await fetch(`/api/notifications?${params.toString()}`)
+      const response = await fetch(`/api/notifications?${params.toString()}`);
       if (response.ok) {
-        const data = await response.json()
-        setAnnouncements(data.announcements || [])
+        const data = await response.json();
+        setAnnouncements(data.announcements || []);
       }
     } catch (error) {
-      console.error("Failed to fetch announcements:", error)
+      console.error("Failed to fetch announcements:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [organizationId])
+  }, [organizationId]);
 
   useEffect(() => {
     if (open) {
-      fetchAnnouncements()
+      fetchAnnouncements();
     }
-  }, [open, fetchAnnouncements])
+  }, [open, fetchAnnouncements]);
 
   const handleMarkAsRead = async (id: string, type: "system" | "org") => {
     try {
@@ -62,32 +62,30 @@ export function AnnouncementsTray({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ announcementId: id, type }),
-      })
-      setAnnouncements((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, isRead: true } : a))
-      )
+      });
+      setAnnouncements((prev) => prev.map((a) => (a.id === id ? { ...a, isRead: true } : a)));
     } catch (error) {
-      console.error("Failed to mark as read:", error)
+      console.error("Failed to mark as read:", error);
     }
-  }
+  };
 
   const handleMarkAllAsRead = async () => {
-    setMarkingAllRead(true)
+    setMarkingAllRead(true);
     try {
       await fetch("/api/notifications/read-all", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ organizationId }),
-      })
-      setAnnouncements((prev) => prev.map((a) => ({ ...a, isRead: true })))
+      });
+      setAnnouncements((prev) => prev.map((a) => ({ ...a, isRead: true })));
     } catch (error) {
-      console.error("Failed to mark all as read:", error)
+      console.error("Failed to mark all as read:", error);
     } finally {
-      setMarkingAllRead(false)
+      setMarkingAllRead(false);
     }
-  }
+  };
 
-  const unreadCount = announcements.filter((a) => !a.isRead).length
+  const unreadCount = announcements.filter((a) => !a.isRead).length;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -135,9 +133,7 @@ export function AnnouncementsTray({
             </div>
           ) : announcements.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <p className="text-sm text-muted-foreground">
-                No announcements yet
-              </p>
+              <p className="text-sm text-muted-foreground">No announcements yet</p>
             </div>
           ) : (
             <div className="space-y-3 py-4">
@@ -153,5 +149,5 @@ export function AnnouncementsTray({
         </ScrollArea>
       </SheetContent>
     </Sheet>
-  )
+  );
 }

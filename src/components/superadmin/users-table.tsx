@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+import * as React from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -14,25 +14,25 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table"
-import { Search, Users, MoreHorizontal, Pencil } from "lucide-react"
+} from "@tanstack/react-table";
+import { Search, Users, MoreHorizontal, Pencil } from "lucide-react";
 
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
-import { DataTablePagination } from "@/components/data-table/data-table-pagination"
-import { DataTableViewOptions } from "@/components/data-table/data-table-view-options"
-import { formatDistanceToNow } from "date-fns"
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
+import { formatDistanceToNow } from "date-fns";
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -40,7 +40,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,7 +48,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -56,71 +56,76 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Switch } from "@/components/ui/switch"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { toast } from "sonner"
+} from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { toast } from "sonner";
 
 // Type definitions
 interface OrganizationMembership {
-  id: string
-  role: string
+  id: string;
+  role: string;
   organization: {
-    id: string
-    name: string
-  }
+    id: string;
+    name: string;
+  };
 }
 
 interface User {
-  id: string
-  name: string
-  email: string
-  avatar: string | null
-  role: string
-  status: string
-  isSuperAdmin: boolean
-  createdAt: string
-  lastActiveAt: string | null
-  memberships: OrganizationMembership[]
+  id: string;
+  name: string;
+  email: string;
+  avatar: string | null;
+  role: string;
+  status: string;
+  isSuperAdmin: boolean;
+  createdAt: string;
+  lastActiveAt: string | null;
+  memberships: OrganizationMembership[];
 }
 
 interface SuperadminUsersTableProps {
-  users: User[]
-  organizations: { id: string; name: string }[]
+  users: User[];
+  organizations: { id: string; name: string }[];
 }
 
 // Helper function for role badge variants
-const getRoleBadgeVariant = (role: string, isSuperAdmin: boolean): "default" | "secondary" | "destructive" | "outline" => {
-  if (isSuperAdmin) return "destructive"
+const getRoleBadgeVariant = (
+  role: string,
+  isSuperAdmin: boolean
+): "default" | "secondary" | "destructive" | "outline" => {
+  if (isSuperAdmin) return "destructive";
   switch (role) {
     case "ADMIN":
-      return "destructive"
+      return "destructive";
     case "COACH":
-      return "default"
+      return "default";
     case "VOLUNTEER":
     case "ACCOUNTANT":
     case "PARENT":
-      return "secondary"
+      return "secondary";
     case "CUSTOM":
-      return "outline"
+      return "outline";
     default:
-      return "secondary"
+      return "secondary";
   }
-}
+};
 
 // Helper function for status badge variants
-const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
+const getStatusBadgeVariant = (
+  status: string
+): "default" | "secondary" | "destructive" | "outline" => {
   switch (status) {
     case "ACTIVE":
-      return "default"
+      return "default";
     case "INVITED":
-      return "outline"
+      return "outline";
     case "INACTIVE":
-      return "secondary"
+      return "secondary";
     default:
-      return "secondary"
+      return "secondary";
   }
-}
+};
 
 // Helper function for initials
 const getInitials = (name: string) => {
@@ -129,27 +134,27 @@ const getInitials = (name: string) => {
     .map((n) => n[0])
     .join("")
     .toUpperCase()
-    .slice(0, 2)
-}
+    .slice(0, 2);
+};
 
 // Format last active date
 const formatLastActive = (date: string | null) => {
-  if (!date) return "Never"
+  if (!date) return "Never";
   try {
-    return formatDistanceToNow(new Date(date), { addSuffix: true })
+    return formatDistanceToNow(new Date(date), { addSuffix: true });
   } catch {
-    return "Unknown"
+    return "Unknown";
   }
-}
+};
 
 // Format created date
 const formatCreatedDate = (date: string) => {
   try {
-    return new Date(date).toLocaleDateString()
+    return new Date(date).toLocaleDateString();
   } catch {
-    return "Unknown"
+    return "Unknown";
   }
-}
+};
 
 // Role options for filter
 const ROLE_OPTIONS = [
@@ -160,148 +165,146 @@ const ROLE_OPTIONS = [
   { value: "ACCOUNTANT", label: "Accountant" },
   { value: "PARENT", label: "Parent" },
   { value: "CUSTOM", label: "Custom" },
-]
+];
 
 // Status options for filter
 const STATUS_OPTIONS = [
   { value: "ACTIVE", label: "Active" },
   { value: "INVITED", label: "Invited" },
   { value: "INACTIVE", label: "Inactive" },
-]
+];
 
 export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTableProps) {
-  const router = useRouter()
-  const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
-  const [globalFilter, setGlobalFilter] = React.useState("")
-  const [roleFilter, setRoleFilter] = React.useState<string>("all")
-  const [orgFilter, setOrgFilter] = React.useState<string>("all")
-  const [statusFilter, setStatusFilter] = React.useState<string>("all")
-  
+  const router = useRouter();
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [globalFilter, setGlobalFilter] = React.useState("");
+  const [roleFilter, setRoleFilter] = React.useState<string>("all");
+  const [orgFilter, setOrgFilter] = React.useState<string>("all");
+  const [statusFilter, setStatusFilter] = React.useState<string>("all");
+
   // Edit dialog state
-  const [editDialogOpen, setEditDialogOpen] = React.useState(false)
-  const [editingUser, setEditingUser] = React.useState<User | null>(null)
+  const [editDialogOpen, setEditDialogOpen] = React.useState(false);
+  const [editingUser, setEditingUser] = React.useState<User | null>(null);
   const [editFormData, setEditFormData] = React.useState({
     name: "",
     email: "",
     role: "",
     status: "",
     isSuperAdmin: false,
-  })
-  const [isUpdating, setIsUpdating] = React.useState(false)
+  });
+  const [isUpdating, setIsUpdating] = React.useState(false);
 
   const handleEditUser = (user: User) => {
-    setEditingUser(user)
+    setEditingUser(user);
     setEditFormData({
       name: user.name,
       email: user.email,
       role: user.role,
       status: user.status,
       isSuperAdmin: user.isSuperAdmin,
-    })
-    setEditDialogOpen(true)
-  }
+    });
+    setEditDialogOpen(true);
+  };
 
   const handleSaveUser = async () => {
-    if (!editingUser) return
-    
-    setIsUpdating(true)
+    if (!editingUser) return;
+
+    setIsUpdating(true);
     try {
       const response = await fetch(`/api/superadmin/users/${editingUser.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editFormData),
-      })
+      });
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to update user")
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update user");
       }
 
-      toast.success("User updated successfully")
-      setEditDialogOpen(false)
-      setEditingUser(null)
-      router.refresh()
+      toast.success("User updated successfully");
+      setEditDialogOpen(false);
+      setEditingUser(null);
+      router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update user")
+      toast.error(error instanceof Error ? error.message : "Failed to update user");
     } finally {
-      setIsUpdating(false)
+      setIsUpdating(false);
     }
-  }
+  };
 
   const handleSendPasswordReset = async (user: User) => {
     try {
       const response = await fetch(`/api/superadmin/users/${user.id}/send-password-reset`, {
         method: "POST",
-      })
+      });
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to send password reset email")
+        const error = await response.json();
+        throw new Error(error.error || "Failed to send password reset email");
       }
 
-      toast.success(`Password reset email sent to ${user.email}`)
+      toast.success(`Password reset email sent to ${user.email}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to send password reset email")
+      toast.error(error instanceof Error ? error.message : "Failed to send password reset email");
     }
-  }
+  };
 
   // Filter data based on all filters
   const filteredData = React.useMemo(() => {
     return users.filter((user) => {
       // Global search filter (name and email)
       if (globalFilter) {
-        const searchLower = globalFilter.toLowerCase()
-        const matchesName = user.name.toLowerCase().includes(searchLower)
-        const matchesEmail = user.email.toLowerCase().includes(searchLower)
-        if (!matchesName && !matchesEmail) return false
+        const searchLower = globalFilter.toLowerCase();
+        const matchesName = user.name.toLowerCase().includes(searchLower);
+        const matchesEmail = user.email.toLowerCase().includes(searchLower);
+        if (!matchesName && !matchesEmail) return false;
       }
 
       // Role filter
       if (roleFilter !== "all") {
         if (roleFilter === "SUPER_ADMIN") {
-          if (!user.isSuperAdmin) return false
+          if (!user.isSuperAdmin) return false;
         } else {
-          if (user.isSuperAdmin || user.role !== roleFilter) return false
+          if (user.isSuperAdmin || user.role !== roleFilter) return false;
         }
       }
 
       // Organization filter
       if (orgFilter !== "all") {
-        const hasOrg = user.memberships.some((m) => m.organization.id === orgFilter)
-        if (!hasOrg) return false
+        const hasOrg = user.memberships.some((m) => m.organization.id === orgFilter);
+        if (!hasOrg) return false;
       }
 
       // Status filter
       if (statusFilter !== "all") {
-        if (user.status !== statusFilter) return false
+        if (user.status !== statusFilter) return false;
       }
 
-      return true
-    })
-  }, [users, globalFilter, roleFilter, orgFilter, statusFilter])
+      return true;
+    });
+  }, [users, globalFilter, roleFilter, orgFilter, statusFilter]);
 
   const columns: ColumnDef<User>[] = [
     {
       accessorKey: "name",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
       cell: ({ row }) => {
-        const user = row.original
+        const user = row.original;
         return (
-          <Link 
+          <Link
             href={`/superadmin/users/${user.id}`}
             className="flex items-center gap-3 hover:underline"
           >
             <Avatar className="h-8 w-8">
               <AvatarImage src={user.avatar || undefined} />
-              <AvatarFallback className="text-xs">
-                {getInitials(user.name)}
-              </AvatarFallback>
+              <AvatarFallback className="text-xs">{getInitials(user.name)}</AvatarFallback>
             </Avatar>
             <span className="font-medium">{user.name}</span>
           </Link>
-        )
+        );
       },
     },
     {
@@ -312,22 +315,20 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
       accessorKey: "role",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Role (Platform)" />,
       cell: ({ row }) => {
-        const user = row.original
-        const displayRole = user.isSuperAdmin ? "Super Admin" : user.role
+        const user = row.original;
+        const displayRole = user.isSuperAdmin ? "Super Admin" : user.role;
         return (
-          <Badge variant={getRoleBadgeVariant(user.role, user.isSuperAdmin)}>
-            {displayRole}
-          </Badge>
-        )
+          <Badge variant={getRoleBadgeVariant(user.role, user.isSuperAdmin)}>{displayRole}</Badge>
+        );
       },
     },
     {
       accessorKey: "memberships",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Organizations" />,
       cell: ({ row }) => {
-        const memberships = row.original.memberships
+        const memberships = row.original.memberships;
         if (memberships.length === 0) {
-          return <span className="text-xs text-muted-foreground">None</span>
+          return <span className="text-xs text-muted-foreground">None</span>;
         }
         return (
           <div className="flex flex-col gap-1">
@@ -337,12 +338,10 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
               </span>
             ))}
             {memberships.length > 2 && (
-              <span className="text-xs text-muted-foreground">
-                +{memberships.length - 2} more
-              </span>
+              <span className="text-xs text-muted-foreground">+{memberships.length - 2} more</span>
             )}
           </div>
-        )
+        );
       },
     },
     {
@@ -350,10 +349,8 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
       header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
       cell: ({ row }) => {
         return (
-          <Badge variant={getStatusBadgeVariant(row.original.status)}>
-            {row.original.status}
-          </Badge>
-        )
+          <Badge variant={getStatusBadgeVariant(row.original.status)}>{row.original.status}</Badge>
+        );
       },
     },
     {
@@ -364,7 +361,7 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
           <span className="text-sm text-muted-foreground">
             {formatLastActive(row.original.lastActiveAt)}
           </span>
-        )
+        );
       },
     },
     {
@@ -375,14 +372,14 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
           <span className="text-sm text-muted-foreground">
             {formatCreatedDate(row.original.createdAt)}
           </span>
-        )
+        );
       },
     },
     {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => {
-        const user = row.original
+        const user = row.original;
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -403,10 +400,10 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        )
+        );
       },
     },
-  ]
+  ];
 
   const table = useReactTable({
     data: filteredData,
@@ -428,7 +425,7 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
         pageSize: 20,
       },
     },
-  })
+  });
 
   return (
     <div className="space-y-4">
@@ -504,10 +501,7 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
                   <TableHead key={header.id}>
                     {header.isPlaceholder
                       ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                      : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -516,26 +510,17 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
+                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
+                <TableCell colSpan={columns.length} className="h-24 text-center">
                   <div className="flex flex-col items-center gap-2">
                     <Users className="h-8 w-8 text-muted-foreground" />
                     <p className="text-muted-foreground">No users found.</p>
@@ -564,9 +549,7 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
               <Input
                 id="edit-name"
                 value={editFormData.name}
-                onChange={(e) =>
-                  setEditFormData((prev) => ({ ...prev, name: e.target.value }))
-                }
+                onChange={(e) => setEditFormData((prev) => ({ ...prev, name: e.target.value }))}
                 placeholder="Enter full name"
               />
             </div>
@@ -576,9 +559,7 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
                 id="edit-email"
                 type="email"
                 value={editFormData.email}
-                onChange={(e) =>
-                  setEditFormData((prev) => ({ ...prev, email: e.target.value }))
-                }
+                onChange={(e) => setEditFormData((prev) => ({ ...prev, email: e.target.value }))}
                 placeholder="Enter email address"
               />
             </div>
@@ -586,9 +567,7 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
               <Label htmlFor="edit-role">Platform Role</Label>
               <Select
                 value={editFormData.role}
-                onValueChange={(value) =>
-                  setEditFormData((prev) => ({ ...prev, role: value }))
-                }
+                onValueChange={(value) => setEditFormData((prev) => ({ ...prev, role: value }))}
               >
                 <SelectTrigger id="edit-role">
                   <SelectValue placeholder="Select role" />
@@ -607,9 +586,7 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
               <Label htmlFor="edit-status">Status</Label>
               <Select
                 value={editFormData.status}
-                onValueChange={(value) =>
-                  setEditFormData((prev) => ({ ...prev, status: value }))
-                }
+                onValueChange={(value) => setEditFormData((prev) => ({ ...prev, status: value }))}
               >
                 <SelectTrigger id="edit-status">
                   <SelectValue placeholder="Select status" />
@@ -647,5 +624,5 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

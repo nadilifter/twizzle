@@ -95,9 +95,7 @@ interface SendChatEmailResult {
  * Send a chat message as an email with proper reply-to addressing
  * and threading headers.
  */
-export async function sendChatEmail(
-  options: SendChatEmailOptions
-): Promise<SendChatEmailResult> {
+export async function sendChatEmail(options: SendChatEmailOptions): Promise<SendChatEmailResult> {
   const { to, body, conversationId, organizationId, senderRole = "admin", coachName } = options;
 
   const org = await db.organization.findUnique({
@@ -111,9 +109,7 @@ export async function sendChatEmail(
   const sesConfig = getSESConfig();
 
   const isCoach = senderRole === "coach" && coachName;
-  const displayName = isCoach
-    ? sanitizeHeaderValue(coachName)
-    : orgName;
+  const displayName = isCoach ? sanitizeHeaderValue(coachName) : orgName;
   const fromAddress = `${displayName} <${sesConfig.fromEmail}>`;
   const subject = isCoach
     ? `New message from ${displayName} at ${orgName}`

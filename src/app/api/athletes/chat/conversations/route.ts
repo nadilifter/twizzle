@@ -69,9 +69,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching athlete conversations:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch conversations" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch conversations" }, { status: 500 });
   }
 }

@@ -164,7 +164,8 @@ export default function AthletesPage() {
         <div className="grid gap-4 md:grid-cols-2">
           {athletes.map((athlete) => {
             const displayName = `${athlete.firstName} ${athlete.lastName}`.trim() || athlete.name;
-            const initials = `${athlete.firstName?.[0] || ""}${athlete.lastName?.[0] || ""}`.toUpperCase();
+            const initials =
+              `${athlete.firstName?.[0] || ""}${athlete.lastName?.[0] || ""}`.toUpperCase();
 
             return (
               <Link key={athlete.id} href={`/athletes/${athlete.id}`}>
@@ -181,14 +182,18 @@ export default function AthletesPage() {
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="font-semibold truncate">{displayName}</h3>
                           {athlete.isSelf && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">You</Badge>
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                              You
+                            </Badge>
                           )}
                         </div>
                         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                           {athlete.birthDate && (
                             <span>{format(new Date(athlete.birthDate), "MMM d, yyyy")}</span>
                           )}
-                          <Badge variant="outline" className="text-[10px]">{athlete.status}</Badge>
+                          <Badge variant="outline" className="text-[10px]">
+                            {athlete.status}
+                          </Badge>
                         </div>
                         <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">
@@ -197,7 +202,8 @@ export default function AthletesPage() {
                           </span>
                           <span className="flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
-                            {athlete.registrationCount} registration{athlete.registrationCount !== 1 ? "s" : ""}
+                            {athlete.registrationCount} registration
+                            {athlete.registrationCount !== 1 ? "s" : ""}
                           </span>
                           {athlete.allowGuardianClaims && (
                             <span className="flex items-center gap-1 text-green-600 dark:text-green-400">

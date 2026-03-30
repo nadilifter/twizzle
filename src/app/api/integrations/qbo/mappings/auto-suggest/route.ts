@@ -20,23 +20,14 @@ export async function POST() {
     });
 
     if (!connection || !connection.isActive) {
-      return NextResponse.json(
-        { error: "No active QBO connection" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "No active QBO connection" }, { status: 404 });
     }
 
-    const suggestions = await autoSuggestMappings(
-      connection.id,
-      session.user.organizationId
-    );
+    const suggestions = await autoSuggestMappings(connection.id, session.user.organizationId);
 
     return NextResponse.json(suggestions);
   } catch (error) {
     console.error("[QBO Auto-Suggest] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to generate mapping suggestions" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to generate mapping suggestions" }, { status: 500 });
   }
 }

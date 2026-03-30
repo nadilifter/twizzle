@@ -1,63 +1,60 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { UplifterLogo } from "@/components/uplifter-logo"
-import { ShineBorder } from "@/components/ui/shine-border"
-import { ArrowLeft, MapPin, Search, Building2 } from "lucide-react"
-import { getClientSubdomainUrl } from "@/lib/client-domains"
+import { useState } from "react";
+import Link from "next/link";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { UplifterLogo } from "@/components/uplifter-logo";
+import { ShineBorder } from "@/components/ui/shine-border";
+import { ArrowLeft, MapPin, Search, Building2 } from "lucide-react";
+import { getClientSubdomainUrl } from "@/lib/client-domains";
 
 type Organization = {
-  id: string
-  name: string
-  logo: string | null
-  city: string | null
-  stateProvince: string | null
-  sports: { sport: { id: string; name: string; slug: string } }[]
+  id: string;
+  name: string;
+  logo: string | null;
+  city: string | null;
+  stateProvince: string | null;
+  sports: { sport: { id: string; name: string; slug: string } }[];
   websiteConfig: {
-    subdomain: string | null
-    logo: string | null
-    heroLocation: string | null
-    primaryColor: string | null
-  } | null
-}
+    subdomain: string | null;
+    logo: string | null;
+    heroLocation: string | null;
+    primaryColor: string | null;
+  } | null;
+};
 
 type Sport = {
-  id: string
-  name: string
-  slug: string
-}
+  id: string;
+  name: string;
+  slug: string;
+};
 
 export function FindYourClub({
   organizations,
   sports,
 }: {
-  organizations: Organization[]
-  sports: Sport[]
+  organizations: Organization[];
+  sports: Sport[];
 }) {
-  const [selectedSport, setSelectedSport] = useState<string | null>(null)
-  const [search, setSearch] = useState("")
+  const [selectedSport, setSelectedSport] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const sportsWithOrgs = sports.filter((sport) =>
-    organizations.some((org) =>
-      org.sports.some((os) => os.sport.id === sport.id)
-    )
-  )
+    organizations.some((org) => org.sports.some((os) => os.sport.id === sport.id))
+  );
 
   const filtered = organizations.filter((org) => {
-    const matchesSport =
-      !selectedSport || org.sports.some((os) => os.sport.id === selectedSport)
+    const matchesSport = !selectedSport || org.sports.some((os) => os.sport.id === selectedSport);
     const matchesSearch =
       !search ||
       org.name.toLowerCase().includes(search.toLowerCase()) ||
       org.city?.toLowerCase().includes(search.toLowerCase()) ||
-      org.stateProvince?.toLowerCase().includes(search.toLowerCase())
-    return matchesSport && matchesSearch
-  })
+      org.stateProvince?.toLowerCase().includes(search.toLowerCase());
+    return matchesSport && matchesSearch;
+  });
 
   return (
     <div className="w-full max-w-4xl">
@@ -84,11 +81,7 @@ export function FindYourClub({
                 key={sport.id}
                 variant={selectedSport === sport.id ? "default" : "outline"}
                 size="sm"
-                onClick={() =>
-                  setSelectedSport(
-                    selectedSport === sport.id ? null : sport.id
-                  )
-                }
+                onClick={() => setSelectedSport(selectedSport === sport.id ? null : sport.id)}
                 className="rounded-full"
               >
                 {sport.name}
@@ -116,21 +109,15 @@ export function FindYourClub({
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {filtered.map((org) => {
-                const subdomain = org.websiteConfig?.subdomain
-                const href = subdomain
-                  ? getClientSubdomainUrl(subdomain)
-                  : "#"
-                const logo = org.websiteConfig?.logo || org.logo
+                const subdomain = org.websiteConfig?.subdomain;
+                const href = subdomain ? getClientSubdomainUrl(subdomain) : "#";
+                const logo = org.websiteConfig?.logo || org.logo;
                 const location =
                   org.websiteConfig?.heroLocation ||
-                  [org.city, org.stateProvince].filter(Boolean).join(", ")
+                  [org.city, org.stateProvince].filter(Boolean).join(", ");
 
                 return (
-                  <a
-                    key={org.id}
-                    href={href}
-                    className="group block text-left"
-                  >
+                  <a key={org.id} href={href} className="group block text-left">
                     <Card className="h-full transition-colors hover:bg-accent/50 hover:border-primary/30">
                       <div className="p-4 flex flex-col gap-3">
                         <div className="flex items-start gap-3">
@@ -180,7 +167,7 @@ export function FindYourClub({
                       </div>
                     </Card>
                   </a>
-                )
+                );
               })}
             </div>
           )}
@@ -197,5 +184,5 @@ export function FindYourClub({
         </Link>
       </div>
     </div>
-  )
+  );
 }

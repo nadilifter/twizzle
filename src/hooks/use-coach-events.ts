@@ -3,11 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { api, ApiError } from "@/lib/api-client";
-import type {
-  EventWithRelations,
-  EventsListResponse,
-  EventsQueryParams,
-} from "@/types/events";
+import type { EventWithRelations, EventsListResponse, EventsQueryParams } from "@/types/events";
 
 interface UseCoachEventsOptions {
   autoFetch?: boolean;
@@ -31,7 +27,7 @@ interface UseCoachEventsReturn {
 export function useCoachEvents(options: UseCoachEventsOptions = {}): UseCoachEventsReturn {
   const { autoFetch = true, initialParams = {} } = options;
   const { data: session } = useSession();
-  
+
   const effectiveCoachId = useMemo(() => {
     if (!session?.user) return null;
     if (session.user.isSuperAdmin && session.user.viewingAsUserId) {
@@ -44,7 +40,8 @@ export function useCoachEvents(options: UseCoachEventsOptions = {}): UseCoachEve
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentParams, setCurrentParamsState] = useState<Omit<EventsQueryParams, "coachId">>(initialParams);
+  const [currentParams, setCurrentParamsState] =
+    useState<Omit<EventsQueryParams, "coachId">>(initialParams);
   const currentParamsRef = useRef<Omit<EventsQueryParams, "coachId">>(initialParams);
 
   const setCurrentParams = useCallback((params: Omit<EventsQueryParams, "coachId">) => {
@@ -52,34 +49,37 @@ export function useCoachEvents(options: UseCoachEventsOptions = {}): UseCoachEve
     setCurrentParamsState(params);
   }, []);
 
-  const fetchEvents = useCallback(async (params?: Omit<EventsQueryParams, "coachId">) => {
-    if (!effectiveCoachId) {
-      setError("Not authenticated");
-      return;
-    }
+  const fetchEvents = useCallback(
+    async (params?: Omit<EventsQueryParams, "coachId">) => {
+      if (!effectiveCoachId) {
+        setError("Not authenticated");
+        return;
+      }
 
-    const queryParams = params ?? currentParamsRef.current;
-    
-    if (JSON.stringify(queryParams) !== JSON.stringify(currentParamsRef.current)) {
-      setCurrentParams(queryParams);
-    }
-    currentParamsRef.current = queryParams;
+      const queryParams = params ?? currentParamsRef.current;
 
-    setIsLoading(true);
-    setError(null);
+      if (JSON.stringify(queryParams) !== JSON.stringify(currentParamsRef.current)) {
+        setCurrentParams(queryParams);
+      }
+      currentParamsRef.current = queryParams;
 
-    try {
-      const response = await api.get<EventsListResponse>("/api/coach/events", queryParams);
-      setEvents(response.data);
-      setTotal(response.total);
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to fetch events";
-      setError(message);
-      console.error("Error fetching coach events:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [effectiveCoachId, setCurrentParams]);
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await api.get<EventsListResponse>("/api/coach/events", queryParams);
+        setEvents(response.data);
+        setTotal(response.total);
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to fetch events";
+        setError(message);
+        console.error("Error fetching coach events:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [effectiveCoachId, setCurrentParams]
+  );
 
   const refresh = useCallback(async () => {
     await fetchEvents(currentParams);

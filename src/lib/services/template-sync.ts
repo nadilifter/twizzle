@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 
 /**
  * Template Auto-Sync Service
- * 
+ *
  * Handles automatic synchronization of skills in evaluation templates
  * based on configured level and category filters.
  */
@@ -17,7 +17,7 @@ interface SyncResult {
 /**
  * Sync skills for a single evaluation template based on its auto-sync configuration.
  * Only syncs if autoSyncEnabled is true.
- * 
+ *
  * @param templateId - The ID of the template to sync
  * @returns SyncResult with counts of added/removed skills
  */
@@ -71,10 +71,7 @@ export async function syncTemplateSkills(templateId: string): Promise<SyncResult
   const matchingSkills = await db.skill.findMany({
     where: whereClause,
     select: { id: true },
-    orderBy: [
-      { category: "asc" },
-      { name: "asc" },
-    ],
+    orderBy: [{ category: "asc" }, { name: "asc" }],
   });
 
   const matchingSkillIds = new Set(matchingSkills.map((s) => s.id));
@@ -133,13 +130,11 @@ export async function syncTemplateSkills(templateId: string): Promise<SyncResult
 /**
  * Sync all templates that have auto-sync enabled for a specific organization.
  * Useful for batch syncing when skills are added/updated/deleted.
- * 
+ *
  * @param organizationId - The organization to sync templates for
  * @returns Array of SyncResults for each template
  */
-export async function syncAllOrganizationTemplates(
-  organizationId: string
-): Promise<SyncResult[]> {
+export async function syncAllOrganizationTemplates(organizationId: string): Promise<SyncResult[]> {
   const templates = await db.evaluationTemplate.findMany({
     where: {
       organizationId,
@@ -161,7 +156,7 @@ export async function syncAllOrganizationTemplates(
 /**
  * Check if a template would have any skills with the given auto-sync configuration.
  * Useful for previewing before enabling auto-sync.
- * 
+ *
  * @param organizationId - The organization ID
  * @param levels - Array of Level IDs to include
  * @param categories - Array of categories to include
@@ -171,7 +166,10 @@ export async function previewAutoSyncSkills(
   organizationId: string,
   levels: string[],
   categories: string[]
-): Promise<{ count: number; skills: Array<{ id: string; name: string; category: string; levelId: string | null }> }> {
+): Promise<{
+  count: number;
+  skills: Array<{ id: string; name: string; category: string; levelId: string | null }>;
+}> {
   const whereClause: {
     organizationId: string;
     levelId?: { in: string[] };
@@ -200,10 +198,7 @@ export async function previewAutoSyncSkills(
       category: true,
       levelId: true,
     },
-    orderBy: [
-      { category: "asc" },
-      { name: "asc" },
-    ],
+    orderBy: [{ category: "asc" }, { name: "asc" }],
   });
 
   return {
@@ -215,7 +210,7 @@ export async function previewAutoSyncSkills(
 /**
  * Get unique categories from skills in an organization.
  * Useful for populating category selector in UI.
- * 
+ *
  * @param organizationId - The organization ID
  * @returns Array of unique category names
  */

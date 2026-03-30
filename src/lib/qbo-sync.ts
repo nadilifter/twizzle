@@ -60,10 +60,7 @@ async function processConnectionQueue(
   try {
     client = await getQboClient(connection.id);
   } catch (error) {
-    console.error(
-      `[QBO Sync] Failed to get client for connection ${connection.id}:`,
-      error
-    );
+    console.error(`[QBO Sync] Failed to get client for connection ${connection.id}:`, error);
     return { processed: 0, succeeded: 0, failed: 0 };
   }
 
@@ -90,11 +87,7 @@ async function processConnectionQueue(
   for (const item of pendingItems) {
     const startTime = Date.now();
     try {
-      const externalEntityId = await syncEntity(
-        client,
-        connection,
-        item
-      );
+      const externalEntityId = await syncEntity(client, connection, item);
 
       await db.accountingSyncQueue.update({
         where: { id: item.id },
@@ -136,8 +129,7 @@ async function processConnectionQueue(
 
       succeeded++;
     } catch (error: any) {
-      const errorMessage =
-        error?.message || "Unknown error";
+      const errorMessage = error?.message || "Unknown error";
 
       await db.accountingSyncQueue.update({
         where: { id: item.id },
@@ -332,9 +324,7 @@ async function syncInvoice(
   }
 
   const lines = invoice.lineItems.map((li) => {
-    const glMapping = li.glCodeId
-      ? getMapping(connection, "GL_CODE", li.glCodeId)
-      : undefined;
+    const glMapping = li.glCodeId ? getMapping(connection, "GL_CODE", li.glCodeId) : undefined;
 
     const line: any = {
       Amount: Number(li.total),
@@ -509,9 +499,7 @@ async function syncJournalEntry(
 
   const glMapping = getMapping(connection, "GL_CODE", entry.glCodeId);
   if (!glMapping) {
-    throw new Error(
-      `No account mapping for GL code ${entry.glCode.code} (${entry.glCodeId})`
-    );
+    throw new Error(`No account mapping for GL code ${entry.glCode.code} (${entry.glCodeId})`);
   }
 
   const lines: any[] = [];
@@ -615,9 +603,7 @@ async function syncDeposit(
       DetailType: "DepositLineDetail",
       Description: `Payout ${payout.reference}`,
       DepositLineDetail: {
-        AccountRef: undepositedFunds
-          ? { value: undepositedFunds.externalAccountId }
-          : undefined,
+        AccountRef: undepositedFunds ? { value: undepositedFunds.externalAccountId } : undefined,
       },
     });
   }

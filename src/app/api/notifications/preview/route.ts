@@ -12,26 +12,28 @@ import type { NotificationTriggerType } from "@prisma/client";
 
 const previewSchema = z.object({
   template: z.string().min(1, "Template is required"),
-  triggerType: z.enum([
-    "MEMBERSHIP_EXPIRY",
-    "MEMBERSHIP_EXPIRED",
-    "PAYMENT_DUE",
-    "PAYMENT_OVERDUE",
-    "PAYMENT_RECEIVED",
-    "PROGRAM_REMINDER",
-    "PROGRAM_ENROLLMENT",
-    "PROGRAM_CANCELLATION",
-    "EVENT_REMINDER",
-    "EVENT_REGISTRATION_OPEN",
-    "EVENT_REGISTRATION_CLOSE",
-    "ATTENDANCE_MISSED",
-    "SKILL_ACHIEVED",
-    "EVALUATION_DUE",
-    "EVALUATION_COMPLETED",
-    "BIRTHDAY",
-    "WAITLIST_OPENING",
-    "CUSTOM",
-  ]).optional(),
+  triggerType: z
+    .enum([
+      "MEMBERSHIP_EXPIRY",
+      "MEMBERSHIP_EXPIRED",
+      "PAYMENT_DUE",
+      "PAYMENT_OVERDUE",
+      "PAYMENT_RECEIVED",
+      "PROGRAM_REMINDER",
+      "PROGRAM_ENROLLMENT",
+      "PROGRAM_CANCELLATION",
+      "EVENT_REMINDER",
+      "EVENT_REGISTRATION_OPEN",
+      "EVENT_REGISTRATION_CLOSE",
+      "ATTENDANCE_MISSED",
+      "SKILL_ACHIEVED",
+      "EVALUATION_DUE",
+      "EVALUATION_COMPLETED",
+      "BIRTHDAY",
+      "WAITLIST_OPENING",
+      "CUSTOM",
+    ])
+    .optional(),
   // Optional context IDs for real data preview
   athleteId: z.string().optional(),
   membershipId: z.string().optional(),
@@ -85,10 +87,7 @@ export async function POST(request: NextRequest) {
       preview = validatedData.template;
       for (const [key, value] of Object.entries(context)) {
         if (value !== undefined && value !== null) {
-          preview = preview.replace(
-            new RegExp(`\\{\\{${key}\\}\\}`, "g"),
-            String(value)
-          );
+          preview = preview.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), String(value));
         }
       }
     } else {
@@ -105,15 +104,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error generating preview:", error);
-    return NextResponse.json(
-      { error: "Failed to generate preview" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to generate preview" }, { status: 500 });
   }
 }

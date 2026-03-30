@@ -5,7 +5,8 @@ This directory contains Terraform configuration for staging infrastructure. Note
 ## Current Setup (Provisioned by DevOps)
 
 The staging environment uses:
-- **S3 Buckets**: 
+
+- **S3 Buckets**:
   - `uplifter-gymnastics-assets` - public assets via CloudFront
   - `uplifter-gymnastics-docs` - private documents
 - **CloudFront CDN**: `assets.upliftergymnastics.com` (serves assets bucket)
@@ -91,15 +92,18 @@ If this exits non-zero, there are schema changes without a matching migration â€
 ## Troubleshooting
 
 ### Upload fails with "Access Denied"
+
 - Verify the EC2 instance has the correct IAM role attached
 - Check that `USE_S3_STORAGE=true` is set
 - Check that `APP_ENVIRONMENT=staging` is set
 
 ### Images don't display
+
 - Verify CloudFront distribution is active
 - Check that the CDN URL is correct in `env-domains.ts`
 - Check browser console for CORS errors
 
 ### Wrong bucket being used
+
 - Ensure `APP_ENVIRONMENT=staging` is set (not `production` or `local`)
 - Restart the application after changing environment variables

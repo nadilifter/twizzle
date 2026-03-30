@@ -1,47 +1,47 @@
-import { NextResponse } from "next/server"
-import { getAuthSession } from "@/lib/auth"
-import { db } from "@/lib/db"
-import { removeAllowedOrigin } from "@/lib/adyen-platform"
+import { NextResponse } from "next/server";
+import { getAuthSession } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { removeAllowedOrigin } from "@/lib/adyen-platform";
 
 // POST /api/organization/subscription/cancel — Self-serve plan cancellation
 // Deactivates the organization, cancels the subscription, voids pending invoices.
 export async function POST() {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     if (
       !session.user.permissions?.includes("*") &&
       !session.user.permissions?.includes("settings.edit")
     ) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const organizationId = session.user.organizationId
+    const organizationId = session.user.organizationId;
 
     const organization = await db.organization.findUnique({
       where: { id: organizationId },
       include: { subscription: true, websiteConfig: { select: { subdomain: true } } },
-    })
+    });
 
     if (!organization) {
-      return NextResponse.json({ error: "Organization not found" }, { status: 404 })
+      return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
 
     if (!organization.isActive) {
-      return NextResponse.json(
-        { error: "Organization is already deactivated" },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: "Organization is already deactivated" }, { status: 400 });
     }
 
     if (organization.subscription?.isLocked) {
       return NextResponse.json(
-        { error: "Your subscription is locked and cannot be cancelled. Contact support for assistance." },
+        {
+          error:
+            "Your subscription is locked and cannot be cancelled. Contact support for assistance.",
+        },
         { status: 403 }
-      )
+      );
     }
 
     await db.$transaction(async (tx) => {
@@ -54,7 +54,7 @@ export async function POST() {
           deactivationReason: "Requested by customer",
           deactivationNotes: null,
         },
-      })
+      });
 
       if (organization.subscription) {
         await tx.organizationSubscription.update({
@@ -64,7 +64,7 @@ export async function POST() {
             cancelledAt: new Date(),
             cancelAtPeriodEnd: false,
           },
-        })
+        });
       }
 
       // Void any pending subscription invoices to prevent retries by the dunning cron
@@ -78,7 +78,7 @@ export async function POST() {
           voidedAt: new Date(),
           voidedBy: session.user.id,
         },
-      })
+      });
 
       await tx.organizationStatusLog.create({
         data: {
@@ -87,22 +87,19 @@ export async function POST() {
           reason: "Requested by customer",
           performedBy: session.user.id,
         },
-      })
-    })
+      });
+    });
 
     if (organization.websiteConfig?.subdomain) {
-      void removeAllowedOrigin(organization.websiteConfig.subdomain)
+      void removeAllowedOrigin(organization.websiteConfig.subdomain);
     }
 
     return NextResponse.json({
       success: true,
       message: "Your plan has been cancelled and organization deactivated.",
-    })
+    });
   } catch (error) {
-    console.error("Error cancelling subscription:", error)
-    return NextResponse.json(
-      { error: "Failed to cancel subscription" },
-      { status: 500 }
-    )
+    console.error("Error cancelling subscription:", error);
+    return NextResponse.json({ error: "Failed to cancel subscription" }, { status: 500 });
   }
 }

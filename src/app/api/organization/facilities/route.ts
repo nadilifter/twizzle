@@ -12,7 +12,11 @@ const createFacilitySchema = z.object({
   stateProvince: z.string().optional().nullable(),
   postalCode: z.string().optional().nullable(),
   country: z.string().optional().nullable(),
-  phone: z.string().refine((val) => !val || isValidPhoneNumber(val), "Please enter a valid phone number").optional().nullable(),
+  phone: z
+    .string()
+    .refine((val) => !val || isValidPhoneNumber(val), "Please enter a valid phone number")
+    .optional()
+    .nullable(),
   email: z.string().email().optional().nullable(),
   squareFootage: z.number().optional().nullable(),
   maxCapacity: z.number().optional().nullable(),
@@ -45,10 +49,7 @@ export async function GET() {
           },
         },
       },
-      orderBy: [
-        { isDefault: "desc" },
-        { name: "asc" },
-      ],
+      orderBy: [{ isDefault: "desc" }, { name: "asc" }],
     });
 
     return NextResponse.json(facilities);

@@ -7,19 +7,19 @@ import { logger } from "@/lib/logger";
 
 /**
  * Session Bridge Endpoint
- * 
+ *
  * LOCAL DEVELOPMENT ONLY:
  * This endpoint handles cross-domain authentication for Google OAuth and credentials login.
  * Since Google OAuth only accepts localhost:3000 as an authorized origin,
  * but our app runs on *.uplifterinc.localhost subdomains, we need to:
- * 
+ *
  * 1. Complete OAuth/credentials login on localhost:3000
  * 2. Pass a signed bridge token to this endpoint on uplifterinc.localhost
  * 3. This endpoint verifies the token and sets the session cookie for .uplifterinc.localhost
- * 
+ *
  * The bridge token contains the user's email (signed with NEXTAUTH_SECRET)
  * and is only valid for a short time (60 seconds).
- * 
+ *
  * PRODUCTION/STAGING:
  * In production/staging, cookies are set with domain=.upliftergymnastics.com
  * which is automatically shared across all subdomains. This bridge is not needed.
@@ -52,8 +52,8 @@ export async function GET(req: NextRequest) {
   // In production/staging, if there's no bridge token, just redirect to callback.
   // This can happen if someone bookmarks a bridge URL or there's a redirect loop.
   // The session cookie is already set with the correct domain, so no action needed.
-  if (!bridgeToken && currentEnv !== 'local') {
-    if (process.env.AUTH_DEBUG === 'true') {
+  if (!bridgeToken && currentEnv !== "local") {
+    if (process.env.AUTH_DEBUG === "true") {
       logger.debug("Session bridge: production passthrough (no token)", { callbackUrl });
     }
     return NextResponse.redirect(new URL(callbackUrl, req.nextUrl.origin));
@@ -68,9 +68,7 @@ export async function GET(req: NextRequest) {
 
   try {
     // Decode and verify the bridge token
-    const tokenData = JSON.parse(
-      Buffer.from(bridgeToken, "base64url").toString("utf-8")
-    );
+    const tokenData = JSON.parse(Buffer.from(bridgeToken, "base64url").toString("utf-8"));
 
     const { email, exp, signature } = tokenData;
 
@@ -169,17 +167,17 @@ export async function GET(req: NextRequest) {
     // Use the same environment detection as the logout route for consistency
     const currentEnv = getCurrentEnvironment();
     const config = getEnvConfig();
-    
+
     let cookieDomain: string;
-    if (currentEnv === 'local') {
+    if (currentEnv === "local") {
       // In local dev, use the shared local domain
       cookieDomain = ".uplifterinc.localhost";
     } else {
       // In cloud environments, use the configured cookie domain
       cookieDomain = config.cookieDomain;
     }
-    
-    const isSecure = currentEnv !== 'local';
+
+    const isSecure = currentEnv !== "local";
 
     // Create response with redirect
     const response = NextResponse.redirect(new URL(callbackUrl, req.nextUrl.origin));
@@ -194,7 +192,7 @@ export async function GET(req: NextRequest) {
       domain: cookieDomain,
       maxAge: 30 * 24 * 60 * 60, // 30 days
     });
-    
+
     logger.debug("Session bridge: setting cookie", { cookieDomain, isSecure });
 
     logger.info("Session bridge: created session", { email });

@@ -20,10 +20,7 @@ const updateTemplateSchema = z.object({
 });
 
 // GET - Get a specific schedule template
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -41,10 +38,7 @@ export async function GET(
       where: { id, organizationId },
       include: {
         entries: {
-          orderBy: [
-            { dayOfWeek: "asc" },
-            { startTime: "asc" },
-          ],
+          orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
         },
       },
     });
@@ -61,10 +55,7 @@ export async function GET(
 }
 
 // PATCH - Update a schedule template
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -100,17 +91,27 @@ export async function PATCH(
 
     if (validatedData.entries?.length) {
       const scopedDb = getScopedDb(organizationId);
-      const facilityIds = [...new Set(validatedData.entries.map(e => e.facilityId).filter(Boolean))] as string[];
-      const memberIds = [...new Set(validatedData.entries.map(e => e.memberId).filter(Boolean))] as string[];
+      const facilityIds = [
+        ...new Set(validatedData.entries.map((e) => e.facilityId).filter(Boolean)),
+      ] as string[];
+      const memberIds = [
+        ...new Set(validatedData.entries.map((e) => e.memberId).filter(Boolean)),
+      ] as string[];
 
       if (facilityIds.length > 0) {
-        const validFacilities = await scopedDb.facility.findMany({ where: { id: { in: facilityIds } }, select: { id: true } });
+        const validFacilities = await scopedDb.facility.findMany({
+          where: { id: { in: facilityIds } },
+          select: { id: true },
+        });
         if (validFacilities.length !== facilityIds.length) {
           return NextResponse.json({ error: "One or more facilities not found" }, { status: 404 });
         }
       }
       if (memberIds.length > 0) {
-        const validMembers = await scopedDb.organizationMember.findMany({ where: { id: { in: memberIds } }, select: { id: true } });
+        const validMembers = await scopedDb.organizationMember.findMany({
+          where: { id: { in: memberIds } },
+          select: { id: true },
+        });
         if (validMembers.length !== memberIds.length) {
           return NextResponse.json({ error: "One or more members not found" }, { status: 404 });
         }
@@ -164,10 +165,7 @@ export async function PATCH(
       where: { id },
       include: {
         entries: {
-          orderBy: [
-            { dayOfWeek: "asc" },
-            { startTime: "asc" },
-          ],
+          orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
         },
         _count: {
           select: {

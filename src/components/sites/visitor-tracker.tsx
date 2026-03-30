@@ -8,7 +8,7 @@ interface VisitorTrackerProps {
 
 /**
  * Anonymous visitor tracking component
- * 
+ *
  * - Uses a daily cookie to identify unique visitors (no PII)
  * - Cookie contains only a random UUID, regenerated daily
  * - Sends tracking data via navigator.sendBeacon (non-blocking)
@@ -53,7 +53,7 @@ function getOrCreateVisitorId(): { visitorId: string; isNew: boolean } {
 
   // Generate new visitor ID (random, no PII)
   const visitorId = generateVisitorId();
-  
+
   // Set cookie to expire at midnight
   const expiry = getMidnightExpiry();
   setCookie(VISITOR_COOKIE_NAME, `${visitorId}|${today}`, expiry);
@@ -69,10 +69,11 @@ function getDeviceType(): "mobile" | "desktop" {
   if (typeof window === "undefined" || typeof navigator === "undefined") {
     return "desktop";
   }
-  
+
   const ua = navigator.userAgent.toLowerCase();
-  const mobileKeywords = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile|tablet/;
-  
+  const mobileKeywords =
+    /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile|tablet/;
+
   return mobileKeywords.test(ua) ? "mobile" : "desktop";
 }
 
@@ -82,14 +83,14 @@ function getDeviceType(): "mobile" | "desktop" {
 async function trackVisitor(organizationId: string): Promise<void> {
   try {
     const { visitorId, isNew } = getOrCreateVisitorId();
-    
+
     // Only send tracking request for new daily visitors
     // (Redis SADD handles deduplication, but this reduces requests)
     if (!isNew) return;
 
     const today = formatDate(new Date());
     const deviceType = getDeviceType();
-    
+
     const payload = JSON.stringify({
       visitorId,
       date: today,

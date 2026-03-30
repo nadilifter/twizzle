@@ -7,17 +7,18 @@ const signWaiverSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
   signedByName: z.string().min(1, "Signer name is required"),
   signedByEmail: z.string().email("Valid email is required"),
-  signatures: z.array(z.object({
-    waiverPageId: z.string().min(1),
-    signatureData: z.string().min(1, "Signature data is required"),
-  })).min(1, "At least one signature is required"),
+  signatures: z
+    .array(
+      z.object({
+        waiverPageId: z.string().min(1),
+        signatureData: z.string().min(1, "Signature data is required"),
+      })
+    )
+    .min(1, "At least one signature is required"),
 });
 
 // POST /api/waivers/[id]/sign - Sign waiver pages
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -43,24 +44,18 @@ export async function POST(
     });
 
     if (!waiver) {
-      return NextResponse.json(
-        { error: "Waiver not found or not active" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Waiver not found or not active" }, { status: 404 });
     }
 
-    const ipAddress = request.headers.get("x-forwarded-for") ||
-      request.headers.get("x-real-ip") || null;
+    const ipAddress =
+      request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || null;
     const userAgent = request.headers.get("user-agent") || null;
     const userId = validatedData.userId;
 
-    const validPageIds = new Set(waiver.pages.map(p => p.id));
+    const validPageIds = new Set(waiver.pages.map((p) => p.id));
     for (const sig of validatedData.signatures) {
       if (!validPageIds.has(sig.waiverPageId)) {
-        return NextResponse.json(
-          { error: "Invalid waiver page" },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: "Invalid waiver page" }, { status: 400 });
       }
     }
 
@@ -138,15 +133,9 @@ export async function POST(
     return NextResponse.json(result);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error signing waiver:", error);
-    return NextResponse.json(
-      { error: "Failed to sign waiver" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to sign waiver" }, { status: 500 });
   }
 }

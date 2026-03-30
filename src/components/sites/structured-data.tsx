@@ -1,6 +1,6 @@
 /**
  * Structured Data (JSON-LD) Components for SEO
- * 
+ *
  * These components generate schema.org structured data to help search engines
  * better understand gymnastics organization websites.
  */
@@ -27,14 +27,14 @@ interface OrganizationSchemaProps {
 
 /**
  * SportsOrganization Schema
- * 
+ *
  * Signals to Google that this is a sports-related organization.
  * Helps with discovery in sports-related searches.
  */
-export function OrganizationStructuredData({ 
-  organization, 
-  siteUrl, 
-  heroImage 
+export function OrganizationStructuredData({
+  organization,
+  siteUrl,
+  heroImage,
 }: OrganizationSchemaProps) {
   const schema = {
     "@context": "https://schema.org",
@@ -60,27 +60,25 @@ export function OrganizationStructuredData({
   };
 
   return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: safeJsonLd(schema) }}
-    />
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(schema) }} />
   );
 }
 
 /**
  * SportsActivityLocation Schema
- * 
+ *
  * Signals to Google that this is a local business offering sports activities.
  * Helps with Google Maps and Local Pack visibility.
  */
-export function LocalBusinessStructuredData({ 
-  organization, 
-  siteUrl, 
-  heroImage 
+export function LocalBusinessStructuredData({
+  organization,
+  siteUrl,
+  heroImage,
 }: OrganizationSchemaProps) {
-  const locationDescription = organization.city && organization.stateProvince
-    ? `Gymnastics programs and classes in ${organization.city}, ${organization.stateProvince}`
-    : `Gymnastics programs and classes for all ages and skill levels`;
+  const locationDescription =
+    organization.city && organization.stateProvince
+      ? `Gymnastics programs and classes in ${organization.city}, ${organization.stateProvince}`
+      : `Gymnastics programs and classes for all ages and skill levels`;
 
   const schema = {
     "@context": "https://schema.org",
@@ -107,22 +105,19 @@ export function LocalBusinessStructuredData({
   };
 
   return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: safeJsonLd(schema) }}
-    />
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(schema) }} />
   );
 }
 
 /**
  * WebSite Schema
- * 
+ *
  * Helps Google understand this is a website with a searchable structure.
  */
-export function WebSiteStructuredData({ 
-  organization, 
-  siteUrl 
-}: Pick<OrganizationSchemaProps, 'organization' | 'siteUrl'>) {
+export function WebSiteStructuredData({
+  organization,
+  siteUrl,
+}: Pick<OrganizationSchemaProps, "organization" | "siteUrl">) {
   const schema = {
     "@context": "https://schema.org",
     "@type": "WebSite",
@@ -131,16 +126,13 @@ export function WebSiteStructuredData({
   };
 
   return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: safeJsonLd(schema) }}
-    />
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(schema) }} />
   );
 }
 
 /**
  * Combined Structured Data Component
- * 
+ *
  * Renders all relevant structured data schemas for a gymnastics organization site.
  */
 export function SiteStructuredData(props: OrganizationSchemaProps) {
@@ -148,10 +140,7 @@ export function SiteStructuredData(props: OrganizationSchemaProps) {
     <>
       <OrganizationStructuredData {...props} />
       <LocalBusinessStructuredData {...props} />
-      <WebSiteStructuredData 
-        organization={props.organization} 
-        siteUrl={props.siteUrl} 
-      />
+      <WebSiteStructuredData organization={props.organization} siteUrl={props.siteUrl} />
     </>
   );
 }

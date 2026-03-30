@@ -93,24 +93,27 @@ export function useSeasons(options: UseSeasonsOptions = {}): UseSeasonsReturn {
   const [error, setError] = useState<string | null>(null);
   const [currentParams, setCurrentParams] = useState<SeasonsQueryParams>(initialParams);
 
-  const fetchSeasons = useCallback(async (params?: SeasonsQueryParams) => {
-    const queryParams = params ?? currentParams;
-    setCurrentParams(queryParams);
-    setIsLoading(true);
-    setError(null);
+  const fetchSeasons = useCallback(
+    async (params?: SeasonsQueryParams) => {
+      const queryParams = params ?? currentParams;
+      setCurrentParams(queryParams);
+      setIsLoading(true);
+      setError(null);
 
-    try {
-      const response = await api.get<SeasonsListResponse>("/api/seasons", queryParams);
-      setSeasons(response.data);
-      setTotal(response.total);
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to fetch seasons";
-      setError(message);
-      console.error("Error fetching seasons:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentParams]);
+      try {
+        const response = await api.get<SeasonsListResponse>("/api/seasons", queryParams);
+        setSeasons(response.data);
+        setTotal(response.total);
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to fetch seasons";
+        setError(message);
+        console.error("Error fetching seasons:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [currentParams]
+  );
 
   const createSeason = useCallback(async (data: CreateSeasonPayload): Promise<Season | null> => {
     setIsCreating(true);
@@ -131,20 +134,23 @@ export function useSeasons(options: UseSeasonsOptions = {}): UseSeasonsReturn {
     }
   }, []);
 
-  const updateSeason = useCallback(async (id: string, data: UpdateSeasonPayload): Promise<Season | null> => {
-    setError(null);
+  const updateSeason = useCallback(
+    async (id: string, data: UpdateSeasonPayload): Promise<Season | null> => {
+      setError(null);
 
-    try {
-      const updated = await api.patch<Season>(`/api/seasons/${id}`, data);
-      setSeasons((prev) => prev.map((s) => (s.id === id ? updated : s)));
-      return updated;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to update season";
-      setError(message);
-      console.error("Error updating season:", err);
-      return null;
-    }
-  }, []);
+      try {
+        const updated = await api.patch<Season>(`/api/seasons/${id}`, data);
+        setSeasons((prev) => prev.map((s) => (s.id === id ? updated : s)));
+        return updated;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to update season";
+        setError(message);
+        console.error("Error updating season:", err);
+        return null;
+      }
+    },
+    []
+  );
 
   const deleteSeason = useCallback(async (id: string): Promise<boolean> => {
     setIsDeleting(true);

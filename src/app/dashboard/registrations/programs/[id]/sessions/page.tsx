@@ -1,57 +1,49 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
-import Link from "next/link"
-import { format } from "date-fns"
-import {
-  ArrowLeft,
-  Clock,
-  Users,
-  MapPin,
-  ExternalLink,
-  Loader2,
-  CalendarDays,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
-import { toast } from "sonner"
-import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { format } from "date-fns";
+import { ArrowLeft, Clock, Users, MapPin, ExternalLink, Loader2, CalendarDays } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
 
 interface Program {
-  id: string
-  name: string
-  registrationType: string | null
-  _count: { instances: number; enrollments: number }
+  id: string;
+  name: string;
+  registrationType: string | null;
+  _count: { instances: number; enrollments: number };
 }
 
 interface Instance {
-  id: string
-  date: string
-  startTime: string
-  endTime: string
-  status: string
-  capacity: number | null
-  notes: string | null
-  facility: { id: string; name: string; city?: string } | null
-  _count: { registrations: number; attendances: number }
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  capacity: number | null;
+  notes: string | null;
+  facility: { id: string; name: string; city?: string } | null;
+  _count: { registrations: number; attendances: number };
 }
 
 export default function ProgramSessionsPage() {
-  const params = useParams()
-  const router = useRouter()
-  const programId = params.id as string
+  const params = useParams();
+  const router = useRouter();
+  const programId = params.id as string;
 
-  const [program, setProgram] = useState<Program | null>(null)
-  const [instances, setInstances] = useState<Instance[]>([])
-  const [loading, setLoading] = useState(true)
+  const [program, setProgram] = useState<Program | null>(null);
+  const [instances, setInstances] = useState<Instance[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useBreadcrumbOverride(
     program ? `/dashboard/registrations/programs/${programId}` : undefined,
-    program?.name,
-  )
+    program?.name
+  );
 
   useEffect(() => {
     const fetchData = async () => {
@@ -59,34 +51,32 @@ export default function ProgramSessionsPage() {
         const [progRes, instRes] = await Promise.all([
           fetch(`/api/programs/${programId}`),
           fetch(`/api/programs/${programId}/instances`),
-        ])
+        ]);
 
-        if (!progRes.ok) throw new Error("Failed to fetch program")
-        if (!instRes.ok) throw new Error("Failed to fetch instances")
+        if (!progRes.ok) throw new Error("Failed to fetch program");
+        if (!instRes.ok) throw new Error("Failed to fetch instances");
 
-        const progData = await progRes.json()
-        const instData = await instRes.json()
-        const instanceList: Instance[] = instData.instances || []
+        const progData = await progRes.json();
+        const instData = await instRes.json();
+        const instanceList: Instance[] = instData.instances || [];
 
         // If there's exactly 1 instance, redirect directly
         if (instanceList.length === 1) {
-          router.replace(
-            `/dashboard/calendar/instance/${instanceList[0].id}?from=programs`
-          )
-          return
+          router.replace(`/dashboard/calendar/instance/${instanceList[0].id}?from=programs`);
+          return;
         }
 
-        setProgram(progData)
-        setInstances(instanceList)
+        setProgram(progData);
+        setInstances(instanceList);
       } catch (error) {
-        console.error("Failed to load sessions:", error)
-        toast.error("Failed to load sessions")
+        console.error("Failed to load sessions:", error);
+        toast.error("Failed to load sessions");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    fetchData()
-  }, [programId, router])
+    };
+    fetchData();
+  }, [programId, router]);
 
   if (loading) {
     return (
@@ -104,7 +94,7 @@ export default function ProgramSessionsPage() {
           ))}
         </div>
       </div>
-    )
+    );
   }
 
   if (!program) {
@@ -113,25 +103,23 @@ export default function ProgramSessionsPage() {
         <div className="text-center py-12">
           <h2 className="text-xl font-semibold">Program not found</h2>
           <Button asChild className="mt-4">
-            <Link href="/dashboard/registrations/programs">
-              Back to Programs
-            </Link>
+            <Link href="/dashboard/registrations/programs">Back to Programs</Link>
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
   const statusBadge = (status: string) => {
     switch (status) {
       case "COMPLETED":
-        return <Badge variant="secondary">Completed</Badge>
+        return <Badge variant="secondary">Completed</Badge>;
       case "CANCELLED":
-        return <Badge variant="destructive">Cancelled</Badge>
+        return <Badge variant="destructive">Cancelled</Badge>;
       default:
-        return <Badge variant="outline">Scheduled</Badge>
+        return <Badge variant="outline">Scheduled</Badge>;
     }
-  }
+  };
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -145,8 +133,7 @@ export default function ProgramSessionsPage() {
         <div>
           <h1 className="text-2xl font-bold">{program.name}</h1>
           <p className="text-muted-foreground">
-            {instances.length} session{instances.length !== 1 ? "s" : ""}{" "}
-            scheduled
+            {instances.length} session{instances.length !== 1 ? "s" : ""} scheduled
           </p>
         </div>
       </div>
@@ -190,10 +177,7 @@ export default function ProgramSessionsPage() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="font-medium">
-                          {format(
-                            new Date(instance.date),
-                            "EEEE, MMMM d, yyyy"
-                          )}
+                          {format(new Date(instance.date), "EEEE, MMMM d, yyyy")}
                         </span>
                         {statusBadge(instance.status)}
                       </div>
@@ -211,10 +195,7 @@ export default function ProgramSessionsPage() {
                         <span className="flex items-center gap-1">
                           <Users className="h-3.5 w-3.5" />
                           {instance._count.registrations}
-                          {instance.capacity
-                            ? `/${instance.capacity}`
-                            : ""}{" "}
-                          registered
+                          {instance.capacity ? `/${instance.capacity}` : ""} registered
                         </span>
                       </div>
                     </div>
@@ -228,5 +209,5 @@ export default function ProgramSessionsPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

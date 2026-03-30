@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   DndContext,
   KeyboardSensor,
@@ -10,15 +10,15 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
-} from "@dnd-kit/core"
-import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers"
+} from "@dnd-kit/core";
+import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
 import {
   SortableContext,
   arrayMove,
   useSortable,
   verticalListSortingStrategy,
-} from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   Plus,
   Pencil,
@@ -29,18 +29,12 @@ import {
   Trophy,
   GripVertical,
   ArrowUpDown,
-} from "lucide-react"
-import { toast } from "sonner"
+} from "lucide-react";
+import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -48,17 +42,17 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -66,7 +60,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -76,30 +70,30 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 
 interface Sport {
-  id: string
-  name: string
-  slug: string
-  description: string | null
-  icon: string | null
-  isActive: boolean
-  displayOrder: number
-  createdAt: string
-  updatedAt: string
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  icon: string | null;
+  isActive: boolean;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
   _count: {
-    organizations: number
-  }
+    organizations: number;
+  };
 }
 
 interface SportFormData {
-  name: string
-  slug: string
-  description: string
-  icon: string
-  isActive: boolean
-  displayOrder: number
+  name: string;
+  slug: string;
+  description: string;
+  icon: string;
+  isActive: boolean;
+  displayOrder: number;
 }
 
 const initialFormData: SportFormData = {
@@ -109,7 +103,7 @@ const initialFormData: SportFormData = {
   icon: "",
   isActive: true,
   displayOrder: 0,
-}
+};
 
 function generateSlug(name: string): string {
   return name
@@ -117,24 +111,19 @@ function generateSlug(name: string): string {
     .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
+    .replace(/^-|-$/g, "");
 }
 
 // Sortable sport item for reorder dialog
 function SortableSportItem({ sport }: { sport: Sport }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: sport.id })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: sport.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-  }
+  };
 
   return (
     <div
@@ -165,59 +154,59 @@ function SortableSportItem({ sport }: { sport: Sport }) {
         {sport.isActive ? "Active" : "Inactive"}
       </Badge>
     </div>
-  )
+  );
 }
 
 export default function SuperadminSportsPage() {
-  const [sports, setSports] = React.useState<Sport[]>([])
-  const [loading, setLoading] = React.useState(true)
-  const [saving, setSaving] = React.useState(false)
+  const [sports, setSports] = React.useState<Sport[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [saving, setSaving] = React.useState(false);
 
-  const [dialogOpen, setDialogOpen] = React.useState(false)
-  const [editingSport, setEditingSport] = React.useState<Sport | null>(null)
-  const [formData, setFormData] = React.useState<SportFormData>(initialFormData)
+  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [editingSport, setEditingSport] = React.useState<Sport | null>(null);
+  const [formData, setFormData] = React.useState<SportFormData>(initialFormData);
 
-  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
-  const [deletingSport, setDeletingSport] = React.useState<Sport | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [deletingSport, setDeletingSport] = React.useState<Sport | null>(null);
 
-  const [isReorderDialogOpen, setIsReorderDialogOpen] = React.useState(false)
-  const [reorderSports, setReorderSports] = React.useState<Sport[]>([])
-  const [isSavingOrder, setIsSavingOrder] = React.useState(false)
+  const [isReorderDialogOpen, setIsReorderDialogOpen] = React.useState(false);
+  const [reorderSports, setReorderSports] = React.useState<Sport[]>([]);
+  const [isSavingOrder, setIsSavingOrder] = React.useState(false);
 
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
     useSensor(TouchSensor, {}),
     useSensor(KeyboardSensor, {})
-  )
+  );
 
   const fetchSports = React.useCallback(async () => {
     try {
-      const response = await fetch("/api/superadmin/sports")
-      if (!response.ok) throw new Error("Failed to fetch sports")
-      const data = await response.json()
-      setSports(data)
+      const response = await fetch("/api/superadmin/sports");
+      if (!response.ok) throw new Error("Failed to fetch sports");
+      const data = await response.json();
+      setSports(data);
     } catch (error) {
-      toast.error("Failed to load sports")
+      toast.error("Failed to load sports");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
   React.useEffect(() => {
-    fetchSports()
-  }, [fetchSports])
+    fetchSports();
+  }, [fetchSports]);
 
   const handleOpenCreate = () => {
-    setEditingSport(null)
+    setEditingSport(null);
     setFormData({
       ...initialFormData,
       displayOrder: sports.length,
-    })
-    setDialogOpen(true)
-  }
+    });
+    setDialogOpen(true);
+  };
 
   const handleOpenEdit = (sport: Sport) => {
-    setEditingSport(sport)
+    setEditingSport(sport);
     setFormData({
       name: sport.name,
       slug: sport.slug,
@@ -225,34 +214,34 @@ export default function SuperadminSportsPage() {
       icon: sport.icon || "",
       isActive: sport.isActive,
       displayOrder: sport.displayOrder,
-    })
-    setDialogOpen(true)
-  }
+    });
+    setDialogOpen(true);
+  };
 
   const handleNameChange = (name: string) => {
     setFormData((prev) => ({
       ...prev,
       name,
       slug: editingSport ? prev.slug : generateSlug(name),
-    }))
-  }
+    }));
+  };
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
-      toast.error("Name is required")
-      return
+      toast.error("Name is required");
+      return;
     }
     if (!formData.slug.trim()) {
-      toast.error("Slug is required")
-      return
+      toast.error("Slug is required");
+      return;
     }
 
-    setSaving(true)
+    setSaving(true);
     try {
       const url = editingSport
         ? `/api/superadmin/sports/${editingSport.id}`
-        : "/api/superadmin/sports"
-      const method = editingSport ? "PATCH" : "POST"
+        : "/api/superadmin/sports";
+      const method = editingSport ? "PATCH" : "POST";
 
       const response = await fetch(url, {
         method,
@@ -265,98 +254,98 @@ export default function SuperadminSportsPage() {
           isActive: formData.isActive,
           ...(editingSport ? {} : { displayOrder: formData.displayOrder }),
         }),
-      })
+      });
 
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || "Failed to save sport")
+        const data = await response.json();
+        throw new Error(data.error || "Failed to save sport");
       }
 
-      toast.success(editingSport ? "Sport updated" : "Sport created")
-      setDialogOpen(false)
-      fetchSports()
+      toast.success(editingSport ? "Sport updated" : "Sport created");
+      setDialogOpen(false);
+      fetchSports();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save sport")
+      toast.error(error instanceof Error ? error.message : "Failed to save sport");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleDelete = async () => {
-    if (!deletingSport) return
+    if (!deletingSport) return;
 
     try {
       const response = await fetch(`/api/superadmin/sports/${deletingSport.id}`, {
         method: "DELETE",
-      })
+      });
 
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || "Failed to delete sport")
+        const data = await response.json();
+        throw new Error(data.error || "Failed to delete sport");
       }
 
-      toast.success("Sport deleted")
-      setDeleteDialogOpen(false)
-      setDeletingSport(null)
-      fetchSports()
+      toast.success("Sport deleted");
+      setDeleteDialogOpen(false);
+      setDeletingSport(null);
+      fetchSports();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete sport")
+      toast.error(error instanceof Error ? error.message : "Failed to delete sport");
     }
-  }
+  };
 
   const handleOpenReorder = () => {
-    setReorderSports([...sports])
-    setIsReorderDialogOpen(true)
-  }
+    setReorderSports([...sports]);
+    setIsReorderDialogOpen(true);
+  };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
+    const { active, over } = event;
     if (over && active.id !== over.id) {
       setReorderSports((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id)
-        const newIndex = items.findIndex((item) => item.id === over.id)
-        return arrayMove(items, oldIndex, newIndex)
-      })
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
     }
-  }
+  };
 
   const handleSaveOrder = async () => {
-    setIsSavingOrder(true)
+    setIsSavingOrder(true);
     try {
       const updates = reorderSports.map((sport, index) => ({
         id: sport.id,
         displayOrder: index,
-      }))
+      }));
 
       const response = await fetch("/api/superadmin/sports/reorder", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sports: updates }),
-      })
+      });
 
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || "Failed to save order")
+        const data = await response.json();
+        throw new Error(data.error || "Failed to save order");
       }
 
-      toast.success("Sport order updated")
-      setIsReorderDialogOpen(false)
-      fetchSports()
+      toast.success("Sport order updated");
+      setIsReorderDialogOpen(false);
+      fetchSports();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save order")
+      toast.error(error instanceof Error ? error.message : "Failed to save order");
     } finally {
-      setIsSavingOrder(false)
+      setIsSavingOrder(false);
     }
-  }
+  };
 
-  const totalOrgs = sports.reduce((sum, s) => sum + s._count.organizations, 0)
+  const totalOrgs = sports.reduce((sum, s) => sum + s._count.organizations, 0);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-    )
+    );
   }
 
   return (
@@ -403,9 +392,7 @@ export default function SuperadminSportsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalOrgs}</div>
-            <p className="text-xs text-muted-foreground">
-              Across all sports
-            </p>
+            <p className="text-xs text-muted-foreground">Across all sports</p>
           </CardContent>
         </Card>
         <Card>
@@ -423,9 +410,11 @@ export default function SuperadminSportsPage() {
             </div>
             <p className="text-xs text-muted-foreground">
               {sports.length > 0
-                ? `${sports.reduce((max, s) =>
-                    s._count.organizations > max._count.organizations ? s : max
-                  )._count.organizations} organizations`
+                ? `${
+                    sports.reduce((max, s) =>
+                      s._count.organizations > max._count.organizations ? s : max
+                    )._count.organizations
+                  } organizations`
                 : "No sports yet"}
             </p>
           </CardContent>
@@ -492,8 +481,8 @@ export default function SuperadminSportsPage() {
                           <DropdownMenuItem
                             className="text-destructive"
                             onClick={() => {
-                              setDeletingSport(sport)
-                              setDeleteDialogOpen(true)
+                              setDeletingSport(sport);
+                              setDeleteDialogOpen(true);
                             }}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
@@ -536,9 +525,7 @@ export default function SuperadminSportsPage() {
               <Input
                 id="sport-slug"
                 value={formData.slug}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, slug: e.target.value }))
-                }
+                onChange={(e) => setFormData((prev) => ({ ...prev, slug: e.target.value }))}
                 placeholder="e.g., gymnastics"
                 className="font-mono"
               />
@@ -551,9 +538,7 @@ export default function SuperadminSportsPage() {
               <Textarea
                 id="sport-description"
                 value={formData.description}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, description: e.target.value }))
-                }
+                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                 placeholder="Brief description of this sport"
                 rows={3}
               />
@@ -591,8 +576,8 @@ export default function SuperadminSportsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Sport</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{deletingSport?.name}&quot;? This
-              action cannot be undone.
+              Are you sure you want to delete &quot;{deletingSport?.name}&quot;? This action cannot
+              be undone.
               {deletingSport && deletingSport._count.organizations > 0 && (
                 <span className="block mt-2 text-destructive font-medium">
                   This sport is currently used by {deletingSport._count.organizations}{" "}
@@ -655,5 +640,5 @@ export default function SuperadminSportsPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

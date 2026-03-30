@@ -13,10 +13,10 @@ interface EnrollmentMetricsResponse {
 
 /**
  * GET /api/analytics/enrollments
- * 
+ *
  * Fetch enrollment metrics for the authenticated user's organization.
  * Returns new enrollment counts and growth rate comparisons.
- * 
+ *
  * Query parameters:
  * - periodDays: Number of days for the period (defaults to 30)
  */
@@ -25,19 +25,13 @@ export async function GET(request: NextRequest) {
     // Require authentication
     const session = await getAuthSession();
     if (!session?.user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const organizationId = session.user.organizationId;
 
     if (!organizationId) {
-      return NextResponse.json(
-        { error: "No organization selected" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
     // Parse period from query params (default 30 days)
@@ -48,7 +42,7 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const periodStart = new Date(now);
     periodStart.setDate(periodStart.getDate() - periodDays);
-    
+
     const previousPeriodEnd = new Date(periodStart);
     const previousPeriodStart = new Date(previousPeriodEnd);
     previousPeriodStart.setDate(previousPeriodStart.getDate() - periodDays);
@@ -63,12 +57,7 @@ export async function GET(request: NextRequest) {
     };
 
     // Execute all queries in parallel
-    const [
-      newThisPeriod,
-      newPreviousPeriod,
-      activeTotal,
-      activePreviousTotal,
-    ] = await Promise.all([
+    const [newThisPeriod, newPreviousPeriod, activeTotal, activePreviousTotal] = await Promise.all([
       // New enrollments in current period
       db.enrollment.count({
         where: {
@@ -110,9 +99,7 @@ export async function GET(request: NextRequest) {
     // Calculate percentage change for new enrollments
     let percentChange: number | null = null;
     if (newPreviousPeriod > 0) {
-      percentChange = Math.round(
-        ((newThisPeriod - newPreviousPeriod) / newPreviousPeriod) * 100
-      );
+      percentChange = Math.round(((newThisPeriod - newPreviousPeriod) / newPreviousPeriod) * 100);
     } else if (newThisPeriod > 0) {
       percentChange = 100; // Any enrollments when previous was 0 = +100%
     }
@@ -120,9 +107,7 @@ export async function GET(request: NextRequest) {
     // Calculate growth rate (active enrollment change)
     let growthRate: number | null = null;
     if (activePreviousTotal > 0) {
-      growthRate = Math.round(
-        ((activeTotal - activePreviousTotal) / activePreviousTotal) * 100
-      );
+      growthRate = Math.round(((activeTotal - activePreviousTotal) / activePreviousTotal) * 100);
     } else if (activeTotal > 0) {
       growthRate = 100; // Any active when previous was 0 = +100%
     }
@@ -139,9 +124,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response);
   } catch (error) {
     console.error("[Analytics Enrollments] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch enrollment metrics" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch enrollment metrics" }, { status: 500 });
   }
 }

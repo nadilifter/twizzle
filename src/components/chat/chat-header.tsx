@@ -16,16 +16,8 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import {
-  AvatarFallbackProps,
-  AvatarImageProps,
-  AvatarProps,
-} from "@radix-ui/react-avatar";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar";
+import { AvatarFallbackProps, AvatarImageProps, AvatarProps } from "@radix-ui/react-avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
 export interface ChatHeaderProps extends React.ComponentProps<"div"> {
@@ -55,10 +47,7 @@ export interface ChatHeaderProps extends React.ComponentProps<"div"> {
 export function ChatHeader({ children, className, ...props }: ChatHeaderProps) {
   return (
     <div
-      className={cn(
-        "sticky top-0 z-10 p-2 bg-background flex items-center gap-2",
-        className,
-      )}
+      className={cn("sticky top-0 z-10 p-2 bg-background flex items-center gap-2", className)}
       {...props}
     >
       {children}
@@ -84,11 +73,7 @@ export interface ChatHeaderMainProps extends React.ComponentProps<"div"> {
  * </ChatHeaderMain>
  * ```
  */
-export function ChatHeaderMain({
-  children,
-  className,
-  ...props
-}: ChatHeaderMainProps) {
+export function ChatHeaderMain({ children, className, ...props }: ChatHeaderMainProps) {
   return (
     <div className={cn("flex-1 flex items-center gap-2", className)} {...props}>
       {children}
@@ -119,11 +104,7 @@ export interface ChatHeaderAddonProps extends React.ComponentProps<"div"> {
  * </ChatHeaderAddon>
  * ```
  */
-export function ChatHeaderAddon({
-  children,
-  className,
-  ...props
-}: ChatHeaderAddonProps) {
+export function ChatHeaderAddon({ children, className, ...props }: ChatHeaderAddonProps) {
   return (
     <div className={cn("flex items-center gap-2", className)} {...props}>
       {children}
@@ -170,16 +151,12 @@ export function ChatHeaderAvatar({
   return (
     <Avatar className={cn("rounded-full", className)} {...props}>
       <AvatarImage src={src} alt={alt} {...imageProps} />
-      {fallback && (
-        <AvatarFallback {...fallbackProps}>{fallback}</AvatarFallback>
-      )}
+      {fallback && <AvatarFallback {...fallbackProps}>{fallback}</AvatarFallback>}
     </Avatar>
   );
 }
 
-export interface ChatHeaderButtonProps extends React.ComponentProps<
-  typeof Button
-> {
+export interface ChatHeaderButtonProps extends React.ComponentProps<typeof Button> {
   children?: React.ReactNode;
 }
 
@@ -194,11 +171,7 @@ export interface ChatHeaderButtonProps extends React.ComponentProps<
  * </ChatHeaderButton>
  * ```
  */
-export function ChatHeaderButton({
-  children,
-  className,
-  ...props
-}: ChatHeaderButtonProps) {
+export function ChatHeaderButton({ children, className, ...props }: ChatHeaderButtonProps) {
   return (
     <Button variant="ghost" size="icon" className={cn("h-8 w-8", className)} {...props}>
       {children}

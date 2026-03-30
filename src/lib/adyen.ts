@@ -1,6 +1,6 @@
 /**
  * Adyen Payment Integration
- * 
+ *
  * Environment variables:
  *   - ADYEN_API_KEY: Your Adyen API key
  *   - ADYEN_MERCHANT_ACCOUNT: Your Adyen merchant account name
@@ -15,9 +15,7 @@
 function safeErrorDetail(error: unknown): string {
   if (error instanceof Error) {
     const statusCode = (error as any).statusCode;
-    return statusCode
-      ? `${error.message} (status ${statusCode})`
-      : error.message;
+    return statusCode ? `${error.message} (status ${statusCode})` : error.message;
   }
   return String(error);
 }
@@ -43,8 +41,12 @@ function getAdyenClient() {
 
   // Check if Adyen is configured before trying to load the library
   if (!isAdyenConfigured()) {
-    console.warn("ADYEN_API_KEY or ADYEN_MERCHANT_ACCOUNT is not set - Adyen payments will not work");
-    throw new Error("Adyen is not configured. Please set ADYEN_API_KEY and ADYEN_MERCHANT_ACCOUNT environment variables.");
+    console.warn(
+      "ADYEN_API_KEY or ADYEN_MERCHANT_ACCOUNT is not set - Adyen payments will not work"
+    );
+    throw new Error(
+      "Adyen is not configured. Please set ADYEN_API_KEY and ADYEN_MERCHANT_ACCOUNT environment variables."
+    );
   }
 
   // Only initialize when actually needed
@@ -53,7 +55,7 @@ function getAdyenClient() {
   // Determine Adyen environment from env var
   const envValue = process.env.ADYEN_ENVIRONMENT?.toUpperCase();
   let adyenEnvironment;
-  
+
   if (envValue === "LIVE") {
     adyenEnvironment = Environment.LIVE;
     _adyenEnvironmentName = "LIVE";
@@ -65,8 +67,8 @@ function getAdyenClient() {
     if (process.env.NODE_ENV === "production") {
       console.warn(
         "ADYEN_ENVIRONMENT is not set in production! " +
-        "Set to 'LIVE' for production payments or 'TEST' for sandbox. " +
-        "Defaulting to TEST for safety."
+          "Set to 'LIVE' for production payments or 'TEST' for sandbox. " +
+          "Defaulting to TEST for safety."
       );
     }
     adyenEnvironment = Environment.TEST;
@@ -168,8 +170,10 @@ export async function createPaymentSession(
 
     if (tokenization) {
       sessionRequest.shopperReference = tokenization.shopperReference;
-      sessionRequest.storePaymentMethodMode = tokenization.storePaymentMethodMode ?? "askForConsent";
-      sessionRequest.recurringProcessingModel = tokenization.recurringProcessingModel ?? "CardOnFile";
+      sessionRequest.storePaymentMethodMode =
+        tokenization.storePaymentMethodMode ?? "askForConsent";
+      sessionRequest.recurringProcessingModel =
+        tokenization.recurringProcessingModel ?? "CardOnFile";
       sessionRequest.shopperInteraction = "Ecommerce";
     }
 
@@ -223,20 +227,20 @@ export async function getPaymentLink(linkId: string) {
  * Stored payment method type returned from Adyen
  */
 export interface StoredPaymentMethod {
-  id: string;  // storedPaymentMethodId
-  type: string;  // "scheme", "sepadirectdebit", etc.
-  brand?: string;  // "visa", "mc", "amex"
+  id: string; // storedPaymentMethodId
+  type: string; // "scheme", "sepadirectdebit", etc.
+  brand?: string; // "visa", "mc", "amex"
   lastFour: string;
   expiryMonth?: string;
   expiryYear?: string;
   holderName?: string;
-  name?: string;  // Display name from Adyen
+  name?: string; // Display name from Adyen
 }
 
 /**
  * Create a session for tokenizing a payment method (storing card for recurring payments)
  * Used during organization signup for paid plans
- * 
+ *
  * @param shopperReference - Unique identifier for the organization in Adyen
  * @param returnUrl - URL to redirect after payment/tokenization
  * @param shopperEmail - Optional shopper email
@@ -253,9 +257,9 @@ export async function createTokenizationSession(
 ) {
   try {
     const response = await checkoutApi.PaymentsApi.sessions({
-      amount: { 
-        currency: "USD", 
-        value: Math.round(amount * 100)
+      amount: {
+        currency: "USD",
+        value: Math.round(amount * 100),
       },
       reference: `token-${shopperReference}-${Date.now()}`,
       returnUrl,
@@ -278,7 +282,7 @@ export async function createTokenizationSession(
 
 /**
  * Get stored payment methods for a shopper
- * 
+ *
  * @param shopperReference - The unique shopper reference (organization ID)
  */
 export async function getStoredPaymentMethods(
@@ -295,7 +299,7 @@ export async function getStoredPaymentMethods(
 
     // Transform stored payment methods from the response
     const storedMethods: StoredPaymentMethod[] = [];
-    
+
     if (response.storedPaymentMethods) {
       for (const method of response.storedPaymentMethods) {
         storedMethods.push({
@@ -320,7 +324,7 @@ export async function getStoredPaymentMethods(
 
 /**
  * Disable (delete) a stored payment method
- * 
+ *
  * @param shopperReference - The unique shopper reference (organization ID)
  * @param storedPaymentMethodId - The ID of the stored payment method to disable
  */
@@ -343,7 +347,7 @@ export async function disableStoredPaymentMethod(
 
 /**
  * Charge a subscription using a stored payment token
- * 
+ *
  * @param shopperReference - The unique shopper reference (organization ID)
  * @param storedPaymentMethodId - The ID of the stored payment method to charge
  * @param amount - Amount in dollars
@@ -360,9 +364,9 @@ export async function chargeSubscription(
   try {
     const response = await checkoutApi.PaymentsApi.payments(
       {
-        amount: { 
-          currency: "USD", 
-          value: Math.round(amount * 100)
+        amount: {
+          currency: "USD",
+          value: Math.round(amount * 100),
         },
         reference,
         merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT!,
@@ -373,8 +377,8 @@ export async function chargeSubscription(
         },
         shopperInteraction: "ContAuth" as any,
         recurringProcessingModel: "Subscription" as any,
-        ...(description && { 
-          metadata: { description } 
+        ...(description && {
+          metadata: { description },
         }),
       },
       { idempotencyKey: reference }
@@ -389,14 +393,11 @@ export async function chargeSubscription(
 
 /**
  * Verify Adyen webhook HMAC signature
- * 
+ *
  * @param payload - The raw request body as a string
  * @param hmacSignature - The HMAC signature from the request headers
  */
-export function verifyWebhookSignature(
-  payload: string,
-  hmacSignature: string
-): boolean {
+export function verifyWebhookSignature(payload: string, hmacSignature: string): boolean {
   const hmacKey = process.env.ADYEN_WEBHOOK_HMAC_KEY;
   if (!hmacKey) {
     console.error("ADYEN_WEBHOOK_HMAC_KEY is not set - cannot verify webhook signature");
@@ -406,11 +407,11 @@ export function verifyWebhookSignature(
   try {
     const { hmacValidator } = require("@adyen/api-library");
     const validator = new hmacValidator();
-    
+
     // Parse the notification item from the payload
     const notificationRequest = JSON.parse(payload);
     const notificationItem = notificationRequest.notificationItems?.[0]?.NotificationRequestItem;
-    
+
     if (!notificationItem) {
       console.error("Invalid webhook payload - no notification item found");
       return false;
@@ -425,7 +426,7 @@ export function verifyWebhookSignature(
 
 /**
  * Parse webhook notification for recurring token events
- * 
+ *
  * @param payload - The raw webhook payload
  */
 export interface TokenWebhookData {
@@ -448,7 +449,7 @@ export function parseRecurringTokenWebhook(payload: string): TokenWebhookData | 
   try {
     const notificationRequest = JSON.parse(payload);
     const notificationItem = notificationRequest.notificationItems?.[0]?.NotificationRequestItem;
-    
+
     if (!notificationItem) {
       return null;
     }
@@ -466,9 +467,7 @@ export function parseRecurringTokenWebhook(payload: string): TokenWebhookData | 
       additionalData.iban?.slice(-4);
 
     // Brand: for card-based methods use the card network; for others use the type itself
-    const brand = additionalData.cardBin
-      ? additionalData.cardPaymentMethod
-      : pmType || undefined;
+    const brand = additionalData.cardBin ? additionalData.cardPaymentMethod : pmType || undefined;
 
     return {
       eventCode: notificationItem.eventCode,
@@ -480,7 +479,9 @@ export function parseRecurringTokenWebhook(payload: string): TokenWebhookData | 
         brand,
         lastFour,
         expiryMonth: additionalData.expiryDate?.split("/")[0],
-        expiryYear: additionalData.expiryDate?.split("/")[1] ? `20${additionalData.expiryDate.split("/")[1]}` : undefined,
+        expiryYear: additionalData.expiryDate?.split("/")[1]
+          ? `20${additionalData.expiryDate.split("/")[1]}`
+          : undefined,
         holderName: additionalData.cardHolderName || additionalData.shopperName,
       },
       success: notificationItem.success === "true" || notificationItem.success === true,

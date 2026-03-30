@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { ArrowLeft, Check, CreditCard, Loader2, Shield } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Check, CreditCard, Loader2, Shield } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,82 +12,84 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import Link from "next/link"
-import { toast } from "sonner"
-import { AdyenCheckoutComponent } from "@/components/sites/adyen-checkout"
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import Link from "next/link";
+import { toast } from "sonner";
+import { AdyenCheckoutComponent } from "@/components/sites/adyen-checkout";
 
 interface SignupData {
-  useExistingAccount?: boolean
-  email?: string
-  password?: string
-  confirmPassword?: string
-  name?: string
-  orgName: string
-  orgEmail: string
-  phone: string
-  street: string
-  city: string
-  stateProvince: string
-  postalCode: string
-  country: string
-  subdomain: string
-  primaryColor?: string
-  secondaryColor?: string
-  sportIds?: string[]
-  planId: string
-  planName: string
-  planPrice: string | number
+  useExistingAccount?: boolean;
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
+  name?: string;
+  orgName: string;
+  orgEmail: string;
+  phone: string;
+  street: string;
+  city: string;
+  stateProvince: string;
+  postalCode: string;
+  country: string;
+  subdomain: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+  sportIds?: string[];
+  planId: string;
+  planName: string;
+  planPrice: string | number;
 }
 
 export default function PaymentPage() {
-  const router = useRouter()
-  const [signupData, setSignupData] = useState<SignupData | null>(null)
-  const [paymentSession, setPaymentSession] = useState<{ id: string; sessionData: string } | null>(null)
-  const [shopperReference, setShopperReference] = useState<string | null>(null)
-  const [isCreatingSession, setIsCreatingSession] = useState(true)
-  const [isCreatingOrg, setIsCreatingOrg] = useState(false)
-  const [sessionError, setSessionError] = useState<string | null>(null)
-  const [showConfirmation, setShowConfirmation] = useState(false)
+  const router = useRouter();
+  const [signupData, setSignupData] = useState<SignupData | null>(null);
+  const [paymentSession, setPaymentSession] = useState<{ id: string; sessionData: string } | null>(
+    null
+  );
+  const [shopperReference, setShopperReference] = useState<string | null>(null);
+  const [isCreatingSession, setIsCreatingSession] = useState(true);
+  const [isCreatingOrg, setIsCreatingOrg] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
-  const trialEndDate = new Date()
-  trialEndDate.setDate(trialEndDate.getDate() + 30)
+  const trialEndDate = new Date();
+  trialEndDate.setDate(trialEndDate.getDate() + 30);
   const formattedTrialEnd = trialEndDate.toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
     year: "numeric",
-  })
+  });
 
   useEffect(() => {
-    const raw = sessionStorage.getItem("org-signup-data")
+    const raw = sessionStorage.getItem("org-signup-data");
     if (!raw) {
-      router.replace("/org-signup")
-      return
+      router.replace("/org-signup");
+      return;
     }
 
-    let data: SignupData
+    let data: SignupData;
     try {
-      data = JSON.parse(raw)
+      data = JSON.parse(raw);
     } catch {
-      router.replace("/org-signup")
-      return
+      router.replace("/org-signup");
+      return;
     }
 
     if ((!data.email && !data.useExistingAccount) || !data.subdomain || !data.planId) {
-      router.replace("/org-signup")
-      return
+      router.replace("/org-signup");
+      return;
     }
 
-    setSignupData(data)
-    createSession(data)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    setSignupData(data);
+    createSession(data);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const createSession = async (data: SignupData) => {
-    setIsCreatingSession(true)
-    setSessionError(null)
+    setIsCreatingSession(true);
+    setSessionError(null);
     try {
-      const signupReference = `${data.subdomain}-${Date.now()}`
+      const signupReference = `${data.subdomain}-${Date.now()}`;
       const response = await fetch("/api/org-signup/payment-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -96,39 +98,43 @@ export default function PaymentPage() {
           email: data.email || data.orgEmail,
           returnUrl: `${window.location.origin}/org-signup/payment`,
         }),
-      })
+      });
 
       if (!response.ok) {
-        const errData = await response.json()
-        throw new Error(errData.error || "Failed to create payment session")
+        const errData = await response.json();
+        throw new Error(errData.error || "Failed to create payment session");
       }
 
-      const sessionData = await response.json()
-      setPaymentSession({ id: sessionData.sessionId, sessionData: sessionData.sessionData })
-      setShopperReference(sessionData.shopperReference)
+      const sessionData = await response.json();
+      setPaymentSession({ id: sessionData.sessionId, sessionData: sessionData.sessionData });
+      setShopperReference(sessionData.shopperReference);
     } catch (error: any) {
-      console.error("Failed to create payment session:", error)
-      setSessionError(error.message || "Failed to initialize payment. Please try again.")
+      console.error("Failed to create payment session:", error);
+      setSessionError(error.message || "Failed to initialize payment. Please try again.");
     } finally {
-      setIsCreatingSession(false)
+      setIsCreatingSession(false);
     }
-  }
+  };
 
   const handlePaymentCompleted = async (result: any) => {
-    if (result.resultCode !== "Authorised" && result.resultCode !== "Pending" && result.resultCode !== "Received") {
-      toast.error(`Payment was not successful (${result.resultCode}). Please try again.`)
-      return
+    if (
+      result.resultCode !== "Authorised" &&
+      result.resultCode !== "Pending" &&
+      result.resultCode !== "Received"
+    ) {
+      toast.error(`Payment was not successful (${result.resultCode}). Please try again.`);
+      return;
     }
 
-    setShowConfirmation(true)
-  }
+    setShowConfirmation(true);
+  };
 
   const handleConfirmStartTrial = async () => {
-    if (!signupData) return
+    if (!signupData) return;
 
-    setIsCreatingOrg(true)
+    setIsCreatingOrg(true);
     try {
-      const { confirmPassword, planName, planPrice, ...formFields } = signupData
+      const { confirmPassword, planName, planPrice, ...formFields } = signupData;
 
       const response = await fetch("/api/org-signup", {
         method: "POST",
@@ -137,42 +143,42 @@ export default function PaymentPage() {
           ...formFields,
           adyenShopperReference: shopperReference,
         }),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to create organization")
+        throw new Error(data.error || "Failed to create organization");
       }
 
-      sessionStorage.removeItem("org-signup-data")
+      sessionStorage.removeItem("org-signup-data");
       const successParams = new URLSearchParams({
         subdomain: signupData.subdomain,
         orgName: signupData.orgName,
         planPrice: String(signupData.planPrice),
-      })
-      router.push(`/org-signup/success?${successParams.toString()}`)
+      });
+      router.push(`/org-signup/success?${successParams.toString()}`);
     } catch (error: any) {
-      console.error("Failed to create organization:", error)
-      toast.error(error.message || "Organization creation failed. Please contact support.")
-      setIsCreatingOrg(false)
+      console.error("Failed to create organization:", error);
+      toast.error(error.message || "Organization creation failed. Please contact support.");
+      setIsCreatingOrg(false);
     }
-  }
+  };
 
   const handlePaymentError = (error: any) => {
-    console.error("Payment error:", error)
-    toast.error("Payment failed. Please try again.")
-  }
+    console.error("Payment error:", error);
+    toast.error("Payment failed. Please try again.");
+  };
 
   if (!signupData) {
     return (
       <div className="w-full max-w-lg mx-auto flex items-center justify-center py-12">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
-    )
+    );
   }
 
-  const monthlyPrice = Number(signupData.planPrice)
+  const monthlyPrice = Number(signupData.planPrice);
 
   return (
     <div className="w-full max-w-2xl mx-auto">
@@ -203,7 +209,8 @@ export default function PaymentPage() {
                 <p className="text-sm text-muted-foreground">Monthly subscription</p>
               </div>
               <p className="text-lg font-semibold">
-                ${monthlyPrice.toFixed(2)}<span className="text-sm font-normal text-muted-foreground">/mo</span>
+                ${monthlyPrice.toFixed(2)}
+                <span className="text-sm font-normal text-muted-foreground">/mo</span>
               </p>
             </div>
             <Separator />
@@ -215,7 +222,8 @@ export default function PaymentPage() {
               <p className="text-xs text-muted-foreground">
                 Your 30-day free trial starts when you confirm. After your trial ends on{" "}
                 <span className="font-medium text-foreground">{formattedTrialEnd}</span>,
-                you&apos;ll be billed ${monthlyPrice.toFixed(2)}/month. Cancel anytime from your dashboard.
+                you&apos;ll be billed ${monthlyPrice.toFixed(2)}/month. Cancel anytime from your
+                dashboard.
               </p>
             </div>
           </CardContent>
@@ -277,7 +285,8 @@ export default function PaymentPage() {
                 )}
               </Button>
               <p className="text-xs text-center text-muted-foreground">
-                By confirming, you agree to be billed ${monthlyPrice.toFixed(2)}/month after your 30-day trial.
+                By confirming, you agree to be billed ${monthlyPrice.toFixed(2)}/month after your
+                30-day trial.
               </p>
             </CardFooter>
           </Card>
@@ -290,7 +299,8 @@ export default function PaymentPage() {
                 <CardTitle className="text-lg">Payment Method</CardTitle>
               </div>
               <CardDescription>
-                Add a payment method for billing after your free trial. You will not be charged today.
+                Add a payment method for billing after your free trial. You will not be charged
+                today.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -302,10 +312,7 @@ export default function PaymentPage() {
               ) : sessionError ? (
                 <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
                   <p className="text-sm text-destructive">{sessionError}</p>
-                  <Button
-                    variant="outline"
-                    onClick={() => createSession(signupData)}
-                  >
+                  <Button variant="outline" onClick={() => createSession(signupData)}>
                     Try Again
                   </Button>
                 </div>
@@ -328,5 +335,5 @@ export default function PaymentPage() {
         )}
       </div>
     </div>
-  )
+  );
 }

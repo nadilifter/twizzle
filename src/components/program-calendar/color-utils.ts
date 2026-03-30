@@ -220,9 +220,7 @@ function findColorMatch(hexColor: string): (typeof colorPalette)[0] {
 /**
  * Converts hex color to HSL
  */
-function hexToHsl(
-  hex: string
-): { h: number; s: number; l: number } | null {
+function hexToHsl(hex: string): { h: number; s: number; l: number } | null {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   if (!result) return null;
 
@@ -271,12 +269,7 @@ export function getEventColorClasses(hexColor: string): {
   const color = findColorMatch(hexColor);
   return {
     ...color.classes,
-    combined: cn(
-      color.classes.bg,
-      color.classes.border,
-      color.classes.text,
-      color.classes.hover
-    ),
+    combined: cn(color.classes.bg, color.classes.border, color.classes.text, color.classes.hover),
   };
 }
 
@@ -297,10 +290,7 @@ export function getEventPillStyles(hexColor: string): React.CSSProperties {
   };
 }
 
-export function getEventPillClasses(
-  _hexColor: string,
-  isCancelled: boolean = false
-): string {
+export function getEventPillClasses(_hexColor: string, isCancelled: boolean = false): string {
   return cn(
     "rounded px-1.5 py-0.5 text-xs font-medium transition-all",
     "border-l-3",
@@ -315,10 +305,7 @@ export function getEventCardStyles(hexColor: string): React.CSSProperties {
   };
 }
 
-export function getEventCardClasses(
-  _hexColor: string,
-  isCancelled: boolean = false
-): string {
+export function getEventCardClasses(_hexColor: string, isCancelled: boolean = false): string {
   return cn(
     "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
     "border-l-4",
@@ -335,7 +322,5 @@ export function getBadgeStyles(hexColor: string): React.CSSProperties {
 }
 
 export function getBadgeColorClasses(_hexColor: string): string {
-  return cn(
-    "text-xs shrink-0",
-  );
+  return cn("text-xs shrink-0");
 }

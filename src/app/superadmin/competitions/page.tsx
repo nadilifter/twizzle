@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   Table,
   TableBody,
@@ -8,21 +8,15 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card"
+} from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,26 +27,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import {
-  Loader2,
-  Trash2,
-  ExternalLink,
-  Trophy,
-  AlertTriangle,
-} from "lucide-react"
-import { format } from "date-fns"
-import { toast } from "sonner"
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Trash2, ExternalLink, Trophy, AlertTriangle } from "lucide-react";
+import { format } from "date-fns";
+import { toast } from "sonner";
 
-const PUBLISH_STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
-  LIVE: "default",
-  DRAFT: "secondary",
-  SCHEDULED: "outline",
-  CLOSED: "outline",
-  COMPLETED: "outline",
-}
+const PUBLISH_STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "destructive"> =
+  {
+    LIVE: "default",
+    DRAFT: "secondary",
+    SCHEDULED: "outline",
+    CLOSED: "outline",
+    COMPLETED: "outline",
+  };
 
 const PUBLISH_STATUS_LABELS: Record<string, string> = {
   LIVE: "Live",
@@ -60,9 +49,12 @@ const PUBLISH_STATUS_LABELS: Record<string, string> = {
   SCHEDULED: "Scheduled",
   CLOSED: "Closed",
   COMPLETED: "Completed",
-}
+};
 
-const FALLBACK_STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
+const FALLBACK_STATUS_VARIANTS: Record<
+  string,
+  "default" | "secondary" | "outline" | "destructive"
+> = {
   REGISTRATION_OPEN: "default",
   PUBLISHED: "default",
   DRAFT: "secondary",
@@ -70,7 +62,7 @@ const FALLBACK_STATUS_VARIANTS: Record<string, "default" | "secondary" | "outlin
   IN_PROGRESS: "default",
   COMPLETED: "outline",
   CANCELLED: "destructive",
-}
+};
 
 const FALLBACK_STATUS_LABELS: Record<string, string> = {
   REGISTRATION_OPEN: "Live",
@@ -80,135 +72,134 @@ const FALLBACK_STATUS_LABELS: Record<string, string> = {
   IN_PROGRESS: "In Progress",
   COMPLETED: "Completed",
   CANCELLED: "Cancelled",
-}
+};
 
 function getStatusLabel(competition: Competition): string {
   if (competition.publishStatus && PUBLISH_STATUS_LABELS[competition.publishStatus]) {
-    return PUBLISH_STATUS_LABELS[competition.publishStatus]
+    return PUBLISH_STATUS_LABELS[competition.publishStatus];
   }
-  return FALLBACK_STATUS_LABELS[competition.status] || competition.status
+  return FALLBACK_STATUS_LABELS[competition.status] || competition.status;
 }
 
-function getStatusVariant(competition: Competition): "default" | "secondary" | "outline" | "destructive" {
+function getStatusVariant(
+  competition: Competition
+): "default" | "secondary" | "outline" | "destructive" {
   if (competition.publishStatus && PUBLISH_STATUS_VARIANTS[competition.publishStatus]) {
-    return PUBLISH_STATUS_VARIANTS[competition.publishStatus]
+    return PUBLISH_STATUS_VARIANTS[competition.publishStatus];
   }
-  return FALLBACK_STATUS_VARIANTS[competition.status] || "secondary"
+  return FALLBACK_STATUS_VARIANTS[competition.status] || "secondary";
 }
 
 interface Organization {
-  id: string
-  name: string
-  slug: string
+  id: string;
+  name: string;
+  slug: string;
 }
 
 interface Competition {
-  id: string
-  name: string
-  competitionType: string
-  status: string
-  startDate: string
-  endDate: string
-  publishStatus: string | null
-  organization: Organization
-  _count: { entries: number; results: number; teams: number; categories: number }
+  id: string;
+  name: string;
+  competitionType: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+  publishStatus: string | null;
+  organization: Organization;
+  _count: { entries: number; results: number; teams: number; categories: number };
 }
 
 function getAdminCompetitionsUrl(orgId: string, orgName: string): string {
-  if (typeof window === "undefined") return "/"
-  const { hostname, protocol } = window.location
-  const parts = hostname.split(".")
+  if (typeof window === "undefined") return "/";
+  const { hostname, protocol } = window.location;
+  const parts = hostname.split(".");
 
   if (hostname.includes("localhost")) {
-    const localhostIndex = parts.findIndex((p) => p.includes("localhost"))
+    const localhostIndex = parts.findIndex((p) => p.includes("localhost"));
     if (localhostIndex > 0) {
-      const baseParts = parts.slice(1)
-      return `${protocol}//admin.${baseParts.join(".")}/dashboard/switch-org?orgId=${encodeURIComponent(orgId)}&orgName=${encodeURIComponent(orgName)}&redirect=${encodeURIComponent("/dashboard/competitions")}`
+      const baseParts = parts.slice(1);
+      return `${protocol}//admin.${baseParts.join(".")}/dashboard/switch-org?orgId=${encodeURIComponent(orgId)}&orgName=${encodeURIComponent(orgName)}&redirect=${encodeURIComponent("/dashboard/competitions")}`;
     }
-    return `${protocol}//admin.localhost:3000/dashboard/switch-org?orgId=${encodeURIComponent(orgId)}&orgName=${encodeURIComponent(orgName)}&redirect=${encodeURIComponent("/dashboard/competitions")}`
+    return `${protocol}//admin.localhost:3000/dashboard/switch-org?orgId=${encodeURIComponent(orgId)}&orgName=${encodeURIComponent(orgName)}&redirect=${encodeURIComponent("/dashboard/competitions")}`;
   }
 
   if (parts.length >= 2) {
-    const baseParts = parts.slice(1)
-    return `${protocol}//admin.${baseParts.join(".")}/dashboard/switch-org?orgId=${encodeURIComponent(orgId)}&orgName=${encodeURIComponent(orgName)}&redirect=${encodeURIComponent("/dashboard/competitions")}`
+    const baseParts = parts.slice(1);
+    return `${protocol}//admin.${baseParts.join(".")}/dashboard/switch-org?orgId=${encodeURIComponent(orgId)}&orgName=${encodeURIComponent(orgName)}&redirect=${encodeURIComponent("/dashboard/competitions")}`;
   }
 
-  return "/"
+  return "/";
 }
 
 export default function SuperadminCompetitionsPage() {
-  const [organizations, setOrganizations] = React.useState<Organization[]>([])
-  const [selectedOrgId, setSelectedOrgId] = React.useState<string>("")
-  const [competitions, setCompetitions] = React.useState<Competition[]>([])
-  const [isLoadingOrgs, setIsLoadingOrgs] = React.useState(true)
-  const [isLoadingCompetitions, setIsLoadingCompetitions] = React.useState(false)
-  const [deletingId, setDeletingId] = React.useState<string | null>(null)
+  const [organizations, setOrganizations] = React.useState<Organization[]>([]);
+  const [selectedOrgId, setSelectedOrgId] = React.useState<string>("");
+  const [competitions, setCompetitions] = React.useState<Competition[]>([]);
+  const [isLoadingOrgs, setIsLoadingOrgs] = React.useState(true);
+  const [isLoadingCompetitions, setIsLoadingCompetitions] = React.useState(false);
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     async function fetchOrgs() {
       try {
-        const res = await fetch("/api/superadmin/competitions")
-        if (!res.ok) throw new Error("Failed to fetch")
-        const data: Competition[] = await res.json()
+        const res = await fetch("/api/superadmin/competitions");
+        if (!res.ok) throw new Error("Failed to fetch");
+        const data: Competition[] = await res.json();
 
-        const orgMap = new Map<string, Organization>()
+        const orgMap = new Map<string, Organization>();
         for (const c of data) {
           if (!orgMap.has(c.organization.id)) {
-            orgMap.set(c.organization.id, c.organization)
+            orgMap.set(c.organization.id, c.organization);
           }
         }
-        setOrganizations(
-          Array.from(orgMap.values()).sort((a, b) => a.name.localeCompare(b.name))
-        )
+        setOrganizations(Array.from(orgMap.values()).sort((a, b) => a.name.localeCompare(b.name)));
       } catch {
-        toast.error("Failed to load organizations")
+        toast.error("Failed to load organizations");
       } finally {
-        setIsLoadingOrgs(false)
+        setIsLoadingOrgs(false);
       }
     }
-    fetchOrgs()
-  }, [])
+    fetchOrgs();
+  }, []);
 
   const fetchCompetitions = React.useCallback(async (orgId: string) => {
-    setIsLoadingCompetitions(true)
+    setIsLoadingCompetitions(true);
     try {
-      const res = await fetch(`/api/superadmin/competitions?organizationId=${orgId}`)
-      if (!res.ok) throw new Error("Failed to fetch")
-      setCompetitions(await res.json())
+      const res = await fetch(`/api/superadmin/competitions?organizationId=${orgId}`);
+      if (!res.ok) throw new Error("Failed to fetch");
+      setCompetitions(await res.json());
     } catch {
-      toast.error("Failed to load competitions")
+      toast.error("Failed to load competitions");
     } finally {
-      setIsLoadingCompetitions(false)
+      setIsLoadingCompetitions(false);
     }
-  }, [])
+  }, []);
 
   const handleOrgChange = (orgId: string) => {
-    setSelectedOrgId(orgId)
-    fetchCompetitions(orgId)
-  }
+    setSelectedOrgId(orgId);
+    fetchCompetitions(orgId);
+  };
 
   const handleDelete = async (competition: Competition) => {
-    setDeletingId(competition.id)
+    setDeletingId(competition.id);
     try {
       const res = await fetch(`/api/superadmin/competitions/${competition.id}`, {
         method: "DELETE",
-      })
+      });
       if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || "Failed to delete")
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete");
       }
-      toast.success(`"${competition.name}" deleted`)
-      setCompetitions((prev) => prev.filter((c) => c.id !== competition.id))
+      toast.success(`"${competition.name}" deleted`);
+      setCompetitions((prev) => prev.filter((c) => c.id !== competition.id));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete competition")
+      toast.error(err instanceof Error ? err.message : "Failed to delete competition");
     } finally {
-      setDeletingId(null)
+      setDeletingId(null);
     }
-  }
+  };
 
-  const selectedOrg = organizations.find((o) => o.id === selectedOrgId)
-  const hasEntries = (c: Competition) =>
-    c._count.entries > 0 || c._count.results > 0
+  const selectedOrg = organizations.find((o) => o.id === selectedOrgId);
+  const hasEntries = (c: Competition) => c._count.entries > 0 || c._count.results > 0;
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -270,9 +261,7 @@ export default function SuperadminCompetitionsPage() {
       {selectedOrgId && (
         <Card>
           <CardHeader>
-            <CardTitle>
-              {selectedOrg?.name} — Competitions
-            </CardTitle>
+            <CardTitle>{selectedOrg?.name} — Competitions</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoadingCompetitions ? (
@@ -300,29 +289,20 @@ export default function SuperadminCompetitionsPage() {
                 <TableBody>
                   {competitions.map((competition) => (
                     <TableRow key={competition.id}>
-                      <TableCell className="font-medium">
-                        {competition.name}
-                      </TableCell>
+                      <TableCell className="font-medium">{competition.name}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {competition.competitionType}
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant={getStatusVariant(competition)}
-                          className="text-xs"
-                        >
+                        <Badge variant={getStatusVariant(competition)} className="text-xs">
                           {getStatusLabel(competition)}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm">
                         {format(new Date(competition.startDate), "MMM d, yyyy")}
                       </TableCell>
-                      <TableCell className="text-sm">
-                        {competition._count.entries}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {competition._count.categories}
-                      </TableCell>
+                      <TableCell className="text-sm">{competition._count.entries}</TableCell>
+                      <TableCell className="text-sm">{competition._count.categories}</TableCell>
                       <TableCell>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
@@ -352,9 +332,11 @@ export default function SuperadminCompetitionsPage() {
                                     <div className="flex items-start gap-2 p-3 rounded-md bg-destructive/10 text-destructive text-sm">
                                       <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
                                       <span>
-                                        This competition has {competition._count.entries} {competition._count.entries === 1 ? "entry" : "entries"}
-                                        {competition._count.results > 0 && ` and ${competition._count.results} ${competition._count.results === 1 ? "result" : "results"}`}.
-                                        Deleting it will remove all participant data.
+                                        This competition has {competition._count.entries}{" "}
+                                        {competition._count.entries === 1 ? "entry" : "entries"}
+                                        {competition._count.results > 0 &&
+                                          ` and ${competition._count.results} ${competition._count.results === 1 ? "result" : "results"}`}
+                                        . Deleting it will remove all participant data.
                                       </span>
                                     </div>
                                   )}
@@ -382,5 +364,5 @@ export default function SuperadminCompetitionsPage() {
         </Card>
       )}
     </div>
-  )
+  );
 }

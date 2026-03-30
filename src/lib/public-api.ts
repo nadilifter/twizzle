@@ -4,8 +4,17 @@ import { getEnvConfig, getCurrentEnvironment } from "@/lib/env-domains";
 import { checkApiRateLimit } from "@/lib/rate-limit";
 
 const SYSTEM_SUBDOMAINS = new Set([
-  "admin", "login", "superadmin", "coach", "athletes",
-  "pos", "feedback", "events", "startup", "www", "main",
+  "admin",
+  "login",
+  "superadmin",
+  "coach",
+  "athletes",
+  "pos",
+  "feedback",
+  "events",
+  "startup",
+  "www",
+  "main",
 ]);
 
 /**
@@ -119,10 +128,7 @@ export async function resolvePublicRequest(
   const result = await resolvePublicOrganizationId(request, paramOrganizationId);
 
   if (!result.ok) {
-    return NextResponse.json(
-      { error: result.error },
-      { status: result.status }
-    );
+    return NextResponse.json({ error: result.error }, { status: result.status });
   }
 
   return { organizationId: result.organizationId };

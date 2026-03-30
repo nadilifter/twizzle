@@ -32,7 +32,9 @@ export interface RenderEmailOptions {
 /**
  * Get organization branding for email templates
  */
-export async function getOrganizationBranding(organizationId: string): Promise<OrganizationBranding> {
+export async function getOrganizationBranding(
+  organizationId: string
+): Promise<OrganizationBranding> {
   const org = await db.organization.findUnique({
     where: { id: organizationId },
     include: {
@@ -78,7 +80,6 @@ function darkenColor(hex: string, percent: number): string {
   // Convert back to hex
   return `#${newR.toString(16).padStart(2, "0")}${newG.toString(16).padStart(2, "0")}${newB.toString(16).padStart(2, "0")}`;
 }
-
 
 /**
  * Build the formatted address string
@@ -207,9 +208,10 @@ export function renderCampaignEmail(options: RenderEmailOptions): { html: string
           <!-- Header with Logo -->
           <tr>
             <td align="center" style="background-color: ${headerBgColor}; padding: 24px 32px;">
-              ${branding.logo 
-                ? `<img src="${branding.logo}" alt="${escapeHtml(branding.name)}" style="max-width: 200px; max-height: 60px; height: auto;" />`
-                : `<h1 style="margin: 0; font-size: 24px; font-weight: bold; color: ${headerTextColor};">${escapeHtml(branding.name)}</h1>`
+              ${
+                branding.logo
+                  ? `<img src="${branding.logo}" alt="${escapeHtml(branding.name)}" style="max-width: 200px; max-height: 60px; height: auto;" />`
+                  : `<h1 style="margin: 0; font-size: 24px; font-weight: bold; color: ${headerTextColor};">${escapeHtml(branding.name)}</h1>`
               }
             </td>
           </tr>
@@ -239,7 +241,9 @@ export function renderCampaignEmail(options: RenderEmailOptions): { html: string
                     ${branding.phone ? `<p style="margin: 0 0 8px 0; font-size: 12px; color: #6b7280;">${branding.phone}</p>` : ""}
                   </td>
                 </tr>
-                ${unsubscribeUrl ? `
+                ${
+                  unsubscribeUrl
+                    ? `
                 <tr>
                   <td style="text-align: center; padding-top: 16px;">
                     <p style="margin: 0; font-size: 11px; color: #9ca3af;">
@@ -247,7 +251,9 @@ export function renderCampaignEmail(options: RenderEmailOptions): { html: string
                     </p>
                   </td>
                 </tr>
-                ` : ""}
+                `
+                    : ""
+                }
               </table>
             </td>
           </tr>
@@ -290,10 +296,7 @@ function processHtmlForEmail(html: string, primaryColor: string): string {
   );
 
   // Ensure images are responsive
-  processed = processed.replace(
-    /<img([^>]*)>/gi,
-    '<img$1 style="max-width: 100%; height: auto;">'
-  );
+  processed = processed.replace(/<img([^>]*)>/gi, '<img$1 style="max-width: 100%; height: auto;">');
 
   // Process text alignment from TipTap
   processed = processed.replace(
@@ -327,7 +330,7 @@ function generatePlainText(
   text = text.replace(/<ul[^>]*>|<\/ul>|<ol[^>]*>|<\/ol>/gi, "\n");
   text = text.replace(/<blockquote[^>]*>/gi, "\n> ");
   text = text.replace(/<\/blockquote>/gi, "\n");
-  
+
   // Extract link text and URL
   text = text.replace(/<a[^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/gi, "$2 ($1)");
 
@@ -360,7 +363,10 @@ function generatePlainText(
     unsubscribeUrl ? `Unsubscribe: ${unsubscribeUrl}` : "",
   ];
 
-  return lines.filter((line) => line !== undefined).join("\n").trim();
+  return lines
+    .filter((line) => line !== undefined)
+    .join("\n")
+    .trim();
 }
 
 /**

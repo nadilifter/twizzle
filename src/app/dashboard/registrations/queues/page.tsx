@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Button } from "@/components/ui/button"
+import * as React from "react";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,33 +9,29 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/components/ui/switch"
-import { Plus, Settings, Loader2, AlertCircle, Users, Clock, Globe, Timer } from "lucide-react"
-import {
-  Sheet,
-  SheetContent,
-} from "@/components/ui/sheet"
-import { useQueueConfig, type QueueConfig } from "@/hooks/use-queue-config"
-import { usePrograms } from "@/hooks/use-programs"
-import { toast } from "sonner"
-import { QueueConfiguration } from "./queue-configuration"
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Plus, Settings, Loader2, AlertCircle, Users, Clock, Globe, Timer } from "lucide-react";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { useQueueConfig, type QueueConfig } from "@/hooks/use-queue-config";
+import { usePrograms } from "@/hooks/use-programs";
+import { toast } from "sonner";
+import { QueueConfiguration } from "./queue-configuration";
 
 export default function QueuesPage() {
-  const { configs, isLoading, error, fetchConfigs, createConfig, toggleConfig, deleteConfig } = useQueueConfig({ includeProgram: true })
-  const { programs } = usePrograms()
-  const [isAddOpen, setIsAddOpen] = React.useState(false)
-  const [isEditOpen, setIsEditOpen] = React.useState(false)
-  const [selectedConfig, setSelectedConfig] = React.useState<QueueConfig | null>(null)
-  const [togglingId, setTogglingId] = React.useState<string | null>(null)
+  const { configs, isLoading, error, fetchConfigs, createConfig, toggleConfig, deleteConfig } =
+    useQueueConfig({ includeProgram: true });
+  const { programs } = usePrograms();
+  const [isAddOpen, setIsAddOpen] = React.useState(false);
+  const [isEditOpen, setIsEditOpen] = React.useState(false);
+  const [selectedConfig, setSelectedConfig] = React.useState<QueueConfig | null>(null);
+  const [togglingId, setTogglingId] = React.useState<string | null>(null);
 
   // Find programs that don't have a queue config yet
-  const programsWithoutQueue = programs.filter(
-    p => !configs.some(c => c.programId === p.id)
-  )
+  const programsWithoutQueue = programs.filter((p) => !configs.some((c) => c.programId === p.id));
 
-  const hasGlobalQueue = configs.some(c => c.programId === null)
+  const hasGlobalQueue = configs.some((c) => c.programId === null);
 
   const handleCreateGlobal = async () => {
     const result = await createConfig({
@@ -44,15 +40,15 @@ export default function QueuesPage() {
       reservationMinutes: 10,
       maxConcurrent: 50,
       activationType: "ALWAYS",
-    })
+    });
     if (result) {
-      toast.success("Global queue configuration created")
-      setSelectedConfig(result)
-      setIsEditOpen(true)
+      toast.success("Global queue configuration created");
+      setSelectedConfig(result);
+      setIsEditOpen(true);
     } else {
-      toast.error("Failed to create queue configuration")
+      toast.error("Failed to create queue configuration");
     }
-  }
+  };
 
   const handleCreateForProgram = async (programId: string) => {
     const result = await createConfig({
@@ -61,52 +57,56 @@ export default function QueuesPage() {
       reservationMinutes: 10,
       maxConcurrent: 50,
       activationType: "ALWAYS",
-    })
+    });
     if (result) {
-      toast.success("Queue configuration created")
-      setSelectedConfig(result)
-      setIsEditOpen(true)
+      toast.success("Queue configuration created");
+      setSelectedConfig(result);
+      setIsEditOpen(true);
     } else {
-      toast.error("Failed to create queue configuration")
+      toast.error("Failed to create queue configuration");
     }
-  }
+  };
 
   const handleToggle = async (config: QueueConfig) => {
-    setTogglingId(config.id)
-    const success = await toggleConfig(config.id, !config.isEnabled)
+    setTogglingId(config.id);
+    const success = await toggleConfig(config.id, !config.isEnabled);
     if (success) {
-      toast.success(config.isEnabled ? "Queue disabled" : "Queue enabled")
+      toast.success(config.isEnabled ? "Queue disabled" : "Queue enabled");
     } else {
-      toast.error("Failed to toggle queue")
+      toast.error("Failed to toggle queue");
     }
-    setTogglingId(null)
-  }
+    setTogglingId(null);
+  };
 
   const handleConfigure = (config: QueueConfig) => {
-    setSelectedConfig(config)
-    setIsEditOpen(true)
-  }
+    setSelectedConfig(config);
+    setIsEditOpen(true);
+  };
 
   const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete this queue configuration?")) {
-      const success = await deleteConfig(id)
+      const success = await deleteConfig(id);
       if (success) {
-        toast.success("Queue configuration deleted")
-        setIsEditOpen(false)
+        toast.success("Queue configuration deleted");
+        setIsEditOpen(false);
       } else {
-        toast.error("Failed to delete queue configuration")
+        toast.error("Failed to delete queue configuration");
       }
     }
-  }
+  };
 
   const getActivationLabel = (type: string) => {
     switch (type) {
-      case "ALWAYS": return "Always Active"
-      case "THRESHOLD": return "Threshold-based"
-      case "SCHEDULED": return "Scheduled"
-      default: return type
+      case "ALWAYS":
+        return "Always Active";
+      case "THRESHOLD":
+        return "Threshold-based";
+      case "SCHEDULED":
+        return "Scheduled";
+      default:
+        return type;
     }
-  }
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -141,12 +141,12 @@ export default function QueuesPage() {
       <Sheet open={isEditOpen} onOpenChange={setIsEditOpen}>
         <SheetContent className="sm:max-w-xl">
           {selectedConfig ? (
-            <QueueConfiguration 
-              config={selectedConfig} 
+            <QueueConfiguration
+              config={selectedConfig}
               onClose={() => setIsEditOpen(false)}
               onUpdate={(updated) => {
-                setSelectedConfig(updated)
-                fetchConfigs()
+                setSelectedConfig(updated);
+                fetchConfigs();
               }}
               onDelete={() => handleDelete(selectedConfig.id)}
             />
@@ -168,11 +168,11 @@ export default function QueuesPage() {
             </div>
             <div className="flex-1 overflow-y-auto py-6 space-y-4">
               {!hasGlobalQueue && (
-                <Card 
+                <Card
                   className="cursor-pointer hover:border-primary transition-colors"
                   onClick={() => {
-                    handleCreateGlobal()
-                    setIsAddOpen(false)
+                    handleCreateGlobal();
+                    setIsAddOpen(false);
                   }}
                 >
                   <CardHeader className="pb-2">
@@ -183,26 +183,29 @@ export default function QueuesPage() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground">
-                      Apply a queue to all programs in your organization. This will be the default for any program without its own queue.
+                      Apply a queue to all programs in your organization. This will be the default
+                      for any program without its own queue.
                     </p>
                   </CardContent>
                 </Card>
               )}
 
               <div className="space-y-2">
-                <h3 className="text-sm font-medium text-muted-foreground">Program-Specific Queues</h3>
+                <h3 className="text-sm font-medium text-muted-foreground">
+                  Program-Specific Queues
+                </h3>
                 {programsWithoutQueue.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-4 text-center">
                     All programs have queue configurations.
                   </p>
                 ) : (
-                  programsWithoutQueue.map(program => (
-                    <Card 
+                  programsWithoutQueue.map((program) => (
+                    <Card
                       key={program.id}
                       className="cursor-pointer hover:border-primary transition-colors"
                       onClick={() => {
-                        handleCreateForProgram(program.id)
-                        setIsAddOpen(false)
+                        handleCreateForProgram(program.id);
+                        setIsAddOpen(false);
                       }}
                     >
                       <CardHeader className="py-3">
@@ -225,103 +228,121 @@ export default function QueuesPage() {
       {!isLoading && !error && (
         <div className="space-y-6">
           {/* Global Queue Section */}
-          {configs.filter(c => c.programId === null).length > 0 && (
+          {configs.filter((c) => c.programId === null).length > 0 && (
             <div className="space-y-3">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <Globe className="h-5 w-5" />
                 Global Queue
               </h2>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {configs.filter(c => c.programId === null).map(config => (
-                  <Card key={config.id} className="flex flex-col">
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle>Organization-wide Queue</CardTitle>
-                          <CardDescription className="mt-1">Default for all programs</CardDescription>
+                {configs
+                  .filter((c) => c.programId === null)
+                  .map((config) => (
+                    <Card key={config.id} className="flex flex-col">
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <CardTitle>Organization-wide Queue</CardTitle>
+                            <CardDescription className="mt-1">
+                              Default for all programs
+                            </CardDescription>
+                          </div>
+                          <Switch
+                            checked={config.isEnabled}
+                            onCheckedChange={() => handleToggle(config)}
+                            disabled={togglingId === config.id}
+                          />
                         </div>
-                        <Switch
-                          checked={config.isEnabled}
-                          onCheckedChange={() => handleToggle(config)}
-                          disabled={togglingId === config.id}
-                        />
-                      </div>
-                    </CardHeader>
-                    <CardContent className="flex-1">
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Timer className="h-4 w-4" />
-                          <span>{config.reservationMinutes} min reservation</span>
+                      </CardHeader>
+                      <CardContent className="flex-1">
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Timer className="h-4 w-4" />
+                            <span>{config.reservationMinutes} min reservation</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Users className="h-4 w-4" />
+                            <span>Max {config.maxConcurrent} concurrent</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={config.isEnabled ? "default" : "secondary"}>
+                              {config.isEnabled ? "Active" : "Inactive"}
+                            </Badge>
+                            <Badge variant="outline">
+                              {getActivationLabel(config.activationType)}
+                            </Badge>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Users className="h-4 w-4" />
-                          <span>Max {config.maxConcurrent} concurrent</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={config.isEnabled ? "default" : "secondary"}>
-                            {config.isEnabled ? "Active" : "Inactive"}
-                          </Badge>
-                          <Badge variant="outline">{getActivationLabel(config.activationType)}</Badge>
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="border-t pt-4">
-                      <Button variant="outline" className="w-full" onClick={() => handleConfigure(config)}>
-                        <Settings className="mr-2 h-4 w-4" />
-                        Configure
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))}
+                      </CardContent>
+                      <CardFooter className="border-t pt-4">
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => handleConfigure(config)}
+                        >
+                          <Settings className="mr-2 h-4 w-4" />
+                          Configure
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
               </div>
             </div>
           )}
 
           {/* Program-Specific Queues */}
-          {configs.filter(c => c.programId !== null).length > 0 && (
+          {configs.filter((c) => c.programId !== null).length > 0 && (
             <div className="space-y-3">
               <h2 className="text-lg font-semibold">Program Queues</h2>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {configs.filter(c => c.programId !== null).map(config => (
-                  <Card key={config.id} className="flex flex-col">
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle>{config.program?.name || "Unknown Program"}</CardTitle>
+                {configs
+                  .filter((c) => c.programId !== null)
+                  .map((config) => (
+                    <Card key={config.id} className="flex flex-col">
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <CardTitle>{config.program?.name || "Unknown Program"}</CardTitle>
+                          </div>
+                          <Switch
+                            checked={config.isEnabled}
+                            onCheckedChange={() => handleToggle(config)}
+                            disabled={togglingId === config.id}
+                          />
                         </div>
-                        <Switch
-                          checked={config.isEnabled}
-                          onCheckedChange={() => handleToggle(config)}
-                          disabled={togglingId === config.id}
-                        />
-                      </div>
-                    </CardHeader>
-                    <CardContent className="flex-1">
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Timer className="h-4 w-4" />
-                          <span>{config.reservationMinutes} min reservation</span>
+                      </CardHeader>
+                      <CardContent className="flex-1">
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Timer className="h-4 w-4" />
+                            <span>{config.reservationMinutes} min reservation</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Users className="h-4 w-4" />
+                            <span>Max {config.maxConcurrent} concurrent</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={config.isEnabled ? "default" : "secondary"}>
+                              {config.isEnabled ? "Active" : "Inactive"}
+                            </Badge>
+                            <Badge variant="outline">
+                              {getActivationLabel(config.activationType)}
+                            </Badge>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Users className="h-4 w-4" />
-                          <span>Max {config.maxConcurrent} concurrent</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={config.isEnabled ? "default" : "secondary"}>
-                            {config.isEnabled ? "Active" : "Inactive"}
-                          </Badge>
-                          <Badge variant="outline">{getActivationLabel(config.activationType)}</Badge>
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="border-t pt-4">
-                      <Button variant="outline" className="w-full" onClick={() => handleConfigure(config)}>
-                        <Settings className="mr-2 h-4 w-4" />
-                        Configure
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))}
+                      </CardContent>
+                      <CardFooter className="border-t pt-4">
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => handleConfigure(config)}
+                        >
+                          <Settings className="mr-2 h-4 w-4" />
+                          Configure
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
               </div>
             </div>
           )}
@@ -342,5 +363,5 @@ export default function QueuesPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

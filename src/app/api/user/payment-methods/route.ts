@@ -1,12 +1,12 @@
-import { NextResponse } from "next/server"
-import { db } from "@/lib/db"
-import { getAuthSession } from "@/lib/auth"
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { getAuthSession } from "@/lib/auth";
 
 export async function GET() {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Authentication required" }, { status: 401 })
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
     const paymentMethods = await db.paymentMethod.findMany({
@@ -21,11 +21,14 @@ export async function GET() {
         createdAt: true,
       },
       orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
-    })
+    });
 
-    return NextResponse.json({ paymentMethods })
+    return NextResponse.json({ paymentMethods });
   } catch (error) {
-    console.error("Fetch user payment methods error:", error instanceof Error ? error.message : error)
-    return NextResponse.json({ error: "Failed to fetch payment methods" }, { status: 500 })
+    console.error(
+      "Fetch user payment methods error:",
+      error instanceof Error ? error.message : error
+    );
+    return NextResponse.json({ error: "Failed to fetch payment methods" }, { status: 500 });
   }
 }

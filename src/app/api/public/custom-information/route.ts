@@ -45,11 +45,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const seasonEntityMap = new Map<string, {
-      programIds: Set<string>;
-      competitionIds: Set<string>;
-      membershipIds: Set<string>;
-    }>();
+    const seasonEntityMap = new Map<
+      string,
+      {
+        programIds: Set<string>;
+        competitionIds: Set<string>;
+        membershipIds: Set<string>;
+      }
+    >();
 
     if (seasonScopeIds.size > 0) {
       const seasons = await db.season.findMany({

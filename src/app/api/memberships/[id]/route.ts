@@ -46,10 +46,7 @@ const updateMembershipGroupSchema = z.object({
 });
 
 // GET /api/memberships/[id]
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -66,10 +63,10 @@ export async function GET(
       },
       include: {
         instances: {
-            orderBy: { startDate: 'desc' },
-            include: {
-              _count: { select: { athleteMemberships: true } },
-            },
+          orderBy: { startDate: "desc" },
+          include: {
+            _count: { select: { athleteMemberships: true } },
+          },
         },
         levelRequirements: {
           include: { level: { select: { id: true, name: true, color: true } } },
@@ -92,18 +89,12 @@ export async function GET(
     return NextResponse.json(group);
   } catch (error) {
     console.error("Error fetching membership group:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch membership group" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch membership group" }, { status: 500 });
   }
 }
 
 // PATCH /api/memberships/[id]
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -155,7 +146,9 @@ export async function PATCH(
       });
 
       // For non-recurring groups: sync price and name to auto-generated instance
-      const isNonRecurring = validatedData.isRecurring === false || (!validatedData.isRecurring && !currentGroup.isRecurring);
+      const isNonRecurring =
+        validatedData.isRecurring === false ||
+        (!validatedData.isRecurring && !currentGroup.isRecurring);
       const priceChanged = validatedData.defaultPrice !== undefined;
       const nameChanged = validatedData.name !== undefined;
 
@@ -183,7 +176,7 @@ export async function PATCH(
         where: { id: params.id },
         include: {
           instances: {
-            orderBy: { startDate: 'desc' },
+            orderBy: { startDate: "desc" },
             include: {
               _count: { select: { athleteMemberships: true } },
             },
@@ -202,24 +195,15 @@ export async function PATCH(
     return NextResponse.json(result);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error updating membership group:", error);
-    return NextResponse.json(
-      { error: "Failed to update membership group" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update membership group" }, { status: 500 });
   }
 }
 
 // DELETE /api/memberships/[id]
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -230,10 +214,7 @@ export async function DELETE(
     if (gate) return gate;
 
     const permissions = session.user.permissions || [];
-    if (
-      !permissions.includes("*") &&
-      !permissions.includes("training.delete")
-    ) {
+    if (!permissions.includes("*") && !permissions.includes("training.delete")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -246,9 +227,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting membership group:", error);
-    return NextResponse.json(
-      { error: "Failed to delete membership group" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete membership group" }, { status: 500 });
   }
 }

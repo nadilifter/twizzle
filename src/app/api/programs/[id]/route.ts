@@ -10,7 +10,10 @@ import { getEnabledHolidayDates, filterOutHolidayDates } from "@/lib/holiday-uti
 const updateProgramSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color").optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color")
+    .optional(),
   status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).optional(),
   pricingModel: z.enum(["FLAT_RATE", "PER_SESSION"]).optional(),
   basePrice: z.number().min(0).optional().nullable(),
@@ -56,11 +59,17 @@ const updateProgramSchema = z.object({
   passRequirementIds: z.array(z.string()).optional(),
   waiverRequirementIds: z.array(z.string()).optional(),
   spaceIds: z.array(z.string()).optional(),
-  staffAssignments: z.array(z.object({
-    memberId: z.string(),
-    role: z.enum(["LEAD_COACH", "ASSISTANT_COACH", "SUBSTITUTE", "VOLUNTEER"]).default("ASSISTANT_COACH"),
-    isPrimary: z.boolean().default(false),
-  })).optional(),
+  staffAssignments: z
+    .array(
+      z.object({
+        memberId: z.string(),
+        role: z
+          .enum(["LEAD_COACH", "ASSISTANT_COACH", "SUBSTITUTE", "VOLUNTEER"])
+          .default("ASSISTANT_COACH"),
+        isPrimary: z.boolean().default(false),
+      })
+    )
+    .optional(),
   glCodeId: z.string().optional().nullable(),
   categoryId: z.string().optional().nullable(),
   // Registration window
@@ -75,10 +84,7 @@ const updateProgramSchema = z.object({
 });
 
 // GET /api/programs/[id]
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -120,10 +126,7 @@ export async function GET(
               },
             },
           },
-          orderBy: [
-            { isPrimary: "desc" },
-            { role: "asc" },
-          ],
+          orderBy: [{ isPrimary: "desc" }, { role: "asc" }],
         },
         requiredMemberships: {
           include: {
@@ -226,18 +229,12 @@ export async function GET(
     return NextResponse.json(program);
   } catch (error) {
     console.error("Error fetching program:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch program" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch program" }, { status: 500 });
   }
 }
 
 // PATCH /api/programs/[id]
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -269,7 +266,9 @@ export async function PATCH(
     // Validate all client-provided foreign keys belong to this org
     const scopedDb = getScopedDb(session.user.organizationId);
     if (validatedData.facilityId) {
-      const facility = await scopedDb.facility.findUnique({ where: { id: validatedData.facilityId } });
+      const facility = await scopedDb.facility.findUnique({
+        where: { id: validatedData.facilityId },
+      });
       if (!facility) return NextResponse.json({ error: "Facility not found" }, { status: 404 });
     }
     if (validatedData.glCodeId) {
@@ -277,34 +276,60 @@ export async function PATCH(
       if (!glCode) return NextResponse.json({ error: "GL code not found" }, { status: 404 });
     }
     if (validatedData.categoryId) {
-      const cat = await scopedDb.category.findUnique({ where: { id: validatedData.categoryId }, select: { id: true } });
+      const cat = await scopedDb.category.findUnique({
+        where: { id: validatedData.categoryId },
+        select: { id: true },
+      });
       if (!cat) return NextResponse.json({ error: "Category not found" }, { status: 404 });
     }
     if (validatedData.levelRequirementIds?.length) {
-      const valid = await scopedDb.level.findMany({ where: { id: { in: validatedData.levelRequirementIds } }, select: { id: true } });
-      if (valid.length !== validatedData.levelRequirementIds.length) return NextResponse.json({ error: "One or more levels not found" }, { status: 404 });
+      const valid = await scopedDb.level.findMany({
+        where: { id: { in: validatedData.levelRequirementIds } },
+        select: { id: true },
+      });
+      if (valid.length !== validatedData.levelRequirementIds.length)
+        return NextResponse.json({ error: "One or more levels not found" }, { status: 404 });
     }
     if (validatedData.waiverRequirementIds?.length) {
-      const valid = await scopedDb.waiver.findMany({ where: { id: { in: validatedData.waiverRequirementIds } }, select: { id: true } });
-      if (valid.length !== validatedData.waiverRequirementIds.length) return NextResponse.json({ error: "One or more waivers not found" }, { status: 404 });
+      const valid = await scopedDb.waiver.findMany({
+        where: { id: { in: validatedData.waiverRequirementIds } },
+        select: { id: true },
+      });
+      if (valid.length !== validatedData.waiverRequirementIds.length)
+        return NextResponse.json({ error: "One or more waivers not found" }, { status: 404 });
     }
     if (validatedData.membershipRequirementIds?.length) {
       const valid = await db.membershipInstance.findMany({
-        where: { id: { in: validatedData.membershipRequirementIds }, group: { organizationId: session.user.organizationId } },
+        where: {
+          id: { in: validatedData.membershipRequirementIds },
+          group: { organizationId: session.user.organizationId },
+        },
         select: { id: true },
       });
-      if (valid.length !== validatedData.membershipRequirementIds.length) return NextResponse.json({ error: "One or more membership instances not found" }, { status: 404 });
+      if (valid.length !== validatedData.membershipRequirementIds.length)
+        return NextResponse.json(
+          { error: "One or more membership instances not found" },
+          { status: 404 }
+        );
     }
     if (validatedData.passRequirementIds?.length) {
-      const valid = await scopedDb.pass.findMany({ where: { id: { in: validatedData.passRequirementIds } }, select: { id: true } });
-      if (valid.length !== validatedData.passRequirementIds.length) return NextResponse.json({ error: "One or more passes not found" }, { status: 404 });
+      const valid = await scopedDb.pass.findMany({
+        where: { id: { in: validatedData.passRequirementIds } },
+        select: { id: true },
+      });
+      if (valid.length !== validatedData.passRequirementIds.length)
+        return NextResponse.json({ error: "One or more passes not found" }, { status: 404 });
     }
     if (validatedData.spaceIds?.length) {
       const valid = await db.space.findMany({
-        where: { id: { in: validatedData.spaceIds }, facility: { organizationId: session.user.organizationId } },
+        where: {
+          id: { in: validatedData.spaceIds },
+          facility: { organizationId: session.user.organizationId },
+        },
         select: { id: true },
       });
-      if (valid.length !== validatedData.spaceIds.length) return NextResponse.json({ error: "One or more spaces not found" }, { status: 404 });
+      if (valid.length !== validatedData.spaceIds.length)
+        return NextResponse.json({ error: "One or more spaces not found" }, { status: 404 });
     }
 
     // Pre-compute holiday dates outside the transaction
@@ -315,7 +340,11 @@ export async function PATCH(
       ? parseDateOnly(validatedData.endDate)
       : existing.endDate;
     const holidayDates = holidayStartDate
-      ? await getEnabledHolidayDates(session.user.organizationId!, holidayStartDate, holidayEndDate || holidayStartDate)
+      ? await getEnabledHolidayDates(
+          session.user.organizationId!,
+          holidayStartDate,
+          holidayEndDate || holidayStartDate
+        )
       : new Set<string>();
 
     const program = await db.$transaction(async (tx) => {
@@ -326,32 +355,46 @@ export async function PATCH(
       if (!verified) throw new Error("Program not found or access denied");
 
       const updateData: Record<string, unknown> = {};
-      
+
       if (validatedData.name !== undefined) updateData.name = validatedData.name;
-      if (validatedData.description !== undefined) updateData.description = validatedData.description;
+      if (validatedData.description !== undefined)
+        updateData.description = validatedData.description;
       if (validatedData.color !== undefined) updateData.color = validatedData.color;
       if (validatedData.status !== undefined) updateData.status = validatedData.status;
-      if (validatedData.pricingModel !== undefined) updateData.pricingModel = validatedData.pricingModel;
+      if (validatedData.pricingModel !== undefined)
+        updateData.pricingModel = validatedData.pricingModel;
       if (validatedData.basePrice !== undefined) updateData.basePrice = validatedData.basePrice;
-      if (validatedData.perSessionPrice !== undefined) updateData.perSessionPrice = validatedData.perSessionPrice;
-      if (validatedData.billingInterval !== undefined) updateData.billingInterval = validatedData.billingInterval;
-      if (validatedData.recurringPrice !== undefined) updateData.recurringPrice = validatedData.recurringPrice;
-      if (validatedData.registrationType !== undefined) updateData.registrationType = validatedData.registrationType;
-      if (validatedData.startDate !== undefined) updateData.startDate = validatedData.startDate ? parseDateOnly(validatedData.startDate) : null;
-      if (validatedData.endDate !== undefined) updateData.endDate = validatedData.endDate ? parseDateOnly(validatedData.endDate) : null;
+      if (validatedData.perSessionPrice !== undefined)
+        updateData.perSessionPrice = validatedData.perSessionPrice;
+      if (validatedData.billingInterval !== undefined)
+        updateData.billingInterval = validatedData.billingInterval;
+      if (validatedData.recurringPrice !== undefined)
+        updateData.recurringPrice = validatedData.recurringPrice;
+      if (validatedData.registrationType !== undefined)
+        updateData.registrationType = validatedData.registrationType;
+      if (validatedData.startDate !== undefined)
+        updateData.startDate = validatedData.startDate
+          ? parseDateOnly(validatedData.startDate)
+          : null;
+      if (validatedData.endDate !== undefined)
+        updateData.endDate = validatedData.endDate ? parseDateOnly(validatedData.endDate) : null;
       if (validatedData.startTime !== undefined) updateData.startTime = validatedData.startTime;
       if (validatedData.duration !== undefined) updateData.duration = validatedData.duration;
       if (validatedData.rrule !== undefined) updateData.rrule = validatedData.rrule;
       if (validatedData.facilityId !== undefined) updateData.facilityId = validatedData.facilityId;
       if (validatedData.capacity !== undefined) updateData.capacity = validatedData.capacity;
-      if (validatedData.showCoachOnSite !== undefined) updateData.showCoachOnSite = validatedData.showCoachOnSite;
+      if (validatedData.showCoachOnSite !== undefined)
+        updateData.showCoachOnSite = validatedData.showCoachOnSite;
       if (validatedData.imageUrl !== undefined) updateData.imageUrl = validatedData.imageUrl;
       // Age and restriction fields
       if (validatedData.minAge !== undefined) updateData.minAge = validatedData.minAge;
       if (validatedData.maxAge !== undefined) updateData.maxAge = validatedData.maxAge;
-      if (validatedData.hasLevelRestriction !== undefined) updateData.hasLevelRestriction = validatedData.hasLevelRestriction;
-      if (validatedData.hasCapacityRestriction !== undefined) updateData.hasCapacityRestriction = validatedData.hasCapacityRestriction;
-      if (validatedData.hasAgeRestriction !== undefined) updateData.hasAgeRestriction = validatedData.hasAgeRestriction;
+      if (validatedData.hasLevelRestriction !== undefined)
+        updateData.hasLevelRestriction = validatedData.hasLevelRestriction;
+      if (validatedData.hasCapacityRestriction !== undefined)
+        updateData.hasCapacityRestriction = validatedData.hasCapacityRestriction;
+      if (validatedData.hasAgeRestriction !== undefined)
+        updateData.hasAgeRestriction = validatedData.hasAgeRestriction;
       if (validatedData.hasGenderRestriction !== undefined) {
         updateData.hasGenderRestriction = validatedData.hasGenderRestriction;
         updateData.allowedGenders = validatedData.hasGenderRestriction
@@ -360,25 +403,46 @@ export async function PATCH(
       } else if (validatedData.allowedGenders !== undefined) {
         updateData.allowedGenders = validatedData.allowedGenders;
       }
-      if (validatedData.hasMembershipRestriction !== undefined) updateData.hasMembershipRestriction = validatedData.hasMembershipRestriction;
-      if (validatedData.hasPassRestriction !== undefined) updateData.hasPassRestriction = validatedData.hasPassRestriction;
-      if (validatedData.hasWaiverRestriction !== undefined) updateData.hasWaiverRestriction = validatedData.hasWaiverRestriction;
-      if (validatedData.hasMedicalRequirement !== undefined) updateData.hasMedicalRequirement = validatedData.hasMedicalRequirement;
-      if (validatedData.hasFileRequirement !== undefined) updateData.hasFileRequirement = validatedData.hasFileRequirement;
-      if (validatedData.fileRequirementConfig !== undefined) updateData.fileRequirementConfig = validatedData.fileRequirementConfig;
-      if (validatedData.hasSpaceRestriction !== undefined) updateData.hasSpaceRestriction = validatedData.hasSpaceRestriction;
-      if (validatedData.spaceCapacityMode !== undefined) updateData.spaceCapacityMode = validatedData.spaceCapacityMode;
-      if (validatedData.waitlistEnabled !== undefined) updateData.waitlistEnabled = validatedData.waitlistEnabled;
-      if (validatedData.waitlistAutoPromote !== undefined) updateData.waitlistAutoPromote = validatedData.waitlistAutoPromote;
-      if (validatedData.waitlistCapacity !== undefined) updateData.waitlistCapacity = validatedData.waitlistCapacity;
+      if (validatedData.hasMembershipRestriction !== undefined)
+        updateData.hasMembershipRestriction = validatedData.hasMembershipRestriction;
+      if (validatedData.hasPassRestriction !== undefined)
+        updateData.hasPassRestriction = validatedData.hasPassRestriction;
+      if (validatedData.hasWaiverRestriction !== undefined)
+        updateData.hasWaiverRestriction = validatedData.hasWaiverRestriction;
+      if (validatedData.hasMedicalRequirement !== undefined)
+        updateData.hasMedicalRequirement = validatedData.hasMedicalRequirement;
+      if (validatedData.hasFileRequirement !== undefined)
+        updateData.hasFileRequirement = validatedData.hasFileRequirement;
+      if (validatedData.fileRequirementConfig !== undefined)
+        updateData.fileRequirementConfig = validatedData.fileRequirementConfig;
+      if (validatedData.hasSpaceRestriction !== undefined)
+        updateData.hasSpaceRestriction = validatedData.hasSpaceRestriction;
+      if (validatedData.spaceCapacityMode !== undefined)
+        updateData.spaceCapacityMode = validatedData.spaceCapacityMode;
+      if (validatedData.waitlistEnabled !== undefined)
+        updateData.waitlistEnabled = validatedData.waitlistEnabled;
+      if (validatedData.waitlistAutoPromote !== undefined)
+        updateData.waitlistAutoPromote = validatedData.waitlistAutoPromote;
+      if (validatedData.waitlistCapacity !== undefined)
+        updateData.waitlistCapacity = validatedData.waitlistCapacity;
       if (validatedData.glCodeId !== undefined) updateData.glCodeId = validatedData.glCodeId;
       if (validatedData.categoryId !== undefined) updateData.categoryId = validatedData.categoryId;
-      if (validatedData.registrationStartDate !== undefined) updateData.registrationStartDate = validatedData.registrationStartDate ? parseDateOnly(validatedData.registrationStartDate) : null;
-      if (validatedData.registrationStartTime !== undefined) updateData.registrationStartTime = validatedData.registrationStartTime;
-      if (validatedData.registrationEndDate !== undefined) updateData.registrationEndDate = validatedData.registrationEndDate ? parseDateOnly(validatedData.registrationEndDate) : null;
-      if (validatedData.registrationEndTime !== undefined) updateData.registrationEndTime = validatedData.registrationEndTime;
-      if (validatedData.registrationOpen !== undefined) updateData.registrationOpen = validatedData.registrationOpen;
-      if (validatedData.earlyAccessCode !== undefined) updateData.earlyAccessCode = validatedData.earlyAccessCode;
+      if (validatedData.registrationStartDate !== undefined)
+        updateData.registrationStartDate = validatedData.registrationStartDate
+          ? parseDateOnly(validatedData.registrationStartDate)
+          : null;
+      if (validatedData.registrationStartTime !== undefined)
+        updateData.registrationStartTime = validatedData.registrationStartTime;
+      if (validatedData.registrationEndDate !== undefined)
+        updateData.registrationEndDate = validatedData.registrationEndDate
+          ? parseDateOnly(validatedData.registrationEndDate)
+          : null;
+      if (validatedData.registrationEndTime !== undefined)
+        updateData.registrationEndTime = validatedData.registrationEndTime;
+      if (validatedData.registrationOpen !== undefined)
+        updateData.registrationOpen = validatedData.registrationOpen;
+      if (validatedData.earlyAccessCode !== undefined)
+        updateData.earlyAccessCode = validatedData.earlyAccessCode;
 
       // Update the program
       const updatedProgram = await tx.program.update({
@@ -388,10 +452,14 @@ export async function PATCH(
 
       // Regenerate instances if explicitly requested or if schedule fields changed
       const scheduleChanged =
-        (validatedData.startDate !== undefined && parseDateOnly(validatedData.startDate)?.getTime() !== existing.startDate?.getTime()) ||
-        (validatedData.endDate !== undefined && parseDateOnly(validatedData.endDate)?.getTime() !== existing.endDate?.getTime()) ||
-        (validatedData.startTime !== undefined && validatedData.startTime !== (existing as any).startTime) ||
-        (validatedData.duration !== undefined && validatedData.duration !== (existing as any).duration) ||
+        (validatedData.startDate !== undefined &&
+          parseDateOnly(validatedData.startDate)?.getTime() !== existing.startDate?.getTime()) ||
+        (validatedData.endDate !== undefined &&
+          parseDateOnly(validatedData.endDate)?.getTime() !== existing.endDate?.getTime()) ||
+        (validatedData.startTime !== undefined &&
+          validatedData.startTime !== (existing as any).startTime) ||
+        (validatedData.duration !== undefined &&
+          validatedData.duration !== (existing as any).duration) ||
         (validatedData.rrule !== undefined && validatedData.rrule !== (existing as any).rrule);
 
       if (validatedData.regenerateInstances || scheduleChanged) {
@@ -405,11 +473,11 @@ export async function PATCH(
         });
 
         // Generate new instances
-        const startDate = validatedData.startDate 
-          ? parseDateOnly(validatedData.startDate) 
+        const startDate = validatedData.startDate
+          ? parseDateOnly(validatedData.startDate)
           : existing.startDate;
-        const endDate = validatedData.endDate 
-          ? parseDateOnly(validatedData.endDate) 
+        const endDate = validatedData.endDate
+          ? parseDateOnly(validatedData.endDate)
           : existing.endDate;
         const startTime = validatedData.startTime ?? (existing as any).startTime;
         const duration = validatedData.duration ?? (existing as any).duration;
@@ -424,12 +492,12 @@ export async function PATCH(
             : [startDate];
 
           // Filter to only future dates, then exclude holidays
-          const futureDatesUnfiltered = allDates.filter(d => d >= new Date());
+          const futureDatesUnfiltered = allDates.filter((d) => d >= new Date());
           const futureDates = filterOutHolidayDates(futureDatesUnfiltered, holidayDates);
-          
+
           if (futureDates.length > 0) {
             await tx.programInstance.createMany({
-              data: futureDates.map(date => ({
+              data: futureDates.map((date) => ({
                 programId: id,
                 date,
                 startTime,
@@ -452,8 +520,8 @@ export async function PATCH(
                   where: { programId: id, date: { gte: new Date() } },
                   select: { id: true },
                 });
-                const instanceSpaceData = newInstances.flatMap(inst =>
-                  programSpaces.map(ps => ({
+                const instanceSpaceData = newInstances.flatMap((inst) =>
+                  programSpaces.map((ps) => ({
                     programInstanceId: inst.id,
                     spaceId: ps.spaceId,
                   }))
@@ -476,7 +544,7 @@ export async function PATCH(
         // Create new requirements
         if (validatedData.levelRequirementIds.length > 0) {
           await tx.programLevelRequirement.createMany({
-            data: validatedData.levelRequirementIds.map(levelId => ({
+            data: validatedData.levelRequirementIds.map((levelId) => ({
               programId: id,
               levelId,
             })),
@@ -490,7 +558,7 @@ export async function PATCH(
           where: { id },
           data: {
             requiredMemberships: {
-              set: validatedData.membershipRequirementIds.map(membId => ({ id: membId })),
+              set: validatedData.membershipRequirementIds.map((membId) => ({ id: membId })),
             },
           },
         });
@@ -502,7 +570,7 @@ export async function PATCH(
           where: { id },
           data: {
             requiredPasses: {
-              set: validatedData.passRequirementIds.map(passId => ({ id: passId })),
+              set: validatedData.passRequirementIds.map((passId) => ({ id: passId })),
             },
           },
         });
@@ -515,7 +583,7 @@ export async function PATCH(
         });
         if (validatedData.waiverRequirementIds.length > 0) {
           await tx.programWaiverRequirement.createMany({
-            data: validatedData.waiverRequirementIds.map(waiverId => ({
+            data: validatedData.waiverRequirementIds.map((waiverId) => ({
               programId: id,
               waiverId,
             })),
@@ -544,7 +612,7 @@ export async function PATCH(
         });
         if (validatedData.staffAssignments.length > 0) {
           await tx.programStaff.createMany({
-            data: validatedData.staffAssignments.map(sa => ({
+            data: validatedData.staffAssignments.map((sa) => ({
               programId: id,
               memberId: sa.memberId,
               role: sa.role,
@@ -561,7 +629,7 @@ export async function PATCH(
         });
         if (validatedData.spaceIds.length > 0) {
           await tx.programSpace.createMany({
-            data: validatedData.spaceIds.map(spaceId => ({
+            data: validatedData.spaceIds.map((spaceId) => ({
               programId: id,
               spaceId,
             })),
@@ -578,14 +646,14 @@ export async function PATCH(
         });
 
         if (futureInstances.length > 0) {
-          const instanceIds = futureInstances.map(i => i.id);
+          const instanceIds = futureInstances.map((i) => i.id);
           await tx.programInstanceSpace.deleteMany({
             where: { programInstanceId: { in: instanceIds } },
           });
 
           if (validatedData.spaceIds.length > 0) {
-            const instanceSpaceData = futureInstances.flatMap(inst =>
-              validatedData.spaceIds!.map(spaceId => ({
+            const instanceSpaceData = futureInstances.flatMap((inst) =>
+              validatedData.spaceIds!.map((spaceId) => ({
                 programInstanceId: inst.id,
                 spaceId,
               }))
@@ -678,16 +746,10 @@ export async function PATCH(
     return NextResponse.json(program);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error updating program:", error);
-    return NextResponse.json(
-      { error: "Failed to update program" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update program" }, { status: 500 });
   }
 }
 
@@ -743,9 +805,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting program:", error);
-    return NextResponse.json(
-      { error: "Failed to delete program" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete program" }, { status: 500 });
   }
 }

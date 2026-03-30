@@ -35,11 +35,7 @@ export async function POST(request: NextRequest) {
 
     const normalized = normalizePhoneNumber(phone);
 
-    const verified = await validateVerificationCode(
-      normalized,
-      code,
-      "PHONE_VERIFICATION"
-    );
+    const verified = await validateVerificationCode(normalized, code, "PHONE_VERIFICATION");
 
     if (!verified) {
       return NextResponse.json(
@@ -70,15 +66,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ verified: true, user });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error verifying phone code:", error);
-    return NextResponse.json(
-      { error: "Verification failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Verification failed" }, { status: 500 });
   }
 }

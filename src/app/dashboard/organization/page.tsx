@@ -1,17 +1,5 @@
-import { redirect } from "next/navigation"
+import { redirect } from "next/navigation";
 
 export default function OrganizationPage() {
-  redirect("/dashboard/organization/overview")
+  redirect("/dashboard/organization/overview");
 }
-
-
-
-
-
-
-
-
-
-
-
-

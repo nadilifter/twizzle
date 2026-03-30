@@ -12,7 +12,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CalendarDays, Clock, MapPin, Building2, Trophy, ClipboardList, Repeat } from "lucide-react";
+import {
+  CalendarDays,
+  Clock,
+  MapPin,
+  Building2,
+  Trophy,
+  ClipboardList,
+  Repeat,
+} from "lucide-react";
 import { format, parseISO, isToday, isTomorrow, isThisWeek } from "date-fns";
 
 interface ScheduleEvent {
@@ -204,7 +212,9 @@ export default function SchedulePage() {
             return (
               <div key={dateKey}>
                 <div className="flex items-center gap-2 mb-3">
-                  <h2 className={`text-sm font-semibold ${isCurrentDay ? "text-primary" : "text-muted-foreground"}`}>
+                  <h2
+                    className={`text-sm font-semibold ${isCurrentDay ? "text-primary" : "text-muted-foreground"}`}
+                  >
                     {heading}
                   </h2>
                   {isCurrentDay && (
@@ -217,14 +227,18 @@ export default function SchedulePage() {
                   {dayEvents.map((event) => {
                     const cfg = typeConfig[event.type];
                     const TypeIcon = cfg.icon;
-                    const initials = `${event.athleteFirstName?.[0] || ""}${event.athleteLastName?.[0] || ""}`.toUpperCase();
+                    const initials =
+                      `${event.athleteFirstName?.[0] || ""}${event.athleteLastName?.[0] || ""}`.toUpperCase();
 
                     return (
                       <Card key={event.id} className="hover:shadow-sm transition-shadow">
                         <CardContent className="p-4">
                           <div className="flex items-start gap-3">
                             <Avatar className="w-9 h-9 shrink-0 mt-0.5">
-                              <AvatarImage src={event.athleteAvatar || undefined} alt={`${event.athleteFirstName} ${event.athleteLastName}`} />
+                              <AvatarImage
+                                src={event.athleteAvatar || undefined}
+                                alt={`${event.athleteFirstName} ${event.athleteLastName}`}
+                              />
                               <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
                                 {initials}
                               </AvatarFallback>
@@ -232,7 +246,10 @@ export default function SchedulePage() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
                                 <span className="font-medium text-sm truncate">{event.title}</span>
-                                <Badge variant={cfg.variant} className="text-[10px] px-1.5 py-0 shrink-0">
+                                <Badge
+                                  variant={cfg.variant}
+                                  className="text-[10px] px-1.5 py-0 shrink-0"
+                                >
                                   <TypeIcon className="w-2.5 h-2.5 mr-0.5" />
                                   {cfg.label}
                                 </Badge>

@@ -10,14 +10,11 @@ const TOKEN_EXPIRATION_MS = 60 * 60 * 1000;
 
 /**
  * POST /api/superadmin/users/[id]/send-password-reset
- * 
+ *
  * Allows superadmins to send a password reset email to any user.
  * Requires superadmin access.
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.isSuperAdmin) {
@@ -33,10 +30,7 @@ export async function POST(
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Generate a reset token
@@ -80,9 +74,6 @@ export async function POST(
     });
   } catch (error) {
     console.error("Error sending password reset email:", error);
-    return NextResponse.json(
-      { error: "Failed to send password reset email" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to send password reset email" }, { status: 500 });
   }
 }

@@ -12,10 +12,7 @@ const createBulkDiscountSchema = z.object({
 });
 
 // GET /api/programs/[id]/bulk-discounts - List all bulk discounts for a program
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -51,10 +48,7 @@ export async function GET(
 }
 
 // POST /api/programs/[id]/bulk-discounts - Create a new bulk discount
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -107,7 +101,9 @@ export async function POST(
 
     if (existingDiscount) {
       return NextResponse.json(
-        { error: `A ${validatedData.type} discount for quantity ${validatedData.minQuantity} already exists` },
+        {
+          error: `A ${validatedData.type} discount for quantity ${validatedData.minQuantity} already exists`,
+        },
         { status: 400 }
       );
     }

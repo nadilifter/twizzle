@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { getScopedDb } from "@/lib/db";
-import type { FacilityActivityItem, FacilityActivitySort, FacilityActivityType } from "@/types/facilities";
+import type {
+  FacilityActivityItem,
+  FacilityActivitySort,
+  FacilityActivityType,
+} from "@/types/facilities";
 
 const ACTIVITY_SORTS: FacilityActivitySort[] = [
   "date_asc",
@@ -12,7 +16,12 @@ const ACTIVITY_SORTS: FacilityActivitySort[] = [
   "type_desc",
 ];
 
-const ACTIVITY_TYPES: FacilityActivityType[] = ["event", "program", "program_instance", "competition"];
+const ACTIVITY_TYPES: FacilityActivityType[] = [
+  "event",
+  "program",
+  "program_instance",
+  "competition",
+];
 
 const RAW_FETCH_LIMIT = 300;
 
@@ -36,7 +45,7 @@ function parseActivityQuery(request: NextRequest) {
       .map((t) => t.trim().toLowerCase())
       .filter(Boolean);
     const valid = parts.filter((t): t is FacilityActivityType =>
-      ACTIVITY_TYPES.includes(t as FacilityActivityType),
+      ACTIVITY_TYPES.includes(t as FacilityActivityType)
     );
     if (valid.length > 0) {
       typesFilter = [...new Set(valid)];
@@ -48,7 +57,11 @@ function parseActivityQuery(request: NextRequest) {
   return { page, pageSize, sort, typesFilter, q };
 }
 
-function compareActivityItems(a: FacilityActivityItem, b: FacilityActivityItem, sort: FacilityActivitySort): number {
+function compareActivityItems(
+  a: FacilityActivityItem,
+  b: FacilityActivityItem,
+  sort: FacilityActivitySort
+): number {
   switch (sort) {
     case "date_desc":
       return new Date(b.date).getTime() - new Date(a.date).getTime();
@@ -57,19 +70,20 @@ function compareActivityItems(a: FacilityActivityItem, b: FacilityActivityItem, 
     case "name_desc":
       return b.name.localeCompare(a.name, undefined, { sensitivity: "base" });
     case "type_asc":
-      return a.type.localeCompare(b.type) || new Date(a.date).getTime() - new Date(b.date).getTime();
+      return (
+        a.type.localeCompare(b.type) || new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
     case "type_desc":
-      return b.type.localeCompare(a.type) || new Date(a.date).getTime() - new Date(b.date).getTime();
+      return (
+        b.type.localeCompare(a.type) || new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
     case "date_asc":
     default:
       return new Date(a.date).getTime() - new Date(b.date).getTime();
   }
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {

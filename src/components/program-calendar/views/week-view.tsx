@@ -17,8 +17,7 @@ import { EventPill, EventCard } from "../calendar-event";
 import type { CalendarEvent } from "../types";
 
 export function WeekView() {
-  const { currentDate, setCurrentDate, setViewMode, events } =
-    useCalendarContext();
+  const { currentDate, setCurrentDate, setViewMode, events } = useCalendarContext();
 
   // Generate week days
   const weekDays = useMemo(() => {
@@ -63,9 +62,7 @@ export function WeekView() {
               )}
               onClick={() => handleDayClick(day)}
             >
-              <div className="text-xs font-medium text-muted-foreground">
-                {format(day, "EEE")}
-              </div>
+              <div className="text-xs font-medium text-muted-foreground">{format(day, "EEE")}</div>
               <div
                 className={cn(
                   "text-lg w-8 h-8 flex items-center justify-center rounded-full mx-auto transition-colors",
@@ -88,10 +85,7 @@ export function WeekView() {
           return (
             <div
               key={day.toISOString()}
-              className={cn(
-                "p-2 overflow-y-auto",
-                isTodayDate && "bg-primary/5"
-              )}
+              className={cn("p-2 overflow-y-auto", isTodayDate && "bg-primary/5")}
             >
               <div className="space-y-1">
                 {dayEvents.length > 0 ? (
@@ -99,9 +93,7 @@ export function WeekView() {
                     <EventPill key={event.id} event={event} showTime={true} />
                   ))
                 ) : (
-                  <div className="text-xs text-muted-foreground text-center py-4">
-                    No sessions
-                  </div>
+                  <div className="text-xs text-muted-foreground text-center py-4">No sessions</div>
                 )}
               </div>
             </div>
@@ -136,13 +128,9 @@ export function WeekView() {
                 </div>
                 <div className="space-y-2 pl-10">
                   {dayEvents.length > 0 ? (
-                    dayEvents.map((event) => (
-                      <EventCard key={event.id} event={event} />
-                    ))
+                    dayEvents.map((event) => <EventCard key={event.id} event={event} />)
                   ) : (
-                    <p className="text-xs text-muted-foreground py-2">
-                      No sessions
-                    </p>
+                    <p className="text-xs text-muted-foreground py-2">No sessions</p>
                   )}
                 </div>
               </div>

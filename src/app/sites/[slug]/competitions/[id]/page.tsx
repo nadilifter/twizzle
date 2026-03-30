@@ -1,35 +1,42 @@
-import React from "react"
-import Link from "next/link"
-import { db } from "@/lib/db"
-import { notFound } from "next/navigation"
-import { format } from "date-fns"
-import { Trophy, CalendarDays, MapPin, Clock, Ban, Hourglass } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import { getRegistrationStatus } from "@/lib/registration-utils"
-import { CompetitionRegistrationFlow } from "@/components/sites/competition-registration-flow"
-import { LocationMap } from "@/components/location-map"
-import type { FileRequirementConfig } from "@/types/file-requirements"
-import { getHeroContrastStyles } from "@/lib/color-utils"
+import React from "react";
+import Link from "next/link";
+import { db } from "@/lib/db";
+import { notFound } from "next/navigation";
+import { format } from "date-fns";
+import { Trophy, CalendarDays, MapPin, Clock, Ban, Hourglass } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { getRegistrationStatus } from "@/lib/registration-utils";
+import { CompetitionRegistrationFlow } from "@/components/sites/competition-registration-flow";
+import { LocationMap } from "@/components/location-map";
+import type { FileRequirementConfig } from "@/types/file-requirements";
+import { getHeroContrastStyles } from "@/lib/color-utils";
 
 export default async function CompetitionDetailPage({
   params,
   searchParams,
 }: {
-  params: { slug: string; id: string }
-  searchParams: { code?: string }
+  params: { slug: string; id: string };
+  searchParams: { code?: string };
 }) {
   const config = await db.websiteConfig.findUnique({
     where: { subdomain: params.slug },
     include: { organization: true },
-  })
+  });
 
-  if (!config || !config.showCompetitions) return notFound()
+  if (!config || !config.showCompetitions) return notFound();
 
   const competition = await db.competition.findUnique({
     where: { id: params.id },
     include: {
       facility: {
-        select: { id: true, name: true, city: true, stateProvince: true, latitude: true, longitude: true },
+        select: {
+          id: true,
+          name: true,
+          city: true,
+          stateProvince: true,
+          latitude: true,
+          longitude: true,
+        },
       },
       categories: {
         where: { isActive: true },
@@ -50,31 +57,33 @@ export default async function CompetitionDetailPage({
         select: { id: true, name: true },
       },
     },
-  })
+  });
 
   if (
     !competition ||
     competition.organizationId !== config.organizationId ||
     competition.publishStatus !== "LIVE"
   ) {
-    return notFound()
+    return notFound();
   }
 
-  const primaryColor = config.primaryColor || "#000000"
+  const primaryColor = config.primaryColor || "#000000";
 
-  const earlyAccessCode = searchParams.code || null
-  const registrationStatus = getRegistrationStatus(competition)
-  const hasValidEarlyAccess = earlyAccessCode !== null && competition.earlyAccessCode !== null && earlyAccessCode === competition.earlyAccessCode
-  const canRegister = registrationStatus === "open" || hasValidEarlyAccess
+  const earlyAccessCode = searchParams.code || null;
+  const registrationStatus = getRegistrationStatus(competition);
+  const hasValidEarlyAccess =
+    earlyAccessCode !== null &&
+    competition.earlyAccessCode !== null &&
+    earlyAccessCode === competition.earlyAccessCode;
+  const canRegister = registrationStatus === "open" || hasValidEarlyAccess;
 
-  const startDate = new Date(competition.startDate)
-  const endDate = new Date(competition.endDate)
-  const sameDay =
-    format(startDate, "yyyy-MM-dd") === format(endDate, "yyyy-MM-dd")
+  const startDate = new Date(competition.startDate);
+  const endDate = new Date(competition.endDate);
+  const sameDay = format(startDate, "yyyy-MM-dd") === format(endDate, "yyyy-MM-dd");
 
   const locationLabel = competition.facility
     ? `${competition.facility.name}${competition.facility.city ? `, ${competition.facility.city}` : ""}`
-    : [competition.city, competition.stateProvince].filter(Boolean).join(", ") || null
+    : [competition.city, competition.stateProvince].filter(Boolean).join(", ") || null;
 
   // Serialize for client component
   const serializedCompetition = {
@@ -145,9 +154,9 @@ export default async function CompetitionDetailPage({
       pricePerEvent: Number(t.pricePerEvent),
       displayOrder: t.displayOrder,
     })),
-  }
+  };
 
-  const hero = getHeroContrastStyles(primaryColor)
+  const hero = getHeroContrastStyles(primaryColor);
 
   return (
     <div className="min-h-screen">
@@ -163,9 +172,7 @@ export default async function CompetitionDetailPage({
             <div className="flex items-center gap-3">
               <Trophy className="h-8 w-8" />
               <div>
-                <h1 className="text-4xl font-bold tracking-tight">
-                  {competition.name}
-                </h1>
+                <h1 className="text-4xl font-bold tracking-tight">{competition.name}</h1>
                 {competition.programCategory && (
                   <Link href={`/register?category=${competition.programCategory.id}`}>
                     <Badge variant="secondary" className="mt-1">
@@ -176,12 +183,18 @@ export default async function CompetitionDetailPage({
               </div>
             </div>
             {registrationStatus === "closed" ? (
-              <Badge variant="outline" className="shrink-0 text-sm px-3 py-1.5 gap-1.5 bg-gray-500 text-white border-gray-500 shadow-lg">
+              <Badge
+                variant="outline"
+                className="shrink-0 text-sm px-3 py-1.5 gap-1.5 bg-gray-500 text-white border-gray-500 shadow-lg"
+              >
                 <Ban className="h-4 w-4" />
                 Registration Closed
               </Badge>
             ) : registrationStatus === "scheduled" && !hasValidEarlyAccess ? (
-              <Badge variant="outline" className="shrink-0 text-sm px-3 py-1.5 gap-1.5 bg-blue-500 text-white border-blue-500 shadow-lg">
+              <Badge
+                variant="outline"
+                className="shrink-0 text-sm px-3 py-1.5 gap-1.5 bg-blue-500 text-white border-blue-500 shadow-lg"
+              >
                 <Hourglass className="h-4 w-4" />
                 {competition.registrationStartDate
                   ? `Opens ${format(new Date(competition.registrationStartDate), "MMM d")}`
@@ -222,9 +235,9 @@ export default async function CompetitionDetailPage({
 
       {/* Venue Map */}
       {(() => {
-        const lat = competition.facility?.latitude ?? competition.latitude
-        const lng = competition.facility?.longitude ?? competition.longitude
-        if (lat == null || lng == null) return null
+        const lat = competition.facility?.latitude ?? competition.latitude;
+        const lng = competition.facility?.longitude ?? competition.longitude;
+        if (lat == null || lng == null) return null;
         return (
           <section className="mx-auto w-full max-w-4xl px-4 pt-8 md:px-8">
             <h2 className="text-xl font-semibold mb-3">Venue</h2>
@@ -238,7 +251,7 @@ export default async function CompetitionDetailPage({
               />
             </div>
           </section>
-        )
+        );
       })()}
 
       {/* Registration Flow */}
@@ -254,9 +267,7 @@ export default async function CompetitionDetailPage({
           <div className="rounded-lg border bg-muted/30 p-8 text-center">
             <Ban className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
             <h3 className="text-lg font-semibold mb-2">Registration Closed</h3>
-            <p className="text-muted-foreground">
-              Registration for this competition has closed.
-            </p>
+            <p className="text-muted-foreground">Registration for this competition has closed.</p>
           </div>
         ) : (
           <div className="rounded-lg border bg-muted/30 p-8 text-center">
@@ -271,5 +282,5 @@ export default async function CompetitionDetailPage({
         )}
       </section>
     </div>
-  )
+  );
 }

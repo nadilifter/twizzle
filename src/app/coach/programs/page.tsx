@@ -5,13 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
-  GraduationCap, 
-  Users, 
-  CalendarDays, 
-  Star,
-  User,
-} from "lucide-react";
+import { GraduationCap, Users, CalendarDays, Star, User } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { sanitizeHtml } from "@/lib/sanitize";
 
@@ -81,7 +75,9 @@ export default function CoachProgramsPage() {
       <div className="space-y-6">
         <div>
           <h2 className="text-lg font-semibold mb-2">My Programs</h2>
-          <p className="text-sm text-muted-foreground mb-4">Programs you are assigned to as a coach</p>
+          <p className="text-sm text-muted-foreground mb-4">
+            Programs you are assigned to as a coach
+          </p>
         </div>
         <div className="grid gap-4">
           {[1, 2, 3].map((i) => (
@@ -133,7 +129,8 @@ export default function CoachProgramsPage() {
             <GraduationCap className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">No Programs Assigned</h3>
             <p className="text-sm text-muted-foreground">
-              You haven&apos;t been assigned to any programs yet. Contact your administrator to get assigned to programs.
+              You haven&apos;t been assigned to any programs yet. Contact your administrator to get
+              assigned to programs.
             </p>
           </CardContent>
         </Card>

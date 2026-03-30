@@ -12,10 +12,7 @@ const updateInvoiceSchema = z.object({
 });
 
 // GET /api/invoices/[id]
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -59,18 +56,12 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error fetching invoice:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch invoice" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch invoice" }, { status: 500 });
   }
 }
 
 // PATCH /api/invoices/[id]
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -109,7 +100,9 @@ export async function PATCH(
         where: { id },
         data: {
           ...validatedData,
-          dueDate: validatedData.dueDate ? parseDateOnly(validatedData.dueDate) ?? undefined : undefined,
+          dueDate: validatedData.dueDate
+            ? (parseDateOnly(validatedData.dueDate) ?? undefined)
+            : undefined,
         },
         include: {
           lineItems: true,
@@ -145,19 +138,13 @@ export async function PATCH(
     return NextResponse.json(invoice);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     if (error?.message === "Not found") {
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
     console.error("Error updating invoice:", error);
-    return NextResponse.json(
-      { error: "Failed to update invoice" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update invoice" }, { status: 500 });
   }
 }
 
@@ -205,10 +192,7 @@ export async function DELETE(
 
     // Only allow deletion of draft invoices
     if (existing.status !== "DRAFT") {
-      return NextResponse.json(
-        { error: "Only draft invoices can be deleted" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Only draft invoices can be deleted" }, { status: 400 });
     }
 
     const scopedDb = getScopedDb(session.user.organizationId);
@@ -217,9 +201,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting invoice:", error);
-    return NextResponse.json(
-      { error: "Failed to delete invoice" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete invoice" }, { status: 500 });
   }
 }

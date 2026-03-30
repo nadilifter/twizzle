@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { EventStepper } from "../components/event-stepper"
-import { ArrowLeft } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
+import { EventStepper } from "../components/event-stepper";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function NewEventPage() {
   return (
@@ -16,13 +16,11 @@ export default function NewEventPage() {
         </Button>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Create Event</h1>
-          <p className="text-muted-foreground">
-            Set up a new event for your organization.
-          </p>
+          <p className="text-muted-foreground">Set up a new event for your organization.</p>
         </div>
       </div>
 
       <EventStepper />
     </div>
-  )
+  );
 }

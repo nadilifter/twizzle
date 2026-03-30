@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { checkFeatureGate } from "@/lib/feature-resolver";
 import { z } from "zod";
-import {
-  listConversations,
-  getOrCreateConversation,
-} from "@/lib/conversation-service";
+import { listConversations, getOrCreateConversation } from "@/lib/conversation-service";
 import { db } from "@/lib/db";
 
 // GET /api/chat/conversations - List conversations
@@ -26,9 +23,10 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const validStatuses = ["OPEN", "CLOSED", "ARCHIVED"] as const;
     const rawStatus = searchParams.get("status");
-    const status = rawStatus && validStatuses.includes(rawStatus as any)
-      ? (rawStatus as typeof validStatuses[number])
-      : undefined;
+    const status =
+      rawStatus && validStatuses.includes(rawStatus as any)
+        ? (rawStatus as (typeof validStatuses)[number])
+        : undefined;
     const search = searchParams.get("search") || undefined;
     const page = Math.max(1, parseInt(searchParams.get("page") || "1") || 1);
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50") || 50));
@@ -43,10 +41,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error fetching conversations:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch conversations" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch conversations" }, { status: 500 });
   }
 }
 
@@ -137,11 +132,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const conversationId = await getOrCreateConversation(
-      organizationId,
-      userId,
-      channel
-    );
+    const conversationId = await getOrCreateConversation(organizationId, userId, channel);
 
     return NextResponse.json({
       success: true,
@@ -155,9 +146,6 @@ export async function POST(request: NextRequest) {
       );
     }
     console.error("Error creating conversation:", error);
-    return NextResponse.json(
-      { error: "Failed to create conversation" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create conversation" }, { status: 500 });
   }
 }

@@ -1,19 +1,13 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { 
-  Plus, 
-  Search, 
+  Plus,
+  Search,
   PlayCircle,
   Video,
   Loader2,
@@ -22,10 +16,10 @@ import {
   Users,
   LayoutGrid,
   List,
-} from "lucide-react"
-import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
-import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+} from "lucide-react";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Table,
   TableBody,
@@ -33,7 +27,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
   Sheet,
   SheetContent,
@@ -42,7 +36,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet"
+} from "@/components/ui/sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,32 +46,38 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { Skeleton } from "@/components/ui/skeleton"
-import { toast } from "sonner"
-import { api } from "@/lib/api-client"
-import type { Skill, Level } from "@/types/evaluations"
+} from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import { api } from "@/lib/api-client";
+import type { Skill, Level } from "@/types/evaluations";
 
 interface OrgSport {
-  id: string
-  name: string
-  slug: string
+  id: string;
+  name: string;
+  slug: string;
 }
 
-const DEFAULT_CATEGORIES = ["Floor", "Bars", "Beam", "Vault", "Trampoline", "General"]
+const DEFAULT_CATEGORIES = ["Floor", "Bars", "Beam", "Vault", "Trampoline", "General"];
 
 interface SkillFormData {
-  name: string
-  category: string
-  description: string
-  levelId: string
-  minAge: string
-  maxAge: string
-  videoUrl: string
-  imageUrl: string
+  name: string;
+  category: string;
+  description: string;
+  levelId: string;
+  minAge: string;
+  maxAge: string;
+  videoUrl: string;
+  imageUrl: string;
 }
 
 const initialFormData: SkillFormData = {
@@ -89,97 +89,97 @@ const initialFormData: SkillFormData = {
   maxAge: "",
   videoUrl: "",
   imageUrl: "",
-}
+};
 
 export default function SkillsPage() {
-  const [skills, setSkills] = useState<Skill[]>([])
-  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES)
-  const [isLoading, setIsLoading] = useState(true)
-  const [search, setSearch] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("All")
-  const [levelFilter, setLevelFilter] = useState("")
-  const [levels, setLevels] = useState<Level[]>([])
-  const [viewMode, setViewMode] = useState<"grid" | "table">("grid")
-  
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  const [isLoading, setIsLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [levelFilter, setLevelFilter] = useState("");
+  const [levels, setLevels] = useState<Level[]>([]);
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+
   // Form state
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [isEditOpen, setIsEditOpen] = useState(false)
-  const [isViewOpen, setIsViewOpen] = useState(false)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null)
-  const [formData, setFormData] = useState<SkillFormData>(initialFormData)
-  const [isSaving, setIsSaving] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
+  const [formData, setFormData] = useState<SkillFormData>(initialFormData);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch skills
   const fetchSkills = useCallback(async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      const params: Record<string, string> = {}
-      if (search) params.search = search
-      if (selectedCategory !== "All") params.category = selectedCategory
-      if (levelFilter) params.levelId = levelFilter
+      const params: Record<string, string> = {};
+      if (search) params.search = search;
+      if (selectedCategory !== "All") params.category = selectedCategory;
+      if (levelFilter) params.levelId = levelFilter;
 
       const response = await api.get<{
-        data: Skill[]
-        categories: string[]
-        total: number
-      }>("/api/skills", params)
-      
-      setSkills(response.data)
+        data: Skill[];
+        categories: string[];
+        total: number;
+      }>("/api/skills", params);
+
+      setSkills(response.data);
       if (response.categories?.length > 0) {
-        setCategories(["All", ...response.categories])
+        setCategories(["All", ...response.categories]);
       }
     } catch (error) {
-      console.error("Error fetching skills:", error)
-      toast.error("Failed to load skills")
+      console.error("Error fetching skills:", error);
+      toast.error("Failed to load skills");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [search, selectedCategory, levelFilter])
+  }, [search, selectedCategory, levelFilter]);
 
   // Organization sports context
-  const [orgSports, setOrgSports] = useState<OrgSport[]>([])
+  const [orgSports, setOrgSports] = useState<OrgSport[]>([]);
 
   // Fetch levels and org sports
   useEffect(() => {
     async function loadLevels() {
       try {
-        const response = await api.get<Level[]>("/api/levels")
-        setLevels(response)
+        const response = await api.get<Level[]>("/api/levels");
+        setLevels(response);
       } catch (error) {
-        console.error("Error fetching levels:", error)
+        console.error("Error fetching levels:", error);
       }
     }
     async function loadOrgSports() {
       try {
-        const response = await fetch("/api/organization/sports")
+        const response = await fetch("/api/organization/sports");
         if (response.ok) {
-          setOrgSports(await response.json())
+          setOrgSports(await response.json());
         }
       } catch (error) {
-        console.error("Error fetching org sports:", error)
+        console.error("Error fetching org sports:", error);
       }
     }
-    loadLevels()
-    loadOrgSports()
-  }, [])
+    loadLevels();
+    loadOrgSports();
+  }, []);
 
   useEffect(() => {
     const debounce = setTimeout(() => {
-      fetchSkills()
-    }, 300)
-    return () => clearTimeout(debounce)
-  }, [fetchSkills])
+      fetchSkills();
+    }, 300);
+    return () => clearTimeout(debounce);
+  }, [fetchSkills]);
 
   // Handle create skill
   const handleCreate = async () => {
     if (!formData.name.trim() || !formData.category) {
-      toast.error("Please fill in required fields")
-      return
+      toast.error("Please fill in required fields");
+      return;
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       await api.post("/api/skills", {
         name: formData.name,
@@ -190,28 +190,28 @@ export default function SkillsPage() {
         maxAge: formData.maxAge ? parseInt(formData.maxAge) : undefined,
         videoUrl: formData.videoUrl || undefined,
         imageUrl: formData.imageUrl || undefined,
-      })
+      });
 
-      toast.success("Skill created successfully")
-      setIsCreateOpen(false)
-      setFormData(initialFormData)
-      fetchSkills()
+      toast.success("Skill created successfully");
+      setIsCreateOpen(false);
+      setFormData(initialFormData);
+      fetchSkills();
     } catch (error) {
-      console.error("Error creating skill:", error)
-      toast.error("Failed to create skill")
+      console.error("Error creating skill:", error);
+      toast.error("Failed to create skill");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   // Handle update skill
   const handleUpdate = async () => {
     if (!selectedSkill || !formData.name.trim() || !formData.category) {
-      toast.error("Please fill in required fields")
-      return
+      toast.error("Please fill in required fields");
+      return;
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       await api.put(`/api/skills/${selectedSkill.id}`, {
         name: formData.name,
@@ -222,47 +222,46 @@ export default function SkillsPage() {
         maxAge: formData.maxAge ? parseInt(formData.maxAge) : null,
         videoUrl: formData.videoUrl || null,
         imageUrl: formData.imageUrl || null,
-      })
+      });
 
-      toast.success("Skill updated successfully")
-      setIsEditOpen(false)
-      setSelectedSkill(null)
-      setFormData(initialFormData)
-      fetchSkills()
+      toast.success("Skill updated successfully");
+      setIsEditOpen(false);
+      setSelectedSkill(null);
+      setFormData(initialFormData);
+      fetchSkills();
     } catch (error) {
-      console.error("Error updating skill:", error)
-      toast.error("Failed to update skill")
+      console.error("Error updating skill:", error);
+      toast.error("Failed to update skill");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   // Handle delete skill
   const handleDelete = async () => {
-    if (!selectedSkill) return
+    if (!selectedSkill) return;
 
-    setIsDeleting(true)
+    setIsDeleting(true);
     try {
-      await api.delete(`/api/skills/${selectedSkill.id}`)
+      await api.delete(`/api/skills/${selectedSkill.id}`);
 
-      toast.success("Skill deleted successfully")
-      setIsDeleteDialogOpen(false)
-      setSelectedSkill(null)
-      fetchSkills()
+      toast.success("Skill deleted successfully");
+      setIsDeleteDialogOpen(false);
+      setSelectedSkill(null);
+      fetchSkills();
     } catch (error: unknown) {
-      console.error("Error deleting skill:", error)
-      const errorMessage = error instanceof Error && 'message' in error 
-        ? error.message 
-        : "Failed to delete skill"
-      toast.error(errorMessage)
+      console.error("Error deleting skill:", error);
+      const errorMessage =
+        error instanceof Error && "message" in error ? error.message : "Failed to delete skill";
+      toast.error(errorMessage);
     } finally {
-      setIsDeleting(false)
+      setIsDeleting(false);
     }
-  }
+  };
 
   // Open edit sheet
   const openEdit = (skill: Skill) => {
-    setSelectedSkill(skill)
+    setSelectedSkill(skill);
     setFormData({
       name: skill.name,
       category: skill.category,
@@ -272,44 +271,42 @@ export default function SkillsPage() {
       maxAge: skill.maxAge?.toString() || "",
       videoUrl: skill.videoUrl || "",
       imageUrl: skill.imageUrl || "",
-    })
-    setIsEditOpen(true)
-  }
+    });
+    setIsEditOpen(true);
+  };
 
   // Open view sheet
   const openView = (skill: Skill) => {
-    setSelectedSkill(skill)
-    setIsViewOpen(true)
-  }
+    setSelectedSkill(skill);
+    setIsViewOpen(true);
+  };
 
   // Filtered skills
   const filteredSkills = skills.filter((skill) => {
     if (selectedCategory !== "All" && skill.category !== selectedCategory) {
-      return false
+      return false;
     }
-    return true
-  })
+    return true;
+  });
 
   // Get age range display
   const getAgeRange = (skill: Skill) => {
     if (skill.minAge && skill.maxAge) {
-      return `Ages ${skill.minAge}-${skill.maxAge}`
+      return `Ages ${skill.minAge}-${skill.maxAge}`;
     } else if (skill.minAge) {
-      return `Ages ${skill.minAge}+`
+      return `Ages ${skill.minAge}+`;
     } else if (skill.maxAge) {
-      return `Ages up to ${skill.maxAge}`
+      return `Ages up to ${skill.maxAge}`;
     }
-    return null
-  }
+    return null;
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Skills Database</h1>
-          <p className="text-muted-foreground">
-            Library of skills, drills, and progressions.
-          </p>
+          <p className="text-muted-foreground">Library of skills, drills, and progressions.</p>
           {orgSports.length > 0 && (
             <div className="flex items-center gap-1.5 mt-1">
               <span className="text-xs text-muted-foreground">Sports:</span>
@@ -331,9 +328,7 @@ export default function SkillsPage() {
           <SheetContent>
             <SheetHeader>
               <SheetTitle>Add New Skill</SheetTitle>
-              <SheetDescription>
-                Add a new skill to the training database.
-              </SheetDescription>
+              <SheetDescription>Add a new skill to the training database.</SheetDescription>
             </SheetHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
@@ -356,7 +351,9 @@ export default function SkillsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {DEFAULT_CATEGORIES.map((cat) => (
-                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      <SelectItem key={cat} value={cat}>
+                        {cat}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -365,7 +362,9 @@ export default function SkillsPage() {
                 <Label htmlFor="difficulty">Level</Label>
                 <Select
                   value={formData.levelId || "none"}
-                  onValueChange={(value) => setFormData({ ...formData, levelId: value === "none" ? "" : value })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, levelId: value === "none" ? "" : value })
+                  }
                 >
                   <SelectTrigger id="difficulty">
                     <SelectValue placeholder="Select a level" />
@@ -373,7 +372,9 @@ export default function SkillsPage() {
                   <SelectContent>
                     <SelectItem value="none">No level</SelectItem>
                     {levels.map((level) => (
-                      <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>
+                      <SelectItem key={level.id} value={level.id}>
+                        {level.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -456,14 +457,19 @@ export default function SkillsPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Select value={levelFilter || "all"} onValueChange={(v) => setLevelFilter(v === "all" ? "" : v)}>
+        <Select
+          value={levelFilter || "all"}
+          onValueChange={(v) => setLevelFilter(v === "all" ? "" : v)}
+        >
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="All Levels" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Levels</SelectItem>
             {levels.map((level) => (
-              <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>
+              <SelectItem key={level.id} value={level.id}>
+                {level.name}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -485,7 +491,9 @@ export default function SkillsPage() {
       <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="space-y-4">
         <ResponsiveTabsList value={selectedCategory} onValueChange={setSelectedCategory}>
           {categories.map((category) => (
-            <TabsTrigger key={category} value={category}>{category}</TabsTrigger>
+            <TabsTrigger key={category} value={category}>
+              {category}
+            </TabsTrigger>
           ))}
         </ResponsiveTabsList>
 
@@ -543,7 +551,14 @@ export default function SkillsPage() {
                       {skill.skillLevel && (
                         <Badge
                           className="absolute top-2 right-2"
-                          style={skill.skillLevel.color ? { backgroundColor: `${skill.skillLevel.color}20`, color: skill.skillLevel.color } : undefined}
+                          style={
+                            skill.skillLevel.color
+                              ? {
+                                  backgroundColor: `${skill.skillLevel.color}20`,
+                                  color: skill.skillLevel.color,
+                                }
+                              : undefined
+                          }
                           variant={skill.skillLevel.color ? "outline" : "secondary"}
                         >
                           {skill.skillLevel.name}
@@ -560,9 +575,7 @@ export default function SkillsPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        {getAgeRange(skill) && (
-                          <span>{getAgeRange(skill)}</span>
-                        )}
+                        {getAgeRange(skill) && <span>{getAgeRange(skill)}</span>}
                       </div>
                     </CardContent>
                   </Card>
@@ -607,7 +620,14 @@ export default function SkillsPage() {
                         <TableCell>
                           {skill.skillLevel ? (
                             <Badge
-                              style={skill.skillLevel.color ? { backgroundColor: `${skill.skillLevel.color}20`, color: skill.skillLevel.color } : undefined}
+                              style={
+                                skill.skillLevel.color
+                                  ? {
+                                      backgroundColor: `${skill.skillLevel.color}20`,
+                                      color: skill.skillLevel.color,
+                                    }
+                                  : undefined
+                              }
                               variant={skill.skillLevel.color ? "outline" : "secondary"}
                             >
                               {skill.skillLevel.name}
@@ -625,8 +645,8 @@ export default function SkillsPage() {
                               variant="ghost"
                               size="icon"
                               onClick={(e) => {
-                                e.stopPropagation()
-                                openEdit(skill)
+                                e.stopPropagation();
+                                openEdit(skill);
                               }}
                             >
                               <Pencil className="h-4 w-4" />
@@ -635,9 +655,9 @@ export default function SkillsPage() {
                               variant="ghost"
                               size="icon"
                               onClick={(e) => {
-                                e.stopPropagation()
-                                setSelectedSkill(skill)
-                                setIsDeleteDialogOpen(true)
+                                e.stopPropagation();
+                                setSelectedSkill(skill);
+                                setIsDeleteDialogOpen(true);
                               }}
                             >
                               <Trash2 className="h-4 w-4" />
@@ -662,7 +682,8 @@ export default function SkillsPage() {
               <SheetHeader>
                 <SheetTitle>{selectedSkill.name}</SheetTitle>
                 <SheetDescription>
-                  {selectedSkill.category}{selectedSkill.skillLevel ? ` • ${selectedSkill.skillLevel.name}` : ""}
+                  {selectedSkill.category}
+                  {selectedSkill.skillLevel ? ` • ${selectedSkill.skillLevel.name}` : ""}
                   {getAgeRange(selectedSkill) && ` • ${getAgeRange(selectedSkill)}`}
                 </SheetDescription>
               </SheetHeader>
@@ -675,11 +696,7 @@ export default function SkillsPage() {
                       className="w-full h-full object-contain"
                     />
                   ) : selectedSkill.videoUrl ? (
-                    <video
-                      src={selectedSkill.videoUrl}
-                      controls
-                      className="w-full h-full"
-                    />
+                    <video src={selectedSkill.videoUrl} controls className="w-full h-full" />
                   ) : (
                     <Video className="h-16 w-16 text-muted" />
                   )}
@@ -697,8 +714,8 @@ export default function SkillsPage() {
                     variant="outline"
                     className="flex-1"
                     onClick={() => {
-                      setIsViewOpen(false)
-                      openEdit(selectedSkill)
+                      setIsViewOpen(false);
+                      openEdit(selectedSkill);
                     }}
                   >
                     <Pencil className="mr-2 h-4 w-4" />
@@ -708,8 +725,8 @@ export default function SkillsPage() {
                     variant="destructive"
                     className="flex-1"
                     onClick={() => {
-                      setIsViewOpen(false)
-                      setIsDeleteDialogOpen(true)
+                      setIsViewOpen(false);
+                      setIsDeleteDialogOpen(true);
                     }}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
@@ -727,9 +744,7 @@ export default function SkillsPage() {
         <SheetContent>
           <SheetHeader>
             <SheetTitle>Edit Skill</SheetTitle>
-            <SheetDescription>
-              Update skill details.
-            </SheetDescription>
+            <SheetDescription>Update skill details.</SheetDescription>
           </SheetHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
@@ -752,7 +767,9 @@ export default function SkillsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {DEFAULT_CATEGORIES.map((cat) => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -761,7 +778,9 @@ export default function SkillsPage() {
               <Label htmlFor="edit-difficulty">Level</Label>
               <Select
                 value={formData.levelId || "none"}
-                onValueChange={(value) => setFormData({ ...formData, levelId: value === "none" ? "" : value })}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, levelId: value === "none" ? "" : value })
+                }
               >
                 <SelectTrigger id="edit-difficulty">
                   <SelectValue placeholder="Select a level" />
@@ -769,7 +788,9 @@ export default function SkillsPage() {
                 <SelectContent>
                   <SelectItem value="none">No level</SelectItem>
                   {levels.map((level) => (
-                    <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>
+                    <SelectItem key={level.id} value={level.id}>
+                      {level.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -846,7 +867,8 @@ export default function SkillsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Skill</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{selectedSkill?.name}&quot;? This action cannot be undone.
+              Are you sure you want to delete &quot;{selectedSkill?.name}&quot;? This action cannot
+              be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -863,5 +885,5 @@ export default function SkillsPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
+  );
 }

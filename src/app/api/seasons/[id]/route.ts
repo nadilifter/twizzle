@@ -17,10 +17,7 @@ const updateSeasonSchema = z.object({
 });
 
 // GET /api/seasons/[id]
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -51,18 +48,12 @@ export async function GET(
     return NextResponse.json(season);
   } catch (error) {
     console.error("Error fetching season:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch season" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch season" }, { status: 500 });
   }
 }
 
 // PATCH /api/seasons/[id]
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -87,17 +78,15 @@ export async function PATCH(
     const updateData: Record<string, unknown> = {};
 
     if (validatedData.name !== undefined) updateData.name = validatedData.name;
-    if (validatedData.description !== undefined)
-      updateData.description = validatedData.description;
+    if (validatedData.description !== undefined) updateData.description = validatedData.description;
     if (validatedData.color !== undefined) updateData.color = validatedData.color;
-    if (validatedData.status !== undefined)
-      updateData.status = validatedData.status;
-    if (validatedData.isRecurring !== undefined)
-      updateData.isRecurring = validatedData.isRecurring;
+    if (validatedData.status !== undefined) updateData.status = validatedData.status;
+    if (validatedData.isRecurring !== undefined) updateData.isRecurring = validatedData.isRecurring;
 
     if (validatedData.startDate !== undefined) {
       const parsed = parseDateOnly(validatedData.startDate);
-      if (!parsed) return NextResponse.json({ error: "Invalid start date format" }, { status: 400 });
+      if (!parsed)
+        return NextResponse.json({ error: "Invalid start date format" }, { status: 400 });
       updateData.startDate = parsed;
     }
     if (validatedData.endDate !== undefined) {
@@ -126,24 +115,15 @@ export async function PATCH(
     return NextResponse.json(season);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error updating season:", error);
-    return NextResponse.json(
-      { error: "Failed to update season" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update season" }, { status: 500 });
   }
 }
 
 // DELETE /api/seasons/[id]
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -176,9 +156,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting season:", error);
-    return NextResponse.json(
-      { error: "Failed to delete season" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete season" }, { status: 500 });
   }
 }

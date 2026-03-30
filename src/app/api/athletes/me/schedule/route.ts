@@ -45,8 +45,27 @@ function resolveRruleDates(
     const d = String(programStartDate.getUTCDate()).padStart(2, "0");
     const rruleWithDtstart = `DTSTART:${y}${m}${d}T120000Z\nRRULE:${cleanRrule}`;
     const rule = RRule.fromString(rruleWithDtstart);
-    const startBound = new Date(Date.UTC(effectiveStart.getUTCFullYear(), effectiveStart.getUTCMonth(), effectiveStart.getUTCDate(), 0, 0, 0));
-    const endBound = new Date(Date.UTC(effectiveEnd.getUTCFullYear(), effectiveEnd.getUTCMonth(), effectiveEnd.getUTCDate(), 23, 59, 59, 999));
+    const startBound = new Date(
+      Date.UTC(
+        effectiveStart.getUTCFullYear(),
+        effectiveStart.getUTCMonth(),
+        effectiveStart.getUTCDate(),
+        0,
+        0,
+        0
+      )
+    );
+    const endBound = new Date(
+      Date.UTC(
+        effectiveEnd.getUTCFullYear(),
+        effectiveEnd.getUTCMonth(),
+        effectiveEnd.getUTCDate(),
+        23,
+        59,
+        59,
+        999
+      )
+    );
     return rule.between(startBound, endBound, true);
   } catch (error) {
     console.error("Error parsing RRULE:", error);
@@ -72,9 +91,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Support superadmin impersonation: use viewingAsUserId if set
-    const userId = (session.user.isSuperAdmin && session.user.viewingAsUserId)
-      ? session.user.viewingAsUserId
-      : session.user.id;
+    const userId =
+      session.user.isSuperAdmin && session.user.viewingAsUserId
+        ? session.user.viewingAsUserId
+        : session.user.id;
 
     const { searchParams } = new URL(request.url);
     const daysParam = Math.min(Math.max(parseInt(searchParams.get("days") || "30") || 30, 1), 90);
@@ -85,7 +105,10 @@ export async function GET(request: NextRequest) {
     // Get all athletes for this user (same logic as /api/athletes/me)
     const userGuardianLinks = await db.athleteGuardian.findMany({
       where: { userId },
-      select: { athleteId: true, athlete: { select: { id: true, firstName: true, lastName: true, avatar: true } } },
+      select: {
+        athleteId: true,
+        athlete: { select: { id: true, firstName: true, lastName: true, avatar: true } },
+      },
     });
 
     const selfAthletes = await db.athlete.findMany({
@@ -93,7 +116,10 @@ export async function GET(request: NextRequest) {
       select: { id: true, firstName: true, lastName: true, avatar: true },
     });
 
-    const athleteMap = new Map<string, { id: string; firstName: string; lastName: string; avatar: string | null }>();
+    const athleteMap = new Map<
+      string,
+      { id: string; firstName: string; lastName: string; avatar: string | null }
+    >();
     for (const link of userGuardianLinks) {
       athleteMap.set(link.athlete.id, link.athlete);
     }

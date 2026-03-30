@@ -1,24 +1,21 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getAuthSession } from "@/lib/auth"
-import { db } from "@/lib/db"
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthSession } from "@/lib/auth";
+import { db } from "@/lib/db";
 
 /**
  * POST /api/payment-methods/[id]/default
- * 
+ *
  * Set a payment method as the default for the current organization
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getAuthSession()
-    
+    const session = await getAuthSession();
+
     if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await params
+    const { id } = await params;
 
     // Find the payment method and verify ownership
     const paymentMethod = await db.organizationPaymentMethod.findFirst({
@@ -27,15 +24,15 @@ export async function POST(
         organizationId: session.user.organizationId,
         isActive: true,
       },
-    })
+    });
 
     if (!paymentMethod) {
-      return NextResponse.json({ error: "Payment method not found" }, { status: 404 })
+      return NextResponse.json({ error: "Payment method not found" }, { status: 404 });
     }
 
     // Already default
     if (paymentMethod.isDefault) {
-      return NextResponse.json({ success: true })
+      return NextResponse.json({ success: true });
     }
 
     // Update in a transaction
@@ -58,14 +55,11 @@ export async function POST(
         where: { organizationId: session.user.organizationId },
         data: { adyenRecurringDetailRef: paymentMethod.storedPaymentMethodId },
       }),
-    ])
+    ]);
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error setting default payment method:", error)
-    return NextResponse.json(
-      { error: "Failed to set default payment method" },
-      { status: 500 }
-    )
+    console.error("Error setting default payment method:", error);
+    return NextResponse.json({ error: "Failed to set default payment method" }, { status: 500 });
   }
 }

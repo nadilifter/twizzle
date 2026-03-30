@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getAuthSession } from "@/lib/auth"
-import { checkFeatureGate } from "@/lib/feature-resolver"
-import { db, getScopedDb } from "@/lib/db"
-import { parseDateOnly } from "@/lib/date-utils"
-import { geocodeAddress } from "@/lib/geocode"
-import { z } from "zod"
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthSession } from "@/lib/auth";
+import { checkFeatureGate } from "@/lib/feature-resolver";
+import { db, getScopedDb } from "@/lib/db";
+import { parseDateOnly } from "@/lib/date-utils";
+import { geocodeAddress } from "@/lib/geocode";
+import { z } from "zod";
 
 const competitionInclude = {
   facility: { select: { id: true, name: true, city: true, stateProvince: true } },
@@ -32,7 +32,7 @@ const competitionInclude = {
       teams: true,
     },
   },
-}
+};
 
 /**
  * GET /api/competitions
@@ -40,22 +40,22 @@ const competitionInclude = {
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const organizationId = session.user.organizationId
+    const organizationId = session.user.organizationId;
     if (!organizationId) {
-      return NextResponse.json({ error: "No organization" }, { status: 400 })
+      return NextResponse.json({ error: "No organization" }, { status: 400 });
     }
 
-    const gateResponse = await checkFeatureGate(organizationId, "competitions")
-    if (gateResponse) return gateResponse
+    const gateResponse = await checkFeatureGate(organizationId, "competitions");
+    if (gateResponse) return gateResponse;
 
-    const { searchParams } = new URL(request.url)
-    const status = searchParams.get("status")
-    const seasonId = searchParams.get("seasonId")
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get("status");
+    const seasonId = searchParams.get("seasonId");
 
     const competitions = await db.competition.findMany({
       where: {
@@ -70,21 +70,21 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy: { startDate: "desc" },
-    })
+    });
 
-    return NextResponse.json(competitions)
+    return NextResponse.json(competitions);
   } catch (error) {
-    console.error("Error fetching competitions:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch competitions" },
-      { status: 500 }
-    )
+    console.error("Error fetching competitions:", error);
+    return NextResponse.json({ error: "Failed to fetch competitions" }, { status: 500 });
   }
 }
 
 const createCompetitionSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color").optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color")
+    .optional(),
   competitionType: z.string().min(1, "Competition type is required"),
 
   // Location
@@ -122,33 +122,45 @@ const createCompetitionSchema = z.object({
   fileRequirementConfig: z.any().optional().nullable(),
 
   // Results configuration per category
-  categoryResults: z.array(z.object({
-    // Legacy template refs
-    combinationEntryId: z.string().nullable().optional(),
-    individualEntryId: z.string().nullable().optional(),
-    // Sport-specific refs
-    sportEventId: z.string().nullable().optional(),
-    ageCategoryId: z.string().nullable().optional(),
-    // Result config (can be auto-derived from sportEvent if sport-specific)
-    resultType: z.enum(["TIME", "DISTANCE", "HEIGHT", "SCORE", "PLACEMENT"]).optional(),
-    sortDirection: z.enum(["ASC", "DESC"]).default("ASC"),
-    precision: z.number().int().min(0).max(6).optional(),
-    seedMarkRequired: z.boolean().default(false),
-    submissionMode: z.enum(["NONE", "VERIFIED_RESULT", "MANUAL_ENTRY"]).default("NONE"),
-    qualifyingMark: z.number().nullable().optional(),
-    isTeamEvent: z.boolean().default(false),
-    teamSize: z.number().int().min(2).nullable().optional(),
-    displayOrder: z.number().int().default(0),
-  })).optional().default([]),
+  categoryResults: z
+    .array(
+      z.object({
+        // Legacy template refs
+        combinationEntryId: z.string().nullable().optional(),
+        individualEntryId: z.string().nullable().optional(),
+        // Sport-specific refs
+        sportEventId: z.string().nullable().optional(),
+        ageCategoryId: z.string().nullable().optional(),
+        // Result config (can be auto-derived from sportEvent if sport-specific)
+        resultType: z.enum(["TIME", "DISTANCE", "HEIGHT", "SCORE", "PLACEMENT"]).optional(),
+        sortDirection: z.enum(["ASC", "DESC"]).default("ASC"),
+        precision: z.number().int().min(0).max(6).optional(),
+        seedMarkRequired: z.boolean().default(false),
+        submissionMode: z.enum(["NONE", "VERIFIED_RESULT", "MANUAL_ENTRY"]).default("NONE"),
+        qualifyingMark: z.number().nullable().optional(),
+        isTeamEvent: z.boolean().default(false),
+        teamSize: z.number().int().min(2).nullable().optional(),
+        displayOrder: z.number().int().default(0),
+      })
+    )
+    .optional()
+    .default([]),
 
   // Pricing
-  pricingMode: z.enum(["FREE", "PER_COMPETITION", "PER_EVENT", "TIERED", "PER_CATEGORY"]).default("FREE"),
+  pricingMode: z
+    .enum(["FREE", "PER_COMPETITION", "PER_EVENT", "TIERED", "PER_CATEGORY"])
+    .default("FREE"),
   entryFee: z.number().min(0).nullable().optional(),
-  pricingTiers: z.array(z.object({
-    minEvents: z.number().int().min(1),
-    maxEvents: z.number().int().min(1).nullable().optional(),
-    pricePerEvent: z.number().min(0),
-  })).optional().default([]),
+  pricingTiers: z
+    .array(
+      z.object({
+        minEvents: z.number().int().min(1),
+        maxEvents: z.number().int().min(1).nullable().optional(),
+        pricePerEvent: z.number().min(0),
+      })
+    )
+    .optional()
+    .default([]),
   categoryPrices: z.record(z.string(), z.number().min(0)).optional().default({}),
 
   // Publishing
@@ -167,7 +179,7 @@ const createCompetitionSchema = z.object({
   glCodeId: z.string().optional().nullable(),
   seasonId: z.string().optional().nullable(),
   categoryId: z.string().optional().nullable(),
-})
+});
 
 /**
  * POST /api/competitions
@@ -175,37 +187,37 @@ const createCompetitionSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const organizationId = session.user.organizationId
+    const organizationId = session.user.organizationId;
     if (!organizationId) {
-      return NextResponse.json({ error: "No organization" }, { status: 400 })
+      return NextResponse.json({ error: "No organization" }, { status: 400 });
     }
 
-    const gateResponse = await checkFeatureGate(organizationId, "competitions")
-    if (gateResponse) return gateResponse
+    const gateResponse = await checkFeatureGate(organizationId, "competitions");
+    if (gateResponse) return gateResponse;
 
-    const body = await request.json()
-    const data = createCompetitionSchema.parse(body)
+    const body = await request.json();
+    const data = createCompetitionSchema.parse(body);
 
     // Determine initial status based on publishStatus
-    let status: "DRAFT" | "PUBLISHED" | "REGISTRATION_OPEN" = "DRAFT"
+    let status: "DRAFT" | "PUBLISHED" | "REGISTRATION_OPEN" = "DRAFT";
     if (data.publishStatus === "LIVE") {
-      status = "REGISTRATION_OPEN"
+      status = "REGISTRATION_OPEN";
     } else if (data.publishStatus === "SCHEDULED") {
-      status = "DRAFT"
+      status = "DRAFT";
     }
 
     if (data.facilityId) {
       const facility = await db.facility.findFirst({
         where: { id: data.facilityId, organizationId },
         select: { id: true },
-      })
+      });
       if (!facility) {
-        return NextResponse.json({ error: "Facility not found" }, { status: 404 })
+        return NextResponse.json({ error: "Facility not found" }, { status: 404 });
       }
     }
 
@@ -213,9 +225,9 @@ export async function POST(request: NextRequest) {
       const levels = await db.level.findMany({
         where: { id: { in: data.levelRequirementIds }, organizationId },
         select: { id: true },
-      })
+      });
       if (levels.length !== data.levelRequirementIds.length) {
-        return NextResponse.json({ error: "One or more levels not found" }, { status: 404 })
+        return NextResponse.json({ error: "One or more levels not found" }, { status: 404 });
       }
     }
 
@@ -223,9 +235,9 @@ export async function POST(request: NextRequest) {
       const instances = await db.membershipInstance.findMany({
         where: { id: { in: data.membershipRequirementIds }, group: { organizationId } },
         select: { id: true },
-      })
+      });
       if (instances.length !== data.membershipRequirementIds.length) {
-        return NextResponse.json({ error: "One or more memberships not found" }, { status: 404 })
+        return NextResponse.json({ error: "One or more memberships not found" }, { status: 404 });
       }
     }
 
@@ -233,15 +245,18 @@ export async function POST(request: NextRequest) {
       const waivers = await db.waiver.findMany({
         where: { id: { in: data.waiverRequirementIds }, organizationId },
         select: { id: true },
-      })
+      });
       if (waivers.length !== data.waiverRequirementIds.length) {
-        return NextResponse.json({ error: "One or more waivers not found" }, { status: 404 })
+        return NextResponse.json({ error: "One or more waivers not found" }, { status: 404 });
       }
     }
 
     if (data.categoryId) {
       const scopedDb = getScopedDb(organizationId);
-      const cat = await scopedDb.category.findUnique({ where: { id: data.categoryId }, select: { id: true } });
+      const cat = await scopedDb.category.findUnique({
+        where: { id: data.categoryId },
+        select: { id: true },
+      });
       if (!cat) return NextResponse.json({ error: "Category not found" }, { status: 404 });
     }
 
@@ -253,7 +268,7 @@ export async function POST(request: NextRequest) {
           stateProvince: data.stateProvince,
           postalCode: data.postalCode,
           country: data.country,
-        })
+        });
 
     const competition = await db.competition.create({
       data: {
@@ -304,94 +319,103 @@ export async function POST(request: NextRequest) {
 
         // Pricing
         pricingMode: data.pricingMode,
-        entryFee: data.pricingMode === "PER_COMPETITION" || data.pricingMode === "PER_EVENT"
-          ? data.entryFee ?? null
-          : null,
+        entryFee:
+          data.pricingMode === "PER_COMPETITION" || data.pricingMode === "PER_EVENT"
+            ? (data.entryFee ?? null)
+            : null,
 
         // Registration window
         registrationOpen: data.registrationOpen,
-        registrationStartDate: data.registrationStartDate ? parseDateOnly(data.registrationStartDate) : null,
+        registrationStartDate: data.registrationStartDate
+          ? parseDateOnly(data.registrationStartDate)
+          : null,
         registrationStartTime: data.registrationStartTime,
-        registrationEndDate: data.registrationEndDate ? parseDateOnly(data.registrationEndDate) : null,
+        registrationEndDate: data.registrationEndDate
+          ? parseDateOnly(data.registrationEndDate)
+          : null,
         registrationEndTime: data.registrationEndTime,
         earlyAccessCode: data.earlyAccessCode,
 
         // Publishing
         publishStatus: data.publishStatus,
-        scheduledGoLiveDate: data.scheduledGoLiveDate ? parseDateOnly(String(data.scheduledGoLiveDate)) : null,
+        scheduledGoLiveDate: data.scheduledGoLiveDate
+          ? parseDateOnly(String(data.scheduledGoLiveDate))
+          : null,
         scheduledGoLiveTime: data.scheduledGoLiveTime || null,
 
         // Pricing tiers (for TIERED mode)
-        pricingTiers: data.pricingMode === "TIERED" && data.pricingTiers.length > 0
-          ? {
-              create: data.pricingTiers.map((tier, i) => ({
-                minEvents: tier.minEvents,
-                maxEvents: tier.maxEvents ?? null,
-                pricePerEvent: tier.pricePerEvent,
-                displayOrder: i,
-              })),
-            }
-          : undefined,
+        pricingTiers:
+          data.pricingMode === "TIERED" && data.pricingTiers.length > 0
+            ? {
+                create: data.pricingTiers.map((tier, i) => ({
+                  minEvents: tier.minEvents,
+                  maxEvents: tier.maxEvents ?? null,
+                  pricePerEvent: tier.pricePerEvent,
+                  displayOrder: i,
+                })),
+              }
+            : undefined,
 
         // Create competition categories
         categories: {
-          create: await Promise.all(data.categoryResults.map(async (cat, index) => {
-            let resultType = cat.resultType
-            let sortDirection = cat.sortDirection
-            let precision = cat.precision
+          create: await Promise.all(
+            data.categoryResults.map(async (cat, index) => {
+              let resultType = cat.resultType;
+              let sortDirection = cat.sortDirection;
+              let precision = cat.precision;
 
-            // Auto-derive result config from sport event if using sport-specific refs
-            if (cat.sportEventId && !resultType) {
-              const sportEvent = await db.sportEvent.findUnique({
-                where: { id: cat.sportEventId },
-              })
-              if (sportEvent) {
-                resultType = sportEvent.resultType
-                sortDirection = sportEvent.sortDirection
-                precision = precision ?? sportEvent.defaultPrecision
+              // Auto-derive result config from sport event if using sport-specific refs
+              if (cat.sportEventId && !resultType) {
+                const sportEvent = await db.sportEvent.findUnique({
+                  where: { id: cat.sportEventId },
+                });
+                if (sportEvent) {
+                  resultType = sportEvent.resultType;
+                  sortDirection = sportEvent.sortDirection;
+                  precision = precision ?? sportEvent.defaultPrecision;
+                }
               }
-            }
 
-            // Look up per-category price if PER_CATEGORY pricing
-            const catKey = cat.sportEventId && cat.ageCategoryId
-              ? `${cat.sportEventId}:${cat.ageCategoryId}`
-              : cat.combinationEntryId || cat.individualEntryId || ""
-            const categoryPrice = data.pricingMode === "PER_CATEGORY" && data.categoryPrices[catKey] !== undefined
-              ? data.categoryPrices[catKey]
-              : null
+              // Look up per-category price if PER_CATEGORY pricing
+              const catKey =
+                cat.sportEventId && cat.ageCategoryId
+                  ? `${cat.sportEventId}:${cat.ageCategoryId}`
+                  : cat.combinationEntryId || cat.individualEntryId || "";
+              const categoryPrice =
+                data.pricingMode === "PER_CATEGORY" && data.categoryPrices[catKey] !== undefined
+                  ? data.categoryPrices[catKey]
+                  : null;
 
-            return {
-              combinationEntryId: cat.combinationEntryId || null,
-              individualEntryId: cat.individualEntryId || null,
-              sportEventId: cat.sportEventId || null,
-              ageCategoryId: cat.ageCategoryId || null,
-              resultType: resultType || "TIME",
-              sortDirection,
-              precision: precision ?? 3,
-              seedMarkRequired: cat.seedMarkRequired,
-              submissionMode: cat.submissionMode,
-              qualifyingMark: cat.qualifyingMark ?? null,
-              isTeamEvent: cat.isTeamEvent,
-              teamSize: cat.teamSize ?? null,
-              displayOrder: cat.displayOrder || index,
-              price: categoryPrice,
-            }
-          })),
+              return {
+                combinationEntryId: cat.combinationEntryId || null,
+                individualEntryId: cat.individualEntryId || null,
+                sportEventId: cat.sportEventId || null,
+                ageCategoryId: cat.ageCategoryId || null,
+                resultType: resultType || "TIME",
+                sortDirection,
+                precision: precision ?? 3,
+                seedMarkRequired: cat.seedMarkRequired,
+                submissionMode: cat.submissionMode,
+                qualifyingMark: cat.qualifyingMark ?? null,
+                isTeamEvent: cat.isTeamEvent,
+                teamSize: cat.teamSize ?? null,
+                displayOrder: cat.displayOrder || index,
+                price: categoryPrice,
+              };
+            })
+          ),
         },
       },
       include: competitionInclude,
-    })
+    });
 
-    return NextResponse.json(competition, { status: 201 })
+    return NextResponse.json(competition, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const message = error.issues?.[0]?.message || "Validation error"
-      return NextResponse.json({ error: message }, { status: 400 })
+      const message = error.issues?.[0]?.message || "Validation error";
+      return NextResponse.json({ error: message }, { status: 400 });
     }
-    console.error("Error creating competition:", error)
-    return NextResponse.json(
-      { error: "Failed to create competition" },
-      { status: 500 }
-    )
+    console.error("Error creating competition:", error);
+    return NextResponse.json({ error: "Failed to create competition" }, { status: 500 });
   }
 }

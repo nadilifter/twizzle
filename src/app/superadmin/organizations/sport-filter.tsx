@@ -1,36 +1,36 @@
-"use client"
+"use client";
 
-import { useRouter, usePathname } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 
 interface Sport {
-  id: string
-  name: string
-  slug: string
+  id: string;
+  name: string;
+  slug: string;
 }
 
 interface SportFilterProps {
-  sports: Sport[]
-  currentSport?: string
+  sports: Sport[];
+  currentSport?: string;
 }
 
 export function SportFilter({ sports, currentSport }: SportFilterProps) {
-  const router = useRouter()
-  const pathname = usePathname()
+  const router = useRouter();
+  const pathname = usePathname();
 
   const handleChange = (value: string) => {
     if (value === "all") {
-      router.push(pathname)
+      router.push(pathname);
     } else {
-      router.push(`${pathname}?sport=${value}`)
+      router.push(`${pathname}?sport=${value}`);
     }
-  }
+  };
 
   return (
     <Select value={currentSport || "all"} onValueChange={handleChange}>
@@ -46,5 +46,5 @@ export function SportFilter({ sports, currentSport }: SportFilterProps) {
         ))}
       </SelectContent>
     </Select>
-  )
+  );
 }

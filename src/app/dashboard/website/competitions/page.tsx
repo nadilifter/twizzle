@@ -1,47 +1,47 @@
-"use client"
+"use client";
 
-import React, { useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { toast } from "sonner"
-import { Loader2, Globe, Trophy, Type, FileText } from "lucide-react"
-import { Textarea } from "@/components/ui/textarea"
+import React, { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
+import { Loader2, Globe, Trophy, Type, FileText } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function CompetitionsMarketingPage() {
-  const [config, setConfig] = useState<any>({})
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [config, setConfig] = useState<any>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetch("/api/organization/website")
       .then((res) => res.json())
       .then((data) => {
         if (data.error) {
-          console.error("Website config error:", data.error)
-          setConfig({})
-          setLoading(false)
-          return
+          console.error("Website config error:", data.error);
+          setConfig({});
+          setLoading(false);
+          return;
         }
-        setConfig(data)
-        setLoading(false)
+        setConfig(data);
+        setLoading(false);
       })
       .catch((err) => {
-        console.error(err)
-        toast.error("Failed to load website configuration")
-        setLoading(false)
-      })
-  }, [])
+        console.error(err);
+        toast.error("Failed to load website configuration");
+        setLoading(false);
+      });
+  }, []);
 
   const updateConfig = (key: string, value: any) => {
-    setConfig((prev: any) => ({ ...prev, [key]: value }))
-  }
+    setConfig((prev: any) => ({ ...prev, [key]: value }));
+  };
 
   const handleSave = async () => {
-    setSaving(true)
+    setSaving(true);
     try {
       const res = await fetch("/api/organization/website", {
         method: "PUT",
@@ -52,24 +52,24 @@ export default function CompetitionsMarketingPage() {
           competitionsDescription: config.competitionsDescription,
           competitionsCtaText: config.competitionsCtaText,
         }),
-      })
-      if (!res.ok) throw new Error("Failed to save")
-      const data = await res.json()
-      setConfig(data)
-      toast.success("Marketing site settings saved")
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      const data = await res.json();
+      setConfig(data);
+      toast.success("Marketing site settings saved");
     } catch (error) {
-      toast.error("Failed to save changes")
+      toast.error("Failed to save changes");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-    )
+    );
   }
 
   return (
@@ -141,7 +141,8 @@ export default function CompetitionsMarketingPage() {
               onChange={(e) => updateConfig("competitionsHeading", e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              The main heading displayed at the top of the competitions page. Defaults to &quot;Competitions&quot;.
+              The main heading displayed at the top of the competitions page. Defaults to
+              &quot;Competitions&quot;.
             </p>
           </div>
 
@@ -172,11 +173,12 @@ export default function CompetitionsMarketingPage() {
               onChange={(e) => updateConfig("competitionsCtaText", e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              The text displayed on the registration button for each competition card. Defaults to &quot;Register Now&quot;.
+              The text displayed on the registration button for each competition card. Defaults to
+              &quot;Register Now&quot;.
             </p>
           </div>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

@@ -4,19 +4,21 @@ import { hashPassword, isUplifterEmail } from "@/lib/auth";
 import { z } from "zod";
 import { passwordSchema } from "@/lib/password";
 
-const signupSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  email: z.string().email("Invalid email address"),
-  password: passwordSchema,
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
-});
+const signupSchema = z
+  .object({
+    name: z.string().min(1, "Name is required"),
+    email: z.string().email("Invalid email address"),
+    password: passwordSchema,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
 /**
  * POST /api/sites/[slug]/signup
- * 
+ *
  * Register a new user via the marketing site.
  * Creates a user with PARENT role associated with the subdomain's organization.
  */
@@ -35,9 +37,9 @@ export async function POST(
     // Reject Uplifter staff emails - they must use Microsoft OAuth
     if (isUplifterEmail(email)) {
       return NextResponse.json(
-        { 
+        {
           error: "Uplifter staff should sign in with Microsoft instead.",
-          code: "UPLIFTER_EMAIL" 
+          code: "UPLIFTER_EMAIL",
         },
         { status: 400 }
       );
@@ -50,10 +52,7 @@ export async function POST(
     });
 
     if (!config || !config.isPublished) {
-      return NextResponse.json(
-        { error: "Organization not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
 
     const organizationId = config.organizationId;
@@ -66,9 +65,9 @@ export async function POST(
 
     if (existingUser) {
       return NextResponse.json(
-        { 
+        {
           error: "An account with this email already exists. Please log in instead.",
-          code: "USER_EXISTS" 
+          code: "USER_EXISTS",
         },
         { status: 400 }
       );
@@ -116,15 +115,9 @@ export async function POST(
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Marketing site signup error:", error);
-    return NextResponse.json(
-      { error: "Failed to create account" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create account" }, { status: 500 });
   }
 }

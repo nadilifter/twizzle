@@ -1,4 +1,4 @@
-import { FEATURE_LABELS, type FeatureKey } from "@/lib/feature-toggles"
+import { FEATURE_LABELS, type FeatureKey } from "@/lib/feature-toggles";
 
 /**
  * Server component that renders a full-page "Feature Unavailable" message.
@@ -26,14 +26,12 @@ export function FeatureUnavailablePage({ feature }: { feature: FeatureKey }) {
             <path d="m9.5 9.5 5 5" />
           </svg>
         </div>
-        <h1 className="text-2xl font-bold">
-          {FEATURE_LABELS[feature]} Not Available
-        </h1>
+        <h1 className="text-2xl font-bold">{FEATURE_LABELS[feature]} Not Available</h1>
         <p className="text-muted-foreground">
-          This feature is not included in your organization&apos;s current plan.
-          Please contact your administrator to upgrade.
+          This feature is not included in your organization&apos;s current plan. Please contact your
+          administrator to upgrade.
         </p>
       </div>
     </div>
-  )
+  );
 }

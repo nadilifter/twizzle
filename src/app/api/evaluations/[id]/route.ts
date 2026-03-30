@@ -8,7 +8,14 @@ import type { SkillAttemptStatus, ScoringType } from "@prisma/client";
 import { checkAndAwardAchievements } from "@/lib/services/achievement";
 
 const skillAttemptStatusEnum = z.enum(["NOT_ATTEMPTED", "ATTEMPTED", "SUCCEEDED"]);
-const evaluationStatusEnum = z.enum(["PENDING", "IN_PROGRESS", "PASS", "RETRY", "EXCELLENT", "SATISFACTORY"]);
+const evaluationStatusEnum = z.enum([
+  "PENDING",
+  "IN_PROGRESS",
+  "PASS",
+  "RETRY",
+  "EXCELLENT",
+  "SATISFACTORY",
+]);
 
 const skillRatingSchema = z.object({
   skillId: z.string().min(1),
@@ -53,7 +60,7 @@ async function updateAthleteSkillProgress(
   evaluationDate: Date
 ) {
   const now = new Date();
-  
+
   // Get existing progress record
   const existingProgress = await db.athleteSkillProgress.findUnique({
     where: {
@@ -79,7 +86,7 @@ async function updateAthleteSkillProgress(
         updateData.bestStatus = "ATTEMPTED";
       }
     }
-    
+
     if (attemptStatus === "SUCCEEDED" || passed) {
       updateData.successCount = existingProgress.successCount + 1;
       if (!existingProgress.firstSucceededAt) {
@@ -97,12 +104,12 @@ async function updateAthleteSkillProgress(
     // Create new progress record
     const isPassed = attemptStatus === "SUCCEEDED" || passed;
     const isAttempted = attemptStatus !== "NOT_ATTEMPTED" || passed;
-    
+
     await db.athleteSkillProgress.create({
       data: {
         athleteId,
         skillId,
-        bestStatus: isPassed ? "SUCCEEDED" : (isAttempted ? "ATTEMPTED" : "NOT_ATTEMPTED"),
+        bestStatus: isPassed ? "SUCCEEDED" : isAttempted ? "ATTEMPTED" : "NOT_ATTEMPTED",
         firstAttemptedAt: isAttempted ? evaluationDate : null,
         firstSucceededAt: isPassed ? evaluationDate : null,
         attemptCount: isAttempted ? 1 : 0,
@@ -115,10 +122,7 @@ async function updateAthleteSkillProgress(
 }
 
 // GET /api/evaluations/[id]
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -203,18 +207,12 @@ export async function GET(
     return NextResponse.json(evaluation);
   } catch (error) {
     console.error("Error fetching evaluation:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch evaluation" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch evaluation" }, { status: 500 });
   }
 }
 
 // PUT /api/evaluations/[id]
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -266,17 +264,22 @@ export async function PUT(
 
     // Track which skills had status changes for progress updates
     const previousRatings = new Map(
-      existingEvaluation.skillRatings.map((sr) => [sr.skillId, { attemptStatus: sr.attemptStatus, passed: sr.passed }])
+      existingEvaluation.skillRatings.map((sr) => [
+        sr.skillId,
+        { attemptStatus: sr.attemptStatus, passed: sr.passed },
+      ])
     );
 
     // Calculate passed status for each skill rating
     const skillRatingsWithPassed = skillRatings?.map((sr) => {
-      const passed = sr.passed ?? isSkillPassed(
-        scoringType,
-        sr.attemptStatus || "NOT_ATTEMPTED",
-        sr.pointScore,
-        passThreshold
-      );
+      const passed =
+        sr.passed ??
+        isSkillPassed(
+          scoringType,
+          sr.attemptStatus || "NOT_ATTEMPTED",
+          sr.pointScore,
+          passThreshold
+        );
       return { ...sr, passed };
     });
 
@@ -393,23 +396,22 @@ export async function PUT(
     // Only if evaluation is not PENDING
     const newStatus = validatedData.status || existingEvaluation.status;
     if (skillRatingsWithPassed && newStatus !== "PENDING" && evaluation) {
-      const evalDate = validatedData.date 
-        ? parseDateOnly(validatedData.date)! 
+      const evalDate = validatedData.date
+        ? parseDateOnly(validatedData.date)!
         : existingEvaluation.date;
-        
+
       for (const sr of skillRatingsWithPassed) {
         const previous = previousRatings.get(sr.skillId);
         const previousStatus = previous?.attemptStatus || "NOT_ATTEMPTED";
         const previousPassed = previous?.passed || false;
         const newAttemptStatus = sr.attemptStatus || "NOT_ATTEMPTED";
         const newPassed = sr.passed;
-        
+
         // Only update progress if status changed to something better
-        const statusImproved = (
+        const statusImproved =
           (newAttemptStatus !== "NOT_ATTEMPTED" && previousStatus === "NOT_ATTEMPTED") ||
           (newAttemptStatus === "SUCCEEDED" && previousStatus === "ATTEMPTED") ||
-          (newPassed && !previousPassed)
-        );
+          (newPassed && !previousPassed);
 
         if (statusImproved) {
           await updateAthleteSkillProgress(
@@ -513,16 +515,10 @@ export async function PUT(
     return NextResponse.json(evaluation);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error updating evaluation:", error);
-    return NextResponse.json(
-      { error: "Failed to update evaluation" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update evaluation" }, { status: 500 });
   }
 }
 
@@ -576,9 +572,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting evaluation:", error);
-    return NextResponse.json(
-      { error: "Failed to delete evaluation" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete evaluation" }, { status: 500 });
   }
 }

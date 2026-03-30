@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import * as React from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -9,35 +9,41 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-import { SearchIcon, DownloadIcon, FilterIcon, Loader2 } from "lucide-react"
-import { format } from "date-fns"
-import { toast } from "sonner"
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { SearchIcon, DownloadIcon, FilterIcon, Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { toast } from "sonner";
 
 interface Transaction {
-  id: string
-  pspReference: string
-  merchantRef: string | null
-  type: "PAYMENT" | "REFUND" | "CHARGEBACK" | "CAPTURE" | "CANCEL"
-  amount: number
-  currency: string
-  status: "AUTHORISED" | "CAPTURED" | "SETTLED" | "REFUSED" | "CANCELLED" | "ERROR" | "PENDING"
-  method: string | null
-  description: string | null
-  createdAt: string
-  settledAt: string | null
+  id: string;
+  pspReference: string;
+  merchantRef: string | null;
+  type: "PAYMENT" | "REFUND" | "CHARGEBACK" | "CAPTURE" | "CANCEL";
+  amount: number;
+  currency: string;
+  status: "AUTHORISED" | "CAPTURED" | "SETTLED" | "REFUSED" | "CANCELLED" | "ERROR" | "PENDING";
+  method: string | null;
+  description: string | null;
+  createdAt: string;
+  settledAt: string | null;
   payment?: {
-    id: string
-    amount: number
+    id: string;
+    amount: number;
     user?: {
-      id: string
-      name: string
-    }
-  } | null
+      id: string;
+      name: string;
+    };
+  } | null;
 }
 
 const statusVariants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -48,7 +54,7 @@ const statusVariants: Record<string, "default" | "secondary" | "destructive" | "
   REFUSED: "destructive",
   CANCELLED: "destructive",
   ERROR: "destructive",
-}
+};
 
 const statusLabels: Record<string, string> = {
   AUTHORISED: "Authorised",
@@ -58,46 +64,46 @@ const statusLabels: Record<string, string> = {
   CANCELLED: "Cancelled",
   ERROR: "Error",
   PENDING: "Pending",
-}
+};
 
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = React.useState<Transaction[]>([])
-  const [loading, setLoading] = React.useState(true)
-  const [search, setSearch] = React.useState("")
-  const [statusFilter, setStatusFilter] = React.useState("all")
+  const [transactions, setTransactions] = React.useState<Transaction[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [search, setSearch] = React.useState("");
+  const [statusFilter, setStatusFilter] = React.useState("all");
   const [stats, setStats] = React.useState({
     settledThisMonth: 0,
     transactionCount: 0,
-  })
+  });
 
   const fetchTransactions = React.useCallback(async () => {
     try {
-      const params = new URLSearchParams()
-      if (search) params.set("search", search)
-      if (statusFilter && statusFilter !== "all") params.set("status", statusFilter)
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      if (statusFilter && statusFilter !== "all") params.set("status", statusFilter);
 
-      const response = await fetch(`/api/transactions?${params.toString()}`)
-      if (!response.ok) throw new Error("Failed to fetch transactions")
+      const response = await fetch(`/api/transactions?${params.toString()}`);
+      if (!response.ok) throw new Error("Failed to fetch transactions");
 
-      const data = await response.json()
-      setTransactions(data.data)
-      setStats(data.stats)
+      const data = await response.json();
+      setTransactions(data.data);
+      setStats(data.stats);
     } catch (error) {
-      console.error("Error fetching transactions:", error)
-      toast.error("Failed to load transactions")
+      console.error("Error fetching transactions:", error);
+      toast.error("Failed to load transactions");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [search, statusFilter])
+  }, [search, statusFilter]);
 
   React.useEffect(() => {
-    const timeoutId = setTimeout(fetchTransactions, 300)
-    return () => clearTimeout(timeoutId)
-  }, [fetchTransactions])
+    const timeoutId = setTimeout(fetchTransactions, 300);
+    return () => clearTimeout(timeoutId);
+  }, [fetchTransactions]);
 
   const handleExport = () => {
     // Generate CSV export
-    const headers = ["Date", "PSP Reference", "Description", "Method", "Status", "Amount"]
+    const headers = ["Date", "PSP Reference", "Description", "Method", "Status", "Amount"];
     const rows = transactions.map((trx) => [
       format(new Date(trx.createdAt), "yyyy-MM-dd HH:mm"),
       trx.pspReference,
@@ -105,18 +111,18 @@ export default function TransactionsPage() {
       trx.method || "",
       trx.status,
       `$${Number(trx.amount).toFixed(2)}`,
-    ])
+    ]);
 
-    const csv = [headers, ...rows].map((row) => row.join(",")).join("\n")
-    const blob = new Blob([csv], { type: "text/csv" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `transactions-${format(new Date(), "yyyy-MM-dd")}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-    toast.success("Transactions exported")
-  }
+    const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `transactions-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Transactions exported");
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -142,7 +148,8 @@ export default function TransactionsPage() {
             Real-time transaction data from your payment terminals and online checkout.
             {stats.transactionCount > 0 && (
               <span className="block mt-1">
-                ${Number(stats.settledThisMonth).toFixed(2)} settled this month ({stats.transactionCount} transactions)
+                ${Number(stats.settledThisMonth).toFixed(2)} settled this month (
+                {stats.transactionCount} transactions)
               </span>
             )}
           </CardDescription>
@@ -225,5 +232,5 @@ export default function TransactionsPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

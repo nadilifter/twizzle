@@ -1,34 +1,46 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { ProgressiveImage } from "@/components/ui/progressive-image"
-import { ArrowRight } from "lucide-react"
+import Link from "next/link";
+import { ProgressiveImage } from "@/components/ui/progressive-image";
+import { ArrowRight } from "lucide-react";
 
 interface CategoryTile {
-  id: string
-  name: string
-  description: string | null
-  imageUrl: string | null
+  id: string;
+  name: string;
+  description: string | null;
+  imageUrl: string | null;
   _count: {
-    programs: number
-    events: number
-    competitions: number
-  }
+    programs: number;
+    events: number;
+    competitions: number;
+  };
 }
 
 interface CategoryTilesProps {
-  categories: CategoryTile[]
-  hasUncategorizedPrograms: boolean
-  primaryColor: string
+  categories: CategoryTile[];
+  hasUncategorizedPrograms: boolean;
+  primaryColor: string;
 }
 
-export function CategoryTiles({ categories, hasUncategorizedPrograms, primaryColor }: CategoryTilesProps) {
+export function CategoryTiles({
+  categories,
+  hasUncategorizedPrograms,
+  primaryColor,
+}: CategoryTilesProps) {
   const tiles = [
     ...categories,
     ...(hasUncategorizedPrograms
-      ? [{ id: "other", name: "Other Programs", description: "Browse additional programs", imageUrl: null, _count: { programs: 0, events: 0, competitions: 0 } }]
+      ? [
+          {
+            id: "other",
+            name: "Other Programs",
+            description: "Browse additional programs",
+            imageUrl: null,
+            _count: { programs: 0, events: 0, competitions: 0 },
+          },
+        ]
       : []),
-  ]
+  ];
 
   return (
     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -57,9 +69,7 @@ export function CategoryTiles({ categories, hasUncategorizedPrograms, primaryCol
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
             <div className="absolute bottom-0 left-0 right-0 p-5">
-              <h3 className="text-xl font-bold text-white drop-shadow-md">
-                {category.name}
-              </h3>
+              <h3 className="text-xl font-bold text-white drop-shadow-md">{category.name}</h3>
               {category.description && (
                 <p className="mt-1 text-sm text-white/80 line-clamp-2 drop-shadow-sm">
                   {category.description}
@@ -68,13 +78,11 @@ export function CategoryTiles({ categories, hasUncategorizedPrograms, primaryCol
             </div>
           </div>
           <div className="flex items-center justify-between p-4">
-            <span className="text-sm text-muted-foreground">
-              Browse programs
-            </span>
+            <span className="text-sm text-muted-foreground">Browse programs</span>
             <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
           </div>
         </Link>
       ))}
     </div>
-  )
+  );
 }

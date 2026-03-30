@@ -17,10 +17,7 @@ const updateEquipmentSchema = z.object({
 });
 
 // GET - Get a single piece of equipment
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -59,10 +56,7 @@ export async function GET(
 }
 
 // PATCH - Update equipment
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -100,10 +94,14 @@ export async function PATCH(
     const updateData: Record<string, unknown> = { ...validatedData };
 
     if (validatedData.purchaseDate !== undefined) {
-      updateData.purchaseDate = validatedData.purchaseDate ? parseDateOnly(validatedData.purchaseDate) : null;
+      updateData.purchaseDate = validatedData.purchaseDate
+        ? parseDateOnly(validatedData.purchaseDate)
+        : null;
     }
     if (validatedData.lastInspectionDate !== undefined) {
-      updateData.lastInspectionDate = validatedData.lastInspectionDate ? parseDateOnly(validatedData.lastInspectionDate) : null;
+      updateData.lastInspectionDate = validatedData.lastInspectionDate
+        ? parseDateOnly(validatedData.lastInspectionDate)
+        : null;
     }
 
     if (validatedData.facilityId === null) {

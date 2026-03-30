@@ -65,10 +65,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data: seasons, total, limit, offset });
   } catch (error) {
     console.error("Error fetching seasons:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch seasons" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch seasons" }, { status: 500 });
   }
 }
 
@@ -90,17 +87,11 @@ export async function POST(request: NextRequest) {
     const endDate = parseDateOnly(validatedData.endDate);
 
     if (!startDate || !endDate) {
-      return NextResponse.json(
-        { error: "Invalid date format" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
     }
 
     if (endDate <= startDate) {
-      return NextResponse.json(
-        { error: "End date must be after start date" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "End date must be after start date" }, { status: 400 });
     }
 
     const scopedDb = getScopedDb(session.user.organizationId);
@@ -131,15 +122,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(season);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating season:", error);
-    return NextResponse.json(
-      { error: "Failed to create season" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create season" }, { status: 500 });
   }
 }

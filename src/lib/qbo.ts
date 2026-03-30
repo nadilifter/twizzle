@@ -60,10 +60,7 @@ export function generateOAuthUrl(state: string): string {
   return provider.generateAuthUrl(state).toString();
 }
 
-export async function exchangeCodeForTokens(
-  code: string,
-  realmId: string
-): Promise<Token> {
+export async function exchangeCodeForTokens(code: string, realmId: string): Promise<Token> {
   const provider = createAuthProvider();
   return provider.exchangeCode(code, realmId);
 }
@@ -157,7 +154,7 @@ export async function getQboClient(connectionId: string): Promise<QboApiClient> 
       Authorization: `Bearer ${token.accessToken}`,
       Accept: "application/json",
       "Content-Type": "application/json",
-      ...(init.headers as Record<string, string> || {}),
+      ...((init.headers as Record<string, string>) || {}),
     };
 
     let response = await fetch(url, { ...init, headers });
@@ -181,8 +178,7 @@ export async function getQboClient(connectionId: string): Promise<QboApiClient> 
   }
 
   return {
-    get: <T = any>(endpoint: string) =>
-      request<T>(`${baseUrl}/${endpoint}`, { method: "GET" }),
+    get: <T = any>(endpoint: string) => request<T>(`${baseUrl}/${endpoint}`, { method: "GET" }),
 
     post: <T = any>(endpoint: string, body: any) =>
       request<T>(`${baseUrl}/${endpoint}`, {
@@ -192,13 +188,12 @@ export async function getQboClient(connectionId: string): Promise<QboApiClient> 
 
     query: async <T = any>(queryStr: string) => {
       const encoded = encodeURIComponent(queryStr);
-      const result = await request<any>(
-        `${baseUrl}/query?query=${encoded}`,
-        { method: "GET" }
-      );
-      return (result?.QueryResponse
-        ? Object.values(result.QueryResponse).find(Array.isArray) as T[] || []
-        : []) as T[];
+      const result = await request<any>(`${baseUrl}/query?query=${encoded}`, { method: "GET" });
+      return (
+        result?.QueryResponse
+          ? (Object.values(result.QueryResponse).find(Array.isArray) as T[]) || []
+          : []
+      ) as T[];
     },
   };
 }

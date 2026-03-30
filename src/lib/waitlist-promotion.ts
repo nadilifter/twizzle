@@ -7,7 +7,9 @@ import { executeNotificationByTrigger } from "@/lib/notification-service";
  * Locks the Program row to serialize concurrent promotions and prevent
  * over-admitting beyond capacity.
  */
-export async function promoteFromWaitlist(programId: string): Promise<{ promoted: boolean; athleteId?: string }> {
+export async function promoteFromWaitlist(
+  programId: string
+): Promise<{ promoted: boolean; athleteId?: string }> {
   interface TxResult {
     promoted: boolean;
     athleteId?: string;
@@ -15,9 +17,7 @@ export async function promoteFromWaitlist(programId: string): Promise<{ promoted
   }
 
   const txResult: TxResult = await db.$transaction(async (tx) => {
-    await tx.$queryRaw(
-      Prisma.sql`SELECT id FROM "Program" WHERE id = ${programId} FOR UPDATE`
-    );
+    await tx.$queryRaw(Prisma.sql`SELECT id FROM "Program" WHERE id = ${programId} FOR UPDATE`);
 
     const program = await tx.program.findUnique({
       where: { id: programId },
@@ -117,7 +117,9 @@ export async function promoteFromWaitlist(programId: string): Promise<{ promoted
  * Locks the ProgramInstance row to serialize concurrent promotions
  * and prevent exceeding instance capacity.
  */
-export async function promoteFromInstanceWaitlist(instanceId: string): Promise<{ promoted: boolean; athleteId?: string }> {
+export async function promoteFromInstanceWaitlist(
+  instanceId: string
+): Promise<{ promoted: boolean; athleteId?: string }> {
   return db.$transaction(async (tx) => {
     await tx.$queryRaw(
       Prisma.sql`SELECT id FROM "ProgramInstance" WHERE id = ${instanceId} FOR UPDATE`

@@ -78,18 +78,24 @@ export async function GET(request: NextRequest) {
               instances: true,
             },
           },
-          instances: includeInstances ? {
-             orderBy: { startDate: 'desc' },
-             include: {
-               _count: { select: { athleteMemberships: true } },
-             },
-          } : undefined,
-          levelRequirements: includeRestrictions ? {
-            include: { level: { select: { id: true, name: true, color: true } } },
-          } : undefined,
-          waiverRequirements: includeRestrictions ? {
-            include: { waiver: { select: { id: true, title: true, status: true } } },
-          } : undefined,
+          instances: includeInstances
+            ? {
+                orderBy: { startDate: "desc" },
+                include: {
+                  _count: { select: { athleteMemberships: true } },
+                },
+              }
+            : undefined,
+          levelRequirements: includeRestrictions
+            ? {
+                include: { level: { select: { id: true, name: true, color: true } } },
+              }
+            : undefined,
+          waiverRequirements: includeRestrictions
+            ? {
+                include: { waiver: { select: { id: true, title: true, status: true } } },
+              }
+            : undefined,
           season: {
             select: { id: true, name: true, color: true, startDate: true, endDate: true },
           },
@@ -109,10 +115,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching membership groups:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch membership groups" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch membership groups" }, { status: 500 });
   }
 }
 
@@ -128,31 +131,28 @@ export async function POST(request: NextRequest) {
     if (gate) return gate;
 
     let permissions = session.user.permissions || [];
-    
+
     // Fallback: If no permissions in session, verify against DB via membership
     if (permissions.length === 0) {
-       const member = await db.organizationMember.findFirst({
-           where: { userId: session.user.id, organizationId: session.user.organizationId },
-           include: { permissions: true }
-       });
+      const member = await db.organizationMember.findFirst({
+        where: { userId: session.user.id, organizationId: session.user.organizationId },
+        include: { permissions: true },
+      });
 
-       if (member) {
-           permissions = member.permissions.map(p => p.permission);
-       }
+      if (member) {
+        permissions = member.permissions.map((p) => p.permission);
+      }
 
-       const user = await db.user.findUnique({
-           where: { id: session.user.id },
-           select: { isSuperAdmin: true },
-       });
-       if (user?.isSuperAdmin && !permissions.includes("*")) {
-           permissions.push("*");
-       }
+      const user = await db.user.findUnique({
+        where: { id: session.user.id },
+        select: { isSuperAdmin: true },
+      });
+      if (user?.isSuperAdmin && !permissions.includes("*")) {
+        permissions.push("*");
+      }
     }
 
-    if (
-      !permissions.includes("*") &&
-      !permissions.includes("training.create")
-    ) {
+    if (!permissions.includes("*") && !permissions.includes("training.create")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -172,19 +172,22 @@ export async function POST(request: NextRequest) {
       where: { id: session.user.organizationId! },
       include: {
         subscription: {
-          include: { plan: true }
-        }
-      }
+          include: { plan: true },
+        },
+      },
     });
 
     if (organization?.subscription?.plan?.maxMembershipTypes) {
       const maxTypes = organization.subscription.plan.maxMembershipTypes;
       const currentCount = await scopedDb.membershipGroup.count();
-      
+
       if (currentCount >= maxTypes) {
-        return NextResponse.json({ 
-          error: `Membership types limit reached. Your plan allows a maximum of ${maxTypes} membership type${maxTypes === 1 ? '' : 's'}. Please upgrade your plan to create more membership types.` 
-        }, { status: 400 });
+        return NextResponse.json(
+          {
+            error: `Membership types limit reached. Your plan allows a maximum of ${maxTypes} membership type${maxTypes === 1 ? "" : "s"}. Please upgrade your plan to create more membership types.`,
+          },
+          { status: 400 }
+        );
       }
     }
 
@@ -247,15 +250,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating membership group:", error);
-    return NextResponse.json(
-      { error: "Failed to create membership group" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create membership group" }, { status: 500 });
   }
 }

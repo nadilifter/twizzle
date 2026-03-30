@@ -25,10 +25,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!discount) {
-      return NextResponse.json(
-        { valid: false, error: "Invalid discount code" },
-        { status: 400 }
-      );
+      return NextResponse.json({ valid: false, error: "Invalid discount code" }, { status: 400 });
     }
 
     const now = new Date();
@@ -74,9 +71,9 @@ export async function POST(request: NextRequest) {
       discount.productScope !== validatedData.productScope
     ) {
       return NextResponse.json(
-        { 
-          valid: false, 
-          error: `This discount is only valid for ${discount.productScope.toLowerCase().replace("_", " ")} purchases` 
+        {
+          valid: false,
+          error: `This discount is only valid for ${discount.productScope.toLowerCase().replace("_", " ")} purchases`,
         },
         { status: 400 }
       );
@@ -120,10 +117,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { valid: false, error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ valid: false, error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error validating discount:", error);
     return NextResponse.json(

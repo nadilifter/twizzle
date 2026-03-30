@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import { useParams, useRouter } from "next/navigation"
-import Link from "next/link"
-import { sanitizeHtml } from "@/lib/sanitize"
-import { format } from "date-fns"
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { sanitizeHtml } from "@/lib/sanitize";
+import { format } from "date-fns";
 import {
   ArrowLeft,
   Calendar,
@@ -23,13 +23,13 @@ import {
   XCircle,
   ExternalLink,
   Info,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
-import { Skeleton } from "@/components/ui/skeleton"
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -38,21 +38,21 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,12 +63,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { Label } from "@/components/ui/label"
-import { useAthletes } from "@/hooks/use-athletes"
-import { useAttendance } from "@/hooks/use-attendance"
-import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
-import { toast } from "sonner"
+} from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
+import { useAthletes } from "@/hooks/use-athletes";
+import { useAttendance } from "@/hooks/use-attendance";
+import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
+import { toast } from "sonner";
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
   CLASS: "Class",
@@ -77,97 +77,96 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   TRYOUT: "Tryout",
   MEETING: "Meeting",
   OTHER: "Other",
-}
+};
 
 const ROLE_LABELS: Record<string, string> = {
   LEAD: "Lead",
   ASSISTANT: "Assistant",
   VOLUNTEER: "Volunteer",
   OBSERVER: "Observer",
-}
+};
 
 function getInitials(name: string | null | undefined) {
-  if (!name) return "?"
-  const parts = name.trim().split(" ")
+  if (!name) return "?";
+  const parts = name.trim().split(" ");
   if (parts.length >= 2 && parts[0].length > 0 && parts[1].length > 0) {
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
   }
-  return name.substring(0, 2).toUpperCase()
+  return name.substring(0, 2).toUpperCase();
 }
 
-function getAthleteName(athlete: { name?: string; firstName?: string; lastName?: string } | null | undefined) {
-  if (!athlete) return "Unknown"
-  const fullName = [athlete.firstName, athlete.lastName].filter(Boolean).join(" ")
-  return fullName || athlete.name || "Unknown"
+function getAthleteName(
+  athlete: { name?: string; firstName?: string; lastName?: string } | null | undefined
+) {
+  if (!athlete) return "Unknown";
+  const fullName = [athlete.firstName, athlete.lastName].filter(Boolean).join(" ");
+  return fullName || athlete.name || "Unknown";
 }
 
 export default function EventDetailPage() {
-  const params = useParams()
-  const router = useRouter()
-  const eventId = params.id as string
+  const params = useParams();
+  const router = useRouter();
+  const eventId = params.id as string;
 
-  const [event, setEvent] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const { athletes } = useAthletes()
-  const { markAttendance, isUpdating } = useAttendance()
-  const [selectedAthleteId, setSelectedAthleteId] = useState("")
-  const [isRegisterOpen, setIsRegisterOpen] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
+  const [event, setEvent] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const { athletes } = useAthletes();
+  const { markAttendance, isUpdating } = useAttendance();
+  const [selectedAthleteId, setSelectedAthleteId] = useState("");
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  useBreadcrumbOverride(
-    event ? `/dashboard/events/${eventId}` : undefined,
-    event?.title,
-  )
+  useBreadcrumbOverride(event ? `/dashboard/events/${eventId}` : undefined, event?.title);
 
   const fetchEvent = useCallback(async () => {
     try {
-      const response = await fetch(`/api/events/${eventId}`)
-      if (!response.ok) throw new Error("Failed to fetch event")
-      const data = await response.json()
-      setEvent(data)
+      const response = await fetch(`/api/events/${eventId}`);
+      if (!response.ok) throw new Error("Failed to fetch event");
+      const data = await response.json();
+      setEvent(data);
     } catch (error) {
-      toast.error("Failed to load event")
+      toast.error("Failed to load event");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [eventId])
+  }, [eventId]);
 
   useEffect(() => {
-    fetchEvent()
-  }, [fetchEvent])
+    fetchEvent();
+  }, [fetchEvent]);
 
   const handleRegister = async () => {
-    if (!selectedAthleteId || !event) return
+    if (!selectedAthleteId || !event) return;
 
     const result = await markAttendance({
       athleteId: selectedAthleteId,
       eventId: event.id,
       status: "REGISTERED",
-    })
+    });
 
     if (result) {
-      toast.success("Athlete registered successfully")
-      setIsRegisterOpen(false)
-      setSelectedAthleteId("")
-      fetchEvent()
+      toast.success("Athlete registered successfully");
+      setIsRegisterOpen(false);
+      setSelectedAthleteId("");
+      fetchEvent();
     } else {
-      toast.error("Failed to register athlete")
+      toast.error("Failed to register athlete");
     }
-  }
+  };
 
   const handleDelete = async () => {
-    setIsDeleting(true)
+    setIsDeleting(true);
     try {
-      const response = await fetch(`/api/events/${eventId}`, { method: "DELETE" })
-      if (!response.ok) throw new Error("Failed to delete event")
-      toast.success("Event deleted")
-      router.push("/dashboard/events")
+      const response = await fetch(`/api/events/${eventId}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Failed to delete event");
+      toast.success("Event deleted");
+      router.push("/dashboard/events");
     } catch (error) {
-      toast.error("Failed to delete event")
+      toast.error("Failed to delete event");
     } finally {
-      setIsDeleting(false)
+      setIsDeleting(false);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -181,7 +180,7 @@ export default function EventDetailPage() {
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-64 w-full" />
       </div>
-    )
+    );
   }
 
   if (!event) {
@@ -194,17 +193,17 @@ export default function EventDetailPage() {
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
-  const attendances = event.attendances || []
-  const staffAssignments = event.staffAssignments || []
-  const requiredMemberships = event.requiredMemberships || []
-  const attendanceCount = event.attendanceCount || attendances.length
+  const attendances = event.attendances || [];
+  const staffAssignments = event.staffAssignments || [];
+  const requiredMemberships = event.requiredMemberships || [];
+  const attendanceCount = event.attendanceCount || attendances.length;
 
   // Filter athletes not already registered
-  const registeredAthleteIds = new Set(attendances.map((a: any) => a.athlete?.id).filter(Boolean))
-  const availableAthletes = athletes.filter((a) => !registeredAthleteIds.has(a.id))
+  const registeredAthleteIds = new Set(attendances.map((a: any) => a.athlete?.id).filter(Boolean));
+  const availableAthletes = athletes.filter((a) => !registeredAthleteIds.has(a.id));
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -220,7 +219,9 @@ export default function EventDetailPage() {
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold">{event.title}</h1>
               <Badge
-                variant={event.type === "CLINIC" || event.type === "TRYOUT" ? "default" : "secondary"}
+                variant={
+                  event.type === "CLINIC" || event.type === "TRYOUT" ? "default" : "secondary"
+                }
               >
                 {EVENT_TYPE_LABELS[event.type] || event.type}
               </Badge>
@@ -242,7 +243,11 @@ export default function EventDetailPage() {
           </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="outline" size="icon" className="text-destructive hover:text-destructive">
+              <Button
+                variant="outline"
+                size="icon"
+                className="text-destructive hover:text-destructive"
+              >
                 <Trash2 className="h-4 w-4" />
               </Button>
             </AlertDialogTrigger>
@@ -250,8 +255,8 @@ export default function EventDetailPage() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete Event</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete &ldquo;{event.title}&rdquo;? This action cannot be undone
-                  and will remove all attendee registrations.
+                  Are you sure you want to delete &ldquo;{event.title}&rdquo;? This action cannot be
+                  undone and will remove all attendee registrations.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -283,9 +288,7 @@ export default function EventDetailPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Date</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {format(new Date(event.date), "MMM d")}
-            </div>
+            <div className="text-2xl font-bold">{format(new Date(event.date), "MMM d")}</div>
             <p className="text-xs text-muted-foreground">
               {format(new Date(event.date), "EEEE, yyyy")}
             </p>
@@ -417,7 +420,8 @@ export default function EventDetailPage() {
               <div className="flex flex-wrap gap-2">
                 {requiredMemberships.map((m: any) => (
                   <Badge key={m.id} variant="outline" className="text-xs">
-                    {m.group?.name ? `${m.group.name} - ` : ""}{m.name}
+                    {m.group?.name ? `${m.group.name} - ` : ""}
+                    {m.name}
                   </Badge>
                 ))}
               </div>
@@ -432,7 +436,8 @@ export default function EventDetailPage() {
           <CardHeader>
             <CardTitle>Staff</CardTitle>
             <CardDescription>
-              {staffAssignments.length} staff member{staffAssignments.length !== 1 ? "s" : ""} assigned
+              {staffAssignments.length} staff member{staffAssignments.length !== 1 ? "s" : ""}{" "}
+              assigned
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -444,16 +449,11 @@ export default function EventDetailPage() {
             ) : (
               <div className="space-y-3">
                 {staffAssignments.map((sa: any) => (
-                  <div
-                    key={sa.id}
-                    className="flex items-center gap-3 p-3 rounded-lg border"
-                  >
+                  <div key={sa.id} className="flex items-center gap-3 p-3 rounded-lg border">
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={sa.member?.user?.avatar || ""} />
                       <AvatarFallback>
-                        {sa.member?.user?.name
-                          ? getInitials(sa.member.user.name)
-                          : "?"}
+                        {sa.member?.user?.name ? getInitials(sa.member.user.name) : "?"}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
@@ -482,14 +482,14 @@ export default function EventDetailPage() {
               <div className="flex items-center gap-3 p-3 rounded-lg border">
                 <Avatar className="h-10 w-10">
                   <AvatarImage src={event.coach.avatar || ""} />
-                  <AvatarFallback>
-                    {getInitials(event.coach.name)}
-                  </AvatarFallback>
+                  <AvatarFallback>{getInitials(event.coach.name)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm">{event.coach.name}</span>
-                    <Badge variant="secondary" className="text-xs">Coach</Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      Coach
+                    </Badge>
                   </div>
                   {event.coach.email && (
                     <p className="text-xs text-muted-foreground">{event.coach.email}</p>
@@ -506,9 +506,7 @@ export default function EventDetailPage() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Attendees</CardTitle>
-                <CardDescription>
-                  {attendanceCount} registered
-                </CardDescription>
+                <CardDescription>{attendanceCount} registered</CardDescription>
               </div>
               <Dialog open={isRegisterOpen} onOpenChange={setIsRegisterOpen}>
                 <DialogTrigger asChild>
@@ -549,10 +547,7 @@ export default function EventDetailPage() {
                     <Button variant="outline" onClick={() => setIsRegisterOpen(false)}>
                       Cancel
                     </Button>
-                    <Button
-                      onClick={handleRegister}
-                      disabled={isUpdating || !selectedAthleteId}
-                    >
+                    <Button onClick={handleRegister} disabled={isUpdating || !selectedAthleteId}>
                       {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Register
                     </Button>
@@ -592,14 +587,12 @@ export default function EventDetailPage() {
                         attendance.status === "PRESENT"
                           ? "default"
                           : attendance.status === "ABSENT"
-                          ? "destructive"
-                          : "secondary"
+                            ? "destructive"
+                            : "secondary"
                       }
                       className="text-xs shrink-0"
                     >
-                      {attendance.status === "REGISTERED"
-                        ? "Signed Up"
-                        : attendance.status}
+                      {attendance.status === "REGISTERED" ? "Signed Up" : attendance.status}
                     </Badge>
                   </div>
                 ))}
@@ -609,5 +602,5 @@ export default function EventDetailPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

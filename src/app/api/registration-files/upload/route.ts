@@ -32,7 +32,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
     if (!athleteId || !organizationId) {
-      return NextResponse.json({ error: "athleteId and organizationId are required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "athleteId and organizationId are required" },
+        { status: 400 }
+      );
     }
 
     const entityCount = [programId, competitionId, eventId].filter(Boolean).length;
@@ -70,7 +73,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Program not found" }, { status: 404 });
       }
       if (!program.hasFileRequirement || !program.fileRequirementConfig) {
-        return NextResponse.json({ error: "This program does not require a file upload" }, { status: 400 });
+        return NextResponse.json(
+          { error: "This program does not require a file upload" },
+          { status: 400 }
+        );
       }
       fileReqConfig = program.fileRequirementConfig as unknown as FileRequirementConfig;
     } else if (competitionId) {
@@ -84,7 +90,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Competition not found" }, { status: 404 });
       }
       if (!competition.hasFileRequirement || !competition.fileRequirementConfig) {
-        return NextResponse.json({ error: "This competition does not require a file upload" }, { status: 400 });
+        return NextResponse.json(
+          { error: "This competition does not require a file upload" },
+          { status: 400 }
+        );
       }
       fileReqConfig = competition.fileRequirementConfig as unknown as FileRequirementConfig;
     } else {
@@ -98,7 +107,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Event not found" }, { status: 404 });
       }
       if (!event.hasFileRequirement || !event.fileRequirementConfig) {
-        return NextResponse.json({ error: "This event does not require a file upload" }, { status: 400 });
+        return NextResponse.json(
+          { error: "This event does not require a file upload" },
+          { status: 400 }
+        );
       }
       fileReqConfig = event.fileRequirementConfig as unknown as FileRequirementConfig;
     }
@@ -134,8 +146,7 @@ export async function POST(request: NextRequest) {
         where: { organizationId },
         _sum: { fileSize: true },
       });
-      const currentBytes =
-        (storageUsage._sum.fileSize || 0) + (regFileUsage._sum.fileSize || 0);
+      const currentBytes = (storageUsage._sum.fileSize || 0) + (regFileUsage._sum.fileSize || 0);
       const currentMB = currentBytes / (1024 * 1024);
       const fileSizeMB = fileSizeBytes / (1024 * 1024);
 

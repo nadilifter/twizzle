@@ -1,34 +1,39 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { cn } from "@/lib/utils"
-import { Check, Loader2 } from "lucide-react"
-import { defineStepper } from "@stepperize/react"
-import type { StepStatus } from "@stepperize/react/primitives"
+import * as React from "react";
+import { cn } from "@/lib/utils";
+import { Check, Loader2 } from "lucide-react";
+import { defineStepper } from "@stepperize/react";
+import type { StepStatus } from "@stepperize/react/primitives";
 
 // Re-export defineStepper so consumers can import from one place
-export { defineStepper }
-export type { StepStatus }
+export { defineStepper };
+export type { StepStatus };
 
 /**
  * Derive the visual state label used for styling from a stepperize StepStatus.
  * stepperize uses "success" | "active" | "inactive"
  */
-type VisualState = "completed" | "active" | "inactive"
+type VisualState = "completed" | "active" | "inactive";
 
 function toVisualState(status: StepStatus): VisualState {
-  if (status === "success") return "completed"
-  if (status === "active") return "active"
-  return "inactive"
+  if (status === "success") return "completed";
+  if (status === "active") return "active";
+  return "inactive";
 }
 
 // ---------- Nav container ----------
 
 interface StepperNavProps extends React.ComponentProps<"nav"> {
-  orientation?: "horizontal" | "vertical"
+  orientation?: "horizontal" | "vertical";
 }
 
-function StepperNav({ orientation = "horizontal", className, children, ...props }: StepperNavProps) {
+function StepperNav({
+  orientation = "horizontal",
+  className,
+  children,
+  ...props
+}: StepperNavProps) {
   return (
     <nav
       className={cn(
@@ -41,13 +46,13 @@ function StepperNav({ orientation = "horizontal", className, children, ...props 
     >
       {children}
     </nav>
-  )
+  );
 }
 
 // ---------- Step item wrapper ----------
 
 interface StepperItemProps extends React.ComponentProps<"div"> {
-  status: StepStatus
+  status: StepStatus;
 }
 
 function StepperItem({ status, className, children, ...props }: StepperItemProps) {
@@ -59,15 +64,15 @@ function StepperItem({ status, className, children, ...props }: StepperItemProps
     >
       {children}
     </div>
-  )
+  );
 }
 
 // ---------- Indicator (circle with number / check) ----------
 
 interface StepperIndicatorProps extends React.ComponentProps<"button"> {
-  status: StepStatus
-  step: number
-  loading?: boolean
+  status: StepStatus;
+  step: number;
+  loading?: boolean;
 }
 
 function StepperIndicator({
@@ -78,8 +83,8 @@ function StepperIndicator({
   children,
   ...props
 }: StepperIndicatorProps) {
-  const visual = toVisualState(status)
-  const isLoading = loading && status === "active"
+  const visual = toVisualState(status);
+  const isLoading = loading && status === "active";
 
   return (
     <button
@@ -100,17 +105,17 @@ function StepperIndicator({
       ) : visual === "completed" ? (
         <Check className="h-5 w-5" />
       ) : (
-        children ?? step
+        (children ?? step)
       )}
     </button>
-  )
+  );
 }
 
 // ---------- Separator line ----------
 
 interface StepperSeparatorProps extends React.ComponentProps<"div"> {
-  status: StepStatus
-  orientation?: "horizontal" | "vertical"
+  status: StepStatus;
+  orientation?: "horizontal" | "vertical";
 }
 
 function StepperSeparator({
@@ -119,7 +124,7 @@ function StepperSeparator({
   className,
   ...props
 }: StepperSeparatorProps) {
-  const visual = toVisualState(status)
+  const visual = toVisualState(status);
 
   return (
     <div
@@ -132,17 +137,17 @@ function StepperSeparator({
       )}
       {...props}
     />
-  )
+  );
 }
 
 // ---------- Title ----------
 
 interface StepperTitleProps extends React.ComponentProps<"h3"> {
-  status: StepStatus
+  status: StepStatus;
 }
 
 function StepperTitle({ status, className, children, ...props }: StepperTitleProps) {
-  const visual = toVisualState(status)
+  const visual = toVisualState(status);
 
   return (
     <h3
@@ -156,17 +161,17 @@ function StepperTitle({ status, className, children, ...props }: StepperTitlePro
     >
       {children}
     </h3>
-  )
+  );
 }
 
 // ---------- Description ----------
 
 interface StepperDescriptionProps extends React.ComponentProps<"p"> {
-  status: StepStatus
+  status: StepStatus;
 }
 
 function StepperDescription({ status, className, children, ...props }: StepperDescriptionProps) {
-  const visual = toVisualState(status)
+  const visual = toVisualState(status);
 
   return (
     <p
@@ -180,14 +185,14 @@ function StepperDescription({ status, className, children, ...props }: StepperDe
     >
       {children}
     </p>
-  )
+  );
 }
 
 // ---------- Content panel ----------
 
 interface StepperContentProps extends React.ComponentProps<"div"> {
-  active?: boolean
-  forceMount?: boolean
+  active?: boolean;
+  forceMount?: boolean;
 }
 
 function StepperContent({
@@ -198,7 +203,7 @@ function StepperContent({
   ...props
 }: StepperContentProps) {
   if (!forceMount && !active) {
-    return null
+    return null;
   }
 
   return (
@@ -213,15 +218,15 @@ function StepperContent({
     >
       {children}
     </div>
-  )
+  );
 }
 
 // ---------- Utility: Compute status for a step by index ----------
 
 function getStepStatus(index: number, currentIndex: number): StepStatus {
-  if (index < currentIndex) return "success"
-  if (index === currentIndex) return "active"
-  return "inactive"
+  if (index < currentIndex) return "success";
+  if (index === currentIndex) return "active";
+  return "inactive";
 }
 
 export {
@@ -233,4 +238,4 @@ export {
   StepperDescription,
   StepperContent,
   getStepStatus,
-}
+};

@@ -26,10 +26,7 @@ const bulkGenerateSchema = z.object({
 });
 
 // GET /api/programs/[id]/instances
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -38,7 +35,7 @@ export async function GET(
 
     const { id: programId } = await params;
     const { searchParams } = new URL(request.url);
-    
+
     // Query parameters
     const status = searchParams.get("status");
     const fromDate = searchParams.get("from");
@@ -115,18 +112,12 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error fetching instances:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch instances" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch instances" }, { status: 500 });
   }
 }
 
 // POST /api/programs/[id]/instances
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -164,7 +155,11 @@ export async function POST(
       const endTime = calculateEndTime(validated.startTime, validated.duration);
 
       const allDates = generateInstanceDates(startDate, endDate, validated.rrule);
-      const holidayDates = await getEnabledHolidayDates(session.user.organizationId!, startDate, endDate);
+      const holidayDates = await getEnabledHolidayDates(
+        session.user.organizationId!,
+        startDate,
+        endDate
+      );
       const dates = filterOutHolidayDates(allDates, holidayDates);
 
       if (dates.length === 0) {
@@ -175,7 +170,7 @@ export async function POST(
       }
 
       const instances = await db.programInstance.createMany({
-        data: dates.map(date => ({
+        data: dates.map((date) => ({
           programId,
           date,
           startTime: validated.startTime,
@@ -186,14 +181,17 @@ export async function POST(
         })),
       });
 
-      return NextResponse.json({
-        message: `Created ${instances.count} instances`,
-        count: instances.count,
-      }, { status: 201 });
+      return NextResponse.json(
+        {
+          message: `Created ${instances.count} instances`,
+          count: instances.count,
+        },
+        { status: 201 }
+      );
     } else {
       // Single instance creation
       const validated = createInstanceSchema.parse(body);
-      
+
       // Calculate end time if not provided
       let endTime = validated.endTime;
       if (!endTime && validated.duration) {
@@ -225,15 +223,9 @@ export async function POST(
     }
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating instance:", error);
-    return NextResponse.json(
-      { error: "Failed to create instance" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create instance" }, { status: 500 });
   }
 }

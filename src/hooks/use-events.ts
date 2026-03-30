@@ -51,72 +51,76 @@ export function useEvents(options: UseEventsOptions = {}): UseEventsReturn {
     setCurrentParamsState(params);
   }, []);
 
-  const fetchEvents = useCallback(async (params?: EventsQueryParams) => {
-    const queryParams = params ?? currentParamsRef.current;
-    
-    if (JSON.stringify(queryParams) !== JSON.stringify(currentParamsRef.current)) {
+  const fetchEvents = useCallback(
+    async (params?: EventsQueryParams) => {
+      const queryParams = params ?? currentParamsRef.current;
+
+      if (JSON.stringify(queryParams) !== JSON.stringify(currentParamsRef.current)) {
         setCurrentParams(queryParams);
-    }
-    // Update ref regardless to ensure it's in sync for immediate reuse
-    currentParamsRef.current = queryParams;
+      }
+      // Update ref regardless to ensure it's in sync for immediate reuse
+      currentParamsRef.current = queryParams;
 
-    setIsLoading(true);
-    setError(null);
+      setIsLoading(true);
+      setError(null);
 
-    try {
-      const response = await api.get<EventsListResponse>("/api/events", queryParams);
-      setEvents(response.data);
-      setTotal(response.total);
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to fetch events";
-      setError(message);
-      console.error("Error fetching events:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [setCurrentParams]);
+      try {
+        const response = await api.get<EventsListResponse>("/api/events", queryParams);
+        setEvents(response.data);
+        setTotal(response.total);
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to fetch events";
+        setError(message);
+        console.error("Error fetching events:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [setCurrentParams]
+  );
 
-  const createEvent = useCallback(async (data: CreateEventPayload): Promise<EventWithRelations | null> => {
-    setIsCreating(true);
-    setError(null);
+  const createEvent = useCallback(
+    async (data: CreateEventPayload): Promise<EventWithRelations | null> => {
+      setIsCreating(true);
+      setError(null);
 
-    try {
-      const newEvent = await api.post<EventWithRelations>("/api/events", data);
-      setEvents((prev) => [...prev, newEvent]);
-      setTotal((prev) => prev + 1);
-      return newEvent;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to create event";
-      setError(message);
-      console.error("Error creating event:", err);
-      return null;
-    } finally {
-      setIsCreating(false);
-    }
-  }, []);
+      try {
+        const newEvent = await api.post<EventWithRelations>("/api/events", data);
+        setEvents((prev) => [...prev, newEvent]);
+        setTotal((prev) => prev + 1);
+        return newEvent;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to create event";
+        setError(message);
+        console.error("Error creating event:", err);
+        return null;
+      } finally {
+        setIsCreating(false);
+      }
+    },
+    []
+  );
 
-  const updateEvent = useCallback(async (
-    id: string,
-    data: UpdateEventPayload
-  ): Promise<EventWithRelations | null> => {
-    setIsUpdating(true);
-    setError(null);
+  const updateEvent = useCallback(
+    async (id: string, data: UpdateEventPayload): Promise<EventWithRelations | null> => {
+      setIsUpdating(true);
+      setError(null);
 
-    try {
-      const updatedEvent = await api.patch<EventWithRelations>(`/api/events/${id}`, data);
-      setEvents((prev) =>
-        prev.map((event) => (event.id === id ? updatedEvent : event))
-      );
-      return updatedEvent;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to update event";
-      setError(message);
-      console.error("Error updating event:", err);
-      return null;
-    } finally {
-      setIsUpdating(false);
-    }
-  }, []);
+      try {
+        const updatedEvent = await api.patch<EventWithRelations>(`/api/events/${id}`, data);
+        setEvents((prev) => prev.map((event) => (event.id === id ? updatedEvent : event)));
+        return updatedEvent;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to update event";
+        setError(message);
+        console.error("Error updating event:", err);
+        return null;
+      } finally {
+        setIsUpdating(false);
+      }
+    },
+    []
+  );
 
   const deleteEvent = useCallback(async (id: string): Promise<boolean> => {
     setIsDeleting(true);

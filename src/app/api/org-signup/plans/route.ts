@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server"
-import { db } from "@/lib/db"
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
 
-export const dynamic = "force-dynamic"
+export const dynamic = "force-dynamic";
 
 // GET /api/signups/plans - Get public subscription plans
 // This is a public endpoint, no authentication required
@@ -39,14 +39,11 @@ export async function GET() {
       orderBy: {
         displayOrder: "asc",
       },
-    })
+    });
 
-    return NextResponse.json(plans)
+    return NextResponse.json(plans);
   } catch (error) {
-    console.error("Error fetching plans:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch subscription plans" },
-      { status: 500 }
-    )
+    console.error("Error fetching plans:", error);
+    return NextResponse.json({ error: "Failed to fetch subscription plans" }, { status: 500 });
   }
 }

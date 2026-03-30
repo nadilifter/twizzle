@@ -10,10 +10,7 @@ const updateOrderSchema = z.object({
 });
 
 // PATCH /api/orders/[id] - Update order fulfillment status
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -74,24 +71,15 @@ export async function PATCH(
     return NextResponse.json(order);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error updating order:", error);
-    return NextResponse.json(
-      { error: "Failed to update order" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update order" }, { status: 500 });
   }
 }
 
 // GET /api/orders/[id] - Get a single order
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -143,9 +131,6 @@ export async function GET(
     return NextResponse.json(order);
   } catch (error) {
     console.error("Error fetching order:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch order" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch order" }, { status: 500 });
   }
 }

@@ -16,10 +16,7 @@ const updateSkillSchema = z.object({
 });
 
 // GET /api/skills/[id]
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -51,18 +48,12 @@ export async function GET(
     return NextResponse.json(skill);
   } catch (error) {
     console.error("Error fetching skill:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch skill" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch skill" }, { status: 500 });
   }
 }
 
 // PUT /api/skills/[id]
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -102,16 +93,10 @@ export async function PUT(
     return NextResponse.json(skill);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error updating skill:", error);
-    return NextResponse.json(
-      { error: "Failed to update skill" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update skill" }, { status: 500 });
   }
 }
 
@@ -159,7 +144,7 @@ export async function DELETE(
     const inUseCount = existingSkill._count.evaluationSkills + existingSkill._count.templateSkills;
     if (inUseCount > 0) {
       return NextResponse.json(
-        { 
+        {
           error: "Skill is in use",
           message: `This skill is used in ${existingSkill._count.evaluationSkills} evaluation(s) and ${existingSkill._count.templateSkills} template(s). Remove these references first.`,
         },
@@ -175,9 +160,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting skill:", error);
-    return NextResponse.json(
-      { error: "Failed to delete skill" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete skill" }, { status: 500 });
   }
 }

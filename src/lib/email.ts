@@ -1,17 +1,17 @@
 /**
  * Email Service
- * 
+ *
  * This module provides a unified interface for sending emails that works with:
  * - Amazon SES in cloud environments (production, staging, development)
  * - MailHog in local development via SMTP (catches all emails for inspection)
  */
 
-import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
-import * as nodemailer from 'nodemailer';
-import type { Transporter } from 'nodemailer';
-import { getSESConfig } from './services-config';
-import { getCurrentEnvironment } from './env-domains';
-import { logger } from './logger';
+import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
+import * as nodemailer from "nodemailer";
+import type { Transporter } from "nodemailer";
+import { getSESConfig } from "./services-config";
+import { getCurrentEnvironment } from "./env-domains";
+import { logger } from "./logger";
 
 // SES Client singleton (for cloud environments)
 let sesClient: SESClient | null = null;
@@ -35,7 +35,7 @@ function getSESClient(): SESClient {
     ...(process.env.AWS_ACCESS_KEY_ID && {
       credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
       },
     }),
   });
@@ -52,8 +52,8 @@ function getSMTPTransporter(): Transporter {
     return smtpTransporter;
   }
 
-  const smtpHost = process.env.SMTP_HOST || 'localhost';
-  const smtpPort = parseInt(process.env.SMTP_PORT || '1025', 10);
+  const smtpHost = process.env.SMTP_HOST || "localhost";
+  const smtpPort = parseInt(process.env.SMTP_PORT || "1025", 10);
 
   smtpTransporter = nodemailer.createTransport({
     host: smtpHost,
@@ -105,7 +105,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
   const fromAddress = options.from || config.fromEmail;
 
   // Local development: Use nodemailer with SMTP to MailHog
-  if (currentEnv === 'local') {
+  if (currentEnv === "local") {
     return sendEmailViaSMTP(options, fromAddress);
   }
 
@@ -122,7 +122,7 @@ async function sendEmailViaSMTP(
 ): Promise<SendEmailResult> {
   const transporter = getSMTPTransporter();
 
-  logger.info('[EMAIL] Sending email via SMTP/MailHog', {
+  logger.info("[EMAIL] Sending email via SMTP/MailHog", {
     to: options.to,
     from: fromAddress,
     subject: options.subject,
@@ -131,16 +131,16 @@ async function sendEmailViaSMTP(
   try {
     const result = await transporter.sendMail({
       from: fromAddress,
-      to: options.to.join(', '),
-      cc: options.cc?.join(', '),
-      bcc: options.bcc?.join(', '),
+      to: options.to.join(", "),
+      cc: options.cc?.join(", "),
+      bcc: options.bcc?.join(", "),
       replyTo: options.replyTo,
       subject: options.subject,
       html: options.html,
       text: options.text,
     });
 
-    logger.info('[EMAIL] Email sent successfully via SMTP', {
+    logger.info("[EMAIL] Email sent successfully via SMTP", {
       messageId: result.messageId,
       to: options.to,
     });
@@ -150,7 +150,7 @@ async function sendEmailViaSMTP(
       messageId: result.messageId,
     };
   } catch (error: any) {
-    logger.error('[EMAIL] Failed to send email via SMTP', {
+    logger.error("[EMAIL] Failed to send email via SMTP", {
       error: error.message,
       to: options.to,
       subject: options.subject,
@@ -174,14 +174,14 @@ async function sendEmailViaSES(
   const client = getSESClient();
 
   // In sandbox mode, check if recipients are verified
-  if (config.mode === 'sandbox') {
-    logger.warn('[EMAIL] SES is in sandbox mode - recipients must be verified', {
+  if (config.mode === "sandbox") {
+    logger.warn("[EMAIL] SES is in sandbox mode - recipients must be verified", {
       to: options.to,
     });
   }
 
   if (config.configurationSetName) {
-    logger.info('[EMAIL] Using SES Configuration Set', {
+    logger.info("[EMAIL] Using SES Configuration Set", {
       configurationSetName: config.configurationSetName,
     });
   }
@@ -196,19 +196,19 @@ async function sendEmailViaSES(
       },
       ReplyToAddresses: options.replyTo ? [options.replyTo] : undefined,
       Message: {
-        Subject: { 
+        Subject: {
           Data: options.subject,
-          Charset: 'UTF-8',
+          Charset: "UTF-8",
         },
         Body: {
           Html: {
             Data: options.html,
-            Charset: 'UTF-8',
+            Charset: "UTF-8",
           },
           ...(options.text && {
             Text: {
               Data: options.text,
-              Charset: 'UTF-8',
+              Charset: "UTF-8",
             },
           }),
         },
@@ -221,7 +221,7 @@ async function sendEmailViaSES(
 
     const response = await client.send(command);
 
-    logger.info('[EMAIL] Email sent successfully via SES', {
+    logger.info("[EMAIL] Email sent successfully via SES", {
       messageId: response.MessageId,
       to: options.to,
     });
@@ -231,7 +231,7 @@ async function sendEmailViaSES(
       messageId: response.MessageId,
     };
   } catch (error: any) {
-    logger.error('[EMAIL] Failed to send email via SES', {
+    logger.error("[EMAIL] Failed to send email via SES", {
       error: error.message,
       to: options.to,
       subject: options.subject,
@@ -254,7 +254,7 @@ export async function sendTemplatedEmail(
   data: Record<string, string>
 ): Promise<SendEmailResult> {
   const { subject, html, text } = renderTemplate(template, data);
-  
+
   return sendEmail({
     to,
     subject,
@@ -266,36 +266,33 @@ export async function sendTemplatedEmail(
 /**
  * Email template types
  */
-export type EmailTemplate = 
-  | 'welcome'
-  | 'password-reset'
-  | 'no-account'
-  | 'invitation'
-  | 'invitation-existing-user'
-  | 'registration-confirmation'
-  | 'payment-confirmation'
-  | 'checkout-receipt'
-  | 'announcement'
-  | 'feedback-roadmap'
-  | 'mfa-code'
-  | 'email-login-code'
-  | 'no-account-login'
-  | 'signup-verification-code'
-  | 'subscription-payment-success'
-  | 'subscription-payment-failed'
-  | 'subscription-deactivation-warning'
-  | 'subscription-deactivated'
-  | 'holiday-reminder'
-  | 'payment-method-expiring';
+export type EmailTemplate =
+  | "welcome"
+  | "password-reset"
+  | "no-account"
+  | "invitation"
+  | "invitation-existing-user"
+  | "registration-confirmation"
+  | "payment-confirmation"
+  | "checkout-receipt"
+  | "announcement"
+  | "feedback-roadmap"
+  | "mfa-code"
+  | "email-login-code"
+  | "no-account-login"
+  | "signup-verification-code"
+  | "subscription-payment-success"
+  | "subscription-payment-failed"
+  | "subscription-deactivation-warning"
+  | "subscription-deactivated"
+  | "holiday-reminder"
+  | "payment-method-expiring";
 
 /**
  * Wrap email body content in a branded Uplifter layout.
  * Uses table-based structure for cross-client compatibility (Outlook, Gmail, Apple Mail).
  */
-function wrapInBrandedLayout(options: {
-  preheaderText: string;
-  bodyHtml: string;
-}): string {
+function wrapInBrandedLayout(options: { preheaderText: string; bodyHtml: string }): string {
   const year = new Date().getFullYear();
   return `<!DOCTYPE html>
 <html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
@@ -373,14 +370,14 @@ function renderTemplate(
   // Simple template rendering - replace {{key}} with values
   const render = (str: string) => {
     return Object.entries(data).reduce(
-      (result, [key, value]) => result.replace(new RegExp(`{{${key}}}`, 'g'), value),
+      (result, [key, value]) => result.replace(new RegExp(`{{${key}}}`, "g"), value),
       str
     );
   };
 
   const templates: Record<EmailTemplate, { subject: string; html: string; text: string }> = {
-    'welcome': {
-      subject: 'Welcome to {{organizationName}}!',
+    welcome: {
+      subject: "Welcome to {{organizationName}}!",
       html: `
         <h1>Welcome to {{organizationName}}!</h1>
         <p>Hello {{name}},</p>
@@ -401,8 +398,8 @@ function renderTemplate(
         {{organizationName}} Team
       `,
     },
-    'password-reset': {
-      subject: 'Reset Your Password',
+    "password-reset": {
+      subject: "Reset Your Password",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h1 style="color: #1f2937;">Password Reset Request</h1>
@@ -430,8 +427,8 @@ function renderTemplate(
         If you didn't request this password reset, you can safely ignore this email. Your password will remain unchanged.
       `,
     },
-    'no-account': {
-      subject: 'Password Reset Attempted',
+    "no-account": {
+      subject: "Password Reset Attempted",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h1 style="color: #1f2937;">Password Reset Attempted</h1>
@@ -467,8 +464,8 @@ function renderTemplate(
         If you didn't request this, you can safely ignore this email.
       `,
     },
-    'invitation': {
-      subject: 'You\'ve been invited to join {{organizationName}}',
+    invitation: {
+      subject: "You've been invited to join {{organizationName}}",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h1 style="color: #1f2937;">You've Been Invited!</h1>
@@ -499,8 +496,8 @@ function renderTemplate(
         If you didn't expect this invitation, you can safely ignore this email.
       `,
     },
-    'invitation-existing-user': {
-      subject: '{{inviterName}} invited you to join {{organizationName}}',
+    "invitation-existing-user": {
+      subject: "{{inviterName}} invited you to join {{organizationName}}",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h1 style="color: #1f2937;">You've Been Invited to Join {{organizationName}}</h1>
@@ -531,8 +528,8 @@ function renderTemplate(
         If you didn't expect this invitation, you can safely ignore this email.
       `,
     },
-    'registration-confirmation': {
-      subject: 'Registration Confirmed - {{eventName}}',
+    "registration-confirmation": {
+      subject: "Registration Confirmed - {{eventName}}",
       html: `
         <h1>Registration Confirmed!</h1>
         <p>Hello {{name}},</p>
@@ -560,8 +557,8 @@ function renderTemplate(
         We look forward to seeing you!
       `,
     },
-    'payment-confirmation': {
-      subject: 'Payment Confirmation - {{amount}}',
+    "payment-confirmation": {
+      subject: "Payment Confirmation - {{amount}}",
       html: `
         <h1>Payment Received</h1>
         <p>Hello {{name}},</p>
@@ -583,8 +580,8 @@ function renderTemplate(
         Thank you for your payment!
       `,
     },
-    'checkout-receipt': {
-      subject: 'Order Confirmation - {{reference}}',
+    "checkout-receipt": {
+      subject: "Order Confirmation - {{reference}}",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h1 style="color: #16a34a;">Order Confirmed</h1>
@@ -637,8 +634,8 @@ function renderTemplate(
         Thank you!
       `,
     },
-    'announcement': {
-      subject: '{{subject}}',
+    announcement: {
+      subject: "{{subject}}",
       html: `
         <h1>{{title}}</h1>
         <p>{{content}}</p>
@@ -652,8 +649,8 @@ function renderTemplate(
         - {{organizationName}}
       `,
     },
-    'feedback-roadmap': {
-      subject: 'Your feedback has been added to the Uplifter roadmap!',
+    "feedback-roadmap": {
+      subject: "Your feedback has been added to the Uplifter roadmap!",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h1 style="color: #2563eb;">Great news, {{name}}!</h1>
@@ -678,10 +675,10 @@ function renderTemplate(
         The Uplifter Team
       `,
     },
-    'mfa-code': {
-      subject: 'Your verification code',
+    "mfa-code": {
+      subject: "Your verification code",
       html: wrapInBrandedLayout({
-        preheaderText: 'Your Uplifter verification code. Expires in {{expiresIn}}.',
+        preheaderText: "Your Uplifter verification code. Expires in {{expiresIn}}.",
         bodyHtml: `
               <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #050D22;">Verification Required</h1>
               <p style="margin: 0 0 20px; color: #6b7280; font-size: 14px;">Confirm your identity to continue signing in</p>
@@ -737,10 +734,10 @@ This code expires in {{expiresIn}}.
 
 If you didn't attempt to sign in, someone may have your password. We recommend resetting it immediately. Never share this code with anyone.`,
     },
-    'email-login-code': {
-      subject: 'Your sign-in code',
+    "email-login-code": {
+      subject: "Your sign-in code",
       html: wrapInBrandedLayout({
-        preheaderText: 'Your Uplifter sign-in code. Expires in {{expiresIn}}.',
+        preheaderText: "Your Uplifter sign-in code. Expires in {{expiresIn}}.",
         bodyHtml: `
               <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #050D22;">Sign In to Uplifter</h1>
               <p style="margin: 0 0 20px; color: #6b7280; font-size: 14px;">Use this code to access your account</p>
@@ -795,10 +792,10 @@ This code expires in {{expiresIn}}.
 
 If you didn't request this code, you can safely ignore this email. Never share this code with anyone.`,
     },
-    'signup-verification-code': {
-      subject: 'Verify your email for Uplifter',
+    "signup-verification-code": {
+      subject: "Verify your email for Uplifter",
       html: wrapInBrandedLayout({
-        preheaderText: 'Your Uplifter verification code. Expires in {{expiresIn}}.',
+        preheaderText: "Your Uplifter verification code. Expires in {{expiresIn}}.",
         bodyHtml: `
               <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #050D22;">Verify Your Email</h1>
               <p style="margin: 0 0 20px; color: #6b7280; font-size: 14px;">One step to create your organization on Uplifter</p>
@@ -842,10 +839,10 @@ This code expires in {{expiresIn}}.
 
 If you didn't request this code, you can safely ignore this email. Never share this code with anyone.`,
     },
-    'no-account-login': {
-      subject: 'Sign-in Attempted',
+    "no-account-login": {
+      subject: "Sign-in Attempted",
       html: wrapInBrandedLayout({
-        preheaderText: 'A sign-in was attempted with this email address on Uplifter.',
+        preheaderText: "A sign-in was attempted with this email address on Uplifter.",
         bodyHtml: `
               <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #050D22;">Sign-in Attempted</h1>
               <p style="margin: 0 0 20px; color: #6b7280; font-size: 14px;">No account found for this email address</p>
@@ -894,10 +891,10 @@ If you want to create a new organization on Uplifter, you can get started here:
 
 If you didn't request this, you can safely ignore this email.`,
     },
-    'subscription-payment-success': {
-      subject: 'Payment Received - Uplifter Subscription',
+    "subscription-payment-success": {
+      subject: "Payment Received - Uplifter Subscription",
       html: wrapInBrandedLayout({
-        preheaderText: 'Your Uplifter subscription payment of {{amount}} has been processed.',
+        preheaderText: "Your Uplifter subscription payment of {{amount}} has been processed.",
         bodyHtml: `
               <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #050D22;">Payment Received</h1>
               <p style="margin: 0 0 20px; color: #6b7280; font-size: 14px;">Your Uplifter subscription is active</p>
@@ -923,10 +920,11 @@ Reference: {{reference}}
 
 If you have any questions about this charge, please contact support.`,
     },
-    'subscription-payment-failed': {
-      subject: 'Action Required: Payment Failed - Uplifter Subscription',
+    "subscription-payment-failed": {
+      subject: "Action Required: Payment Failed - Uplifter Subscription",
       html: wrapInBrandedLayout({
-        preheaderText: 'We were unable to process your subscription payment. Please update your payment method.',
+        preheaderText:
+          "We were unable to process your subscription payment. Please update your payment method.",
         bodyHtml: `
               <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #dc2626;">Payment Failed</h1>
               <p style="margin: 0 0 20px; color: #6b7280; font-size: 14px;">Action required to keep your account active</p>
@@ -965,10 +963,11 @@ You can update your payment method by logging into your admin dashboard and navi
 
 If you believe this is an error, please contact support.`,
     },
-    'subscription-deactivation-warning': {
-      subject: 'Urgent: Your Uplifter account will be deactivated in {{daysRemaining}} days',
+    "subscription-deactivation-warning": {
+      subject: "Urgent: Your Uplifter account will be deactivated in {{daysRemaining}} days",
       html: wrapInBrandedLayout({
-        preheaderText: 'Your Uplifter account will be deactivated in {{daysRemaining}} days due to a failed payment.',
+        preheaderText:
+          "Your Uplifter account will be deactivated in {{daysRemaining}} days due to a failed payment.",
         bodyHtml: `
               <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #dc2626;">Account Deactivation Warning</h1>
               <p style="margin: 0 0 20px; color: #6b7280; font-size: 14px;">{{daysRemaining}} days remaining</p>
@@ -1005,10 +1004,11 @@ To prevent deactivation, log in to your admin dashboard and add or update a paym
 
 Need help? Contact our support team.`,
     },
-    'subscription-deactivated': {
-      subject: 'Your Uplifter account has been deactivated',
+    "subscription-deactivated": {
+      subject: "Your Uplifter account has been deactivated",
       html: wrapInBrandedLayout({
-        preheaderText: 'Your Uplifter account has been deactivated due to non-payment. Add a payment method to reactivate.',
+        preheaderText:
+          "Your Uplifter account has been deactivated due to non-payment. Add a payment method to reactivate.",
         bodyHtml: `
               <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #dc2626;">Account Deactivated</h1>
               <p style="margin: 0 0 20px; color: #6b7280; font-size: 14px;">Your site is now offline</p>
@@ -1037,10 +1037,11 @@ To reactivate your account, simply add a valid payment method. Your outstanding 
 
 Need help? Contact our support team.`,
     },
-    'holiday-reminder': {
-      subject: 'Upcoming Holiday Closure: {{holidayName}} on {{holidayDate}}',
+    "holiday-reminder": {
+      subject: "Upcoming Holiday Closure: {{holidayName}} on {{holidayDate}}",
       html: wrapInBrandedLayout({
-        preheaderText: '{{organizationName}} will be closed on {{holidayDate}} for {{holidayName}}. Programs will not have sessions on this date.',
+        preheaderText:
+          "{{organizationName}} will be closed on {{holidayDate}} for {{holidayName}}. Programs will not have sessions on this date.",
         bodyHtml: `
               <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #1f2937;">Upcoming Holiday Closure</h1>
               <p style="margin: 0 0 20px; color: #6b7280; font-size: 14px;">One week reminder</p>
@@ -1066,10 +1067,11 @@ Programs will not have sessions scheduled on this date. If you need to override 
 
 You are receiving this email because you are an administrator of {{organizationName}}.`,
     },
-    'payment-method-expiring': {
-      subject: 'Action Required: Your payment method is expiring soon',
+    "payment-method-expiring": {
+      subject: "Action Required: Your payment method is expiring soon",
       html: wrapInBrandedLayout({
-        preheaderText: 'The payment method on file for {{organizationName}} expires {{expiryDate}}. Update it to avoid billing interruptions.',
+        preheaderText:
+          "The payment method on file for {{organizationName}} expires {{expiryDate}}. Update it to avoid billing interruptions.",
         bodyHtml: `
               <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #b45309;">Payment Method Expiring Soon</h1>
               <p style="margin: 0 0 20px; color: #6b7280; font-size: 14px;">Update your card to avoid service interruption</p>
@@ -1098,7 +1100,7 @@ You are receiving this email because you are an administrator of {{organizationN
   };
 
   const templateContent = templates[template];
-  
+
   return {
     subject: render(templateContent.subject),
     html: render(templateContent.html),
@@ -1109,29 +1111,32 @@ You are receiving this email because you are an administrator of {{organizationN
 /**
  * Check if email service is configured and working
  */
-export async function checkEmailService(): Promise<{ status: 'ok' | 'degraded' | 'error'; message: string }> {
+export async function checkEmailService(): Promise<{
+  status: "ok" | "degraded" | "error";
+  message: string;
+}> {
   const config = getSESConfig();
   const currentEnv = getCurrentEnvironment();
 
-  if (currentEnv === 'local') {
+  if (currentEnv === "local") {
     // In local mode, check if MailHog is running
     try {
-      const response = await fetch('http://localhost:8025/api/v1/events');
+      const response = await fetch("http://localhost:8025/api/v1/events");
       if (response.ok) {
-        return { status: 'ok', message: 'MailHog is running' };
+        return { status: "ok", message: "MailHog is running" };
       }
     } catch {
-      return { status: 'degraded', message: 'MailHog not running - emails will fail' };
+      return { status: "degraded", message: "MailHog not running - emails will fail" };
     }
   }
 
   // For cloud environments, check SES configuration
   if (!process.env.AWS_SES_REGION) {
-    return { status: 'degraded', message: 'SES not configured' };
+    return { status: "degraded", message: "SES not configured" };
   }
 
-  return { 
-    status: 'ok', 
-    message: `SES configured (${config.mode} mode)` 
+  return {
+    status: "ok",
+    message: `SES configured (${config.mode} mode)`,
   };
 }

@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,16 +10,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Clock, CalendarPlus, XCircle } from "lucide-react"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Clock, CalendarPlus, XCircle } from "lucide-react";
 
 interface GracePeriodManagerProps {
-  organizationId: string
-  orgName: string
-  scheduledDeactivationDate: string
+  organizationId: string;
+  orgName: string;
+  scheduledDeactivationDate: string;
 }
 
 export function GracePeriodManager({
@@ -27,54 +27,51 @@ export function GracePeriodManager({
   orgName,
   scheduledDeactivationDate,
 }: GracePeriodManagerProps) {
-  const router = useRouter()
-  const [dialog, setDialog] = useState<"extend" | "clear" | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [days, setDays] = useState("14")
-  const [reason, setReason] = useState("")
+  const router = useRouter();
+  const [dialog, setDialog] = useState<"extend" | "clear" | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [days, setDays] = useState("14");
+  const [reason, setReason] = useState("");
 
-  const deactivationDate = new Date(scheduledDeactivationDate)
+  const deactivationDate = new Date(scheduledDeactivationDate);
   const daysRemaining = Math.ceil(
     (deactivationDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-  )
+  );
 
   const resetForm = () => {
-    setDays("14")
-    setReason("")
-    setDialog(null)
-  }
+    setDays("14");
+    setReason("");
+    setDialog(null);
+  };
 
   const handleAction = async (action: "extend" | "clear") => {
-    setIsSubmitting(true)
+    setIsSubmitting(true);
     try {
-      const body: Record<string, unknown> = { action, reason }
+      const body: Record<string, unknown> = { action, reason };
       if (action === "extend") {
-        body.days = parseInt(days, 10)
+        body.days = parseInt(days, 10);
       }
 
-      const res = await fetch(
-        `/api/superadmin/organizations/${organizationId}/grace-period`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        }
-      )
-      const data = await res.json()
+      const res = await fetch(`/api/superadmin/organizations/${organizationId}/grace-period`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
 
       if (res.ok && data.success) {
-        alert(data.message)
-        resetForm()
-        router.refresh()
+        alert(data.message);
+        resetForm();
+        router.refresh();
       } else {
-        alert(data.error || "Action failed.")
+        alert(data.error || "Action failed.");
       }
     } catch {
-      alert("An error occurred.")
+      alert("An error occurred.");
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <>
@@ -84,8 +81,8 @@ export function GracePeriodManager({
           <p className="font-semibold text-amber-700">Billing grace period active</p>
           <p className="text-sm text-muted-foreground">
             All payment methods failed. This organization will be deactivated in{" "}
-            <strong>{Math.max(daysRemaining, 0)} days</strong>{" "}
-            ({deactivationDate.toLocaleDateString()}) unless a valid payment is received.
+            <strong>{Math.max(daysRemaining, 0)} days</strong> (
+            {deactivationDate.toLocaleDateString()}) unless a valid payment is received.
           </p>
           <div className="flex gap-2 mt-3">
             <Button
@@ -163,9 +160,9 @@ export function GracePeriodManager({
           <DialogHeader>
             <DialogTitle>Clear Grace Period</DialogTitle>
             <DialogDescription>
-              Remove the deactivation threat for{" "}
-              <span className="font-medium">{orgName}</span> and restore the subscription to active.
-              The customer will not be charged — this is a goodwill action.
+              Remove the deactivation threat for <span className="font-medium">{orgName}</span> and
+              restore the subscription to active. The customer will not be charged — this is a
+              goodwill action.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -183,15 +180,12 @@ export function GracePeriodManager({
             <Button variant="outline" onClick={resetForm} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button
-              onClick={() => handleAction("clear")}
-              disabled={isSubmitting || !reason.trim()}
-            >
+            <Button onClick={() => handleAction("clear")} disabled={isSubmitting || !reason.trim()}>
               {isSubmitting ? "Clearing..." : "Clear Grace Period"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }

@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { useParams, useRouter, useSearchParams } from "next/navigation"
-import { format, isPast } from "date-fns"
-import { toast } from "sonner"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import Link from "next/link";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { format, isPast } from "date-fns";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import {
   CalendarDays,
   Clock,
@@ -19,12 +19,12 @@ import {
   Flag,
   Receipt,
   ArrowRight,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
-import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs";
 import {
   Table,
   TableBody,
@@ -32,189 +32,204 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
-import { LocationMap } from "@/components/location-map"
-// Timeline is rendered inline in the Overview tab
-import { CompetitionConfiguration } from "../competition-configuration"
+} from "@/components/ui/table";
 import {
-  COMPETITION_TYPE_LABELS,
-  getStatusLabel,
-  getStatusStyle,
-} from "../lib/competition-status"
-import { AthletesTab } from "./athletes-tab"
-import { EventsTab, getCategoryLabel } from "./events-tab"
-import { TransactionsTab } from "./transactions-tab"
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
+import { LocationMap } from "@/components/location-map";
+// Timeline is rendered inline in the Overview tab
+import { CompetitionConfiguration } from "../competition-configuration";
+import { COMPETITION_TYPE_LABELS, getStatusLabel, getStatusStyle } from "../lib/competition-status";
+import { AthletesTab } from "./athletes-tab";
+import { EventsTab, getCategoryLabel } from "./events-tab";
+import { TransactionsTab } from "./transactions-tab";
 
 interface CompetitionCategory {
-  id: string
-  resultType: "TIME" | "DISTANCE" | "HEIGHT" | "SCORE"
-  sortDirection: "ASC" | "DESC"
-  precision: number
-  seedMarkRequired: boolean
-  isTeamEvent: boolean
-  teamSize: number | null
-  price: string | number | null
-  isActive: boolean
-  displayOrder: number
+  id: string;
+  resultType: "TIME" | "DISTANCE" | "HEIGHT" | "SCORE";
+  sortDirection: "ASC" | "DESC";
+  precision: number;
+  seedMarkRequired: boolean;
+  isTeamEvent: boolean;
+  teamSize: number | null;
+  price: string | number | null;
+  isActive: boolean;
+  displayOrder: number;
   combinationEntry: {
-    id: string
-    rowValue: { id: string; name: string }
-    colValue: { id: string; name: string }
-    template: { id: string; name: string }
-  } | null
+    id: string;
+    rowValue: { id: string; name: string };
+    colValue: { id: string; name: string };
+    template: { id: string; name: string };
+  } | null;
   individualEntry: {
-    id: string
-    name: string
-    template: { id: string; name: string }
-  } | null
-  sportEvent: { id: string; name: string; code: string } | null
-  ageCategory: { id: string; name: string; code: string } | null
-  _count: { entries: number; results: number }
+    id: string;
+    name: string;
+    template: { id: string; name: string };
+  } | null;
+  sportEvent: { id: string; name: string; code: string } | null;
+  ageCategory: { id: string; name: string; code: string } | null;
+  _count: { entries: number; results: number };
 }
 
 interface CompetitionLineItem {
-  id: string
-  description: string
-  quantity: number
-  unitPrice: string | number
-  total: string | number
-  createdAt: string
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: string | number;
+  total: string | number;
+  createdAt: string;
   invoice: {
-    id: string
-    reference: string
-    status: string
-    total: string | number
-    createdAt: string
-    user: { id: string; name: string; email: string } | null
-  }
+    id: string;
+    reference: string;
+    status: string;
+    total: string | number;
+    createdAt: string;
+    user: { id: string; name: string; email: string } | null;
+  };
 }
 
 interface CompetitionDetail {
-  id: string
-  name: string
-  competitionType: string
-  status: string
-  publishStatus: string | null
-  scheduledGoLiveDate: string | null
-  scheduledGoLiveTime: string | null
-  startDate: string
-  endDate: string
-  startTime: string
-  endTime: string
-  city: string | null
-  stateProvince: string | null
-  streetAddress: string | null
-  postalCode: string | null
-  country: string | null
-  pricingMode: string
-  entryFee: number | string | null
-  createdAt: string
-  latitude: number | null
-  longitude: number | null
-  facility: { id: string; name: string; street: string | null; city: string | null; stateProvince: string | null; postalCode: string | null; country: string | null; latitude: number | null; longitude: number | null } | null
-  categories: CompetitionCategory[]
+  id: string;
+  name: string;
+  competitionType: string;
+  status: string;
+  publishStatus: string | null;
+  scheduledGoLiveDate: string | null;
+  scheduledGoLiveTime: string | null;
+  startDate: string;
+  endDate: string;
+  startTime: string;
+  endTime: string;
+  city: string | null;
+  stateProvince: string | null;
+  streetAddress: string | null;
+  postalCode: string | null;
+  country: string | null;
+  pricingMode: string;
+  entryFee: number | string | null;
+  createdAt: string;
+  latitude: number | null;
+  longitude: number | null;
+  facility: {
+    id: string;
+    name: string;
+    street: string | null;
+    city: string | null;
+    stateProvince: string | null;
+    postalCode: string | null;
+    country: string | null;
+    latitude: number | null;
+    longitude: number | null;
+  } | null;
+  categories: CompetitionCategory[];
   entries: {
-    id: string
-    createdAt: string
+    id: string;
+    createdAt: string;
     athlete: {
-      id: string
-      firstName: string | null
-      lastName: string | null
-      name: string | null
-      avatar: string | null
-    }
-  }[]
-  lineItems: CompetitionLineItem[]
-  _count: { entries: number; results: number; teams: number }
-  hasLevelRestriction: boolean
-  hasMembershipRestriction: boolean
-  hasWaiverRestriction: boolean
-  hasMedicalRequirement: boolean
+      id: string;
+      firstName: string | null;
+      lastName: string | null;
+      name: string | null;
+      avatar: string | null;
+    };
+  }[];
+  lineItems: CompetitionLineItem[];
+  _count: { entries: number; results: number; teams: number };
+  hasLevelRestriction: boolean;
+  hasMembershipRestriction: boolean;
+  hasWaiverRestriction: boolean;
+  hasMedicalRequirement: boolean;
 }
 
 interface CompetitionResult {
-  id: string
-  value: number
-  displayValue: string | null
-  placement: number | null
-  isDNF: boolean
-  isDNS: boolean
-  isDQ: boolean
+  id: string;
+  value: number;
+  displayValue: string | null;
+  placement: number | null;
+  isDNF: boolean;
+  isDNS: boolean;
+  isDQ: boolean;
   athlete: {
-    id: string
-    firstName: string | null
-    lastName: string | null
-    name: string | null
-  } | null
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    name: string | null;
+  } | null;
   team: {
-    id: string
-    name: string
-  } | null
+    id: string;
+    name: string;
+  } | null;
   category: {
-    id: string
-    resultType: "TIME" | "DISTANCE" | "HEIGHT" | "SCORE" | "PLACEMENT"
-    sortDirection: "ASC" | "DESC"
-    precision: number
-  }
+    id: string;
+    resultType: "TIME" | "DISTANCE" | "HEIGHT" | "SCORE" | "PLACEMENT";
+    sortDirection: "ASC" | "DESC";
+    precision: number;
+  };
 }
 
 interface LatestRegistration {
-  athleteId: string
-  athleteName: string
-  athleteAvatar: string | null
-  registeredAt: string
+  athleteId: string;
+  athleteName: string;
+  athleteAvatar: string | null;
+  registeredAt: string;
 }
 
 function getLatestRegistrations(competition: CompetitionDetail): LatestRegistration[] {
-  const seen = new Map<string, LatestRegistration>()
+  const seen = new Map<string, LatestRegistration>();
   for (const entry of competition.entries) {
-    const athlete = entry.athlete
-    if (seen.has(athlete.id)) continue
+    const athlete = entry.athlete;
+    if (seen.has(athlete.id)) continue;
     seen.set(athlete.id, {
       athleteId: athlete.id,
-      athleteName: [athlete.firstName, athlete.lastName].filter(Boolean).join(" ") || athlete.name || "Unknown athlete",
+      athleteName:
+        [athlete.firstName, athlete.lastName].filter(Boolean).join(" ") ||
+        athlete.name ||
+        "Unknown athlete",
       athleteAvatar: athlete.avatar,
       registeredAt: entry.createdAt,
-    })
+    });
   }
-  return Array.from(seen.values())
+  return Array.from(seen.values());
 }
 
 function formatResultValue(value: number, resultType: string, precision: number): string {
   if (resultType === "TIME") {
-    const totalMs = Math.round(value)
-    const minutes = Math.floor(totalMs / 60000)
-    const seconds = Math.floor((totalMs % 60000) / 1000)
-    const ms = totalMs % 1000
+    const totalMs = Math.round(value);
+    const minutes = Math.floor(totalMs / 60000);
+    const seconds = Math.floor((totalMs % 60000) / 1000);
+    const ms = totalMs % 1000;
     if (minutes > 0) {
-      return `${minutes}:${seconds.toString().padStart(2, "0")}.${ms.toString().padStart(3, "0")}`
+      return `${minutes}:${seconds.toString().padStart(2, "0")}.${ms.toString().padStart(3, "0")}`;
     }
-    return `${seconds}.${ms.toString().padStart(3, "0")}s`
+    return `${seconds}.${ms.toString().padStart(3, "0")}s`;
   }
 
   if (resultType === "DISTANCE" || resultType === "HEIGHT") {
-    const meters = value / 1000
-    return `${meters.toFixed(precision)}m`
+    const meters = value / 1000;
+    return `${meters.toFixed(precision)}m`;
   }
 
-  return value.toFixed(precision)
+  return value.toFixed(precision);
 }
 
 function formatPrice(price: number | string | null | undefined): string {
-  if (price === null || price === undefined) return "Free"
-  const numPrice = typeof price === "string" ? parseFloat(price) : price
-  if (numPrice === 0) return "Free"
+  if (price === null || price === undefined) return "Free";
+  const numPrice = typeof price === "string" ? parseFloat(price) : price;
+  if (numPrice === 0) return "Free";
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
-  }).format(numPrice)
+  }).format(numPrice);
 }
 
 const PRICING_MODE_LABELS: Record<string, string> = {
@@ -223,7 +238,7 @@ const PRICING_MODE_LABELS: Record<string, string> = {
   PER_EVENT: "Per Event",
   TIERED: "Tiered",
   PER_CATEGORY: "Per Category",
-}
+};
 
 const INVOICE_STATUS_STYLES: Record<string, string> = {
   PAID: "bg-green-50 text-green-700 border-green-200",
@@ -232,22 +247,22 @@ const INVOICE_STATUS_STYLES: Record<string, string> = {
   DRAFT: "bg-muted text-muted-foreground",
   CANCELLED: "bg-muted text-muted-foreground",
   PARTIAL: "bg-yellow-50 text-yellow-700 border-yellow-200",
-}
+};
 
 function buildTimelineItems(competition: CompetitionDetail) {
   const items: {
-    title: string
-    date: Date | null
-    time: string | null
-    hollow: boolean
-  }[] = []
+    title: string;
+    date: Date | null;
+    time: string | null;
+    hollow: boolean;
+  }[] = [];
 
   items.push({
     title: "Registration Created",
     date: new Date(competition.createdAt),
     time: format(new Date(competition.createdAt), "h:mm a"),
     hollow: false,
-  })
+  });
 
   const hasGoneLive =
     competition.publishStatus === "LIVE" ||
@@ -256,25 +271,25 @@ function buildTimelineItems(competition: CompetitionDetail) {
     competition.status === "REGISTRATION_OPEN" ||
     competition.status === "REGISTRATION_CLOSED" ||
     competition.status === "IN_PROGRESS" ||
-    competition.status === "COMPLETED"
+    competition.status === "COMPLETED";
 
   if (hasGoneLive) {
     const goLiveDate = competition.scheduledGoLiveDate
       ? new Date(competition.scheduledGoLiveDate)
-      : null
+      : null;
     items.push({
       title: "Registration Live",
       date: goLiveDate,
       time: competition.scheduledGoLiveTime ?? null,
       hollow: false,
-    })
+    });
   } else if (competition.publishStatus === "SCHEDULED" && competition.scheduledGoLiveDate) {
     items.push({
       title: "Registration Scheduled to Go Live",
       date: new Date(competition.scheduledGoLiveDate),
       time: competition.scheduledGoLiveTime ?? null,
       hollow: true,
-    })
+    });
   }
 
   const hasClosed =
@@ -282,7 +297,7 @@ function buildTimelineItems(competition: CompetitionDetail) {
     competition.status === "IN_PROGRESS" ||
     competition.status === "COMPLETED" ||
     competition.publishStatus === "CLOSED" ||
-    competition.publishStatus === "COMPLETED"
+    competition.publishStatus === "COMPLETED";
 
   if (hasClosed) {
     items.push({
@@ -290,109 +305,112 @@ function buildTimelineItems(competition: CompetitionDetail) {
       date: null,
       time: null,
       hollow: false,
-    })
+    });
   }
 
-  const startDate = new Date(competition.startDate)
-  const startPast = isPast(startDate)
+  const startDate = new Date(competition.startDate);
+  const startPast = isPast(startDate);
   items.push({
     title: "Competition Begins",
     date: startDate,
     time: competition.startTime,
     hollow: !startPast,
-  })
+  });
 
-  const endDate = new Date(competition.endDate)
-  const endPast = isPast(endDate)
+  const endDate = new Date(competition.endDate);
+  const endPast = isPast(endDate);
   items.push({
     title: "Competition Ends",
     date: endDate,
     time: competition.endTime,
     hollow: !endPast,
-  })
+  });
 
-  return items
+  return items;
 }
 
 export default function CompetitionProfilePage() {
-  const params = useParams()
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const competitionId = params.id as string
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const competitionId = params.id as string;
 
-  const [competition, setCompetition] = React.useState<CompetitionDetail | null>(null)
-  const [results, setResults] = React.useState<CompetitionResult[]>([])
-  const [selectedCategoryId, setSelectedCategoryId] = React.useState<string>("all")
-  const [loading, setLoading] = React.useState(true)
-  const [resultsLoading, setResultsLoading] = React.useState(false)
-  const [isEditOpen, setIsEditOpen] = React.useState(false)
-  const [activeTab, setActiveTabState] = React.useState(searchParams.get("tab") ?? "overview")
+  const [competition, setCompetition] = React.useState<CompetitionDetail | null>(null);
+  const [results, setResults] = React.useState<CompetitionResult[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = React.useState<string>("all");
+  const [loading, setLoading] = React.useState(true);
+  const [resultsLoading, setResultsLoading] = React.useState(false);
+  const [isEditOpen, setIsEditOpen] = React.useState(false);
+  const [activeTab, setActiveTabState] = React.useState(searchParams.get("tab") ?? "overview");
 
-  const setActiveTab = React.useCallback((tab: string) => {
-    setActiveTabState(tab)
-    const params = new URLSearchParams(searchParams.toString())
-    if (tab === "overview") {
-      params.delete("tab")
-    } else {
-      params.set("tab", tab)
-    }
-    const qs = params.toString()
-    router.replace(`${window.location.pathname}${qs ? `?${qs}` : ""}`, { scroll: false })
-  }, [searchParams, router])
+  const setActiveTab = React.useCallback(
+    (tab: string) => {
+      setActiveTabState(tab);
+      const params = new URLSearchParams(searchParams.toString());
+      if (tab === "overview") {
+        params.delete("tab");
+      } else {
+        params.set("tab", tab);
+      }
+      const qs = params.toString();
+      router.replace(`${window.location.pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+    },
+    [searchParams, router]
+  );
 
   useBreadcrumbOverride(
     competition ? `/dashboard/competitions/${competitionId}` : undefined,
-    competition?.name,
-  )
+    competition?.name
+  );
 
   React.useEffect(() => {
     const fetchCompetition = async () => {
       try {
-        const response = await fetch(`/api/competitions/${competitionId}`)
-        if (!response.ok) throw new Error("Failed to fetch competition")
-        const data = await response.json()
-        setCompetition(data)
+        const response = await fetch(`/api/competitions/${competitionId}`);
+        if (!response.ok) throw new Error("Failed to fetch competition");
+        const data = await response.json();
+        setCompetition(data);
       } catch (error) {
-        toast.error("Failed to load competition details")
+        toast.error("Failed to load competition details");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    if (competitionId) fetchCompetition()
-  }, [competitionId, isEditOpen])
+    if (competitionId) fetchCompetition();
+  }, [competitionId, isEditOpen]);
 
   React.useEffect(() => {
-    if (!competition) return
+    if (!competition) return;
     if (competition.categories.length > 0) {
-      setSelectedCategoryId(competition.categories[0].id)
+      setSelectedCategoryId(competition.categories[0].id);
     } else {
-      setSelectedCategoryId("all")
+      setSelectedCategoryId("all");
     }
-  }, [competition])
+  }, [competition]);
 
   React.useEffect(() => {
     const fetchResults = async () => {
-      setResultsLoading(true)
+      setResultsLoading(true);
       try {
-        const url = new URL(`/api/competitions/${competitionId}/results`, window.location.origin)
+        const url = new URL(`/api/competitions/${competitionId}/results`, window.location.origin);
         if (selectedCategoryId !== "all") {
-          url.searchParams.set("categoryId", selectedCategoryId)
+          url.searchParams.set("categoryId", selectedCategoryId);
         }
 
-        const response = await fetch(url.toString())
-        if (!response.ok) throw new Error("Failed to fetch results")
-        const data = await response.json()
-        setResults(data)
+        const response = await fetch(url.toString());
+        if (!response.ok) throw new Error("Failed to fetch results");
+        const data = await response.json();
+        setResults(data);
       } catch (error) {
-        toast.error("Failed to load results")
+        toast.error("Failed to load results");
       } finally {
-        setResultsLoading(false)
+        setResultsLoading(false);
       }
-    }
+    };
 
-    fetchResults()
-  }, [competitionId, selectedCategoryId])
+    fetchResults();
+  }, [competitionId, selectedCategoryId]);
 
   if (loading) {
     return (
@@ -404,7 +422,7 @@ export default function CompetitionProfilePage() {
           <Skeleton className="h-96 md:col-span-2" />
         </div>
       </div>
-    )
+    );
   }
 
   if (!competition) {
@@ -419,18 +437,34 @@ export default function CompetitionProfilePage() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
-  const facilityName = competition.facility?.name ?? null
+  const facilityName = competition.facility?.name ?? null;
   const locationAddress = competition.facility
-    ? [competition.facility.street, competition.facility.city, [competition.facility.stateProvince, competition.facility.postalCode].filter(Boolean).join(" "), competition.facility.country].filter(Boolean).join(", ")
-    : [competition.streetAddress, competition.city, [competition.stateProvince, competition.postalCode].filter(Boolean).join(" "), competition.country].filter(Boolean).join(", ")
+    ? [
+        competition.facility.street,
+        competition.facility.city,
+        [competition.facility.stateProvince, competition.facility.postalCode]
+          .filter(Boolean)
+          .join(" "),
+        competition.facility.country,
+      ]
+        .filter(Boolean)
+        .join(", ")
+    : [
+        competition.streetAddress,
+        competition.city,
+        [competition.stateProvince, competition.postalCode].filter(Boolean).join(" "),
+        competition.country,
+      ]
+        .filter(Boolean)
+        .join(", ");
 
   const selectedCategory =
     selectedCategoryId === "all"
       ? null
-      : competition.categories.find((category) => category.id === selectedCategoryId) || null
+      : competition.categories.find((category) => category.id === selectedCategoryId) || null;
 
   const categoryFilter = (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -451,10 +485,10 @@ export default function CompetitionProfilePage() {
         </Select>
       </div>
     </div>
-  )
+  );
 
-  const latestRegistrations = getLatestRegistrations(competition)
-  const timelineItems = buildTimelineItems(competition)
+  const latestRegistrations = getLatestRegistrations(competition);
+  const timelineItems = buildTimelineItems(competition);
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -466,7 +500,7 @@ export default function CompetitionProfilePage() {
             variant="outline"
             className={cn(
               "text-[10px] uppercase tracking-wider font-semibold h-5 px-1.5 shrink-0",
-              getStatusStyle(competition),
+              getStatusStyle(competition)
             )}
           >
             {getStatusLabel(competition)}
@@ -543,7 +577,10 @@ export default function CompetitionProfilePage() {
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Trophy className="h-3.5 w-3.5 shrink-0" />
-                      <span>{COMPETITION_TYPE_LABELS[competition.competitionType] || competition.competitionType}</span>
+                      <span>
+                        {COMPETITION_TYPE_LABELS[competition.competitionType] ||
+                          competition.competitionType}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <DollarSign className="h-3.5 w-3.5 shrink-0" />
@@ -568,7 +605,9 @@ export default function CompetitionProfilePage() {
                       <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                       {facilityName || locationAddress ? (
                         <div className="min-w-0">
-                          {facilityName && <span className="font-medium text-foreground">{facilityName}</span>}
+                          {facilityName && (
+                            <span className="font-medium text-foreground">{facilityName}</span>
+                          )}
                           {facilityName && locationAddress && <br />}
                           {locationAddress && <span className="text-xs">{locationAddress}</span>}
                         </div>
@@ -577,9 +616,9 @@ export default function CompetitionProfilePage() {
                       )}
                     </div>
                     {(() => {
-                      const lat = competition.facility?.latitude ?? competition.latitude
-                      const lng = competition.facility?.longitude ?? competition.longitude
-                      if (lat == null || lng == null) return null
+                      const lat = competition.facility?.latitude ?? competition.latitude;
+                      const lng = competition.facility?.longitude ?? competition.longitude;
+                      if (lat == null || lng == null) return null;
                       return (
                         <div className="col-span-2 mt-2 rounded-md overflow-hidden border border-border">
                           <LocationMap
@@ -590,7 +629,7 @@ export default function CompetitionProfilePage() {
                             className="h-40 min-h-0"
                           />
                         </div>
-                      )
+                      );
                     })()}
                   </div>
                 </CardContent>
@@ -626,7 +665,8 @@ export default function CompetitionProfilePage() {
                             </p>
                           </div>
                           <Badge variant="secondary" className="shrink-0 ml-2">
-                            {category._count.entries} {category._count.entries === 1 ? "entry" : "entries"}
+                            {category._count.entries}{" "}
+                            {category._count.entries === 1 ? "entry" : "entries"}
                           </Badge>
                         </div>
                       ))}
@@ -648,7 +688,7 @@ export default function CompetitionProfilePage() {
                 <CardContent>
                   <div className="space-y-0">
                     {timelineItems.map((item, idx) => {
-                      const isLast = idx === timelineItems.length - 1
+                      const isLast = idx === timelineItems.length - 1;
                       return (
                         <div key={idx} className="relative flex gap-4">
                           <div className="flex flex-col items-center">
@@ -657,12 +697,10 @@ export default function CompetitionProfilePage() {
                                 "h-3 w-3 rounded-full border-2 shrink-0 mt-1.5",
                                 item.hollow
                                   ? "bg-background border-muted-foreground/40"
-                                  : "bg-primary border-primary",
+                                  : "bg-primary border-primary"
                               )}
                             />
-                            {!isLast && (
-                              <div className="w-[2px] flex-1 bg-border my-1" />
-                            )}
+                            {!isLast && <div className="w-[2px] flex-1 bg-border my-1" />}
                           </div>
                           <div className={cn("pb-5", isLast && "pb-0")}>
                             <div className="flex items-center gap-2">
@@ -680,7 +718,7 @@ export default function CompetitionProfilePage() {
                             </p>
                           </div>
                         </div>
-                      )
+                      );
                     })}
                   </div>
                 </CardContent>
@@ -720,7 +758,8 @@ export default function CompetitionProfilePage() {
                               <TableCell>
                                 <p className="font-medium">{item.description}</p>
                                 <p className="text-xs text-muted-foreground">
-                                  {item.invoice?.user?.name ?? "N/A"} &middot; {format(new Date(item.createdAt), "MM/dd/yyyy")}
+                                  {item.invoice?.user?.name ?? "N/A"} &middot;{" "}
+                                  {format(new Date(item.createdAt), "MM/dd/yyyy")}
                                 </p>
                               </TableCell>
                               <TableCell>
@@ -728,7 +767,7 @@ export default function CompetitionProfilePage() {
                                   variant="outline"
                                   className={cn(
                                     "capitalize",
-                                    INVOICE_STATUS_STYLES[item.invoice?.status] ?? "",
+                                    INVOICE_STATUS_STYLES[item.invoice?.status] ?? ""
                                   )}
                                 >
                                   {item.invoice?.status?.toLowerCase() ?? "unknown"}
@@ -769,13 +808,13 @@ export default function CompetitionProfilePage() {
                     {latestRegistrations.length > 0 ? (
                       <div className="space-y-4">
                         {latestRegistrations.slice(0, 5).map((reg) => (
-                          <div
-                            key={reg.athleteId}
-                            className="flex items-center justify-between"
-                          >
+                          <div key={reg.athleteId} className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                               <Avatar className="h-10 w-10">
-                                <AvatarImage src={reg.athleteAvatar || undefined} alt={reg.athleteName} />
+                                <AvatarImage
+                                  src={reg.athleteAvatar || undefined}
+                                  alt={reg.athleteName}
+                                />
                                 <AvatarFallback>
                                   {reg.athleteName
                                     .split(" ")
@@ -793,7 +832,9 @@ export default function CompetitionProfilePage() {
                               </div>
                             </div>
                             <Button variant="outline" size="sm" asChild>
-                              <Link href={`/dashboard/competitions/${competition.id}/athletes/${reg.athleteId}`}>
+                              <Link
+                                href={`/dashboard/competitions/${competition.id}/athletes/${reg.athleteId}`}
+                              >
                                 View
                               </Link>
                             </Button>
@@ -850,10 +891,12 @@ export default function CompetitionProfilePage() {
                   <TableBody>
                     {results.map((result, index) => {
                       const name = result.athlete
-                        ? [result.athlete.firstName, result.athlete.lastName].filter(Boolean).join(" ") ||
+                        ? [result.athlete.firstName, result.athlete.lastName]
+                            .filter(Boolean)
+                            .join(" ") ||
                           result.athlete.name ||
                           "Unknown athlete"
-                        : result.team?.name || "Unknown team"
+                        : result.team?.name || "Unknown team";
 
                       return (
                         <TableRow key={result.id}>
@@ -877,7 +920,7 @@ export default function CompetitionProfilePage() {
                             )}
                           </TableCell>
                         </TableRow>
-                      )
+                      );
                     })}
                   </TableBody>
                 </Table>
@@ -896,15 +939,14 @@ export default function CompetitionProfilePage() {
           <Card>
             <CardHeader>
               <CardTitle>Reports</CardTitle>
-              <CardDescription>
-                Competition analytics and reporting
-              </CardDescription>
+              <CardDescription>Competition analytics and reporting</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <BarChart3 className="h-12 w-12 text-muted-foreground/50 mb-4" />
                 <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-                  Competition reports and analytics will be available here, including entry summaries, result breakdowns, and participation trends.
+                  Competition reports and analytics will be available here, including entry
+                  summaries, result breakdowns, and participation trends.
                 </p>
               </div>
             </CardContent>
@@ -926,5 +968,5 @@ export default function CompetitionProfilePage() {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }

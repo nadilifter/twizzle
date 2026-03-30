@@ -1,33 +1,33 @@
-"use client"
+"use client";
 
-import { useRouter, usePathname, useSearchParams } from "next/navigation"
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 
 interface StatusFilterProps {
-  currentStatus?: string
+  currentStatus?: string;
 }
 
 export function StatusFilter({ currentStatus }: StatusFilterProps) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const handleChange = (value: string) => {
-    const params = new URLSearchParams(searchParams.toString())
+    const params = new URLSearchParams(searchParams.toString());
     if (value === "all") {
-      params.delete("status")
+      params.delete("status");
     } else {
-      params.set("status", value)
+      params.set("status", value);
     }
-    const qs = params.toString()
-    router.push(qs ? `${pathname}?${qs}` : pathname)
-  }
+    const qs = params.toString();
+    router.push(qs ? `${pathname}?${qs}` : pathname);
+  };
 
   return (
     <Select value={currentStatus || "all"} onValueChange={handleChange}>
@@ -40,5 +40,5 @@ export function StatusFilter({ currentStatus }: StatusFilterProps) {
         <SelectItem value="deactivated">Deactivated</SelectItem>
       </SelectContent>
     </Select>
-  )
+  );
 }

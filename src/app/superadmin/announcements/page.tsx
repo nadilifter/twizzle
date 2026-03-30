@@ -1,18 +1,18 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Label } from "@/components/ui/label"
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -21,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -29,40 +29,56 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Eye, Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Loader2 } from "lucide-react"
-import { format } from "date-fns"
-import { toast } from "sonner"
+} from "@/components/ui/dropdown-menu";
+import {
+  Plus,
+  Search,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Eye,
+  Bold,
+  Italic,
+  Underline as UnderlineIcon,
+  List,
+  ListOrdered,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Loader2,
+} from "lucide-react";
+import { format } from "date-fns";
+import { toast } from "sonner";
 
 // Tiptap imports
-import { useEditor, EditorContent } from "@tiptap/react"
-import StarterKit from "@tiptap/starter-kit"
-import Placeholder from "@tiptap/extension-placeholder"
-import Link from "@tiptap/extension-link"
-import Underline from "@tiptap/extension-underline"
-import TextAlign from "@tiptap/extension-text-align"
-import { cn } from "@/lib/utils"
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Placeholder from "@tiptap/extension-placeholder";
+import Link from "@tiptap/extension-link";
+import Underline from "@tiptap/extension-underline";
+import TextAlign from "@tiptap/extension-text-align";
+import { cn } from "@/lib/utils";
 
 interface SystemAnnouncement {
-  id: string
-  title: string
-  content: string
-  priority: "LOW" | "NORMAL" | "HIGH" | "URGENT"
-  status: "DRAFT" | "PUBLISHED" | "ARCHIVED"
-  publishedAt: string | null
-  expiresAt: string | null
-  createdAt: string
-  readCount: number
+  id: string;
+  title: string;
+  content: string;
+  priority: "LOW" | "NORMAL" | "HIGH" | "URGENT";
+  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+  publishedAt: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+  readCount: number;
   createdBy: {
-    name: string
-    email: string
-  }
+    name: string;
+    email: string;
+  };
 }
 
 const priorityColors = {
@@ -70,27 +86,27 @@ const priorityColors = {
   NORMAL: "bg-secondary text-secondary-foreground",
   HIGH: "bg-orange-500 text-white",
   URGENT: "bg-destructive text-destructive-foreground",
-}
+};
 
 const statusColors = {
   DRAFT: "bg-muted text-muted-foreground",
   PUBLISHED: "bg-green-500 text-white",
   ARCHIVED: "bg-gray-500 text-white",
-}
+};
 
 export default function SuperadminAnnouncementsPage() {
-  const [announcements, setAnnouncements] = useState<SystemAnnouncement[]>([])
-  const [loading, setLoading] = useState(true)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingAnnouncement, setEditingAnnouncement] = useState<SystemAnnouncement | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [saving, setSaving] = useState(false)
+  const [announcements, setAnnouncements] = useState<SystemAnnouncement[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingAnnouncement, setEditingAnnouncement] = useState<SystemAnnouncement | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [saving, setSaving] = useState(false);
 
   // Form State
-  const [title, setTitle] = useState("")
-  const [priority, setPriority] = useState<"LOW" | "NORMAL" | "HIGH" | "URGENT">("NORMAL")
-  const [status, setStatus] = useState<"DRAFT" | "PUBLISHED" | "ARCHIVED">("DRAFT")
-  const [expiresAt, setExpiresAt] = useState("")
+  const [title, setTitle] = useState("");
+  const [priority, setPriority] = useState<"LOW" | "NORMAL" | "HIGH" | "URGENT">("NORMAL");
+  const [status, setStatus] = useState<"DRAFT" | "PUBLISHED" | "ARCHIVED">("DRAFT");
+  const [expiresAt, setExpiresAt] = useState("");
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -113,61 +129,62 @@ export default function SuperadminAnnouncementsPage() {
     content: "",
     editorProps: {
       attributes: {
-        class: "min-h-[150px] w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 overflow-y-auto prose prose-sm max-w-none dark:prose-invert",
+        class:
+          "min-h-[150px] w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 overflow-y-auto prose prose-sm max-w-none dark:prose-invert",
       },
     },
-  })
+  });
 
   const fetchAnnouncements = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const response = await fetch("/api/superadmin/announcements")
+      const response = await fetch("/api/superadmin/announcements");
       if (response.ok) {
-        const data = await response.json()
-        setAnnouncements(data.data || [])
+        const data = await response.json();
+        setAnnouncements(data.data || []);
       }
     } catch (error) {
-      console.error("Failed to fetch announcements:", error)
-      toast.error("Failed to fetch announcements")
+      console.error("Failed to fetch announcements:", error);
+      toast.error("Failed to fetch announcements");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchAnnouncements()
-  }, [])
+    fetchAnnouncements();
+  }, []);
 
   const resetForm = () => {
-    setTitle("")
-    setPriority("NORMAL")
-    setStatus("DRAFT")
-    setExpiresAt("")
-    editor?.commands.clearContent()
-    setEditingAnnouncement(null)
-  }
+    setTitle("");
+    setPriority("NORMAL");
+    setStatus("DRAFT");
+    setExpiresAt("");
+    editor?.commands.clearContent();
+    setEditingAnnouncement(null);
+  };
 
   const handleOpenDialog = (announcement?: SystemAnnouncement) => {
     if (announcement) {
-      setEditingAnnouncement(announcement)
-      setTitle(announcement.title)
-      setPriority(announcement.priority)
-      setStatus(announcement.status)
-      setExpiresAt(announcement.expiresAt ? announcement.expiresAt.slice(0, 16) : "")
-      editor?.commands.setContent(announcement.content)
+      setEditingAnnouncement(announcement);
+      setTitle(announcement.title);
+      setPriority(announcement.priority);
+      setStatus(announcement.status);
+      setExpiresAt(announcement.expiresAt ? announcement.expiresAt.slice(0, 16) : "");
+      editor?.commands.setContent(announcement.content);
     } else {
-      resetForm()
+      resetForm();
     }
-    setIsDialogOpen(true)
-  }
+    setIsDialogOpen(true);
+  };
 
   const handleSave = async () => {
     if (!title || !editor?.getHTML()) {
-      toast.error("Title and content are required")
-      return
+      toast.error("Title and content are required");
+      return;
     }
 
-    setSaving(true)
+    setSaving(true);
     try {
       const payload = {
         title,
@@ -175,54 +192,56 @@ export default function SuperadminAnnouncementsPage() {
         priority,
         status,
         expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
-      }
+      };
 
       const url = editingAnnouncement
         ? `/api/superadmin/announcements/${editingAnnouncement.id}`
-        : "/api/superadmin/announcements"
-      
+        : "/api/superadmin/announcements";
+
       const response = await fetch(url, {
         method: editingAnnouncement ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      })
+      });
 
       if (response.ok) {
-        toast.success(editingAnnouncement
-          ? "Announcement updated successfully"
-          : "Announcement created successfully")
-        setIsDialogOpen(false)
-        resetForm()
-        fetchAnnouncements()
+        toast.success(
+          editingAnnouncement
+            ? "Announcement updated successfully"
+            : "Announcement created successfully"
+        );
+        setIsDialogOpen(false);
+        resetForm();
+        fetchAnnouncements();
       } else {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to save announcement")
+        const error = await response.json();
+        throw new Error(error.error || "Failed to save announcement");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save announcement")
+      toast.error(error instanceof Error ? error.message : "Failed to save announcement");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this announcement?")) return
+    if (!confirm("Are you sure you want to delete this announcement?")) return;
 
     try {
       const response = await fetch(`/api/superadmin/announcements/${id}`, {
         method: "DELETE",
-      })
+      });
 
       if (response.ok) {
-        toast.success("Announcement deleted successfully")
-        fetchAnnouncements()
+        toast.success("Announcement deleted successfully");
+        fetchAnnouncements();
       } else {
-        throw new Error("Failed to delete announcement")
+        throw new Error("Failed to delete announcement");
       }
     } catch (error) {
-      toast.error("Failed to delete announcement")
+      toast.error("Failed to delete announcement");
     }
-  }
+  };
 
   const handlePublish = async (id: string) => {
     try {
@@ -230,22 +249,22 @@ export default function SuperadminAnnouncementsPage() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "PUBLISHED" }),
-      })
+      });
 
       if (response.ok) {
-        toast.success("Announcement published successfully")
-        fetchAnnouncements()
+        toast.success("Announcement published successfully");
+        fetchAnnouncements();
       } else {
-        throw new Error("Failed to publish announcement")
+        throw new Error("Failed to publish announcement");
       }
     } catch (error) {
-      toast.error("Failed to publish announcement")
+      toast.error("Failed to publish announcement");
     }
-  }
+  };
 
   const filteredAnnouncements = announcements.filter((item) =>
     item.title.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  );
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -256,10 +275,13 @@ export default function SuperadminAnnouncementsPage() {
             Manage platform-wide announcements visible to all organizations.
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={(open) => {
-          setIsDialogOpen(open)
-          if (!open) resetForm()
-        }}>
+        <Dialog
+          open={isDialogOpen}
+          onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) resetForm();
+          }}
+        >
           <DialogTrigger asChild>
             <Button onClick={() => handleOpenDialog()}>
               <Plus className="mr-2 h-4 w-4" />
@@ -364,7 +386,10 @@ export default function SuperadminAnnouncementsPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => editor.chain().focus().setTextAlign("left").run()}
-                        className={cn("h-8 w-8 p-0", editor.isActive({ textAlign: "left" }) && "bg-muted")}
+                        className={cn(
+                          "h-8 w-8 p-0",
+                          editor.isActive({ textAlign: "left" }) && "bg-muted"
+                        )}
                       >
                         <AlignLeft className="h-4 w-4" />
                       </Button>
@@ -373,7 +398,10 @@ export default function SuperadminAnnouncementsPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => editor.chain().focus().setTextAlign("center").run()}
-                        className={cn("h-8 w-8 p-0", editor.isActive({ textAlign: "center" }) && "bg-muted")}
+                        className={cn(
+                          "h-8 w-8 p-0",
+                          editor.isActive({ textAlign: "center" }) && "bg-muted"
+                        )}
                       >
                         <AlignCenter className="h-4 w-4" />
                       </Button>
@@ -382,7 +410,10 @@ export default function SuperadminAnnouncementsPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => editor.chain().focus().setTextAlign("right").run()}
-                        className={cn("h-8 w-8 p-0", editor.isActive({ textAlign: "right" }) && "bg-muted")}
+                        className={cn(
+                          "h-8 w-8 p-0",
+                          editor.isActive({ textAlign: "right" }) && "bg-muted"
+                        )}
                       >
                         <AlignRight className="h-4 w-4" />
                       </Button>
@@ -519,5 +550,5 @@ export default function SuperadminAnnouncementsPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

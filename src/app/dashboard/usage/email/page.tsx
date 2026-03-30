@@ -1,51 +1,51 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { useState, useEffect, useCallback } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet"
-import { 
-  Mail, 
-  MailOpen, 
+} from "@/components/ui/sheet";
+import {
+  Mail,
+  MailOpen,
   MousePointerClick,
   AlertTriangle,
   CheckCircle2,
   Loader2,
   TrendingUp,
-} from "lucide-react"
-import { Skeleton } from "@/components/ui/skeleton"
-import { toast } from "sonner"
+} from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 
 interface EmailCampaign {
-  id: string
-  name: string
-  subject: string
-  status: string
-  totalRecipients: number
-  sentCount: number
-  deliveredCount: number
-  openedCount: number
-  clickedCount: number
-  bouncedCount: number
-  failedCount: number
-  createdAt: string
-  startedAt?: string
-  completedAt?: string
-  targetScope: string
-  htmlBody: string
+  id: string;
+  name: string;
+  subject: string;
+  status: string;
+  totalRecipients: number;
+  sentCount: number;
+  deliveredCount: number;
+  openedCount: number;
+  clickedCount: number;
+  bouncedCount: number;
+  failedCount: number;
+  createdAt: string;
+  startedAt?: string;
+  completedAt?: string;
+  targetScope: string;
+  htmlBody: string;
 }
 
 interface UsageInfo {
-  used: number
-  included: number
-  remaining: number
-  overageRate: number | null
+  used: number;
+  included: number;
+  remaining: number;
+  overageRate: number | null;
 }
 
 const statusColors: Record<string, string> = {
@@ -55,50 +55,50 @@ const statusColors: Record<string, string> = {
   COMPLETED: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
   FAILED: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
   CANCELLED: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300",
-}
+};
 
 const targetScopeLabels: Record<string, string> = {
   ALL: "All Members",
   PROGRAM: "Program Participants",
   EVENT: "Event Attendees",
   GUARDIAN: "All Guardians",
-}
+};
 
 export default function EmailPage() {
   // Data state
-  const [campaigns, setCampaigns] = useState<EmailCampaign[]>([])
-  const [usage, setUsage] = useState<UsageInfo | null>(null)
-  const [selectedCampaign, setSelectedCampaign] = useState<EmailCampaign | null>(null)
-  
+  const [campaigns, setCampaigns] = useState<EmailCampaign[]>([]);
+  const [usage, setUsage] = useState<UsageInfo | null>(null);
+  const [selectedCampaign, setSelectedCampaign] = useState<EmailCampaign | null>(null);
+
   // Loading states
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(true);
 
   // Fetch campaigns
   const fetchCampaigns = useCallback(async () => {
     try {
-      const response = await fetch("/api/email/campaigns")
-      if (!response.ok) throw new Error("Failed to fetch campaigns")
-      const data = await response.json()
-      setCampaigns(data.campaigns || [])
-      setUsage(data.usage || null)
+      const response = await fetch("/api/email/campaigns");
+      if (!response.ok) throw new Error("Failed to fetch campaigns");
+      const data = await response.json();
+      setCampaigns(data.campaigns || []);
+      setUsage(data.usage || null);
     } catch (error) {
-      console.error("Error fetching campaigns:", error)
-      toast.error("Failed to load email campaigns")
+      console.error("Error fetching campaigns:", error);
+      toast.error("Failed to load email campaigns");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    fetchCampaigns()
-  }, [fetchCampaigns])
+    fetchCampaigns();
+  }, [fetchCampaigns]);
 
   // Calculate stats
-  const totalSent = campaigns.reduce((sum, c) => sum + c.sentCount, 0)
-  const totalOpened = campaigns.reduce((sum, c) => sum + c.openedCount, 0)
-  const totalClicked = campaigns.reduce((sum, c) => sum + c.clickedCount, 0)
-  const avgOpenRate = totalSent > 0 ? ((totalOpened / totalSent) * 100).toFixed(1) : "0"
-  const avgClickRate = totalSent > 0 ? ((totalClicked / totalSent) * 100).toFixed(1) : "0"
+  const totalSent = campaigns.reduce((sum, c) => sum + c.sentCount, 0);
+  const totalOpened = campaigns.reduce((sum, c) => sum + c.openedCount, 0);
+  const totalClicked = campaigns.reduce((sum, c) => sum + c.clickedCount, 0);
+  const avgOpenRate = totalSent > 0 ? ((totalOpened / totalSent) * 100).toFixed(1) : "0";
+  const avgClickRate = totalSent > 0 ? ((totalClicked / totalSent) * 100).toFixed(1) : "0";
 
   return (
     <div className="@container/main flex flex-1 flex-col gap-2">
@@ -144,9 +144,7 @@ export default function EmailPage() {
               ) : (
                 <>
                   <div className="text-2xl font-bold">{avgOpenRate}%</div>
-                  <p className="text-xs text-muted-foreground">
-                    {totalOpened} total opens
-                  </p>
+                  <p className="text-xs text-muted-foreground">{totalOpened} total opens</p>
                 </>
               )}
             </CardContent>
@@ -165,9 +163,7 @@ export default function EmailPage() {
               ) : (
                 <>
                   <div className="text-2xl font-bold">{avgClickRate}%</div>
-                  <p className="text-xs text-muted-foreground">
-                    {totalClicked} total clicks
-                  </p>
+                  <p className="text-xs text-muted-foreground">{totalClicked} total clicks</p>
                 </>
               )}
             </CardContent>
@@ -187,7 +183,7 @@ export default function EmailPage() {
                 <>
                   <div className="text-2xl font-bold">{campaigns.length}</div>
                   <p className="text-xs text-muted-foreground">
-                    {campaigns.filter(c => c.status === "COMPLETED").length} completed
+                    {campaigns.filter((c) => c.status === "COMPLETED").length} completed
                   </p>
                 </>
               )}
@@ -229,7 +225,8 @@ export default function EmailPage() {
                         </div>
                         <p className="text-sm text-muted-foreground truncate">{campaign.subject}</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {targetScopeLabels[campaign.targetScope]} • {new Date(campaign.createdAt).toLocaleDateString()}
+                          {targetScopeLabels[campaign.targetScope]} •{" "}
+                          {new Date(campaign.createdAt).toLocaleDateString()}
                         </p>
                       </div>
                       <div className="flex items-center gap-6 text-sm text-muted-foreground ml-4">
@@ -239,17 +236,19 @@ export default function EmailPage() {
                         </div>
                         <div className="text-center">
                           <p className="font-semibold text-foreground">
-                            {campaign.deliveredCount > 0 
+                            {campaign.deliveredCount > 0
                               ? ((campaign.openedCount / campaign.deliveredCount) * 100).toFixed(0)
-                              : 0}%
+                              : 0}
+                            %
                           </p>
                           <p className="text-xs">Opened</p>
                         </div>
                         <div className="text-center">
                           <p className="font-semibold text-foreground">
-                            {campaign.deliveredCount > 0 
+                            {campaign.deliveredCount > 0
                               ? ((campaign.clickedCount / campaign.deliveredCount) * 100).toFixed(0)
-                              : 0}%
+                              : 0}
+                            %
                           </p>
                           <p className="text-xs">Clicked</p>
                         </div>
@@ -268,11 +267,9 @@ export default function EmailPage() {
         <SheetContent className="sm:max-w-[540px]">
           <SheetHeader className="mb-6">
             <SheetTitle>Campaign Details</SheetTitle>
-            <SheetDescription>
-              Performance metrics for this email campaign.
-            </SheetDescription>
+            <SheetDescription>Performance metrics for this email campaign.</SheetDescription>
           </SheetHeader>
-          
+
           {selectedCampaign && (
             <div className="flex flex-col gap-6">
               <Card className="bg-muted/50">
@@ -337,9 +334,13 @@ export default function EmailPage() {
                 <Card>
                   <CardContent className="p-4 flex flex-col items-center justify-center text-center">
                     <div className="text-2xl font-bold">
-                      {selectedCampaign.deliveredCount > 0 
-                        ? ((selectedCampaign.openedCount / selectedCampaign.deliveredCount) * 100).toFixed(1)
-                        : 0}%
+                      {selectedCampaign.deliveredCount > 0
+                        ? (
+                            (selectedCampaign.openedCount / selectedCampaign.deliveredCount) *
+                            100
+                          ).toFixed(1)
+                        : 0}
+                      %
                     </div>
                     <div className="text-xs text-muted-foreground">Open Rate</div>
                   </CardContent>
@@ -347,9 +348,13 @@ export default function EmailPage() {
                 <Card>
                   <CardContent className="p-4 flex flex-col items-center justify-center text-center">
                     <div className="text-2xl font-bold">
-                      {selectedCampaign.deliveredCount > 0 
-                        ? ((selectedCampaign.clickedCount / selectedCampaign.deliveredCount) * 100).toFixed(1)
-                        : 0}%
+                      {selectedCampaign.deliveredCount > 0
+                        ? (
+                            (selectedCampaign.clickedCount / selectedCampaign.deliveredCount) *
+                            100
+                          ).toFixed(1)
+                        : 0}
+                      %
                     </div>
                     <div className="text-xs text-muted-foreground">Click Rate</div>
                   </CardContent>
@@ -373,5 +378,5 @@ export default function EmailPage() {
         </SheetContent>
       </Sheet>
     </div>
-  )
+  );
 }

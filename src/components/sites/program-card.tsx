@@ -4,7 +4,19 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CalendarDays, User, Star, Clock, MapPin, Repeat, Users, UserCheck, Shield, ClipboardList, CalendarClock } from "lucide-react";
+import {
+  CalendarDays,
+  User,
+  Star,
+  Clock,
+  MapPin,
+  Repeat,
+  Users,
+  UserCheck,
+  Shield,
+  ClipboardList,
+  CalendarClock,
+} from "lucide-react";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { formatRRuleDays } from "@/lib/rrule-utils";
 import { getRegistrationStatus } from "@/lib/registration-utils";
@@ -138,22 +150,29 @@ export function ProgramCard({ program }: ProgramCardProps) {
   const bulkDiscounts = program.bulkDiscounts || [];
   const showCoach = program.showCoachOnSite !== false;
 
-  const directPrice = program.basePrice 
-    ? (typeof program.basePrice === "string" ? parseFloat(program.basePrice) : program.basePrice)
+  const directPrice = program.basePrice
+    ? typeof program.basePrice === "string"
+      ? parseFloat(program.basePrice)
+      : program.basePrice
     : program.perSessionPrice
-    ? (typeof program.perSessionPrice === "string" ? parseFloat(program.perSessionPrice) : program.perSessionPrice)
-    : 0;
+      ? typeof program.perSessionPrice === "string"
+        ? parseFloat(program.perSessionPrice)
+        : program.perSessionPrice
+      : 0;
 
   const totalCapacity = program.capacity || 0;
   const enrolled = program._count?.enrollments || 0;
-  const spotsAvailable = program.hasCapacityRestriction && totalCapacity > 0 ? Math.max(0, totalCapacity - enrolled) : null;
+  const spotsAvailable =
+    program.hasCapacityRestriction && totalCapacity > 0
+      ? Math.max(0, totalCapacity - enrolled)
+      : null;
 
   const isFull = spotsAvailable === 0;
   const isDropIn = program.registrationType === "PER_INSTANCE";
   const waitlistedCount = program._count?.waitlistedEnrollments || 0;
-  const waitlistHasRoom = program.waitlistEnabled && (
-    program.waitlistCapacity == null || waitlistedCount < program.waitlistCapacity
-  );
+  const waitlistHasRoom =
+    program.waitlistEnabled &&
+    (program.waitlistCapacity == null || waitlistedCount < program.waitlistCapacity);
   const canJoinWaitlist = isFull && waitlistHasRoom;
   const isSoldOut = isFull && !canJoinWaitlist && !isDropIn;
 
@@ -161,17 +180,19 @@ export function ProgramCard({ program }: ProgramCardProps) {
 
   const daysLabel = program.rrule ? formatRRuleDays(program.rrule) : null;
 
-  const ageLabel = program.hasAgeRestriction && (program.minAge !== null || program.maxAge !== null)
-    ? program.minAge && program.maxAge
-      ? `Ages ${program.minAge}–${program.maxAge}`
-      : program.minAge
-      ? `Ages ${program.minAge}+`
-      : `Up to age ${program.maxAge}`
-    : null;
+  const ageLabel =
+    program.hasAgeRestriction && (program.minAge !== null || program.maxAge !== null)
+      ? program.minAge && program.maxAge
+        ? `Ages ${program.minAge}–${program.maxAge}`
+        : program.minAge
+          ? `Ages ${program.minAge}+`
+          : `Up to age ${program.maxAge}`
+      : null;
 
-  const genderLabel = program.hasGenderRestriction && program.allowedGenders && program.allowedGenders.length > 0
-    ? program.allowedGenders.map(g => CARD_GENDER_LABELS[g] || g).join(", ")
-    : null;
+  const genderLabel =
+    program.hasGenderRestriction && program.allowedGenders && program.allowedGenders.length > 0
+      ? program.allowedGenders.map((g) => CARD_GENDER_LABELS[g] || g).join(", ")
+      : null;
 
   return (
     <Card className="group relative flex flex-col overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-primary/10">
@@ -189,9 +210,7 @@ export function ProgramCard({ program }: ProgramCardProps) {
       )}
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold leading-tight text-foreground">
-            {program.name}
-          </h3>
+          <h3 className="font-semibold leading-tight text-foreground">{program.name}</h3>
           <div className="flex items-center gap-1">
             {spotsAvailable !== null && spotsAvailable <= 5 && spotsAvailable > 0 && (
               <Badge variant="destructive" className="shrink-0 text-[10px] px-1.5 py-0">
@@ -215,15 +234,23 @@ export function ProgramCard({ program }: ProgramCardProps) {
             )}
           </div>
         </div>
-        
+
         {levelRequirements.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-1.5">
             {levelRequirements.map((lr) => (
-              <Badge 
+              <Badge
                 key={lr.id}
-                variant="secondary" 
+                variant="secondary"
                 className="text-[10px] px-1.5 py-0"
-                style={lr.level.color ? { backgroundColor: `${lr.level.color}15`, color: lr.level.color, borderColor: `${lr.level.color}40` } : undefined}
+                style={
+                  lr.level.color
+                    ? {
+                        backgroundColor: `${lr.level.color}15`,
+                        color: lr.level.color,
+                        borderColor: `${lr.level.color}40`,
+                      }
+                    : undefined
+                }
               >
                 {lr.level.name}
               </Badge>
@@ -248,7 +275,8 @@ export function ProgramCard({ program }: ProgramCardProps) {
                 <span>
                   {program.endDate ? (
                     <>
-                      {format(new Date(program.startDate), "MMM d")} - {format(new Date(program.endDate), "MMM d, yyyy")}
+                      {format(new Date(program.startDate), "MMM d")} -{" "}
+                      {format(new Date(program.endDate), "MMM d, yyyy")}
                     </>
                   ) : (
                     format(new Date(program.startDate), "EEEE, MMM d, yyyy")
@@ -256,7 +284,7 @@ export function ProgramCard({ program }: ProgramCardProps) {
                 </span>
               </div>
             )}
-            
+
             {daysLabel && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <CalendarClock className="h-3.5 w-3.5 shrink-0" />
@@ -287,10 +315,9 @@ export function ProgramCard({ program }: ProgramCardProps) {
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Repeat className="h-3.5 w-3.5 shrink-0" />
               <span>
-                {program._count?.instances 
+                {program._count?.instances
                   ? `${program._count.instances} sessions`
-                  : "Recurring program"
-                }
+                  : "Recurring program"}
                 {program.registrationType === "PER_INSTANCE" && (
                   <span className="ml-1 text-primary">(drop-in available)</span>
                 )}
@@ -299,7 +326,10 @@ export function ProgramCard({ program }: ProgramCardProps) {
           </div>
         )}
 
-        {(ageLabel || genderLabel || (program.hasCapacityRestriction && totalCapacity > 0) || requiredMemberships.length > 0) && (
+        {(ageLabel ||
+          genderLabel ||
+          (program.hasCapacityRestriction && totalCapacity > 0) ||
+          requiredMemberships.length > 0) && (
           <div className="mt-3 flex flex-wrap gap-1.5">
             {ageLabel && (
               <div className="inline-flex items-center gap-1 text-[10px] font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 px-2 py-0.5 rounded-full">
@@ -316,7 +346,9 @@ export function ProgramCard({ program }: ProgramCardProps) {
             {program.hasCapacityRestriction && totalCapacity > 0 && (
               <div className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-700 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/50 px-2 py-0.5 rounded-full">
                 <Users className="h-3 w-3" />
-                {spotsAvailable !== null ? `${spotsAvailable} spot${spotsAvailable !== 1 ? "s" : ""} left` : `${totalCapacity} spots`}
+                {spotsAvailable !== null
+                  ? `${spotsAvailable} spot${spotsAvailable !== 1 ? "s" : ""} left`
+                  : `${totalCapacity} spots`}
               </div>
             )}
             {requiredMemberships.length > 0 && (
@@ -331,18 +363,21 @@ export function ProgramCard({ program }: ProgramCardProps) {
         {bulkDiscounts.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">
             {bulkDiscounts.map((discount) => {
-              const value = typeof discount.discountValue === "string" 
-                ? parseFloat(discount.discountValue) 
-                : discount.discountValue;
-              const label = discount.discountType === "PERCENTAGE" 
-                ? `${value}% off` 
-                : `$${value} off`;
+              const value =
+                typeof discount.discountValue === "string"
+                  ? parseFloat(discount.discountValue)
+                  : discount.discountValue;
+              const label =
+                discount.discountType === "PERCENTAGE" ? `${value}% off` : `$${value} off`;
               return (
-                <Badge key={discount.id} variant="outline" className="text-xs text-green-600 border-green-200 bg-green-50">
-                  {discount.type === "FAMILY_SIBLING" 
+                <Badge
+                  key={discount.id}
+                  variant="outline"
+                  className="text-xs text-green-600 border-green-200 bg-green-50"
+                >
+                  {discount.type === "FAMILY_SIBLING"
                     ? `${discount.minQuantity}+ kids: ${label}`
-                    : `${discount.minQuantity}+ sessions: ${label}`
-                  }
+                    : `${discount.minQuantity}+ sessions: ${label}`}
                 </Badge>
               );
             })}
@@ -382,10 +417,14 @@ export function ProgramCard({ program }: ProgramCardProps) {
 
       <CardFooter className="flex flex-col gap-3 border-t bg-muted/30 pt-4">
         <div className="flex items-center justify-between w-full">
-            <span className="text-sm font-medium">
-              {directPrice === 0 ? "Free Program" : program.pricingModel === "PER_SESSION" ? "Per Session" : "Program Fee"}
-            </span>
-            <span className="font-bold">{formatPrice(directPrice)}</span>
+          <span className="text-sm font-medium">
+            {directPrice === 0
+              ? "Free Program"
+              : program.pricingModel === "PER_SESSION"
+                ? "Per Session"
+                : "Program Fee"}
+          </span>
+          <span className="font-bold">{formatPrice(directPrice)}</span>
         </div>
 
         <Button
@@ -397,12 +436,12 @@ export function ProgramCard({ program }: ProgramCardProps) {
           {registrationStatus === "closed"
             ? "Registration Closed"
             : registrationStatus === "scheduled" && program.registrationStartDate
-            ? `Opens ${format(new Date(program.registrationStartDate), "MMM d")}`
-            : isFull && canJoinWaitlist
-            ? "Join Waitlist"
-            : isSoldOut
-            ? "Sold Out"
-            : "Register"}
+              ? `Opens ${format(new Date(program.registrationStartDate), "MMM d")}`
+              : isFull && canJoinWaitlist
+                ? "Join Waitlist"
+                : isSoldOut
+                  ? "Sold Out"
+                  : "Register"}
         </Button>
       </CardFooter>
     </Card>

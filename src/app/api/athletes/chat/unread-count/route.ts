@@ -27,9 +27,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching athlete chat unread count:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch unread count" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch unread count" }, { status: 500 });
   }
 }

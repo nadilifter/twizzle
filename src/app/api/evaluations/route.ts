@@ -8,7 +8,14 @@ import type { SkillAttemptStatus, ScoringType } from "@prisma/client";
 import { checkAndAwardAchievements } from "@/lib/services/achievement";
 
 const skillAttemptStatusEnum = z.enum(["NOT_ATTEMPTED", "ATTEMPTED", "SUCCEEDED"]);
-const evaluationStatusEnum = z.enum(["PENDING", "IN_PROGRESS", "PASS", "RETRY", "EXCELLENT", "SATISFACTORY"]);
+const evaluationStatusEnum = z.enum([
+  "PENDING",
+  "IN_PROGRESS",
+  "PASS",
+  "RETRY",
+  "EXCELLENT",
+  "SATISFACTORY",
+]);
 
 const skillRatingSchema = z.object({
   skillId: z.string().min(1),
@@ -57,7 +64,7 @@ async function updateAthleteSkillProgress(
   evaluationDate: Date
 ) {
   const now = new Date();
-  
+
   // Get existing progress record
   const existingProgress = await db.athleteSkillProgress.findUnique({
     where: {
@@ -83,7 +90,7 @@ async function updateAthleteSkillProgress(
         updateData.bestStatus = "ATTEMPTED";
       }
     }
-    
+
     if (attemptStatus === "SUCCEEDED" || passed) {
       updateData.successCount = existingProgress.successCount + 1;
       if (!existingProgress.firstSucceededAt) {
@@ -101,12 +108,12 @@ async function updateAthleteSkillProgress(
     // Create new progress record
     const isPassed = attemptStatus === "SUCCEEDED" || passed;
     const isAttempted = attemptStatus !== "NOT_ATTEMPTED" || passed;
-    
+
     await db.athleteSkillProgress.create({
       data: {
         athleteId,
         skillId,
-        bestStatus: isPassed ? "SUCCEEDED" : (isAttempted ? "ATTEMPTED" : "NOT_ATTEMPTED"),
+        bestStatus: isPassed ? "SUCCEEDED" : isAttempted ? "ATTEMPTED" : "NOT_ATTEMPTED",
         firstAttemptedAt: isAttempted ? evaluationDate : null,
         firstSucceededAt: isPassed ? evaluationDate : null,
         attemptCount: isAttempted ? 1 : 0,
@@ -152,14 +159,23 @@ export async function GET(request: NextRequest) {
       ...(coachId && { coachId }),
       ...(templateId && { templateId }),
       ...(programId && { programId }),
-      ...(status && { status: status as "PENDING" | "IN_PROGRESS" | "PASS" | "RETRY" | "EXCELLENT" | "SATISFACTORY" }),
-      ...(levelId && { levelId }),
-      ...(startDate && endDate && {
-        date: {
-          gte: new Date(startDate),
-          lte: new Date(endDate),
-        },
+      ...(status && {
+        status: status as
+          | "PENDING"
+          | "IN_PROGRESS"
+          | "PASS"
+          | "RETRY"
+          | "EXCELLENT"
+          | "SATISFACTORY",
       }),
+      ...(levelId && { levelId }),
+      ...(startDate &&
+        endDate && {
+          date: {
+            gte: new Date(startDate),
+            lte: new Date(endDate),
+          },
+        }),
     };
 
     const [evaluations, total] = await Promise.all([
@@ -233,10 +249,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching evaluations:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch evaluations" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch evaluations" }, { status: 500 });
   }
 }
 
@@ -309,7 +322,7 @@ export async function POST(request: NextRequest) {
     let levelId = validatedData.levelId;
     let scoringType: ScoringType = "PASS_FAIL";
     let pointScalePassThreshold = 7;
-    
+
     if (validatedData.templateId) {
       const template = await db.evaluationTemplate.findFirst({
         where: {
@@ -331,7 +344,7 @@ export async function POST(request: NextRequest) {
       templateSkillIds = template.skills.map((s) => s.skillId);
       scoringType = template.scoringType;
       pointScalePassThreshold = template.pointScalePassThreshold;
-      
+
       // Use template's level if level not provided
       if (!levelId) {
         levelId = template.levelId ?? undefined;
@@ -340,9 +353,13 @@ export async function POST(request: NextRequest) {
 
     // Determine skill ratings to create
     let skillRatingsToCreate = validatedData.skillRatings || [];
-    
+
     // If using template and no skillRatings provided, create entries for all template skills
-    if (validatedData.templateId && templateSkillIds.length > 0 && skillRatingsToCreate.length === 0) {
+    if (
+      validatedData.templateId &&
+      templateSkillIds.length > 0 &&
+      skillRatingsToCreate.length === 0
+    ) {
       skillRatingsToCreate = templateSkillIds.map((skillId) => ({
         skillId,
         attemptStatus: "NOT_ATTEMPTED" as const,
@@ -352,12 +369,14 @@ export async function POST(request: NextRequest) {
 
     // Calculate passed status for each skill rating
     const skillRatingsWithPassed = skillRatingsToCreate.map((sr) => {
-      const passed = sr.passed ?? isSkillPassed(
-        scoringType,
-        sr.attemptStatus || "NOT_ATTEMPTED",
-        sr.pointScore,
-        pointScalePassThreshold
-      );
+      const passed =
+        sr.passed ??
+        isSkillPassed(
+          scoringType,
+          sr.attemptStatus || "NOT_ATTEMPTED",
+          sr.pointScore,
+          pointScalePassThreshold
+        );
       return { ...sr, passed };
     });
 
@@ -373,16 +392,19 @@ export async function POST(request: NextRequest) {
         overallScore: validatedData.overallScore || 0,
         status: validatedData.status || "PENDING",
         notes: validatedData.notes,
-        skillRatings: skillRatingsWithPassed.length > 0 ? {
-          create: skillRatingsWithPassed.map((sr) => ({
-            skillId: sr.skillId,
-            rating: sr.rating,
-            pointScore: sr.pointScore,
-            attemptStatus: sr.attemptStatus || "NOT_ATTEMPTED",
-            passed: sr.passed,
-            comment: sr.comment,
-          })),
-        } : undefined,
+        skillRatings:
+          skillRatingsWithPassed.length > 0
+            ? {
+                create: skillRatingsWithPassed.map((sr) => ({
+                  skillId: sr.skillId,
+                  rating: sr.rating,
+                  pointScore: sr.pointScore,
+                  attemptStatus: sr.attemptStatus || "NOT_ATTEMPTED",
+                  passed: sr.passed,
+                  comment: sr.comment,
+                })),
+              }
+            : undefined,
       },
       include: {
         athlete: {
@@ -400,31 +422,31 @@ export async function POST(request: NextRequest) {
           },
         },
         template: {
-            select: {
-              id: true,
-              name: true,
-              levelId: true,
-              level: true,
-              scoringType: true,
-              pointScaleMin: true,
-              pointScaleMax: true,
-              pointScalePassThreshold: true,
-            },
-          },
-          level: true,
-          program: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-          skillRatings: {
-            include: {
-              skill: true,
-            },
+          select: {
+            id: true,
+            name: true,
+            levelId: true,
+            level: true,
+            scoringType: true,
+            pointScaleMin: true,
+            pointScaleMax: true,
+            pointScalePassThreshold: true,
           },
         },
-      });
+        level: true,
+        program: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        skillRatings: {
+          include: {
+            skill: true,
+          },
+        },
+      },
+    });
 
     // Update athlete skill progress for each skill rating (only if not PENDING)
     if (validatedData.status && validatedData.status !== "PENDING") {
@@ -513,15 +535,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(evaluation);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating evaluation:", error);
-    return NextResponse.json(
-      { error: "Failed to create evaluation" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create evaluation" }, { status: 500 });
   }
 }

@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Get message count by day for charting
-    const messagesByDay = await db.$queryRaw`
+    const messagesByDay = (await db.$queryRaw`
       SELECT 
         DATE(created_at) as date,
         COUNT(*) as count,
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       GROUP BY DATE(created_at)
       ORDER BY date DESC
       LIMIT 30
-    ` as Array<{ date: Date; count: bigint; delivered: bigint; failed: bigint }>;
+    `) as Array<{ date: Date; count: bigint; delivered: bigint; failed: bigint }>;
 
     // Transform BigInt to number for JSON serialization
     const chartData = messagesByDay.map((day) => ({
@@ -111,9 +111,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching SMS usage:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch SMS usage" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch SMS usage" }, { status: 500 });
   }
 }

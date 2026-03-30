@@ -1,5 +1,5 @@
-import Link from "next/link"
-import { redirect } from "next/navigation"
+import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   Users,
   Calendar,
@@ -9,21 +9,15 @@ import {
   CheckCircle2,
   Circle,
   ArrowRight,
-} from "lucide-react"
-import type { LucideIcon } from "lucide-react"
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-import { getAuthSession } from "@/lib/auth"
-import { getActionItems } from "@/lib/onboarding-actions"
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
-import type { ActionItem } from "@/types/onboarding"
+import { getAuthSession } from "@/lib/auth";
+import { getActionItems } from "@/lib/onboarding-actions";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import type { ActionItem } from "@/types/onboarding";
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Settings,
@@ -31,19 +25,17 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Calendar,
   Globe,
   CreditCard,
-}
+};
 
 function ActionItemCard({ item }: { item: ActionItem }) {
-  const Icon = ICON_MAP[item.icon] ?? Circle
+  const Icon = ICON_MAP[item.icon] ?? Circle;
 
   return (
     <Card className={item.isComplete ? "opacity-60" : ""}>
       <CardHeader className="flex flex-row items-start gap-4 space-y-0">
         <div
           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-            item.isComplete
-              ? "bg-green-100 dark:bg-green-900/30"
-              : "bg-primary/10"
+            item.isComplete ? "bg-green-100 dark:bg-green-900/30" : "bg-primary/10"
           }`}
         >
           {item.isComplete ? (
@@ -56,11 +48,7 @@ function ActionItemCard({ item }: { item: ActionItem }) {
           <CardTitle className="text-base">{item.title}</CardTitle>
           <CardDescription>{item.description}</CardDescription>
         </div>
-        <Button
-          variant={item.isComplete ? "outline" : "default"}
-          size="sm"
-          asChild
-        >
+        <Button variant={item.isComplete ? "outline" : "default"} size="sm" asChild>
           <Link href={item.url}>
             {item.isComplete ? "View" : "Get started"}
             <ArrowRight className="ml-1 h-4 w-4" />
@@ -68,26 +56,22 @@ function ActionItemCard({ item }: { item: ActionItem }) {
         </Button>
       </CardHeader>
     </Card>
-  )
+  );
 }
 
 export default async function ActionItemsPage() {
-  const session = await getAuthSession()
+  const session = await getAuthSession();
   if (!session?.user?.organizationId) {
-    redirect("/switch-organization")
+    redirect("/switch-organization");
   }
 
-  const data = await getActionItems(session.user.organizationId)
-  const progressPercent = Math.round(
-    (data.completedCount / data.totalCount) * 100
-  )
+  const data = await getActionItems(session.user.organizationId);
+  const progressPercent = Math.round((data.completedCount / data.totalCount) * 100);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
       <div className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">
-          Get started with Uplifter
-        </h1>
+        <h1 className="text-2xl font-bold tracking-tight">Get started with Uplifter</h1>
         <p className="text-muted-foreground">
           Complete these steps to get the most out of your organization.
         </p>
@@ -99,9 +83,7 @@ export default async function ActionItemsPage() {
             <span className="text-sm font-medium">
               {data.completedCount} of {data.totalCount} complete
             </span>
-            <span className="text-sm text-muted-foreground">
-              {progressPercent}%
-            </span>
+            <span className="text-sm text-muted-foreground">{progressPercent}%</span>
           </div>
           <Progress value={progressPercent} />
         </CardContent>
@@ -121,10 +103,7 @@ export default async function ActionItemsPage() {
               <p className="font-semibold">All set!</p>
               <p className="text-sm text-muted-foreground">
                 You&apos;ve completed all the setup steps.{" "}
-                <Link
-                  href="/dashboard"
-                  className="text-primary underline hover:no-underline"
-                >
+                <Link href="/dashboard" className="text-primary underline hover:no-underline">
                   Go to your dashboard
                 </Link>
               </p>
@@ -133,5 +112,5 @@ export default async function ActionItemsPage() {
         </Card>
       )}
     </div>
-  )
+  );
 }

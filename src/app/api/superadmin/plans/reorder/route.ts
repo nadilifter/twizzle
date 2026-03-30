@@ -1,25 +1,27 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getAuthSession } from "@/lib/auth"
-import { db } from "@/lib/db"
-import { z } from "zod"
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthSession } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { z } from "zod";
 
 const reorderSchema = z.object({
-  plans: z.array(z.object({
-    id: z.string(),
-    displayOrder: z.number().int().nonnegative(),
-  })),
-})
+  plans: z.array(
+    z.object({
+      id: z.string(),
+      displayOrder: z.number().int().nonnegative(),
+    })
+  ),
+});
 
 // POST /api/superadmin/plans/reorder - Bulk update plan order
 export async function POST(request: NextRequest) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session?.user?.isSuperAdmin) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json()
-    const { plans } = reorderSchema.parse(body)
+    const body = await request.json();
+    const { plans } = reorderSchema.parse(body);
 
     // Update all plans in a transaction
     await db.$transaction(
@@ -29,20 +31,14 @@ export async function POST(request: NextRequest) {
           data: { displayOrder: plan.displayOrder },
         })
       )
-    )
+    );
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    console.error("Error reordering plans:", error)
-    return NextResponse.json(
-      { error: "Failed to reorder plans" },
-      { status: 500 }
-    )
+    console.error("Error reordering plans:", error);
+    return NextResponse.json({ error: "Failed to reorder plans" }, { status: 500 });
   }
 }

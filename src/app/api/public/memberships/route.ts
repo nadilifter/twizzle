@@ -65,8 +65,9 @@ export async function GET(request: NextRequest) {
       .map((group) => {
         const purchasableInstances = group.instances.filter((instance) => {
           // Calculate purchase window
-          const purchaseStart = instance.purchaseStartDate
-            ?? (group.purchaseWindowDays != null
+          const purchaseStart =
+            instance.purchaseStartDate ??
+            (group.purchaseWindowDays != null
               ? subDays(instance.startDate, group.purchaseWindowDays)
               : new Date(0));
           const purchaseEnd = instance.purchaseEndDate ?? instance.endDate;
@@ -75,12 +76,17 @@ export async function GET(request: NextRequest) {
 
           // Check capacity
           const effectiveCapacity = instance.capacity ?? group.capacity;
-          const hasCapacity = !group.hasCapacityRestriction
-            || effectiveCapacity == null
-            || instance._count.athleteMemberships < effectiveCapacity;
+          const hasCapacity =
+            !group.hasCapacityRestriction ||
+            effectiveCapacity == null ||
+            instance._count.athleteMemberships < effectiveCapacity;
 
           // Check registration window (new fields take precedence over legacy purchase window)
-          if (instance.registrationStartDate || instance.registrationEndDate || !instance.registrationOpen) {
+          if (
+            instance.registrationStartDate ||
+            instance.registrationEndDate ||
+            !instance.registrationOpen
+          ) {
             const regStatus = getRegistrationStatus(instance);
             if (regStatus === "closed") return false;
           }
@@ -114,9 +120,10 @@ export async function GET(request: NextRequest) {
 
           // Purchasable instances (with counts for capacity display)
           instances: purchasableInstances.map((inst) => {
-            const regStatus = (inst.registrationStartDate || inst.registrationEndDate || !inst.registrationOpen)
-              ? getRegistrationStatus(inst)
-              : "open";
+            const regStatus =
+              inst.registrationStartDate || inst.registrationEndDate || !inst.registrationOpen
+                ? getRegistrationStatus(inst)
+                : "open";
             return {
               id: inst.id,
               name: inst.name,
@@ -143,7 +150,12 @@ export async function GET(request: NextRequest) {
 
     if (athleteGender) {
       filtered = filtered.filter(
-        (g) => !g!.hasGenderRestriction || g!.allowedGenders.length === 0 || g!.allowedGenders.includes(athleteGender as "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")
+        (g) =>
+          !g!.hasGenderRestriction ||
+          g!.allowedGenders.length === 0 ||
+          g!.allowedGenders.includes(
+            athleteGender as "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY"
+          )
       );
     }
 
@@ -153,8 +165,7 @@ export async function GET(request: NextRequest) {
         filtered = filtered.filter(
           (g) =>
             !g!.hasAgeRestriction ||
-            ((g!.minAge == null || age >= g!.minAge) &&
-              (g!.maxAge == null || age <= g!.maxAge))
+            ((g!.minAge == null || age >= g!.minAge) && (g!.maxAge == null || age <= g!.maxAge))
         );
       }
     }
@@ -162,17 +173,13 @@ export async function GET(request: NextRequest) {
     if (athleteLevel) {
       filtered = filtered.filter(
         (g) =>
-          !g!.hasLevelRestriction ||
-          g!.levelRequirements.some((lr) => lr.levelId === athleteLevel)
+          !g!.hasLevelRestriction || g!.levelRequirements.some((lr) => lr.levelId === athleteLevel)
       );
     }
 
     return NextResponse.json({ data: filtered });
   } catch (error) {
     console.error("Error fetching public memberships:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch memberships" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch memberships" }, { status: 500 });
   }
 }

@@ -27,14 +27,9 @@ export function createVerifiedToken(email: string, type: string): string {
   return Buffer.from(JSON.stringify(payload)).toString("base64url");
 }
 
-export function verifyVerifiedToken(
-  token: string,
-  expectedType: string
-): { email: string } | null {
+export function verifyVerifiedToken(token: string, expectedType: string): { email: string } | null {
   try {
-    const payload = JSON.parse(
-      Buffer.from(token, "base64url").toString("utf-8")
-    );
+    const payload = JSON.parse(Buffer.from(token, "base64url").toString("utf-8"));
     if (!payload.email || !payload.type || !payload.exp || !payload.signature) {
       return null;
     }
@@ -49,7 +44,10 @@ export function verifyVerifiedToken(
 
     const expectedBuf = Buffer.from(expected);
     const actualBuf = Buffer.from(payload.signature);
-    if (expectedBuf.length !== actualBuf.length || !crypto.timingSafeEqual(expectedBuf, actualBuf)) {
+    if (
+      expectedBuf.length !== actualBuf.length ||
+      !crypto.timingSafeEqual(expectedBuf, actualBuf)
+    ) {
       return null;
     }
 
@@ -133,9 +131,7 @@ export async function validateVerificationCode(
       type,
       usedAt: null,
       expiresAt: { gt: new Date() },
-      ...(isToken
-        ? { token: codeOrToken }
-        : { code: codeOrToken.toUpperCase() }),
+      ...(isToken ? { token: codeOrToken } : { code: codeOrToken.toUpperCase() }),
     },
     data: { usedAt: new Date() },
   });

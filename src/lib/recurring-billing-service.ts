@@ -1,39 +1,39 @@
-import { db } from "@/lib/db"
-import { chargeSubscription } from "@/lib/adyen"
-import { addMonths, addYears } from "date-fns"
-import { getTodayNoonUTC, normalizeToNoonUTC } from "@/lib/date-utils"
-import type { Decimal } from "@prisma/client/runtime/library"
+import { db } from "@/lib/db";
+import { chargeSubscription } from "@/lib/adyen";
+import { addMonths, addYears } from "date-fns";
+import { getTodayNoonUTC, normalizeToNoonUTC } from "@/lib/date-utils";
+import type { Decimal } from "@prisma/client/runtime/library";
 
 export interface RecurringChargeWithRelations {
-  id: string
-  organizationId: string
-  userId: string | null
-  athleteId: string | null
-  description: string
-  amount: Decimal
-  frequency: string
-  nextChargeDate: Date
-  paymentMethodId: string | null
-  athletePassId: string | null
-  athleteMembershipId: string | null
-  enrollmentId: string | null
+  id: string;
+  organizationId: string;
+  userId: string | null;
+  athleteId: string | null;
+  description: string;
+  amount: Decimal;
+  frequency: string;
+  nextChargeDate: Date;
+  paymentMethodId: string | null;
+  athletePassId: string | null;
+  athleteMembershipId: string | null;
+  enrollmentId: string | null;
   paymentMethod: {
-    id: string
-    type: string
-    last4: string
-    brand: string | null
-    adyenTokenId: string | null
-    shopperReference: string | null
-  } | null
+    id: string;
+    type: string;
+    last4: string;
+    brand: string | null;
+    adyenTokenId: string | null;
+    shopperReference: string | null;
+  } | null;
 }
 
 export interface ChargeResult {
-  success: boolean
-  pspReference?: string
-  error?: string
-  invoiceId?: string
-  transactionId?: string
-  chargedTotal?: number
+  success: boolean;
+  pspReference?: string;
+  error?: string;
+  invoiceId?: string;
+  transactionId?: string;
+  chargedTotal?: number;
 }
 
 export async function executeRecurringCharge(
@@ -41,19 +41,19 @@ export async function executeRecurringCharge(
   organizationId: string
 ): Promise<ChargeResult> {
   if (!charge.paymentMethodId || !charge.paymentMethod) {
-    return { success: false, error: "No payment method" }
+    return { success: false, error: "No payment method" };
   }
 
-  const { adyenTokenId, shopperReference } = charge.paymentMethod
+  const { adyenTokenId, shopperReference } = charge.paymentMethod;
   if (!adyenTokenId || !shopperReference) {
-    return { success: false, error: "Payment method missing Adyen token" }
+    return { success: false, error: "Payment method missing Adyen token" };
   }
 
-  const baseAmount = Number(charge.amount)
+  const baseAmount = Number(charge.amount);
   // Deterministic reference per billing period prevents double-charging
   // if the cron fires twice on the same day.
-  const chargeDateStr = charge.nextChargeDate.toISOString().split("T")[0]
-  const reference = `recurring-${charge.id}-${chargeDateStr}`
+  const chargeDateStr = charge.nextChargeDate.toISOString().split("T")[0];
+  const reference = `recurring-${charge.id}-${chargeDateStr}`;
 
   // Fetch org tax/fee settings
   const org = await db.organization.findUnique({
@@ -74,23 +74,27 @@ export async function executeRecurringCharge(
         },
       },
     },
-  })
+  });
 
-  const taxRate = org?.taxEnabled !== false ? Number(org?.taxRate ?? 0) : 0
-  const taxPaidBy = org?.taxPaidBy ?? "CUSTOMER"
-  const processingFeePaidBy = org?.processingFeePaidBy ?? "CUSTOMER"
-  const planTransactionFee = org?.subscription?.plan ? Number(org.subscription.plan.transactionFee) : 0
-  const planPerTransactionFee = org?.subscription?.plan ? Number(org.subscription.plan.perTransactionFee) : 0
+  const taxRate = org?.taxEnabled !== false ? Number(org?.taxRate ?? 0) : 0;
+  const taxPaidBy = org?.taxPaidBy ?? "CUSTOMER";
+  const processingFeePaidBy = org?.processingFeePaidBy ?? "CUSTOMER";
+  const planTransactionFee = org?.subscription?.plan
+    ? Number(org.subscription.plan.transactionFee)
+    : 0;
+  const planPerTransactionFee = org?.subscription?.plan
+    ? Number(org.subscription.plan.perTransactionFee)
+    : 0;
 
-  const tax = Math.round(baseAmount * taxRate * 100) / 100
-  const feeBase = taxPaidBy === "CUSTOMER" ? baseAmount + tax : baseAmount
-  const processingFeeRaw = feeBase > 0 ? feeBase * planTransactionFee + planPerTransactionFee : 0
-  const processingFee = Math.round(processingFeeRaw * 100) / 100
+  const tax = Math.round(baseAmount * taxRate * 100) / 100;
+  const feeBase = taxPaidBy === "CUSTOMER" ? baseAmount + tax : baseAmount;
+  const processingFeeRaw = feeBase > 0 ? feeBase * planTransactionFee + planPerTransactionFee : 0;
+  const processingFee = Math.round(processingFeeRaw * 100) / 100;
 
-  let chargeTotal = baseAmount
-  if (taxPaidBy === "CUSTOMER") chargeTotal += tax
-  if (processingFeePaidBy === "CUSTOMER") chargeTotal += processingFee
-  chargeTotal = Math.round(chargeTotal * 100) / 100
+  let chargeTotal = baseAmount;
+  if (taxPaidBy === "CUSTOMER") chargeTotal += tax;
+  if (processingFeePaidBy === "CUSTOMER") chargeTotal += processingFee;
+  chargeTotal = Math.round(chargeTotal * 100) / 100;
 
   try {
     const response = await chargeSubscription(
@@ -99,16 +103,16 @@ export async function executeRecurringCharge(
       chargeTotal,
       reference,
       charge.description
-    )
+    );
 
     if (response.resultCode !== "Authorised") {
       return {
         success: false,
         error: response.refusalReason || `Payment ${response.resultCode}`,
-      }
+      };
     }
 
-    const pspReference: string = response.pspReference
+    const pspReference: string = response.pspReference;
 
     // Create invoice, line items, payment, and transaction in a single transaction
     const result = await db.$transaction(async (tx) => {
@@ -125,7 +129,7 @@ export async function executeRecurringCharge(
           total: chargeTotal,
           notes: JSON.stringify({ recurringChargeId: charge.id }),
         },
-      })
+      });
 
       await tx.lineItem.create({
         data: {
@@ -135,7 +139,7 @@ export async function executeRecurringCharge(
           unitPrice: baseAmount,
           total: baseAmount,
         },
-      })
+      });
 
       if (processingFeePaidBy === "CUSTOMER" && processingFee > 0) {
         await tx.lineItem.create({
@@ -146,7 +150,7 @@ export async function executeRecurringCharge(
             unitPrice: processingFee,
             total: processingFee,
           },
-        })
+        });
       }
 
       const payment = await tx.payment.create({
@@ -158,7 +162,7 @@ export async function executeRecurringCharge(
           status: "COMPLETED",
           processedAt: new Date(),
         },
-      })
+      });
 
       const transaction = await tx.transaction.create({
         data: {
@@ -176,7 +180,7 @@ export async function executeRecurringCharge(
           feeRate: org?.subscription?.plan ? planTransactionFee : null,
           feeFixed: org?.subscription?.plan ? planPerTransactionFee : null,
         },
-      })
+      });
 
       return {
         invoiceId: invoice.id,
@@ -184,8 +188,8 @@ export async function executeRecurringCharge(
         tax,
         processingFee,
         chargeTotal,
-      }
-    })
+      };
+    });
 
     return {
       success: true,
@@ -193,13 +197,13 @@ export async function executeRecurringCharge(
       invoiceId: result.invoiceId,
       transactionId: result.transactionId,
       chargedTotal: result.chargeTotal,
-    }
+    };
   } catch (error: any) {
-    console.error(`executeRecurringCharge failed for charge ${charge.id}:`, error)
+    console.error(`executeRecurringCharge failed for charge ${charge.id}:`, error);
     return {
       success: false,
       error: error.responseBody?.message || error.message || "Unknown error",
-    }
+    };
   }
 }
 
@@ -211,39 +215,45 @@ export async function executeRecurringCharge(
  * - No product link (admin-created charge): no-op
  */
 export async function extendEntitlement(
-  charge: Pick<RecurringChargeWithRelations, "id" | "organizationId" | "frequency" | "athletePassId" | "athleteMembershipId" | "enrollmentId">
+  charge: Pick<
+    RecurringChargeWithRelations,
+    "id" | "organizationId" | "frequency" | "athletePassId" | "athleteMembershipId" | "enrollmentId"
+  >
 ): Promise<void> {
   if (charge.athletePassId) {
     const athletePass = await db.athletePass.findFirst({
       where: { id: charge.athletePassId, pass: { organizationId: charge.organizationId } },
       select: { id: true, endDate: true, status: true },
-    })
+    });
     if (athletePass?.endDate) {
       const newEnd = normalizeToNoonUTC(
         charge.frequency === "YEARLY"
           ? addYears(athletePass.endDate, 1)
           : addMonths(athletePass.endDate, 1)
-      )!
+      )!;
       await db.athletePass.update({
         where: { id: athletePass.id },
         data: { endDate: newEnd, status: "ACTIVE" },
-      })
+      });
     }
   } else if (charge.athleteMembershipId) {
     const membership = await db.athleteMembership.findFirst({
-      where: { id: charge.athleteMembershipId, instance: { group: { organizationId: charge.organizationId } } },
+      where: {
+        id: charge.athleteMembershipId,
+        instance: { group: { organizationId: charge.organizationId } },
+      },
       select: { id: true, endDate: true, status: true },
-    })
+    });
     if (membership?.endDate) {
       const newEnd = normalizeToNoonUTC(
         charge.frequency === "YEARLY"
           ? addYears(membership.endDate, 1)
           : addMonths(membership.endDate, 1)
-      )!
+      )!;
       await db.athleteMembership.update({
         where: { id: membership.id },
         data: { endDate: newEnd, status: "ACTIVE" },
-      })
+      });
     }
   }
 }
@@ -254,40 +264,46 @@ export async function extendEntitlement(
  * extendEntitlement will reactivate the entitlement.
  */
 export async function suspendEntitlement(
-  charge: Pick<RecurringChargeWithRelations, "id" | "organizationId" | "athletePassId" | "athleteMembershipId" | "enrollmentId">
+  charge: Pick<
+    RecurringChargeWithRelations,
+    "id" | "organizationId" | "athletePassId" | "athleteMembershipId" | "enrollmentId"
+  >
 ): Promise<void> {
   if (charge.athletePassId) {
     const verified = await db.athletePass.findFirst({
       where: { id: charge.athletePassId, pass: { organizationId: charge.organizationId } },
       select: { id: true },
-    })
+    });
     if (verified) {
       await db.athletePass.update({
         where: { id: verified.id },
         data: { status: "EXPIRED" },
-      })
+      });
     }
   } else if (charge.athleteMembershipId) {
     const verified = await db.athleteMembership.findFirst({
-      where: { id: charge.athleteMembershipId, instance: { group: { organizationId: charge.organizationId } } },
+      where: {
+        id: charge.athleteMembershipId,
+        instance: { group: { organizationId: charge.organizationId } },
+      },
       select: { id: true },
-    })
+    });
     if (verified) {
       await db.athleteMembership.update({
         where: { id: verified.id },
         data: { status: "EXPIRED" },
-      })
+      });
     }
   } else if (charge.enrollmentId) {
     const verified = await db.enrollment.findFirst({
       where: { id: charge.enrollmentId, program: { organizationId: charge.organizationId } },
       select: { id: true },
-    })
+    });
     if (verified) {
       await db.enrollment.update({
         where: { id: verified.id },
         data: { status: "PAUSED" },
-      })
+      });
     }
   }
 }
@@ -297,32 +313,38 @@ export async function suspendEntitlement(
  * Returns true if the linked entity has been cancelled, completed, or deleted.
  */
 export async function shouldTerminateCharge(
-  charge: Pick<RecurringChargeWithRelations, "organizationId" | "enrollmentId" | "athletePassId" | "athleteMembershipId">
+  charge: Pick<
+    RecurringChargeWithRelations,
+    "organizationId" | "enrollmentId" | "athletePassId" | "athleteMembershipId"
+  >
 ): Promise<boolean> {
   if (charge.enrollmentId) {
     const enrollment = await db.enrollment.findFirst({
       where: { id: charge.enrollmentId, program: { organizationId: charge.organizationId } },
       select: { status: true, endDate: true },
-    })
-    if (!enrollment) return true
-    if (enrollment.status === "CANCELLED" || enrollment.status === "COMPLETED") return true
-    if (enrollment.endDate && enrollment.endDate < new Date()) return true
+    });
+    if (!enrollment) return true;
+    if (enrollment.status === "CANCELLED" || enrollment.status === "COMPLETED") return true;
+    if (enrollment.endDate && enrollment.endDate < new Date()) return true;
   }
   if (charge.athletePassId) {
     const pass = await db.athletePass.findFirst({
       where: { id: charge.athletePassId, pass: { organizationId: charge.organizationId } },
       select: { status: true },
-    })
-    if (!pass) return true
-    if (pass.status === "CANCELLED" || pass.status === "ARCHIVED") return true
+    });
+    if (!pass) return true;
+    if (pass.status === "CANCELLED" || pass.status === "ARCHIVED") return true;
   }
   if (charge.athleteMembershipId) {
     const membership = await db.athleteMembership.findFirst({
-      where: { id: charge.athleteMembershipId, instance: { group: { organizationId: charge.organizationId } } },
+      where: {
+        id: charge.athleteMembershipId,
+        instance: { group: { organizationId: charge.organizationId } },
+      },
       select: { status: true },
-    })
-    if (!membership) return true
-    if (membership.status === "CANCELLED" || membership.status === "ARCHIVED") return true
+    });
+    if (!membership) return true;
+    if (membership.status === "CANCELLED" || membership.status === "ARCHIVED") return true;
   }
-  return false
+  return false;
 }

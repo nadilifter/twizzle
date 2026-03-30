@@ -3,10 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 // GET /api/athletes/[id]/skills - Get athlete's skill progress
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -40,10 +37,7 @@ export async function GET(
       athlete = await db.athlete.findFirst({
         where: {
           id: athleteId,
-          OR: [
-            { guardians: { some: { userId: session.user.id } } },
-            { userId: session.user.id },
-          ],
+          OR: [{ guardians: { some: { userId: session.user.id } } }, { userId: session.user.id }],
         },
       });
     }
@@ -78,9 +72,7 @@ export async function GET(
     ]);
 
     // Create a map of skill progress
-    const progressMap = new Map(
-      progressRecords.map((p) => [p.skillId, p])
-    );
+    const progressMap = new Map(progressRecords.map((p) => [p.skillId, p]));
 
     // Build response with all skills and their progress (or default if no progress)
     const data = skills.map((skill) => {
@@ -132,9 +124,6 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error fetching athlete skill progress:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch athlete skill progress" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch athlete skill progress" }, { status: 500 });
   }
 }

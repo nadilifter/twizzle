@@ -49,7 +49,7 @@ export const RATE_LIMITS = {
 
 /**
  * Check rate limit for a given identifier using sliding window algorithm
- * 
+ *
  * @param identifier - Unique identifier (e.g., IP address, user ID)
  * @param prefix - Key prefix to namespace rate limits (e.g., "auth", "api")
  * @param config - Rate limit configuration
@@ -63,7 +63,9 @@ export async function checkRateLimit(
 ): Promise<RateLimitResult> {
   if (!isRedisAvailable() || !redis) {
     if (failClosed) {
-      console.warn("Rate limiting: Redis unavailable, failing closed for security-critical endpoint");
+      console.warn(
+        "Rate limiting: Redis unavailable, failing closed for security-critical endpoint"
+      );
       return {
         success: false,
         remaining: 0,
@@ -88,26 +90,26 @@ export async function checkRateLimit(
     // Use a sorted set with timestamps as scores for sliding window
     // Remove old entries, add current request, and count
     const pipeline = redis.pipeline();
-    
+
     // Remove entries older than the window
     pipeline.zremrangebyscore(key, 0, windowStart);
-    
+
     // Add current request with timestamp as score
     pipeline.zadd(key, { score: now, member: `${now}-${Math.random()}` });
-    
+
     // Count requests in window
     pipeline.zcard(key);
-    
+
     // Set expiry on the key
     pipeline.expire(key, config.windowSeconds);
-    
+
     const results = await pipeline.exec();
-    
+
     // zcard result is at index 2
     const requestCount = (results[2] as number) || 0;
     const remaining = Math.max(0, config.limit - requestCount);
     const reset = now + config.windowSeconds * 1000;
-    
+
     if (requestCount > config.limit) {
       return {
         success: false,
@@ -181,7 +183,7 @@ export function rateLimitHeaders(result: RateLimitResult): HeadersInit {
 
 /**
  * Helper to check auth rate limit and return response if exceeded
- * 
+ *
  * @param request - The incoming request
  * @param customConfig - Optional custom rate limit config
  * @returns null if allowed, Response if rate limited
@@ -217,7 +219,7 @@ export async function checkAuthRateLimit(
 
 /**
  * Helper to check API rate limit and return response if exceeded
- * 
+ *
  * @param request - The incoming request
  * @param prefix - Rate limit prefix/namespace
  * @param customConfig - Optional custom rate limit config

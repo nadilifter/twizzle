@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Loader2, User, Calendar, AlertCircle, Shield } from "lucide-react"
-import { toast } from "sonner"
-import { format } from "date-fns"
-import { cn } from "@/lib/utils"
-import { Calendar as CalendarPicker } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useState } from "react";
+import { Loader2, User, Calendar, AlertCircle, Shield } from "lucide-react";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 import {
   Dialog,
@@ -14,24 +14,24 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 interface AddAthleteDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onAthleteCreated: () => void
-  hasSelfAthlete: boolean
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onAthleteCreated: () => void;
+  hasSelfAthlete: boolean;
 }
 
 export function AddAthleteDialog({
@@ -40,8 +40,8 @@ export function AddAthleteDialog({
   onAthleteCreated,
   hasSelfAthlete,
 }: AddAthleteDialogProps) {
-  const [isCreating, setIsCreating] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [isCreating, setIsCreating] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [newAthlete, setNewAthlete] = useState({
     firstName: "",
@@ -50,60 +50,60 @@ export function AddAthleteDialog({
     gender: "",
     isSelf: false,
     allowGuardianClaims: false,
-  })
+  });
 
   const handleCreateAthlete = async () => {
     if (!newAthlete.firstName.trim()) {
-      toast.error("First name is required")
-      return
+      toast.error("First name is required");
+      return;
     }
     if (!newAthlete.lastName.trim()) {
-      toast.error("Last name is required")
-      return
+      toast.error("Last name is required");
+      return;
     }
     if (!newAthlete.birthDate) {
-      toast.error("Date of birth is required")
-      return
+      toast.error("Date of birth is required");
+      return;
     }
     if (!newAthlete.gender) {
-      toast.error("Gender declaration is required")
-      return
+      toast.error("Gender declaration is required");
+      return;
     }
 
-    setIsCreating(true)
-    setErrorMessage(null)
+    setIsCreating(true);
+    setErrorMessage(null);
     try {
       const response = await fetch("/api/athletes/me", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newAthlete),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!response.ok) {
         if (response.status === 409) {
-          setErrorMessage(data.error)
-          return
+          setErrorMessage(data.error);
+          return;
         }
-        throw new Error(data.error || "Failed to create athlete")
+        throw new Error(data.error || "Failed to create athlete");
       }
 
-      const created = data.athlete
-      const displayName = `${created.firstName} ${created.lastName}`.trim() || created.name
-      toast.success(`${displayName} added successfully`)
-      onAthleteCreated()
-      handleClose()
+      const created = data.athlete;
+      const displayName = `${created.firstName} ${created.lastName}`.trim() || created.name;
+      toast.success(`${displayName} added successfully`);
+      onAthleteCreated();
+      handleClose();
     } catch (error: any) {
-      console.error("Error creating athlete:", error)
-      toast.error(error.message || "Failed to create athlete")
+      console.error("Error creating athlete:", error);
+      toast.error(error.message || "Failed to create athlete");
     } finally {
-      setIsCreating(false)
+      setIsCreating(false);
     }
-  }
+  };
 
   const resetForm = () => {
-    setErrorMessage(null)
+    setErrorMessage(null);
     setNewAthlete({
       firstName: "",
       lastName: "",
@@ -111,19 +111,22 @@ export function AddAthleteDialog({
       gender: "",
       isSelf: false,
       allowGuardianClaims: false,
-    })
-  }
+    });
+  };
 
   const handleClose = () => {
-    resetForm()
-    onOpenChange(false)
-  }
+    resetForm();
+    onOpenChange(false);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={(newOpen) => {
-      if (!newOpen) handleClose()
-      else onOpenChange(true)
-    }}>
+    <Dialog
+      open={open}
+      onOpenChange={(newOpen) => {
+        if (!newOpen) handleClose();
+        else onOpenChange(true);
+      }}
+    >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add New Athlete</DialogTitle>
@@ -170,9 +173,7 @@ export function AddAthleteDialog({
               <Input
                 id="athlete-first-name"
                 value={newAthlete.firstName}
-                onChange={(e) =>
-                  setNewAthlete((prev) => ({ ...prev, firstName: e.target.value }))
-                }
+                onChange={(e) => setNewAthlete((prev) => ({ ...prev, firstName: e.target.value }))}
                 placeholder="First name"
                 disabled={isCreating}
               />
@@ -182,9 +183,7 @@ export function AddAthleteDialog({
               <Input
                 id="athlete-last-name"
                 value={newAthlete.lastName}
-                onChange={(e) =>
-                  setNewAthlete((prev) => ({ ...prev, lastName: e.target.value }))
-                }
+                onChange={(e) => setNewAthlete((prev) => ({ ...prev, lastName: e.target.value }))}
                 placeholder="Last name"
                 disabled={isCreating}
               />
@@ -199,17 +198,29 @@ export function AddAthleteDialog({
                   type="button"
                   variant="outline"
                   disabled={isCreating}
-                  className={cn("w-full justify-start text-left font-normal", !newAthlete.birthDate && "text-muted-foreground")}
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !newAthlete.birthDate && "text-muted-foreground"
+                  )}
                 >
                   <Calendar className="mr-2 h-4 w-4" />
-                  {newAthlete.birthDate ? format(new Date(newAthlete.birthDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                  {newAthlete.birthDate
+                    ? format(new Date(newAthlete.birthDate + "T12:00:00Z"), "PPP")
+                    : "Pick a date"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
                 <CalendarPicker
                   mode="single"
-                  selected={newAthlete.birthDate ? new Date(newAthlete.birthDate + "T12:00:00Z") : undefined}
-                  onSelect={(date) => setNewAthlete((prev) => ({ ...prev, birthDate: date ? format(date, "yyyy-MM-dd") : "" }))}
+                  selected={
+                    newAthlete.birthDate ? new Date(newAthlete.birthDate + "T12:00:00Z") : undefined
+                  }
+                  onSelect={(date) =>
+                    setNewAthlete((prev) => ({
+                      ...prev,
+                      birthDate: date ? format(date, "yyyy-MM-dd") : "",
+                    }))
+                  }
                   captionLayout="dropdown"
                   fromYear={1940}
                   toYear={new Date().getFullYear()}
@@ -223,9 +234,7 @@ export function AddAthleteDialog({
             <Label htmlFor="athlete-gender">Gender Declaration</Label>
             <Select
               value={newAthlete.gender}
-              onValueChange={(value) =>
-                setNewAthlete((prev) => ({ ...prev, gender: value }))
-              }
+              onValueChange={(value) => setNewAthlete((prev) => ({ ...prev, gender: value }))}
               disabled={isCreating}
             >
               <SelectTrigger id="athlete-gender">
@@ -245,7 +254,10 @@ export function AddAthleteDialog({
               <div className="flex items-center gap-2">
                 <Shield className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <Label htmlFor="allow-guardian-claims" className="text-sm font-medium cursor-pointer">
+                  <Label
+                    htmlFor="allow-guardian-claims"
+                    className="text-sm font-medium cursor-pointer"
+                  >
                     Allow other guardians
                   </Label>
                   <p className="text-xs text-muted-foreground">
@@ -273,11 +285,7 @@ export function AddAthleteDialog({
             >
               Cancel
             </Button>
-            <Button
-              onClick={handleCreateAthlete}
-              disabled={isCreating}
-              className="flex-1"
-            >
+            <Button onClick={handleCreateAthlete} disabled={isCreating} className="flex-1">
               {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {newAthlete.isSelf ? "Add Myself" : "Add Athlete"}
             </Button>
@@ -285,5 +293,5 @@ export function AddAthleteDialog({
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

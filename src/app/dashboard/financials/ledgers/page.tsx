@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Plus, TrendingUp, DollarSign, CreditCard, Activity, Loader2, Layers } from "lucide-react"
-import { Pie, PieChart, Label as RechartsLabel } from "recharts"
-import { toast } from "sonner"
+import * as React from "react";
+import { Plus, TrendingUp, DollarSign, CreditCard, Activity, Loader2, Layers } from "lucide-react";
+import { Pie, PieChart, Label as RechartsLabel } from "recharts";
+import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -13,16 +13,16 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -31,14 +31,21 @@ import {
   DialogHeader,
   DialogTitle,
   DialogClose,
-} from "@/components/ui/dialog"
-import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart"
-import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
-import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
-import { GLCodesTable, GLCode } from "./gl-codes-table"
-import { LedgerTransactions } from "./ledger-transactions"
-import { FinancialReports } from "./financial-reports"
-import { GLCodeAssignments } from "./gl-code-assignments"
+} from "@/components/ui/dialog";
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/components/ui/chart";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs";
+import { GLCodesTable, GLCode } from "./gl-codes-table";
+import { LedgerTransactions } from "./ledger-transactions";
+import { FinancialReports } from "./financial-reports";
+import { GLCodeAssignments } from "./gl-code-assignments";
 
 const CHART_COLORS = [
   "hsl(var(--chart-1))",
@@ -49,100 +56,100 @@ const CHART_COLORS = [
   "hsl(160, 60%, 45%)",
   "hsl(200, 60%, 45%)",
   "hsl(280, 60%, 45%)",
-]
+];
 
 interface RevenueByCode {
-  id: string
-  code: string
-  description: string
-  amount: number
+  id: string;
+  code: string;
+  description: string;
+  amount: number;
 }
 
 interface MonthlyRevenue {
-  month: string
-  total: number
+  month: string;
+  total: number;
 }
 
 export default function LedgersPage() {
-  const [activeTab, setActiveTab] = React.useState("overview")
-  const [glCodes, setGlCodes] = React.useState<GLCode[]>([])
-  const [loading, setLoading] = React.useState(true)
-  const [isDialogOpen, setIsDialogOpen] = React.useState(false)
-  const [saving, setSaving] = React.useState(false)
+  const [activeTab, setActiveTab] = React.useState("overview");
+  const [glCodes, setGlCodes] = React.useState<GLCode[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
   const [newGLCode, setNewGLCode] = React.useState({
     code: "",
     description: "",
     type: "REVENUE",
-  })
+  });
   const [stats, setStats] = React.useState({
     totalRevenue: 0,
     totalExpenses: 0,
     totalAssets: 0,
     totalLiabilities: 0,
     totalEquity: 0,
-  })
-  const [revenueByCode, setRevenueByCode] = React.useState<RevenueByCode[]>([])
-  const [monthlyRevenue, setMonthlyRevenue] = React.useState<MonthlyRevenue[]>([])
+  });
+  const [revenueByCode, setRevenueByCode] = React.useState<RevenueByCode[]>([]);
+  const [monthlyRevenue, setMonthlyRevenue] = React.useState<MonthlyRevenue[]>([]);
 
   const fetchGLCodes = React.useCallback(async () => {
     try {
-      const response = await fetch("/api/ledgers")
-      if (!response.ok) throw new Error("Failed to fetch GL codes")
-      
-      const data = await response.json()
+      const response = await fetch("/api/ledgers");
+      if (!response.ok) throw new Error("Failed to fetch GL codes");
+
+      const data = await response.json();
       const mappedCodes = data.data.map((code: Record<string, unknown>) => ({
         id: code.id,
         code: code.code,
         description: code.description,
         type: (code.type as string).charAt(0) + (code.type as string).slice(1).toLowerCase(),
         status: code.status === "ACTIVE" ? "Active" : "Inactive",
-      }))
-      setGlCodes(mappedCodes)
-      setStats(data.stats)
-      setRevenueByCode(data.revenueByCode || [])
-      setMonthlyRevenue(data.monthlyRevenue || [])
+      }));
+      setGlCodes(mappedCodes);
+      setStats(data.stats);
+      setRevenueByCode(data.revenueByCode || []);
+      setMonthlyRevenue(data.monthlyRevenue || []);
     } catch (error) {
-      console.error("Error fetching GL codes:", error)
-      toast.error("Failed to load GL codes")
+      console.error("Error fetching GL codes:", error);
+      toast.error("Failed to load GL codes");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
   React.useEffect(() => {
-    fetchGLCodes()
-  }, [fetchGLCodes])
+    fetchGLCodes();
+  }, [fetchGLCodes]);
 
   const handleCreateGLCode = async () => {
     if (!newGLCode.code || !newGLCode.description) {
-      toast.error("Please fill in all required fields")
-      return
+      toast.error("Please fill in all required fields");
+      return;
     }
 
-    setSaving(true)
+    setSaving(true);
     try {
       const response = await fetch("/api/ledgers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newGLCode),
-      })
+      });
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to create GL code")
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create GL code");
       }
 
-      toast.success("GL code created successfully")
-      setNewGLCode({ code: "", description: "", type: "REVENUE" })
-      setIsDialogOpen(false)
-      fetchGLCodes()
+      toast.success("GL code created successfully");
+      setNewGLCode({ code: "", description: "", type: "REVENUE" });
+      setIsDialogOpen(false);
+      fetchGLCodes();
     } catch (error) {
-      console.error("Error creating GL code:", error)
-      toast.error(error instanceof Error ? error.message : "Failed to create GL code")
+      console.error("Error creating GL code:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to create GL code");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   // Build chart config and data from real GL code revenue breakdown
   const revenueChartConfig: ChartConfig = {
@@ -153,20 +160,20 @@ export default function LedgersPage() {
         { label: rc.description, color: CHART_COLORS[i % CHART_COLORS.length] },
       ])
     ),
-  }
+  };
 
   const revenueChartData = revenueByCode.map((rc, i) => ({
     category: rc.code,
     amount: rc.amount,
     fill: CHART_COLORS[i % CHART_COLORS.length],
-  }))
+  }));
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-    )
+    );
   }
 
   return (
@@ -188,11 +195,13 @@ export default function LedgersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${stats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              $
+              {stats.totalRevenue.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </div>
-            <p className="text-xs text-muted-foreground">
-              From invoiced line items
-            </p>
+            <p className="text-xs text-muted-foreground">From invoiced line items</p>
           </CardContent>
         </Card>
         <Card>
@@ -201,10 +210,10 @@ export default function LedgersPage() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{glCodes.filter(c => c.status === "Active").length}</div>
-            <p className="text-xs text-muted-foreground">
-              {glCodes.length} total codes
-            </p>
+            <div className="text-2xl font-bold">
+              {glCodes.filter((c) => c.status === "Active").length}
+            </div>
+            <p className="text-xs text-muted-foreground">{glCodes.length} total codes</p>
           </CardContent>
         </Card>
         <Card>
@@ -214,11 +223,13 @@ export default function LedgersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${stats.totalLiabilities.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              $
+              {stats.totalLiabilities.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </div>
-            <p className="text-xs text-muted-foreground">
-              From ledger entries
-            </p>
+            <p className="text-xs text-muted-foreground">From ledger entries</p>
           </CardContent>
         </Card>
       </div>
@@ -268,7 +279,9 @@ export default function LedgersPage() {
                         <Input
                           id="description"
                           value={newGLCode.description}
-                          onChange={(e) => setNewGLCode({ ...newGLCode, description: e.target.value })}
+                          onChange={(e) =>
+                            setNewGLCode({ ...newGLCode, description: e.target.value })
+                          }
                           className="col-span-3"
                           placeholder="e.g. Membership Dues"
                         />
@@ -296,7 +309,9 @@ export default function LedgersPage() {
                     </div>
                     <DialogFooter>
                       <DialogClose asChild>
-                        <Button variant="outline" disabled={saving}>Cancel</Button>
+                        <Button variant="outline" disabled={saving}>
+                          Cancel
+                        </Button>
                       </DialogClose>
                       <Button onClick={handleCreateGLCode} disabled={saving}>
                         {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -305,7 +320,7 @@ export default function LedgersPage() {
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
-                
+
                 <GLCodesTable data={glCodes} onAddClick={() => setIsDialogOpen(true)} />
               </CardContent>
             </Card>
@@ -328,8 +343,8 @@ export default function LedgersPage() {
                         <ChartTooltip
                           cursor={false}
                           content={
-                            <ChartTooltipContent 
-                              hideLabel 
+                            <ChartTooltipContent
+                              hideLabel
                               className="w-[200px]"
                               formatter={(value, name, item) => (
                                 <>
@@ -344,7 +359,10 @@ export default function LedgersPage() {
                                   <div className="flex flex-1 justify-between leading-none items-center">
                                     <span className="text-muted-foreground mr-2">{name}</span>
                                     <span className="font-mono font-medium tabular-nums text-foreground">
-                                      ${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                      $
+                                      {Number(value).toLocaleString(undefined, {
+                                        minimumFractionDigits: 2,
+                                      })}
                                     </span>
                                   </div>
                                 </>
@@ -362,9 +380,10 @@ export default function LedgersPage() {
                           <RechartsLabel
                             content={({ viewBox }) => {
                               if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                                const formatted = stats.totalRevenue >= 1000
-                                  ? `$${(stats.totalRevenue / 1000).toFixed(1)}k`
-                                  : `$${stats.totalRevenue.toFixed(0)}`
+                                const formatted =
+                                  stats.totalRevenue >= 1000
+                                    ? `$${(stats.totalRevenue / 1000).toFixed(1)}k`
+                                    : `$${stats.totalRevenue.toFixed(0)}`;
                                 return (
                                   <text
                                     x={viewBox.cx}
@@ -387,13 +406,18 @@ export default function LedgersPage() {
                                       Total
                                     </tspan>
                                   </text>
-                                )
+                                );
                               }
                             }}
                           />
                         </Pie>
                         <ChartLegend
-                          content={<ChartLegendContent nameKey="category" className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center text-foreground font-medium" />}
+                          content={
+                            <ChartLegendContent
+                              nameKey="category"
+                              className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center text-foreground font-medium"
+                            />
+                          }
                         />
                       </PieChart>
                     </ChartContainer>
@@ -426,12 +450,16 @@ export default function LedgersPage() {
           <LedgerTransactions />
         </TabsContent>
         <TabsContent value="reports">
-          <FinancialReports stats={stats} monthlyRevenue={monthlyRevenue} revenueByCode={revenueByCode} />
+          <FinancialReports
+            stats={stats}
+            monthlyRevenue={monthlyRevenue}
+            revenueByCode={revenueByCode}
+          />
         </TabsContent>
         <TabsContent value="assignments">
           <GLCodeAssignments />
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }

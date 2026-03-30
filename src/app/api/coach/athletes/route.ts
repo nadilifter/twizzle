@@ -95,13 +95,21 @@ export async function GET(request: NextRequest) {
     });
 
     // Deduplicate athletes
-    const athleteMap = new Map<string, {
-      id: string;
-      name: string;
-      email: string | null;
-      avatar: string | null;
-      programs: Array<{ id: string; name: string; organizationId: string; organizationName: string }>;
-    }>();
+    const athleteMap = new Map<
+      string,
+      {
+        id: string;
+        name: string;
+        email: string | null;
+        avatar: string | null;
+        programs: Array<{
+          id: string;
+          name: string;
+          organizationId: string;
+          organizationName: string;
+        }>;
+      }
+    >();
 
     for (const enrollment of enrollments) {
       const existing = athleteMap.get(enrollment.athlete.id);
@@ -150,9 +158,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching coach athletes:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch athletes" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch athletes" }, { status: 500 });
   }
 }

@@ -34,12 +34,14 @@ Build the onboarding flow that creates Adyen platform resources for an organizat
 **Auth**: Requires authenticated session with `financials.create` permission or admin (`*`).
 
 **Flow**:
+
 1. Get the current organization from the session
 2. Check if `AdyenPlatformAccount` already exists for this org -- if yes, return current status
 3. Load `Organization` data (name, address, phone, email, country)
 4. Call Adyen APIs in sequence (if any call fails, return error and do not proceed):
 
 **API Call 1: Create Legal Entity**
+
 ```
 POST /legalEntities (LEM API)
 {
@@ -58,6 +60,7 @@ POST /legalEntities (LEM API)
 ```
 
 **API Call 2: Create Business Line**
+
 ```
 POST /businessLines (LEM API)
 {
@@ -72,6 +75,7 @@ POST /businessLines (LEM API)
 Note: The NAICS code `71394` is "Fitness and Recreational Sports Centers." Verify this is appropriate for gymnastics gyms. Alternative: `611620` (Sports and Recreation Instruction).
 
 **API Call 3: Create Account Holder**
+
 ```
 POST /accountHolders (Configuration API)
 {
@@ -87,6 +91,7 @@ POST /accountHolders (Configuration API)
 ```
 
 **API Call 4: Create Balance Account**
+
 ```
 POST /balanceAccounts (Configuration API)
 {
@@ -96,6 +101,7 @@ POST /balanceAccounts (Configuration API)
 ```
 
 5. Save all IDs to `AdyenPlatformAccount`:
+
 ```typescript
 await db.adyenPlatformAccount.create({
   data: {
@@ -106,7 +112,7 @@ await db.adyenPlatformAccount.create({
     balanceAccountId: balanceAccount.id,
     onboardingStatus: "PENDING_HOSTED",
   },
-})
+});
 ```
 
 6. Return success with the created record.
@@ -118,6 +124,7 @@ await db.adyenPlatformAccount.create({
 **Auth**: Requires authenticated session.
 
 Return the `AdyenPlatformAccount` for the current organization, or `null` if not started. Include:
+
 - `onboardingStatus`
 - `verificationStatus`
 - `capabilities` (JSON)
@@ -134,6 +141,7 @@ Return the `AdyenPlatformAccount` for the current organization, or `null` if not
 **Auth**: Requires authenticated session with admin permissions.
 
 **Flow**:
+
 1. Load the org's `AdyenPlatformAccount`
 2. Verify it exists and has a `legalEntityId`
 3. Call the LEM API:
@@ -165,11 +173,13 @@ This endpoint is called after the onboarding status reaches `VERIFIED` (either m
 **Auth**: Requires authenticated session with admin or superadmin permissions.
 
 **Flow**:
+
 1. Load the org's `AdyenPlatformAccount`
 2. Verify `onboardingStatus` is `VERIFIED`
 3. Skip if `storeId` is already set (idempotent)
 
 **API Call: Create Store**
+
 ```
 POST /stores (Management API)
 {
@@ -188,6 +198,7 @@ POST /stores (Management API)
 ```
 
 **API Call: Create Sweep** (if transfer instrument is available)
+
 ```
 POST /balanceAccounts/{balanceAccountId}/sweeps (Configuration API)
 {
@@ -204,6 +215,7 @@ POST /balanceAccounts/{balanceAccountId}/sweeps (Configuration API)
 ```
 
 The `transferInstrumentId` is created by Adyen during the hosted onboarding process when the user provides their bank account details. To get it:
+
 - Call `GET /accountHolders/{id}` via Configuration API
 - Look for `primaryBalanceAccount` or check the account holder's transfer instruments
 - Or receive it via the `balancePlatform.paymentInstrument.created` webhook
@@ -221,6 +233,7 @@ Replace the current hardcoded mockup (which has `const isFullyVerified = true` h
 ### Current state of the file
 
 The current page is a static mockup that shows:
+
 - Legal Entity status (always green checkmark)
 - Identity Verification status (always green checkmark)
 - Bank Account status (always green checkmark)
@@ -230,30 +243,36 @@ The current page is a static mockup that shows:
 ### New behavior
 
 **State: No `AdyenPlatformAccount` exists**
+
 - Show a "Start Onboarding" card explaining what onboarding involves
 - Button: "Begin Verification" → calls `POST /api/organization/adyen-onboarding`
 - After API returns, show success and "Continue to Adyen" button
 
 **State: `PENDING_HOSTED`**
+
 - Show that account structure is created
 - Button: "Complete Verification" → calls `POST /api/organization/adyen-onboarding/link`, then redirects to the returned URL
 
 **State: `IN_PROGRESS` / `IN_REVIEW`**
+
 - Show verification progress
 - Parse `capabilities` JSON to show per-capability status (receivePayments, sendToTransferInstrument, etc.)
 - Each capability: pending (yellow), allowed (green), or problem (red)
 - "Check Status" button that refreshes the page (status updates come via webhook)
 
 **State: `VERIFIED`**
+
 - Show success state (green alert, similar to current mockup)
 - If store is not yet configured: show "Finalize Setup" button → calls finalize endpoint
 - If store is configured: show full success with store ID, balance account ID
 
 **State: `REJECTED`**
+
 - Show error state with explanation
 - Link to re-open hosted onboarding page to fix issues
 
 ### Keep existing UI patterns
+
 - Use the same Shadcn components: `Card`, `Alert`, `Button`
 - Keep the `Building2Icon`, `UserIcon`, `UniversityIcon` layout for the three status rows
 - Replace hardcoded values with real data
@@ -267,6 +286,7 @@ The current page is a static mockup that shows:
 Add a new section/card to the organization detail page:
 
 **"Adyen Platform Account" card**:
+
 - Show `onboardingStatus`, `verificationStatus`
 - Show all Adyen entity IDs (legal entity, account holder, balance account, store)
 - Show capabilities JSON (collapsible)

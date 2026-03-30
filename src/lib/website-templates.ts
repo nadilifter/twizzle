@@ -269,15 +269,3 @@ export const SAAS_TEMPLATE = `
   </div>
 </div>
 `;
-
-
-
-
-
-
-
-
-
-
-
-

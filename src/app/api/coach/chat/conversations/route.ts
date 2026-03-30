@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { checkFeatureGate } from "@/lib/feature-resolver";
 import { z } from "zod";
-import {
-  listCoachConversations,
-  getOrCreateCoachConversation,
-} from "@/lib/conversation-service";
+import { listCoachConversations, getOrCreateCoachConversation } from "@/lib/conversation-service";
 import { getEffectiveUser, getCoachingMemberships } from "@/lib/impersonation";
 import { db } from "@/lib/db";
 
@@ -36,26 +33,21 @@ export async function GET(request: NextRequest) {
         : undefined;
     const search = searchParams.get("search")?.slice(0, 200) || undefined;
     const page = Math.max(1, parseInt(searchParams.get("page") || "1") || 1);
-    const limit = Math.min(
-      100,
-      Math.max(1, parseInt(searchParams.get("limit") || "50") || 50)
-    );
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50") || 50));
 
     const orgIds = coachingMemberships.map((m) => m.organizationId);
 
-    const result = await listCoachConversations(
-      effectiveUser.userId,
-      orgIds,
-      { status, search, page, limit }
-    );
+    const result = await listCoachConversations(effectiveUser.userId, orgIds, {
+      status,
+      search,
+      page,
+      limit,
+    });
 
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error fetching coach conversations:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch conversations" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch conversations" }, { status: 500 });
   }
 }
 
@@ -84,18 +76,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { userId, organizationId, channel } =
-      createConversationSchema.parse(body);
+    const { userId, organizationId, channel } = createConversationSchema.parse(body);
 
     // Validate the coach is affiliated with this org
-    const validOrg = coachingMemberships.find(
-      (m) => m.organizationId === organizationId
-    );
+    const validOrg = coachingMemberships.find((m) => m.organizationId === organizationId);
     if (!validOrg) {
-      return NextResponse.json(
-        { error: "Not affiliated with this organization" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Not affiliated with this organization" }, { status: 403 });
     }
 
     if (channel === "WEB_SMS") {
@@ -124,17 +110,12 @@ export async function POST(request: NextRequest) {
     const programIds = Array.from(
       new Set([
         ...staffAssignments.map((a) => a.programId),
-        ...coachEvents
-          .map((e) => e.programId)
-          .filter((id): id is string => id !== null),
+        ...coachEvents.map((e) => e.programId).filter((id): id is string => id !== null),
       ])
     );
 
     if (programIds.length === 0) {
-      return NextResponse.json(
-        { error: "No program assignments found" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "No program assignments found" }, { status: 403 });
     }
 
     const guardianLink = await db.athleteGuardian.findFirst({
@@ -210,9 +191,6 @@ export async function POST(request: NextRequest) {
       );
     }
     console.error("Error creating coach conversation:", error);
-    return NextResponse.json(
-      { error: "Failed to create conversation" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create conversation" }, { status: 500 });
   }
 }

@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import React from "react"
-import Link from "next/link"
-import { motion } from "motion/react"
+import React from "react";
+import Link from "next/link";
+import { motion } from "motion/react";
 import {
   ArrowLeft,
   Users,
@@ -11,14 +11,14 @@ import {
   CreditCard,
   MessageSquare,
   Monitor,
-} from "lucide-react"
-import { SparklesCore } from "@/components/ui/sparkles"
-import { LampContainer } from "@/components/ui/lamp"
-import { TextGenerateEffect } from "@/components/ui/text-generate-effect"
-import { ShootingStars } from "@/components/ui/shooting-stars"
-import { StarsBackground } from "@/components/ui/stars-background"
-import { WavyBackground } from "@/components/ui/wavy-background"
-import WorldMap from "@/components/ui/world-map"
+} from "lucide-react";
+import { SparklesCore } from "@/components/ui/sparkles";
+import { LampContainer } from "@/components/ui/lamp";
+import { TextGenerateEffect } from "@/components/ui/text-generate-effect";
+import { ShootingStars } from "@/components/ui/shooting-stars";
+import { StarsBackground } from "@/components/ui/stars-background";
+import { WavyBackground } from "@/components/ui/wavy-background";
+import WorldMap from "@/components/ui/world-map";
 
 const features = [
   {
@@ -57,7 +57,7 @@ const features = [
     description:
       "Dedicated portals for parents, athletes, coaches, front desk, and administrators.",
   },
-]
+];
 
 const mapConnections = [
   { start: { lat: 34.05, lng: -118.24 }, end: { lat: 40.71, lng: -74.0 } },
@@ -68,13 +68,13 @@ const mapConnections = [
   { start: { lat: 35.68, lng: 139.69 }, end: { lat: 1.35, lng: 103.82 } },
   { start: { lat: 48.86, lng: 2.35 }, end: { lat: 55.75, lng: 37.62 } },
   { start: { lat: 34.05, lng: -118.24 }, end: { lat: 19.43, lng: -99.13 } },
-]
+];
 
 const fadeUp = {
   initial: { opacity: 0, y: 40 },
   whileInView: { opacity: 1, y: 0 },
   viewport: { once: true, margin: "-80px" as const },
-}
+};
 
 export default function WhyPage() {
   return (
@@ -118,9 +118,7 @@ export default function WhyPage() {
           animate={{ y: [0, 8, 0] }}
           transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
         >
-          <span className="text-white/40 text-xs tracking-widest uppercase">
-            Scroll
-          </span>
+          <span className="text-white/40 text-xs tracking-widest uppercase">Scroll</span>
           <div className="w-px h-8 bg-gradient-to-b from-white/40 to-transparent" />
         </motion.div>
       </section>
@@ -174,9 +172,8 @@ export default function WhyPage() {
               Nothing it doesn&apos;t.
             </h2>
             <p className="mt-6 max-w-2xl text-center text-base md:text-lg text-slate-400 leading-relaxed">
-              Uplifter replaces the patchwork of disconnected tools gyms rely on
-              today. A single, white-labeled platform gives every
-              stakeholder&mdash;owners, coaches, parents, and
+              Uplifter replaces the patchwork of disconnected tools gyms rely on today. A single,
+              white-labeled platform gives every stakeholder&mdash;owners, coaches, parents, and
               athletes&mdash;exactly the experience they need, under your brand.
             </p>
           </motion.div>
@@ -200,14 +197,11 @@ export default function WhyPage() {
             transition={{ duration: 0.8, delay: 0.15, ease: "easeOut" }}
             className="text-center text-slate-400 mb-12 max-w-xl mx-auto text-lg"
           >
-            From local meets to international competitions, Uplifter brings
-            gyms, athletes, and families together no matter where they are.
+            From local meets to international competitions, Uplifter brings gyms, athletes, and
+            families together no matter where they are.
           </motion.p>
 
-          <motion.div
-            {...fadeUp}
-            transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}
-          >
+          <motion.div {...fadeUp} transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}>
             <WorldMap dots={mapConnections} lineColor="#6366F1" dark />
           </motion.div>
         </div>
@@ -217,17 +211,8 @@ export default function WhyPage() {
       {/* Section 5: Features – shooting stars background                  */}
       {/* ================================================================ */}
       <section className="min-h-screen relative w-full bg-black flex flex-col items-center justify-center overflow-hidden py-24 px-6">
-        <StarsBackground
-          starDensity={0.0003}
-          allStarsTwinkle
-          twinkleProbability={0.8}
-        />
-        <ShootingStars
-          starColor="#6366F1"
-          trailColor="#8B5CF6"
-          minDelay={2000}
-          maxDelay={5000}
-        />
+        <StarsBackground starDensity={0.0003} allStarsTwinkle twinkleProbability={0.8} />
+        <ShootingStars starColor="#6366F1" trailColor="#8B5CF6" minDelay={2000} maxDelay={5000} />
 
         <div className="relative z-10 max-w-6xl mx-auto w-full">
           <motion.h2
@@ -242,8 +227,8 @@ export default function WhyPage() {
             transition={{ duration: 0.8, delay: 0.1, ease: "easeOut" }}
             className="text-center text-slate-400 mb-16 max-w-xl mx-auto"
           >
-            Six core pillars, one seamless experience. Every feature designed
-            for the unique demands of gymnastics organizations.
+            Six core pillars, one seamless experience. Every feature designed for the unique demands
+            of gymnastics organizations.
           </motion.p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -257,12 +242,8 @@ export default function WhyPage() {
                 className="group relative rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-sm p-6 hover:border-white/20 hover:bg-white/[0.04] transition-all duration-300"
               >
                 <feature.icon className="h-8 w-8 text-indigo-400 mb-4 group-hover:text-indigo-300 transition-colors" />
-                <h3 className="text-lg font-semibold text-white mb-2">
-                  {feature.title}
-                </h3>
-                <p className="text-sm text-slate-400 leading-relaxed">
-                  {feature.description}
-                </p>
+                <h3 className="text-lg font-semibold text-white mb-2">{feature.title}</h3>
+                <p className="text-sm text-slate-400 leading-relaxed">{feature.description}</p>
               </motion.div>
             ))}
           </div>
@@ -294,8 +275,7 @@ export default function WhyPage() {
             transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
             className="text-lg text-slate-300 mb-10"
           >
-            Join the next generation of gymnastics management. Start your
-            30-day free trial today.
+            Join the next generation of gymnastics management. Start your 30-day free trial today.
           </motion.p>
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -326,5 +306,5 @@ export default function WhyPage() {
         </WavyBackground>
       </section>
     </div>
-  )
+  );
 }

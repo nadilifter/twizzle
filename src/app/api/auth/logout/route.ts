@@ -13,10 +13,14 @@ import { getCurrentEnvironment, getEnvConfig, getSessionCookieName } from "@/lib
 function logExistingCookies() {
   const cookieStore = cookies();
   const allCookies = cookieStore.getAll();
-  console.log("Logout: Existing cookies:", allCookies.map(c => ({ name: c.name, value: c.value.substring(0, 20) + "..." })));
+  console.log(
+    "Logout: Existing cookies:",
+    allCookies.map((c) => ({ name: c.name, value: c.value.substring(0, 20) + "..." }))
+  );
 
   const sessionCookieName = getSessionCookieName();
-  const sessionCookie = cookieStore.get(sessionCookieName) || cookieStore.get("next-auth.session-token");
+  const sessionCookie =
+    cookieStore.get(sessionCookieName) || cookieStore.get("next-auth.session-token");
   if (sessionCookie) {
     console.log("Logout: Found session cookie, length:", sessionCookie.value.length);
   } else {
@@ -53,9 +57,7 @@ export async function POST(req: NextRequest) {
 
   logExistingCookies();
 
-  const cookieDomain = currentEnv === "local"
-    ? ".uplifterinc.localhost"
-    : config.cookieDomain;
+  const cookieDomain = currentEnv === "local" ? ".uplifterinc.localhost" : config.cookieDomain;
   const isSecure = currentEnv !== "local";
 
   let callbackUrl = "/login";
@@ -90,9 +92,7 @@ export async function GET(req: NextRequest) {
 
   logExistingCookies();
 
-  const cookieDomain = currentEnv === "local"
-    ? ".uplifterinc.localhost"
-    : config.cookieDomain;
+  const cookieDomain = currentEnv === "local" ? ".uplifterinc.localhost" : config.cookieDomain;
   const isSecure = currentEnv !== "local";
 
   const protocol = config.useHttps ? "https" : "http";

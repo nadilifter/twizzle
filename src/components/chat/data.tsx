@@ -129,7 +129,8 @@ export const userData = [
         id: 3,
         avatar: "/avatars/03.png",
         name: "Isabella Nguyen",
-        message: "Yes, I used the <a href='https://library.com' target='_blank' class='text-blue-500 underline'>library website</a> like you said.",
+        message:
+          "Yes, I used the <a href='https://library.com' target='_blank' class='text-blue-500 underline'>library website</a> like you said.",
         timestamp: "2 days ago",
       },
     ],

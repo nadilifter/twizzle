@@ -73,6 +73,7 @@ In the `Organization` model, add this line in the relations section (near the ot
 ```
 
 Insert it after the `organizationPaymentMethods` line:
+
 ```
   organizationPaymentMethods OrganizationPaymentMethod[]
 
@@ -106,6 +107,7 @@ This module wraps the Adyen LEM, Configuration, and Management APIs following th
 ### Architecture Notes
 
 The existing `src/lib/adyen.ts` uses:
+
 - `require("@adyen/api-library")` for lazy loading (avoids build-time errors)
 - Module-level singleton caching (`let _checkoutApi: any = null`)
 - `any` types because Adyen client types are only available at runtime via `require()`
@@ -123,29 +125,29 @@ Each API surface requires its own Adyen `Client` instance because they use diffe
 ```typescript
 // --- Client initialization (two separate clients for different credential scopes) ---
 
-function getLemClient(): any
+function getLemClient(): any;
 // Creates an Adyen Client using ADYEN_LEM_API_KEY (required)
 // Scoped to Company_KirraCapital -- used for LEM API only
 // Throws if ADYEN_LEM_API_KEY is not set
 
-function getPlatformClient(): any
+function getPlatformClient(): any;
 // Creates an Adyen Client using ADYEN_PLATFORM_API_KEY (required)
 // Scoped to BalancePlatform.UplifterLLC -- used for Configuration + Transfers APIs
 // Throws if ADYEN_PLATFORM_API_KEY is not set
 
-function getLemApi(): any
+function getLemApi(): any;
 // Returns LegalEntityManagementAPI instance
 // Uses: new LegalEntityManagementAPI(getLemClient())
 
-function getConfigApi(): any
+function getConfigApi(): any;
 // Returns BalancePlatformAPI instance
 // Uses: new BalancePlatformAPI(getPlatformClient())
 
-function getManagementApi(): any
+function getManagementApi(): any;
 // Returns ManagementAPI instance
 // Uses: new ManagementAPI(getPlatformClient())
 
-export function isPlatformConfigured(): boolean
+export function isPlatformConfigured(): boolean;
 // Returns true if ADYEN_BALANCE_PLATFORM, ADYEN_PLATFORM_API_KEY, and ADYEN_LEM_API_KEY are all set
 
 // --- Legal Entity Management ---
@@ -162,24 +164,24 @@ export async function createLegalEntity(data: {
       country: string; // ISO 3166-1 alpha-2 (US, CA)
     };
   };
-}): Promise<{ id: string; [key: string]: any }>
+}): Promise<{ id: string; [key: string]: any }>;
 // Calls: POST /legalEntities via LEM API
 // Returns: The created legal entity including its id
 
 export async function createBusinessLine(data: {
   legalEntityId: string;
-  industryCode: string;    // NAICS code
+  industryCode: string; // NAICS code
   service: "paymentProcessing";
   salesChannels: Array<{ source: string }>;
   webData?: Array<{ webAddress: string }>;
-}): Promise<{ id: string; [key: string]: any }>
+}): Promise<{ id: string; [key: string]: any }>;
 // Calls: POST /businessLines via LEM API
 
 export async function generateOnboardingLink(
   legalEntityId: string,
   redirectUrl: string,
-  themeId?: string,
-): Promise<{ url: string; [key: string]: any }>
+  themeId?: string
+): Promise<{ url: string; [key: string]: any }>;
 // Calls: POST /legalEntities/{id}/onboardingLinks via LEM API
 // themeId defaults to process.env.ADYEN_ONBOARDING_THEME_ID if set, otherwise omitted (Adyen default)
 
@@ -189,7 +191,7 @@ export async function createAccountHolder(data: {
   legalEntityId: string;
   description?: string;
   capabilities?: Record<string, { requested: boolean; requestedLevel: string }>;
-}): Promise<{ id: string; [key: string]: any }>
+}): Promise<{ id: string; [key: string]: any }>;
 // Calls: POST /accountHolders via Configuration API
 // Default capabilities to request:
 //   receivePayments: { requested: true, requestedLevel: "notApplicable" }
@@ -199,7 +201,7 @@ export async function createAccountHolder(data: {
 export async function createBalanceAccount(data: {
   accountHolderId: string;
   description?: string;
-}): Promise<{ id: string; [key: string]: any }>
+}): Promise<{ id: string; [key: string]: any }>;
 // Calls: POST /balanceAccounts via Configuration API
 
 export async function createSweep(
@@ -208,21 +210,21 @@ export async function createSweep(
     counterparty: { transferInstrumentId: string };
     type: "push";
     schedule: { type: string }; // "daily", "weekly", etc.
-    priorities: string[];       // ["regular"]
-    currency: string;           // "USD"
+    priorities: string[]; // ["regular"]
+    currency: string; // "USD"
   }
-): Promise<{ id: string; [key: string]: any }>
+): Promise<{ id: string; [key: string]: any }>;
 // Calls: POST /balanceAccounts/{id}/sweeps via Configuration API
 
 export async function getAccountHolder(
   accountHolderId: string
-): Promise<{ id: string; capabilities: any; [key: string]: any }>
+): Promise<{ id: string; capabilities: any; [key: string]: any }>;
 // Calls: GET /accountHolders/{id} via Configuration API
 
 // --- Management API ---
 
 export async function createStore(data: {
-  merchantId: string;  // ADYEN_PLATFORM_MERCHANT_ACCOUNT
+  merchantId: string; // ADYEN_PLATFORM_MERCHANT_ACCOUNT
   description: string;
   address: {
     country: string;
@@ -233,7 +235,7 @@ export async function createStore(data: {
   };
   phoneNumber: string;
   reference: string;
-}): Promise<{ id: string; reference: string; [key: string]: any }>
+}): Promise<{ id: string; reference: string; [key: string]: any }>;
 // Calls: POST /stores via Management API
 ```
 

@@ -1,19 +1,15 @@
-import { SuperadminSidebar } from "@/components/superadmin-sidebar"
-import { SiteHeader } from "@/components/site-header"
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-import { BreadcrumbOverrideProvider } from "@/components/breadcrumb-context"
-import { getAuthSession } from "@/lib/auth"
-import { redirect } from "next/navigation"
+import { SuperadminSidebar } from "@/components/superadmin-sidebar";
+import { SiteHeader } from "@/components/site-header";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { BreadcrumbOverrideProvider } from "@/components/breadcrumb-context";
+import { getAuthSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
-export default async function SuperadminLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  const session = await getAuthSession()
-  
+export default async function SuperadminLayout({ children }: { children: React.ReactNode }) {
+  const session = await getAuthSession();
+
   if (!session?.user?.isSuperAdmin) {
-    redirect("/dashboard")
+    redirect("/dashboard");
   }
 
   return (
@@ -22,11 +18,9 @@ export default async function SuperadminLayout({
         <SuperadminSidebar />
         <SidebarInset>
           <SiteHeader />
-          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-            {children}
-          </div>
+          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
         </SidebarInset>
       </SidebarProvider>
     </BreadcrumbOverrideProvider>
-  )
+  );
 }

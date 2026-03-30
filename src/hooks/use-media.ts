@@ -56,71 +56,75 @@ export function useMedia(options: UseMediaOptions = {}): UseMediaReturn {
     setCurrentParamsState(params);
   }, []);
 
-  const fetchMedia = useCallback(async (params?: MediaQueryParams) => {
-    const queryParams = params ?? currentParamsRef.current;
-    
-    if (JSON.stringify(queryParams) !== JSON.stringify(currentParamsRef.current)) {
-      setCurrentParams(queryParams);
-    }
-    currentParamsRef.current = queryParams;
+  const fetchMedia = useCallback(
+    async (params?: MediaQueryParams) => {
+      const queryParams = params ?? currentParamsRef.current;
 
-    setIsLoading(true);
-    setError(null);
+      if (JSON.stringify(queryParams) !== JSON.stringify(currentParamsRef.current)) {
+        setCurrentParams(queryParams);
+      }
+      currentParamsRef.current = queryParams;
 
-    try {
-      const response = await api.get<MediaListResponse>("/api/media", queryParams);
-      setMedia(response.data);
-      setTotal(response.total);
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to fetch media";
-      setError(message);
-      console.error("Error fetching media:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [setCurrentParams]);
+      setIsLoading(true);
+      setError(null);
 
-  const createMedia = useCallback(async (data: CreateMediaPayload): Promise<MediaWithRelations | null> => {
-    setIsCreating(true);
-    setError(null);
+      try {
+        const response = await api.get<MediaListResponse>("/api/media", queryParams);
+        setMedia(response.data);
+        setTotal(response.total);
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to fetch media";
+        setError(message);
+        console.error("Error fetching media:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [setCurrentParams]
+  );
 
-    try {
-      const newMedia = await api.post<MediaWithRelations>("/api/media", data);
-      setMedia((prev) => [newMedia, ...prev]);
-      setTotal((prev) => prev + 1);
-      return newMedia;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to create media";
-      setError(message);
-      console.error("Error creating media:", err);
-      return null;
-    } finally {
-      setIsCreating(false);
-    }
-  }, []);
+  const createMedia = useCallback(
+    async (data: CreateMediaPayload): Promise<MediaWithRelations | null> => {
+      setIsCreating(true);
+      setError(null);
 
-  const updateMedia = useCallback(async (
-    id: string,
-    data: UpdateMediaPayload
-  ): Promise<MediaWithRelations | null> => {
-    setIsUpdating(true);
-    setError(null);
+      try {
+        const newMedia = await api.post<MediaWithRelations>("/api/media", data);
+        setMedia((prev) => [newMedia, ...prev]);
+        setTotal((prev) => prev + 1);
+        return newMedia;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to create media";
+        setError(message);
+        console.error("Error creating media:", err);
+        return null;
+      } finally {
+        setIsCreating(false);
+      }
+    },
+    []
+  );
 
-    try {
-      const updatedMedia = await api.patch<MediaWithRelations>(`/api/media/${id}`, data);
-      setMedia((prev) =>
-        prev.map((item) => (item.id === id ? updatedMedia : item))
-      );
-      return updatedMedia;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to update media";
-      setError(message);
-      console.error("Error updating media:", err);
-      return null;
-    } finally {
-      setIsUpdating(false);
-    }
-  }, []);
+  const updateMedia = useCallback(
+    async (id: string, data: UpdateMediaPayload): Promise<MediaWithRelations | null> => {
+      setIsUpdating(true);
+      setError(null);
+
+      try {
+        const updatedMedia = await api.patch<MediaWithRelations>(`/api/media/${id}`, data);
+        setMedia((prev) => prev.map((item) => (item.id === id ? updatedMedia : item)));
+        return updatedMedia;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to update media";
+        setError(message);
+        console.error("Error updating media:", err);
+        return null;
+      } finally {
+        setIsUpdating(false);
+      }
+    },
+    []
+  );
 
   const deleteMedia = useCallback(async (id: string): Promise<boolean> => {
     setIsDeleting(true);

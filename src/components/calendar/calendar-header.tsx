@@ -37,10 +37,7 @@ export function CalendarHeader() {
 
   return (
     <>
-      <CreateEventDialog
-        open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
-      />
+      <CreateEventDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
       <div className="border-b border-border bg-background">
         <div className="px-3 md:px-6 py-2.5 md:py-3">
           <div className="flex items-center justify-between gap-2 md:gap-3 flex-nowrap">
@@ -65,12 +62,8 @@ export function CalendarHeader() {
                   <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer">
                     <div className="flex items-center gap-2 w-full">
                       <CheckCircle2 className="size-4 text-green-500" />
-                      <span className="text-sm font-medium flex-1">
-                        Meeting confirmed
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        2m ago
-                      </span>
+                      <span className="text-sm font-medium flex-1">Meeting confirmed</span>
+                      <span className="text-xs text-muted-foreground">2m ago</span>
                     </div>
                     <p className="text-xs text-muted-foreground pl-6">
                       Daily checkin has been confirmed for tomorrow at 9:00 AM
@@ -79,12 +72,8 @@ export function CalendarHeader() {
                   <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer">
                     <div className="flex items-center gap-2 w-full">
                       <Clock className="size-4 text-blue-500" />
-                      <span className="text-sm font-medium flex-1">
-                        Reminder
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        15m ago
-                      </span>
+                      <span className="text-sm font-medium flex-1">Reminder</span>
+                      <span className="text-xs text-muted-foreground">15m ago</span>
                     </div>
                     <p className="text-xs text-muted-foreground pl-6">
                       Team Standup starts in 30 minutes
@@ -93,12 +82,8 @@ export function CalendarHeader() {
                   <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer">
                     <div className="flex items-center gap-2 w-full">
                       <AlertCircle className="size-4 text-orange-500" />
-                      <span className="text-sm font-medium flex-1">
-                        Event updated
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        1h ago
-                      </span>
+                      <span className="text-sm font-medium flex-1">Event updated</span>
+                      <span className="text-xs text-muted-foreground">1h ago</span>
                     </div>
                     <p className="text-xs text-muted-foreground pl-6">
                       Design Workshop time has been changed to 2:00 PM
@@ -107,12 +92,8 @@ export function CalendarHeader() {
                   <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer">
                     <div className="flex items-center gap-2 w-full">
                       <CheckCircle2 className="size-4 text-green-500" />
-                      <span className="text-sm font-medium flex-1">
-                        New participant
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        3h ago
-                      </span>
+                      <span className="text-sm font-medium flex-1">New participant</span>
+                      <span className="text-xs text-muted-foreground">3h ago</span>
                     </div>
                     <p className="text-xs text-muted-foreground pl-6">
                       Sarah joined the Sprint Planning meeting
@@ -120,9 +101,7 @@ export function CalendarHeader() {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="justify-center cursor-pointer">
-                    <span className="text-xs text-muted-foreground">
-                      View all notifications
-                    </span>
+                    <span className="text-xs text-muted-foreground">View all notifications</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

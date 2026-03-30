@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState } from "react"
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,37 +8,37 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { AlertTriangle, CreditCard, Check } from "lucide-react"
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { AlertTriangle, CreditCard, Check } from "lucide-react";
 
 interface RequiredMembership {
-  id: string
-  name: string
-  price: number
-  billingInterval: string
-  earlyAccessCode?: string | null
+  id: string;
+  name: string;
+  price: number;
+  billingInterval: string;
+  earlyAccessCode?: string | null;
   group: {
-    id: string
-    name: string
-  }
+    id: string;
+    name: string;
+  };
 }
 
 interface MembershipRequirementDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  programName: string
-  requiredMemberships: RequiredMembership[]
-  onCancel: () => void
-  onAddMembership: (membership: RequiredMembership) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  programName: string;
+  requiredMemberships: RequiredMembership[];
+  onCancel: () => void;
+  onAddMembership: (membership: RequiredMembership) => void;
 }
 
 export function MembershipRequirementDialog({
@@ -51,31 +51,31 @@ export function MembershipRequirementDialog({
 }: MembershipRequirementDialogProps) {
   const [selectedMembershipId, setSelectedMembershipId] = useState<string>(
     requiredMemberships.length === 1 ? requiredMemberships[0].id : ""
-  )
+  );
 
-  const selectedMembership = requiredMemberships.find(m => m.id === selectedMembershipId)
-  const isSingleOption = requiredMemberships.length === 1
-  
+  const selectedMembership = requiredMemberships.find((m) => m.id === selectedMembershipId);
+  const isSingleOption = requiredMemberships.length === 1;
+
   const formatPrice = (price: number, interval: string) => {
-    const numPrice = price
+    const numPrice = price;
     const formattedPrice = numPrice.toLocaleString("en-US", {
       style: "currency",
       currency: "USD",
-    })
+    });
     const intervalLabels: Record<string, string> = {
       MONTHLY: "/mo",
       YEARLY: "/yr",
       SESSION: "/session",
-    }
-    return `${formattedPrice}${intervalLabels[interval] || ""}`
-  }
+    };
+    return `${formattedPrice}${intervalLabels[interval] || ""}`;
+  };
 
   const handleAddMembership = () => {
-    const membership = isSingleOption ? requiredMemberships[0] : selectedMembership
+    const membership = isSingleOption ? requiredMemberships[0] : selectedMembership;
     if (membership) {
-      onAddMembership(membership)
+      onAddMembership(membership);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -92,12 +92,13 @@ export function MembershipRequirementDialog({
               </>
             ) : (
               <>
-                To register for <strong>{programName}</strong>, you need one of the following memberships:
+                To register for <strong>{programName}</strong>, you need one of the following
+                memberships:
               </>
             )}
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="py-4">
           {isSingleOption ? (
             // Single membership option - show details directly
@@ -113,17 +114,17 @@ export function MembershipRequirementDialog({
                 </div>
                 <Badge variant="secondary" className="text-base">
                   <CreditCard className="h-4 w-4 mr-1" />
-                  {formatPrice(requiredMemberships[0].price, requiredMemberships[0].billingInterval)}
+                  {formatPrice(
+                    requiredMemberships[0].price,
+                    requiredMemberships[0].billingInterval
+                  )}
                 </Badge>
               </div>
             </div>
           ) : (
             // Multiple membership options - show dropdown
             <div className="space-y-4">
-              <Select
-                value={selectedMembershipId}
-                onValueChange={setSelectedMembershipId}
-              >
+              <Select value={selectedMembershipId} onValueChange={setSelectedMembershipId}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select a membership option" />
                 </SelectTrigger>
@@ -140,7 +141,7 @@ export function MembershipRequirementDialog({
                   ))}
                 </SelectContent>
               </Select>
-              
+
               {selectedMembership && (
                 <div className="border rounded-lg p-4 bg-muted/50">
                   <div className="flex items-center justify-between">
@@ -170,8 +171,8 @@ export function MembershipRequirementDialog({
           <Button variant="outline" onClick={onCancel} className="w-full sm:w-auto">
             Cancel
           </Button>
-          <Button 
-            onClick={handleAddMembership} 
+          <Button
+            onClick={handleAddMembership}
             disabled={!isSingleOption && !selectedMembershipId}
             className="w-full sm:w-auto"
           >
@@ -180,5 +181,5 @@ export function MembershipRequirementDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

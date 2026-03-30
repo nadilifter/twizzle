@@ -1,54 +1,91 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
-import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { 
-  Check, X, Clock, Loader2, CalendarIcon, Search, Users, 
-  TrendingUp, TrendingDown, UserCheck, UserX, AlertCircle, Download
-} from "lucide-react"
-import { format, subDays, startOfMonth, endOfMonth } from "date-fns"
-import { DateRange } from "react-day-picker"
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Line, LineChart, Pie, PieChart, Cell, Label as RechartsLabel } from "recharts"
-import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart"
-import { cn } from "@/lib/utils"
-import { useAttendanceMetrics } from "@/hooks/use-attendance-metrics"
-import type { AttendanceBreakdownItem, AttendanceGroupBy } from "@/types/attendance"
+import * as React from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Check,
+  X,
+  Clock,
+  Loader2,
+  CalendarIcon,
+  Search,
+  Users,
+  TrendingUp,
+  TrendingDown,
+  UserCheck,
+  UserX,
+  AlertCircle,
+  Download,
+} from "lucide-react";
+import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
+import { DateRange } from "react-day-picker";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  Cell,
+  Label as RechartsLabel,
+} from "recharts";
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/components/ui/chart";
+import { cn } from "@/lib/utils";
+import { useAttendanceMetrics } from "@/hooks/use-attendance-metrics";
+import type { AttendanceBreakdownItem, AttendanceGroupBy } from "@/types/attendance";
 
 const statusColors = {
   present: "hsl(var(--chart-1))",
   absent: "hsl(var(--chart-2))",
   late: "hsl(var(--chart-3))",
   excused: "hsl(var(--chart-4))",
-}
+};
 
 const statusChartConfig = {
   present: { label: "Present", color: "hsl(142.1 76.2% 36.3%)" },
   absent: { label: "Absent", color: "hsl(0 72.2% 50.6%)" },
   late: { label: "Late", color: "hsl(45.4 93.4% 47.5%)" },
   excused: { label: "Excused", color: "hsl(221.2 83.2% 53.3%)" },
-} satisfies ChartConfig
+} satisfies ChartConfig;
 
 const trendChartConfig = {
   rate: { label: "Attendance Rate", color: "hsl(var(--primary))" },
-} satisfies ChartConfig
+} satisfies ChartConfig;
 
 export default function AttendancePage() {
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
-  })
-  const [search, setSearch] = React.useState("")
-  const [activeTab, setActiveTab] = React.useState<AttendanceGroupBy>("overall")
-  
+  });
+  const [search, setSearch] = React.useState("");
+  const [activeTab, setActiveTab] = React.useState<AttendanceGroupBy>("overall");
+
   // Fetch metrics based on active tab
   const { metrics, isLoading, fetchMetrics } = useAttendanceMetrics({
     autoFetch: false,
@@ -57,67 +94,67 @@ export default function AttendancePage() {
       startDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
       endDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
     },
-  })
+  });
 
   // Refetch when date range or tab changes
   React.useEffect(() => {
-    const newGroupBy = activeTab === "overall" ? "date" : activeTab
+    const newGroupBy = activeTab === "overall" ? "date" : activeTab;
     fetchMetrics({
       groupBy: activeTab === "overall" ? "overall" : newGroupBy,
       startDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
       endDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
-    })
-  }, [dateRange, activeTab, fetchMetrics])
-  
+    });
+  }, [dateRange, activeTab, fetchMetrics]);
+
   // Also fetch date trend data for the overview
-  const { metrics: trendMetrics, fetchMetrics: fetchTrendMetrics } = useAttendanceMetrics()
-  
+  const { metrics: trendMetrics, fetchMetrics: fetchTrendMetrics } = useAttendanceMetrics();
+
   React.useEffect(() => {
     if (activeTab === "overall") {
       fetchTrendMetrics({
         groupBy: "date",
         startDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
         endDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
-      })
+      });
     }
-  }, [dateRange, activeTab, fetchTrendMetrics])
+  }, [dateRange, activeTab, fetchTrendMetrics]);
 
   // Filter breakdown items by search
   const filteredBreakdown = React.useMemo(() => {
-    if (!metrics?.breakdown || !search) return metrics?.breakdown || []
-    const searchLower = search.toLowerCase()
-    return metrics.breakdown.filter(item => 
-      item.name.toLowerCase().includes(searchLower)
-    )
-  }, [metrics?.breakdown, search])
+    if (!metrics?.breakdown || !search) return metrics?.breakdown || [];
+    const searchLower = search.toLowerCase();
+    return metrics.breakdown.filter((item) => item.name.toLowerCase().includes(searchLower));
+  }, [metrics?.breakdown, search]);
 
   // Prepare status distribution chart data
   const statusDistributionData = React.useMemo(() => {
-    if (!metrics?.summary) return []
+    if (!metrics?.summary) return [];
     return [
       { status: "present", count: metrics.summary.present, fill: statusChartConfig.present.color },
       { status: "absent", count: metrics.summary.absent, fill: statusChartConfig.absent.color },
       { status: "late", count: metrics.summary.late, fill: statusChartConfig.late.color },
       { status: "excused", count: metrics.summary.excused, fill: statusChartConfig.excused.color },
-    ]
-  }, [metrics?.summary])
+    ];
+  }, [metrics?.summary]);
 
   // Prepare trend chart data
   const trendData = React.useMemo(() => {
-    if (!trendMetrics?.breakdown) return []
-    return trendMetrics.breakdown.map(item => ({
-      date: item.date || item.name,
-      rate: item.rate,
-      total: item.total,
-    })).slice(-14) // Last 14 days
-  }, [trendMetrics?.breakdown])
+    if (!trendMetrics?.breakdown) return [];
+    return trendMetrics.breakdown
+      .map((item) => ({
+        date: item.date || item.name,
+        rate: item.rate,
+        total: item.total,
+      }))
+      .slice(-14); // Last 14 days
+  }, [trendMetrics?.breakdown]);
 
   // Export to CSV
   const handleExport = () => {
-    if (!filteredBreakdown.length) return
-    
-    const headers = ["Name", "Total", "Present", "Absent", "Late", "Excused", "Rate (%)"]
-    const rows = filteredBreakdown.map(item => [
+    if (!filteredBreakdown.length) return;
+
+    const headers = ["Name", "Total", "Present", "Absent", "Late", "Excused", "Rate (%)"];
+    const rows = filteredBreakdown.map((item) => [
       item.name,
       item.total,
       item.present,
@@ -125,38 +162,38 @@ export default function AttendancePage() {
       item.late,
       item.excused,
       item.rate,
-    ])
-    
-    const csv = [headers, ...rows].map(row => row.join(",")).join("\n")
-    const blob = new Blob([csv], { type: "text/csv" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `attendance-${activeTab}-${format(new Date(), "yyyy-MM-dd")}.csv`
-    a.click()
-  }
+    ]);
+
+    const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `attendance-${activeTab}-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "PRESENT":
-        return <Badge className="bg-green-100 text-green-700 border-green-200">Present</Badge>
+        return <Badge className="bg-green-100 text-green-700 border-green-200">Present</Badge>;
       case "ABSENT":
-        return <Badge className="bg-red-100 text-red-700 border-red-200">Absent</Badge>
+        return <Badge className="bg-red-100 text-red-700 border-red-200">Absent</Badge>;
       case "LATE":
-        return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">Late</Badge>
+        return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">Late</Badge>;
       case "EXCUSED":
-        return <Badge className="bg-blue-100 text-blue-700 border-blue-200">Excused</Badge>
+        return <Badge className="bg-blue-100 text-blue-700 border-blue-200">Excused</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>
+        return <Badge variant="outline">{status}</Badge>;
     }
-  }
+  };
 
   if (isLoading && !metrics) {
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-    )
+    );
   }
 
   return (
@@ -171,7 +208,13 @@ export default function AttendancePage() {
         <div className="flex items-center gap-2">
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className={cn("justify-start text-left font-normal", !dateRange && "text-muted-foreground")}>
+              <Button
+                variant="outline"
+                className={cn(
+                  "justify-start text-left font-normal",
+                  !dateRange && "text-muted-foreground"
+                )}
+              >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {dateRange?.from ? (
                   dateRange.to ? (
@@ -209,9 +252,7 @@ export default function AttendancePage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metrics?.summary.attendanceRate || 0}%</div>
-            <p className="text-xs text-muted-foreground">
-              Present + Late out of total
-            </p>
+            <p className="text-xs text-muted-foreground">Present + Late out of total</p>
           </CardContent>
         </Card>
         <Card>
@@ -222,7 +263,10 @@ export default function AttendancePage() {
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{metrics?.summary.present || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {metrics?.summary.total ? Math.round((metrics.summary.present / metrics.summary.total) * 100) : 0}% of total
+              {metrics?.summary.total
+                ? Math.round((metrics.summary.present / metrics.summary.total) * 100)
+                : 0}
+              % of total
             </p>
           </CardContent>
         </Card>
@@ -234,7 +278,10 @@ export default function AttendancePage() {
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{metrics?.summary.absent || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {metrics?.summary.total ? Math.round((metrics.summary.absent / metrics.summary.total) * 100) : 0}% of total
+              {metrics?.summary.total
+                ? Math.round((metrics.summary.absent / metrics.summary.total) * 100)
+                : 0}
+              % of total
             </p>
           </CardContent>
         </Card>
@@ -245,16 +292,21 @@ export default function AttendancePage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metrics?.summary.total || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              In selected date range
-            </p>
+            <p className="text-xs text-muted-foreground">In selected date range</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as AttendanceGroupBy)} className="space-y-4">
-        <ResponsiveTabsList value={activeTab} onValueChange={(v) => setActiveTab(v as AttendanceGroupBy)}>
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as AttendanceGroupBy)}
+        className="space-y-4"
+      >
+        <ResponsiveTabsList
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as AttendanceGroupBy)}
+        >
           <TabsTrigger value="overall">Overview</TabsTrigger>
           <TabsTrigger value="athlete">By Athlete</TabsTrigger>
           <TabsTrigger value="program">By Program</TabsTrigger>
@@ -268,38 +320,36 @@ export default function AttendancePage() {
             <Card className="col-span-4">
               <CardHeader>
                 <CardTitle>Attendance Trend</CardTitle>
-                <CardDescription>
-                  Daily attendance rate over time
-                </CardDescription>
+                <CardDescription>Daily attendance rate over time</CardDescription>
               </CardHeader>
               <CardContent>
                 {trendData.length > 0 ? (
                   <ChartContainer config={trendChartConfig} className="h-[300px] w-full">
                     <LineChart data={trendData}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis 
-                        dataKey="date" 
+                      <XAxis
+                        dataKey="date"
                         tickLine={false}
                         axisLine={false}
                         tickFormatter={(value) => {
-                          const date = new Date(value)
-                          return format(date, "MMM d")
+                          const date = new Date(value);
+                          return format(date, "MMM d");
                         }}
                       />
-                      <YAxis 
+                      <YAxis
                         tickLine={false}
                         axisLine={false}
                         tickFormatter={(value) => `${value}%`}
                         domain={[0, 100]}
                       />
-                      <ChartTooltip 
+                      <ChartTooltip
                         content={<ChartTooltipContent />}
                         formatter={(value) => [`${value}%`, "Rate"]}
                       />
-                      <Line 
-                        type="monotone" 
-                        dataKey="rate" 
-                        stroke="var(--color-rate)" 
+                      <Line
+                        type="monotone"
+                        dataKey="rate"
+                        stroke="var(--color-rate)"
                         strokeWidth={2}
                         dot={{ r: 4 }}
                         activeDot={{ r: 6 }}
@@ -318,18 +368,16 @@ export default function AttendancePage() {
             <Card className="col-span-3">
               <CardHeader>
                 <CardTitle>Status Distribution</CardTitle>
-                <CardDescription>
-                  Breakdown by attendance status
-                </CardDescription>
+                <CardDescription>Breakdown by attendance status</CardDescription>
               </CardHeader>
               <CardContent>
-                {statusDistributionData.some(d => d.count > 0) ? (
-                  <ChartContainer config={statusChartConfig} className="mx-auto aspect-square max-h-[280px]">
+                {statusDistributionData.some((d) => d.count > 0) ? (
+                  <ChartContainer
+                    config={statusChartConfig}
+                    className="mx-auto aspect-square max-h-[280px]"
+                  >
                     <PieChart>
-                      <ChartTooltip
-                        cursor={false}
-                        content={<ChartTooltipContent hideLabel />}
-                      />
+                      <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
                       <Pie
                         data={statusDistributionData}
                         dataKey="count"
@@ -341,15 +389,28 @@ export default function AttendancePage() {
                           content={({ viewBox }) => {
                             if (viewBox && "cx" in viewBox && "cy" in viewBox) {
                               return (
-                                <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                                  <tspan x={viewBox.cx} y={viewBox.cy} className="fill-foreground text-3xl font-bold">
+                                <text
+                                  x={viewBox.cx}
+                                  y={viewBox.cy}
+                                  textAnchor="middle"
+                                  dominantBaseline="middle"
+                                >
+                                  <tspan
+                                    x={viewBox.cx}
+                                    y={viewBox.cy}
+                                    className="fill-foreground text-3xl font-bold"
+                                  >
                                     {metrics?.summary.total || 0}
                                   </tspan>
-                                  <tspan x={viewBox.cx} y={(viewBox.cy || 0) + 24} className="fill-muted-foreground text-sm">
+                                  <tspan
+                                    x={viewBox.cx}
+                                    y={(viewBox.cy || 0) + 24}
+                                    className="fill-muted-foreground text-sm"
+                                  >
                                     Total
                                   </tspan>
                                 </text>
-                              )
+                              );
                             }
                           }}
                         />
@@ -377,9 +438,7 @@ export default function AttendancePage() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <CardTitle>Attendance by Athlete</CardTitle>
-                  <CardDescription>
-                    Individual athlete attendance records and rates
-                  </CardDescription>
+                  <CardDescription>Individual athlete attendance records and rates</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="relative">
@@ -444,12 +503,14 @@ export default function AttendancePage() {
                         <TableCell className="text-center text-red-600">{item.absent}</TableCell>
                         <TableCell className="text-center text-yellow-600">{item.late}</TableCell>
                         <TableCell className="text-center">
-                          <Badge 
-                            variant="outline" 
+                          <Badge
+                            variant="outline"
                             className={cn(
-                              item.rate >= 90 ? "bg-green-50 text-green-700 border-green-200" :
-                              item.rate >= 70 ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
-                              "bg-red-50 text-red-700 border-red-200"
+                              item.rate >= 90
+                                ? "bg-green-50 text-green-700 border-green-200"
+                                : item.rate >= 70
+                                  ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                                  : "bg-red-50 text-red-700 border-red-200"
                             )}
                           >
                             {item.rate}%
@@ -471,9 +532,7 @@ export default function AttendancePage() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <CardTitle>Attendance by Program</CardTitle>
-                  <CardDescription>
-                    Program-level attendance metrics
-                  </CardDescription>
+                  <CardDescription>Program-level attendance metrics</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="relative">
@@ -508,20 +567,20 @@ export default function AttendancePage() {
                       <CardHeader className="pb-2">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-base">{item.name}</CardTitle>
-                          <Badge 
-                            variant="outline" 
+                          <Badge
+                            variant="outline"
                             className={cn(
-                              item.rate >= 90 ? "bg-green-50 text-green-700 border-green-200" :
-                              item.rate >= 70 ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
-                              "bg-red-50 text-red-700 border-red-200"
+                              item.rate >= 90
+                                ? "bg-green-50 text-green-700 border-green-200"
+                                : item.rate >= 70
+                                  ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                                  : "bg-red-50 text-red-700 border-red-200"
                             )}
                           >
                             {item.rate}%
                           </Badge>
                         </div>
-                        {item.level && (
-                          <CardDescription>Level: {item.level}</CardDescription>
-                        )}
+                        {item.level && <CardDescription>Level: {item.level}</CardDescription>}
                       </CardHeader>
                       <CardContent>
                         <div className="grid grid-cols-4 gap-2 text-center text-sm">
@@ -558,9 +617,7 @@ export default function AttendancePage() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <CardTitle>Attendance by Coach</CardTitle>
-                  <CardDescription>
-                    Coach performance based on class attendance
-                  </CardDescription>
+                  <CardDescription>Coach performance based on class attendance</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="relative">
@@ -628,12 +685,14 @@ export default function AttendancePage() {
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-2">
                             <div className="w-24 bg-gray-200 rounded-full h-2">
-                              <div 
+                              <div
                                 className={cn(
                                   "h-2 rounded-full",
-                                  item.rate >= 90 ? "bg-green-500" :
-                                  item.rate >= 70 ? "bg-yellow-500" :
-                                  "bg-red-500"
+                                  item.rate >= 90
+                                    ? "bg-green-500"
+                                    : item.rate >= 70
+                                      ? "bg-yellow-500"
+                                      : "bg-red-500"
                                 )}
                                 style={{ width: `${item.rate}%` }}
                               />
@@ -651,5 +710,5 @@ export default function AttendancePage() {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }

@@ -12,10 +12,7 @@ const generateEvaluationsSchema = z.object({
 
 // GET /api/programs/[id]/evaluations
 // List all evaluations for a program
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -45,7 +42,15 @@ export async function GET(
     const where = {
       programId,
       ...(templateId && { templateId }),
-      ...(status && { status: status as "PENDING" | "IN_PROGRESS" | "PASS" | "RETRY" | "EXCELLENT" | "SATISFACTORY" }),
+      ...(status && {
+        status: status as
+          | "PENDING"
+          | "IN_PROGRESS"
+          | "PASS"
+          | "RETRY"
+          | "EXCELLENT"
+          | "SATISFACTORY",
+      }),
       ...(athleteId && { athleteId }),
     };
 
@@ -98,19 +103,13 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error fetching program evaluations:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch program evaluations" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch program evaluations" }, { status: 500 });
   }
 }
 
 // POST /api/programs/[id]/evaluations/generate
 // Generate evaluation instances for enrolled athletes
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -171,7 +170,7 @@ export async function POST(
 
     // Get athletes - either specified ones or all enrolled
     let athleteIds = validatedData.athleteIds;
-    
+
     if (!athleteIds || athleteIds.length === 0) {
       // Get all actively enrolled athletes
       const enrollments = await db.enrollment.findMany({
@@ -194,7 +193,7 @@ export async function POST(
       });
       const enrolledAthleteIds = new Set(enrollments.map((e) => e.athleteId));
       const notEnrolled = athleteIds.filter((id) => !enrolledAthleteIds.has(id));
-      
+
       if (notEnrolled.length > 0) {
         return NextResponse.json(
           { error: `Some athletes are not enrolled in this program: ${notEnrolled.join(", ")}` },
@@ -221,7 +220,7 @@ export async function POST(
       select: { athleteId: true },
     });
     const existingAthleteIds = new Set(existingEvaluations.map((e) => e.athleteId));
-    
+
     // Filter out athletes who already have pending evaluations
     const athletesToCreate = athleteIds.filter((id) => !existingAthleteIds.has(id));
 
@@ -281,15 +280,9 @@ export async function POST(
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error generating evaluations:", error);
-    return NextResponse.json(
-      { error: "Failed to generate evaluations" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to generate evaluations" }, { status: 500 });
   }
 }

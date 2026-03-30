@@ -1,36 +1,39 @@
-"use client"
+"use client";
 
-import { useSearchParams } from "next/navigation"
-import { Suspense, useEffect } from "react"
-import Link from "next/link"
-import { CheckCircle2, ExternalLink, ArrowRight, ChevronRight, Users, Calendar, Globe, CreditCard } from "lucide-react"
-
-import { Button } from "@/components/ui/button"
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect } from "react";
+import Link from "next/link";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { getBaseDomainFromHostname } from "@/lib/client-domains"
-import { MARKETING_DOCS_URL, MARKETING_CONTACT_URL } from "@/lib/env-domains"
+  CheckCircle2,
+  ExternalLink,
+  ArrowRight,
+  ChevronRight,
+  Users,
+  Calendar,
+  Globe,
+  CreditCard,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getBaseDomainFromHostname } from "@/lib/client-domains";
+import { MARKETING_DOCS_URL, MARKETING_CONTACT_URL } from "@/lib/env-domains";
 
 function SuccessContent() {
-  const searchParams = useSearchParams()
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    sessionStorage.removeItem("org-signup-data")
-  }, [])
+    sessionStorage.removeItem("org-signup-data");
+  }, []);
 
-  const subdomain = searchParams.get("subdomain") || "your-site"
-  const orgName = searchParams.get("orgName") || "Your Organization"
-  const planPrice = searchParams.get("planPrice")
-  const isFreePlan = planPrice !== null && Number(planPrice) === 0
+  const subdomain = searchParams.get("subdomain") || "your-site";
+  const orgName = searchParams.get("orgName") || "Your Organization";
+  const planPrice = searchParams.get("planPrice");
+  const isFreePlan = planPrice !== null && Number(planPrice) === 0;
 
-  const { baseDomain, protocol } = getBaseDomainFromHostname()
-  const siteUrl = `${protocol}://${subdomain}.${baseDomain}`
-  const adminUrl = `${protocol}://admin.${baseDomain}`
+  const { baseDomain, protocol } = getBaseDomainFromHostname();
+  const siteUrl = `${protocol}://${subdomain}.${baseDomain}`;
+  const adminUrl = `${protocol}://admin.${baseDomain}`;
 
   const nextSteps = [
     {
@@ -57,7 +60,7 @@ function SuccessContent() {
       description: "Complete Adyen verification to accept payments and receive payouts",
       url: `${adminUrl}/financials/onboarding`,
     },
-  ]
+  ];
 
   return (
     <div className="w-full max-w-2xl mx-auto text-center">
@@ -71,7 +74,8 @@ function SuccessContent() {
       {/* Success Message */}
       <h1 className="text-3xl font-bold mb-2">Welcome to Uplifter!</h1>
       <p className="text-lg text-muted-foreground mb-8">
-        <span className="font-semibold text-foreground">{orgName}</span> has been successfully created.
+        <span className="font-semibold text-foreground">{orgName}</span> has been successfully
+        created.
       </p>
 
       {/* Site URLs */}
@@ -114,9 +118,7 @@ function SuccessContent() {
       <Card className="mb-8 text-left">
         <CardHeader>
           <CardTitle className="text-lg">Next Steps</CardTitle>
-          <CardDescription>
-            Get the most out of Uplifter
-          </CardDescription>
+          <CardDescription>Get the most out of Uplifter</CardDescription>
         </CardHeader>
         <CardContent>
           <ul className="space-y-2">
@@ -159,26 +161,43 @@ function SuccessContent() {
 
       <p className="text-sm text-muted-foreground mt-8">
         Need help? Check out our{" "}
-        <a href={MARKETING_DOCS_URL} className="underline hover:text-foreground" target="_blank" rel="noopener noreferrer">documentation</a>
-        {" "}or{" "}
-        <a href={MARKETING_CONTACT_URL} className="underline hover:text-foreground" target="_blank" rel="noopener noreferrer">contact support</a>.
+        <a
+          href={MARKETING_DOCS_URL}
+          className="underline hover:text-foreground"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          documentation
+        </a>{" "}
+        or{" "}
+        <a
+          href={MARKETING_CONTACT_URL}
+          className="underline hover:text-foreground"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          contact support
+        </a>
+        .
       </p>
     </div>
-  )
+  );
 }
 
 export default function SuccessPage() {
   return (
-    <Suspense fallback={
-      <div className="w-full max-w-2xl mx-auto text-center">
-        <div className="animate-pulse">
-          <div className="h-20 w-20 rounded-full bg-muted mx-auto mb-6" />
-          <div className="h-8 bg-muted rounded w-64 mx-auto mb-2" />
-          <div className="h-4 bg-muted rounded w-48 mx-auto" />
+    <Suspense
+      fallback={
+        <div className="w-full max-w-2xl mx-auto text-center">
+          <div className="animate-pulse">
+            <div className="h-20 w-20 rounded-full bg-muted mx-auto mb-6" />
+            <div className="h-8 bg-muted rounded w-64 mx-auto mb-2" />
+            <div className="h-4 bg-muted rounded w-48 mx-auto" />
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <SuccessContent />
     </Suspense>
-  )
+  );
 }

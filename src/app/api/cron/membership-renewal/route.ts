@@ -1,23 +1,23 @@
-import crypto from "crypto"
-import { NextRequest, NextResponse } from "next/server"
+import crypto from "crypto";
+import { NextRequest, NextResponse } from "next/server";
 import {
   generateUpcomingInstances,
   processMembershipInstanceRenewals,
   processAthleteRenewals,
   expireInstances,
-} from "@/lib/services/membership-renewal"
-import { logger } from "@/lib/logger"
+} from "@/lib/services/membership-renewal";
+import { logger } from "@/lib/logger";
 
-export const dynamic = "force-dynamic"
-export const maxDuration = 300
+export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
-const CRON_SECRET = process.env.CRON_SECRET
+const CRON_SECRET = process.env.CRON_SECRET;
 
 function verifyCronSecret(authHeader: string | null): boolean {
-  if (!CRON_SECRET || !authHeader) return false
-  const expected = `Bearer ${CRON_SECRET}`
-  if (authHeader.length !== expected.length) return false
-  return crypto.timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected))
+  if (!CRON_SECRET || !authHeader) return false;
+  const expected = `Bearer ${CRON_SECRET}`;
+  if (authHeader.length !== expected.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected));
 }
 
 /**
@@ -34,41 +34,45 @@ function verifyCronSecret(authHeader: string | null): boolean {
 export async function GET(request: NextRequest) {
   try {
     if (!CRON_SECRET) {
-      logger.error("CRON_SECRET is not configured")
-      return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 })
+      logger.error("CRON_SECRET is not configured");
+      return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
     }
 
     if (!verifyCronSecret(request.headers.get("authorization"))) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Sequential: generate instances before renewals check for them,
     // renew athletes before expiring instances they need to find.
-    const generated = await generateUpcomingInstances()
-    const instanceRenewals = await processMembershipInstanceRenewals()
-    const athleteRenewals = await processAthleteRenewals()
-    const expired = await expireInstances()
+    const generated = await generateUpcomingInstances();
+    const instanceRenewals = await processMembershipInstanceRenewals();
+    const athleteRenewals = await processAthleteRenewals();
+    const expired = await expireInstances();
 
     const summary = {
       generatedInstances: generated.length,
       instanceRenewals: instanceRenewals.length,
       athleteRenewals: athleteRenewals.length,
       expiredInstances: expired.expiredCount,
-    }
+    };
 
-    logger.info("Membership renewal cron completed", summary)
-    return NextResponse.json({ success: true, summary, timestamp: new Date().toISOString() })
+    logger.info("Membership renewal cron completed", summary);
+    return NextResponse.json({ success: true, summary, timestamp: new Date().toISOString() });
   } catch (error) {
     logger.error("Membership renewal cron failed", {
       error: error instanceof Error ? error.message : String(error),
-    })
+    });
     return NextResponse.json(
-      { success: false, error: "Failed to process membership renewals", timestamp: new Date().toISOString() },
+      {
+        success: false,
+        error: "Failed to process membership renewals",
+        timestamp: new Date().toISOString(),
+      },
       { status: 500 }
-    )
+    );
   }
 }
 
 export async function POST(request: NextRequest) {
-  return GET(request)
+  return GET(request);
 }

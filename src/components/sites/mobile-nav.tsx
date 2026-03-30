@@ -1,36 +1,31 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { Menu } from "lucide-react"
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Menu } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 interface NavLink {
-  href: string
-  label: string
+  href: string;
+  label: string;
 }
 
 interface MobileNavProps {
-  links: NavLink[]
-  loginUrl: string
-  isAuthenticated: boolean
+  links: NavLink[];
+  loginUrl: string;
+  isAuthenticated: boolean;
 }
 
 export function MobileNav({ links, loginUrl, isAuthenticated }: MobileNavProps) {
-  const [open, setOpen] = useState(false)
-  const pathname = usePathname()
+  const [open, setOpen] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
-    setOpen(false)
-  }, [pathname])
+    setOpen(false);
+  }, [pathname]);
 
   return (
     <div className="md:hidden">
@@ -73,5 +68,5 @@ export function MobileNav({ links, loginUrl, isAuthenticated }: MobileNavProps) 
         </SheetContent>
       </Sheet>
     </div>
-  )
+  );
 }

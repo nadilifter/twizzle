@@ -15,10 +15,7 @@ export async function GET(request: NextRequest) {
     const athleteId = searchParams.get("athleteId");
 
     if (!programId || !athleteId) {
-      return NextResponse.json(
-        { error: "programId and athleteId are required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "programId and athleteId are required" }, { status: 400 });
     }
 
     const [instanceRegistrations, enrollment] = await Promise.all([
@@ -41,16 +38,11 @@ export async function GET(request: NextRequest) {
     ]);
 
     return NextResponse.json({
-      registeredInstanceIds: instanceRegistrations.map(
-        (r) => r.programInstanceId
-      ),
+      registeredInstanceIds: instanceRegistrations.map((r) => r.programInstanceId),
       hasFullEnrollment: !!enrollment,
     });
   } catch (error) {
     console.error("Error checking program registrations:", error);
-    return NextResponse.json(
-      { error: "Failed to check registrations" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to check registrations" }, { status: 500 });
   }
 }

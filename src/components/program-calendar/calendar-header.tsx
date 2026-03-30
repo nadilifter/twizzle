@@ -22,8 +22,7 @@ export function CalendarHeader({
   title = "Program Schedule",
   showViewSelector = true,
 }: CalendarHeaderProps) {
-  const { currentDate, setCurrentDate, viewMode, setViewMode, loading } =
-    useCalendarContext();
+  const { currentDate, setCurrentDate, viewMode, setViewMode, loading } = useCalendarContext();
 
   // Generate week days for week view date range display
   const getWeekRange = () => {
@@ -76,9 +75,7 @@ export function CalendarHeader({
             <span className="hidden sm:inline">{title}</span>
             <span className="sm:hidden">Schedule</span>
           </div>
-          {loading && (
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          )}
+          {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         </div>
 
         <div className="flex items-center gap-2">
@@ -110,10 +107,7 @@ export function CalendarHeader({
           </div>
 
           {showViewSelector && (
-            <Select
-              value={viewMode}
-              onValueChange={(v) => setViewMode(v as ViewMode)}
-            >
+            <Select value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
               <SelectTrigger className="w-[90px] h-8">
                 <SelectValue />
               </SelectTrigger>
@@ -127,9 +121,7 @@ export function CalendarHeader({
         </div>
       </div>
 
-      <div className="text-sm font-medium text-muted-foreground">
-        {getDateDisplay()}
-      </div>
+      <div className="text-sm font-medium text-muted-foreground">{getDateDisplay()}</div>
     </div>
   );
 }

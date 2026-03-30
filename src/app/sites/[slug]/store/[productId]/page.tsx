@@ -1,20 +1,20 @@
-import { unstable_cache } from "next/cache"
-import { db } from "@/lib/db"
-import { notFound } from "next/navigation"
-import { Metadata } from "next"
-import { StoreProductDetail } from "@/components/sites/store-product-detail"
-import { isFeatureEnabled } from "@/lib/feature-resolver"
+import { unstable_cache } from "next/cache";
+import { db } from "@/lib/db";
+import { notFound } from "next/navigation";
+import { Metadata } from "next";
+import { StoreProductDetail } from "@/components/sites/store-product-detail";
+import { isFeatureEnabled } from "@/lib/feature-resolver";
 
 const getCachedSiteConfig = unstable_cache(
   async (slug: string) => {
     return db.websiteConfig.findUnique({
       where: { subdomain: slug },
       select: { organizationId: true, primaryColor: true, showStore: true },
-    })
+    });
   },
   ["site-config-store"],
   { revalidate: 30 }
-)
+);
 
 const getCachedProduct = unstable_cache(
   async (productId: string, organizationId: string) => {
@@ -43,26 +43,26 @@ const getCachedProduct = unstable_cache(
           orderBy: { sortOrder: "asc" },
         },
       },
-    })
+    });
   },
   ["site-product-detail"],
   { revalidate: 30 }
-)
+);
 
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ slug: string; productId: string }>
+  params: Promise<{ slug: string; productId: string }>;
 }): Promise<Metadata> {
-  const { slug, productId } = await params
-  const config = await getCachedSiteConfig(slug)
-  if (!config || !config.showStore) return {}
+  const { slug, productId } = await params;
+  const config = await getCachedSiteConfig(slug);
+  if (!config || !config.showStore) return {};
 
-  const storeEnabled = await isFeatureEnabled(config.organizationId, "store")
-  if (!storeEnabled) return {}
+  const storeEnabled = await isFeatureEnabled(config.organizationId, "store");
+  if (!storeEnabled) return {};
 
-  const product = await getCachedProduct(productId, config.organizationId)
-  if (!product) return {}
+  const product = await getCachedProduct(productId, config.organizationId);
+  if (!product) return {};
 
   return {
     title: product.name,
@@ -72,25 +72,25 @@ export async function generateMetadata({
       description: product.description || undefined,
       images: product.imageUrl ? [{ url: product.imageUrl }] : undefined,
     },
-  }
+  };
 }
 
 export default async function ProductDetailPage({
   params,
 }: {
-  params: Promise<{ slug: string; productId: string }>
+  params: Promise<{ slug: string; productId: string }>;
 }) {
-  const { slug, productId } = await params
-  const config = await getCachedSiteConfig(slug)
+  const { slug, productId } = await params;
+  const config = await getCachedSiteConfig(slug);
 
-  if (!config || !config.showStore) return notFound()
+  if (!config || !config.showStore) return notFound();
 
-  const storeEnabled = await isFeatureEnabled(config.organizationId, "store")
-  if (!storeEnabled) return notFound()
+  const storeEnabled = await isFeatureEnabled(config.organizationId, "store");
+  if (!storeEnabled) return notFound();
 
-  const product = await getCachedProduct(productId, config.organizationId)
+  const product = await getCachedProduct(productId, config.organizationId);
 
-  if (!product) return notFound()
+  if (!product) return notFound();
 
   const serializedProduct = {
     ...product,
@@ -99,12 +99,12 @@ export default async function ProductDetailPage({
       ...v,
       price: v.price !== null ? Number(v.price) : null,
     })),
-  }
+  };
 
   return (
     <StoreProductDetail
       product={serializedProduct}
       primaryColor={config.primaryColor || "#000000"}
     />
-  )
+  );
 }

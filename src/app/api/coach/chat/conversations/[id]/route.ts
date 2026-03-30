@@ -9,10 +9,7 @@ import {
 import { getEffectiveUser, getCoachingMemberships } from "@/lib/impersonation";
 
 // GET /api/coach/chat/conversations/[id] - Get conversation detail
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -34,19 +31,13 @@ export async function GET(
     const conversation = await getCoachConversation(id, effectiveUser.userId);
 
     if (!conversation) {
-      return NextResponse.json(
-        { error: "Conversation not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
 
     return NextResponse.json(conversation);
   } catch (error) {
     console.error("Error fetching coach conversation:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch conversation" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch conversation" }, { status: 500 });
   }
 }
 
@@ -56,10 +47,7 @@ const updateSchema = z.object({
 });
 
 // PATCH /api/coach/chat/conversations/[id] - Update conversation
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -80,10 +68,7 @@ export async function PATCH(
 
     const conversation = await getCoachConversation(id, effectiveUser.userId);
     if (!conversation) {
-      return NextResponse.json(
-        { error: "Conversation not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
 
     const body = await request.json();
@@ -111,9 +96,6 @@ export async function PATCH(
       );
     }
     console.error("Error updating coach conversation:", error);
-    return NextResponse.json(
-      { error: "Failed to update conversation" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update conversation" }, { status: 500 });
   }
 }

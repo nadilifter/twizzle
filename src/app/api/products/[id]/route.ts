@@ -30,10 +30,7 @@ const updateProductSchema = z.object({
 });
 
 // GET /api/products/[id] - Get a single product
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -65,18 +62,12 @@ export async function GET(
     return NextResponse.json(product);
   } catch (error) {
     console.error("Error fetching product:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch product" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch product" }, { status: 500 });
   }
 }
 
 // PUT /api/products/[id] - Update a product
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -135,11 +126,14 @@ export async function PUT(
       }
     }
 
-    const wantsVariants = validatedData.typeName !== undefined
-      ? !!validatedData.typeName
-      : !!existingProduct.typeName;
+    const wantsVariants =
+      validatedData.typeName !== undefined ? !!validatedData.typeName : !!existingProduct.typeName;
 
-    if (wantsVariants && validatedData.variants !== undefined && (!validatedData.variants || validatedData.variants.length === 0)) {
+    if (
+      wantsVariants &&
+      validatedData.variants !== undefined &&
+      (!validatedData.variants || validatedData.variants.length === 0)
+    ) {
       return NextResponse.json(
         { error: "At least one variant option is required when a type is set" },
         { status: 400 }
@@ -157,7 +151,8 @@ export async function PUT(
       // Build product-level update data
       const productUpdateData: Record<string, unknown> = {};
       if (validatedData.name !== undefined) productUpdateData.name = validatedData.name;
-      if (validatedData.description !== undefined) productUpdateData.description = validatedData.description;
+      if (validatedData.description !== undefined)
+        productUpdateData.description = validatedData.description;
       if (validatedData.sku !== undefined) productUpdateData.sku = validatedData.sku;
       if (validatedData.category !== undefined) productUpdateData.category = validatedData.category;
       if (validatedData.price !== undefined) productUpdateData.price = validatedData.price;
@@ -175,13 +170,17 @@ export async function PUT(
         productUpdateData.currentInventory = null;
       } else if (validatedData.typeName === null || validatedData.typeName === "") {
         // Switching from variants to no-type: accept product-level inventory
-        if (validatedData.maxInventory !== undefined) productUpdateData.maxInventory = validatedData.maxInventory;
-        if (validatedData.currentInventory !== undefined) productUpdateData.currentInventory = validatedData.currentInventory;
+        if (validatedData.maxInventory !== undefined)
+          productUpdateData.maxInventory = validatedData.maxInventory;
+        if (validatedData.currentInventory !== undefined)
+          productUpdateData.currentInventory = validatedData.currentInventory;
         productUpdateData.typeName = null;
       } else {
         // No type change, just regular product-level inventory updates
-        if (validatedData.maxInventory !== undefined) productUpdateData.maxInventory = validatedData.maxInventory;
-        if (validatedData.currentInventory !== undefined) productUpdateData.currentInventory = validatedData.currentInventory;
+        if (validatedData.maxInventory !== undefined)
+          productUpdateData.maxInventory = validatedData.maxInventory;
+        if (validatedData.currentInventory !== undefined)
+          productUpdateData.currentInventory = validatedData.currentInventory;
       }
 
       await tx.product.update({
@@ -195,11 +194,11 @@ export async function PUT(
           // Remove all variants (switching to no-type)
           await tx.productVariant.deleteMany({ where: { productId: id } });
         } else {
-          const incomingIds = new Set(validatedData.variants.filter(v => v.id).map(v => v.id!));
-          const existingIds = existingProduct.variants.map(v => v.id);
+          const incomingIds = new Set(validatedData.variants.filter((v) => v.id).map((v) => v.id!));
+          const existingIds = existingProduct.variants.map((v) => v.id);
 
           // Delete removed variants
-          const toDelete = existingIds.filter(eid => !incomingIds.has(eid));
+          const toDelete = existingIds.filter((eid) => !incomingIds.has(eid));
           if (toDelete.length > 0) {
             await tx.productVariant.deleteMany({
               where: { id: { in: toDelete }, productId: id },
@@ -249,16 +248,10 @@ export async function PUT(
     return NextResponse.json(product);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error updating product:", error);
-    return NextResponse.json(
-      { error: "Failed to update product" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update product" }, { status: 500 });
   }
 }
 
@@ -306,9 +299,6 @@ export async function DELETE(
     return NextResponse.json(product);
   } catch (error) {
     console.error("Error deleting product:", error);
-    return NextResponse.json(
-      { error: "Failed to delete product" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete product" }, { status: 500 });
   }
 }

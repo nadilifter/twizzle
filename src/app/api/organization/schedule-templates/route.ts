@@ -49,10 +49,7 @@ export async function GET(request: NextRequest) {
       },
       include: {
         entries: {
-          orderBy: [
-            { dayOfWeek: "asc" },
-            { startTime: "asc" },
-          ],
+          orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
         },
         _count: {
           select: {
@@ -96,17 +93,27 @@ export async function POST(request: NextRequest) {
 
     if (validatedData.entries?.length) {
       const scopedDb = getScopedDb(organizationId);
-      const facilityIds = [...new Set(validatedData.entries.map(e => e.facilityId).filter(Boolean))] as string[];
-      const memberIds = [...new Set(validatedData.entries.map(e => e.memberId).filter(Boolean))] as string[];
+      const facilityIds = [
+        ...new Set(validatedData.entries.map((e) => e.facilityId).filter(Boolean)),
+      ] as string[];
+      const memberIds = [
+        ...new Set(validatedData.entries.map((e) => e.memberId).filter(Boolean)),
+      ] as string[];
 
       if (facilityIds.length > 0) {
-        const validFacilities = await scopedDb.facility.findMany({ where: { id: { in: facilityIds } }, select: { id: true } });
+        const validFacilities = await scopedDb.facility.findMany({
+          where: { id: { in: facilityIds } },
+          select: { id: true },
+        });
         if (validFacilities.length !== facilityIds.length) {
           return NextResponse.json({ error: "One or more facilities not found" }, { status: 404 });
         }
       }
       if (memberIds.length > 0) {
-        const validMembers = await scopedDb.organizationMember.findMany({ where: { id: { in: memberIds } }, select: { id: true } });
+        const validMembers = await scopedDb.organizationMember.findMany({
+          where: { id: { in: memberIds } },
+          select: { id: true },
+        });
         if (validMembers.length !== memberIds.length) {
           return NextResponse.json({ error: "One or more members not found" }, { status: 404 });
         }
@@ -118,23 +125,22 @@ export async function POST(request: NextRequest) {
         organizationId,
         name: validatedData.name,
         isActive: validatedData.isActive ?? true,
-        entries: validatedData.entries ? {
-          create: validatedData.entries.map((entry) => ({
-            dayOfWeek: entry.dayOfWeek,
-            startTime: entry.startTime,
-            endTime: entry.endTime,
-            shiftType: entry.shiftType,
-            memberId: entry.memberId ?? null,
-            facilityId: entry.facilityId ?? null,
-          })),
-        } : undefined,
+        entries: validatedData.entries
+          ? {
+              create: validatedData.entries.map((entry) => ({
+                dayOfWeek: entry.dayOfWeek,
+                startTime: entry.startTime,
+                endTime: entry.endTime,
+                shiftType: entry.shiftType,
+                memberId: entry.memberId ?? null,
+                facilityId: entry.facilityId ?? null,
+              })),
+            }
+          : undefined,
       },
       include: {
         entries: {
-          orderBy: [
-            { dayOfWeek: "asc" },
-            { startTime: "asc" },
-          ],
+          orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
         },
         _count: {
           select: {

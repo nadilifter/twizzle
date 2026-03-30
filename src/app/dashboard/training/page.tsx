@@ -1,16 +1,18 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Dumbbell, GraduationCap, Layers } from "lucide-react"
-import Link from "next/link"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Dumbbell, GraduationCap, Layers } from "lucide-react";
+import Link from "next/link";
 
 export default function TrainingPage() {
   return (
     <div className="flex flex-col gap-6 p-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Training</h1>
-        <p className="text-muted-foreground">Manage your skills database, evaluations, and program levels.</p>
+        <p className="text-muted-foreground">
+          Manage your skills database, evaluations, and program levels.
+        </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -72,5 +74,5 @@ export default function TrainingPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

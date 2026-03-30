@@ -4,7 +4,7 @@
 replicaCount: 2
 
 image:
-  repository: ""  # Set in environment-specific values
+  repository: "" # Set in environment-specific values
   pullPolicy: IfNotPresent
   tag: "latest"
 
@@ -25,7 +25,7 @@ podSecurityContext:
 securityContext:
   runAsNonRoot: true
   runAsUser: 1001
-  readOnlyRootFilesystem: false  # Next.js needs to write to .next/cache
+  readOnlyRootFilesystem: false # Next.js needs to write to .next/cache
   capabilities:
     drop:
       - ALL
@@ -44,7 +44,7 @@ ingress:
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
     alb.ingress.kubernetes.io/ssl-redirect: "443"
   hosts:
-    - host: "*.example.com"  # Override in environment values
+    - host: "*.example.com" # Override in environment values
       paths:
         - path: /
           pathType: Prefix
@@ -98,7 +98,7 @@ affinity:
 # Environment variables (non-sensitive)
 env:
   NODE_ENV: "production"
-  APP_ENVIRONMENT: "production"  # Override per environment
+  APP_ENVIRONMENT: "production" # Override per environment
   PORT: "3000"
 
 # Secrets from ExternalSecrets or native K8s secrets
@@ -146,11 +146,11 @@ podDisruptionBudget:
 # External services configuration
 externalServices:
   database:
-    host: ""  # Set in environment values
+    host: "" # Set in environment values
     port: 5432
   redis:
-    host: ""  # Set in environment values
+    host: "" # Set in environment values
     port: 6379
   s3:
-    bucket: ""  # Set in environment values
+    bucket: "" # Set in environment values
     region: "us-east-1"

@@ -1,19 +1,19 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useMemo } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import { useState, useEffect, useMemo } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -21,7 +21,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -29,20 +29,16 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  Tabs,
-  TabsContent,
-  TabsTrigger,
-} from "@/components/ui/tabs"
-import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
+} from "@/components/ui/dropdown-menu";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs";
 import {
   Plus,
   Search,
@@ -61,34 +57,34 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-} from "lucide-react"
-import Link from "next/link"
-import { format } from "date-fns"
-import { cn } from "@/lib/utils"
-import { toast } from "sonner"
-import { Calendar as CalendarPicker } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+} from "lucide-react";
+import Link from "next/link";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface Feature {
-  id: string
-  title: string
-  description: string
-  status: "SUBMITTED" | "PLANNED" | "IN_PROGRESS" | "DONE" | "CLOSED"
-  isPublic: boolean
-  categories: string[]
-  targetDate: string | null
-  statusChangedAt: string | null
-  createdAt: string
-  updatedAt: string
+  id: string;
+  title: string;
+  description: string;
+  status: "SUBMITTED" | "PLANNED" | "IN_PROGRESS" | "DONE" | "CLOSED";
+  isPublic: boolean;
+  categories: string[];
+  targetDate: string | null;
+  statusChangedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
   author: {
-    id: string
-    name: string
-    email: string
-    avatar: string | null
-  } | null
-  voteCount: number
-  commentCount: number
-  mergedCount: number
+    id: string;
+    name: string;
+    email: string;
+    avatar: string | null;
+  } | null;
+  voteCount: number;
+  commentCount: number;
+  mergedCount: number;
 }
 
 const statusColors: Record<string, string> = {
@@ -97,7 +93,7 @@ const statusColors: Record<string, string> = {
   IN_PROGRESS: "bg-purple-500 text-white",
   DONE: "bg-green-500 text-white",
   CLOSED: "bg-gray-500 text-white",
-}
+};
 
 const statusLabels: Record<string, string> = {
   SUBMITTED: "Submitted",
@@ -105,7 +101,7 @@ const statusLabels: Record<string, string> = {
   IN_PROGRESS: "In Progress",
   DONE: "Done",
   CLOSED: "Closed",
-}
+};
 
 const STATUS_ORDER: Record<string, number> = {
   CLOSED: 0,
@@ -113,7 +109,7 @@ const STATUS_ORDER: Record<string, number> = {
   SUBMITTED: 2,
   IN_PROGRESS: 3,
   PLANNED: 4,
-}
+};
 
 const PREDEFINED_CATEGORIES = [
   "UI/UX",
@@ -129,156 +125,156 @@ const PREDEFINED_CATEGORIES = [
   "Programs",
   "Financials",
   "Other",
-]
+];
 
 export default function SuperadminFeedbackPage() {
-  const [features, setFeatures] = useState<Feature[]>([])
-  const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState("submissions")
-  const [submissionsCount, setSubmissionsCount] = useState(0)
-  const [liveCount, setLiveCount] = useState(0)
-  const [searchQuery, setSearchQuery] = useState("")
-  
+  const [features, setFeatures] = useState<Feature[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("submissions");
+  const [submissionsCount, setSubmissionsCount] = useState(0);
+  const [liveCount, setLiveCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+
   // Dialog states
-  const [editDialogOpen, setEditDialogOpen] = useState(false)
-  const [approveDialogOpen, setApproveDialogOpen] = useState(false)
-  const [mergeDialogOpen, setMergeDialogOpen] = useState(false)
-  const [createDialogOpen, setCreateDialogOpen] = useState(false)
-  const [detailDialogOpen, setDetailDialogOpen] = useState(false)
-  const [selectedFeature, setSelectedFeature] = useState<Feature | null>(null)
-  const [saving, setSaving] = useState(false)
-  
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [selectedFeature, setSelectedFeature] = useState<Feature | null>(null);
+  const [saving, setSaving] = useState(false);
+
   // Form states
-  const [editTitle, setEditTitle] = useState("")
-  const [editDescription, setEditDescription] = useState("")
-  const [editStatus, setEditStatus] = useState<Feature["status"]>("PLANNED")
-  const [editCategories, setEditCategories] = useState<string[]>([])
-  const [editTargetDate, setEditTargetDate] = useState("")
-  const [mergeTargetId, setMergeTargetId] = useState("")
-  
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editStatus, setEditStatus] = useState<Feature["status"]>("PLANNED");
+  const [editCategories, setEditCategories] = useState<string[]>([]);
+  const [editTargetDate, setEditTargetDate] = useState("");
+  const [mergeTargetId, setMergeTargetId] = useState("");
+
   // Sorting state
-  const [sortKey, setSortKey] = useState<string | null>(null)
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   // Live features for merge target selection
-  const [liveFeatures, setLiveFeatures] = useState<Feature[]>([])
+  const [liveFeatures, setLiveFeatures] = useState<Feature[]>([]);
 
   const fetchFeatures = async (tab: string) => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const response = await fetch(`/api/superadmin/feedback?tab=${tab}&search=${searchQuery}`)
+      const response = await fetch(`/api/superadmin/feedback?tab=${tab}&search=${searchQuery}`);
       if (response.ok) {
-        const data = await response.json()
-        setFeatures(data.data || [])
+        const data = await response.json();
+        setFeatures(data.data || []);
       }
     } catch (error) {
-      console.error("Failed to fetch features:", error)
-      toast.error("Failed to fetch features")
+      console.error("Failed to fetch features:", error);
+      toast.error("Failed to fetch features");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const fetchCounts = async () => {
     try {
       const [submissionsRes, liveRes] = await Promise.all([
         fetch("/api/superadmin/feedback?tab=submissions"),
         fetch("/api/superadmin/feedback?tab=live"),
-      ])
+      ]);
       if (submissionsRes.ok) {
-        const data = await submissionsRes.json()
-        setSubmissionsCount(data.total || 0)
+        const data = await submissionsRes.json();
+        setSubmissionsCount(data.total || 0);
       }
       if (liveRes.ok) {
-        const data = await liveRes.json()
-        setLiveCount(data.total || 0)
-        setLiveFeatures(data.data || [])
+        const data = await liveRes.json();
+        setLiveCount(data.total || 0);
+        setLiveFeatures(data.data || []);
       }
     } catch (error) {
-      console.error("Failed to fetch counts:", error)
+      console.error("Failed to fetch counts:", error);
     }
-  }
+  };
 
   const fetchLiveFeatures = async () => {
     try {
-      const response = await fetch("/api/superadmin/feedback?tab=live")
+      const response = await fetch("/api/superadmin/feedback?tab=live");
       if (response.ok) {
-        const data = await response.json()
-        setLiveFeatures(data.data || [])
+        const data = await response.json();
+        setLiveFeatures(data.data || []);
       }
     } catch (error) {
-      console.error("Failed to fetch live features:", error)
+      console.error("Failed to fetch live features:", error);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchFeatures(activeTab)
-  }, [activeTab, searchQuery])
+    fetchFeatures(activeTab);
+  }, [activeTab, searchQuery]);
 
   useEffect(() => {
-    fetchCounts()
-  }, [])
+    fetchCounts();
+  }, []);
 
   const handleTabChange = (tab: string) => {
-    setActiveTab(tab)
-    setSortKey(null)
-    setSortDirection("asc")
-  }
+    setActiveTab(tab);
+    setSortKey(null);
+    setSortDirection("asc");
+  };
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
-      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
     } else {
-      setSortKey(key)
-      setSortDirection("asc")
+      setSortKey(key);
+      setSortDirection("asc");
     }
-  }
+  };
 
   const openEditDialog = (feature: Feature) => {
-    setSelectedFeature(feature)
-    setEditTitle(feature.title)
-    setEditDescription(feature.description)
-    setEditStatus(feature.status)
-    setEditCategories(feature.categories)
-    setEditTargetDate(feature.targetDate ? feature.targetDate.slice(0, 16) : "")
-    setEditDialogOpen(true)
-  }
+    setSelectedFeature(feature);
+    setEditTitle(feature.title);
+    setEditDescription(feature.description);
+    setEditStatus(feature.status);
+    setEditCategories(feature.categories);
+    setEditTargetDate(feature.targetDate ? feature.targetDate.slice(0, 16) : "");
+    setEditDialogOpen(true);
+  };
 
   const openApproveDialog = (feature: Feature) => {
-    setSelectedFeature(feature)
-    setEditCategories(feature.categories)
-    setEditTargetDate("")
-    setApproveDialogOpen(true)
-  }
+    setSelectedFeature(feature);
+    setEditCategories(feature.categories);
+    setEditTargetDate("");
+    setApproveDialogOpen(true);
+  };
 
   const openMergeDialog = async (feature: Feature) => {
-    setSelectedFeature(feature)
-    setMergeTargetId("")
-    await fetchLiveFeatures()
-    setMergeDialogOpen(true)
-  }
+    setSelectedFeature(feature);
+    setMergeTargetId("");
+    await fetchLiveFeatures();
+    setMergeDialogOpen(true);
+  };
 
   const openCreateDialog = () => {
-    setEditTitle("")
-    setEditDescription("")
-    setEditStatus("PLANNED")
-    setEditCategories([])
-    setEditTargetDate("")
-    setCreateDialogOpen(true)
-  }
+    setEditTitle("");
+    setEditDescription("");
+    setEditStatus("PLANNED");
+    setEditCategories([]);
+    setEditTargetDate("");
+    setCreateDialogOpen(true);
+  };
 
   const openDetailDialog = (feature: Feature) => {
-    setSelectedFeature(feature)
-    setDetailDialogOpen(true)
-  }
+    setSelectedFeature(feature);
+    setDetailDialogOpen(true);
+  };
 
   const handleCreate = async () => {
     if (!editTitle || !editDescription) {
-      toast.error("Title and description are required")
-      return
+      toast.error("Title and description are required");
+      return;
     }
 
-    setSaving(true)
+    setSaving(true);
     try {
       const response = await fetch("/api/superadmin/feedback", {
         method: "POST",
@@ -291,27 +287,27 @@ export default function SuperadminFeedbackPage() {
           categories: editCategories,
           targetDate: editTargetDate ? new Date(editTargetDate).toISOString() : null,
         }),
-      })
+      });
 
       if (response.ok) {
-        toast.success("Feature created successfully")
-        setCreateDialogOpen(false)
-        fetchFeatures(activeTab)
+        toast.success("Feature created successfully");
+        setCreateDialogOpen(false);
+        fetchFeatures(activeTab);
       } else {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to create feature")
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create feature");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to create feature")
+      toast.error(error instanceof Error ? error.message : "Failed to create feature");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleUpdate = async () => {
-    if (!selectedFeature) return
+    if (!selectedFeature) return;
 
-    setSaving(true)
+    setSaving(true);
     try {
       const response = await fetch(`/api/superadmin/feedback/${selectedFeature.id}`, {
         method: "PUT",
@@ -323,27 +319,27 @@ export default function SuperadminFeedbackPage() {
           categories: editCategories,
           targetDate: editTargetDate ? new Date(editTargetDate).toISOString() : null,
         }),
-      })
+      });
 
       if (response.ok) {
-        toast.success("Feature updated successfully")
-        setEditDialogOpen(false)
-        fetchFeatures(activeTab)
+        toast.success("Feature updated successfully");
+        setEditDialogOpen(false);
+        fetchFeatures(activeTab);
       } else {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to update feature")
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update feature");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update feature")
+      toast.error(error instanceof Error ? error.message : "Failed to update feature");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleApprove = async () => {
-    if (!selectedFeature) return
+    if (!selectedFeature) return;
 
-    setSaving(true)
+    setSaving(true);
     try {
       const response = await fetch(`/api/superadmin/feedback/${selectedFeature.id}/approve`, {
         method: "POST",
@@ -352,28 +348,28 @@ export default function SuperadminFeedbackPage() {
           categories: editCategories,
           targetDate: editTargetDate ? new Date(editTargetDate).toISOString() : null,
         }),
-      })
+      });
 
       if (response.ok) {
-        toast.success("Feature approved and added to roadmap")
-        setApproveDialogOpen(false)
-        fetchFeatures(activeTab)
-        fetchCounts()
+        toast.success("Feature approved and added to roadmap");
+        setApproveDialogOpen(false);
+        fetchFeatures(activeTab);
+        fetchCounts();
       } else {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to approve feature")
+        const error = await response.json();
+        throw new Error(error.error || "Failed to approve feature");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to approve feature")
+      toast.error(error instanceof Error ? error.message : "Failed to approve feature");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleMerge = async () => {
-    if (!selectedFeature || !mergeTargetId) return
+    if (!selectedFeature || !mergeTargetId) return;
 
-    setSaving(true)
+    setSaving(true);
     try {
       const response = await fetch(`/api/superadmin/feedback/${selectedFeature.id}/merge`, {
         method: "POST",
@@ -381,132 +377,134 @@ export default function SuperadminFeedbackPage() {
         body: JSON.stringify({
           targetFeatureId: mergeTargetId,
         }),
-      })
+      });
 
       if (response.ok) {
-        toast.success("Feature merged successfully")
-        setMergeDialogOpen(false)
-        fetchFeatures(activeTab)
-        fetchCounts()
+        toast.success("Feature merged successfully");
+        setMergeDialogOpen(false);
+        fetchFeatures(activeTab);
+        fetchCounts();
       } else {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to merge feature")
+        const error = await response.json();
+        throw new Error(error.error || "Failed to merge feature");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to merge feature")
+      toast.error(error instanceof Error ? error.message : "Failed to merge feature");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this feature? This action cannot be undone.")) return
+    if (!confirm("Are you sure you want to delete this feature? This action cannot be undone."))
+      return;
 
     try {
       const response = await fetch(`/api/superadmin/feedback/${id}`, {
         method: "DELETE",
-      })
+      });
 
       if (response.ok) {
-        toast.success("Feature deleted successfully")
-        fetchFeatures(activeTab)
-        fetchCounts()
+        toast.success("Feature deleted successfully");
+        fetchFeatures(activeTab);
+        fetchCounts();
       } else {
-        throw new Error("Failed to delete feature")
+        throw new Error("Failed to delete feature");
       }
     } catch (error) {
-      toast.error("Failed to delete feature")
+      toast.error("Failed to delete feature");
     }
-  }
+  };
 
   const toggleCategory = (category: string) => {
     setEditCategories((prev) =>
-      prev.includes(category)
-        ? prev.filter((c) => c !== category)
-        : [...prev, category]
-    )
-  }
+      prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category]
+    );
+  };
 
-  const filteredFeatures = features.filter((f) =>
-    f.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    f.description.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredFeatures = features.filter(
+    (f) =>
+      f.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      f.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const sortedFeatures = useMemo(() => {
-    const sorted = [...filteredFeatures]
+    const sorted = [...filteredFeatures];
 
     if (sortKey) {
       sorted.sort((a, b) => {
-        let aVal: string | number
-        let bVal: string | number
+        let aVal: string | number;
+        let bVal: string | number;
         switch (sortKey) {
           case "title":
-            aVal = a.title.toLowerCase()
-            bVal = b.title.toLowerCase()
-            break
+            aVal = a.title.toLowerCase();
+            bVal = b.title.toLowerCase();
+            break;
           case "status":
-            aVal = STATUS_ORDER[a.status] ?? 99
-            bVal = STATUS_ORDER[b.status] ?? 99
-            break
+            aVal = STATUS_ORDER[a.status] ?? 99;
+            bVal = STATUS_ORDER[b.status] ?? 99;
+            break;
           case "target":
-            aVal = a.targetDate || "\uffff"
-            bVal = b.targetDate || "\uffff"
-            break
+            aVal = a.targetDate || "\uffff";
+            bVal = b.targetDate || "\uffff";
+            break;
           case "votes":
-            aVal = a.voteCount
-            bVal = b.voteCount
-            break
+            aVal = a.voteCount;
+            bVal = b.voteCount;
+            break;
           case "comments":
-            aVal = a.commentCount
-            bVal = b.commentCount
-            break
+            aVal = a.commentCount;
+            bVal = b.commentCount;
+            break;
           case "updated":
-            aVal = a.statusChangedAt || a.createdAt
-            bVal = b.statusChangedAt || b.createdAt
-            break
+            aVal = a.statusChangedAt || a.createdAt;
+            bVal = b.statusChangedAt || b.createdAt;
+            break;
           case "author":
-            aVal = a.author?.name?.toLowerCase() || "\uffff"
-            bVal = b.author?.name?.toLowerCase() || "\uffff"
-            break
+            aVal = a.author?.name?.toLowerCase() || "\uffff";
+            bVal = b.author?.name?.toLowerCase() || "\uffff";
+            break;
           case "date":
-            aVal = a.createdAt
-            bVal = b.createdAt
-            break
+            aVal = a.createdAt;
+            bVal = b.createdAt;
+            break;
           default:
-            return 0
+            return 0;
         }
-        if (aVal < bVal) return sortDirection === "asc" ? -1 : 1
-        if (aVal > bVal) return sortDirection === "asc" ? 1 : -1
-        return 0
-      })
+        if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
+        if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
+        return 0;
+      });
     } else if (activeTab === "live") {
       sorted.sort((a, b) => {
-        const statusDiff = (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99)
-        if (statusDiff !== 0) return statusDiff
-        const aTarget = a.targetDate || "\uffff"
-        const bTarget = b.targetDate || "\uffff"
-        if (aTarget < bTarget) return -1
-        if (aTarget > bTarget) return 1
-        return 0
-      })
+        const statusDiff = (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99);
+        if (statusDiff !== 0) return statusDiff;
+        const aTarget = a.targetDate || "\uffff";
+        const bTarget = b.targetDate || "\uffff";
+        if (aTarget < bTarget) return -1;
+        if (aTarget > bTarget) return 1;
+        return 0;
+      });
     }
 
-    return sorted
-  }, [filteredFeatures, sortKey, sortDirection, activeTab])
+    return sorted;
+  }, [filteredFeatures, sortKey, sortDirection, activeTab]);
 
   const SortIcon = ({ columnKey }: { columnKey: string }) => {
-    if (sortKey !== columnKey) return <ArrowUpDown className="h-3 w-3 text-muted-foreground/50" />
-    return sortDirection === "asc"
-      ? <ArrowUp className="h-3 w-3" />
-      : <ArrowDown className="h-3 w-3" />
-  }
+    if (sortKey !== columnKey) return <ArrowUpDown className="h-3 w-3 text-muted-foreground/50" />;
+    return sortDirection === "asc" ? (
+      <ArrowUp className="h-3 w-3" />
+    ) : (
+      <ArrowDown className="h-3 w-3" />
+    );
+  };
 
   const formatQuarter = (date: string | null) => {
-    if (!date) return "-"
-    const d = new Date(date)
-    const quarter = Math.ceil((d.getMonth() + 1) / 3)
-    return `Q${quarter} ${d.getFullYear()}`
-  }
+    if (!date) return "-";
+    const d = new Date(date);
+    const quarter = Math.ceil((d.getMonth() + 1) / 3);
+    return `Q${quarter} ${d.getFullYear()}`;
+  };
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -529,13 +527,17 @@ export default function SuperadminFeedbackPage() {
             <TabsTrigger value="submissions">
               Submissions
               {submissionsCount > 0 && (
-                <Badge variant="secondary" className="ml-2">{submissionsCount}</Badge>
+                <Badge variant="secondary" className="ml-2">
+                  {submissionsCount}
+                </Badge>
               )}
             </TabsTrigger>
             <TabsTrigger value="live">
               Live Features
               {liveCount > 0 && (
-                <Badge variant="outline" className="ml-2">{liveCount}</Badge>
+                <Badge variant="outline" className="ml-2">
+                  {liveCount}
+                </Badge>
               )}
             </TabsTrigger>
           </ResponsiveTabsList>
@@ -568,18 +570,38 @@ export default function SuperadminFeedbackPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("title")}>
-                        <div className="flex items-center gap-1">Title <SortIcon columnKey="title" /></div>
+                      <TableHead
+                        className="cursor-pointer select-none"
+                        onClick={() => handleSort("title")}
+                      >
+                        <div className="flex items-center gap-1">
+                          Title <SortIcon columnKey="title" />
+                        </div>
                       </TableHead>
-                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("author")}>
-                        <div className="flex items-center gap-1">Submitted By <SortIcon columnKey="author" /></div>
+                      <TableHead
+                        className="cursor-pointer select-none"
+                        onClick={() => handleSort("author")}
+                      >
+                        <div className="flex items-center gap-1">
+                          Submitted By <SortIcon columnKey="author" />
+                        </div>
                       </TableHead>
                       <TableHead>Categories</TableHead>
-                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("votes")}>
-                        <div className="flex items-center gap-1">Votes <SortIcon columnKey="votes" /></div>
+                      <TableHead
+                        className="cursor-pointer select-none"
+                        onClick={() => handleSort("votes")}
+                      >
+                        <div className="flex items-center gap-1">
+                          Votes <SortIcon columnKey="votes" />
+                        </div>
                       </TableHead>
-                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("date")}>
-                        <div className="flex items-center gap-1">Date <SortIcon columnKey="date" /></div>
+                      <TableHead
+                        className="cursor-pointer select-none"
+                        onClick={() => handleSort("date")}
+                      >
+                        <div className="flex items-center gap-1">
+                          Date <SortIcon columnKey="date" />
+                        </div>
                       </TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
@@ -597,13 +619,15 @@ export default function SuperadminFeedbackPage() {
                         </TableCell>
                         <TableCell>
                           {feature.author ? (
-                            <Link 
+                            <Link
                               href={`/superadmin/users/${feature.author.id}`}
                               className="flex items-center gap-1.5 hover:text-primary transition-colors group"
                             >
                               <User className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
                               <div>
-                                <span className="font-medium group-hover:underline">{feature.author.name}</span>
+                                <span className="font-medium group-hover:underline">
+                                  {feature.author.name}
+                                </span>
                                 <div className="text-xs text-muted-foreground">
                                   {feature.author.email}
                                 </div>
@@ -634,9 +658,7 @@ export default function SuperadminFeedbackPage() {
                             {feature.voteCount}
                           </div>
                         </TableCell>
-                        <TableCell>
-                          {format(new Date(feature.createdAt), "MMM d, yyyy")}
-                        </TableCell>
+                        <TableCell>{format(new Date(feature.createdAt), "MMM d, yyyy")}</TableCell>
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -695,23 +717,53 @@ export default function SuperadminFeedbackPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("title")}>
-                        <div className="flex items-center gap-1">Title <SortIcon columnKey="title" /></div>
+                      <TableHead
+                        className="cursor-pointer select-none"
+                        onClick={() => handleSort("title")}
+                      >
+                        <div className="flex items-center gap-1">
+                          Title <SortIcon columnKey="title" />
+                        </div>
                       </TableHead>
-                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("status")}>
-                        <div className="flex items-center gap-1">Status <SortIcon columnKey="status" /></div>
+                      <TableHead
+                        className="cursor-pointer select-none"
+                        onClick={() => handleSort("status")}
+                      >
+                        <div className="flex items-center gap-1">
+                          Status <SortIcon columnKey="status" />
+                        </div>
                       </TableHead>
-                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("target")}>
-                        <div className="flex items-center gap-1">Target <SortIcon columnKey="target" /></div>
+                      <TableHead
+                        className="cursor-pointer select-none"
+                        onClick={() => handleSort("target")}
+                      >
+                        <div className="flex items-center gap-1">
+                          Target <SortIcon columnKey="target" />
+                        </div>
                       </TableHead>
-                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("votes")}>
-                        <div className="flex items-center gap-1">Votes <SortIcon columnKey="votes" /></div>
+                      <TableHead
+                        className="cursor-pointer select-none"
+                        onClick={() => handleSort("votes")}
+                      >
+                        <div className="flex items-center gap-1">
+                          Votes <SortIcon columnKey="votes" />
+                        </div>
                       </TableHead>
-                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("comments")}>
-                        <div className="flex items-center gap-1">Comments <SortIcon columnKey="comments" /></div>
+                      <TableHead
+                        className="cursor-pointer select-none"
+                        onClick={() => handleSort("comments")}
+                      >
+                        <div className="flex items-center gap-1">
+                          Comments <SortIcon columnKey="comments" />
+                        </div>
                       </TableHead>
-                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("updated")}>
-                        <div className="flex items-center gap-1">Last Updated <SortIcon columnKey="updated" /></div>
+                      <TableHead
+                        className="cursor-pointer select-none"
+                        onClick={() => handleSort("updated")}
+                      >
+                        <div className="flex items-center gap-1">
+                          Last Updated <SortIcon columnKey="updated" />
+                        </div>
                       </TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
@@ -841,16 +893,23 @@ export default function SuperadminFeedbackPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      className={cn("w-full justify-start text-left font-normal", !editTargetDate && "text-muted-foreground")}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !editTargetDate && "text-muted-foreground"
+                      )}
                     >
                       <Calendar className="mr-2 h-4 w-4" />
-                      {editTargetDate ? format(new Date(editTargetDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                      {editTargetDate
+                        ? format(new Date(editTargetDate + "T12:00:00Z"), "PPP")
+                        : "Pick a date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
                     <CalendarPicker
                       mode="single"
-                      selected={editTargetDate ? new Date(editTargetDate + "T12:00:00Z") : undefined}
+                      selected={
+                        editTargetDate ? new Date(editTargetDate + "T12:00:00Z") : undefined
+                      }
                       onSelect={(date) => setEditTargetDate(date ? format(date, "yyyy-MM-dd") : "")}
                       initialFocus
                     />
@@ -891,9 +950,7 @@ export default function SuperadminFeedbackPage() {
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Edit Feature</DialogTitle>
-            <DialogDescription>
-              Update feature details, status, and target date.
-            </DialogDescription>
+            <DialogDescription>Update feature details, status, and target date.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
@@ -935,16 +992,23 @@ export default function SuperadminFeedbackPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      className={cn("w-full justify-start text-left font-normal", !editTargetDate && "text-muted-foreground")}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !editTargetDate && "text-muted-foreground"
+                      )}
                     >
                       <Calendar className="mr-2 h-4 w-4" />
-                      {editTargetDate ? format(new Date(editTargetDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                      {editTargetDate
+                        ? format(new Date(editTargetDate + "T12:00:00Z"), "PPP")
+                        : "Pick a date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
                     <CalendarPicker
                       mode="single"
-                      selected={editTargetDate ? new Date(editTargetDate + "T12:00:00Z") : undefined}
+                      selected={
+                        editTargetDate ? new Date(editTargetDate + "T12:00:00Z") : undefined
+                      }
                       onSelect={(date) => setEditTargetDate(date ? format(date, "yyyy-MM-dd") : "")}
                       initialFocus
                     />
@@ -993,9 +1057,7 @@ export default function SuperadminFeedbackPage() {
             <div className="grid gap-4 py-4">
               <div className="rounded-lg border p-4 bg-muted/50">
                 <h4 className="font-medium">{selectedFeature.title}</h4>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {selectedFeature.description}
-                </p>
+                <p className="text-sm text-muted-foreground mt-1">{selectedFeature.description}</p>
               </div>
               <div className="grid gap-2">
                 <Label>Categories</Label>
@@ -1019,16 +1081,23 @@ export default function SuperadminFeedbackPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      className={cn("w-full justify-start text-left font-normal", !editTargetDate && "text-muted-foreground")}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !editTargetDate && "text-muted-foreground"
+                      )}
                     >
                       <Calendar className="mr-2 h-4 w-4" />
-                      {editTargetDate ? format(new Date(editTargetDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                      {editTargetDate
+                        ? format(new Date(editTargetDate + "T12:00:00Z"), "PPP")
+                        : "Pick a date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
                     <CalendarPicker
                       mode="single"
-                      selected={editTargetDate ? new Date(editTargetDate + "T12:00:00Z") : undefined}
+                      selected={
+                        editTargetDate ? new Date(editTargetDate + "T12:00:00Z") : undefined
+                      }
                       onSelect={(date) => setEditTargetDate(date ? format(date, "yyyy-MM-dd") : "")}
                       initialFocus
                     />
@@ -1062,9 +1131,7 @@ export default function SuperadminFeedbackPage() {
             <div className="grid gap-4 py-4">
               <div className="rounded-lg border p-4 bg-muted/50">
                 <h4 className="font-medium">{selectedFeature.title}</h4>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {selectedFeature.description}
-                </p>
+                <p className="text-sm text-muted-foreground mt-1">{selectedFeature.description}</p>
               </div>
               <div className="grid gap-2">
                 <Label>Merge Into</Label>
@@ -1126,7 +1193,8 @@ export default function SuperadminFeedbackPage() {
                     {selectedFeature.author?.name || "Anonymous"}
                     {selectedFeature.author?.email && (
                       <span className="text-muted-foreground font-normal">
-                        {" "}({selectedFeature.author.email})
+                        {" "}
+                        ({selectedFeature.author.email})
                       </span>
                     )}
                   </p>
@@ -1160,5 +1228,5 @@ export default function SuperadminFeedbackPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

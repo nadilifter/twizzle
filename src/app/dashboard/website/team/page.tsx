@@ -98,8 +98,9 @@ function SortableTeamItem({
   highlight: TeamHighlight;
   member: StaffMember;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: highlight.memberId });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: highlight.memberId,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -122,9 +123,7 @@ function SortableTeamItem({
         <GripVertical className="h-5 w-5" />
       </button>
       <Avatar className="h-8 w-8">
-        <AvatarImage
-          src={highlight.overrideImage || member.user.avatar || undefined}
-        />
+        <AvatarImage src={highlight.overrideImage || member.user.avatar || undefined} />
         <AvatarFallback>
           <User className="h-4 w-4" />
         </AvatarFallback>
@@ -153,16 +152,12 @@ export default function TeamHighlightsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isReorderDialogOpen, setIsReorderDialogOpen] = useState(false);
-  const [reorderHighlights, setReorderHighlights] = useState<TeamHighlight[]>(
-    []
-  );
+  const [reorderHighlights, setReorderHighlights] = useState<TeamHighlight[]>([]);
   const [cropState, setCropState] = useState<{
     memberId: string;
     imageSrc: string;
   } | null>(null);
-  const [uploadingMemberId, setUploadingMemberId] = useState<string | null>(
-    null
-  );
+  const [uploadingMemberId, setUploadingMemberId] = useState<string | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const sensors = useSensors(
@@ -192,8 +187,7 @@ export default function TeamHighlightsPage() {
 
       let existingHighlights: TeamHighlight[] = [];
       if (highlightsRes.ok) {
-        const highlightsData: TeamHighlightWithMember[] =
-          await highlightsRes.json();
+        const highlightsData: TeamHighlightWithMember[] = await highlightsRes.json();
         existingHighlights = highlightsData.map((h) => ({
           memberId: h.memberId,
           displayOrder: h.displayOrder,
@@ -204,12 +198,8 @@ export default function TeamHighlightsPage() {
         }));
       }
 
-      const existingMemberIds = new Set(
-        existingHighlights.map((h) => h.memberId)
-      );
-      const eligible = staffData.filter(
-        (s) => s.status === "ACTIVE" || s.status === "INVITED"
-      );
+      const existingMemberIds = new Set(existingHighlights.map((h) => h.memberId));
+      const eligible = staffData.filter((s) => s.status === "ACTIVE" || s.status === "INVITED");
       const newEntries: TeamHighlight[] = eligible
         .filter((s) => !existingMemberIds.has(s.id))
         .map((s, i) => ({
@@ -234,9 +224,7 @@ export default function TeamHighlightsPage() {
   }, [fetchData]);
 
   const handleSave = async () => {
-    const missingTitle = highlights.some(
-      (h) => h.isVisible && !h.title?.trim()
-    );
+    const missingTitle = highlights.some((h) => h.isVisible && !h.title?.trim());
     if (missingTitle) {
       toast.error("Every visible team member must have a title before saving.");
       return;
@@ -282,9 +270,7 @@ export default function TeamHighlightsPage() {
   };
 
   const handleSaveOrder = () => {
-    setHighlights(
-      reorderHighlights.map((h, i) => ({ ...h, displayOrder: i }))
-    );
+    setHighlights(reorderHighlights.map((h, i) => ({ ...h, displayOrder: i })));
     setIsReorderDialogOpen(false);
     toast.success("Order updated — click Save Changes to persist");
   };
@@ -325,22 +311,19 @@ export default function TeamHighlightsPage() {
     []
   );
 
-  const handleRecrop = useCallback(
-    async (memberId: string, imageUrl: string) => {
-      try {
-        const res = await fetch(imageUrl);
-        const blob = await res.blob();
-        const reader = new FileReader();
-        reader.onload = () => {
-          setCropState({ memberId, imageSrc: reader.result as string });
-        };
-        reader.readAsDataURL(blob);
-      } catch {
-        toast.error("Failed to load image for re-cropping");
-      }
-    },
-    []
-  );
+  const handleRecrop = useCallback(async (memberId: string, imageUrl: string) => {
+    try {
+      const res = await fetch(imageUrl);
+      const blob = await res.blob();
+      const reader = new FileReader();
+      reader.onload = () => {
+        setCropState({ memberId, imageSrc: reader.result as string });
+      };
+      reader.readAsDataURL(blob);
+    } catch {
+      toast.error("Failed to load image for re-cropping");
+    }
+  }, []);
 
   const handleCropComplete = async (blob: Blob) => {
     if (!cropState) return;
@@ -385,12 +368,9 @@ export default function TeamHighlightsPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Team Highlights
-            </h1>
+            <h1 className="text-3xl font-bold tracking-tight">Team Highlights</h1>
             <p className="text-muted-foreground">
-              Toggle visibility and customize how each team member appears on
-              your public website.
+              Toggle visibility and customize how each team member appears on your public website.
             </p>
           </div>
         </div>
@@ -423,8 +403,8 @@ export default function TeamHighlightsPage() {
               <div>
                 <p className="font-medium">Show Certifications</p>
                 <p className="text-sm text-muted-foreground">
-                  Display earned certifications as badges beneath each team
-                  member&apos;s name on the public team page.
+                  Display earned certifications as badges beneath each team member&apos;s name on
+                  the public team page.
                 </p>
               </div>
             </div>
@@ -447,8 +427,7 @@ export default function TeamHighlightsPage() {
                 No team members found
               </p>
               <p className="text-sm text-muted-foreground">
-                Add staff members to your organization and they will appear here
-                automatically.
+                Add staff members to your organization and they will appear here automatically.
               </p>
             </div>
           </CardContent>
@@ -460,209 +439,167 @@ export default function TeamHighlightsPage() {
             if (!member) return null;
 
             return (
-              <Card
-                key={highlight.memberId}
-                className={
-                  highlight.isVisible ? "" : "opacity-60"
-                }
-              >
+              <Card key={highlight.memberId} className={highlight.isVisible ? "" : "opacity-60"}>
                 <CardContent className="pt-6">
                   <div className="space-y-4">
-                      {/* Header row */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage
-                              src={
-                                highlight.overrideImage ||
-                                member.user.avatar ||
-                                undefined
-                              }
-                            />
-                            <AvatarFallback>
-                              <User className="h-5 w-5" />
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{member.user.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {member.title || member.role} &middot;{" "}
-                              {member.user.email}
-                            </p>
-                          </div>
+                    {/* Header row */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage
+                            src={highlight.overrideImage || member.user.avatar || undefined}
+                          />
+                          <AvatarFallback>
+                            <User className="h-5 w-5" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">{member.user.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {member.title || member.role} &middot; {member.user.email}
+                          </p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Label
-                            htmlFor={`visible-${highlight.memberId}`}
-                            className="text-sm text-muted-foreground"
-                          >
-                            Visible
-                          </Label>
-                          <Switch
-                            id={`visible-${highlight.memberId}`}
-                            checked={highlight.isVisible}
-                            onCheckedChange={(c) =>
-                              updateHighlight(
-                                highlight.memberId,
-                                "isVisible",
-                                c
-                              )
-                            }
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Label
+                          htmlFor={`visible-${highlight.memberId}`}
+                          className="text-sm text-muted-foreground"
+                        >
+                          Visible
+                        </Label>
+                        <Switch
+                          id={`visible-${highlight.memberId}`}
+                          checked={highlight.isVisible}
+                          onCheckedChange={(c) =>
+                            updateHighlight(highlight.memberId, "isVisible", c)
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Settings */}
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>
+                          Team Photo{" "}
+                          <span className="text-muted-foreground text-xs font-normal">
+                            (Optional)
+                          </span>
+                        </Label>
+                        <p className="text-xs text-muted-foreground mb-2">
+                          Replaces the member&apos;s profile photo on the team page. Image will be
+                          cropped to portrait.
+                        </p>
+                        <div
+                          className="relative group w-[150px] aspect-[3/4] rounded-lg overflow-hidden bg-muted border-2 border-dashed cursor-pointer transition-colors hover:border-primary/50"
+                          onClick={() =>
+                            !uploadingMemberId && fileInputRefs.current[highlight.memberId]?.click()
+                          }
+                        >
+                          {highlight.overrideImage ? (
+                            <>
+                              <img
+                                src={highlight.overrideImage}
+                                alt="Team photo"
+                                className="absolute inset-0 w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                {uploadingMemberId === highlight.memberId ? (
+                                  <Loader2 className="h-5 w-5 animate-spin" />
+                                ) : (
+                                  <Camera className="h-5 w-5" />
+                                )}
+                              </div>
+                              <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  type="button"
+                                  className="p-1 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                                  title="Re-crop"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (highlight.overrideImage) {
+                                      handleRecrop(highlight.memberId, highlight.overrideImage);
+                                    }
+                                  }}
+                                >
+                                  <Crop className="h-3 w-3" />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="p-1 rounded-full bg-destructive text-white hover:bg-destructive/90"
+                                  title="Remove photo"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateHighlight(highlight.memberId, "overrideImage", null);
+                                  }}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2">
+                              {uploadingMemberId === highlight.memberId ? (
+                                <Loader2 className="h-6 w-6 animate-spin" />
+                              ) : (
+                                <>
+                                  <Upload className="h-6 w-6" />
+                                  <span className="text-xs">Upload Photo</span>
+                                </>
+                              )}
+                            </div>
+                          )}
+                          <input
+                            ref={(el) => {
+                              fileInputRefs.current[highlight.memberId] = el;
+                            }}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => handlePhotoSelect(highlight.memberId, e)}
+                            disabled={uploadingMemberId !== null}
                           />
                         </div>
                       </div>
 
-                      <Separator />
-
-                      {/* Settings */}
-                      <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-4">
                         <div className="space-y-2">
                           <Label>
-                            Team Photo{" "}
-                            <span className="text-muted-foreground text-xs font-normal">
-                              (Optional)
-                            </span>
+                            Title{" "}
+                            {highlight.isVisible && <span className="text-destructive">*</span>}
                           </Label>
                           <p className="text-xs text-muted-foreground mb-2">
-                            Replaces the member&apos;s profile photo on the team
-                            page. Image will be cropped to portrait.
+                            Their role or position shown on the public team page.
                           </p>
-                          <div
-                            className="relative group w-[150px] aspect-[3/4] rounded-lg overflow-hidden bg-muted border-2 border-dashed cursor-pointer transition-colors hover:border-primary/50"
-                            onClick={() =>
-                              !uploadingMemberId &&
-                              fileInputRefs.current[
-                                highlight.memberId
-                              ]?.click()
+                          <Input
+                            value={highlight.title || ""}
+                            onChange={(e) =>
+                              updateHighlight(highlight.memberId, "title", e.target.value || null)
                             }
-                          >
-                            {highlight.overrideImage ? (
-                              <>
-                                <img
-                                  src={highlight.overrideImage}
-                                  alt="Team photo"
-                                  className="absolute inset-0 w-full h-full object-cover"
-                                />
-                                <div className="absolute inset-0 bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                  {uploadingMemberId ===
-                                  highlight.memberId ? (
-                                    <Loader2 className="h-5 w-5 animate-spin" />
-                                  ) : (
-                                    <Camera className="h-5 w-5" />
-                                  )}
-                                </div>
-                                <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button
-                                    type="button"
-                                    className="p-1 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
-                                    title="Re-crop"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (highlight.overrideImage) {
-                                        handleRecrop(
-                                          highlight.memberId,
-                                          highlight.overrideImage
-                                        );
-                                      }
-                                    }}
-                                  >
-                                    <Crop className="h-3 w-3" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="p-1 rounded-full bg-destructive text-white hover:bg-destructive/90"
-                                    title="Remove photo"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      updateHighlight(
-                                        highlight.memberId,
-                                        "overrideImage",
-                                        null
-                                      );
-                                    }}
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </button>
-                                </div>
-                              </>
-                            ) : (
-                              <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2">
-                                {uploadingMemberId ===
-                                highlight.memberId ? (
-                                  <Loader2 className="h-6 w-6 animate-spin" />
-                                ) : (
-                                  <>
-                                    <Upload className="h-6 w-6" />
-                                    <span className="text-xs">
-                                      Upload Photo
-                                    </span>
-                                  </>
-                                )}
-                              </div>
-                            )}
-                            <input
-                              ref={(el) => {
-                                fileInputRefs.current[highlight.memberId] =
-                                  el;
-                              }}
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) =>
-                                handlePhotoSelect(highlight.memberId, e)
-                              }
-                              disabled={uploadingMemberId !== null}
-                            />
-                          </div>
+                            placeholder="e.g. Head Coach, Program Director..."
+                          />
                         </div>
 
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <Label>
-                              Title{" "}
-                              {highlight.isVisible && (
-                                <span className="text-destructive">*</span>
-                              )}
-                            </Label>
-                            <p className="text-xs text-muted-foreground mb-2">
-                              Their role or position shown on the public team
-                              page.
-                            </p>
-                            <Input
-                              value={highlight.title || ""}
-                              onChange={(e) =>
-                                updateHighlight(
-                                  highlight.memberId,
-                                  "title",
-                                  e.target.value || null
-                                )
-                              }
-                              placeholder="e.g. Head Coach, Program Director..."
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label>Bio</Label>
-                            <p className="text-xs text-muted-foreground mb-2">
-                              A short description shown on the public team page.
-                            </p>
-                            <Textarea
-                              value={highlight.bio || ""}
-                              onChange={(e) =>
-                                updateHighlight(
-                                  highlight.memberId,
-                                  "bio",
-                                  e.target.value || null
-                                )
-                              }
-                              placeholder="Tell visitors about this team member..."
-                              rows={3}
-                            />
-                          </div>
+                        <div className="space-y-2">
+                          <Label>Bio</Label>
+                          <p className="text-xs text-muted-foreground mb-2">
+                            A short description shown on the public team page.
+                          </p>
+                          <Textarea
+                            value={highlight.bio || ""}
+                            onChange={(e) =>
+                              updateHighlight(highlight.memberId, "bio", e.target.value || null)
+                            }
+                            placeholder="Tell visitors about this team member..."
+                            rows={3}
+                          />
                         </div>
                       </div>
                     </div>
-                  </CardContent>
+                  </div>
+                </CardContent>
               </Card>
             );
           })}
@@ -690,8 +627,7 @@ export default function TeamHighlightsPage() {
           <DialogHeader>
             <DialogTitle>Set Team Order</DialogTitle>
             <DialogDescription>
-              Drag and drop to reorder how team members appear on your public
-              website
+              Drag and drop to reorder how team members appear on your public website
             </DialogDescription>
           </DialogHeader>
 
@@ -724,10 +660,7 @@ export default function TeamHighlightsPage() {
           </div>
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsReorderDialogOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setIsReorderDialogOpen(false)}>
               Cancel
             </Button>
             <Button onClick={handleSaveOrder}>Save Order</Button>

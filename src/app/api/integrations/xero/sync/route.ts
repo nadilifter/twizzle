@@ -20,17 +20,11 @@ export async function POST() {
     });
 
     if (!connection || !connection.isActive) {
-      return NextResponse.json(
-        { error: "No active Xero connection" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "No active Xero connection" }, { status: 404 });
     }
 
     if (!connection.setupComplete) {
-      return NextResponse.json(
-        { error: "Account mapping setup not complete" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Account mapping setup not complete" }, { status: 400 });
     }
 
     const result = await enqueueFullSync(session.user.organizationId, "XERO");
@@ -42,9 +36,6 @@ export async function POST() {
     });
   } catch (error) {
     console.error("[Xero Sync Trigger] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to trigger sync" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to trigger sync" }, { status: 500 });
   }
 }

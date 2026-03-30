@@ -15,17 +15,18 @@ Before any development can begin, the Kirra Adyen balance platform must be fully
 
 **Who**: Adyen account manager / Kirra admin
 **Where**: Adyen Customer Area
+
 - Test: https://ca-test.adyen.com
 - Production: https://ca-live.adyen.com
 
 **Values obtained**:
 
-| Variable | Value | Notes |
-|---|---|---|
-| Company Account | `KirraCapital` | Legal entity: Kirra Capital, US |
-| `ADYEN_BALANCE_PLATFORM` | `UplifterLLC` | Balance platform ID |
-| `ADYEN_PLATFORM_MERCHANT_ACCOUNT` | `KirraCapital_Leapfrog_TEST` | Merchant account under KirraCapital |
-| Liable balance account ID | `BA32957223227M5KTBSHJFVFL` | Platform's own balance account for collecting fees |
+| Variable                          | Value                        | Notes                                              |
+| --------------------------------- | ---------------------------- | -------------------------------------------------- |
+| Company Account                   | `KirraCapital`               | Legal entity: Kirra Capital, US                    |
+| `ADYEN_BALANCE_PLATFORM`          | `UplifterLLC`                | Balance platform ID                                |
+| `ADYEN_PLATFORM_MERCHANT_ACCOUNT` | `KirraCapital_Leapfrog_TEST` | Merchant account under KirraCapital                |
+| Liable balance account ID         | `BA32957223227M5KTBSHJFVFL`  | Platform's own balance account for collecting fees |
 
 ---
 
@@ -36,6 +37,7 @@ Before any development can begin, the Kirra Adyen balance platform must be fully
 Three separate credentials are used, each scoped to a different Adyen API surface:
 
 **Credential 1: Checkout / Payments** (Company-level)
+
 - **Username**: `ws_396907@Company.KirraCapital`
 - **Description**: `leapfrog_test_payments`
 - **Shopper interactions**: Omnichannel
@@ -43,12 +45,14 @@ Three separate credentials are used, each scoped to a different Adyen API surfac
 - **Used for**: Checkout API, Payment Links, Recurring payments, standard webhooks
 
 **Credential 2: Balance Platform / Configuration** (BalancePlatform-level)
+
 - **Username**: `ws_508000@BalancePlatform.UplifterLLC`
 - **Description**: `leapfrog_platforms_web_service_user`
 - **Scope**: BalancePlatform account `UplifterLLC` and all associated account holders
 - **Used for**: Configuration API (Account Holders, Balance Accounts, Sweeps), Transfers API
 
 **Credential 3: Legal Entity Management** (Company-scope)
+
 - **Username**: `ws_236609@Scope.Company_KirraCapital`
 - **Description**: `leapfrog_platforms_lem_user`
 - **Scope**: Company `KirraCapital` and all associated account holders
@@ -56,12 +60,12 @@ Three separate credentials are used, each scoped to a different Adyen API surfac
 
 **Values**:
 
-| Variable | Credential | Description |
-|---|---|---|
-| `ADYEN_API_KEY` | 1 | Checkout/payments key |
-| `ADYEN_PLATFORM_API_KEY` | 2 | Configuration/Transfers key (BalancePlatform-scoped) |
-| `ADYEN_LEM_API_KEY` | 3 | Legal Entity Management key (Company-scoped) |
-| `NEXT_PUBLIC_ADYEN_CLIENT_KEY` | 1 | `test_EB5HMWNJJNGENK2OMNZK6LMU6IPHBN4O` |
+| Variable                       | Credential | Description                                          |
+| ------------------------------ | ---------- | ---------------------------------------------------- |
+| `ADYEN_API_KEY`                | 1          | Checkout/payments key                                |
+| `ADYEN_PLATFORM_API_KEY`       | 2          | Configuration/Transfers key (BalancePlatform-scoped) |
+| `ADYEN_LEM_API_KEY`            | 3          | Legal Entity Management key (Company-scoped)         |
+| `NEXT_PUBLIC_ADYEN_CLIENT_KEY` | 1          | `test_EB5HMWNJJNGENK2OMNZK6LMU6IPHBN4O`              |
 
 All API keys are set in `.env` only (never committed).
 
@@ -73,8 +77,8 @@ Adyen hosted onboarding supports generating links without a custom theme (uses A
 
 This can be revisited later to add Leapfrog/Kirra branding to the onboarding experience.
 
-| Variable | Value | Notes |
-|---|---|---|
+| Variable                    | Value              | Notes                     |
+| --------------------------- | ------------------ | ------------------------- |
 | `ADYEN_ONBOARDING_THEME_ID` | Not set (optional) | Omit to use Adyen default |
 
 ---
@@ -88,16 +92,19 @@ This can be revisited later to add Leapfrog/Kirra branding to the onboarding exp
 Adyen requires **three separate webhook subscriptions** for different event categories. Each generates its own HMAC key.
 
 **Subscription 1: Configuration webhook**
+
 - Events: account holder created/updated, balance account created/updated
 - Used for: onboarding status tracking (Phase 3)
 - URL: `{BASE_URL}/api/webhooks/adyen-balance-platform`
 
 **Subscription 2: Transfer webhook**
+
 - Events: transfer created/updated
 - Used for: payment settlement tracking, sweep/payout tracking (Phases 4-8)
 - URL: `{BASE_URL}/api/webhooks/adyen-balance-platform`
 
 **Subscription 3: Negative Balance Compensation Warning Webhook**
+
 - Events: negative balance compensation scheduled
 - Used for: negative balance alerts (Phase 7)
 - URL: `{BASE_URL}/api/webhooks/adyen-balance-platform`
@@ -105,17 +112,18 @@ Adyen requires **three separate webhook subscriptions** for different event cate
 All three point to the same endpoint. The handler dispatches by the `type` field in the payload.
 
 **URL values**:
+
 - Production: `https://admin.yourdomain.com/api/webhooks/adyen-balance-platform`
 - Staging: `https://admin.staging.yourdomain.com/api/webhooks/adyen-balance-platform`
 - Local testing: ngrok URL + `/api/webhooks/adyen-balance-platform`
 
 **HMAC keys**: Each subscription generates a separate HMAC key. Store all three:
 
-| Variable | Webhook subscription |
-|---|---|
-| `ADYEN_BP_CONFIG_WEBHOOK_HMAC_KEY` | Configuration webhook |
-| `ADYEN_BP_TRANSFER_WEBHOOK_HMAC_KEY` | Transfer webhook |
-| `ADYEN_BP_NEGBAL_WEBHOOK_HMAC_KEY` | Negative Balance Compensation Warning |
+| Variable                             | Webhook subscription                  |
+| ------------------------------------ | ------------------------------------- |
+| `ADYEN_BP_CONFIG_WEBHOOK_HMAC_KEY`   | Configuration webhook                 |
+| `ADYEN_BP_TRANSFER_WEBHOOK_HMAC_KEY` | Transfer webhook                      |
+| `ADYEN_BP_NEGBAL_WEBHOOK_HMAC_KEY`   | Negative Balance Compensation Warning |
 
 The webhook handler will try all three keys when verifying signatures (the payload's `type` field identifies which subscription sent it, but we verify against all keys for robustness).
 
@@ -147,6 +155,7 @@ ADYEN_LEM_API_KEY=your-lem-api-key
 ```
 
 **Existing variables**:
+
 - `ADYEN_API_KEY` -- checkout/payments key (`ws_396907@Company.KirraCapital`)
 - `ADYEN_MERCHANT_ACCOUNT` = `KirraCapital_Leapfrog_TEST`
 - `ADYEN_ENVIRONMENT` = `TEST`
@@ -171,6 +180,7 @@ ADYEN_LEM_API_KEY=your-lem-api-key
 ## Deliverable
 
 A completed checklist document with all IDs and keys filled in, confirming:
+
 - [x] Balance platform ID obtained (`UplifterLLC`)
 - [x] Platform merchant account ID obtained (`KirraCapital_Leapfrog_TEST`)
 - [x] API credentials obtained (triple-key: checkout + platform + LEM)

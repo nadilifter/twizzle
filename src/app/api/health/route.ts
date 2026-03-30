@@ -8,10 +8,10 @@ export const dynamic = "force-dynamic";
 
 /**
  * Health Check Endpoint
- * 
+ *
  * Returns the health status of the application and its dependencies.
  * Used by load balancers, container orchestrators, and monitoring systems.
- * 
+ *
  * Response codes:
  *   - 200: All systems operational
  *   - 503: One or more critical dependencies are down
@@ -46,10 +46,14 @@ export async function GET(): Promise<NextResponse<HealthStatus>> {
   // Determine overall status
   // Database is critical, others are not
   let overallStatus: HealthStatus["status"] = "healthy";
-  
+
   if (dbCheck.status === "error") {
     overallStatus = "unhealthy";
-  } else if (redisCheck.status === "error" || adyenCheck.status === "error" || twilioCheck.status === "error") {
+  } else if (
+    redisCheck.status === "error" ||
+    adyenCheck.status === "error" ||
+    twilioCheck.status === "error"
+  ) {
     overallStatus = "degraded";
   }
 
@@ -66,14 +70,14 @@ export async function GET(): Promise<NextResponse<HealthStatus>> {
 
   // Return appropriate status code
   const statusCode = overallStatus === "unhealthy" ? 503 : 200;
-  
-  return NextResponse.json(healthStatus, { 
+
+  return NextResponse.json(healthStatus, {
     status: statusCode,
     headers: {
       // Prevent caching of health checks
       "Cache-Control": "no-cache, no-store, must-revalidate",
-      "Pragma": "no-cache",
-      "Expires": "0",
+      Pragma: "no-cache",
+      Expires: "0",
     },
   });
 }
@@ -83,11 +87,11 @@ export async function GET(): Promise<NextResponse<HealthStatus>> {
  */
 async function checkDatabase(): Promise<CheckResult> {
   const startTime = Date.now();
-  
+
   try {
     // Simple query to verify database connectivity
     await db.$queryRaw`SELECT 1`;
-    
+
     return {
       status: "ok",
       latency: Date.now() - startTime,
@@ -113,7 +117,7 @@ async function checkRedis(): Promise<CheckResult> {
   }
 
   const startTime = Date.now();
-  
+
   try {
     // Import redis client
     const { redis } = await import("@/lib/redis");
@@ -123,10 +127,10 @@ async function checkRedis(): Promise<CheckResult> {
         message: "Redis client not initialized",
       };
     }
-    
+
     // Simple ping to verify connectivity
     await redis.ping();
-    
+
     return {
       status: "ok",
       latency: Date.now() - startTime,

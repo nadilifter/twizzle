@@ -6,7 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Heart, AlertTriangle, Loader2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -28,13 +34,13 @@ export default function AthleteMedicalPage() {
   const [isLoadingAthletes, setIsLoadingAthletes] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
 
-  const { 
-    medicalInfo, 
-    customQuestions, 
-    config, 
+  const {
+    medicalInfo,
+    customQuestions,
+    config,
     isLoading: medicalLoading,
     isSaving,
-    saveMedicalInfo 
+    saveMedicalInfo,
   } = useAthleteMedicalInfo(selectedAthleteId);
 
   // Fetch athletes for the family
@@ -45,7 +51,7 @@ export default function AthleteMedicalPage() {
         const response = await api.get<{ athletes: Athlete[] }>("/api/athletes/me");
         const athleteData = response.athletes || [];
         setAthletes(athleteData);
-        
+
         // Select first athlete by default
         if (athleteData.length > 0 && !selectedAthleteId) {
           setSelectedAthleteId(athleteData[0].id);
@@ -61,7 +67,7 @@ export default function AthleteMedicalPage() {
     fetchAthletes();
   }, []);
 
-  const selectedAthlete = athletes.find(a => a.id === selectedAthleteId);
+  const selectedAthlete = athletes.find((a) => a.id === selectedAthleteId);
 
   const handleSave = async (data: any) => {
     const success = await saveMedicalInfo(data);
@@ -89,9 +95,7 @@ export default function AthleteMedicalPage() {
         <Card>
           <CardHeader>
             <CardTitle>No Athletes Found</CardTitle>
-            <CardDescription>
-              There are no athletes associated with your account.
-            </CardDescription>
+            <CardDescription>There are no athletes associated with your account.</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -143,7 +147,10 @@ export default function AthleteMedicalPage() {
                       <Avatar className="h-6 w-6">
                         <AvatarImage src={athlete.avatar || undefined} />
                         <AvatarFallback>
-                          {athlete.name.split(" ").map(n => n[0]).join("")}
+                          {athlete.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
                         </AvatarFallback>
                       </Avatar>
                       <span>{athlete.name}</span>
@@ -165,14 +172,15 @@ export default function AthleteMedicalPage() {
               <Avatar className="h-16 w-16">
                 <AvatarImage src={selectedAthlete.avatar || undefined} />
                 <AvatarFallback className="text-xl">
-                  {selectedAthlete.name.split(" ").map(n => n[0]).join("")}
+                  {selectedAthlete.name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")}
                 </AvatarFallback>
               </Avatar>
               <div>
                 <h2 className="text-2xl font-bold">{selectedAthlete.name}</h2>
-                <p className="text-muted-foreground">
-                  {selectedAthlete.level}
-                </p>
+                <p className="text-muted-foreground">{selectedAthlete.level}</p>
               </div>
             </div>
           </CardContent>
@@ -200,11 +208,7 @@ export default function AthleteMedicalPage() {
               {medicalInfo?.id ? "Edit Medical Info" : "Add Medical Info"}
             </Button>
           </div>
-          <MedicalDisplay
-            medicalInfo={medicalInfo}
-            config={config}
-            showEmptyState={true}
-          />
+          <MedicalDisplay medicalInfo={medicalInfo} config={config} showEmptyState={true} />
         </div>
       )}
 
@@ -219,7 +223,8 @@ export default function AthleteMedicalPage() {
                   Missing Emergency Contact
                 </p>
                 <p className="text-sm text-amber-700 dark:text-amber-300">
-                  Please add an emergency contact for {selectedAthlete?.name}. This information is important for their safety.
+                  Please add an emergency contact for {selectedAthlete?.name}. This information is
+                  important for their safety.
                 </p>
                 <Button
                   variant="outline"

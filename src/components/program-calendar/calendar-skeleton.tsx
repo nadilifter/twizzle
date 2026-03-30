@@ -18,12 +18,8 @@ export function CalendarSkeleton({ viewMode }: CalendarSkeletonProps) {
 
 // Deterministic pattern for skeleton event counts per day (avoids hydration mismatch)
 const MONTH_EVENT_PATTERN = [
-  2, 0, 1, 0, 2, 1, 0,
-  1, 2, 0, 1, 0, 2, 1,
-  0, 1, 2, 0, 1, 0, 2,
-  2, 0, 1, 2, 0, 1, 0,
-  1, 0, 2, 1, 0, 2, 1,
-  0, 2, 1, 0, 2, 0, 1,
+  2, 0, 1, 0, 2, 1, 0, 1, 2, 0, 1, 0, 2, 1, 0, 1, 2, 0, 1, 0, 2, 2, 0, 1, 2, 0, 1, 0, 1, 0, 2, 1, 0,
+  2, 1, 0, 2, 1, 0, 2, 0, 1,
 ];
 
 const WEEK_EVENT_PATTERN = [2, 1, 3, 1, 2, 1, 2];
@@ -46,17 +42,11 @@ function MonthViewSkeleton() {
       {/* Desktop skeleton grid */}
       <div className="hidden md:grid grid-cols-7 flex-1 border-t divide-x divide-border">
         {MONTH_EVENT_PATTERN.map((eventCount, index) => (
-          <div
-            key={index}
-            className="min-h-[100px] border-b p-1.5"
-          >
+          <div key={index} className="min-h-[100px] border-b p-1.5">
             <Skeleton className="w-6 h-6 rounded-full mb-1.5" />
             <div className="space-y-1">
               {Array.from({ length: eventCount }, (_, i) => (
-                <Skeleton
-                  key={i}
-                  className="h-5 w-full rounded"
-                />
+                <Skeleton key={i} className="h-5 w-full rounded" />
               ))}
             </div>
           </div>

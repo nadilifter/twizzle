@@ -21,9 +21,7 @@ import {
  * 1. Start with plan's featureToggles (or all-disabled defaults if no plan)
  * 2. Overlay any OrganizationFeatureOverride values (superadmin per-org overrides)
  */
-export async function getOrganizationFeatures(
-  organizationId: string
-): Promise<FeatureToggles> {
+export async function getOrganizationFeatures(organizationId: string): Promise<FeatureToggles> {
   if (!organizationId) {
     return { ...DEFAULT_FEATURE_TOGGLES };
   }
@@ -125,9 +123,7 @@ export async function checkFeatureGate(
  * Parse partial feature toggles from an override record.
  * Only returns keys that are explicitly set (not all keys).
  */
-function parsePartialToggles(
-  raw: unknown
-): Partial<FeatureToggles> {
+function parsePartialToggles(raw: unknown): Partial<FeatureToggles> {
   const result: Partial<FeatureToggles> = {};
   if (raw && typeof raw === "object" && !Array.isArray(raw)) {
     const obj = raw as Record<string, unknown>;

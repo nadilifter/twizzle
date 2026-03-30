@@ -136,10 +136,7 @@ export async function GET() {
       // At-risk: recurring charges with failures
       scopedDb.recurringCharge.count({
         where: {
-          OR: [
-            { status: "FAILED" },
-            { failureCount: { gt: 0 } },
-          ],
+          OR: [{ status: "FAILED" }, { failureCount: { gt: 0 } }],
         },
       }),
 
@@ -153,9 +150,8 @@ export async function GET() {
       }),
     ]);
 
-    const retentionRate = totalAthletes > 0
-      ? Math.round((activeAthletes / totalAthletes) * 100)
-      : 0;
+    const retentionRate =
+      totalAthletes > 0 ? Math.round((activeAthletes / totalAthletes) * 100) : 0;
 
     const avgTenureDays = avgTenureResult[0]?.avg_days ?? 0;
 
@@ -179,9 +175,8 @@ export async function GET() {
         cohort: row.cohort,
         total: Number(row.total),
         retained: Number(row.retained),
-        rate: Number(row.total) > 0
-          ? Math.round((Number(row.retained) / Number(row.total)) * 100)
-          : 0,
+        rate:
+          Number(row.total) > 0 ? Math.round((Number(row.retained) / Number(row.total)) * 100) : 0,
       })),
       enrollmentHealth: enrollmentsByStatus.map((row) => ({
         status: row.status,
@@ -194,9 +189,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Error fetching retention analytics:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch retention data" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch retention data" }, { status: 500 });
   }
 }

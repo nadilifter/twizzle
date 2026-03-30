@@ -1,17 +1,23 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/components/ui/switch"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Separator } from "@/components/ui/separator"
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
 import {
   defineStepper,
   StepperNav,
@@ -20,7 +26,7 @@ import {
   StepperSeparator,
   StepperTitle,
   getStepStatus,
-} from "@/components/ui/stepper"
+} from "@/components/ui/stepper";
 import {
   ArrowLeft,
   ArrowRight,
@@ -38,81 +44,86 @@ import {
   Plus,
   RefreshCw,
   KeyRound,
-} from "lucide-react"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { toast } from "sonner"
-import { GLCodeSelector } from "@/components/gl-code-selector"
-import { useFeatures } from "@/components/feature-context"
-import { useSeasons } from "@/hooks/use-seasons"
-import { SeasonDateWarning } from "@/components/season-date-warning"
-import { cn } from "@/lib/utils"
-import { format } from "date-fns"
-import type { BillingInterval, CreateMembershipGroupPayload, GenderDeclaration, MembershipInstanceStatus } from "@/types/memberships"
+} from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { toast } from "sonner";
+import { GLCodeSelector } from "@/components/gl-code-selector";
+import { useFeatures } from "@/components/feature-context";
+import { useSeasons } from "@/hooks/use-seasons";
+import { SeasonDateWarning } from "@/components/season-date-warning";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import type {
+  BillingInterval,
+  CreateMembershipGroupPayload,
+  GenderDeclaration,
+  MembershipInstanceStatus,
+} from "@/types/memberships";
 
 interface Level {
-  id: string
-  name: string
-  color: string | null
-  order: number
+  id: string;
+  name: string;
+  color: string | null;
+  order: number;
 }
 
 interface Waiver {
-  id: string
-  title: string
-  status: string
+  id: string;
+  title: string;
+  status: string;
 }
 
 interface PendingInstance {
-  tempId: string
-  name: string
-  price: number
-  billingInterval: BillingInterval
-  startDate: Date | null
-  endDate: Date | null
-  autoRenewDate: Date | null
-  status: MembershipInstanceStatus
-  registrationOpen: boolean
-  registrationStartDate: Date | null
-  registrationStartTime: string
-  registrationEndDate: Date | null
-  registrationEndTime: string
-  earlyAccessCode: string | null
+  tempId: string;
+  name: string;
+  price: number;
+  billingInterval: BillingInterval;
+  startDate: Date | null;
+  endDate: Date | null;
+  autoRenewDate: Date | null;
+  status: MembershipInstanceStatus;
+  registrationOpen: boolean;
+  registrationStartDate: Date | null;
+  registrationStartTime: string;
+  registrationEndDate: Date | null;
+  registrationEndTime: string;
+  earlyAccessCode: string | null;
 }
 
 interface MembershipFormData {
   // Season
-  seasonId: string | null
+  seasonId: string | null;
 
   // Step 1: Details
-  name: string
-  description: string
-  programTypes: string
-  isRecurring: boolean
-  glCodeId: string | null
+  name: string;
+  description: string;
+  programTypes: string;
+  isRecurring: boolean;
+  glCodeId: string | null;
 
   // Step 2: Pricing & Billing
-  defaultPrice: number | null
-  defaultBillingInterval: BillingInterval
-  allowAutoRenew: boolean
-  autoGenerateInstances: boolean
-  generationLeadDays: number
-  purchaseWindowDays: number | null
+  defaultPrice: number | null;
+  defaultBillingInterval: BillingInterval;
+  allowAutoRenew: boolean;
+  autoGenerateInstances: boolean;
+  generationLeadDays: number;
+  purchaseWindowDays: number | null;
 
   // Step 3: Requirements
-  hasAgeRestriction: boolean
-  minAge: number | null
-  maxAge: number | null
-  hasGenderRestriction: boolean
-  allowedGenders: GenderDeclaration[]
-  hasCapacityRestriction: boolean
-  capacity: number | null
-  hasMedicalRequirement: boolean
-  hasLevelRestriction: boolean
-  levelRequirementIds: string[]
-  hasWaiverRestriction: boolean
-  waiverRequirementIds: string[]
+  hasAgeRestriction: boolean;
+  minAge: number | null;
+  maxAge: number | null;
+  hasGenderRestriction: boolean;
+  allowedGenders: GenderDeclaration[];
+  hasCapacityRestriction: boolean;
+  capacity: number | null;
+  hasMedicalRequirement: boolean;
+  hasLevelRestriction: boolean;
+  levelRequirementIds: string[];
+  hasWaiverRestriction: boolean;
+  waiverRequirementIds: string[];
 
   // Step 4: Instances (recurring only, held in separate array)
 }
@@ -122,21 +133,21 @@ const { useStepper } = defineStepper(
   { id: "details", title: "Details" },
   { id: "pricing", title: "Pricing" },
   { id: "requirements", title: "Requirements" },
-  { id: "instances", title: "Instances" },
-)
+  { id: "instances", title: "Instances" }
+);
 
 export function MembershipStepper() {
-  const router = useRouter()
-  const { isFeatureEnabled } = useFeatures()
-  const trainingEnabled = isFeatureEnabled("training")
-  const seasonsEnabled = isFeatureEnabled("seasons")
+  const router = useRouter();
+  const { isFeatureEnabled } = useFeatures();
+  const trainingEnabled = isFeatureEnabled("training");
+  const seasonsEnabled = isFeatureEnabled("seasons");
 
-  const { seasons, isLoading: seasonsLoading } = useSeasons({ autoFetch: seasonsEnabled })
+  const { seasons, isLoading: seasonsLoading } = useSeasons({ autoFetch: seasonsEnabled });
 
-  const [levels, setLevels] = React.useState<Level[]>([])
-  const [loadingLevels, setLoadingLevels] = React.useState(true)
-  const [waivers, setWaivers] = React.useState<Waiver[]>([])
-  const [loadingWaivers, setLoadingWaivers] = React.useState(true)
+  const [levels, setLevels] = React.useState<Level[]>([]);
+  const [loadingLevels, setLoadingLevels] = React.useState(true);
+  const [waivers, setWaivers] = React.useState<Waiver[]>([]);
+  const [loadingWaivers, setLoadingWaivers] = React.useState(true);
 
   const [formData, setFormData] = React.useState<MembershipFormData>({
     seasonId: null,
@@ -165,32 +176,32 @@ export function MembershipStepper() {
     levelRequirementIds: [],
     hasWaiverRestriction: false,
     waiverRequirementIds: [],
-  })
+  });
 
-  const showSeasonStep = seasonsEnabled && (seasons.length > 0 || seasonsLoading)
+  const showSeasonStep = seasonsEnabled && (seasons.length > 0 || seasonsLoading);
   const selectedSeason = React.useMemo(() => {
-    if (!formData.seasonId) return null
-    return seasons.find((s) => s.id === formData.seasonId) ?? null
-  }, [formData.seasonId, seasons])
+    if (!formData.seasonId) return null;
+    return seasons.find((s) => s.id === formData.seasonId) ?? null;
+  }, [formData.seasonId, seasons]);
 
   const visibleStepIds = React.useMemo(() => {
-    const ids: string[] = []
-    if (showSeasonStep) ids.push("season")
-    ids.push("details", "pricing", "requirements", "instances")
-    return ids
-  }, [showSeasonStep])
+    const ids: string[] = [];
+    if (showSeasonStep) ids.push("season");
+    ids.push("details", "pricing", "requirements", "instances");
+    return ids;
+  }, [showSeasonStep]);
 
-  const [pendingInstances, setPendingInstances] = React.useState<PendingInstance[]>([])
-  const [isAddingInstance, setIsAddingInstance] = React.useState(false)
-  const [newInstance, setNewInstance] = React.useState<PendingInstance>(() => makeEmptyInstance())
-  const [isSaving, setIsSaving] = React.useState(false)
-  const stepper = useStepper()
+  const [pendingInstances, setPendingInstances] = React.useState<PendingInstance[]>([]);
+  const [isAddingInstance, setIsAddingInstance] = React.useState(false);
+  const [newInstance, setNewInstance] = React.useState<PendingInstance>(() => makeEmptyInstance());
+  const [isSaving, setIsSaving] = React.useState(false);
+  const stepper = useStepper();
 
   React.useEffect(() => {
     if (!visibleStepIds.includes(stepper.state.current.data.id)) {
-      stepper.navigation.goTo(visibleStepIds[0] as "details")
+      stepper.navigation.goTo(visibleStepIds[0] as "details");
     }
-  }, [visibleStepIds, stepper.state.current.data.id, stepper.navigation])
+  }, [visibleStepIds, stepper.state.current.data.id, stepper.navigation]);
 
   function makeEmptyInstance(): PendingInstance {
     return {
@@ -208,158 +219,162 @@ export function MembershipStepper() {
       registrationEndDate: null,
       registrationEndTime: "23:59",
       earlyAccessCode: null,
-    }
+    };
   }
 
   React.useEffect(() => {
     const fetchLevels = async () => {
       try {
-        const response = await fetch("/api/levels")
+        const response = await fetch("/api/levels");
         if (response.ok) {
-          const data = await response.json()
-          setLevels(data)
+          const data = await response.json();
+          setLevels(data);
         }
       } catch (error) {
-        console.error("Failed to fetch levels:", error)
+        console.error("Failed to fetch levels:", error);
       } finally {
-        setLoadingLevels(false)
+        setLoadingLevels(false);
       }
-    }
-    fetchLevels()
-  }, [])
+    };
+    fetchLevels();
+  }, []);
 
   React.useEffect(() => {
     const fetchWaivers = async () => {
       try {
-        const response = await fetch("/api/waivers?status=ACTIVE")
+        const response = await fetch("/api/waivers?status=ACTIVE");
         if (response.ok) {
-          const data = await response.json()
-          setWaivers(data.data || [])
+          const data = await response.json();
+          setWaivers(data.data || []);
         }
       } catch (error) {
-        console.error("Failed to fetch waivers:", error)
+        console.error("Failed to fetch waivers:", error);
       } finally {
-        setLoadingWaivers(false)
+        setLoadingWaivers(false);
       }
-    }
-    fetchWaivers()
-  }, [])
+    };
+    fetchWaivers();
+  }, []);
 
   const validateStep = (stepId: string): boolean => {
     switch (stepId) {
       case "details":
         if (!formData.name.trim()) {
-          toast.error("Membership name is required")
-          return false
+          toast.error("Membership name is required");
+          return false;
         }
-        return true
+        return true;
 
       case "pricing":
         if (formData.defaultPrice !== null && formData.defaultPrice < 0) {
-          toast.error("Price cannot be negative")
-          return false
+          toast.error("Price cannot be negative");
+          return false;
         }
         if (formData.autoGenerateInstances && formData.generationLeadDays < 1) {
-          toast.error("Generation lead days must be at least 1")
-          return false
+          toast.error("Generation lead days must be at least 1");
+          return false;
         }
         if (formData.purchaseWindowDays !== null && formData.purchaseWindowDays < 0) {
-          toast.error("Purchase window days cannot be negative")
-          return false
+          toast.error("Purchase window days cannot be negative");
+          return false;
         }
-        return true
+        return true;
 
       case "requirements":
         if (formData.hasCapacityRestriction && (!formData.capacity || formData.capacity < 1)) {
-          toast.error("Capacity must be at least 1 when enabled")
-          return false
+          toast.error("Capacity must be at least 1 when enabled");
+          return false;
         }
         if (formData.hasAgeRestriction) {
           if (formData.minAge === null && formData.maxAge === null) {
-            toast.error("At least one age value is required when age restriction is enabled")
-            return false
+            toast.error("At least one age value is required when age restriction is enabled");
+            return false;
           }
           if (formData.minAge !== null && (formData.minAge < 0 || formData.minAge > 100)) {
-            toast.error("Minimum age must be between 0 and 100")
-            return false
+            toast.error("Minimum age must be between 0 and 100");
+            return false;
           }
           if (formData.maxAge !== null && (formData.maxAge < 0 || formData.maxAge > 100)) {
-            toast.error("Maximum age must be between 0 and 100")
-            return false
+            toast.error("Maximum age must be between 0 and 100");
+            return false;
           }
-          if (formData.minAge !== null && formData.maxAge !== null && formData.minAge > formData.maxAge) {
-            toast.error("Minimum age cannot be greater than maximum age")
-            return false
+          if (
+            formData.minAge !== null &&
+            formData.maxAge !== null &&
+            formData.minAge > formData.maxAge
+          ) {
+            toast.error("Minimum age cannot be greater than maximum age");
+            return false;
           }
         }
         if (formData.hasLevelRestriction && formData.levelRequirementIds.length === 0) {
-          toast.error("Select at least one level when level restriction is enabled")
-          return false
+          toast.error("Select at least one level when level restriction is enabled");
+          return false;
         }
         if (formData.hasWaiverRestriction && formData.waiverRequirementIds.length === 0) {
-          toast.error("Select at least one waiver when waiver restriction is enabled")
-          return false
+          toast.error("Select at least one waiver when waiver restriction is enabled");
+          return false;
         }
-        return true
+        return true;
 
       case "instances":
         if (formData.isRecurring && pendingInstances.length === 0) {
           // Not an error — instances are optional during creation
         }
-        return true
+        return true;
 
       default:
-        return true
+        return true;
     }
-  }
+  };
 
   const handleNext = () => {
     if (validateStep(stepper.state.current.data.id)) {
-      const nextIdx = currentVisibleIndex + 1
+      const nextIdx = currentVisibleIndex + 1;
       if (nextIdx < visibleSteps.length) {
-        stepper.navigation.goTo(visibleSteps[nextIdx].id)
+        stepper.navigation.goTo(visibleSteps[nextIdx].id);
       }
     }
-  }
+  };
 
   const handlePrev = () => {
-    const prevIdx = currentVisibleIndex - 1
+    const prevIdx = currentVisibleIndex - 1;
     if (prevIdx >= 0) {
-      stepper.navigation.goTo(visibleSteps[prevIdx].id)
+      stepper.navigation.goTo(visibleSteps[prevIdx].id);
     }
-  }
+  };
 
   const handleAddInstance = () => {
     if (!newInstance.name.trim()) {
-      toast.error("Instance name is required")
-      return
+      toast.error("Instance name is required");
+      return;
     }
     if (newInstance.price < 0) {
-      toast.error("Instance price cannot be negative")
-      return
+      toast.error("Instance price cannot be negative");
+      return;
     }
     if (!newInstance.startDate) {
-      toast.error("Start date is required")
-      return
+      toast.error("Start date is required");
+      return;
     }
     if (!newInstance.endDate) {
-      toast.error("End date is required")
-      return
+      toast.error("End date is required");
+      return;
     }
     if (newInstance.startDate >= newInstance.endDate) {
-      toast.error("End date must be after start date")
-      return
+      toast.error("End date must be after start date");
+      return;
     }
 
-    setPendingInstances(prev => [...prev, { ...newInstance, tempId: crypto.randomUUID() }])
-    setNewInstance(makeEmptyInstance())
-    setIsAddingInstance(false)
-    toast.success("Instance added")
-  }
+    setPendingInstances((prev) => [...prev, { ...newInstance, tempId: crypto.randomUUID() }]);
+    setNewInstance(makeEmptyInstance());
+    setIsAddingInstance(false);
+    toast.success("Instance added");
+  };
 
   const handleRemoveInstance = (tempId: string) => {
-    setPendingInstances(prev => prev.filter(i => i.tempId !== tempId))
-  }
+    setPendingInstances((prev) => prev.filter((i) => i.tempId !== tempId));
+  };
 
   const handleSubmit = async () => {
     if (
@@ -368,16 +383,16 @@ export function MembershipStepper() {
       !validateStep("requirements") ||
       !validateStep("instances")
     ) {
-      return
+      return;
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
 
     try {
       const programTypesArray = formData.programTypes
         .split(",")
-        .map(s => s.trim())
-        .filter(Boolean)
+        .map((s) => s.trim())
+        .filter(Boolean);
 
       const groupPayload: CreateMembershipGroupPayload = {
         name: formData.name,
@@ -404,22 +419,22 @@ export function MembershipStepper() {
         hasLevelRestriction: formData.hasLevelRestriction,
         hasWaiverRestriction: formData.hasWaiverRestriction,
         seasonId: formData.seasonId,
-      }
+      };
 
       // 1. Create the membership group
       const groupResponse = await fetch("/api/memberships", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(groupPayload),
-      })
+      });
 
       if (!groupResponse.ok) {
-        const error = await groupResponse.json()
-        throw new Error(error.error || "Failed to create membership group")
+        const error = await groupResponse.json();
+        throw new Error(error.error || "Failed to create membership group");
       }
 
-      const group = await groupResponse.json()
-      const groupId = group.id
+      const group = await groupResponse.json();
+      const groupId = group.id;
 
       // 2. Create instances for recurring groups
       if (formData.isRecurring && pendingInstances.length > 0) {
@@ -431,26 +446,35 @@ export function MembershipStepper() {
             billingInterval: instance.billingInterval,
             startDate: instance.startDate ? format(instance.startDate, "yyyy-MM-dd") : "",
             endDate: instance.endDate ? format(instance.endDate, "yyyy-MM-dd") : "",
-            autoRenewDate: instance.autoRenewDate ? format(instance.autoRenewDate, "yyyy-MM-dd") : undefined,
+            autoRenewDate: instance.autoRenewDate
+              ? format(instance.autoRenewDate, "yyyy-MM-dd")
+              : undefined,
             status: instance.status,
             registrationOpen: instance.registrationOpen,
-            registrationStartDate: !instance.registrationOpen && instance.registrationStartDate ? format(instance.registrationStartDate, "yyyy-MM-dd") : null,
-            registrationStartTime: !instance.registrationOpen ? instance.registrationStartTime : null,
-            registrationEndDate: instance.registrationEndDate ? format(instance.registrationEndDate, "yyyy-MM-dd") : null,
+            registrationStartDate:
+              !instance.registrationOpen && instance.registrationStartDate
+                ? format(instance.registrationStartDate, "yyyy-MM-dd")
+                : null,
+            registrationStartTime: !instance.registrationOpen
+              ? instance.registrationStartTime
+              : null,
+            registrationEndDate: instance.registrationEndDate
+              ? format(instance.registrationEndDate, "yyyy-MM-dd")
+              : null,
             registrationEndTime: instance.registrationEndTime || null,
             earlyAccessCode: instance.earlyAccessCode,
-          }
+          };
 
           const instResponse = await fetch(`/api/memberships/${groupId}/instances`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(instancePayload),
-          })
+          });
 
           if (!instResponse.ok) {
-            const error = await instResponse.json()
-            console.error("Failed to create instance:", error)
-            toast.error(`Failed to create instance "${instance.name}": ${error.error}`)
+            const error = await instResponse.json();
+            console.error("Failed to create instance:", error);
+            toast.error(`Failed to create instance "${instance.name}": ${error.error}`);
           }
         }
       }
@@ -462,7 +486,7 @@ export function MembershipStepper() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ type: "level", levelId }),
-          })
+          });
         }
       }
 
@@ -473,30 +497,30 @@ export function MembershipStepper() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ type: "waiver", waiverId }),
-          })
+          });
         }
       }
 
-      toast.success("Membership group created successfully")
-      router.push("/dashboard/athletes/memberships")
+      toast.success("Membership group created successfully");
+      router.push("/dashboard/athletes/memberships");
     } catch (error: any) {
-      console.error("Failed to create membership group:", error)
-      toast.error(error.message || "Failed to create membership group")
+      console.error("Failed to create membership group:", error);
+      toast.error(error.message || "Failed to create membership group");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
-  const visibleSteps = stepper.state.all.filter(s => visibleStepIds.includes(s.id))
-  const currentVisibleIndex = visibleSteps.findIndex(s => s.id === stepper.state.current.data.id)
-  const currentIndex = stepper.state.all.findIndex(s => s.id === stepper.state.current.data.id)
+  const visibleSteps = stepper.state.all.filter((s) => visibleStepIds.includes(s.id));
+  const currentVisibleIndex = visibleSteps.findIndex((s) => s.id === stepper.state.current.data.id);
+  const currentIndex = stepper.state.all.findIndex((s) => s.id === stepper.state.current.data.id);
 
   return (
     <div className="w-full max-w-4xl mx-auto">
       <div className="flex flex-col gap-4">
         <StepperNav className="mb-4">
           {visibleSteps.map((step, index) => {
-            const status = getStepStatus(index, currentVisibleIndex)
+            const status = getStepStatus(index, currentVisibleIndex);
             return (
               <React.Fragment key={step.id}>
                 <StepperItem status={status}>
@@ -504,16 +528,18 @@ export function MembershipStepper() {
                     status={status}
                     step={index + 1}
                     onClick={() => {
-                      if (index < currentVisibleIndex) stepper.navigation.goTo(step.id)
+                      if (index < currentVisibleIndex) stepper.navigation.goTo(step.id);
                     }}
                   />
-                  <StepperTitle status={status} className="hidden sm:block">{step.title}</StepperTitle>
+                  <StepperTitle status={status} className="hidden sm:block">
+                    {step.title}
+                  </StepperTitle>
                 </StepperItem>
                 {index < visibleSteps.length - 1 && (
                   <StepperSeparator status={status} className="hidden sm:block" />
                 )}
               </React.Fragment>
-            )
+            );
           })}
         </StepperNav>
 
@@ -529,15 +555,22 @@ export function MembershipStepper() {
                 <Label>Season</Label>
                 <Select
                   value={formData.seasonId || "none"}
-                  onValueChange={(val) => setFormData(prev => ({ ...prev, seasonId: val === "none" ? null : val }))}
+                  onValueChange={(val) =>
+                    setFormData((prev) => ({ ...prev, seasonId: val === "none" ? null : val }))
+                  }
                 >
-                  <SelectTrigger><SelectValue placeholder="Select a season" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a season" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
                     {seasons.map((s) => (
                       <SelectItem key={s.id} value={s.id}>
                         <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                          <div
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: s.color }}
+                          />
                           {s.name}
                         </div>
                       </SelectItem>
@@ -548,12 +581,18 @@ export function MembershipStepper() {
               {selectedSeason && (
                 <div className="rounded-lg border p-4 space-y-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: selectedSeason.color }} />
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: selectedSeason.color }}
+                    />
                     <span className="font-medium">{selectedSeason.name}</span>
-                    <Badge variant="outline" className="text-xs">{selectedSeason.status}</Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {selectedSeason.status}
+                    </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {format(new Date(selectedSeason.startDate), "MMM d, yyyy")} – {format(new Date(selectedSeason.endDate), "MMM d, yyyy")}
+                    {format(new Date(selectedSeason.startDate), "MMM d, yyyy")} –{" "}
+                    {format(new Date(selectedSeason.endDate), "MMM d, yyyy")}
                   </p>
                 </div>
               )}
@@ -580,7 +619,7 @@ export function MembershipStepper() {
                   id="name"
                   placeholder="e.g., Annual Membership"
                   value={formData.name}
-                  onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                 />
               </div>
 
@@ -590,7 +629,9 @@ export function MembershipStepper() {
                   id="description"
                   placeholder="Describe this membership type..."
                   value={formData.description}
-                  onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, description: e.target.value }))
+                  }
                 />
               </div>
 
@@ -600,7 +641,9 @@ export function MembershipStepper() {
                   id="programTypes"
                   placeholder="e.g., Recreational, Competitive"
                   value={formData.programTypes}
-                  onChange={e => setFormData(prev => ({ ...prev, programTypes: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, programTypes: e.target.value }))
+                  }
                 />
                 <p className="text-sm text-muted-foreground">
                   Define which program types this membership applies to
@@ -617,20 +660,22 @@ export function MembershipStepper() {
                   </div>
                   <Switch
                     checked={formData.isRecurring}
-                    onCheckedChange={checked => setFormData(prev => ({
-                      ...prev,
-                      isRecurring: checked,
-                      defaultBillingInterval: checked ? "YEARLY" : "ONE_TIME",
-                      allowAutoRenew: checked ? prev.allowAutoRenew : false,
-                      autoGenerateInstances: checked ? prev.autoGenerateInstances : false,
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        isRecurring: checked,
+                        defaultBillingInterval: checked ? "YEARLY" : "ONE_TIME",
+                        allowAutoRenew: checked ? prev.allowAutoRenew : false,
+                        autoGenerateInstances: checked ? prev.autoGenerateInstances : false,
+                      }))
+                    }
                   />
                 </div>
               </div>
 
               <GLCodeSelector
                 value={formData.glCodeId}
-                onChange={v => setFormData(prev => ({ ...prev, glCodeId: v }))}
+                onChange={(v) => setFormData((prev) => ({ ...prev, glCodeId: v }))}
                 entityType="MEMBERSHIP"
               />
             </CardContent>
@@ -654,7 +699,9 @@ export function MembershipStepper() {
                 <div className="space-y-2">
                   <Label htmlFor="defaultPrice">Default Price ($)</Label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      $
+                    </span>
                     <Input
                       id="defaultPrice"
                       type="number"
@@ -663,15 +710,18 @@ export function MembershipStepper() {
                       placeholder="0.00"
                       className="pl-7"
                       value={formData.defaultPrice === null ? "" : formData.defaultPrice}
-                      onChange={e => {
-                        const raw = e.target.value
+                      onChange={(e) => {
+                        const raw = e.target.value;
                         if (raw === "") {
-                          setFormData(prev => ({ ...prev, defaultPrice: null }))
-                          return
+                          setFormData((prev) => ({ ...prev, defaultPrice: null }));
+                          return;
                         }
-                        const parsed = parseFloat(raw)
+                        const parsed = parseFloat(raw);
                         if (!Number.isNaN(parsed) && parsed >= 0) {
-                          setFormData(prev => ({ ...prev, defaultPrice: Math.round(parsed * 100) / 100 }))
+                          setFormData((prev) => ({
+                            ...prev,
+                            defaultPrice: Math.round(parsed * 100) / 100,
+                          }));
                         }
                       }}
                     />
@@ -688,7 +738,7 @@ export function MembershipStepper() {
                   <Select
                     value={formData.defaultBillingInterval}
                     onValueChange={(value: BillingInterval) =>
-                      setFormData(prev => ({ ...prev, defaultBillingInterval: value }))
+                      setFormData((prev) => ({ ...prev, defaultBillingInterval: value }))
                     }
                   >
                     <SelectTrigger>
@@ -721,7 +771,9 @@ export function MembershipStepper() {
                       </div>
                       <Switch
                         checked={formData.allowAutoRenew}
-                        onCheckedChange={checked => setFormData(prev => ({ ...prev, allowAutoRenew: checked }))}
+                        onCheckedChange={(checked) =>
+                          setFormData((prev) => ({ ...prev, allowAutoRenew: checked }))
+                        }
                       />
                     </div>
                   </div>
@@ -736,7 +788,9 @@ export function MembershipStepper() {
                       </div>
                       <Switch
                         checked={formData.autoGenerateInstances}
-                        onCheckedChange={checked => setFormData(prev => ({ ...prev, autoGenerateInstances: checked }))}
+                        onCheckedChange={(checked) =>
+                          setFormData((prev) => ({ ...prev, autoGenerateInstances: checked }))
+                        }
                       />
                     </div>
 
@@ -748,10 +802,12 @@ export function MembershipStepper() {
                           type="number"
                           min={1}
                           value={formData.generationLeadDays}
-                          onChange={e => setFormData(prev => ({
-                            ...prev,
-                            generationLeadDays: parseInt(e.target.value) || 30,
-                          }))}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              generationLeadDays: parseInt(e.target.value) || 30,
+                            }))
+                          }
                           className="mt-2 max-w-[200px]"
                         />
                         <p className="text-sm text-muted-foreground mt-1">
@@ -766,7 +822,10 @@ export function MembershipStepper() {
               <Separator />
 
               <div className="space-y-2">
-                <Label htmlFor="purchaseWindowDays" className="text-base font-medium flex items-center gap-2">
+                <Label
+                  htmlFor="purchaseWindowDays"
+                  className="text-base font-medium flex items-center gap-2"
+                >
                   <Clock className="h-4 w-4 text-muted-foreground" />
                   Purchase Window (days before start)
                 </Label>
@@ -776,14 +835,17 @@ export function MembershipStepper() {
                   min={0}
                   placeholder="Leave empty for always available"
                   value={formData.purchaseWindowDays ?? ""}
-                  onChange={e => setFormData(prev => ({
-                    ...prev,
-                    purchaseWindowDays: e.target.value ? parseInt(e.target.value) : null,
-                  }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      purchaseWindowDays: e.target.value ? parseInt(e.target.value) : null,
+                    }))
+                  }
                   className="max-w-[300px]"
                 />
                 <p className="text-sm text-muted-foreground">
-                  Number of days before an instance&apos;s start date that it becomes available for purchase. Leave empty for always available.
+                  Number of days before an instance&apos;s start date that it becomes available for
+                  purchase. Leave empty for always available.
                 </p>
               </div>
             </CardContent>
@@ -799,7 +861,8 @@ export function MembershipStepper() {
                 Requirements & Restrictions
               </CardTitle>
               <CardDescription>
-                Configure eligibility requirements for this membership. Toggle on the restrictions you want to apply.
+                Configure eligibility requirements for this membership. Toggle on the restrictions
+                you want to apply.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -814,12 +877,14 @@ export function MembershipStepper() {
                   </div>
                   <Switch
                     checked={formData.hasAgeRestriction}
-                    onCheckedChange={checked => setFormData(prev => ({
-                      ...prev,
-                      hasAgeRestriction: checked,
-                      minAge: checked ? prev.minAge : null,
-                      maxAge: checked ? prev.maxAge : null,
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        hasAgeRestriction: checked,
+                        minAge: checked ? prev.minAge : null,
+                        maxAge: checked ? prev.maxAge : null,
+                      }))
+                    }
                   />
                 </div>
 
@@ -828,7 +893,8 @@ export function MembershipStepper() {
                     <div className="flex items-center gap-2 p-2 rounded bg-muted/50">
                       <Info className="h-4 w-4 text-muted-foreground shrink-0" />
                       <p className="text-xs text-muted-foreground">
-                        At least one age value is required. Leave the other blank for no limit in that direction.
+                        At least one age value is required. Leave the other blank for no limit in
+                        that direction.
                       </p>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -841,10 +907,12 @@ export function MembershipStepper() {
                           max={100}
                           placeholder="No minimum"
                           value={formData.minAge ?? ""}
-                          onChange={e => setFormData(prev => ({
-                            ...prev,
-                            minAge: e.target.value ? parseInt(e.target.value) : null,
-                          }))}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              minAge: e.target.value ? parseInt(e.target.value) : null,
+                            }))
+                          }
                         />
                       </div>
                       <div className="space-y-2">
@@ -856,10 +924,12 @@ export function MembershipStepper() {
                           max={100}
                           placeholder="No maximum"
                           value={formData.maxAge ?? ""}
-                          onChange={e => setFormData(prev => ({
-                            ...prev,
-                            maxAge: e.target.value ? parseInt(e.target.value) : null,
-                          }))}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              maxAge: e.target.value ? parseInt(e.target.value) : null,
+                            }))
+                          }
                         />
                       </div>
                     </div>
@@ -872,42 +942,45 @@ export function MembershipStepper() {
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label className="text-base font-medium">Gender Restriction</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Restrict membership by gender
-                    </p>
+                    <p className="text-sm text-muted-foreground">Restrict membership by gender</p>
                   </div>
                   <Switch
                     checked={formData.hasGenderRestriction}
-                    onCheckedChange={checked => setFormData(prev => ({
-                      ...prev,
-                      hasGenderRestriction: checked,
-                      allowedGenders: checked ? prev.allowedGenders : [],
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        hasGenderRestriction: checked,
+                        allowedGenders: checked ? prev.allowedGenders : [],
+                      }))
+                    }
                   />
                 </div>
 
                 {formData.hasGenderRestriction && (
                   <div className="pt-2 border-t">
                     <div className="flex flex-wrap gap-2">
-                      {(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"] as const).map(gender => {
-                        const selected = formData.allowedGenders.includes(gender)
+                      {(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"] as const).map((gender) => {
+                        const selected = formData.allowedGenders.includes(gender);
                         return (
                           <Badge
                             key={gender}
                             variant={selected ? "default" : "outline"}
                             className="cursor-pointer"
                             onClick={() => {
-                              setFormData(prev => ({
+                              setFormData((prev) => ({
                                 ...prev,
                                 allowedGenders: selected
-                                  ? prev.allowedGenders.filter(g => g !== gender)
+                                  ? prev.allowedGenders.filter((g) => g !== gender)
                                   : [...prev.allowedGenders, gender],
-                              }))
+                              }));
                             }}
                           >
-                            {gender.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
+                            {gender
+                              .replaceAll("_", " ")
+                              .toLowerCase()
+                              .replace(/\b\w/g, (l) => l.toUpperCase())}
                           </Badge>
-                        )
+                        );
                       })}
                     </div>
                   </div>
@@ -925,11 +998,13 @@ export function MembershipStepper() {
                   </div>
                   <Switch
                     checked={formData.hasCapacityRestriction}
-                    onCheckedChange={checked => setFormData(prev => ({
-                      ...prev,
-                      hasCapacityRestriction: checked,
-                      capacity: checked ? (prev.capacity || 50) : null,
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        hasCapacityRestriction: checked,
+                        capacity: checked ? prev.capacity || 50 : null,
+                      }))
+                    }
                   />
                 </div>
 
@@ -942,10 +1017,12 @@ export function MembershipStepper() {
                       min={1}
                       placeholder="Enter maximum number of members"
                       value={formData.capacity || ""}
-                      onChange={e => setFormData(prev => ({
-                        ...prev,
-                        capacity: e.target.value ? parseInt(e.target.value) : null,
-                      }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          capacity: e.target.value ? parseInt(e.target.value) : null,
+                        }))
+                      }
                       className="mt-2 max-w-[200px]"
                     />
                   </div>
@@ -963,10 +1040,12 @@ export function MembershipStepper() {
                   </div>
                   <Switch
                     checked={formData.hasMedicalRequirement}
-                    onCheckedChange={checked => setFormData(prev => ({
-                      ...prev,
-                      hasMedicalRequirement: checked,
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        hasMedicalRequirement: checked,
+                      }))
+                    }
                   />
                 </div>
 
@@ -978,7 +1057,8 @@ export function MembershipStepper() {
                         Medical information categories are configured in your{" "}
                         <a href="/dashboard/athletes/medical" className="text-primary underline">
                           Medical Information Settings
-                        </a>.
+                        </a>
+                        .
                       </span>
                     </div>
                   </div>
@@ -997,11 +1077,13 @@ export function MembershipStepper() {
                     </div>
                     <Switch
                       checked={formData.hasLevelRestriction}
-                      onCheckedChange={checked => setFormData(prev => ({
-                        ...prev,
-                        hasLevelRestriction: checked,
-                        levelRequirementIds: checked ? prev.levelRequirementIds : [],
-                      }))}
+                      onCheckedChange={(checked) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          hasLevelRestriction: checked,
+                          levelRequirementIds: checked ? prev.levelRequirementIds : [],
+                        }))
+                      }
                     />
                   </div>
 
@@ -1014,11 +1096,15 @@ export function MembershipStepper() {
                         </div>
                       ) : levels.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
-                          No levels configured. <a href="/dashboard/training/levels" className="text-primary underline">Create levels</a> first.
+                          No levels configured.{" "}
+                          <a href="/dashboard/training/levels" className="text-primary underline">
+                            Create levels
+                          </a>{" "}
+                          first.
                         </p>
                       ) : (
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                          {levels.map(level => (
+                          {levels.map((level) => (
                             <label
                               key={level.id}
                               className={cn(
@@ -1030,13 +1116,13 @@ export function MembershipStepper() {
                             >
                               <Checkbox
                                 checked={formData.levelRequirementIds.includes(level.id)}
-                                onCheckedChange={checked => {
-                                  setFormData(prev => ({
+                                onCheckedChange={(checked) => {
+                                  setFormData((prev) => ({
                                     ...prev,
                                     levelRequirementIds: checked
                                       ? [...prev.levelRequirementIds, level.id]
-                                      : prev.levelRequirementIds.filter(id => id !== level.id),
-                                  }))
+                                      : prev.levelRequirementIds.filter((id) => id !== level.id),
+                                  }));
                                 }}
                               />
                               <div
@@ -1064,11 +1150,13 @@ export function MembershipStepper() {
                   </div>
                   <Switch
                     checked={formData.hasWaiverRestriction}
-                    onCheckedChange={checked => setFormData(prev => ({
-                      ...prev,
-                      hasWaiverRestriction: checked,
-                      waiverRequirementIds: checked ? prev.waiverRequirementIds : [],
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        hasWaiverRestriction: checked,
+                        waiverRequirementIds: checked ? prev.waiverRequirementIds : [],
+                      }))
+                    }
                   />
                 </div>
 
@@ -1081,11 +1169,18 @@ export function MembershipStepper() {
                       </div>
                     ) : waivers.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
-                        No active waivers found. <a href="/dashboard/athletes/waivers/new" className="text-primary underline">Create a waiver</a> first.
+                        No active waivers found.{" "}
+                        <a
+                          href="/dashboard/athletes/waivers/new"
+                          className="text-primary underline"
+                        >
+                          Create a waiver
+                        </a>{" "}
+                        first.
                       </p>
                     ) : (
                       <div className="space-y-2">
-                        {waivers.map(waiver => (
+                        {waivers.map((waiver) => (
                           <label
                             key={waiver.id}
                             className={cn(
@@ -1097,13 +1192,13 @@ export function MembershipStepper() {
                           >
                             <Checkbox
                               checked={formData.waiverRequirementIds.includes(waiver.id)}
-                              onCheckedChange={checked => {
-                                setFormData(prev => ({
+                              onCheckedChange={(checked) => {
+                                setFormData((prev) => ({
                                   ...prev,
                                   waiverRequirementIds: checked
                                     ? [...prev.waiverRequirementIds, waiver.id]
-                                    : prev.waiverRequirementIds.filter(id => id !== waiver.id),
-                                }))
+                                    : prev.waiverRequirementIds.filter((id) => id !== waiver.id),
+                                }));
                               }}
                             />
                             <div className="flex-1">
@@ -1153,7 +1248,7 @@ export function MembershipStepper() {
                   {/* Instance list */}
                   {pendingInstances.length > 0 && (
                     <div className="space-y-3">
-                      {pendingInstances.map(instance => (
+                      {pendingInstances.map((instance) => (
                         <div
                           key={instance.tempId}
                           className="flex items-center gap-3 rounded-lg border p-4 bg-card"
@@ -1161,15 +1256,19 @@ export function MembershipStepper() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="font-medium">{instance.name}</span>
-                              <Badge variant={instance.status === "ACTIVE" ? "default" : "secondary"}>
+                              <Badge
+                                variant={instance.status === "ACTIVE" ? "default" : "secondary"}
+                              >
                                 {instance.status}
                               </Badge>
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              ${instance.price.toFixed(2)} / {instance.billingInterval.toLowerCase().replace("_", "-")}
+                              ${instance.price.toFixed(2)} /{" "}
+                              {instance.billingInterval.toLowerCase().replace("_", "-")}
                               {instance.startDate && instance.endDate && (
                                 <span className="ml-2">
-                                  {format(instance.startDate, "MMM d, yyyy")} - {format(instance.endDate, "MMM d, yyyy")}
+                                  {format(instance.startDate, "MMM d, yyyy")} -{" "}
+                                  {format(instance.endDate, "MMM d, yyyy")}
                                 </span>
                               )}
                             </div>
@@ -1197,7 +1296,9 @@ export function MembershipStepper() {
                         <Input
                           placeholder="e.g., FY2026"
                           value={newInstance.name}
-                          onChange={e => setNewInstance(prev => ({ ...prev, name: e.target.value }))}
+                          onChange={(e) =>
+                            setNewInstance((prev) => ({ ...prev, name: e.target.value }))
+                          }
                         />
                       </div>
 
@@ -1209,10 +1310,12 @@ export function MembershipStepper() {
                             min={0}
                             step={0.01}
                             value={newInstance.price || ""}
-                            onChange={e => setNewInstance(prev => ({
-                              ...prev,
-                              price: parseFloat(e.target.value) || 0,
-                            }))}
+                            onChange={(e) =>
+                              setNewInstance((prev) => ({
+                                ...prev,
+                                price: parseFloat(e.target.value) || 0,
+                              }))
+                            }
                           />
                         </div>
                         <div className="space-y-2">
@@ -1220,7 +1323,7 @@ export function MembershipStepper() {
                           <Select
                             value={newInstance.billingInterval}
                             onValueChange={(value: BillingInterval) =>
-                              setNewInstance(prev => ({ ...prev, billingInterval: value }))
+                              setNewInstance((prev) => ({ ...prev, billingInterval: value }))
                             }
                           >
                             <SelectTrigger>
@@ -1238,10 +1341,14 @@ export function MembershipStepper() {
                       {selectedSeason && (
                         <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/30">
                           <div className="flex items-center gap-2 text-sm">
-                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: selectedSeason.color }} />
+                            <div
+                              className="w-2.5 h-2.5 rounded-full"
+                              style={{ backgroundColor: selectedSeason.color }}
+                            />
                             <span className="font-medium">{selectedSeason.name}</span>
                             <span className="text-muted-foreground">
-                              {format(new Date(selectedSeason.startDate), "MMM d")} – {format(new Date(selectedSeason.endDate), "MMM d, yyyy")}
+                              {format(new Date(selectedSeason.startDate), "MMM d")} –{" "}
+                              {format(new Date(selectedSeason.endDate), "MMM d, yyyy")}
                             </span>
                           </div>
                           <Button
@@ -1249,11 +1356,11 @@ export function MembershipStepper() {
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                              setNewInstance(prev => ({
+                              setNewInstance((prev) => ({
                                 ...prev,
                                 startDate: new Date(selectedSeason.startDate),
                                 endDate: new Date(selectedSeason.endDate),
-                              }))
+                              }));
                             }}
                           >
                             Use Season Dates
@@ -1275,7 +1382,9 @@ export function MembershipStepper() {
                                 )}
                               >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                {newInstance.startDate ? format(newInstance.startDate, "PPP") : "Pick a date"}
+                                {newInstance.startDate
+                                  ? format(newInstance.startDate, "PPP")
+                                  : "Pick a date"}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto overflow-hidden p-0" align="start">
@@ -1283,12 +1392,15 @@ export function MembershipStepper() {
                                 mode="single"
                                 fixedWeeks
                                 selected={newInstance.startDate || undefined}
-                                onSelect={date => {
-                                  setNewInstance(prev => ({
+                                onSelect={(date) => {
+                                  setNewInstance((prev) => ({
                                     ...prev,
                                     startDate: date || null,
-                                    endDate: prev.endDate && date && prev.endDate < date ? null : prev.endDate,
-                                  }))
+                                    endDate:
+                                      prev.endDate && date && prev.endDate < date
+                                        ? null
+                                        : prev.endDate,
+                                  }));
                                 }}
                                 initialFocus
                               />
@@ -1308,7 +1420,9 @@ export function MembershipStepper() {
                                 )}
                               >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                {newInstance.endDate ? format(newInstance.endDate, "PPP") : "Pick a date"}
+                                {newInstance.endDate
+                                  ? format(newInstance.endDate, "PPP")
+                                  : "Pick a date"}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto overflow-hidden p-0" align="start">
@@ -1316,8 +1430,12 @@ export function MembershipStepper() {
                                 mode="single"
                                 fixedWeeks
                                 selected={newInstance.endDate || undefined}
-                                onSelect={date => setNewInstance(prev => ({ ...prev, endDate: date || null }))}
-                                disabled={date => newInstance.startDate ? date < newInstance.startDate : false}
+                                onSelect={(date) =>
+                                  setNewInstance((prev) => ({ ...prev, endDate: date || null }))
+                                }
+                                disabled={(date) =>
+                                  newInstance.startDate ? date < newInstance.startDate : false
+                                }
                                 initialFocus
                               />
                             </PopoverContent>
@@ -1331,7 +1449,7 @@ export function MembershipStepper() {
                           <Select
                             value={newInstance.status}
                             onValueChange={(value: MembershipInstanceStatus) =>
-                              setNewInstance(prev => ({ ...prev, status: value }))
+                              setNewInstance((prev) => ({ ...prev, status: value }))
                             }
                           >
                             <SelectTrigger>
@@ -1356,7 +1474,9 @@ export function MembershipStepper() {
                                 )}
                               >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                {newInstance.autoRenewDate ? format(newInstance.autoRenewDate, "PPP") : "Optional"}
+                                {newInstance.autoRenewDate
+                                  ? format(newInstance.autoRenewDate, "PPP")
+                                  : "Optional"}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto overflow-hidden p-0" align="start">
@@ -1364,7 +1484,12 @@ export function MembershipStepper() {
                                 mode="single"
                                 fixedWeeks
                                 selected={newInstance.autoRenewDate || undefined}
-                                onSelect={date => setNewInstance(prev => ({ ...prev, autoRenewDate: date || null }))}
+                                onSelect={(date) =>
+                                  setNewInstance((prev) => ({
+                                    ...prev,
+                                    autoRenewDate: date || null,
+                                  }))
+                                }
                                 initialFocus
                               />
                             </PopoverContent>
@@ -1380,12 +1505,12 @@ export function MembershipStepper() {
                         <RadioGroup
                           value={newInstance.registrationOpen ? "now" : "scheduled"}
                           onValueChange={(value) => {
-                            const isNow = value === "now"
-                            setNewInstance(prev => ({
+                            const isNow = value === "now";
+                            setNewInstance((prev) => ({
                               ...prev,
                               registrationOpen: isNow,
                               registrationStartDate: isNow ? null : prev.registrationStartDate,
-                            }))
+                            }));
                           }}
                           className="space-y-3"
                         >
@@ -1450,13 +1575,23 @@ export function MembershipStepper() {
                                       : "Pick a date"}
                                   </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                                <PopoverContent
+                                  className="w-auto overflow-hidden p-0"
+                                  align="start"
+                                >
                                   <Calendar
                                     mode="single"
                                     fixedWeeks
                                     selected={newInstance.registrationStartDate || undefined}
-                                    onSelect={date => setNewInstance(prev => ({ ...prev, registrationStartDate: date || null }))}
-                                    disabled={date => newInstance.startDate ? date > newInstance.startDate : false}
+                                    onSelect={(date) =>
+                                      setNewInstance((prev) => ({
+                                        ...prev,
+                                        registrationStartDate: date || null,
+                                      }))
+                                    }
+                                    disabled={(date) =>
+                                      newInstance.startDate ? date > newInstance.startDate : false
+                                    }
                                     initialFocus
                                   />
                                 </PopoverContent>
@@ -1469,7 +1604,12 @@ export function MembershipStepper() {
                                 <Input
                                   type="time"
                                   value={newInstance.registrationStartTime}
-                                  onChange={e => setNewInstance(prev => ({ ...prev, registrationStartTime: e.target.value }))}
+                                  onChange={(e) =>
+                                    setNewInstance((prev) => ({
+                                      ...prev,
+                                      registrationStartTime: e.target.value,
+                                    }))
+                                  }
                                   className="pl-10"
                                 />
                               </div>
@@ -1481,7 +1621,8 @@ export function MembershipStepper() {
                       <div className="space-y-4">
                         <Label className="text-base font-medium">Registration Closes</Label>
                         <p className="text-sm text-muted-foreground">
-                          Set when registration closes. Defaults to the instance end date if not specified.
+                          Set when registration closes. Defaults to the instance end date if not
+                          specified.
                         </p>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
@@ -1500,8 +1641,8 @@ export function MembershipStepper() {
                                   {newInstance.registrationEndDate
                                     ? format(newInstance.registrationEndDate, "PPP")
                                     : newInstance.endDate
-                                    ? `Instance end: ${format(newInstance.endDate, "PPP")}`
-                                    : "Pick a date"}
+                                      ? `Instance end: ${format(newInstance.endDate, "PPP")}`
+                                      : "Pick a date"}
                                 </Button>
                               </PopoverTrigger>
                               <PopoverContent className="w-auto overflow-hidden p-0" align="start">
@@ -1509,12 +1650,19 @@ export function MembershipStepper() {
                                   mode="single"
                                   fixedWeeks
                                   selected={newInstance.registrationEndDate || undefined}
-                                  onSelect={date => setNewInstance(prev => ({ ...prev, registrationEndDate: date || null }))}
-                                  disabled={date => {
-                                    const earliest = !newInstance.registrationOpen && newInstance.registrationStartDate
-                                      ? newInstance.registrationStartDate
-                                      : new Date()
-                                    return date < earliest
+                                  onSelect={(date) =>
+                                    setNewInstance((prev) => ({
+                                      ...prev,
+                                      registrationEndDate: date || null,
+                                    }))
+                                  }
+                                  disabled={(date) => {
+                                    const earliest =
+                                      !newInstance.registrationOpen &&
+                                      newInstance.registrationStartDate
+                                        ? newInstance.registrationStartDate
+                                        : new Date();
+                                    return date < earliest;
                                   }}
                                   initialFocus
                                 />
@@ -1528,7 +1676,12 @@ export function MembershipStepper() {
                               <Input
                                 type="time"
                                 value={newInstance.registrationEndTime}
-                                onChange={e => setNewInstance(prev => ({ ...prev, registrationEndTime: e.target.value }))}
+                                onChange={(e) =>
+                                  setNewInstance((prev) => ({
+                                    ...prev,
+                                    registrationEndTime: e.target.value,
+                                  }))
+                                }
                                 className="pl-10"
                               />
                             </div>
@@ -1542,21 +1695,27 @@ export function MembershipStepper() {
                           Early Access Code
                         </Label>
                         <p className="text-sm text-muted-foreground">
-                          Generate or enter a code that allows registration before the registration window opens
+                          Generate or enter a code that allows registration before the registration
+                          window opens
                         </p>
                         <div className="flex items-center gap-2">
                           <Input
                             placeholder="Enter or generate a code"
                             value={newInstance.earlyAccessCode || ""}
-                            onChange={e => setNewInstance(prev => ({ ...prev, earlyAccessCode: e.target.value || null }))}
+                            onChange={(e) =>
+                              setNewInstance((prev) => ({
+                                ...prev,
+                                earlyAccessCode: e.target.value || null,
+                              }))
+                            }
                             className="max-w-[300px]"
                           />
                           <Button
                             type="button"
                             variant="outline"
                             onClick={() => {
-                              const code = crypto.randomUUID().slice(0, 8).toUpperCase()
-                              setNewInstance(prev => ({ ...prev, earlyAccessCode: code }))
+                              const code = crypto.randomUUID().slice(0, 8).toUpperCase();
+                              setNewInstance((prev) => ({ ...prev, earlyAccessCode: code }));
                             }}
                           >
                             <RefreshCw className="h-4 w-4 mr-2" />
@@ -1574,8 +1733,8 @@ export function MembershipStepper() {
                           type="button"
                           variant="outline"
                           onClick={() => {
-                            setIsAddingInstance(false)
-                            setNewInstance(makeEmptyInstance())
+                            setIsAddingInstance(false);
+                            setNewInstance(makeEmptyInstance());
                           }}
                         >
                           Cancel
@@ -1590,9 +1749,12 @@ export function MembershipStepper() {
                         setNewInstance({
                           ...makeEmptyInstance(),
                           price: formData.defaultPrice ?? 0,
-                          billingInterval: formData.defaultBillingInterval === "ONE_TIME" ? "YEARLY" : formData.defaultBillingInterval,
-                        })
-                        setIsAddingInstance(true)
+                          billingInterval:
+                            formData.defaultBillingInterval === "ONE_TIME"
+                              ? "YEARLY"
+                              : formData.defaultBillingInterval,
+                        });
+                        setIsAddingInstance(true);
                       }}
                       className="w-full"
                     >
@@ -1627,11 +1789,7 @@ export function MembershipStepper() {
 
           <div className="flex items-center gap-2">
             {currentVisibleIndex > 0 && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handlePrev}
-              >
+              <Button type="button" variant="outline" onClick={handlePrev}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Previous
               </Button>
@@ -1643,11 +1801,7 @@ export function MembershipStepper() {
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             ) : (
-              <Button
-                type="button"
-                onClick={handleSubmit}
-                disabled={isSaving}
-              >
+              <Button type="button" onClick={handleSubmit} disabled={isSaving}>
                 {isSaving ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1665,5 +1819,5 @@ export function MembershipStepper() {
         </div>
       </div>
     </div>
-  )
+  );
 }

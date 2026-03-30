@@ -1,13 +1,22 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useMemo } from "react"
-import { Loader2, Plus, User, Calendar, ChevronLeft, AlertCircle, Shield, Info } from "lucide-react"
-import { toast } from "sonner"
-import { format } from "date-fns"
-import { cn } from "@/lib/utils"
-import { calculateAge, isAgeEligible } from "@/lib/age-utils"
-import { Calendar as CalendarPicker } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useState, useEffect, useMemo } from "react";
+import {
+  Loader2,
+  Plus,
+  User,
+  Calendar,
+  ChevronLeft,
+  AlertCircle,
+  Shield,
+  Info,
+} from "lucide-react";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { calculateAge, isAgeEligible } from "@/lib/age-utils";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 import {
   Dialog,
@@ -15,38 +24,38 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 interface AthleteOption {
-  id: string
-  firstName: string
-  lastName: string
-  name: string
-  birthDate: string | null
-  gender: string | null
-  allowGuardianClaims?: boolean
-  userId?: string | null
+  id: string;
+  firstName: string;
+  lastName: string;
+  name: string;
+  birthDate: string | null;
+  gender: string | null;
+  allowGuardianClaims?: boolean;
+  userId?: string | null;
 }
 
 interface AthleteSelectionDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onAthleteSelected: (athlete: { id: string; name: string }) => void
-  slug: string
-  hasAgeRestriction?: boolean
-  minAge?: number | null
-  maxAge?: number | null
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onAthleteSelected: (athlete: { id: string; name: string }) => void;
+  slug: string;
+  hasAgeRestriction?: boolean;
+  minAge?: number | null;
+  maxAge?: number | null;
 }
 
 const GENDER_LABELS: Record<string, string> = {
@@ -54,7 +63,7 @@ const GENDER_LABELS: Record<string, string> = {
   FEMALE: "Female",
   OTHER: "Other",
   PREFER_NOT_TO_SAY: "Prefer Not to Say",
-}
+};
 
 export function AthleteSelectionDialog({
   open,
@@ -65,12 +74,12 @@ export function AthleteSelectionDialog({
   minAge,
   maxAge,
 }: AthleteSelectionDialogProps) {
-  const [athletes, setAthletes] = useState<AthleteOption[]>([])
-  const [hasSelfAthlete, setHasSelfAthlete] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const [isCreating, setIsCreating] = useState(false)
-  const [duplicateMessage, setDuplicateMessage] = useState<string | null>(null)
+  const [athletes, setAthletes] = useState<AthleteOption[]>([]);
+  const [hasSelfAthlete, setHasSelfAthlete] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [duplicateMessage, setDuplicateMessage] = useState<string | null>(null);
 
   const [newAthlete, setNewAthlete] = useState({
     firstName: "",
@@ -79,159 +88,175 @@ export function AthleteSelectionDialog({
     gender: "",
     isSelf: false,
     allowGuardianClaims: false,
-  })
+  });
 
-  const ageRestrictionActive = hasAgeRestriction && (minAge != null || maxAge != null)
+  const ageRestrictionActive = hasAgeRestriction && (minAge != null || maxAge != null);
   const ageLabel = ageRestrictionActive
     ? minAge != null && maxAge != null
       ? `Ages ${minAge}–${maxAge}`
       : minAge != null
-      ? `Ages ${minAge}+`
-      : `Up to age ${maxAge}`
-    : null
+        ? `Ages ${minAge}+`
+        : `Up to age ${maxAge}`
+    : null;
 
   const { eligibleAthletes, ineligibleAthletes } = useMemo(() => {
     if (!ageRestrictionActive) {
-      return { eligibleAthletes: athletes, ineligibleAthletes: [] }
+      return { eligibleAthletes: athletes, ineligibleAthletes: [] };
     }
-    const eligible: AthleteOption[] = []
-    const ineligible: AthleteOption[] = []
+    const eligible: AthleteOption[] = [];
+    const ineligible: AthleteOption[] = [];
     for (const athlete of athletes) {
-      const age = calculateAge(athlete.birthDate)
+      const age = calculateAge(athlete.birthDate);
       if (isAgeEligible(age, minAge, maxAge)) {
-        eligible.push(athlete)
+        eligible.push(athlete);
       } else {
-        ineligible.push(athlete)
+        ineligible.push(athlete);
       }
     }
-    return { eligibleAthletes: eligible, ineligibleAthletes: ineligible }
-  }, [athletes, ageRestrictionActive, minAge, maxAge])
+    return { eligibleAthletes: eligible, ineligibleAthletes: ineligible };
+  }, [athletes, ageRestrictionActive, minAge, maxAge]);
 
   useEffect(() => {
     if (open) {
-      fetchAthletes()
+      fetchAthletes();
     }
-  }, [open, slug])
+  }, [open, slug]);
 
   const fetchAthletes = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      const response = await fetch(`/api/sites/${slug}/athletes`)
+      const response = await fetch(`/api/sites/${slug}/athletes`);
       if (response.ok) {
-        const data = await response.json()
-        setAthletes(data.athletes || [])
-        setHasSelfAthlete(data.hasSelfAthlete ?? false)
+        const data = await response.json();
+        setAthletes(data.athletes || []);
+        setHasSelfAthlete(data.hasSelfAthlete ?? false);
       } else {
-        console.error("Failed to fetch athletes")
+        console.error("Failed to fetch athletes");
       }
     } catch (error) {
-      console.error("Error fetching athletes:", error)
+      console.error("Error fetching athletes:", error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleSelectAthlete = (athlete: AthleteOption) => {
-    const displayName = `${athlete.firstName} ${athlete.lastName}`.trim() || athlete.name
-    onAthleteSelected({ id: athlete.id, name: displayName })
-    onOpenChange(false)
-    resetForm()
-  }
+    const displayName = `${athlete.firstName} ${athlete.lastName}`.trim() || athlete.name;
+    onAthleteSelected({ id: athlete.id, name: displayName });
+    onOpenChange(false);
+    resetForm();
+  };
 
   const handleCreateAthlete = async () => {
     if (!newAthlete.firstName.trim()) {
-      toast.error("First name is required")
-      return
+      toast.error("First name is required");
+      return;
     }
     if (!newAthlete.lastName.trim()) {
-      toast.error("Last name is required")
-      return
+      toast.error("Last name is required");
+      return;
     }
     if (!newAthlete.birthDate) {
-      toast.error("Date of birth is required")
-      return
+      toast.error("Date of birth is required");
+      return;
     }
     if (!newAthlete.gender) {
-      toast.error("Gender declaration is required")
-      return
+      toast.error("Gender declaration is required");
+      return;
     }
 
-    setIsCreating(true)
-    setDuplicateMessage(null)
+    setIsCreating(true);
+    setDuplicateMessage(null);
     try {
       const response = await fetch(`/api/sites/${slug}/athletes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newAthlete),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!response.ok) {
         if (data.error === "duplicate_found") {
-          setDuplicateMessage(data.message)
-          return
+          setDuplicateMessage(data.message);
+          return;
         }
         if (data.claimed) {
-          const displayName = `${data.athlete.firstName} ${data.athlete.lastName}`.trim() || data.athlete.name
-          toast.success(data.message || `${displayName} claimed successfully`)
-          onAthleteSelected({ id: data.athlete.id, name: displayName })
-          onOpenChange(false)
-          resetForm()
-          return
+          const displayName =
+            `${data.athlete.firstName} ${data.athlete.lastName}`.trim() || data.athlete.name;
+          toast.success(data.message || `${displayName} claimed successfully`);
+          onAthleteSelected({ id: data.athlete.id, name: displayName });
+          onOpenChange(false);
+          resetForm();
+          return;
         }
-        throw new Error(data.error || "Failed to create athlete")
+        throw new Error(data.error || "Failed to create athlete");
       }
 
       if (data.claimed) {
-        const displayName = `${data.athlete.firstName} ${data.athlete.lastName}`.trim() || data.athlete.name
-        toast.success(data.message || `${displayName} claimed successfully`)
-        onAthleteSelected({ id: data.athlete.id, name: displayName })
-        onOpenChange(false)
-        resetForm()
-        return
+        const displayName =
+          `${data.athlete.firstName} ${data.athlete.lastName}`.trim() || data.athlete.name;
+        toast.success(data.message || `${displayName} claimed successfully`);
+        onAthleteSelected({ id: data.athlete.id, name: displayName });
+        onOpenChange(false);
+        resetForm();
+        return;
       }
 
-      const created = data.athlete
-      const displayName = `${created.firstName} ${created.lastName}`.trim() || created.name
-      toast.success(`${displayName} added successfully`)
+      const created = data.athlete;
+      const displayName = `${created.firstName} ${created.lastName}`.trim() || created.name;
+      toast.success(`${displayName} added successfully`);
 
       if (ageRestrictionActive) {
-        const age = calculateAge(newAthlete.birthDate)
+        const age = calculateAge(newAthlete.birthDate);
         if (!isAgeEligible(age, minAge, maxAge)) {
           toast.error(
             `${displayName} does not meet the age requirement (${ageLabel}) for this program`
-          )
-          await fetchAthletes()
-          setShowCreateForm(false)
-          setNewAthlete({ firstName: "", lastName: "", birthDate: "", gender: "", isSelf: false, allowGuardianClaims: false })
-          return
+          );
+          await fetchAthletes();
+          setShowCreateForm(false);
+          setNewAthlete({
+            firstName: "",
+            lastName: "",
+            birthDate: "",
+            gender: "",
+            isSelf: false,
+            allowGuardianClaims: false,
+          });
+          return;
         }
       }
 
-      onAthleteSelected({ id: created.id, name: displayName })
-      onOpenChange(false)
-      resetForm()
+      onAthleteSelected({ id: created.id, name: displayName });
+      onOpenChange(false);
+      resetForm();
     } catch (error: any) {
-      console.error("Error creating athlete:", error)
-      toast.error(error.message || "Failed to create athlete")
+      console.error("Error creating athlete:", error);
+      toast.error(error.message || "Failed to create athlete");
     } finally {
-      setIsCreating(false)
+      setIsCreating(false);
     }
-  }
+  };
 
   const resetForm = () => {
-    setShowCreateForm(false)
-    setDuplicateMessage(null)
-    setNewAthlete({ firstName: "", lastName: "", birthDate: "", gender: "", isSelf: false, allowGuardianClaims: false })
-  }
+    setShowCreateForm(false);
+    setDuplicateMessage(null);
+    setNewAthlete({
+      firstName: "",
+      lastName: "",
+      birthDate: "",
+      gender: "",
+      isSelf: false,
+      allowGuardianClaims: false,
+    });
+  };
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
-      resetForm()
+      resetForm();
     }
-    onOpenChange(newOpen)
-  }
+    onOpenChange(newOpen);
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -303,9 +328,7 @@ export function AthleteSelectionDialog({
                 <Input
                   id="athlete-last-name"
                   value={newAthlete.lastName}
-                  onChange={(e) =>
-                    setNewAthlete((prev) => ({ ...prev, lastName: e.target.value }))
-                  }
+                  onChange={(e) => setNewAthlete((prev) => ({ ...prev, lastName: e.target.value }))}
                   placeholder="Last name"
                   disabled={isCreating}
                 />
@@ -320,17 +343,31 @@ export function AthleteSelectionDialog({
                     type="button"
                     variant="outline"
                     disabled={isCreating}
-                    className={cn("w-full justify-start text-left font-normal", !newAthlete.birthDate && "text-muted-foreground")}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !newAthlete.birthDate && "text-muted-foreground"
+                    )}
                   >
                     <Calendar className="mr-2 h-4 w-4" />
-                    {newAthlete.birthDate ? format(new Date(newAthlete.birthDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                    {newAthlete.birthDate
+                      ? format(new Date(newAthlete.birthDate + "T12:00:00Z"), "PPP")
+                      : "Pick a date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <CalendarPicker
                     mode="single"
-                    selected={newAthlete.birthDate ? new Date(newAthlete.birthDate + "T12:00:00Z") : undefined}
-                    onSelect={(date) => setNewAthlete((prev) => ({ ...prev, birthDate: date ? format(date, "yyyy-MM-dd") : "" }))}
+                    selected={
+                      newAthlete.birthDate
+                        ? new Date(newAthlete.birthDate + "T12:00:00Z")
+                        : undefined
+                    }
+                    onSelect={(date) =>
+                      setNewAthlete((prev) => ({
+                        ...prev,
+                        birthDate: date ? format(date, "yyyy-MM-dd") : "",
+                      }))
+                    }
                     captionLayout="dropdown"
                     fromYear={1940}
                     toYear={new Date().getFullYear()}
@@ -344,9 +381,7 @@ export function AthleteSelectionDialog({
               <Label htmlFor="athlete-gender">Gender Declaration</Label>
               <Select
                 value={newAthlete.gender}
-                onValueChange={(value) =>
-                  setNewAthlete((prev) => ({ ...prev, gender: value }))
-                }
+                onValueChange={(value) => setNewAthlete((prev) => ({ ...prev, gender: value }))}
                 disabled={isCreating}
               >
                 <SelectTrigger id="athlete-gender">
@@ -367,7 +402,10 @@ export function AthleteSelectionDialog({
                 <div className="flex items-center gap-2">
                   <Shield className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <Label htmlFor="allow-guardian-claims" className="text-sm font-medium cursor-pointer">
+                    <Label
+                      htmlFor="allow-guardian-claims"
+                      className="text-sm font-medium cursor-pointer"
+                    >
                       Allow other guardians
                     </Label>
                     <p className="text-xs text-muted-foreground">
@@ -390,8 +428,8 @@ export function AthleteSelectionDialog({
               <Button
                 variant="outline"
                 onClick={() => {
-                  setShowCreateForm(false)
-                  setDuplicateMessage(null)
+                  setShowCreateForm(false);
+                  setDuplicateMessage(null);
                 }}
                 disabled={isCreating}
                 className="flex-1"
@@ -399,11 +437,7 @@ export function AthleteSelectionDialog({
                 <ChevronLeft className="mr-1 h-4 w-4" />
                 Back
               </Button>
-              <Button
-                onClick={handleCreateAthlete}
-                disabled={isCreating}
-                className="flex-1"
-              >
+              <Button onClick={handleCreateAthlete} disabled={isCreating} className="flex-1">
                 {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {newAthlete.isSelf ? "Register Myself" : "Add Athlete"}
               </Button>
@@ -422,18 +456,18 @@ export function AthleteSelectionDialog({
               <div className="space-y-2 max-h-[300px] overflow-y-auto">
                 {eligibleAthletes.map((athlete) => {
                   const displayName =
-                    `${athlete.firstName} ${athlete.lastName}`.trim() || athlete.name
+                    `${athlete.firstName} ${athlete.lastName}`.trim() || athlete.name;
                   const birthLabel = athlete.birthDate
                     ? new Date(athlete.birthDate).toLocaleDateString("en-US", {
                         month: "short",
                         day: "numeric",
                         year: "numeric",
                       })
-                    : null
+                    : null;
                   const genderLabel = athlete.gender
                     ? GENDER_LABELS[athlete.gender] || athlete.gender
-                    : null
-                  const isSelfAthlete = !!athlete.userId
+                    : null;
+                  const isSelfAthlete = !!athlete.userId;
 
                   return (
                     <button
@@ -464,7 +498,7 @@ export function AthleteSelectionDialog({
                         </div>
                       </div>
                     </button>
-                  )
+                  );
                 })}
 
                 {ineligibleAthletes.length > 0 && (
@@ -476,18 +510,18 @@ export function AthleteSelectionDialog({
                     </div>
                     {ineligibleAthletes.map((athlete) => {
                       const displayName =
-                        `${athlete.firstName} ${athlete.lastName}`.trim() || athlete.name
-                      const age = calculateAge(athlete.birthDate)
+                        `${athlete.firstName} ${athlete.lastName}`.trim() || athlete.name;
+                      const age = calculateAge(athlete.birthDate);
                       const birthLabel = athlete.birthDate
                         ? new Date(athlete.birthDate).toLocaleDateString("en-US", {
                             month: "short",
                             day: "numeric",
                             year: "numeric",
                           })
-                        : null
+                        : null;
                       const genderLabel = athlete.gender
                         ? GENDER_LABELS[athlete.gender] || athlete.gender
-                        : null
+                        : null;
 
                       return (
                         <div
@@ -498,9 +532,7 @@ export function AthleteSelectionDialog({
                             <User className="h-5 w-5" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm truncate">
-                              {displayName}
-                            </div>
+                            <div className="font-medium text-sm truncate">{displayName}</div>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                               {birthLabel && (
                                 <span className="flex items-center gap-1">
@@ -515,7 +547,7 @@ export function AthleteSelectionDialog({
                             </div>
                           </div>
                         </div>
-                      )
+                      );
                     })}
                   </>
                 )}
@@ -540,5 +572,5 @@ export function AthleteSelectionDialog({
         )}
       </DialogContent>
     </Dialog>
-  )
+  );
 }

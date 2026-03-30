@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect, useCallback } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   FileAudio,
   FileImage,
@@ -12,43 +12,43 @@ import {
   Download,
   Trash2,
   Loader2,
-} from "lucide-react"
-import { toast } from "sonner"
+} from "lucide-react";
+import { toast } from "sonner";
 
 interface RegistrationFileRecord {
-  id: string
-  fileName: string
-  fileSize: number
-  contentType: string
-  downloadUrl?: string
-  programId: string | null
-  competitionId: string | null
-  eventId: string | null
-  entityName: string | null
-  createdAt: string
+  id: string;
+  fileName: string;
+  fileSize: number;
+  contentType: string;
+  downloadUrl?: string;
+  programId: string | null;
+  competitionId: string | null;
+  eventId: string | null;
+  entityName: string | null;
+  createdAt: string;
 }
 
 interface RegistrationFilesSectionProps {
-  athleteId: string
-  organizationId?: string
+  athleteId: string;
+  organizationId?: string;
   /** Admin can delete files; guardians can only view/download */
-  canDelete?: boolean
+  canDelete?: boolean;
   /** Labels for the entity names, keyed by entity ID */
-  entityLabels?: Record<string, string>
+  entityLabels?: Record<string, string>;
 }
 
 function getFileIcon(contentType: string) {
-  if (contentType.startsWith("audio/")) return FileAudio
-  if (contentType.startsWith("image/")) return FileImage
-  if (contentType.startsWith("video/")) return FileVideo
-  if (contentType === "application/pdf" || contentType.includes("document")) return FileText
-  return File
+  if (contentType.startsWith("audio/")) return FileAudio;
+  if (contentType.startsWith("image/")) return FileImage;
+  if (contentType.startsWith("video/")) return FileVideo;
+  if (contentType === "application/pdf" || contentType.includes("document")) return FileText;
+  return File;
 }
 
 function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export function RegistrationFilesSection({
@@ -57,56 +57,56 @@ export function RegistrationFilesSection({
   canDelete = false,
   entityLabels = {},
 }: RegistrationFilesSectionProps) {
-  const [files, setFiles] = useState<RegistrationFileRecord[]>([])
-  const [loading, setLoading] = useState(true)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [files, setFiles] = useState<RegistrationFileRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchFiles = useCallback(async () => {
     try {
-      const res = await fetch(`/api/registration-files?athleteId=${athleteId}`)
+      const res = await fetch(`/api/registration-files?athleteId=${athleteId}`);
       if (res.ok) {
-        const data = await res.json()
-        setFiles(data.files || [])
+        const data = await res.json();
+        setFiles(data.files || []);
       }
     } catch {
       // Ignore errors
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [athleteId])
+  }, [athleteId]);
 
   useEffect(() => {
-    fetchFiles()
-  }, [fetchFiles])
+    fetchFiles();
+  }, [fetchFiles]);
 
   const handleDelete = async (fileId: string) => {
-    setDeletingId(fileId)
+    setDeletingId(fileId);
     try {
-      const res = await fetch(`/api/registration-files/${fileId}`, { method: "DELETE" })
+      const res = await fetch(`/api/registration-files/${fileId}`, { method: "DELETE" });
       if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || "Delete failed")
+        const data = await res.json();
+        throw new Error(data.error || "Delete failed");
       }
-      setFiles((prev) => prev.filter((f) => f.id !== fileId))
-      toast.success("File deleted")
+      setFiles((prev) => prev.filter((f) => f.id !== fileId));
+      toast.success("File deleted");
     } catch (error: any) {
-      toast.error(error.message || "Failed to delete file")
+      toast.error(error.message || "Failed to delete file");
     } finally {
-      setDeletingId(null)
+      setDeletingId(null);
     }
-  }
+  };
 
   const getEntityLabel = (file: RegistrationFileRecord) => {
-    if (file.entityName) return file.entityName
-    const entityId = file.programId || file.competitionId || file.eventId
-    if (entityId && entityLabels[entityId]) return entityLabels[entityId]
-    if (file.programId) return "Program"
-    if (file.competitionId) return "Competition"
-    if (file.eventId) return "Event"
-    return "Registration"
-  }
+    if (file.entityName) return file.entityName;
+    const entityId = file.programId || file.competitionId || file.eventId;
+    if (entityId && entityLabels[entityId]) return entityLabels[entityId];
+    if (file.programId) return "Program";
+    if (file.competitionId) return "Competition";
+    if (file.eventId) return "Event";
+    return "Registration";
+  };
 
-  if (loading || files.length === 0) return null
+  if (loading || files.length === 0) return null;
 
   return (
     <Card>
@@ -118,7 +118,7 @@ export function RegistrationFilesSection({
       </CardHeader>
       <CardContent className="space-y-2">
         {files.map((file) => {
-          const FileIcon = getFileIcon(file.contentType)
+          const FileIcon = getFileIcon(file.contentType);
           return (
             <div
               key={file.id}
@@ -156,9 +156,9 @@ export function RegistrationFilesSection({
                 )}
               </div>
             </div>
-          )
+          );
         })}
       </CardContent>
     </Card>
-  )
+  );
 }

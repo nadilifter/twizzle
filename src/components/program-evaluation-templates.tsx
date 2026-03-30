@@ -1,23 +1,10 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { 
-  Plus, 
-  Loader2,
-  Trash2,
-  ClipboardList,
-  Calendar,
-  Users,
-} from "lucide-react"
+import { useState, useEffect, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Loader2, Trash2, ClipboardList, Calendar, Users } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -26,167 +13,167 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
-import { Skeleton } from "@/components/ui/skeleton"
-import { toast } from "sonner"
-import { format } from "date-fns"
-import { cn } from "@/lib/utils"
-import { api } from "@/lib/api-client"
-import { Calendar as CalendarPicker } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import type { 
-  EvaluationTemplateWithSkills,
-  ProgramEvaluationTemplate,
-} from "@/types/evaluations"
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { api } from "@/lib/api-client";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import type { EvaluationTemplateWithSkills, ProgramEvaluationTemplate } from "@/types/evaluations";
 
 interface ProgramEvaluationTemplatesProps {
-  programId: string
-  programName: string
+  programId: string;
+  programName: string;
 }
 
-export function ProgramEvaluationTemplates({ programId, programName }: ProgramEvaluationTemplatesProps) {
-  const [assignments, setAssignments] = useState<ProgramEvaluationTemplate[]>([])
-  const [availableTemplates, setAvailableTemplates] = useState<EvaluationTemplateWithSkills[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false)
-  
+export function ProgramEvaluationTemplates({
+  programId,
+  programName,
+}: ProgramEvaluationTemplatesProps) {
+  const [assignments, setAssignments] = useState<ProgramEvaluationTemplate[]>([]);
+  const [availableTemplates, setAvailableTemplates] = useState<EvaluationTemplateWithSkills[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
+
   // Dialog state
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("")
-  const [isRequired, setIsRequired] = useState(false)
-  const [dueDate, setDueDate] = useState<string>("")
-  const [isSaving, setIsSaving] = useState(false)
-  const [isDeleting, setIsDeleting] = useState<string | null>(null)
-  const [isGenerating, setIsGenerating] = useState<string | null>(null)
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [isRequired, setIsRequired] = useState(false);
+  const [dueDate, setDueDate] = useState<string>("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState<string | null>(null);
 
   // Fetch assigned templates
   const fetchAssignments = useCallback(async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
       const response = await api.get<{
-        programId: string
-        programName: string
-        templates: ProgramEvaluationTemplate[]
-      }>(`/api/programs/${programId}/evaluation-templates`)
-      
-      setAssignments(response.templates)
+        programId: string;
+        programName: string;
+        templates: ProgramEvaluationTemplate[];
+      }>(`/api/programs/${programId}/evaluation-templates`);
+
+      setAssignments(response.templates);
     } catch (error) {
-      console.error("Error fetching program templates:", error)
-      toast.error("Failed to load evaluation templates")
+      console.error("Error fetching program templates:", error);
+      toast.error("Failed to load evaluation templates");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [programId])
+  }, [programId]);
 
   // Fetch available templates for assignment
   const fetchAvailableTemplates = async () => {
-    setIsLoadingTemplates(true)
+    setIsLoadingTemplates(true);
     try {
       const response = await api.get<{
-        data: EvaluationTemplateWithSkills[]
-      }>("/api/evaluation-templates", { isActive: "true", limit: "100" })
-      
+        data: EvaluationTemplateWithSkills[];
+      }>("/api/evaluation-templates", { isActive: "true", limit: "100" });
+
       // Filter out already assigned templates
-      const assignedIds = new Set(assignments.map((a) => a.templateId))
-      setAvailableTemplates(response.data.filter((t) => !assignedIds.has(t.id)))
+      const assignedIds = new Set(assignments.map((a) => a.templateId));
+      setAvailableTemplates(response.data.filter((t) => !assignedIds.has(t.id)));
     } catch (error) {
-      console.error("Error fetching templates:", error)
+      console.error("Error fetching templates:", error);
     } finally {
-      setIsLoadingTemplates(false)
+      setIsLoadingTemplates(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchAssignments()
-  }, [fetchAssignments])
+    fetchAssignments();
+  }, [fetchAssignments]);
 
   // Handle assign template
   const handleAssign = async () => {
     if (!selectedTemplateId) {
-      toast.error("Please select a template")
-      return
+      toast.error("Please select a template");
+      return;
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       await api.post(`/api/programs/${programId}/evaluation-templates`, {
         templateId: selectedTemplateId,
         isRequired,
         dueDate: dueDate || null,
-      })
+      });
 
-      toast.success("Template assigned successfully")
-      setIsAddDialogOpen(false)
-      setSelectedTemplateId("")
-      setIsRequired(false)
-      setDueDate("")
-      fetchAssignments()
+      toast.success("Template assigned successfully");
+      setIsAddDialogOpen(false);
+      setSelectedTemplateId("");
+      setIsRequired(false);
+      setDueDate("");
+      fetchAssignments();
     } catch (error) {
-      console.error("Error assigning template:", error)
-      toast.error("Failed to assign template")
+      console.error("Error assigning template:", error);
+      toast.error("Failed to assign template");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   // Handle remove assignment
   const handleRemove = async (templateId: string) => {
-    setIsDeleting(templateId)
+    setIsDeleting(templateId);
     try {
-      await api.delete(`/api/programs/${programId}/evaluation-templates?templateId=${templateId}`)
+      await api.delete(`/api/programs/${programId}/evaluation-templates?templateId=${templateId}`);
 
-      toast.success("Template removed from program")
-      fetchAssignments()
+      toast.success("Template removed from program");
+      fetchAssignments();
     } catch (error) {
-      console.error("Error removing template:", error)
-      toast.error("Failed to remove template")
+      console.error("Error removing template:", error);
+      toast.error("Failed to remove template");
     } finally {
-      setIsDeleting(null)
+      setIsDeleting(null);
     }
-  }
+  };
 
   // Handle generate evaluations
   const handleGenerate = async (templateId: string) => {
-    setIsGenerating(templateId)
+    setIsGenerating(templateId);
     try {
       const response = await api.post<{
-        created: number
-        skipped: number
-        message?: string
+        created: number;
+        skipped: number;
+        message?: string;
       }>(`/api/programs/${programId}/evaluations`, {
         templateId,
-      })
+      });
 
       if (response.created > 0) {
-        toast.success(`Created ${response.created} evaluation(s)`)
+        toast.success(`Created ${response.created} evaluation(s)`);
       } else if (response.message) {
-        toast.info(response.message)
+        toast.info(response.message);
       } else {
-        toast.info("No new evaluations created")
+        toast.info("No new evaluations created");
       }
     } catch (error) {
-      console.error("Error generating evaluations:", error)
-      toast.error("Failed to generate evaluations")
+      console.error("Error generating evaluations:", error);
+      toast.error("Failed to generate evaluations");
     } finally {
-      setIsGenerating(null)
+      setIsGenerating(null);
     }
-  }
+  };
 
   // Open add dialog
   const openAddDialog = () => {
-    fetchAvailableTemplates()
-    setIsAddDialogOpen(true)
-  }
+    fetchAvailableTemplates();
+    setIsAddDialogOpen(true);
+  };
 
   if (isLoading) {
     return (
@@ -199,7 +186,7 @@ export function ProgramEvaluationTemplates({ programId, programName }: ProgramEv
           <Skeleton key={i} className="h-24 w-full" />
         ))}
       </div>
-    )
+    );
   }
 
   return (
@@ -207,9 +194,7 @@ export function ProgramEvaluationTemplates({ programId, programName }: ProgramEv
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">Evaluation Templates</h3>
-          <p className="text-sm text-muted-foreground">
-            Templates assigned to this program
-          </p>
+          <p className="text-sm text-muted-foreground">Templates assigned to this program</p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
@@ -221,9 +206,7 @@ export function ProgramEvaluationTemplates({ programId, programName }: ProgramEv
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Assign Evaluation Template</DialogTitle>
-              <DialogDescription>
-                Add an evaluation template to {programName}
-              </DialogDescription>
+              <DialogDescription>Add an evaluation template to {programName}</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
@@ -245,9 +228,16 @@ export function ProgramEvaluationTemplates({ programId, programName }: ProgramEv
                           <div className="flex items-center gap-2">
                             <span>{template.name}</span>
                             {template.level && (
-                              <Badge 
+                              <Badge
                                 className="text-xs"
-                                style={template.level.color ? { backgroundColor: `${template.level.color}20`, color: template.level.color } : undefined}
+                                style={
+                                  template.level.color
+                                    ? {
+                                        backgroundColor: `${template.level.color}20`,
+                                        color: template.level.color,
+                                      }
+                                    : undefined
+                                }
                                 variant={template.level.color ? "outline" : "secondary"}
                               >
                                 {template.level.name}
@@ -262,11 +252,7 @@ export function ProgramEvaluationTemplates({ programId, programName }: ProgramEv
               </div>
               <div className="flex items-center justify-between">
                 <Label htmlFor="isRequired">Required for Program</Label>
-                <Switch
-                  id="isRequired"
-                  checked={isRequired}
-                  onCheckedChange={setIsRequired}
-                />
+                <Switch id="isRequired" checked={isRequired} onCheckedChange={setIsRequired} />
               </div>
               <div className="grid gap-2">
                 <Label>Due Date (optional)</Label>
@@ -275,7 +261,10 @@ export function ProgramEvaluationTemplates({ programId, programName }: ProgramEv
                     <Button
                       type="button"
                       variant="outline"
-                      className={cn("w-full justify-start text-left font-normal", !dueDate && "text-muted-foreground")}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !dueDate && "text-muted-foreground"
+                      )}
                     >
                       <Calendar className="mr-2 h-4 w-4" />
                       {dueDate ? format(new Date(dueDate + "T12:00:00Z"), "PPP") : "Pick a date"}
@@ -331,16 +320,25 @@ export function ProgramEvaluationTemplates({ programId, programName }: ProgramEv
                     </CardTitle>
                     <CardDescription className="flex items-center gap-2 mt-1">
                       {assignment.template?.level && (
-                        <Badge 
+                        <Badge
                           className="text-xs"
-                          style={assignment.template.level.color ? { backgroundColor: `${assignment.template.level.color}20`, color: assignment.template.level.color } : undefined}
+                          style={
+                            assignment.template.level.color
+                              ? {
+                                  backgroundColor: `${assignment.template.level.color}20`,
+                                  color: assignment.template.level.color,
+                                }
+                              : undefined
+                          }
                           variant={assignment.template.level.color ? "outline" : "secondary"}
                         >
                           {assignment.template.level.name}
                         </Badge>
                       )}
                       {assignment.isRequired && (
-                        <Badge variant="secondary" className="text-xs">Required</Badge>
+                        <Badge variant="secondary" className="text-xs">
+                          Required
+                        </Badge>
                       )}
                       {assignment.dueDate && (
                         <span className="flex items-center text-xs">
@@ -384,9 +382,10 @@ export function ProgramEvaluationTemplates({ programId, programName }: ProgramEv
               <CardContent className="pt-0">
                 <p className="text-sm text-muted-foreground">
                   {assignment.template?.skills?.length || 0} skills
-                  {assignment.template?.achievements && assignment.template.achievements.length > 0 && (
-                    <> • {assignment.template.achievements.length} achievement(s)</>
-                  )}
+                  {assignment.template?.achievements &&
+                    assignment.template.achievements.length > 0 && (
+                      <> • {assignment.template.achievements.length} achievement(s)</>
+                    )}
                 </p>
               </CardContent>
             </Card>
@@ -394,5 +393,5 @@ export function ProgramEvaluationTemplates({ programId, programName }: ProgramEv
         </div>
       )}
     </div>
-  )
+  );
 }

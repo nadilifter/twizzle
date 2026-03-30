@@ -1,15 +1,30 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { Plus, MoreHorizontal, Trash2, Loader2, AlertCircle, Settings, Eye, Shield, Clock, Calendar as CalendarIcon, KeyRound, RefreshCw, Link2, Copy } from "lucide-react"
-import { format } from "date-fns"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import * as React from "react";
+import Link from "next/link";
+import {
+  Plus,
+  MoreHorizontal,
+  Trash2,
+  Loader2,
+  AlertCircle,
+  Settings,
+  Eye,
+  Shield,
+  Clock,
+  Calendar as CalendarIcon,
+  KeyRound,
+  RefreshCw,
+  Link2,
+  Copy,
+} from "lucide-react";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -17,14 +32,14 @@ import {
   CardHeader,
   CardTitle,
   CardFooter,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet"
+} from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,53 +47,55 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/components/ui/switch"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
-import { useMemberships } from "@/hooks/use-memberships"
-import { useMembershipGroup } from "@/hooks/use-membership-group"
-import { useFeatures } from "@/components/feature-context"
-import { useSeasons } from "@/hooks/use-seasons"
-import { DashboardPageHeader } from "@/components/dashboard-page-header"
-import { toast } from "sonner"
-import type { BillingInterval, MembershipInstanceStatus } from "@/types/memberships"
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { useMemberships } from "@/hooks/use-memberships";
+import { useMembershipGroup } from "@/hooks/use-membership-group";
+import { useFeatures } from "@/components/feature-context";
+import { useSeasons } from "@/hooks/use-seasons";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
+import { toast } from "sonner";
+import type { BillingInterval, MembershipInstanceStatus } from "@/types/memberships";
 
 export default function MembershipsPage() {
-  const { memberships, isLoading, error, deleteMembershipGroup, fetchMemberships } = useMemberships({ autoFetch: false })
-  const { isFeatureEnabled } = useFeatures()
-  const trainingEnabled = isFeatureEnabled("training")
-  const seasonsEnabled = isFeatureEnabled("seasons")
-  const { seasons } = useSeasons({ autoFetch: seasonsEnabled })
-  const [seasonFilter, setSeasonFilter] = React.useState<string>("all")
-  
-  const [selectedGroupId, setSelectedGroupId] = React.useState<string | null>(null)
+  const { memberships, isLoading, error, deleteMembershipGroup, fetchMemberships } = useMemberships(
+    { autoFetch: false }
+  );
+  const { isFeatureEnabled } = useFeatures();
+  const trainingEnabled = isFeatureEnabled("training");
+  const seasonsEnabled = isFeatureEnabled("seasons");
+  const { seasons } = useSeasons({ autoFetch: seasonsEnabled });
+  const [seasonFilter, setSeasonFilter] = React.useState<string>("all");
+
+  const [selectedGroupId, setSelectedGroupId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (seasonFilter && seasonFilter !== "all") {
-      fetchMemberships({ seasonId: seasonFilter })
+      fetchMemberships({ seasonId: seasonFilter });
     } else {
-      fetchMemberships({})
+      fetchMemberships({});
     }
-  }, [seasonFilter, fetchMemberships])
+  }, [seasonFilter, fetchMemberships]);
 
   const handleDeleteGroup = async (id: string) => {
     if (confirm("Are you sure? This will delete all instances within this group.")) {
-      const success = await deleteMembershipGroup(id)
+      const success = await deleteMembershipGroup(id);
       if (success) {
-        toast.success("Membership Group deleted")
+        toast.success("Membership Group deleted");
       }
     }
-  }
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -154,7 +171,7 @@ export default function MembershipsPage() {
                         Manage
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         className="text-destructive focus:text-destructive"
                         onClick={() => handleDeleteGroup(group.id)}
                       >
@@ -181,7 +198,8 @@ export default function MembershipsPage() {
                   )}
                   {group.defaultPrice != null && (
                     <Badge variant="outline">
-                      ${Number(group.defaultPrice).toFixed(2)} / {group.defaultBillingInterval.toLowerCase().replace("_", "-")}
+                      ${Number(group.defaultPrice).toFixed(2)} /{" "}
+                      {group.defaultBillingInterval.toLowerCase().replace("_", "-")}
                     </Badge>
                   )}
                 </div>
@@ -194,9 +212,23 @@ export default function MembershipsPage() {
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Badge variant="outline">{group._count?.instances || 0} Instances</Badge>
-                  {group.allowAutoRenew && <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Auto-Renew</Badge>}
-                  {(group.hasAgeRestriction || group.hasGenderRestriction || group.hasLevelRestriction || group.hasWaiverRestriction || group.hasMedicalRequirement) && (
-                    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                  {group.allowAutoRenew && (
+                    <Badge
+                      variant="outline"
+                      className="bg-green-50 text-green-700 border-green-200"
+                    >
+                      Auto-Renew
+                    </Badge>
+                  )}
+                  {(group.hasAgeRestriction ||
+                    group.hasGenderRestriction ||
+                    group.hasLevelRestriction ||
+                    group.hasWaiverRestriction ||
+                    group.hasMedicalRequirement) && (
+                    <Badge
+                      variant="outline"
+                      className="bg-amber-50 text-amber-700 border-amber-200"
+                    >
                       <Shield className="mr-1 h-3 w-3" />
                       Restrictions
                     </Badge>
@@ -204,7 +236,11 @@ export default function MembershipsPage() {
                 </div>
               </CardContent>
               <CardFooter className="border-t pt-4">
-                <Button variant="outline" className="w-full" onClick={() => setSelectedGroupId(group.id)}>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setSelectedGroupId(group.id)}
+                >
                   Manage
                 </Button>
               </CardFooter>
@@ -221,11 +257,11 @@ export default function MembershipsPage() {
       {/* Manage Group Sheet */}
       <Sheet open={!!selectedGroupId} onOpenChange={(open) => !open && setSelectedGroupId(null)}>
         <SheetContent className="sm:max-w-[640px] overflow-y-auto">
-            {selectedGroupId && <MembershipGroupManager groupId={selectedGroupId} />}
+          {selectedGroupId && <MembershipGroupManager groupId={selectedGroupId} />}
         </SheetContent>
       </Sheet>
     </div>
-  )
+  );
 }
 
 function MembershipGroupManager({ groupId }: { groupId: string }) {
@@ -240,29 +276,33 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
     updateInstance,
     deleteInstance,
     publishInstance,
-  } = useMembershipGroup()
-  const { isFeatureEnabled } = useFeatures()
-  const trainingEnabled = isFeatureEnabled("training")
-  const [isCreatingInstance, setIsCreatingInstance] = React.useState(false)
-  const [activeTab, setActiveTab] = React.useState<"instances" | "restrictions">("instances")
-  const [instanceStartDate, setInstanceStartDate] = React.useState<Date | undefined>(undefined)
-  const [instanceEndDate, setInstanceEndDate] = React.useState<Date | undefined>(undefined)
-  const [instanceAutoRenewDate, setInstanceAutoRenewDate] = React.useState<Date | undefined>(undefined)
-  const [registrationOpen, setRegistrationOpen] = React.useState(true)
-  const [registrationStartDate, setRegistrationStartDate] = React.useState<Date | undefined>(undefined)
-  const [registrationStartTime, setRegistrationStartTime] = React.useState("09:00")
-  const [registrationEndDate, setRegistrationEndDate] = React.useState<Date | undefined>(undefined)
-  const [registrationEndTime, setRegistrationEndTime] = React.useState("23:59")
-  const [earlyAccessCode, setEarlyAccessCode] = React.useState<string | null>(null)
+  } = useMembershipGroup();
+  const { isFeatureEnabled } = useFeatures();
+  const trainingEnabled = isFeatureEnabled("training");
+  const [isCreatingInstance, setIsCreatingInstance] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState<"instances" | "restrictions">("instances");
+  const [instanceStartDate, setInstanceStartDate] = React.useState<Date | undefined>(undefined);
+  const [instanceEndDate, setInstanceEndDate] = React.useState<Date | undefined>(undefined);
+  const [instanceAutoRenewDate, setInstanceAutoRenewDate] = React.useState<Date | undefined>(
+    undefined
+  );
+  const [registrationOpen, setRegistrationOpen] = React.useState(true);
+  const [registrationStartDate, setRegistrationStartDate] = React.useState<Date | undefined>(
+    undefined
+  );
+  const [registrationStartTime, setRegistrationStartTime] = React.useState("09:00");
+  const [registrationEndDate, setRegistrationEndDate] = React.useState<Date | undefined>(undefined);
+  const [registrationEndTime, setRegistrationEndTime] = React.useState("23:59");
+  const [earlyAccessCode, setEarlyAccessCode] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    fetchGroup(groupId)
-  }, [groupId, fetchGroup])
+    fetchGroup(groupId);
+  }, [groupId, fetchGroup]);
 
   const handleCreateInstance = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-    
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+
     const result = await createInstance(groupId, {
       membershipGroupId: groupId,
       name: formData.get("name") as string,
@@ -270,56 +310,65 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
       billingInterval: formData.get("interval") as BillingInterval,
       startDate: instanceStartDate ? format(instanceStartDate, "yyyy-MM-dd") : "",
       endDate: instanceEndDate ? format(instanceEndDate, "yyyy-MM-dd") : "",
-      autoRenewDate: instanceAutoRenewDate ? format(instanceAutoRenewDate, "yyyy-MM-dd") : undefined,
+      autoRenewDate: instanceAutoRenewDate
+        ? format(instanceAutoRenewDate, "yyyy-MM-dd")
+        : undefined,
       status: (formData.get("status") as MembershipInstanceStatus) || "DRAFT",
       registrationOpen,
-      registrationStartDate: !registrationOpen && registrationStartDate ? format(registrationStartDate, "yyyy-MM-dd") : null,
+      registrationStartDate:
+        !registrationOpen && registrationStartDate
+          ? format(registrationStartDate, "yyyy-MM-dd")
+          : null,
       registrationStartTime: !registrationOpen ? registrationStartTime : null,
       registrationEndDate: registrationEndDate ? format(registrationEndDate, "yyyy-MM-dd") : null,
       registrationEndTime: registrationEndTime || null,
       earlyAccessCode,
-    })
+    });
 
     if (result) {
-      toast.success("Instance created")
-      setIsCreatingInstance(false)
-      setInstanceStartDate(undefined)
-      setInstanceEndDate(undefined)
-      setInstanceAutoRenewDate(undefined)
-      setRegistrationOpen(true)
-      setRegistrationStartDate(undefined)
-      setRegistrationStartTime("09:00")
-      setRegistrationEndDate(undefined)
-      setRegistrationEndTime("23:59")
-      setEarlyAccessCode(null)
+      toast.success("Instance created");
+      setIsCreatingInstance(false);
+      setInstanceStartDate(undefined);
+      setInstanceEndDate(undefined);
+      setInstanceAutoRenewDate(undefined);
+      setRegistrationOpen(true);
+      setRegistrationStartDate(undefined);
+      setRegistrationStartTime("09:00");
+      setRegistrationEndDate(undefined);
+      setRegistrationEndTime("23:59");
+      setEarlyAccessCode(null);
     }
-  }
+  };
 
   const handlePublish = async (instanceId: string) => {
-    const result = await publishInstance(groupId, instanceId)
+    const result = await publishInstance(groupId, instanceId);
     if (result) {
-      toast.success("Instance published")
+      toast.success("Instance published");
     }
-  }
+  };
 
   const handleDeleteInstance = async (instanceId: string) => {
     if (confirm("Are you sure you want to delete this instance?")) {
-      const success = await deleteInstance(groupId, instanceId)
+      const success = await deleteInstance(groupId, instanceId);
       if (success) {
-        toast.success("Instance deleted")
+        toast.success("Instance deleted");
       }
     }
-  }
+  };
 
   const handleUpdateRestrictions = async (data: Record<string, unknown>) => {
-    const result = await updateGroup(groupId, data)
+    const result = await updateGroup(groupId, data);
     if (result) {
-      toast.success("Restrictions updated")
+      toast.success("Restrictions updated");
     }
-  }
+  };
 
   if (isLoading || !group) {
-    return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="animate-spin" />
+      </div>
+    );
   }
 
   return (
@@ -328,14 +377,13 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
         <SheetTitle>{group.name}</SheetTitle>
         <SheetDescription>
           {group.isRecurring ? "Recurring" : "One-time"} membership
-          {group.defaultPrice != null && ` - $${Number(group.defaultPrice).toFixed(2)}/${group.defaultBillingInterval.toLowerCase().replace("_", "-")}`}
+          {group.defaultPrice != null &&
+            ` - $${Number(group.defaultPrice).toFixed(2)}/${group.defaultBillingInterval.toLowerCase().replace("_", "-")}`}
         </SheetDescription>
       </SheetHeader>
 
       {error && (
-        <div className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded">
-          {error}
-        </div>
+        <div className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded">{error}</div>
       )}
 
       {/* Tab Navigation */}
@@ -361,7 +409,11 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
         <>
           {group.isRecurring && (
             <div className="flex justify-end">
-              <Button size="sm" onClick={() => setIsCreatingInstance(!isCreatingInstance)} variant={isCreatingInstance ? "secondary" : "default"}>
+              <Button
+                size="sm"
+                onClick={() => setIsCreatingInstance(!isCreatingInstance)}
+                variant={isCreatingInstance ? "secondary" : "default"}
+              >
                 {isCreatingInstance ? "Cancel" : "Add Instance"}
               </Button>
             </div>
@@ -373,7 +425,11 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                 <CardTitle className="text-base">New Instance</CardTitle>
               </CardHeader>
               <CardContent>
-                <form id="create-instance-form" onSubmit={handleCreateInstance} className="grid gap-4">
+                <form
+                  id="create-instance-form"
+                  onSubmit={handleCreateInstance}
+                  className="grid gap-4"
+                >
                   <div className="grid gap-2">
                     <Label>Instance Name</Label>
                     <Input name="name" placeholder="e.g. FY2026" required />
@@ -381,12 +437,28 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
                       <Label>Price ($)</Label>
-                      <Input name="price" type="number" min="0" step="0.01" defaultValue={group.defaultPrice != null ? Number(group.defaultPrice) : ""} required />
+                      <Input
+                        name="price"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        defaultValue={group.defaultPrice != null ? Number(group.defaultPrice) : ""}
+                        required
+                      />
                     </div>
                     <div className="grid gap-2">
                       <Label>Interval</Label>
-                      <Select name="interval" defaultValue={group.defaultBillingInterval !== "ONE_TIME" ? group.defaultBillingInterval : "YEARLY"}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
+                      <Select
+                        name="interval"
+                        defaultValue={
+                          group.defaultBillingInterval !== "ONE_TIME"
+                            ? group.defaultBillingInterval
+                            : "YEARLY"
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="YEARLY">Yearly</SelectItem>
                           <SelectItem value="MONTHLY">Monthly</SelectItem>
@@ -403,7 +475,10 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                           <Button
                             type="button"
                             variant="outline"
-                            className={cn("w-full justify-start text-left font-normal", !instanceStartDate && "text-muted-foreground")}
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !instanceStartDate && "text-muted-foreground"
+                            )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {instanceStartDate ? format(instanceStartDate, "PPP") : "Pick a date"}
@@ -414,8 +489,9 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                             mode="single"
                             selected={instanceStartDate}
                             onSelect={(date) => {
-                              setInstanceStartDate(date)
-                              if (instanceEndDate && date && instanceEndDate < date) setInstanceEndDate(undefined)
+                              setInstanceStartDate(date);
+                              if (instanceEndDate && date && instanceEndDate < date)
+                                setInstanceEndDate(undefined);
                             }}
                             initialFocus
                           />
@@ -429,7 +505,10 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                           <Button
                             type="button"
                             variant="outline"
-                            className={cn("w-full justify-start text-left font-normal", !instanceEndDate && "text-muted-foreground")}
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !instanceEndDate && "text-muted-foreground"
+                            )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {instanceEndDate ? format(instanceEndDate, "PPP") : "Pick a date"}
@@ -440,7 +519,9 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                             mode="single"
                             selected={instanceEndDate}
                             onSelect={setInstanceEndDate}
-                            disabled={(date) => instanceStartDate ? date < instanceStartDate : false}
+                            disabled={(date) =>
+                              instanceStartDate ? date < instanceStartDate : false
+                            }
                             initialFocus
                           />
                         </PopoverContent>
@@ -451,7 +532,9 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                     <div className="grid gap-2">
                       <Label>Status</Label>
                       <Select name="status" defaultValue="DRAFT">
-                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="DRAFT">Draft</SelectItem>
                           <SelectItem value="ACTIVE">Active</SelectItem>
@@ -465,10 +548,15 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                           <Button
                             type="button"
                             variant="outline"
-                            className={cn("w-full justify-start text-left font-normal", !instanceAutoRenewDate && "text-muted-foreground")}
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !instanceAutoRenewDate && "text-muted-foreground"
+                            )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {instanceAutoRenewDate ? format(instanceAutoRenewDate, "PPP") : "Pick a date"}
+                            {instanceAutoRenewDate
+                              ? format(instanceAutoRenewDate, "PPP")
+                              : "Pick a date"}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
@@ -490,18 +578,16 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                     <RadioGroup
                       value={registrationOpen ? "now" : "scheduled"}
                       onValueChange={(value) => {
-                        const isNow = value === "now"
-                        setRegistrationOpen(isNow)
-                        if (isNow) setRegistrationStartDate(undefined)
+                        const isNow = value === "now";
+                        setRegistrationOpen(isNow);
+                        if (isNow) setRegistrationStartDate(undefined);
                       }}
                       className="space-y-3"
                     >
                       <label
                         className={cn(
                           "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
-                          registrationOpen
-                            ? "border-primary bg-primary/5"
-                            : "hover:bg-muted/50"
+                          registrationOpen ? "border-primary bg-primary/5" : "hover:bg-muted/50"
                         )}
                       >
                         <RadioGroupItem value="now" className="mt-1" />
@@ -516,9 +602,7 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                       <label
                         className={cn(
                           "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
-                          !registrationOpen
-                            ? "border-primary bg-primary/5"
-                            : "hover:bg-muted/50"
+                          !registrationOpen ? "border-primary bg-primary/5" : "hover:bg-muted/50"
                         )}
                       >
                         <RadioGroupItem value="scheduled" className="mt-1" />
@@ -546,10 +630,15 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                               <Button
                                 type="button"
                                 variant="outline"
-                                className={cn("w-full justify-start text-left font-normal", !registrationStartDate && "text-muted-foreground")}
+                                className={cn(
+                                  "w-full justify-start text-left font-normal",
+                                  !registrationStartDate && "text-muted-foreground"
+                                )}
                               >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                {registrationStartDate ? format(registrationStartDate, "PPP") : "Pick a date"}
+                                {registrationStartDate
+                                  ? format(registrationStartDate, "PPP")
+                                  : "Pick a date"}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
@@ -557,7 +646,9 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                                 mode="single"
                                 selected={registrationStartDate}
                                 onSelect={(date) => setRegistrationStartDate(date)}
-                                disabled={(date) => instanceStartDate ? date > instanceStartDate : false}
+                                disabled={(date) =>
+                                  instanceStartDate ? date > instanceStartDate : false
+                                }
                                 initialFocus
                               />
                             </PopoverContent>
@@ -570,7 +661,7 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                             <Input
                               type="time"
                               value={registrationStartTime}
-                              onChange={e => setRegistrationStartTime(e.target.value)}
+                              onChange={(e) => setRegistrationStartTime(e.target.value)}
                               className="pl-10"
                             />
                           </div>
@@ -582,7 +673,8 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                   <div className="space-y-4">
                     <Label className="text-base font-medium">Registration Closes</Label>
                     <p className="text-sm text-muted-foreground">
-                      Set when registration closes. Defaults to the instance end date if not specified.
+                      Set when registration closes. Defaults to the instance end date if not
+                      specified.
                     </p>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="grid gap-2">
@@ -592,14 +684,17 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                             <Button
                               type="button"
                               variant="outline"
-                              className={cn("w-full justify-start text-left font-normal", !registrationEndDate && "text-muted-foreground")}
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !registrationEndDate && "text-muted-foreground"
+                              )}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
                               {registrationEndDate
                                 ? format(registrationEndDate, "PPP")
                                 : instanceEndDate
-                                ? `Instance end: ${format(instanceEndDate, "PPP")}`
-                                : "Pick a date"}
+                                  ? `Instance end: ${format(instanceEndDate, "PPP")}`
+                                  : "Pick a date"}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
@@ -608,10 +703,11 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                               selected={registrationEndDate}
                               onSelect={(date) => setRegistrationEndDate(date)}
                               disabled={(date) => {
-                                const earliest = !registrationOpen && registrationStartDate
-                                  ? registrationStartDate
-                                  : new Date()
-                                return date < earliest
+                                const earliest =
+                                  !registrationOpen && registrationStartDate
+                                    ? registrationStartDate
+                                    : new Date();
+                                return date < earliest;
                               }}
                               initialFocus
                             />
@@ -625,7 +721,7 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                           <Input
                             type="time"
                             value={registrationEndTime}
-                            onChange={e => setRegistrationEndTime(e.target.value)}
+                            onChange={(e) => setRegistrationEndTime(e.target.value)}
                             className="pl-10"
                           />
                         </div>
@@ -639,21 +735,22 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                       Early Access Code
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      Generate or enter a code that allows registration before the registration window opens
+                      Generate or enter a code that allows registration before the registration
+                      window opens
                     </p>
                     <div className="flex items-center gap-2">
                       <Input
                         placeholder="Enter or generate a code"
                         value={earlyAccessCode || ""}
-                        onChange={e => setEarlyAccessCode(e.target.value || null)}
+                        onChange={(e) => setEarlyAccessCode(e.target.value || null)}
                         className="max-w-[300px]"
                       />
                       <Button
                         type="button"
                         variant="outline"
                         onClick={() => {
-                          const code = crypto.randomUUID().slice(0, 8).toUpperCase()
-                          setEarlyAccessCode(code)
+                          const code = crypto.randomUUID().slice(0, 8).toUpperCase();
+                          setEarlyAccessCode(code);
                         }}
                       >
                         <RefreshCw className="h-4 w-4 mr-2" />
@@ -675,22 +772,36 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                   <div className="flex justify-between items-center">
                     <CardTitle className="text-base">{instance.name}</CardTitle>
                     <div className="flex items-center gap-2">
-                      <Badge variant={instance.status === 'ACTIVE' ? 'default' : instance.status === 'DRAFT' ? 'secondary' : 'outline'}>
+                      <Badge
+                        variant={
+                          instance.status === "ACTIVE"
+                            ? "default"
+                            : instance.status === "DRAFT"
+                              ? "secondary"
+                              : "outline"
+                        }
+                      >
                         {instance.status}
                       </Badge>
                       {instance.isAutoGenerated && (
-                        <Badge variant="outline" className="text-xs">Auto</Badge>
+                        <Badge variant="outline" className="text-xs">
+                          Auto
+                        </Badge>
                       )}
                     </div>
                   </div>
                   <CardDescription>
-                    {format(new Date(instance.startDate), 'MMM d, yyyy')} - {format(new Date(instance.endDate), 'MMM d, yyyy')}
+                    {format(new Date(instance.startDate), "MMM d, yyyy")} -{" "}
+                    {format(new Date(instance.endDate), "MMM d, yyyy")}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pb-4 pt-0">
                   <div className="flex justify-between items-end">
                     <div className="text-sm">
-                      <div className="font-semibold">${Number(instance.price).toFixed(2)} / {instance.billingInterval.toLowerCase().replace("_", "-")}</div>
+                      <div className="font-semibold">
+                        ${Number(instance.price).toFixed(2)} /{" "}
+                        {instance.billingInterval.toLowerCase().replace("_", "-")}
+                      </div>
                       {instance.capacity != null && (
                         <div className="text-muted-foreground text-xs mt-1">
                           Capacity: {instance._count?.athleteMemberships || 0}/{instance.capacity}
@@ -698,28 +809,47 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                       )}
                       {instance.registrationOpen === false && instance.registrationStartDate && (
                         <div className="text-muted-foreground text-xs mt-1">
-                          Reg opens: {format(new Date(instance.registrationStartDate), 'MMM d, yyyy')}{instance.registrationStartTime ? ` at ${instance.registrationStartTime}` : ''}
+                          Reg opens:{" "}
+                          {format(new Date(instance.registrationStartDate), "MMM d, yyyy")}
+                          {instance.registrationStartTime
+                            ? ` at ${instance.registrationStartTime}`
+                            : ""}
                         </div>
                       )}
                       {instance.registrationEndDate && (
                         <div className="text-muted-foreground text-xs mt-1">
-                          Reg closes: {format(new Date(instance.registrationEndDate), 'MMM d, yyyy')}{instance.registrationEndTime ? ` at ${instance.registrationEndTime}` : ''}
+                          Reg closes:{" "}
+                          {format(new Date(instance.registrationEndDate), "MMM d, yyyy")}
+                          {instance.registrationEndTime
+                            ? ` at ${instance.registrationEndTime}`
+                            : ""}
                         </div>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="text-right mr-2">
-                        <div className="text-2xl font-bold">{instance._count?.athleteMemberships || 0}</div>
+                        <div className="text-2xl font-bold">
+                          {instance._count?.athleteMemberships || 0}
+                        </div>
                         <div className="text-xs text-muted-foreground">Members</div>
                       </div>
-                      {instance.status === 'DRAFT' && (
-                        <Button size="sm" variant="outline" onClick={() => handlePublish(instance.id)}>
+                      {instance.status === "DRAFT" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handlePublish(instance.id)}
+                        >
                           <Eye className="mr-1 h-3 w-3" />
                           Publish
                         </Button>
                       )}
                       {!instance.isAutoGenerated || group.isRecurring ? (
-                        <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDeleteInstance(instance.id)}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive"
+                          onClick={() => handleDeleteInstance(instance.id)}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       ) : null}
@@ -757,17 +887,29 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                 <div className="grid gap-1">
                   <Label className="text-xs text-muted-foreground">Min Age</Label>
                   <Input
-                    type="number" min="0" max="100"
+                    type="number"
+                    min="0"
+                    max="100"
                     defaultValue={group.minAge ?? ""}
-                    onBlur={(e) => handleUpdateRestrictions({ minAge: e.target.value ? parseInt(e.target.value) : null })}
+                    onBlur={(e) =>
+                      handleUpdateRestrictions({
+                        minAge: e.target.value ? parseInt(e.target.value) : null,
+                      })
+                    }
                   />
                 </div>
                 <div className="grid gap-1">
                   <Label className="text-xs text-muted-foreground">Max Age</Label>
                   <Input
-                    type="number" min="0" max="100"
+                    type="number"
+                    min="0"
+                    max="100"
                     defaultValue={group.maxAge ?? ""}
-                    onBlur={(e) => handleUpdateRestrictions({ maxAge: e.target.value ? parseInt(e.target.value) : null })}
+                    onBlur={(e) =>
+                      handleUpdateRestrictions({
+                        maxAge: e.target.value ? parseInt(e.target.value) : null,
+                      })
+                    }
                   />
                 </div>
               </div>
@@ -789,7 +931,7 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
             {group.hasGenderRestriction && (
               <div className="flex flex-wrap gap-2 pl-2">
                 {(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"] as const).map((gender) => {
-                  const selected = group.allowedGenders.includes(gender)
+                  const selected = group.allowedGenders.includes(gender);
                   return (
                     <Badge
                       key={gender}
@@ -797,14 +939,17 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                       className="cursor-pointer"
                       onClick={() => {
                         const newGenders = selected
-                          ? group.allowedGenders.filter(g => g !== gender)
-                          : [...group.allowedGenders, gender]
-                        handleUpdateRestrictions({ allowedGenders: newGenders })
+                          ? group.allowedGenders.filter((g) => g !== gender)
+                          : [...group.allowedGenders, gender];
+                        handleUpdateRestrictions({ allowedGenders: newGenders });
                       }}
                     >
-                      {gender.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
+                      {gender
+                        .replaceAll("_", " ")
+                        .toLowerCase()
+                        .replace(/\b\w/g, (l) => l.toUpperCase())}
                     </Badge>
-                  )
+                  );
                 })}
               </div>
             )}
@@ -825,10 +970,15 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
             {group.hasCapacityRestriction && (
               <div className="pl-2 max-w-[200px]">
                 <Input
-                  type="number" min="0"
+                  type="number"
+                  min="0"
                   defaultValue={group.capacity ?? ""}
                   placeholder="Max members per instance"
-                  onBlur={(e) => handleUpdateRestrictions({ capacity: e.target.value ? parseInt(e.target.value) : null })}
+                  onBlur={(e) =>
+                    handleUpdateRestrictions({
+                      capacity: e.target.value ? parseInt(e.target.value) : null,
+                    })
+                  }
                 />
               </div>
             )}
@@ -856,19 +1006,26 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                   <Label className="text-sm font-medium">Level Restriction</Label>
                   <Switch
                     checked={group.hasLevelRestriction}
-                    onCheckedChange={(val) => handleUpdateRestrictions({ hasLevelRestriction: val })}
+                    onCheckedChange={(val) =>
+                      handleUpdateRestrictions({ hasLevelRestriction: val })
+                    }
                     disabled={isUpdating}
                   />
                 </div>
                 {group.hasLevelRestriction && group.levelRequirements && (
                   <div className="pl-2 space-y-2">
                     {group.levelRequirements.map((lr) => (
-                      <div key={lr.id} className="flex items-center justify-between bg-muted/50 px-3 py-2 rounded">
+                      <div
+                        key={lr.id}
+                        className="flex items-center justify-between bg-muted/50 px-3 py-2 rounded"
+                      >
                         <span className="text-sm">{lr.level?.name}</span>
                       </div>
                     ))}
                     {group.levelRequirements.length === 0 && (
-                      <p className="text-xs text-muted-foreground">No levels configured. Add them via the restrictions API.</p>
+                      <p className="text-xs text-muted-foreground">
+                        No levels configured. Add them via the restrictions API.
+                      </p>
                     )}
                   </div>
                 )}
@@ -891,12 +1048,17 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
             {group.hasWaiverRestriction && group.waiverRequirements && (
               <div className="pl-2 space-y-2">
                 {group.waiverRequirements.map((wr) => (
-                  <div key={wr.id} className="flex items-center justify-between bg-muted/50 px-3 py-2 rounded">
+                  <div
+                    key={wr.id}
+                    className="flex items-center justify-between bg-muted/50 px-3 py-2 rounded"
+                  >
                     <span className="text-sm">{wr.waiver?.title}</span>
                   </div>
                 ))}
                 {group.waiverRequirements.length === 0 && (
-                  <p className="text-xs text-muted-foreground">No waivers configured. Add them via the restrictions API.</p>
+                  <p className="text-xs text-muted-foreground">
+                    No waivers configured. Add them via the restrictions API.
+                  </p>
                 )}
               </div>
             )}
@@ -908,17 +1070,23 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
           <div className="space-y-3">
             <Label className="text-sm font-medium">Purchase Window (days before start)</Label>
             <Input
-              type="number" min="0"
+              type="number"
+              min="0"
               defaultValue={group.purchaseWindowDays ?? ""}
               placeholder="Leave empty for always available"
-              onBlur={(e) => handleUpdateRestrictions({ purchaseWindowDays: e.target.value ? parseInt(e.target.value) : null })}
+              onBlur={(e) =>
+                handleUpdateRestrictions({
+                  purchaseWindowDays: e.target.value ? parseInt(e.target.value) : null,
+                })
+              }
             />
             <p className="text-xs text-muted-foreground">
-              Number of days before an instance&apos;s start date that it becomes available for purchase. Leave empty for always available.
+              Number of days before an instance&apos;s start date that it becomes available for
+              purchase. Leave empty for always available.
             </p>
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }

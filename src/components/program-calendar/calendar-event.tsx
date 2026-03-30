@@ -23,7 +23,7 @@ import type { CalendarEvent } from "./types";
 function formatTime12h(time24: string, compact: boolean = false): string {
   const [hoursStr, minutes] = time24.split(":");
   const hours = parseInt(hoursStr, 10);
-  const period = hours >= 12 ? (compact ? "p" : "PM") : (compact ? "a" : "AM");
+  const period = hours >= 12 ? (compact ? "p" : "PM") : compact ? "a" : "AM";
   const hours12 = hours % 12 || 12;
   return compact ? `${hours12}:${minutes}${period}` : `${hours12}:${minutes} ${period}`;
 }
@@ -41,11 +41,7 @@ export function EventPill({ event, showTime = true, className }: EventPillProps)
   const { onEventClick } = useCalendarContext();
   const isCancelled = event.status === "CANCELLED";
 
-  const statusLabel = event.isSoldOut
-    ? "FULL"
-    : event.isWaitlistAvailable
-    ? "WAITLIST"
-    : null;
+  const statusLabel = event.isSoldOut ? "FULL" : event.isWaitlistAvailable ? "WAITLIST" : null;
 
   const statusTagClass = statusLabel
     ? cn(
@@ -107,12 +103,7 @@ export function EventCard({ event, className }: EventCardProps) {
       <div className="flex-1 min-w-0">
         {/* Title and badges row */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span
-            className={cn(
-              "font-medium truncate",
-              isCancelled && "line-through"
-            )}
-          >
+          <span className={cn("font-medium truncate", isCancelled && "line-through")}>
             {event.title}
           </span>
           {event.levelName && (
@@ -213,7 +204,9 @@ export function EventCompactCard({ event, className }: EventCompactCardProps) {
             )}
           </div>
           <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
-            <span>{formatTime12h(event.startTime)} - {formatTime12h(event.endTime)}</span>
+            <span>
+              {formatTime12h(event.startTime)} - {formatTime12h(event.endTime)}
+            </span>
           </div>
         </div>
         {event.levelName && (

@@ -20,38 +20,38 @@ The platform already has `@adyen/adyen-web` ^6.29.0 installed. The following com
 
 ### Payment UI Components
 
-| Component | Type | Description |
-|-----------|------|-------------|
-| **Drop-in** | `dropin` | All-in-one payment UI that renders every enabled payment method (cards, wallets, bank). Simplest integration; Adyen controls the layout and adding new methods requires no code changes. |
-| **Card** | `card` | Standalone credit/debit card form with PAN, expiry, CVV fields. Supports optional cardholder name and billing address. Supports Visa, Mastercard, Amex, Discover, JCB, etc. |
-| **Google Pay** | `googlepay` | Google Pay wallet button. Presents the Google Pay payment sheet. Handles 3DS redirects. Works on Chrome (desktop + Android). |
-| **Apple Pay** | `applepay` | Apple Pay wallet button. As of v6.10.0, works across all supported browsers and platforms (not just Safari). |
-| **ACH Direct Debit** | `ach` | US bank account payment collection form (routing number, account number, account holder name). For collecting payments, not for payout onboarding. |
-| **PayPal** | `paypal` | PayPal checkout button. Opens PayPal window for authorization. |
-| **Cash App Pay** | `cashapp` | Cash App Pay button for US shoppers. |
+| Component            | Type        | Description                                                                                                                                                                              |
+| -------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Drop-in**          | `dropin`    | All-in-one payment UI that renders every enabled payment method (cards, wallets, bank). Simplest integration; Adyen controls the layout and adding new methods requires no code changes. |
+| **Card**             | `card`      | Standalone credit/debit card form with PAN, expiry, CVV fields. Supports optional cardholder name and billing address. Supports Visa, Mastercard, Amex, Discover, JCB, etc.              |
+| **Google Pay**       | `googlepay` | Google Pay wallet button. Presents the Google Pay payment sheet. Handles 3DS redirects. Works on Chrome (desktop + Android).                                                             |
+| **Apple Pay**        | `applepay`  | Apple Pay wallet button. As of v6.10.0, works across all supported browsers and platforms (not just Safari).                                                                             |
+| **ACH Direct Debit** | `ach`       | US bank account payment collection form (routing number, account number, account holder name). For collecting payments, not for payout onboarding.                                       |
+| **PayPal**           | `paypal`    | PayPal checkout button. Opens PayPal window for authorization.                                                                                                                           |
+| **Cash App Pay**     | `cashapp`   | Cash App Pay button for US shoppers.                                                                                                                                                     |
 
 ### Tokenization and Stored Payments
 
-| Feature | Description |
-|---------|-------------|
-| **Stored Payment Methods** | Built into Drop-in. When `showStoredPaymentMethods: true` is set, Drop-in renders saved cards with one-click payment. Requires `shopperReference` in the session. |
-| **Token Creation** | Sessions API with `storePaymentMethod: true` causes Drop-in/Card to show a "Save for later" checkbox. On consent, Adyen stores the method and fires a `recurring.token.created` webhook. |
-| **Subscription Tokenization** | Use `recurringProcessingModel: "Subscription"` to create tokens suitable for merchant-initiated recurring charges. |
+| Feature                       | Description                                                                                                                                                                              |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Stored Payment Methods**    | Built into Drop-in. When `showStoredPaymentMethods: true` is set, Drop-in renders saved cards with one-click payment. Requires `shopperReference` in the session.                        |
+| **Token Creation**            | Sessions API with `storePaymentMethod: true` causes Drop-in/Card to show a "Save for later" checkbox. On consent, Adyen stores the method and fires a `recurring.token.created` webhook. |
+| **Subscription Tokenization** | Use `recurringProcessingModel: "Subscription"` to create tokens suitable for merchant-initiated recurring charges.                                                                       |
 
 ### Special-Purpose Components
 
-| Component | Type | Description |
-|-----------|------|-------------|
+| Component        | Type       | Description                                                                                                                                                                                                                                              |
+| ---------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Adyen Giving** | `donation` | Donation widget for post-checkout or standalone flows. Supports fixed donation amounts (up to 3 options) and round-up donations. Adyen covers processing fees; 100% goes to the nonprofit. Requires a Giving campaign configured in Adyen Customer Area. |
 
 ### Components Not Relevant to This Platform
 
-| Component | Reason to Skip |
-|-----------|----------------|
-| SEPA Direct Debit | EU-only; not needed for US/Canada |
-| iDEAL | Netherlands-only |
-| Klarna | Buy-now-pay-later; not aligned with sports registration use case |
-| Bancontact, EPS, Giropay, etc. | EU/region-specific methods |
+| Component                      | Reason to Skip                                                   |
+| ------------------------------ | ---------------------------------------------------------------- |
+| SEPA Direct Debit              | EU-only; not needed for US/Canada                                |
+| iDEAL                          | Netherlands-only                                                 |
+| Klarna                         | Buy-now-pay-later; not aligned with sports registration use case |
+| Bancontact, EPS, Giropay, etc. | EU/region-specific methods                                       |
 
 ---
 
@@ -59,21 +59,21 @@ The platform already has `@adyen/adyen-web` ^6.29.0 installed. The following com
 
 ### Summary Table
 
-| Platform Feature | Current Implementation | Adyen Component(s) | Recommendation | Status |
-|---|---|---|---|---|
-| Site checkout payment step | Adyen Drop-in mounted in payment step | Drop-in | **REPLACE** | **Done (P0)** |
-| Org signup payment | Adyen Drop-in with tokenization | Drop-in + tokenization | **REPLACE** | **Done (P0)** |
-| Adyen checkout wrapper | Dynamic env, configurable props, loading state | Drop-in (improved) | **ENHANCE** | **Done (P0)** |
-| Payment webhook (AUTHORISATION) | New `/api/webhooks/adyen` route | N/A (server-side) | **ADD** | **Done (P0)** |
-| Payment methods management (billing) | Working; uses Adyen Drop-in for add | Drop-in with wallet tokenization | **KEEP + ENHANCE** | P1 |
-| Add Payment Method dialog (financials) | Custom card/ACH form, simulated, unused | N/A | **DELETE** | P1 |
-| Donation page | Mock data, manual entry only | Adyen Giving | **REPLACE** | P1 |
-| ACH setup dialog (payouts) | Custom bank form, simulated | N/A (payout onboarding, not payment) | **KEEP** | P2 |
-| POS payment | Adyen Pay by Link + QR code | N/A (correct approach for in-person) | **KEEP** | -- |
-| Billing address forms | Custom inputs for account/contact management | N/A (not payment-specific) | **KEEP** | -- |
-| Receipt/confirmation pages | Custom display UI | N/A (no Adyen component exists) | **KEEP** | -- |
-| Transaction tables | Custom display UI | N/A (no Adyen component exists) | **KEEP** | -- |
-| Invoices/payment links | Adyen Pay by Link API (server-side) | N/A (already correct) | **KEEP** | -- |
+| Platform Feature                       | Current Implementation                         | Adyen Component(s)                   | Recommendation     | Status        |
+| -------------------------------------- | ---------------------------------------------- | ------------------------------------ | ------------------ | ------------- |
+| Site checkout payment step             | Adyen Drop-in mounted in payment step          | Drop-in                              | **REPLACE**        | **Done (P0)** |
+| Org signup payment                     | Adyen Drop-in with tokenization                | Drop-in + tokenization               | **REPLACE**        | **Done (P0)** |
+| Adyen checkout wrapper                 | Dynamic env, configurable props, loading state | Drop-in (improved)                   | **ENHANCE**        | **Done (P0)** |
+| Payment webhook (AUTHORISATION)        | New `/api/webhooks/adyen` route                | N/A (server-side)                    | **ADD**            | **Done (P0)** |
+| Payment methods management (billing)   | Working; uses Adyen Drop-in for add            | Drop-in with wallet tokenization     | **KEEP + ENHANCE** | P1            |
+| Add Payment Method dialog (financials) | Custom card/ACH form, simulated, unused        | N/A                                  | **DELETE**         | P1            |
+| Donation page                          | Mock data, manual entry only                   | Adyen Giving                         | **REPLACE**        | P1            |
+| ACH setup dialog (payouts)             | Custom bank form, simulated                    | N/A (payout onboarding, not payment) | **KEEP**           | P2            |
+| POS payment                            | Adyen Pay by Link + QR code                    | N/A (correct approach for in-person) | **KEEP**           | --            |
+| Billing address forms                  | Custom inputs for account/contact management   | N/A (not payment-specific)           | **KEEP**           | --            |
+| Receipt/confirmation pages             | Custom display UI                              | N/A (no Adyen component exists)      | **KEEP**           | --            |
+| Transaction tables                     | Custom display UI                              | N/A (no Adyen component exists)      | **KEEP**           | --            |
+| Invoices/payment links                 | Adyen Pay by Link API (server-side)            | N/A (already correct)                | **KEEP**           | --            |
 
 ---
 
@@ -85,6 +85,7 @@ The platform already has `@adyen/adyen-web` ^6.29.0 installed. The following com
 **Status:** Implemented.
 
 **What was done:**
+
 - Replaced the "Coming Soon" placeholder with `AdyenCheckoutComponent` (Drop-in).
 - `createPaymentSession()` now stores `sessionId`, `sessionData`, and `invoiceId` in state.
 - On `onPaymentCompleted`, clears cart, completes registration, redirects to `/sites/[slug]/receipt/[invoiceId]`.
@@ -100,6 +101,7 @@ The platform already has `@adyen/adyen-web` ^6.29.0 installed. The following com
 **Status:** Implemented.
 
 **What was done:**
+
 - Converted from static server component to interactive `"use client"` component.
 - Reads `org-signup-data` from sessionStorage on mount; redirects back if missing.
 - Calls `POST /api/org-signup/payment-session` with `signupReference`, `email`, `returnUrl`.
@@ -116,6 +118,7 @@ The platform already has `@adyen/adyen-web` ^6.29.0 installed. The following com
 **Status:** Implemented.
 
 **What was done:**
+
 - Reads environment from `NEXT_PUBLIC_ADYEN_ENVIRONMENT` (falls back to `"test"`).
 - Added props: `countryCode` (default `"US"`), `componentType` (default `"dropin"`), `adyenConfig` (optional overrides).
 - Loading spinner while Adyen initializes, hidden container until ready.
@@ -133,6 +136,7 @@ This component is the shared foundation used by checkout, org signup, and billin
 **Current state:** Fully functional. Lists stored payment methods, supports set-default, delete, and add-new via Adyen Drop-in in a dialog. Used on the billing page at `src/app/dashboard/usage/billing/page.tsx`.
 
 **What to do:**
+
 - Keep the management UI as-is (list, default, delete are custom business logic that Adyen doesn't provide).
 - Enhance the "Add Payment Method" dialog to support Apple Pay and Google Pay as tokenization methods (currently only cards appear in the Drop-in because the session may not enable wallets).
 - Ensure the tokenization session passes `allowedPaymentMethods: ["scheme", "applepay", "googlepay"]` to show wallet options.
@@ -148,6 +152,7 @@ This component is the shared foundation used by checkout, org signup, and billin
 **Current state:** Custom card and ACH input form with plain `<Input>` fields collecting raw card numbers, expiry, and CVV. Submit is simulated (`setTimeout`). This component is not imported or used anywhere in the codebase.
 
 **Why delete:**
+
 - **PCI compliance risk:** Collecting raw card data in plain inputs means your server (or at least your client-side code) handles sensitive cardholder data. This disqualifies you from SAQ A (the simplest PCI validation) and requires SAQ A-EP or higher.
 - **Not functional:** The submit handler is a simulated `setTimeout`, not wired to any API.
 - **Superseded:** `PaymentMethodsCard` already handles the "add payment method" flow correctly via Adyen Drop-in.
@@ -162,6 +167,7 @@ This component is the shared foundation used by checkout, org signup, and billin
 **Current state:** A data table of donations using hardcoded mock data. Has an "Add Donation" dialog for manual entry (donor name, amount, email) but no real payment processing. Refund action exists as a menu item with no handler.
 
 **What to do:**
+
 - Integrate the Adyen Giving component to accept real online donations.
 - Create a donation campaign in the Adyen Customer Area (prerequisite, manual step).
 - Add a new API route (`/api/donations/session` or similar) that creates a payment session and returns the `donationToken` required by Giving.
@@ -170,6 +176,7 @@ This component is the shared foundation used by checkout, org signup, and billin
 - Wire the refund action to Adyen's refund API.
 
 **Backend changes:**
+
 - New API route for donation sessions.
 - Donation campaign configuration (Adyen Customer Area).
 - Webhook handler for donation payment results.
@@ -182,7 +189,7 @@ This component is the shared foundation used by checkout, org signup, and billin
 **File:** `src/components/financials/ach-setup-dialog.tsx`
 **Current state:** Custom bank account form for payout onboarding (organizations entering their bank details to receive payouts). Simulated submit.
 
-**Why keep:** Adyen's ACH Web Component is designed for *collecting payments from shoppers*, not for onboarding merchant payout bank accounts. The payout bank account setup is part of Adyen's KYC/onboarding flow, which uses a different API (Transfer API / Legal Entity Management API). This dialog serves a fundamentally different purpose than any Adyen Web Component.
+**Why keep:** Adyen's ACH Web Component is designed for _collecting payments from shoppers_, not for onboarding merchant payout bank accounts. The payout bank account setup is part of Adyen's KYC/onboarding flow, which uses a different API (Transfer API / Legal Entity Management API). This dialog serves a fundamentally different purpose than any Adyen Web Component.
 
 **Future enhancement (out of scope):** Wire this form to the Adyen onboarding API to actually submit payout bank details, or use Adyen's Hosted Onboarding Page.
 
@@ -321,10 +328,11 @@ These improve existing functionality and reduce risk.
 **Files:** `src/lib/webhooks.ts`, `src/lib/services-config.ts`
 **Issue:** `webhooks.ts` and `services-config.ts` reference `/api/webhooks/adyen` as a generic webhook URL.
 **Current state:** There are now two separate webhook endpoints:
+
 - `/api/webhooks/adyen` — handles `AUTHORISATION` events (site checkout payments)
 - `/api/webhooks/adyen-recurring` — handles `RECURRING_CONTRACT` events (token lifecycle)
 
-In Adyen Customer Area, you need to register *both* endpoints (see [configuration checklist](#adyen-configuration-checklist)). You should also update `src/lib/webhooks.ts` and `src/lib/services-config.ts` to reference both endpoints if they are used for any admin/diagnostic purpose.
+In Adyen Customer Area, you need to register _both_ endpoints (see [configuration checklist](#adyen-configuration-checklist)). You should also update `src/lib/webhooks.ts` and `src/lib/services-config.ts` to reference both endpoints if they are used for any admin/diagnostic purpose.
 
 ### 3. ~~HMAC Key Environment Variable Mismatch~~ — RESOLVED
 
@@ -344,14 +352,14 @@ Before the payment flows work end-to-end, the following operational steps are re
 
 Set these in your `.env` (see `.env.example` for the template):
 
-| Variable | Where Used | Description |
-|---|---|---|
-| `ADYEN_API_KEY` | Server-side (sessions, links, refunds) | Your Adyen API key from Customer Area → Developers → API credentials |
-| `ADYEN_MERCHANT_ACCOUNT` | Server-side (all Adyen API calls) | Your merchant account name |
-| `NEXT_PUBLIC_ADYEN_CLIENT_KEY` | Client-side (Web Components) | Client key from Customer Area → Developers → API credentials → Client settings |
-| `ADYEN_ENVIRONMENT` | Server-side (API library) | `TEST` or `LIVE` |
-| `NEXT_PUBLIC_ADYEN_ENVIRONMENT` | Client-side (Web Components) | `test` or `live` (lowercase) |
-| `ADYEN_WEBHOOK_HMAC_KEY` | Server-side (webhook verification) | HMAC key generated when creating the webhook in Customer Area |
+| Variable                        | Where Used                             | Description                                                                    |
+| ------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------ |
+| `ADYEN_API_KEY`                 | Server-side (sessions, links, refunds) | Your Adyen API key from Customer Area → Developers → API credentials           |
+| `ADYEN_MERCHANT_ACCOUNT`        | Server-side (all Adyen API calls)      | Your merchant account name                                                     |
+| `NEXT_PUBLIC_ADYEN_CLIENT_KEY`  | Client-side (Web Components)           | Client key from Customer Area → Developers → API credentials → Client settings |
+| `ADYEN_ENVIRONMENT`             | Server-side (API library)              | `TEST` or `LIVE`                                                               |
+| `NEXT_PUBLIC_ADYEN_ENVIRONMENT` | Client-side (Web Components)           | `test` or `live` (lowercase)                                                   |
+| `ADYEN_WEBHOOK_HMAC_KEY`        | Server-side (webhook verification)     | HMAC key generated when creating the webhook in Customer Area                  |
 
 ### 2. Register Webhook Endpoints in Adyen Customer Area
 
@@ -387,11 +395,11 @@ Go to **Customer Area → Settings → Payment methods** and enable the methods 
 
 Use Adyen's test credentials before switching to live:
 
-| Card Number | Brand | 3DS |
-|---|---|---|
-| `4111 1111 1111 1111` | Visa | No |
-| `5500 0000 0000 0004` | Mastercard | No |
-| `4212 3456 7891 0006` | Visa | Yes (challenge) |
+| Card Number           | Brand      | 3DS             |
+| --------------------- | ---------- | --------------- |
+| `4111 1111 1111 1111` | Visa       | No              |
+| `5500 0000 0000 0004` | Mastercard | No              |
+| `4212 3456 7891 0006` | Visa       | Yes (challenge) |
 
 Expiry: any future date. CVV: `737`. See [Adyen test card numbers](https://docs.adyen.com/development-resources/testing/test-card-numbers/) for more.
 
@@ -420,6 +428,7 @@ The `AddPaymentMethodDialog` component at `src/components/financials/add-payment
 ### Adyen Web Components and PCI SAQ A
 
 When using Adyen's Drop-in or individual Components:
+
 - Card fields are rendered in Adyen-hosted iframes.
 - Sensitive data never touches your client-side JavaScript or server.
 - This qualifies your integration for **PCI SAQ A**, the simplest compliance level.

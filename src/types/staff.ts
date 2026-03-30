@@ -1,7 +1,13 @@
 // Types for Staff & Scheduling API - matches Prisma schema and API responses
 
 export type EmploymentType = "FULL_TIME" | "PART_TIME" | "CONTRACTOR" | "VOLUNTEER";
-export type ShiftStatus = "SCHEDULED" | "CONFIRMED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
+export type ShiftStatus =
+  | "SCHEDULED"
+  | "CONFIRMED"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "NO_SHOW";
 export type EventStaffRole = "LEAD" | "ASSISTANT" | "VOLUNTEER" | "OBSERVER";
 
 // Certification structure

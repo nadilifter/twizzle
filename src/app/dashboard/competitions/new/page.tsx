@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { CompetitionStepper } from "../components/competition-stepper"
-import { ArrowLeft } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
+import { CompetitionStepper } from "../components/competition-stepper";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function NewCompetitionPage() {
   return (
@@ -16,13 +16,11 @@ export default function NewCompetitionPage() {
         </Button>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Create Competition</h1>
-          <p className="text-muted-foreground">
-            Set up a new competition for your organization.
-          </p>
+          <p className="text-muted-foreground">Set up a new competition for your organization.</p>
         </div>
       </div>
 
       <CompetitionStepper />
     </div>
-  )
+  );
 }

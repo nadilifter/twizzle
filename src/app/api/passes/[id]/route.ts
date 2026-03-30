@@ -19,10 +19,7 @@ const updatePassSchema = z.object({
   glCodeId: z.string().optional().nullable(),
 });
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -39,7 +36,14 @@ export async function GET(
       where: { id },
       include: {
         coveredPrograms: {
-          select: { id: true, name: true, status: true, basePrice: true, perSessionPrice: true, pricingModel: true },
+          select: {
+            id: true,
+            name: true,
+            status: true,
+            basePrice: true,
+            perSessionPrice: true,
+            pricingModel: true,
+          },
         },
         requiredForPrograms: {
           select: { id: true, name: true, status: true },
@@ -64,10 +68,7 @@ export async function GET(
   }
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -97,7 +98,9 @@ export async function PATCH(
     const { programIds, allowedGenders, ...scalarData } = validatedData;
 
     if (scalarData.hasGenderRestriction !== undefined) {
-      (scalarData as any).allowedGenders = scalarData.hasGenderRestriction ? (allowedGenders ?? []) : [];
+      (scalarData as any).allowedGenders = scalarData.hasGenderRestriction
+        ? (allowedGenders ?? [])
+        : [];
     }
 
     if (programIds && programIds.length > 0) {
@@ -127,7 +130,14 @@ export async function PATCH(
       },
       include: {
         coveredPrograms: {
-          select: { id: true, name: true, status: true, basePrice: true, perSessionPrice: true, pricingModel: true },
+          select: {
+            id: true,
+            name: true,
+            status: true,
+            basePrice: true,
+            perSessionPrice: true,
+            pricingModel: true,
+          },
         },
         athletePasses: {
           include: {

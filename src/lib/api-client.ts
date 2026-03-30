@@ -23,7 +23,7 @@ interface RequestOptions extends Omit<RequestInit, "body"> {
  */
 function buildUrl(endpoint: string, params?: object): string {
   const url = new URL(endpoint, window.location.origin);
-  
+
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== "") {
@@ -31,17 +31,14 @@ function buildUrl(endpoint: string, params?: object): string {
       }
     });
   }
-  
+
   return url.toString();
 }
 
 /**
  * Base fetch function with error handling
  */
-async function apiFetch<T>(
-  endpoint: string,
-  options: RequestOptions = {}
-): Promise<T> {
+async function apiFetch<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const { body, headers: customHeaders, ...rest } = options;
 
   const headers: HeadersInit = {
@@ -63,9 +60,10 @@ async function apiFetch<T>(
 
   if (!response.ok) {
     const errorData = isJson ? await response.json() : await response.text();
-    const message = typeof errorData === "object" && errorData.error
-      ? errorData.error
-      : `API Error: ${response.status}`;
+    const message =
+      typeof errorData === "object" && errorData.error
+        ? errorData.error
+        : `API Error: ${response.status}`;
     throw new ApiError(message, response.status, errorData);
   }
 

@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server"
-import { db } from "@/lib/db" // tenant-isolation-ok: public cart validation endpoint with no session; organizationId passed from client for Product queries
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db"; // tenant-isolation-ok: public cart validation endpoint with no session; organizationId passed from client for Product queries
 
 interface ValidateItem {
-  referenceId: string
-  type: "program" | "event" | "item" | "membership" | "competition" | "pass"
+  referenceId: string;
+  type: "program" | "event" | "item" | "membership" | "competition" | "pass";
 }
 
 /**
@@ -13,22 +13,25 @@ interface ValidateItem {
  */
 export async function POST(request: NextRequest) {
   try {
-    const { items, organizationId } = (await request.json()) as { items: ValidateItem[]; organizationId?: string }
+    const { items, organizationId } = (await request.json()) as {
+      items: ValidateItem[];
+      organizationId?: string;
+    };
 
     if (!Array.isArray(items) || items.length === 0) {
-      return NextResponse.json({ valid: [] })
+      return NextResponse.json({ valid: [] });
     }
 
-    const grouped: Record<string, string[]> = {}
+    const grouped: Record<string, string[]> = {};
     for (const item of items) {
-      const key = item.type
-      if (!grouped[key]) grouped[key] = []
-      grouped[key].push(item.referenceId)
+      const key = item.type;
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(item.referenceId);
     }
 
-    const validIds = new Set<string>()
+    const validIds = new Set<string>();
 
-    const checks: Promise<void>[] = []
+    const checks: Promise<void>[] = [];
 
     if (grouped.program) {
       checks.push(
@@ -43,11 +46,11 @@ export async function POST(request: NextRequest) {
               where: { id: { in: grouped.program } },
               select: { id: true },
             }),
-          ])
-          for (const p of programs) validIds.add(p.id)
-          for (const i of instances) validIds.add(i.id)
+          ]);
+          for (const p of programs) validIds.add(p.id);
+          for (const i of instances) validIds.add(i.id);
         })()
-      )
+      );
     }
 
     if (grouped.event) {
@@ -58,7 +61,7 @@ export async function POST(request: NextRequest) {
             select: { id: true },
           })
           .then((rows) => rows.forEach((r) => validIds.add(r.id)))
-      )
+      );
     }
 
     if (grouped.membership) {
@@ -69,7 +72,7 @@ export async function POST(request: NextRequest) {
             select: { id: true },
           })
           .then((rows) => rows.forEach((r) => validIds.add(r.id)))
-      )
+      );
     }
 
     if (grouped.competition) {
@@ -80,7 +83,7 @@ export async function POST(request: NextRequest) {
             select: { id: true },
           })
           .then((rows) => rows.forEach((r) => validIds.add(r.id)))
-      )
+      );
     }
 
     if (grouped.pass) {
@@ -91,7 +94,7 @@ export async function POST(request: NextRequest) {
             select: { id: true },
           })
           .then((rows) => rows.forEach((r) => validIds.add(r.id)))
-      )
+      );
     }
 
     if (grouped.item) {
@@ -106,17 +109,15 @@ export async function POST(request: NextRequest) {
             select: { id: true },
           })
           .then((rows) => rows.forEach((r) => validIds.add(r.id)))
-      )
+      );
     }
 
-    await Promise.all(checks)
+    await Promise.all(checks);
 
-    const valid = items
-      .filter((i) => validIds.has(i.referenceId))
-      .map((i) => i.referenceId)
+    const valid = items.filter((i) => validIds.has(i.referenceId)).map((i) => i.referenceId);
 
-    return NextResponse.json({ valid })
+    return NextResponse.json({ valid });
   } catch {
-    return NextResponse.json({ error: "Validation failed" }, { status: 500 })
+    return NextResponse.json({ error: "Validation failed" }, { status: 500 });
   }
 }

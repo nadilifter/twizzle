@@ -1,19 +1,13 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { 
-  Plus, 
-  Search, 
+  Plus,
+  Search,
   Loader2,
   Pencil,
   Trash2,
@@ -21,9 +15,9 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-} from "lucide-react"
-import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
-import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
+} from "lucide-react";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs";
 import {
   Sheet,
   SheetContent,
@@ -32,7 +26,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet"
+} from "@/components/ui/sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,7 +36,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 import {
   Table,
   TableBody,
@@ -50,25 +44,31 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Switch } from "@/components/ui/switch"
-import { toast } from "sonner"
-import { format } from "date-fns"
-import { api } from "@/lib/api-client"
-import type { 
-  Skill, 
+} from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { api } from "@/lib/api-client";
+import type {
+  Skill,
   Level,
   EvaluationTemplateWithSkills,
   EvaluationWithRelations,
   EvaluationStatus,
   ScoringType,
   CompletionType,
-} from "@/types/evaluations"
+} from "@/types/evaluations";
 
 const statusColors: Record<EvaluationStatus, string> = {
   PENDING: "bg-slate-500/10 text-slate-700 dark:text-slate-400",
@@ -77,7 +77,7 @@ const statusColors: Record<EvaluationStatus, string> = {
   RETRY: "bg-red-500/10 text-red-700 dark:text-red-400",
   EXCELLENT: "bg-purple-500/10 text-purple-700 dark:text-purple-400",
   SATISFACTORY: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
-}
+};
 
 const statusLabels: Record<EvaluationStatus, string> = {
   PENDING: "Pending",
@@ -86,28 +86,28 @@ const statusLabels: Record<EvaluationStatus, string> = {
   RETRY: "Retry",
   EXCELLENT: "Excellent",
   SATISFACTORY: "Satisfactory",
-}
+};
 
 interface TemplateFormData {
-  name: string
-  description: string
-  levelId: string
-  minAge: string
-  maxAge: string
-  isActive: boolean
-  skillIds: string[]
+  name: string;
+  description: string;
+  levelId: string;
+  minAge: string;
+  maxAge: string;
+  isActive: boolean;
+  skillIds: string[];
   // Auto-sync configuration
-  autoSyncEnabled: boolean
-  autoSyncLevels: string[]
-  autoSyncCategories: string[]
+  autoSyncEnabled: boolean;
+  autoSyncLevels: string[];
+  autoSyncCategories: string[];
   // Scoring configuration
-  scoringType: ScoringType
-  pointScaleMin: string
-  pointScaleMax: string
-  pointScalePassThreshold: string
+  scoringType: ScoringType;
+  pointScaleMin: string;
+  pointScaleMax: string;
+  pointScalePassThreshold: string;
   // Completion requirements
-  completionType: CompletionType
-  completionThreshold: string
+  completionType: CompletionType;
+  completionThreshold: string;
 }
 
 const initialFormData: TemplateFormData = {
@@ -130,142 +130,144 @@ const initialFormData: TemplateFormData = {
   // Completion defaults
   completionType: "PERCENTAGE",
   completionThreshold: "80",
-}
+};
 
 const scoringTypeLabels: Record<ScoringType, string> = {
   PASS_FAIL: "Pass/Fail",
   POINT_SCALE: "Point Scale",
-}
+};
 
 const completionTypeLabels: Record<CompletionType, string> = {
   PERCENTAGE: "Percentage",
   COUNT: "Number of Skills",
   ALL: "All Required Skills",
-}
+};
 
 export default function EvaluationsPage() {
-  const [activeTab, setActiveTab] = useState("templates")
-  
+  const [activeTab, setActiveTab] = useState("templates");
+
   // Templates state
-  const [templates, setTemplates] = useState<EvaluationTemplateWithSkills[]>([])
-  const [isLoadingTemplates, setIsLoadingTemplates] = useState(true)
-  const [templateSearch, setTemplateSearch] = useState("")
-  
+  const [templates, setTemplates] = useState<EvaluationTemplateWithSkills[]>([]);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
+  const [templateSearch, setTemplateSearch] = useState("");
+
   // Evaluations state
-  const [evaluations, setEvaluations] = useState<EvaluationWithRelations[]>([])
-  const [isLoadingEvaluations, setIsLoadingEvaluations] = useState(true)
-  const [evaluationSearch, setEvaluationSearch] = useState("")
-  
+  const [evaluations, setEvaluations] = useState<EvaluationWithRelations[]>([]);
+  const [isLoadingEvaluations, setIsLoadingEvaluations] = useState(true);
+  const [evaluationSearch, setEvaluationSearch] = useState("");
+
   // Skills for template form
-  const [skills, setSkills] = useState<Skill[]>([])
-  const [isLoadingSkills, setIsLoadingSkills] = useState(false)
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [isLoadingSkills, setIsLoadingSkills] = useState(false);
 
   // Levels for template form
-  const [levels, setLevels] = useState<Level[]>([])
-  
+  const [levels, setLevels] = useState<Level[]>([]);
+
   // Form state
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [isEditOpen, setIsEditOpen] = useState(false)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [selectedTemplate, setSelectedTemplate] = useState<EvaluationTemplateWithSkills | null>(null)
-  const [formData, setFormData] = useState<TemplateFormData>(initialFormData)
-  const [isSaving, setIsSaving] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<EvaluationTemplateWithSkills | null>(
+    null
+  );
+  const [formData, setFormData] = useState<TemplateFormData>(initialFormData);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch templates
   const fetchTemplates = useCallback(async () => {
-    setIsLoadingTemplates(true)
+    setIsLoadingTemplates(true);
     try {
-      const params: Record<string, string> = {}
-      if (templateSearch) params.search = templateSearch
+      const params: Record<string, string> = {};
+      if (templateSearch) params.search = templateSearch;
 
       const response = await api.get<{
-        data: EvaluationTemplateWithSkills[]
-        total: number
-      }>("/api/evaluation-templates", params)
-      
-      setTemplates(response.data)
+        data: EvaluationTemplateWithSkills[];
+        total: number;
+      }>("/api/evaluation-templates", params);
+
+      setTemplates(response.data);
     } catch (error) {
-      console.error("Error fetching templates:", error)
-      toast.error("Failed to load evaluation templates")
+      console.error("Error fetching templates:", error);
+      toast.error("Failed to load evaluation templates");
     } finally {
-      setIsLoadingTemplates(false)
+      setIsLoadingTemplates(false);
     }
-  }, [templateSearch])
+  }, [templateSearch]);
 
   // Fetch evaluations
   const fetchEvaluations = useCallback(async () => {
-    setIsLoadingEvaluations(true)
+    setIsLoadingEvaluations(true);
     try {
-      const params: Record<string, string> = { limit: "50" }
+      const params: Record<string, string> = { limit: "50" };
 
       const response = await api.get<{
-        data: EvaluationWithRelations[]
-        total: number
-      }>("/api/evaluations", params)
-      
-      setEvaluations(response.data)
+        data: EvaluationWithRelations[];
+        total: number;
+      }>("/api/evaluations", params);
+
+      setEvaluations(response.data);
     } catch (error) {
-      console.error("Error fetching evaluations:", error)
-      toast.error("Failed to load evaluations")
+      console.error("Error fetching evaluations:", error);
+      toast.error("Failed to load evaluations");
     } finally {
-      setIsLoadingEvaluations(false)
+      setIsLoadingEvaluations(false);
     }
-  }, [])
+  }, []);
 
   // Fetch skills for template form
   const fetchSkills = async () => {
-    setIsLoadingSkills(true)
+    setIsLoadingSkills(true);
     try {
-      const response = await api.get<{ data: Skill[] }>("/api/skills", { limit: "500" })
-      setSkills(response.data)
+      const response = await api.get<{ data: Skill[] }>("/api/skills", { limit: "500" });
+      setSkills(response.data);
     } catch (error) {
-      console.error("Error fetching skills:", error)
+      console.error("Error fetching skills:", error);
     } finally {
-      setIsLoadingSkills(false)
+      setIsLoadingSkills(false);
     }
-  }
+  };
 
   // Fetch levels
   const fetchLevels = async () => {
     try {
-      const response = await api.get<Level[]>("/api/levels")
-      setLevels(response)
+      const response = await api.get<Level[]>("/api/levels");
+      setLevels(response);
     } catch (error) {
-      console.error("Error fetching levels:", error)
+      console.error("Error fetching levels:", error);
     }
-  }
+  };
 
   // Load levels on mount
   useEffect(() => {
-    fetchLevels()
-  }, [])
+    fetchLevels();
+  }, []);
 
   useEffect(() => {
     if (activeTab === "templates") {
       const debounce = setTimeout(() => {
-        fetchTemplates()
-      }, 300)
-      return () => clearTimeout(debounce)
+        fetchTemplates();
+      }, 300);
+      return () => clearTimeout(debounce);
     } else {
-      fetchEvaluations()
+      fetchEvaluations();
     }
-  }, [activeTab, fetchTemplates, fetchEvaluations])
+  }, [activeTab, fetchTemplates, fetchEvaluations]);
 
   // Handle create template
   const handleCreate = async () => {
     if (!formData.name.trim()) {
-      toast.error("Please fill in required fields")
-      return
-    }
-    
-    // Either auto-sync must be enabled or skills must be selected
-    if (!formData.autoSyncEnabled && formData.skillIds.length === 0) {
-      toast.error("Please enable auto-sync or select at least one skill")
-      return
+      toast.error("Please fill in required fields");
+      return;
     }
 
-    setIsSaving(true)
+    // Either auto-sync must be enabled or skills must be selected
+    if (!formData.autoSyncEnabled && formData.skillIds.length === 0) {
+      toast.error("Please enable auto-sync or select at least one skill");
+      return;
+    }
+
+    setIsSaving(true);
     try {
       await api.post("/api/evaluation-templates", {
         name: formData.name,
@@ -282,40 +284,44 @@ export default function EvaluationsPage() {
         scoringType: formData.scoringType,
         pointScaleMin: formData.pointScaleMin ? parseInt(formData.pointScaleMin) : 1,
         pointScaleMax: formData.pointScaleMax ? parseInt(formData.pointScaleMax) : 10,
-        pointScalePassThreshold: formData.pointScalePassThreshold ? parseInt(formData.pointScalePassThreshold) : 7,
+        pointScalePassThreshold: formData.pointScalePassThreshold
+          ? parseInt(formData.pointScalePassThreshold)
+          : 7,
         // Completion
         completionType: formData.completionType,
-        completionThreshold: formData.completionThreshold ? parseFloat(formData.completionThreshold) : 80,
+        completionThreshold: formData.completionThreshold
+          ? parseFloat(formData.completionThreshold)
+          : 80,
         // Skills (only if not auto-syncing)
         skillIds: formData.autoSyncEnabled ? undefined : formData.skillIds,
-      })
+      });
 
-      toast.success("Evaluation template created successfully")
-      setIsCreateOpen(false)
-      setFormData(initialFormData)
-      fetchTemplates()
+      toast.success("Evaluation template created successfully");
+      setIsCreateOpen(false);
+      setFormData(initialFormData);
+      fetchTemplates();
     } catch (error) {
-      console.error("Error creating template:", error)
-      toast.error("Failed to create evaluation template")
+      console.error("Error creating template:", error);
+      toast.error("Failed to create evaluation template");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   // Handle update template
   const handleUpdate = async () => {
     if (!selectedTemplate || !formData.name.trim()) {
-      toast.error("Please fill in required fields")
-      return
-    }
-    
-    // Either auto-sync must be enabled or skills must be selected
-    if (!formData.autoSyncEnabled && formData.skillIds.length === 0) {
-      toast.error("Please enable auto-sync or select at least one skill")
-      return
+      toast.error("Please fill in required fields");
+      return;
     }
 
-    setIsSaving(true)
+    // Either auto-sync must be enabled or skills must be selected
+    if (!formData.autoSyncEnabled && formData.skillIds.length === 0) {
+      toast.error("Please enable auto-sync or select at least one skill");
+      return;
+    }
+
+    setIsSaving(true);
     try {
       await api.put(`/api/evaluation-templates/${selectedTemplate.id}`, {
         name: formData.name,
@@ -332,60 +338,63 @@ export default function EvaluationsPage() {
         scoringType: formData.scoringType,
         pointScaleMin: formData.pointScaleMin ? parseInt(formData.pointScaleMin) : 1,
         pointScaleMax: formData.pointScaleMax ? parseInt(formData.pointScaleMax) : 10,
-        pointScalePassThreshold: formData.pointScalePassThreshold ? parseInt(formData.pointScalePassThreshold) : 7,
+        pointScalePassThreshold: formData.pointScalePassThreshold
+          ? parseInt(formData.pointScalePassThreshold)
+          : 7,
         // Completion
         completionType: formData.completionType,
-        completionThreshold: formData.completionThreshold ? parseFloat(formData.completionThreshold) : 80,
+        completionThreshold: formData.completionThreshold
+          ? parseFloat(formData.completionThreshold)
+          : 80,
         // Skills (only if not auto-syncing)
         skillIds: formData.autoSyncEnabled ? undefined : formData.skillIds,
-      })
+      });
 
-      toast.success("Evaluation template updated successfully")
-      setIsEditOpen(false)
-      setSelectedTemplate(null)
-      setFormData(initialFormData)
-      fetchTemplates()
+      toast.success("Evaluation template updated successfully");
+      setIsEditOpen(false);
+      setSelectedTemplate(null);
+      setFormData(initialFormData);
+      fetchTemplates();
     } catch (error) {
-      console.error("Error updating template:", error)
-      toast.error("Failed to update evaluation template")
+      console.error("Error updating template:", error);
+      toast.error("Failed to update evaluation template");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   // Handle delete template
   const handleDelete = async () => {
-    if (!selectedTemplate) return
+    if (!selectedTemplate) return;
 
-    setIsDeleting(true)
+    setIsDeleting(true);
     try {
-      await api.delete(`/api/evaluation-templates/${selectedTemplate.id}`)
+      await api.delete(`/api/evaluation-templates/${selectedTemplate.id}`);
 
-      toast.success("Evaluation template deleted successfully")
-      setIsDeleteDialogOpen(false)
-      setSelectedTemplate(null)
-      fetchTemplates()
+      toast.success("Evaluation template deleted successfully");
+      setIsDeleteDialogOpen(false);
+      setSelectedTemplate(null);
+      fetchTemplates();
     } catch (error: unknown) {
-      console.error("Error deleting template:", error)
-      const errorMessage = error instanceof Error && 'message' in error 
-        ? error.message 
-        : "Failed to delete template"
-      toast.error(errorMessage)
+      console.error("Error deleting template:", error);
+      const errorMessage =
+        error instanceof Error && "message" in error ? error.message : "Failed to delete template";
+      toast.error(errorMessage);
     } finally {
-      setIsDeleting(false)
+      setIsDeleting(false);
     }
-  }
+  };
 
   // Open create sheet
   const openCreate = () => {
-    setFormData(initialFormData)
-    fetchSkills()
-    setIsCreateOpen(true)
-  }
+    setFormData(initialFormData);
+    fetchSkills();
+    setIsCreateOpen(true);
+  };
 
   // Open edit sheet
   const openEdit = (template: EvaluationTemplateWithSkills) => {
-    setSelectedTemplate(template)
+    setSelectedTemplate(template);
     setFormData({
       name: template.name,
       description: template.description || "",
@@ -406,10 +415,10 @@ export default function EvaluationsPage() {
       // Completion
       completionType: template.completionType || "PERCENTAGE",
       completionThreshold: template.completionThreshold?.toString() || "80",
-    })
-    fetchSkills()
-    setIsEditOpen(true)
-  }
+    });
+    fetchSkills();
+    setIsEditOpen(true);
+  };
 
   // Toggle skill selection
   const toggleSkill = (skillId: string) => {
@@ -418,41 +427,44 @@ export default function EvaluationsPage() {
       skillIds: prev.skillIds.includes(skillId)
         ? prev.skillIds.filter((id) => id !== skillId)
         : [...prev.skillIds, skillId],
-    }))
-  }
+    }));
+  };
 
   // Get age range display
   const getAgeRange = (template: EvaluationTemplateWithSkills) => {
     if (template.minAge && template.maxAge) {
-      return `Ages ${template.minAge}-${template.maxAge}`
+      return `Ages ${template.minAge}-${template.maxAge}`;
     } else if (template.minAge) {
-      return `Ages ${template.minAge}+`
+      return `Ages ${template.minAge}+`;
     } else if (template.maxAge) {
-      return `Ages up to ${template.maxAge}`
+      return `Ages up to ${template.maxAge}`;
     }
-    return "All ages"
-  }
+    return "All ages";
+  };
 
   // Filtered evaluations
   const filteredEvaluations = evaluations.filter((evaluation) => {
     if (evaluationSearch) {
-      const search = evaluationSearch.toLowerCase()
+      const search = evaluationSearch.toLowerCase();
       return (
         evaluation.athlete.name.toLowerCase().includes(search) ||
         evaluation.template?.name.toLowerCase().includes(search)
-      )
+      );
     }
-    return true
-  })
+    return true;
+  });
 
   // Group skills by category
-  const skillsByCategory = skills.reduce((acc, skill) => {
-    if (!acc[skill.category]) {
-      acc[skill.category] = []
-    }
-    acc[skill.category].push(skill)
-    return acc
-  }, {} as Record<string, Skill[]>)
+  const skillsByCategory = skills.reduce(
+    (acc, skill) => {
+      if (!acc[skill.category]) {
+        acc[skill.category] = [];
+      }
+      acc[skill.category].push(skill);
+      return acc;
+    },
+    {} as Record<string, Skill[]>
+  );
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -536,19 +548,22 @@ export default function EvaluationsPage() {
                       </div>
                       <div className="flex items-center gap-2 flex-wrap justify-end">
                         {template.level && (
-                          <Badge 
-                            style={template.level.color ? { backgroundColor: `${template.level.color}20`, color: template.level.color } : undefined}
+                          <Badge
+                            style={
+                              template.level.color
+                                ? {
+                                    backgroundColor: `${template.level.color}20`,
+                                    color: template.level.color,
+                                  }
+                                : undefined
+                            }
                             variant={template.level.color ? "outline" : "secondary"}
                           >
                             {template.level.name}
                           </Badge>
                         )}
-                        {!template.isActive && (
-                          <Badge variant="outline">Inactive</Badge>
-                        )}
-                        {template.autoSyncEnabled && (
-                          <Badge variant="secondary">Auto-sync</Badge>
-                        )}
+                        {!template.isActive && <Badge variant="outline">Inactive</Badge>}
+                        {template.autoSyncEnabled && <Badge variant="secondary">Auto-sync</Badge>}
                       </div>
                     </div>
                   </CardHeader>
@@ -563,8 +578,8 @@ export default function EvaluationsPage() {
                         {scoringTypeLabels[template.scoringType || "PASS_FAIL"]}
                       </Badge>
                       <Badge variant="outline" className="text-xs">
-                        {template.completionType === "ALL" 
-                          ? "All skills required" 
+                        {template.completionType === "ALL"
+                          ? "All skills required"
                           : template.completionType === "PERCENTAGE"
                             ? `${template.completionThreshold}% to pass`
                             : `${template.completionThreshold} skills to pass`}
@@ -588,8 +603,8 @@ export default function EvaluationsPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          setSelectedTemplate(template)
-                          setIsDeleteDialogOpen(true)
+                          setSelectedTemplate(template);
+                          setIsDeleteDialogOpen(true);
                         }}
                       >
                         <Trash2 className="h-3 w-3" />
@@ -650,24 +665,18 @@ export default function EvaluationsPage() {
                 <TableBody>
                   {filteredEvaluations.map((evaluation) => (
                     <TableRow key={evaluation.id}>
-                      <TableCell className="font-medium">
-                        {evaluation.athlete.name}
-                      </TableCell>
+                      <TableCell className="font-medium">{evaluation.athlete.name}</TableCell>
                       <TableCell>
                         {evaluation.template?.name || evaluation.level?.name || "—"}
                       </TableCell>
-                      <TableCell>
-                        {format(new Date(evaluation.date), "MMM d, yyyy")}
-                      </TableCell>
+                      <TableCell>{format(new Date(evaluation.date), "MMM d, yyyy")}</TableCell>
                       <TableCell>{evaluation.coach.name}</TableCell>
                       <TableCell>
                         <Badge className={statusColors[evaluation.status]}>
                           {statusLabels[evaluation.status]}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        {Number(evaluation.overallScore).toFixed(1)}/10
-                      </TableCell>
+                      <TableCell>{Number(evaluation.overallScore).toFixed(1)}/10</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -710,7 +719,9 @@ export default function EvaluationsPage() {
               <Label htmlFor="difficulty">Level</Label>
               <Select
                 value={formData.levelId || "none"}
-                onValueChange={(value) => setFormData({ ...formData, levelId: value === "none" ? "" : value })}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, levelId: value === "none" ? "" : value })
+                }
               >
                 <SelectTrigger id="difficulty">
                   <SelectValue placeholder="Select a level" />
@@ -767,7 +778,9 @@ export default function EvaluationsPage() {
                 <Label htmlFor="scoringType">Scoring Type</Label>
                 <Select
                   value={formData.scoringType}
-                  onValueChange={(value) => setFormData({ ...formData, scoringType: value as ScoringType })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, scoringType: value as ScoringType })
+                  }
                 >
                   <SelectTrigger id="scoringType">
                     <SelectValue />
@@ -778,7 +791,7 @@ export default function EvaluationsPage() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  {formData.scoringType === "PASS_FAIL" 
+                  {formData.scoringType === "PASS_FAIL"
                     ? "Skills are marked as Not Attempted, Attempted, or Passed"
                     : "Skills are scored on a numeric scale"}
                 </p>
@@ -815,7 +828,9 @@ export default function EvaluationsPage() {
                       min="0"
                       max="100"
                       value={formData.pointScalePassThreshold}
-                      onChange={(e) => setFormData({ ...formData, pointScalePassThreshold: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, pointScalePassThreshold: e.target.value })
+                      }
                     />
                   </div>
                 </div>
@@ -829,7 +844,9 @@ export default function EvaluationsPage() {
                 <Label htmlFor="completionType">Completion Type</Label>
                 <Select
                   value={formData.completionType}
-                  onValueChange={(value) => setFormData({ ...formData, completionType: value as CompletionType })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, completionType: value as CompletionType })
+                  }
                 >
                   <SelectTrigger id="completionType">
                     <SelectValue />
@@ -844,7 +861,9 @@ export default function EvaluationsPage() {
               {formData.completionType !== "ALL" && (
                 <div className="grid gap-2">
                   <Label htmlFor="completionThreshold">
-                    {formData.completionType === "PERCENTAGE" ? "Required Percentage" : "Required Count"}
+                    {formData.completionType === "PERCENTAGE"
+                      ? "Required Percentage"
+                      : "Required Count"}
                   </Label>
                   <Input
                     id="completionThreshold"
@@ -852,7 +871,9 @@ export default function EvaluationsPage() {
                     min="0"
                     max={formData.completionType === "PERCENTAGE" ? "100" : "1000"}
                     value={formData.completionThreshold}
-                    onChange={(e) => setFormData({ ...formData, completionThreshold: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, completionThreshold: e.target.value })
+                    }
                   />
                   <p className="text-xs text-muted-foreground">
                     {formData.completionType === "PERCENTAGE"
@@ -868,11 +889,15 @@ export default function EvaluationsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="font-medium">Auto-Sync Skills</h4>
-                  <p className="text-xs text-muted-foreground">Automatically include skills by level and category</p>
+                  <p className="text-xs text-muted-foreground">
+                    Automatically include skills by level and category
+                  </p>
                 </div>
                 <Switch
                   checked={formData.autoSyncEnabled}
-                  onCheckedChange={(checked) => setFormData({ ...formData, autoSyncEnabled: checked })}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, autoSyncEnabled: checked })
+                  }
                 />
               </div>
               {formData.autoSyncEnabled && (
@@ -886,9 +911,17 @@ export default function EvaluationsPage() {
                             checked={formData.autoSyncLevels.includes(level.id)}
                             onCheckedChange={(checked) => {
                               if (checked) {
-                                setFormData({ ...formData, autoSyncLevels: [...formData.autoSyncLevels, level.id] })
+                                setFormData({
+                                  ...formData,
+                                  autoSyncLevels: [...formData.autoSyncLevels, level.id],
+                                });
                               } else {
-                                setFormData({ ...formData, autoSyncLevels: formData.autoSyncLevels.filter((l) => l !== level.id) })
+                                setFormData({
+                                  ...formData,
+                                  autoSyncLevels: formData.autoSyncLevels.filter(
+                                    (l) => l !== level.id
+                                  ),
+                                });
                               }
                             }}
                           />
@@ -909,9 +942,17 @@ export default function EvaluationsPage() {
                             checked={formData.autoSyncCategories.includes(category)}
                             onCheckedChange={(checked) => {
                               if (checked) {
-                                setFormData({ ...formData, autoSyncCategories: [...formData.autoSyncCategories, category] })
+                                setFormData({
+                                  ...formData,
+                                  autoSyncCategories: [...formData.autoSyncCategories, category],
+                                });
                               } else {
-                                setFormData({ ...formData, autoSyncCategories: formData.autoSyncCategories.filter((c) => c !== category) })
+                                setFormData({
+                                  ...formData,
+                                  autoSyncCategories: formData.autoSyncCategories.filter(
+                                    (c) => c !== category
+                                  ),
+                                });
                               }
                             }}
                           />
@@ -928,47 +969,45 @@ export default function EvaluationsPage() {
             </div>
 
             {!formData.autoSyncEnabled && (
-            <div className="grid gap-2">
-              <Label>Skills * ({formData.skillIds.length} selected)</Label>
-              {isLoadingSkills ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                </div>
-              ) : skills.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4">
-                  No skills available. Create skills first.
-                </p>
-              ) : (
-                <div className="border rounded-lg max-h-[300px] overflow-y-auto">
-                  {Object.entries(skillsByCategory).map(([category, categorySkills]) => (
-                    <div key={category} className="border-b last:border-b-0">
-                      <div className="px-3 py-2 bg-muted/50 font-medium text-sm">
-                        {category}
-                      </div>
-                      <div className="divide-y">
-                        {categorySkills.map((skill) => (
-                          <label
-                            key={skill.id}
-                            className="flex items-center gap-3 px-3 py-2 hover:bg-muted/30 cursor-pointer"
-                          >
-                            <Checkbox
-                              checked={formData.skillIds.includes(skill.id)}
-                              onCheckedChange={() => toggleSkill(skill.id)}
-                            />
-                            <div className="flex-1">
-                              <div className="text-sm font-medium">{skill.name}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {skill.skillLevel?.name || "No level"}
+              <div className="grid gap-2">
+                <Label>Skills * ({formData.skillIds.length} selected)</Label>
+                {isLoadingSkills ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : skills.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4">
+                    No skills available. Create skills first.
+                  </p>
+                ) : (
+                  <div className="border rounded-lg max-h-[300px] overflow-y-auto">
+                    {Object.entries(skillsByCategory).map(([category, categorySkills]) => (
+                      <div key={category} className="border-b last:border-b-0">
+                        <div className="px-3 py-2 bg-muted/50 font-medium text-sm">{category}</div>
+                        <div className="divide-y">
+                          {categorySkills.map((skill) => (
+                            <label
+                              key={skill.id}
+                              className="flex items-center gap-3 px-3 py-2 hover:bg-muted/30 cursor-pointer"
+                            >
+                              <Checkbox
+                                checked={formData.skillIds.includes(skill.id)}
+                                onCheckedChange={() => toggleSkill(skill.id)}
+                              />
+                              <div className="flex-1">
+                                <div className="text-sm font-medium">{skill.name}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {skill.skillLevel?.name || "No level"}
+                                </div>
                               </div>
-                            </div>
-                          </label>
-                        ))}
+                            </label>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
           <SheetFooter>
@@ -985,9 +1024,7 @@ export default function EvaluationsPage() {
         <SheetContent className="sm:max-w-xl overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Edit Evaluation Template</SheetTitle>
-            <SheetDescription>
-              Update template details and skills.
-            </SheetDescription>
+            <SheetDescription>Update template details and skills.</SheetDescription>
           </SheetHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
@@ -1013,7 +1050,9 @@ export default function EvaluationsPage() {
               <Label htmlFor="edit-difficulty">Level</Label>
               <Select
                 value={formData.levelId || "none"}
-                onValueChange={(value) => setFormData({ ...formData, levelId: value === "none" ? "" : value })}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, levelId: value === "none" ? "" : value })
+                }
               >
                 <SelectTrigger id="edit-difficulty">
                   <SelectValue placeholder="Select a level" />
@@ -1070,7 +1109,9 @@ export default function EvaluationsPage() {
                 <Label htmlFor="edit-scoringType">Scoring Type</Label>
                 <Select
                   value={formData.scoringType}
-                  onValueChange={(value) => setFormData({ ...formData, scoringType: value as ScoringType })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, scoringType: value as ScoringType })
+                  }
                 >
                   <SelectTrigger id="edit-scoringType">
                     <SelectValue />
@@ -1113,7 +1154,9 @@ export default function EvaluationsPage() {
                       min="0"
                       max="100"
                       value={formData.pointScalePassThreshold}
-                      onChange={(e) => setFormData({ ...formData, pointScalePassThreshold: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, pointScalePassThreshold: e.target.value })
+                      }
                     />
                   </div>
                 </div>
@@ -1127,7 +1170,9 @@ export default function EvaluationsPage() {
                 <Label htmlFor="edit-completionType">Completion Type</Label>
                 <Select
                   value={formData.completionType}
-                  onValueChange={(value) => setFormData({ ...formData, completionType: value as CompletionType })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, completionType: value as CompletionType })
+                  }
                 >
                   <SelectTrigger id="edit-completionType">
                     <SelectValue />
@@ -1142,7 +1187,9 @@ export default function EvaluationsPage() {
               {formData.completionType !== "ALL" && (
                 <div className="grid gap-2">
                   <Label htmlFor="edit-completionThreshold">
-                    {formData.completionType === "PERCENTAGE" ? "Required Percentage" : "Required Count"}
+                    {formData.completionType === "PERCENTAGE"
+                      ? "Required Percentage"
+                      : "Required Count"}
                   </Label>
                   <Input
                     id="edit-completionThreshold"
@@ -1150,7 +1197,9 @@ export default function EvaluationsPage() {
                     min="0"
                     max={formData.completionType === "PERCENTAGE" ? "100" : "1000"}
                     value={formData.completionThreshold}
-                    onChange={(e) => setFormData({ ...formData, completionThreshold: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, completionThreshold: e.target.value })
+                    }
                   />
                 </div>
               )}
@@ -1161,11 +1210,15 @@ export default function EvaluationsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="font-medium">Auto-Sync Skills</h4>
-                  <p className="text-xs text-muted-foreground">Automatically include skills by level and category</p>
+                  <p className="text-xs text-muted-foreground">
+                    Automatically include skills by level and category
+                  </p>
                 </div>
                 <Switch
                   checked={formData.autoSyncEnabled}
-                  onCheckedChange={(checked) => setFormData({ ...formData, autoSyncEnabled: checked })}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, autoSyncEnabled: checked })
+                  }
                 />
               </div>
               {formData.autoSyncEnabled && (
@@ -1179,9 +1232,17 @@ export default function EvaluationsPage() {
                             checked={formData.autoSyncLevels.includes(level.id)}
                             onCheckedChange={(checked) => {
                               if (checked) {
-                                setFormData({ ...formData, autoSyncLevels: [...formData.autoSyncLevels, level.id] })
+                                setFormData({
+                                  ...formData,
+                                  autoSyncLevels: [...formData.autoSyncLevels, level.id],
+                                });
                               } else {
-                                setFormData({ ...formData, autoSyncLevels: formData.autoSyncLevels.filter((l) => l !== level.id) })
+                                setFormData({
+                                  ...formData,
+                                  autoSyncLevels: formData.autoSyncLevels.filter(
+                                    (l) => l !== level.id
+                                  ),
+                                });
                               }
                             }}
                           />
@@ -1202,9 +1263,17 @@ export default function EvaluationsPage() {
                             checked={formData.autoSyncCategories.includes(category)}
                             onCheckedChange={(checked) => {
                               if (checked) {
-                                setFormData({ ...formData, autoSyncCategories: [...formData.autoSyncCategories, category] })
+                                setFormData({
+                                  ...formData,
+                                  autoSyncCategories: [...formData.autoSyncCategories, category],
+                                });
                               } else {
-                                setFormData({ ...formData, autoSyncCategories: formData.autoSyncCategories.filter((c) => c !== category) })
+                                setFormData({
+                                  ...formData,
+                                  autoSyncCategories: formData.autoSyncCategories.filter(
+                                    (c) => c !== category
+                                  ),
+                                });
                               }
                             }}
                           />
@@ -1218,43 +1287,41 @@ export default function EvaluationsPage() {
             </div>
 
             {!formData.autoSyncEnabled && (
-            <div className="grid gap-2">
-              <Label>Skills * ({formData.skillIds.length} selected)</Label>
-              {isLoadingSkills ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                </div>
-              ) : (
-                <div className="border rounded-lg max-h-[300px] overflow-y-auto">
-                  {Object.entries(skillsByCategory).map(([category, categorySkills]) => (
-                    <div key={category} className="border-b last:border-b-0">
-                      <div className="px-3 py-2 bg-muted/50 font-medium text-sm">
-                        {category}
-                      </div>
-                      <div className="divide-y">
-                        {categorySkills.map((skill) => (
-                          <label
-                            key={skill.id}
-                            className="flex items-center gap-3 px-3 py-2 hover:bg-muted/30 cursor-pointer"
-                          >
-                            <Checkbox
-                              checked={formData.skillIds.includes(skill.id)}
-                              onCheckedChange={() => toggleSkill(skill.id)}
-                            />
-                            <div className="flex-1">
-                              <div className="text-sm font-medium">{skill.name}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {skill.skillLevel?.name || "No level"}
+              <div className="grid gap-2">
+                <Label>Skills * ({formData.skillIds.length} selected)</Label>
+                {isLoadingSkills ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : (
+                  <div className="border rounded-lg max-h-[300px] overflow-y-auto">
+                    {Object.entries(skillsByCategory).map(([category, categorySkills]) => (
+                      <div key={category} className="border-b last:border-b-0">
+                        <div className="px-3 py-2 bg-muted/50 font-medium text-sm">{category}</div>
+                        <div className="divide-y">
+                          {categorySkills.map((skill) => (
+                            <label
+                              key={skill.id}
+                              className="flex items-center gap-3 px-3 py-2 hover:bg-muted/30 cursor-pointer"
+                            >
+                              <Checkbox
+                                checked={formData.skillIds.includes(skill.id)}
+                                onCheckedChange={() => toggleSkill(skill.id)}
+                              />
+                              <div className="flex-1">
+                                <div className="text-sm font-medium">{skill.name}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {skill.skillLevel?.name || "No level"}
+                                </div>
                               </div>
-                            </div>
-                          </label>
-                        ))}
+                            </label>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
           <SheetFooter>
@@ -1272,10 +1339,12 @@ export default function EvaluationsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Evaluation Template</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{selectedTemplate?.name}&quot;? This action cannot be undone.
+              Are you sure you want to delete &quot;{selectedTemplate?.name}&quot;? This action
+              cannot be undone.
               {selectedTemplate?._count?.evaluations && selectedTemplate._count.evaluations > 0 && (
                 <span className="block mt-2 text-yellow-600">
-                  Note: This template has {selectedTemplate._count.evaluations} evaluation(s) associated with it.
+                  Note: This template has {selectedTemplate._count.evaluations} evaluation(s)
+                  associated with it.
                 </span>
               )}
             </AlertDialogDescription>
@@ -1294,5 +1363,5 @@ export default function EvaluationsPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
+  );
 }

@@ -22,7 +22,10 @@ interface UseAttendanceReturn {
   error: string | null;
   fetchAttendance: (params?: AttendanceQueryParams) => Promise<void>;
   markAttendance: (data: CreateAttendancePayload) => Promise<AttendanceWithRelations | null>;
-  updateAttendance: (id: string, data: UpdateAttendancePayload) => Promise<AttendanceWithRelations | null>;
+  updateAttendance: (
+    id: string,
+    data: UpdateAttendancePayload
+  ) => Promise<AttendanceWithRelations | null>;
   bulkMarkAttendance: (data: BulkAttendancePayload) => Promise<boolean>;
   deleteAttendance: (id: string) => Promise<boolean>;
 }
@@ -45,8 +48,11 @@ export function useAttendance(options: UseAttendanceOptions = {}): UseAttendance
       const cleanParams = Object.fromEntries(
         Object.entries(queryParams).filter(([_, v]) => v !== undefined)
       );
-      
-      const response = await api.get<{ data: AttendanceWithRelations[] }>("/api/attendance", cleanParams);
+
+      const response = await api.get<{ data: AttendanceWithRelations[] }>(
+        "/api/attendance",
+        cleanParams
+      );
       setAttendances(response.data);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch attendance";
@@ -62,9 +68,9 @@ export function useAttendance(options: UseAttendanceOptions = {}): UseAttendance
     setError(null);
     try {
       const result = await api.post<AttendanceWithRelations>("/api/attendance", data);
-      setAttendances(prev => {
+      setAttendances((prev) => {
         // If exists, update, else add
-        const index = prev.findIndex(a => a.id === result.id);
+        const index = prev.findIndex((a) => a.id === result.id);
         if (index >= 0) {
           const newArr = [...prev];
           newArr[index] = result;
@@ -87,7 +93,7 @@ export function useAttendance(options: UseAttendanceOptions = {}): UseAttendance
     setError(null);
     try {
       const result = await api.patch<AttendanceWithRelations>(`/api/attendance/${id}`, data);
-      setAttendances(prev => prev.map(a => a.id === id ? result : a));
+      setAttendances((prev) => prev.map((a) => (a.id === id ? result : a)));
       return result;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to update attendance";
@@ -98,33 +104,36 @@ export function useAttendance(options: UseAttendanceOptions = {}): UseAttendance
     }
   }, []);
 
-  const bulkMarkAttendance = useCallback(async (data: BulkAttendancePayload) => {
-    setIsUpdating(true);
-    setError(null);
-    try {
-      // Transform records to attendances format expected by API
-      await api.post("/api/attendance", {
-        eventId: data.eventId,
-        attendances: data.records,
-      });
-      // Refresh after bulk update
-      await fetchAttendance({ eventId: data.eventId });
-      return true;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to bulk mark attendance";
-      setError(message);
-      return false;
-    } finally {
-      setIsUpdating(false);
-    }
-  }, [fetchAttendance]);
+  const bulkMarkAttendance = useCallback(
+    async (data: BulkAttendancePayload) => {
+      setIsUpdating(true);
+      setError(null);
+      try {
+        // Transform records to attendances format expected by API
+        await api.post("/api/attendance", {
+          eventId: data.eventId,
+          attendances: data.records,
+        });
+        // Refresh after bulk update
+        await fetchAttendance({ eventId: data.eventId });
+        return true;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to bulk mark attendance";
+        setError(message);
+        return false;
+      } finally {
+        setIsUpdating(false);
+      }
+    },
+    [fetchAttendance]
+  );
 
   const deleteAttendance = useCallback(async (id: string) => {
     setIsUpdating(true);
     setError(null);
     try {
       await api.delete(`/api/attendance/${id}`);
-      setAttendances(prev => prev.filter(a => a.id !== id));
+      setAttendances((prev) => prev.filter((a) => a.id !== id));
       return true;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to delete attendance";
@@ -151,6 +160,6 @@ export function useAttendance(options: UseAttendanceOptions = {}): UseAttendance
     markAttendance,
     updateAttendance,
     bulkMarkAttendance,
-    deleteAttendance
+    deleteAttendance,
   };
 }

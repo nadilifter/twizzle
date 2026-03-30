@@ -11,14 +11,35 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import { Calendar as CalendarWidget } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import {
-  ArrowLeft, User, Users, Shield, Calendar, ChevronRight,
-  Eye, EyeOff, Crown, Pencil, Loader2,
+  ArrowLeft,
+  User,
+  Users,
+  Shield,
+  Calendar,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  Crown,
+  Pencil,
+  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -114,7 +135,11 @@ export default function AthleteDetailPage() {
       });
       if (res.ok) {
         setAthlete((prev: any) => ({ ...prev, allowGuardianClaims: checked }));
-        toast.success(checked ? "Other guardians can now find and claim this athlete" : "Guardian claims disabled");
+        toast.success(
+          checked
+            ? "Other guardians can now find and claim this athlete"
+            : "Guardian claims disabled"
+        );
       } else {
         const data = await res.json();
         toast.error(data.error || "Failed to update setting");
@@ -126,7 +151,10 @@ export default function AthleteDetailPage() {
     }
   };
 
-  const handleToggleVisibility = async (field: "shareRegistrations" | "shareFinancials", checked: boolean) => {
+  const handleToggleVisibility = async (
+    field: "shareRegistrations" | "shareFinancials",
+    checked: boolean
+  ) => {
     setIsSaving(true);
     try {
       const res = await fetch(`/api/athletes/${athleteId}/guardian-settings`, {
@@ -152,9 +180,7 @@ export default function AthleteDetailPage() {
     setEditForm({
       firstName: athlete.firstName || "",
       lastName: athlete.lastName || "",
-      birthDate: athlete.birthDate
-        ? new Date(athlete.birthDate).toISOString().split("T")[0]
-        : "",
+      birthDate: athlete.birthDate ? new Date(athlete.birthDate).toISOString().split("T")[0] : "",
       gender: athlete.gender || "",
     });
     setIsEditOpen(true);
@@ -230,10 +256,7 @@ export default function AthleteDetailPage() {
   const athleteDisplayName = athlete
     ? `${athlete.firstName} ${athlete.lastName}`.trim() || athlete.name
     : undefined;
-  useBreadcrumbOverride(
-    athlete ? `/athletes/${athleteId}` : undefined,
-    athleteDisplayName,
-  );
+  useBreadcrumbOverride(athlete ? `/athletes/${athleteId}` : undefined, athleteDisplayName);
 
   if (isLoading) {
     return (
@@ -271,16 +294,14 @@ export default function AthleteDetailPage() {
               name={displayName}
               uploadUrl={`/api/athletes/${athleteId}/avatar`}
               onAvatarChange={(url) =>
-                setAthlete((prev: any) => prev ? { ...prev, avatar: url } : prev)
+                setAthlete((prev: any) => (prev ? { ...prev, avatar: url } : prev))
               }
               size="sm"
             />
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <h1 className="text-xl font-bold">{displayName}</h1>
-                {athlete.isSelf && (
-                  <Badge variant="secondary">You</Badge>
-                )}
+                {athlete.isSelf && <Badge variant="secondary">You</Badge>}
                 {!athlete.isSelf && (
                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={openEditSheet}>
                     <Pencil className="h-3.5 w-3.5" />
@@ -292,7 +313,10 @@ export default function AthleteDetailPage() {
                   <span>Born {format(new Date(athlete.birthDate), "MMM d, yyyy")}</span>
                 )}
                 {athlete.gender && (
-                  <span>{athlete.gender.charAt(0) + athlete.gender.slice(1).toLowerCase().replace(/_/g, " ")}</span>
+                  <span>
+                    {athlete.gender.charAt(0) +
+                      athlete.gender.slice(1).toLowerCase().replace(/_/g, " ")}
+                  </span>
                 )}
                 <Badge variant="outline">{athlete.status}</Badge>
               </div>
@@ -313,9 +337,12 @@ export default function AthleteDetailPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <Label htmlFor="allow-claims" className="text-sm font-medium">Allow other guardians</Label>
+                <Label htmlFor="allow-claims" className="text-sm font-medium">
+                  Allow other guardians
+                </Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  When enabled, other users can find and claim this athlete by matching name and date of birth
+                  When enabled, other users can find and claim this athlete by matching name and
+                  date of birth
                 </p>
               </div>
               <Switch
@@ -345,10 +372,16 @@ export default function AthleteDetailPage() {
               {guardians
                 .sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0))
                 .map((g) => (
-                  <div key={g.id} className="flex items-center justify-between p-3 rounded-lg border">
+                  <div
+                    key={g.id}
+                    className="flex items-center justify-between p-3 rounded-lg border"
+                  >
                     <div className="flex items-center gap-3">
                       <Avatar className="h-9 w-9">
-                        <AvatarImage src={g.user?.avatar || undefined} alt={g.user?.name || "Guardian"} />
+                        <AvatarImage
+                          src={g.user?.avatar || undefined}
+                          alt={g.user?.name || "Guardian"}
+                        />
                         <AvatarFallback className="text-sm">
                           {g.user?.name?.[0] || "?"}
                         </AvatarFallback>
@@ -392,11 +425,17 @@ export default function AthleteDetailPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-xs text-muted-foreground">Control what other guardians of this athlete can see about your activity.</p>
+          <p className="text-xs text-muted-foreground">
+            Control what other guardians of this athlete can see about your activity.
+          </p>
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="share-regs" className="text-sm font-medium">Share registrations</Label>
-              <p className="text-xs text-muted-foreground mt-0.5">Other guardians can see programs you&apos;ve registered this athlete for</p>
+              <Label htmlFor="share-regs" className="text-sm font-medium">
+                Share registrations
+              </Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Other guardians can see programs you&apos;ve registered this athlete for
+              </p>
             </div>
             <Switch
               id="share-regs"
@@ -407,8 +446,12 @@ export default function AthleteDetailPage() {
           </div>
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="share-fin" className="text-sm font-medium">Share financial details</Label>
-              <p className="text-xs text-muted-foreground mt-0.5">Other guardians can see your invoices and payments for this athlete</p>
+              <Label htmlFor="share-fin" className="text-sm font-medium">
+                Share financial details
+              </Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Other guardians can see your invoices and payments for this athlete
+              </p>
             </div>
             <Switch
               id="share-fin"
@@ -479,7 +522,8 @@ export default function AthleteDetailPage() {
                         <div>
                           <div className="font-medium text-sm">{group.programName}</div>
                           <div className="text-xs text-muted-foreground">
-                            {group.instances.length} session{group.instances.length !== 1 ? "s" : ""}
+                            {group.instances.length} session
+                            {group.instances.length !== 1 ? "s" : ""}
                             {dateRange && ` · ${dateRange}`}
                           </div>
                         </div>
@@ -489,13 +533,18 @@ export default function AthleteDetailPage() {
                     <CollapsibleContent>
                       <div className="ml-4 mt-1 space-y-0.5 border-l pl-3 pb-1">
                         {group.instances.map((r: any) => (
-                          <div key={r.id} className="flex items-center justify-between py-1.5 text-sm">
+                          <div
+                            key={r.id}
+                            className="flex items-center justify-between py-1.5 text-sm"
+                          >
                             <span className="text-muted-foreground">
                               {r.programInstance?.date
                                 ? format(new Date(r.programInstance.date), "MMM d, yyyy")
                                 : "No date"}
                             </span>
-                            <Badge variant="outline" className="text-xs">{r.status}</Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {r.status}
+                            </Badge>
                           </div>
                         ))}
                       </div>
@@ -506,7 +555,9 @@ export default function AthleteDetailPage() {
               {registrations?.competitionEntries?.map((c: any) => (
                 <div key={c.id} className="flex items-center justify-between p-3 rounded-lg border">
                   <div>
-                    <div className="font-medium text-sm">{c.competition?.name || "Competition"}</div>
+                    <div className="font-medium text-sm">
+                      {c.competition?.name || "Competition"}
+                    </div>
                     <div className="text-xs text-muted-foreground">
                       {c.competitionCategory?.name || "Competition Entry"}
                     </div>
@@ -555,17 +606,29 @@ export default function AthleteDetailPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className={cn("w-full justify-start text-left font-normal", !editForm.birthDate && "text-muted-foreground")}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !editForm.birthDate && "text-muted-foreground"
+                    )}
                   >
                     <Calendar className="mr-2 h-4 w-4" />
-                    {editForm.birthDate ? format(new Date(editForm.birthDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                    {editForm.birthDate
+                      ? format(new Date(editForm.birthDate + "T12:00:00Z"), "PPP")
+                      : "Pick a date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <CalendarWidget
                     mode="single"
-                    selected={editForm.birthDate ? new Date(editForm.birthDate + "T12:00:00Z") : undefined}
-                    onSelect={(date) => setEditForm((prev) => ({ ...prev, birthDate: date ? format(date, "yyyy-MM-dd") : "" }))}
+                    selected={
+                      editForm.birthDate ? new Date(editForm.birthDate + "T12:00:00Z") : undefined
+                    }
+                    onSelect={(date) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        birthDate: date ? format(date, "yyyy-MM-dd") : "",
+                      }))
+                    }
                     captionLayout="dropdown"
                     fromYear={1940}
                     toYear={new Date().getFullYear()}
@@ -627,7 +690,9 @@ function PortalCustomInfoSection({ athleteId }: { athleteId: string }) {
         if (!cancelled) setIsLoading(false);
       });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [athleteId]);
 
   if (isLoading) return null;
@@ -660,12 +725,20 @@ function PortalCustomInfoSection({ athleteId }: { athleteId: string }) {
                             {r.question?.requireSignatureOnYes && r.signatureData && (
                               <div>
                                 <p className="text-xs text-muted-foreground mb-1">Signature</p>
-                                <img src={r.signatureData} alt="Signature" className="max-h-16 border rounded" />
+                                <img
+                                  src={r.signatureData}
+                                  alt="Signature"
+                                  className="max-h-16 border rounded"
+                                />
                               </div>
                             )}
                           </div>
                         ) : r.question?.questionType === "SIGNATURE" && r.signatureData ? (
-                          <img src={r.signatureData} alt="Signature" className="max-h-16 border rounded" />
+                          <img
+                            src={r.signatureData}
+                            alt="Signature"
+                            className="max-h-16 border rounded"
+                          />
                         ) : r.question?.questionType === "IMAGE" && r.fileUrl ? (
                           <a
                             href={r.fileUrl}

@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import { Check, Palette } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { COLOR_PRESETS } from "@/lib/color-presets"
+import { Check, Palette } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { COLOR_PRESETS } from "@/lib/color-presets";
 
 interface ColorSelectorProps {
-  value: string
-  onChange: (color: string) => void
-  label?: string
+  value: string;
+  onChange: (color: string) => void;
+  label?: string;
 }
 
 export function ColorSelector({ value, onChange, label = "Color" }: ColorSelectorProps) {
@@ -28,9 +28,7 @@ export function ColorSelector({ value, onChange, label = "Color" }: ColorSelecto
             }}
             onClick={() => onChange(color)}
           >
-            {value === color && (
-              <Check className="h-4 w-4 text-white" />
-            )}
+            {value === color && <Check className="h-4 w-4 text-white" />}
           </button>
         ))}
       </div>
@@ -45,5 +43,5 @@ export function ColorSelector({ value, onChange, label = "Color" }: ColorSelecto
         <span className="text-sm text-muted-foreground">{value}</span>
       </div>
     </div>
-  )
+  );
 }

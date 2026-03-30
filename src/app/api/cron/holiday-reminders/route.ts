@@ -24,18 +24,12 @@ export async function GET(request: NextRequest) {
   try {
     if (!CRON_SECRET) {
       console.error("CRON_SECRET is not configured");
-      return NextResponse.json(
-        { error: "Server misconfiguration" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
     }
 
     const authHeader = request.headers.get("authorization");
     if (authHeader !== `Bearer ${CRON_SECRET}`) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const result = await sendHolidayReminderEmails();

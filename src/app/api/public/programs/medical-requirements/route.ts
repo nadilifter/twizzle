@@ -14,10 +14,7 @@ export async function GET(request: NextRequest) {
     const { organizationId } = result;
 
     if (!programIdsParam) {
-      return NextResponse.json(
-        { error: "programIds is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "programIds is required" }, { status: 400 });
     }
 
     const programIds = programIdsParam.split(",").filter(Boolean);
@@ -73,9 +70,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching medical requirements:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch medical requirements" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch medical requirements" }, { status: 500 });
   }
 }

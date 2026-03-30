@@ -15,11 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -40,10 +36,7 @@ interface CreateEventDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function CreateEventDialog({
-  open,
-  onOpenChange,
-}: CreateEventDialogProps) {
+export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps) {
   const { goToDate } = useCalendarStore();
   const { createEvent, isCreating } = useEvents({ autoFetch: false });
   const { users: coaches } = useUsers({ role: "COACH" });
@@ -78,8 +71,8 @@ export function CreateEventDialog({
     now.setSeconds(0, 0);
 
     if (eventDate < now) {
-        toast.error("Event date and time must be in the future");
-        return;
+      toast.error("Event date and time must be in the future");
+      return;
     }
 
     const result = await createEvent({
@@ -93,32 +86,31 @@ export function CreateEventDialog({
       timezone: timezone || null,
       capacity: capacity ? parseInt(capacity) : undefined,
       coachId: coachId === "none" ? null : coachId,
-      requiredMembershipInstanceIds: requiredMembershipIds.length > 0 ? requiredMembershipIds : undefined,
+      requiredMembershipInstanceIds:
+        requiredMembershipIds.length > 0 ? requiredMembershipIds : undefined,
     });
 
     if (result) {
-        goToDate(date);
-        setTitle("");
-        setDate(new Date());
-        setStartTime("");
-        setEndTime("");
-        setMeetingLink("");
-        setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
-        setCapacity("");
-        setCoachId("none");
-        setRequiredMembershipIds([]);
-        onOpenChange(false);
-        toast.success("Event created successfully");
-        // Trigger a refresh if possible, or reload
-        window.location.reload(); 
+      goToDate(date);
+      setTitle("");
+      setDate(new Date());
+      setStartTime("");
+      setEndTime("");
+      setMeetingLink("");
+      setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
+      setCapacity("");
+      setCoachId("none");
+      setRequiredMembershipIds([]);
+      onOpenChange(false);
+      toast.success("Event created successfully");
+      // Trigger a refresh if possible, or reload
+      window.location.reload();
     }
   };
 
   const toggleMembership = (instanceId: string) => {
-    setRequiredMembershipIds(prev => 
-      prev.includes(instanceId) 
-        ? prev.filter(id => id !== instanceId)
-        : [...prev, instanceId]
+    setRequiredMembershipIds((prev) =>
+      prev.includes(instanceId) ? prev.filter((id) => id !== instanceId) : [...prev, instanceId]
     );
   };
 
@@ -206,7 +198,7 @@ export function CreateEventDialog({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-               <div className="grid gap-2">
+              <div className="grid gap-2">
                 <Label htmlFor="capacity">Capacity (Optional)</Label>
                 <Input
                   id="capacity"
@@ -254,24 +246,26 @@ export function CreateEventDialog({
                 ) : (
                   memberships.map((group) => (
                     <div key={group.id} className="space-y-2">
-                      <p className="text-sm font-semibold sticky top-0 bg-background pb-1">{group.name}</p>
+                      <p className="text-sm font-semibold sticky top-0 bg-background pb-1">
+                        {group.name}
+                      </p>
                       {group.instances && group.instances.length > 0 ? (
                         <div className="ml-2 space-y-2">
-                           {group.instances.map(instance => (
-                             <div key={instance.id} className="flex items-center space-x-2">
-                               <Checkbox 
-                                  id={instance.id} 
-                                  checked={requiredMembershipIds.includes(instance.id)}
-                                  onCheckedChange={() => toggleMembership(instance.id)}
-                               />
-                               <label
-                                  htmlFor={instance.id}
-                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                >
-                                  {instance.name}
-                                </label>
-                             </div>
-                           ))}
+                          {group.instances.map((instance) => (
+                            <div key={instance.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={instance.id}
+                                checked={requiredMembershipIds.includes(instance.id)}
+                                onCheckedChange={() => toggleMembership(instance.id)}
+                              />
+                              <label
+                                htmlFor={instance.id}
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                              >
+                                {instance.name}
+                              </label>
+                            </div>
+                          ))}
                         </div>
                       ) : (
                         <p className="ml-2 text-xs text-muted-foreground">No instances</p>
@@ -292,14 +286,9 @@ export function CreateEventDialog({
                 onChange={(e) => setMeetingLink(e.target.value)}
               />
             </div>
-
           </div>
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={isCreating}>

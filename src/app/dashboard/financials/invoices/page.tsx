@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import * as React from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -9,52 +9,59 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { LinkIcon, SendIcon, MoreHorizontalIcon, Search, Loader2, ExternalLinkIcon } from "lucide-react"
-import { CreateInvoiceSheet } from "@/components/invoices/create-invoice-sheet"
-import { format } from "date-fns"
-import { toast } from "sonner"
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  LinkIcon,
+  SendIcon,
+  MoreHorizontalIcon,
+  Search,
+  Loader2,
+  ExternalLinkIcon,
+} from "lucide-react";
+import { CreateInvoiceSheet } from "@/components/invoices/create-invoice-sheet";
+import { format } from "date-fns";
+import { toast } from "sonner";
 
 interface Invoice {
-  id: string
-  reference: string
+  id: string;
+  reference: string;
   user: {
-    id: string
-    name: string
-    email: string
-  } | null
+    id: string;
+    name: string;
+    email: string;
+  } | null;
   lineItems: Array<{
-    id: string
-    description: string
-    quantity: number
-    unitPrice: number
-    total: number
-    athlete?: { id: string; name: string } | null
-  }>
-  status: "DRAFT" | "SENT" | "PAID" | "OVERDUE" | "CANCELLED" | "PARTIAL"
-  dueDate: string
-  subtotal: number
-  tax: number
-  total: number
-  paidAmount: number
-  balanceDue: number
-  createdAt: string
+    id: string;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+    athlete?: { id: string; name: string } | null;
+  }>;
+  status: "DRAFT" | "SENT" | "PAID" | "OVERDUE" | "CANCELLED" | "PARTIAL";
+  dueDate: string;
+  subtotal: number;
+  tax: number;
+  total: number;
+  paidAmount: number;
+  balanceDue: number;
+  createdAt: string;
 }
 
 interface InvoiceStats {
-  outstanding: number
-  outstandingCount: number
-  collected: number
-  successRate: number
+  outstanding: number;
+  outstandingCount: number;
+  collected: number;
+  successRate: number;
 }
 
 const statusColors: Record<string, "default" | "outline" | "secondary" | "destructive"> = {
@@ -64,95 +71,95 @@ const statusColors: Record<string, "default" | "outline" | "secondary" | "destru
   OVERDUE: "destructive",
   CANCELLED: "secondary",
   PARTIAL: "outline",
-}
+};
 
 export default function InvoicesPage() {
-  const [invoices, setInvoices] = React.useState<Invoice[]>([])
-  const [loading, setLoading] = React.useState(true)
-  const [search, setSearch] = React.useState("")
-  const [siteSubdomain, setSiteSubdomain] = React.useState<string | null>(null)
+  const [invoices, setInvoices] = React.useState<Invoice[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [search, setSearch] = React.useState("");
+  const [siteSubdomain, setSiteSubdomain] = React.useState<string | null>(null);
   const [stats, setStats] = React.useState<InvoiceStats>({
     outstanding: 0,
     outstandingCount: 0,
     collected: 0,
     successRate: 0,
-  })
+  });
 
   const fetchInvoices = React.useCallback(async () => {
     try {
-      const params = new URLSearchParams()
-      if (search) params.set("search", search)
-      
-      const response = await fetch(`/api/invoices?${params.toString()}`)
-      if (!response.ok) throw new Error("Failed to fetch invoices")
-      
-      const data = await response.json()
-      setInvoices(data.data)
-      if (data.siteSubdomain) setSiteSubdomain(data.siteSubdomain)
-      
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+
+      const response = await fetch(`/api/invoices?${params.toString()}`);
+      if (!response.ok) throw new Error("Failed to fetch invoices");
+
+      const data = await response.json();
+      setInvoices(data.data);
+      if (data.siteSubdomain) setSiteSubdomain(data.siteSubdomain);
+
       // Calculate stats
       const outstanding = data.data
         .filter((inv: Invoice) => ["SENT", "PARTIAL", "OVERDUE"].includes(inv.status))
-        .reduce((sum: number, inv: Invoice) => sum + Number(inv.balanceDue), 0)
-      
-      const outstandingCount = data.data.filter((inv: Invoice) => 
+        .reduce((sum: number, inv: Invoice) => sum + Number(inv.balanceDue), 0);
+
+      const outstandingCount = data.data.filter((inv: Invoice) =>
         ["SENT", "PARTIAL", "OVERDUE"].includes(inv.status)
-      ).length
-      
+      ).length;
+
       const collected = data.data
         .filter((inv: Invoice) => inv.status === "PAID")
-        .reduce((sum: number, inv: Invoice) => sum + Number(inv.total), 0)
-      
-      const totalInvoices = data.data.length
-      const paidInvoices = data.data.filter((inv: Invoice) => inv.status === "PAID").length
-      const successRate = totalInvoices > 0 ? Math.round((paidInvoices / totalInvoices) * 100) : 0
-      
+        .reduce((sum: number, inv: Invoice) => sum + Number(inv.total), 0);
+
+      const totalInvoices = data.data.length;
+      const paidInvoices = data.data.filter((inv: Invoice) => inv.status === "PAID").length;
+      const successRate = totalInvoices > 0 ? Math.round((paidInvoices / totalInvoices) * 100) : 0;
+
       setStats({
         outstanding,
         outstandingCount,
         collected,
         successRate,
-      })
+      });
     } catch (error) {
-      console.error("Error fetching invoices:", error)
-      toast.error("Failed to load invoices")
+      console.error("Error fetching invoices:", error);
+      toast.error("Failed to load invoices");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [search])
+  }, [search]);
 
   React.useEffect(() => {
-    fetchInvoices()
-  }, [fetchInvoices])
+    fetchInvoices();
+  }, [fetchInvoices]);
 
   const handleCopyPaymentLink = (invoice: Invoice) => {
     // In a real implementation, this would generate/copy an Adyen payment link
-    const link = `${window.location.origin}/pay/${invoice.reference}`
-    navigator.clipboard.writeText(link)
-    toast.success("Payment link copied to clipboard")
-  }
+    const link = `${window.location.origin}/pay/${invoice.reference}`;
+    navigator.clipboard.writeText(link);
+    toast.success("Payment link copied to clipboard");
+  };
 
   const handleResendEmail = async (invoice: Invoice) => {
     if (!invoice.user?.email) {
-      toast.error("No guardian email associated with this invoice")
-      return
+      toast.error("No guardian email associated with this invoice");
+      return;
     }
     // In a real implementation, this would trigger an email
-    toast.success(`Email sent to ${invoice.user.email}`)
-  }
+    toast.success(`Email sent to ${invoice.user.email}`);
+  };
 
   const handleViewReceipt = (invoice: Invoice) => {
     if (!siteSubdomain) {
-      toast.error("No site configured for this organization")
-      return
+      toast.error("No site configured for this organization");
+      return;
     }
-    const host = window.location.host
+    const host = window.location.host;
     const baseDomain = host.includes("localhost")
       ? host.replace(/^[^.]+\./, "")
-      : host.replace(/^[^.]+\./, "")
-    const protocol = window.location.protocol
-    window.open(`${protocol}//${siteSubdomain}.${baseDomain}/receipt/${invoice.id}`, "_blank")
-  }
+      : host.replace(/^[^.]+\./, "");
+    const protocol = window.location.protocol;
+    window.open(`${protocol}//${siteSubdomain}.${baseDomain}/receipt/${invoice.id}`, "_blank");
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -176,7 +183,8 @@ export default function InvoicesPage() {
           <CardContent>
             <div className="text-2xl font-bold">${stats.outstanding.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">
-              Across {stats.outstandingCount} active invoice{stats.outstandingCount !== 1 ? "s" : ""}
+              Across {stats.outstandingCount} active invoice
+              {stats.outstandingCount !== 1 ? "s" : ""}
             </p>
           </CardContent>
         </Card>
@@ -258,7 +266,8 @@ export default function InvoicesPage() {
                       {invoice.lineItems[0]?.description || "Invoice"}
                       {invoice.lineItems.length > 1 && (
                         <span className="text-muted-foreground">
-                          {" "}+{invoice.lineItems.length - 1} more
+                          {" "}
+                          +{invoice.lineItems.length - 1} more
                         </span>
                       )}
                     </TableCell>
@@ -311,5 +320,5 @@ export default function InvoicesPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

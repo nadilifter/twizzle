@@ -1,51 +1,59 @@
-"use client"
+"use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
-type Overrides = Record<string, string>
+type Overrides = Record<string, string>;
 
 interface BreadcrumbOverrideContextValue {
-  overrides: Overrides
-  setOverride: (path: string, label: string) => void
-  removeOverride: (path: string) => void
+  overrides: Overrides;
+  setOverride: (path: string, label: string) => void;
+  removeOverride: (path: string) => void;
 }
 
 const BreadcrumbOverrideContext = createContext<BreadcrumbOverrideContextValue>({
   overrides: {},
   setOverride: () => {},
   removeOverride: () => {},
-})
+});
 
 export function BreadcrumbOverrideProvider({ children }: { children: React.ReactNode }) {
-  const [overrides, setOverrides] = useState<Overrides>({})
+  const [overrides, setOverrides] = useState<Overrides>({});
 
   const setOverride = useCallback((path: string, label: string) => {
-    setOverrides((prev) => (prev[path] === label ? prev : { ...prev, [path]: label }))
-  }, [])
+    setOverrides((prev) => (prev[path] === label ? prev : { ...prev, [path]: label }));
+  }, []);
 
   const removeOverride = useCallback((path: string) => {
     setOverrides((prev) => {
-      if (!(path in prev)) return prev
-      const next = { ...prev }
-      delete next[path]
-      return next
-    })
-  }, [])
+      if (!(path in prev)) return prev;
+      const next = { ...prev };
+      delete next[path];
+      return next;
+    });
+  }, []);
 
   const value = useMemo(
     () => ({ overrides, setOverride, removeOverride }),
-    [overrides, setOverride, removeOverride],
-  )
+    [overrides, setOverride, removeOverride]
+  );
 
   return (
     <BreadcrumbOverrideContext.Provider value={value}>
       {children}
     </BreadcrumbOverrideContext.Provider>
-  )
+  );
 }
 
 export function useBreadcrumbOverrides() {
-  return useContext(BreadcrumbOverrideContext)
+  return useContext(BreadcrumbOverrideContext);
 }
 
 /**
@@ -53,21 +61,21 @@ export function useBreadcrumbOverrides() {
  * Automatically cleans up on unmount.
  */
 export function useBreadcrumbOverride(path: string | undefined, label: string | undefined) {
-  const { setOverride, removeOverride } = useBreadcrumbOverrides()
-  const prevPathRef = useRef<string>()
+  const { setOverride, removeOverride } = useBreadcrumbOverrides();
+  const prevPathRef = useRef<string>();
 
   useEffect(() => {
     if (prevPathRef.current && prevPathRef.current !== path) {
-      removeOverride(prevPathRef.current)
+      removeOverride(prevPathRef.current);
     }
-    prevPathRef.current = path
+    prevPathRef.current = path;
 
     if (path && label) {
-      setOverride(path, label)
+      setOverride(path, label);
     }
 
     return () => {
-      if (path) removeOverride(path)
-    }
-  }, [path, label, setOverride, removeOverride])
+      if (path) removeOverride(path);
+    };
+  }, [path, label, setOverride, removeOverride]);
 }

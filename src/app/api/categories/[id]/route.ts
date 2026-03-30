@@ -10,10 +10,7 @@ const updateCategorySchema = z.object({
 });
 
 // GET /api/categories/[id]
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -44,18 +41,12 @@ export async function GET(
     return NextResponse.json(category);
   } catch (error) {
     console.error("Error fetching category:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch category" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch category" }, { status: 500 });
   }
 }
 
 // PATCH /api/categories/[id]
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -99,16 +90,10 @@ export async function PATCH(
     return NextResponse.json(category);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error updating category:", error);
-    return NextResponse.json(
-      { error: "Failed to update category" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update category" }, { status: 500 });
   }
 }
 
@@ -145,9 +130,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting category:", error);
-    return NextResponse.json(
-      { error: "Failed to delete category" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete category" }, { status: 500 });
   }
 }

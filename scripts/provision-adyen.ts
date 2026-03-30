@@ -19,49 +19,49 @@
  * backward compatibility but is no longer the preferred approach).
  */
 
-import { execSync } from "child_process"
-import * as fs from "fs"
+import { execSync } from "child_process";
+import * as fs from "fs";
 
-const { loadEnvConfig } = require("@next/env")
-loadEnvConfig(process.cwd())
+const { loadEnvConfig } = require("@next/env");
+loadEnvConfig(process.cwd());
 
 // ---------------------------------------------------------------------------
 // Environment resolution
 // ---------------------------------------------------------------------------
 
-type Environment = "production" | "staging" | "development" | "local"
+type Environment = "production" | "staging" | "development" | "local";
 
 const ADMIN_URLS: Record<Environment, string> = {
   production: "https://admin.uplifterinc.com",
   staging: "https://admin.upliftergymnastics.com",
   development: "https://admin.uplifterdev.com",
   local: process.env.WEBHOOK_TUNNEL_URL || "http://localhost:3000",
-}
+};
 
 // ---------------------------------------------------------------------------
 // CLI argument parsing
 // ---------------------------------------------------------------------------
 
 function parseArgs() {
-  const args = process.argv.slice(2)
-  const parsed: Record<string, string | boolean> = {}
+  const args = process.argv.slice(2);
+  const parsed: Record<string, string | boolean> = {};
 
   for (let i = 0; i < args.length; i++) {
-    const arg = args[i]
+    const arg = args[i];
     if (arg === "--dry-run") {
-      parsed.dryRun = true
+      parsed.dryRun = true;
     } else if (arg === "--env" && args[i + 1]) {
-      parsed.env = args[++i]
+      parsed.env = args[++i];
     } else if (arg === "--output" && args[i + 1]) {
-      parsed.output = args[++i]
+      parsed.output = args[++i];
     } else if (arg === "--deploy-ssh" && args[i + 1]) {
-      parsed.deploySsh = args[++i]
+      parsed.deploySsh = args[++i];
     } else if (arg === "--help" || arg === "-h") {
-      printUsage()
-      process.exit(0)
+      printUsage();
+      process.exit(0);
     }
   }
-  return parsed
+  return parsed;
 }
 
 function printUsage() {
@@ -82,7 +82,7 @@ Examples:
   npx tsx scripts/provision-adyen.ts --env staging --dry-run
   npx tsx scripts/provision-adyen.ts --env staging --output .env.adyen
   npx tsx scripts/provision-adyen.ts --env production --deploy-ssh uplifter-prod
-`)
+`);
 }
 
 // ---------------------------------------------------------------------------
@@ -90,11 +90,11 @@ Examples:
 // ---------------------------------------------------------------------------
 
 interface CredentialSpec {
-  label: string
-  description: string
-  envKeyApiKey: string
-  envKeyClientKey?: string
-  roles: string[]
+  label: string;
+  description: string;
+  envKeyApiKey: string;
+  envKeyClientKey?: string;
+  roles: string[];
 }
 
 const API_CREDENTIALS: CredentialSpec[] = [
@@ -127,21 +127,19 @@ const API_CREDENTIALS: CredentialSpec[] = [
     label: "Legal Entity Management",
     description: "Uplifter LEM (company-scoped)",
     envKeyApiKey: "ADYEN_LEM_API_KEY",
-    roles: [
-      "Legal Entity Management API - All",
-    ],
+    roles: ["Legal Entity Management API - All"],
   },
-]
+];
 
 // ---------------------------------------------------------------------------
 // Webhook definitions
 // ---------------------------------------------------------------------------
 
 interface WebhookSpec {
-  label: string
-  url: string
-  envKey: string
-  description: string
+  label: string;
+  url: string;
+  envKey: string;
+  description: string;
 }
 
 function getWebhookConfigs(adminUrl: string): WebhookSpec[] {
@@ -170,7 +168,7 @@ function getWebhookConfigs(adminUrl: string): WebhookSpec[] {
       envKey: "ADYEN_BP_NEGBAL_WEBHOOK_HMAC_KEY",
       description: "Negative Balance Compensation Warning webhook",
     },
-  ]
+  ];
 }
 
 // ---------------------------------------------------------------------------
@@ -178,148 +176,156 @@ function getWebhookConfigs(adminUrl: string): WebhookSpec[] {
 // ---------------------------------------------------------------------------
 
 async function main() {
-  const args = parseArgs()
-  const DRY_RUN = !!args.dryRun
-  const targetEnv = args.env as Environment | undefined
+  const args = parseArgs();
+  const DRY_RUN = !!args.dryRun;
+  const targetEnv = args.env as Environment | undefined;
 
   if (!targetEnv || !ADMIN_URLS[targetEnv]) {
-    console.error("ERROR: --env is required. Must be one of: production, staging, development, local")
-    process.exit(1)
+    console.error(
+      "ERROR: --env is required. Must be one of: production, staging, development, local"
+    );
+    process.exit(1);
   }
 
-  const ADYEN_API_KEY = process.env.ADYEN_API_KEY
+  const ADYEN_API_KEY = process.env.ADYEN_API_KEY;
   if (!ADYEN_API_KEY) {
-    console.error("ERROR: ADYEN_API_KEY is not set in your local .env file.")
-    console.error("       This key must have the 'Management API - API credentials read and write' role.")
-    process.exit(1)
+    console.error("ERROR: ADYEN_API_KEY is not set in your local .env file.");
+    console.error(
+      "       This key must have the 'Management API - API credentials read and write' role."
+    );
+    process.exit(1);
   }
 
-  const adminUrl = ADMIN_URLS[targetEnv]
+  const adminUrl = ADMIN_URLS[targetEnv];
 
-  console.log("===========================================")
-  console.log("  Adyen Provisioning")
-  console.log(`  Environment: ${targetEnv}`)
-  console.log(`  Admin URL:   ${adminUrl}`)
-  if (DRY_RUN) console.log("  MODE: DRY RUN (no changes will be made)")
-  console.log("===========================================\n")
+  console.log("===========================================");
+  console.log("  Adyen Provisioning");
+  console.log(`  Environment: ${targetEnv}`);
+  console.log(`  Admin URL:   ${adminUrl}`);
+  if (DRY_RUN) console.log("  MODE: DRY RUN (no changes will be made)");
+  console.log("===========================================\n");
 
-  const { Client, ManagementAPI } = require("@adyen/api-library")
-  const adyenEnv = targetEnv === "production" ? "LIVE" : "TEST"
-  const client = new Client({ apiKey: ADYEN_API_KEY, environment: adyenEnv })
-  const mgmt = new ManagementAPI(client)
+  const { Client, ManagementAPI } = require("@adyen/api-library");
+  const adyenEnv = targetEnv === "production" ? "LIVE" : "TEST";
+  const client = new Client({ apiKey: ADYEN_API_KEY, environment: adyenEnv });
+  const mgmt = new ManagementAPI(client);
 
   // Step 1: Discover Company ID
-  console.log("[Step 1/4] Discovering Company ID...")
-  const companiesResponse = await mgmt.AccountCompanyLevelApi.listCompanyAccounts()
-  const companies = companiesResponse.data || []
+  console.log("[Step 1/4] Discovering Company ID...");
+  const companiesResponse = await mgmt.AccountCompanyLevelApi.listCompanyAccounts();
+  const companies = companiesResponse.data || [];
   if (companies.length === 0) {
-    console.error("ERROR: No company accounts found for this API key.")
-    process.exit(1)
+    console.error("ERROR: No company accounts found for this API key.");
+    process.exit(1);
   }
-  const companyId = companies[0].id
-  console.log(`  Found company: ${companyId} (${companies[0].name || ""})\n`)
+  const companyId = companies[0].id;
+  console.log(`  Found company: ${companyId} (${companies[0].name || ""})\n`);
 
-  const generatedKeys: Record<string, string> = {}
+  const generatedKeys: Record<string, string> = {};
 
   // Step 2: Create/find API credentials
-  console.log("[Step 2/4] Setting up API credentials...\n")
+  console.log("[Step 2/4] Setting up API credentials...\n");
 
-  const existingCreds = await mgmt.APICredentialsCompanyLevelApi
-    .listApiCredentials(companyId, 1, 100)
-  const existingCredsList: any[] = existingCreds.data || []
+  const existingCreds = await mgmt.APICredentialsCompanyLevelApi.listApiCredentials(
+    companyId,
+    1,
+    100
+  );
+  const existingCredsList: any[] = existingCreds.data || [];
 
   for (const spec of API_CREDENTIALS) {
-    console.log(`  ${spec.label}`)
+    console.log(`  ${spec.label}`);
 
-    const existing = existingCredsList.find(
-      (c: any) => c.description === spec.description
-    )
+    const existing = existingCredsList.find((c: any) => c.description === spec.description);
 
     if (existing) {
-      console.log(`    Found existing: ${existing.id}`)
+      console.log(`    Found existing: ${existing.id}`);
 
       if (!DRY_RUN) {
-        const keyResult = await mgmt.APICredentialsCompanyLevelApi
-          .generateNewApiKey(companyId, existing.id)
-        generatedKeys[spec.envKeyApiKey] = keyResult.apiKey
-        console.log(`    API key regenerated: ${keyResult.apiKey.substring(0, 12)}...`)
+        const keyResult = await mgmt.APICredentialsCompanyLevelApi.generateNewApiKey(
+          companyId,
+          existing.id
+        );
+        generatedKeys[spec.envKeyApiKey] = keyResult.apiKey;
+        console.log(`    API key regenerated: ${keyResult.apiKey.substring(0, 12)}...`);
         if (spec.envKeyClientKey && existing.clientKey) {
-          generatedKeys[spec.envKeyClientKey] = existing.clientKey
-          console.log(`    Client key: ${existing.clientKey.substring(0, 12)}...`)
+          generatedKeys[spec.envKeyClientKey] = existing.clientKey;
+          console.log(`    Client key: ${existing.clientKey.substring(0, 12)}...`);
         }
       } else {
-        generatedKeys[spec.envKeyApiKey] = "DRY_RUN_PLACEHOLDER"
-        if (spec.envKeyClientKey) generatedKeys[spec.envKeyClientKey] = "DRY_RUN_PLACEHOLDER"
-        console.log(`    [dry-run] Would regenerate API key`)
+        generatedKeys[spec.envKeyApiKey] = "DRY_RUN_PLACEHOLDER";
+        if (spec.envKeyClientKey) generatedKeys[spec.envKeyClientKey] = "DRY_RUN_PLACEHOLDER";
+        console.log(`    [dry-run] Would regenerate API key`);
       }
     } else {
       if (DRY_RUN) {
-        console.log(`    [dry-run] Would create credential: ${spec.description}`)
-        generatedKeys[spec.envKeyApiKey] = "DRY_RUN_PLACEHOLDER"
-        if (spec.envKeyClientKey) generatedKeys[spec.envKeyClientKey] = "DRY_RUN_PLACEHOLDER"
+        console.log(`    [dry-run] Would create credential: ${spec.description}`);
+        generatedKeys[spec.envKeyApiKey] = "DRY_RUN_PLACEHOLDER";
+        if (spec.envKeyClientKey) generatedKeys[spec.envKeyClientKey] = "DRY_RUN_PLACEHOLDER";
       } else {
         try {
-          const created = await mgmt.APICredentialsCompanyLevelApi
-            .createApiCredential(companyId, {
-              description: spec.description,
-              roles: spec.roles,
-              allowedOrigins: [],
-            })
-          console.log(`    Created: ${created.id}`)
+          const created = await mgmt.APICredentialsCompanyLevelApi.createApiCredential(companyId, {
+            description: spec.description,
+            roles: spec.roles,
+            allowedOrigins: [],
+          });
+          console.log(`    Created: ${created.id}`);
 
-          const keyResult = await mgmt.APICredentialsCompanyLevelApi
-            .generateNewApiKey(companyId, created.id)
-          generatedKeys[spec.envKeyApiKey] = keyResult.apiKey
-          console.log(`    API key: ${keyResult.apiKey.substring(0, 12)}...`)
+          const keyResult = await mgmt.APICredentialsCompanyLevelApi.generateNewApiKey(
+            companyId,
+            created.id
+          );
+          generatedKeys[spec.envKeyApiKey] = keyResult.apiKey;
+          console.log(`    API key: ${keyResult.apiKey.substring(0, 12)}...`);
 
           if (spec.envKeyClientKey && created.clientKey) {
-            generatedKeys[spec.envKeyClientKey] = created.clientKey
-            console.log(`    Client key: ${created.clientKey.substring(0, 12)}...`)
+            generatedKeys[spec.envKeyClientKey] = created.clientKey;
+            console.log(`    Client key: ${created.clientKey.substring(0, 12)}...`);
           }
         } catch (error: any) {
-          console.error(`    ERROR creating credential: ${error.message || error}`)
-          console.error(`    You may need to create this credential manually in the Customer Area.`)
+          console.error(`    ERROR creating credential: ${error.message || error}`);
+          console.error(
+            `    You may need to create this credential manually in the Customer Area.`
+          );
         }
       }
     }
-    console.log()
+    console.log();
   }
 
   // Step 3: Create webhooks and generate HMAC keys
-  console.log("[Step 3/4] Creating webhooks and generating HMAC keys...\n")
+  console.log("[Step 3/4] Creating webhooks and generating HMAC keys...\n");
 
-  const webhookConfigs = getWebhookConfigs(adminUrl)
+  const webhookConfigs = getWebhookConfigs(adminUrl);
 
-  const existingWebhooks = await mgmt.WebhooksCompanyLevelApi.listAllWebhooks(companyId, 1, 100)
-  const existingWebhookList: any[] = existingWebhooks.data || []
+  const existingWebhooks = await mgmt.WebhooksCompanyLevelApi.listAllWebhooks(companyId, 1, 100);
+  const existingWebhookList: any[] = existingWebhooks.data || [];
 
   for (const config of webhookConfigs) {
-    console.log(`  ${config.label}`)
-    console.log(`    URL: ${config.url}`)
+    console.log(`  ${config.label}`);
+    console.log(`    URL: ${config.url}`);
 
-    const matchingWebhooks = existingWebhookList.filter(
-      (wh: any) => wh.url === config.url
-    )
+    const matchingWebhooks = existingWebhookList.filter((wh: any) => wh.url === config.url);
 
     // For the standard payment webhook, reuse existing if found
-    const isStandard = config.envKey === "ADYEN_WEBHOOK_HMAC_KEY"
-    const reuseExisting = isStandard && matchingWebhooks.length > 0
+    const isStandard = config.envKey === "ADYEN_WEBHOOK_HMAC_KEY";
+    const reuseExisting = isStandard && matchingWebhooks.length > 0;
 
     if (reuseExisting) {
-      const existing = matchingWebhooks[0]
-      console.log(`    Reusing existing webhook: ${existing.id}`)
+      const existing = matchingWebhooks[0];
+      console.log(`    Reusing existing webhook: ${existing.id}`);
       if (!DRY_RUN) {
-        const hmac = await mgmt.WebhooksCompanyLevelApi.generateHmacKey(companyId, existing.id)
-        generatedKeys[config.envKey] = hmac.hmacKey
-        console.log(`    HMAC: ${hmac.hmacKey.substring(0, 12)}...`)
+        const hmac = await mgmt.WebhooksCompanyLevelApi.generateHmacKey(companyId, existing.id);
+        generatedKeys[config.envKey] = hmac.hmacKey;
+        console.log(`    HMAC: ${hmac.hmacKey.substring(0, 12)}...`);
       } else {
-        generatedKeys[config.envKey] = "DRY_RUN_PLACEHOLDER"
-        console.log(`    [dry-run] Would regenerate HMAC key`)
+        generatedKeys[config.envKey] = "DRY_RUN_PLACEHOLDER";
+        console.log(`    [dry-run] Would regenerate HMAC key`);
       }
     } else {
       if (DRY_RUN) {
-        console.log(`    [dry-run] Would create webhook`)
-        generatedKeys[config.envKey] = "DRY_RUN_PLACEHOLDER"
+        console.log(`    [dry-run] Would create webhook`);
+        generatedKeys[config.envKey] = "DRY_RUN_PLACEHOLDER";
       } else {
         const webhook = await mgmt.WebhooksCompanyLevelApi.setUpWebhook(companyId, {
           type: "standard",
@@ -329,25 +335,25 @@ async function main() {
           filterMerchantAccountType: "allAccounts",
           filterMerchantAccounts: [],
           description: config.description,
-        })
-        console.log(`    Created: ${webhook.id}`)
+        });
+        console.log(`    Created: ${webhook.id}`);
 
-        const hmac = await mgmt.WebhooksCompanyLevelApi.generateHmacKey(companyId, webhook.id)
-        generatedKeys[config.envKey] = hmac.hmacKey
-        console.log(`    HMAC: ${hmac.hmacKey.substring(0, 12)}...`)
+        const hmac = await mgmt.WebhooksCompanyLevelApi.generateHmacKey(companyId, webhook.id);
+        generatedKeys[config.envKey] = hmac.hmacKey;
+        console.log(`    HMAC: ${hmac.hmacKey.substring(0, 12)}...`);
       }
     }
-    console.log()
+    console.log();
   }
 
   // Add static env vars
-  generatedKeys["ADYEN_ENVIRONMENT"] = targetEnv === "production" ? "LIVE" : "TEST"
-  generatedKeys["NEXT_PUBLIC_ADYEN_ENVIRONMENT"] = targetEnv === "production" ? "live" : "test"
+  generatedKeys["ADYEN_ENVIRONMENT"] = targetEnv === "production" ? "LIVE" : "TEST";
+  generatedKeys["NEXT_PUBLIC_ADYEN_ENVIRONMENT"] = targetEnv === "production" ? "live" : "test";
 
   // Step 4: Output
-  console.log("[Step 4/4] Outputting configuration...\n")
+  console.log("[Step 4/4] Outputting configuration...\n");
 
-  const envLines: string[] = []
+  const envLines: string[] = [];
   const keyOrder = [
     "ADYEN_API_KEY",
     "ADYEN_ENVIRONMENT",
@@ -359,85 +365,85 @@ async function main() {
     "ADYEN_BP_CONFIG_WEBHOOK_HMAC_KEY",
     "ADYEN_BP_TRANSFER_WEBHOOK_HMAC_KEY",
     "ADYEN_BP_NEGBAL_WEBHOOK_HMAC_KEY",
-  ]
+  ];
 
   for (const key of keyOrder) {
     if (generatedKeys[key]) {
-      envLines.push(`${key}=${generatedKeys[key]}`)
+      envLines.push(`${key}=${generatedKeys[key]}`);
     }
   }
   // Any remaining keys not in the order list
   for (const [key, value] of Object.entries(generatedKeys)) {
     if (!keyOrder.includes(key)) {
-      envLines.push(`${key}=${value}`)
+      envLines.push(`${key}=${value}`);
     }
   }
 
-  const envFragment = envLines.join("\n")
+  const envFragment = envLines.join("\n");
 
   if (args.output && typeof args.output === "string") {
     if (!DRY_RUN) {
-      fs.writeFileSync(args.output, envFragment + "\n")
-      console.log(`  Written to ${args.output}`)
+      fs.writeFileSync(args.output, envFragment + "\n");
+      console.log(`  Written to ${args.output}`);
     } else {
-      console.log(`  [dry-run] Would write to ${args.output}`)
+      console.log(`  [dry-run] Would write to ${args.output}`);
     }
   }
 
   if (args.deploySsh && typeof args.deploySsh === "string") {
-    const sshHost = args.deploySsh
-    const envFilePath = "~/.env.uplifter"
+    const sshHost = args.deploySsh;
+    const envFilePath = "~/.env.uplifter";
 
     if (DRY_RUN) {
-      console.log(`  [dry-run] Would SSH to ${sshHost} and update ${envFilePath}`)
+      console.log(`  [dry-run] Would SSH to ${sshHost} and update ${envFilePath}`);
     } else {
-      const sshCommands: string[] = []
+      const sshCommands: string[] = [];
       for (const [key, value] of Object.entries(generatedKeys)) {
-        const escapedValue = value.replace(/[&/\\]/g, "\\$&")
+        const escapedValue = value.replace(/[&/\\]/g, "\\$&");
         sshCommands.push(
           `if grep -q "^#\\?${key}=" ${envFilePath} 2>/dev/null; then ` +
-          `sed -i "s|^#\\?${key}=.*|${key}=${escapedValue}|" ${envFilePath}; ` +
-          `else echo "${key}=${escapedValue}" >> ${envFilePath}; fi`
-        )
+            `sed -i "s|^#\\?${key}=.*|${key}=${escapedValue}|" ${envFilePath}; ` +
+            `else echo "${key}=${escapedValue}" >> ${envFilePath}; fi`
+        );
       }
       try {
-        console.log(`  Connecting to ${sshHost}...`)
-        execSync(`ssh ${sshHost} '${sshCommands.join(" && ")}'`, { stdio: "inherit" })
-        console.log("  Environment variables updated on remote host.\n")
+        console.log(`  Connecting to ${sshHost}...`);
+        execSync(`ssh ${sshHost} '${sshCommands.join(" && ")}'`, { stdio: "inherit" });
+        console.log("  Environment variables updated on remote host.\n");
       } catch {
-        console.error(`  ERROR: Failed to update ${sshHost}. Set variables manually:`)
-        console.error(envFragment)
+        console.error(`  ERROR: Failed to update ${sshHost}. Set variables manually:`);
+        console.error(envFragment);
       }
     }
   }
 
   // Always print the fragment to stdout
-  console.log("\n--- Generated .env fragment ---")
+  console.log("\n--- Generated .env fragment ---");
   for (const line of envLines) {
-    const [key, val] = line.split("=")
-    const display = DRY_RUN ? "[dry-run]" : `${val.substring(0, 16)}...`
-    console.log(`  ${key}=${display}`)
+    const [key, val] = line.split("=");
+    const display = DRY_RUN ? "[dry-run]" : `${val.substring(0, 16)}...`;
+    console.log(`  ${key}=${display}`);
   }
 
-  console.log("\n===========================================")
-  console.log("  Provisioning Complete!")
-  console.log("===========================================")
-  console.log(`  Environment: ${targetEnv}`)
-  console.log(`  API credentials: ${API_CREDENTIALS.length}`)
-  console.log(`  Webhooks: ${webhookConfigs.length}`)
-  console.log()
-  console.log("  Next steps:")
-  console.log("    1. Add the generated values to your environment's .env or secrets manager")
-  console.log("    2. Also set these manually (not auto-provisioned):")
-  console.log("       ADYEN_BALANCE_PLATFORM=UplifterLLC")
-  console.log("       ADYEN_PLATFORM_MERCHANT_ACCOUNT=<your merchant account>")
-  console.log("       ADYEN_LIABLE_BALANCE_ACCOUNT_ID=<your liable balance account>")
-  console.log("    3. Deploy to pick up the new environment variables")
-  console.log("    4. Test webhooks from the Adyen Customer Area")
-  console.log()
+  console.log("\n===========================================");
+  console.log("  Provisioning Complete!");
+  console.log("===========================================");
+  console.log(`  Environment: ${targetEnv}`);
+  console.log(`  API credentials: ${API_CREDENTIALS.length}`);
+  console.log(`  Webhooks: ${webhookConfigs.length}`);
+  console.log();
+  console.log("  Next steps:");
+  console.log("    1. Add the generated values to your environment's .env or secrets manager");
+  console.log("    2. Also set these manually (not auto-provisioned):");
+  console.log("       ADYEN_BALANCE_PLATFORM=UplifterLLC");
+  console.log("       ADYEN_PLATFORM_MERCHANT_ACCOUNT=<your merchant account>");
+  console.log("       ADYEN_LIABLE_BALANCE_ACCOUNT_ID=<your liable balance account>");
+  console.log("    3. Deploy to pick up the new environment variables");
+  console.log("    4. Test webhooks from the Adyen Customer Area");
+  console.log();
 }
 
 main().catch((error) => {
-  console.error("Provisioning failed:", error)
-  process.exit(1)
-})
+  console.error("Provisioning failed:", error);
+  process.exit(1);
+});

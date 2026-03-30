@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getAuthSession } from "@/lib/auth"
-import { db } from "@/lib/db"
-import { z } from "zod"
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthSession } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { z } from "zod";
 
 const axisValueSchema = z.object({
   id: z.string().optional(),
@@ -10,8 +10,11 @@ const axisValueSchema = z.object({
   displayOrder: z.number().int().default(0),
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
-  allowedGenders: z.array(z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"])).optional().default([]),
-})
+  allowedGenders: z
+    .array(z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]))
+    .optional()
+    .default([]),
+});
 
 const individualEntrySchema = z.object({
   id: z.string().optional(),
@@ -21,11 +24,14 @@ const individualEntrySchema = z.object({
   hasGenderRestriction: z.boolean().default(false),
   hasAgeRestriction: z.boolean().default(false),
   hasCapacityRestriction: z.boolean().default(false),
-  allowedGenders: z.array(z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"])).optional().default([]),
+  allowedGenders: z
+    .array(z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]))
+    .optional()
+    .default([]),
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
   capacity: z.number().int().min(1).optional().nullable(),
-})
+});
 
 const updateTemplateSchema = z.object({
   name: z.string().min(1).optional(),
@@ -38,26 +44,27 @@ const updateTemplateSchema = z.object({
   restrictionAxis: z.enum(["ROW", "COLUMN"]).optional().nullable(),
   axisValues: z.array(axisValueSchema).optional(),
   // Combination entries as a map of "rowValueId:colValueId" -> isActive
-  combinationUpdates: z.array(z.object({
-    rowValueId: z.string(),
-    colValueId: z.string(),
-    isActive: z.boolean(),
-  })).optional(),
+  combinationUpdates: z
+    .array(
+      z.object({
+        rowValueId: z.string(),
+        colValueId: z.string(),
+        isActive: z.boolean(),
+      })
+    )
+    .optional(),
   // INDIVIDUAL specific
   individualEntries: z.array(individualEntrySchema).optional(),
-})
+});
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session?.user?.isSuperAdmin) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await params
+    const { id } = await params;
     const template = await db.competitionCategoryTemplate.findUnique({
       where: { id },
       include: {
@@ -66,35 +73,29 @@ export async function GET(
         combinationEntries: true,
         individualEntries: { orderBy: { displayOrder: "asc" } },
       },
-    })
+    });
 
     if (!template) {
-      return NextResponse.json({ error: "Template not found" }, { status: 404 })
+      return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
 
-    return NextResponse.json(template)
+    return NextResponse.json(template);
   } catch (error) {
-    console.error("Error fetching template:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch template" },
-      { status: 500 }
-    )
+    console.error("Error fetching template:", error);
+    return NextResponse.json({ error: "Failed to fetch template" }, { status: 500 });
   }
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session?.user?.isSuperAdmin) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await params
-    const body = await request.json()
-    const data = updateTemplateSchema.parse(body)
+    const { id } = await params;
+    const body = await request.json();
+    const data = updateTemplateSchema.parse(body);
 
     const existing = await db.competitionCategoryTemplate.findUnique({
       where: { id },
@@ -103,15 +104,18 @@ export async function PATCH(
         combinationEntries: true,
         individualEntries: true,
       },
-    })
+    });
 
     if (!existing) {
-      return NextResponse.json({ error: "Template not found" }, { status: 404 })
+      return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
 
     // Ensure this is a sport-level template
     if (!existing.sportId) {
-      return NextResponse.json({ error: "Cannot edit org-level templates via superadmin API" }, { status: 400 })
+      return NextResponse.json(
+        { error: "Cannot edit org-level templates via superadmin API" },
+        { status: 400 }
+      );
     }
 
     // Update base template fields
@@ -126,19 +130,19 @@ export async function PATCH(
         columnAxisLabel: data.columnAxisLabel,
         restrictionAxis: data.restrictionAxis,
       },
-    })
+    });
 
     // Handle axis values update for COMBINATION templates
     if (existing.type === "COMBINATION" && data.axisValues) {
-      const existingIds = existing.axisValues.map((v) => v.id)
-      const incomingIds = data.axisValues.filter((v) => v.id).map((v) => v.id!)
+      const existingIds = existing.axisValues.map((v) => v.id);
+      const incomingIds = data.axisValues.filter((v) => v.id).map((v) => v.id!);
 
       // Delete removed axis values (cascade deletes their combination entries)
-      const toDelete = existingIds.filter((eid) => !incomingIds.includes(eid))
+      const toDelete = existingIds.filter((eid) => !incomingIds.includes(eid));
       if (toDelete.length > 0) {
         await db.categoryAxisValue.deleteMany({
           where: { id: { in: toDelete } },
-        })
+        });
       }
 
       // Upsert axis values
@@ -154,7 +158,7 @@ export async function PATCH(
               maxAge: v.maxAge,
               allowedGenders: v.allowedGenders,
             },
-          })
+          });
         } else {
           await db.categoryAxisValue.create({
             data: {
@@ -166,7 +170,7 @@ export async function PATCH(
               maxAge: v.maxAge,
               allowedGenders: v.allowedGenders,
             },
-          })
+          });
         }
       }
 
@@ -174,51 +178,51 @@ export async function PATCH(
       const updatedValues = await db.categoryAxisValue.findMany({
         where: { templateId: id },
         orderBy: { displayOrder: "asc" },
-      })
-      const rows = updatedValues.filter((v) => v.axis === "ROW")
-      const cols = updatedValues.filter((v) => v.axis === "COLUMN")
+      });
+      const rows = updatedValues.filter((v) => v.axis === "ROW");
+      const cols = updatedValues.filter((v) => v.axis === "COLUMN");
 
       // Delete existing combination entries
       await db.categoryCombinationEntry.deleteMany({
         where: { templateId: id },
-      })
+      });
 
       // Rebuild combination entries
       const comboUpdateMap = new Map(
         (data.combinationUpdates || []).map((u) => [`${u.rowValueId}:${u.colValueId}`, u.isActive])
-      )
+      );
 
-      const combEntries = []
+      const combEntries = [];
       for (const row of rows) {
         for (const col of cols) {
-          const key = `${row.id}:${col.id}`
-          const isActive = comboUpdateMap.has(key) ? comboUpdateMap.get(key)! : true
+          const key = `${row.id}:${col.id}`;
+          const isActive = comboUpdateMap.has(key) ? comboUpdateMap.get(key)! : true;
           combEntries.push({
             templateId: id,
             rowValueId: row.id,
             colValueId: col.id,
             isActive,
             name: `${row.name} - ${col.name}`,
-          })
+          });
         }
       }
 
       if (combEntries.length > 0) {
-        await db.categoryCombinationEntry.createMany({ data: combEntries })
+        await db.categoryCombinationEntry.createMany({ data: combEntries });
       }
     }
 
     // Handle individual entries update
     if (existing.type === "INDIVIDUAL" && data.individualEntries) {
-      const existingIds = existing.individualEntries.map((e) => e.id)
-      const incomingIds = data.individualEntries.filter((e) => e.id).map((e) => e.id!)
+      const existingIds = existing.individualEntries.map((e) => e.id);
+      const incomingIds = data.individualEntries.filter((e) => e.id).map((e) => e.id!);
 
       // Delete removed entries
-      const toDelete = existingIds.filter((eid) => !incomingIds.includes(eid))
+      const toDelete = existingIds.filter((eid) => !incomingIds.includes(eid));
       if (toDelete.length > 0) {
         await db.categoryIndividualEntry.deleteMany({
           where: { id: { in: toDelete } },
-        })
+        });
       }
 
       // Upsert entries
@@ -238,7 +242,7 @@ export async function PATCH(
               maxAge: e.maxAge,
               capacity: e.capacity,
             },
-          })
+          });
         } else {
           await db.categoryIndividualEntry.create({
             data: {
@@ -254,7 +258,7 @@ export async function PATCH(
               maxAge: e.maxAge,
               capacity: e.capacity,
             },
-          })
+          });
         }
       }
     }
@@ -268,19 +272,16 @@ export async function PATCH(
         combinationEntries: true,
         individualEntries: { orderBy: { displayOrder: "asc" } },
       },
-    })
+    });
 
-    return NextResponse.json(updated)
+    return NextResponse.json(updated);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const message = error.issues?.[0]?.message || "Validation error"
-      return NextResponse.json({ error: message }, { status: 400 })
+      const message = error.issues?.[0]?.message || "Validation error";
+      return NextResponse.json({ error: message }, { status: 400 });
     }
-    console.error("Error updating template:", error)
-    return NextResponse.json(
-      { error: "Failed to update template" },
-      { status: 500 }
-    )
+    console.error("Error updating template:", error);
+    return NextResponse.json({ error: "Failed to update template" }, { status: 500 });
   }
 }
 
@@ -289,32 +290,32 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session?.user?.isSuperAdmin) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await params
+    const { id } = await params;
     const template = await db.competitionCategoryTemplate.findUnique({
       where: { id },
-    })
+    });
 
     if (!template) {
-      return NextResponse.json({ error: "Template not found" }, { status: 404 })
+      return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
 
     if (!template.sportId) {
-      return NextResponse.json({ error: "Cannot delete org-level templates via superadmin API" }, { status: 400 })
+      return NextResponse.json(
+        { error: "Cannot delete org-level templates via superadmin API" },
+        { status: 400 }
+      );
     }
 
-    await db.competitionCategoryTemplate.delete({ where: { id } })
+    await db.competitionCategoryTemplate.delete({ where: { id } });
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting template:", error)
-    return NextResponse.json(
-      { error: "Failed to delete template" },
-      { status: 500 }
-    )
+    console.error("Error deleting template:", error);
+    return NextResponse.json({ error: "Failed to delete template" }, { status: 500 });
   }
 }

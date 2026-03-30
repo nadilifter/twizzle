@@ -57,10 +57,7 @@ export async function GET() {
     return NextResponse.json(transformedUsers);
   } catch (error) {
     console.error("Error fetching users:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch users" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
   }
 }
 
@@ -90,10 +87,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!organization) {
-      return NextResponse.json(
-        { error: "Organization not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
 
     // Check if user already exists
@@ -103,10 +97,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Get default permissions for role if not provided
-    const permissions =
-      validatedData.permissions ||
-      ROLE_PERMISSIONS[validatedData.role] ||
-      [];
+    const permissions = validatedData.permissions || ROLE_PERMISSIONS[validatedData.role] || [];
 
     // Generate invitation token
     const invitationToken = crypto.randomUUID();
@@ -233,15 +224,9 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating user:", error);
-    return NextResponse.json(
-      { error: "Failed to create user" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create user" }, { status: 500 });
   }
 }

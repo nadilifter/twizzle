@@ -1,21 +1,27 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react"
-import { useFeatures } from "@/components/feature-context"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { RichTextEditor } from "@/components/ui/rich-text-editor"
-import { ImageUpload } from "@/components/ui/image-upload"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
-import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Switch } from "@/components/ui/switch"
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useFeatures } from "@/components/feature-context";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { ImageUpload } from "@/components/ui/image-upload";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +31,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 import {
   Plus,
   Trash2,
@@ -48,72 +54,67 @@ import {
   RefreshCw,
   Link2,
   Copy,
-} from "lucide-react"
-import { toast } from "sonner"
-import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-config"
-import type { FileRequirementConfig } from "@/types/file-requirements"
-import { usePrograms } from "@/hooks/use-programs"
-import { useStaff } from "@/hooks/use-staff"
-import { useStaffCertStatus } from "@/hooks/use-staff-cert-status"
-import { useMemberships } from "@/hooks/use-memberships"
-import { usePasses } from "@/hooks/use-passes"
-import type { ProgramStaffRole } from "@/types/staff"
-import type { SpaceWithAvailability } from "@/types/programs"
-import { cn } from "@/lib/utils"
-import { ColorSelector } from "@/components/color-selector"
-import { GLCodeSelector } from "@/components/gl-code-selector"
-import { RecurrencePicker, parseRRule } from "@/components/ui/recurrence-picker"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { format } from "date-fns"
-import { Calendar as CalendarIcon } from "lucide-react"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+} from "lucide-react";
+import { toast } from "sonner";
+import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-config";
+import type { FileRequirementConfig } from "@/types/file-requirements";
+import { usePrograms } from "@/hooks/use-programs";
+import { useStaff } from "@/hooks/use-staff";
+import { useStaffCertStatus } from "@/hooks/use-staff-cert-status";
+import { useMemberships } from "@/hooks/use-memberships";
+import { usePasses } from "@/hooks/use-passes";
+import type { ProgramStaffRole } from "@/types/staff";
+import type { SpaceWithAvailability } from "@/types/programs";
+import { cn } from "@/lib/utils";
+import { ColorSelector } from "@/components/color-selector";
+import { GLCodeSelector } from "@/components/gl-code-selector";
+import { RecurrencePicker, parseRRule } from "@/components/ui/recurrence-picker";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { format } from "date-fns";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface ProgramConfigProps {
-  program: any
-  onClose: () => void
-  onUpdated?: () => Promise<void> | void
+  program: any;
+  onClose: () => void;
+  onUpdated?: () => Promise<void> | void;
 }
 
 interface Level {
-  id: string
-  name: string
-  color: string | null
-  order: number
+  id: string;
+  name: string;
+  color: string | null;
+  order: number;
 }
 
 interface Facility {
-  id: string
-  name: string
-  street: string | null
-  city: string | null
-  stateProvince: string | null
+  id: string;
+  name: string;
+  street: string | null;
+  city: string | null;
+  stateProvince: string | null;
 }
 
 interface MembershipInstance {
-  id: string
-  name: string
-  price: number
-  groupName: string
+  id: string;
+  name: string;
+  price: number;
+  groupName: string;
 }
 
 interface StaffAssignment {
-  memberId: string
-  role: ProgramStaffRole
-  isPrimary: boolean
+  memberId: string;
+  role: ProgramStaffRole;
+  isPrimary: boolean;
   member?: {
-    id: string
+    id: string;
     user: {
-      name: string
-      avatar: string | null
-    }
-    title: string | null
-  }
+      name: string;
+      avatar: string | null;
+    };
+    title: string | null;
+  };
 }
 
 const ROLE_LABELS: Record<ProgramStaffRole, string> = {
@@ -121,39 +122,45 @@ const ROLE_LABELS: Record<ProgramStaffRole, string> = {
   ASSISTANT_COACH: "Assistant Coach",
   SUBSTITUTE: "Substitute",
   VOLUNTEER: "Volunteer",
-}
+};
 
 export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramConfigProps) {
-  const { updateProgram } = usePrograms()
-  const { isFeatureEnabled } = useFeatures()
-  const trainingEnabled = isFeatureEnabled("training")
-  const membershipsEnabled = isFeatureEnabled("memberships")
-  const waitlistsEnabled = isFeatureEnabled("waitlists")
-  const { staff: availableStaff, isLoading: loadingStaff } = useStaff()
-  const { memberships, isLoading: loadingMemberships } = useMemberships({ initialParams: { include: "instances" } })
-  const { passes: availablePasses, isLoading: loadingPasses } = usePasses()
-  const { requiredCertNames, hasRequirements: hasCertRequirements, getMemberStatus } = useStaffCertStatus("programs")
+  const { updateProgram } = usePrograms();
+  const { isFeatureEnabled } = useFeatures();
+  const trainingEnabled = isFeatureEnabled("training");
+  const membershipsEnabled = isFeatureEnabled("memberships");
+  const waitlistsEnabled = isFeatureEnabled("waitlists");
+  const { staff: availableStaff, isLoading: loadingStaff } = useStaff();
+  const { memberships, isLoading: loadingMemberships } = useMemberships({
+    initialParams: { include: "instances" },
+  });
+  const { passes: availablePasses, isLoading: loadingPasses } = usePasses();
+  const {
+    requiredCertNames,
+    hasRequirements: hasCertRequirements,
+    getMemberStatus,
+  } = useStaffCertStatus("programs");
 
-  const [activeTab, setActiveTab] = useState("general")
-  const [isSaving, setIsSaving] = useState(false)
+  const [activeTab, setActiveTab] = useState("general");
+  const [isSaving, setIsSaving] = useState(false);
 
   // Levels state
-  const [levels, setLevels] = useState<Level[]>([])
-  const [loadingLevels, setLoadingLevels] = useState(true)
+  const [levels, setLevels] = useState<Level[]>([]);
+  const [loadingLevels, setLoadingLevels] = useState(true);
 
   // Facilities state
-  const [facilities, setFacilities] = useState<Facility[]>([])
-  const [loadingFacilities, setLoadingFacilities] = useState(true)
+  const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [loadingFacilities, setLoadingFacilities] = useState(true);
 
   // Waivers state
-  const [waivers, setWaivers] = useState<Array<{ id: string; title: string; status: string }>>([])
-  const [loadingWaivers, setLoadingWaivers] = useState(true)
+  const [waivers, setWaivers] = useState<Array<{ id: string; title: string; status: string }>>([]);
+  const [loadingWaivers, setLoadingWaivers] = useState(true);
 
   // Spaces state
-  const [spaces, setSpaces] = useState<SpaceWithAvailability[]>([])
-  const [loadingSpaces, setLoadingSpaces] = useState(false)
-  const [fullyBookedOverride, setFullyBookedOverride] = useState<string | null>(null)
-  const [conflictDetailsSpaceId, setConflictDetailsSpaceId] = useState<string | null>(null)
+  const [spaces, setSpaces] = useState<SpaceWithAvailability[]>([]);
+  const [loadingSpaces, setLoadingSpaces] = useState(false);
+  const [fullyBookedOverride, setFullyBookedOverride] = useState<string | null>(null);
+  const [conflictDetailsSpaceId, setConflictDetailsSpaceId] = useState<string | null>(null);
 
   // Form state - mirrors the stepper's ProgramFormData
   const [formData, setFormData] = useState(() => ({
@@ -161,12 +168,14 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
     name: program.name || "",
     description: program.description || "",
     color: program.color || "#3b82f6",
-    imageUrl: program.imageUrl as string | null || null,
-    registrationType: (program.registrationType || "ALL_INSTANCES") as "ALL_INSTANCES" | "PER_INSTANCE",
+    imageUrl: (program.imageUrl as string | null) || null,
+    registrationType: (program.registrationType || "ALL_INSTANCES") as
+      | "ALL_INSTANCES"
+      | "PER_INSTANCE",
     price: (() => {
-      const isFlatRate = program.pricingModel === "FLAT_RATE"
-      const val = isFlatRate ? program.basePrice : program.perSessionPrice
-      return val != null ? Number(val) : null
+      const isFlatRate = program.pricingModel === "FLAT_RATE";
+      const val = isFlatRate ? program.basePrice : program.perSessionPrice;
+      return val != null ? Number(val) : null;
     })(),
     billingInterval: (program.billingInterval || "ONE_TIME") as "ONE_TIME" | "MONTHLY" | "YEARLY",
     recurringPrice: program.recurringPrice != null ? Number(program.recurringPrice) : null,
@@ -182,7 +191,8 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
 
     // Requirements
     hasLevelRestriction: program.hasLevelRestriction || false,
-    levelRequirementIds: (program.levelRequirements?.map((lr: any) => lr.levelId) || []) as string[],
+    levelRequirementIds: (program.levelRequirements?.map((lr: any) => lr.levelId) ||
+      []) as string[],
     hasCapacityRestriction: program.hasCapacityRestriction || false,
     hasSpaceRestriction: program.hasSpaceRestriction || false,
     spaceCapacityMode: (program.spaceCapacityMode || "MINIMUM") as "MINIMUM" | "SUM",
@@ -191,14 +201,17 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
     minAge: (program.minAge ?? null) as number | null,
     maxAge: (program.maxAge ?? null) as number | null,
     hasMembershipRestriction: program.hasMembershipRestriction || false,
-    membershipRequirementIds: (program.requiredMemberships?.map((m: any) => m.id) || []) as string[],
+    membershipRequirementIds: (program.requiredMemberships?.map((m: any) => m.id) ||
+      []) as string[],
     hasPassRestriction: (program as any).hasPassRestriction || false,
     passRequirementIds: ((program as any).requiredPasses?.map((p: any) => p.id) || []) as string[],
     hasWaiverRestriction: (program as any).hasWaiverRestriction || false,
-    waiverRequirementIds: ((program as any).waiverRequirements?.map((wr: any) => wr.waiverId) || []) as string[],
+    waiverRequirementIds: ((program as any).waiverRequirements?.map((wr: any) => wr.waiverId) ||
+      []) as string[],
     hasMedicalRequirement: (program as any).hasMedicalRequirement || false,
     hasFileRequirement: (program as any).hasFileRequirement || false,
-    fileRequirementConfig: ((program as any).fileRequirementConfig || null) as FileRequirementConfig | null,
+    fileRequirementConfig: ((program as any).fileRequirementConfig ||
+      null) as FileRequirementConfig | null,
 
     // Waitlist
     waitlistEnabled: program.waitlistEnabled || false,
@@ -219,111 +232,130 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
 
     // Registration
     registrationOpen: program.registrationOpen ?? true,
-    registrationStartDate: program.registrationStartDate ? new Date(program.registrationStartDate).toISOString().split("T")[0] : (program.startDate ? new Date(program.startDate).toISOString().split("T")[0] : ""),
+    registrationStartDate: program.registrationStartDate
+      ? new Date(program.registrationStartDate).toISOString().split("T")[0]
+      : program.startDate
+        ? new Date(program.startDate).toISOString().split("T")[0]
+        : "",
     registrationStartTime: program.registrationStartTime || "09:00",
-    registrationEndDate: program.registrationEndDate ? new Date(program.registrationEndDate).toISOString().split("T")[0] : (program.endDate ? new Date(program.endDate).toISOString().split("T")[0] : ""),
+    registrationEndDate: program.registrationEndDate
+      ? new Date(program.registrationEndDate).toISOString().split("T")[0]
+      : program.endDate
+        ? new Date(program.endDate).toISOString().split("T")[0]
+        : "",
     registrationEndTime: program.registrationEndTime || "23:59",
     earlyAccessCode: (program.earlyAccessCode || null) as string | null,
-  }))
+  }));
 
   // Fetch levels
   useEffect(() => {
     const fetchLevels = async () => {
       try {
-        const response = await fetch("/api/levels")
+        const response = await fetch("/api/levels");
         if (response.ok) {
-          const data = await response.json()
-          setLevels(data)
+          const data = await response.json();
+          setLevels(data);
         }
       } catch (error) {
-        console.error("Failed to fetch levels:", error)
+        console.error("Failed to fetch levels:", error);
       } finally {
-        setLoadingLevels(false)
+        setLoadingLevels(false);
       }
-    }
-    fetchLevels()
-  }, [])
+    };
+    fetchLevels();
+  }, []);
 
   // Fetch facilities
   useEffect(() => {
     const fetchFacilities = async () => {
       try {
-        const response = await fetch("/api/organization/facilities")
+        const response = await fetch("/api/organization/facilities");
         if (response.ok) {
-          const data = await response.json()
-          setFacilities(data)
+          const data = await response.json();
+          setFacilities(data);
         }
       } catch (error) {
-        console.error("Failed to fetch facilities:", error)
+        console.error("Failed to fetch facilities:", error);
       } finally {
-        setLoadingFacilities(false)
+        setLoadingFacilities(false);
       }
-    }
-    fetchFacilities()
-  }, [])
+    };
+    fetchFacilities();
+  }, []);
 
   // Fetch waivers
   useEffect(() => {
     const fetchWaivers = async () => {
       try {
-        const response = await fetch("/api/waivers?status=ACTIVE")
+        const response = await fetch("/api/waivers?status=ACTIVE");
         if (response.ok) {
-          const data = await response.json()
-          setWaivers(data.data || [])
+          const data = await response.json();
+          setWaivers(data.data || []);
         }
       } catch (error) {
-        console.error("Failed to fetch waivers:", error)
+        console.error("Failed to fetch waivers:", error);
       } finally {
-        setLoadingWaivers(false)
+        setLoadingWaivers(false);
       }
-    }
-    fetchWaivers()
-  }, [])
+    };
+    fetchWaivers();
+  }, []);
 
   // Fetch spaces + availability when facility or time changes
   const rruleDays = useMemo(() => {
-    if (!formData.rrule) return []
-    const match = formData.rrule.match(/BYDAY=([A-Z,]+)/)
-    if (!match) return []
-    const dayMap: Record<string, number> = { MO: 0, TU: 1, WE: 2, TH: 3, FR: 4, SA: 5, SU: 6 }
-    return match[1].split(",").map(d => dayMap[d]).filter((d): d is number => d != null)
-  }, [formData.rrule])
+    if (!formData.rrule) return [];
+    const match = formData.rrule.match(/BYDAY=([A-Z,]+)/);
+    if (!match) return [];
+    const dayMap: Record<string, number> = { MO: 0, TU: 1, WE: 2, TH: 3, FR: 4, SA: 5, SU: 6 };
+    return match[1]
+      .split(",")
+      .map((d) => dayMap[d])
+      .filter((d): d is number => d != null);
+  }, [formData.rrule]);
 
-  const fetchSpaceAvailability = useCallback(async (
-    facilityId: string,
-    startTime?: string,
-    duration?: number | null,
-    daysOfWeek?: number[],
-    programStartDate?: string,
-    programEndDate?: string,
-  ) => {
-    setLoadingSpaces(true)
-    try {
-      const params = new URLSearchParams()
-      if (startTime && duration) {
-        params.set("startTime", startTime)
-        const [h, m] = startTime.split(":").map(Number)
-        const endDate = new Date(2000, 0, 1, h, m + duration)
-        params.set("endTime", `${String(endDate.getHours()).padStart(2, "0")}:${String(endDate.getMinutes()).padStart(2, "0")}`)
+  const fetchSpaceAvailability = useCallback(
+    async (
+      facilityId: string,
+      startTime?: string,
+      duration?: number | null,
+      daysOfWeek?: number[],
+      programStartDate?: string,
+      programEndDate?: string
+    ) => {
+      setLoadingSpaces(true);
+      try {
+        const params = new URLSearchParams();
+        if (startTime && duration) {
+          params.set("startTime", startTime);
+          const [h, m] = startTime.split(":").map(Number);
+          const endDate = new Date(2000, 0, 1, h, m + duration);
+          params.set(
+            "endTime",
+            `${String(endDate.getHours()).padStart(2, "0")}:${String(endDate.getMinutes()).padStart(2, "0")}`
+          );
+        }
+        if (daysOfWeek && daysOfWeek.length > 0) {
+          params.set("daysOfWeek", daysOfWeek.join(","));
+        }
+        if (programStartDate) params.set("programStartDate", programStartDate);
+        if (programEndDate) params.set("programEndDate", programEndDate);
+        params.set("excludeProgramId", program.id);
+        const qs = params.toString();
+        const response = await fetch(
+          `/api/organization/facilities/${facilityId}/spaces/availability${qs ? `?${qs}` : ""}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setSpaces(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch spaces:", error);
+      } finally {
+        setLoadingSpaces(false);
       }
-      if (daysOfWeek && daysOfWeek.length > 0) {
-        params.set("daysOfWeek", daysOfWeek.join(","))
-      }
-      if (programStartDate) params.set("programStartDate", programStartDate)
-      if (programEndDate) params.set("programEndDate", programEndDate)
-      params.set("excludeProgramId", program.id)
-      const qs = params.toString()
-      const response = await fetch(`/api/organization/facilities/${facilityId}/spaces/availability${qs ? `?${qs}` : ""}`)
-      if (response.ok) {
-        const data = await response.json()
-        setSpaces(data)
-      }
-    } catch (error) {
-      console.error("Failed to fetch spaces:", error)
-    } finally {
-      setLoadingSpaces(false)
-    }
-  }, [program.id])
+    },
+    [program.id]
+  );
 
   useEffect(() => {
     if (formData.facilityId) {
@@ -333,53 +365,61 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
         formData.duration,
         rruleDays,
         formData.startDate,
-        formData.endDate,
-      )
+        formData.endDate
+      );
     } else {
-      setSpaces([])
-      setFormData(prev => ({ ...prev, spaceIds: [] }))
+      setSpaces([]);
+      setFormData((prev) => ({ ...prev, spaceIds: [] }));
     }
-  }, [formData.facilityId, formData.startTime, formData.duration, rruleDays, formData.startDate, formData.endDate, fetchSpaceAvailability])
+  }, [
+    formData.facilityId,
+    formData.startTime,
+    formData.duration,
+    rruleDays,
+    formData.startDate,
+    formData.endDate,
+    fetchSpaceAvailability,
+  ]);
 
   const spaceDerivedCapacity = useMemo(() => {
-    if (formData.spaceIds.length === 0) return null
-    const selectedSpaces = spaces.filter(s => formData.spaceIds.includes(s.id))
-    const capacities = selectedSpaces.map(s => s.capacity).filter((c): c is number => c != null)
-    if (capacities.length === 0) return null
+    if (formData.spaceIds.length === 0) return null;
+    const selectedSpaces = spaces.filter((s) => formData.spaceIds.includes(s.id));
+    const capacities = selectedSpaces.map((s) => s.capacity).filter((c): c is number => c != null);
+    if (capacities.length === 0) return null;
     if (formData.spaceCapacityMode === "SUM") {
-      return capacities.reduce((sum, c) => sum + c, 0)
+      return capacities.reduce((sum, c) => sum + c, 0);
     }
-    return Math.min(...capacities)
-  }, [formData.spaceIds, formData.spaceCapacityMode, spaces])
+    return Math.min(...capacities);
+  }, [formData.spaceIds, formData.spaceCapacityMode, spaces]);
 
   // Flatten membership instances from groups
   const allMembershipInstances = useMemo(() => {
     return (
-      memberships?.flatMap((group) =>
-        group.instances?.map((instance: any) => ({
-          id: instance.id,
-          name: instance.name,
-          price: Number(instance.price),
-          groupName: group.name,
-        })) || []
+      memberships?.flatMap(
+        (group) =>
+          group.instances?.map((instance: any) => ({
+            id: instance.id,
+            name: instance.name,
+            price: Number(instance.price),
+            groupName: group.name,
+          })) || []
       ) || []
-    )
-  }, [memberships])
+    );
+  }, [memberships]);
 
   // Filter out already assigned staff
   const unassignedStaff = useMemo(() => {
     return (
-      availableStaff?.filter(
-        (s) => !formData.staffAssignments.some((a) => a.memberId === s.id)
-      ) || []
-    )
-  }, [availableStaff, formData.staffAssignments])
+      availableStaff?.filter((s) => !formData.staffAssignments.some((a) => a.memberId === s.id)) ||
+      []
+    );
+  }, [availableStaff, formData.staffAssignments]);
 
   // Staff handlers
   const handleAddStaff = useCallback(
     (memberId: string) => {
-      const staff = availableStaff?.find((s) => s.id === memberId)
-      if (!staff) return
+      const staff = availableStaff?.find((s) => s.id === memberId);
+      if (!staff) return;
       setFormData((prev) => ({
         ...prev,
         staffAssignments: [
@@ -398,19 +438,17 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
             },
           },
         ],
-      }))
+      }));
     },
     [availableStaff]
-  )
+  );
 
   const handleRemoveStaff = (memberId: string) => {
     setFormData((prev) => ({
       ...prev,
-      staffAssignments: prev.staffAssignments.filter(
-        (a) => a.memberId !== memberId
-      ),
-    }))
-  }
+      staffAssignments: prev.staffAssignments.filter((a) => a.memberId !== memberId),
+    }));
+  };
 
   const handleUpdateStaffRole = (memberId: string, role: ProgramStaffRole) => {
     setFormData((prev) => ({
@@ -418,8 +456,8 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
       staffAssignments: prev.staffAssignments.map((a) =>
         a.memberId === memberId ? { ...a, role } : a
       ),
-    }))
-  }
+    }));
+  };
 
   const handleSetPrimary = (memberId: string) => {
     setFormData((prev) => ({
@@ -428,74 +466,73 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
         ...a,
         isPrimary: a.memberId === memberId,
       })),
-    }))
-  }
+    }));
+  };
 
   const handleSaveAll = async () => {
     if (!formData.name.trim()) {
-      toast.error("Program name is required")
-      return
+      toast.error("Program name is required");
+      return;
     }
     if (formData.price !== null && formData.price < 0) {
-      toast.error("Price cannot be negative")
-      return
+      toast.error("Price cannot be negative");
+      return;
     }
-    if (
-      formData.hasCapacityRestriction &&
-      (!formData.capacity || formData.capacity < 1)
-    ) {
-      toast.error("Capacity must be at least 1 when enabled")
-      return
+    if (formData.hasCapacityRestriction && (!formData.capacity || formData.capacity < 1)) {
+      toast.error("Capacity must be at least 1 when enabled");
+      return;
     }
     if (formData.hasAgeRestriction) {
       if (formData.minAge === null && formData.maxAge === null) {
-        toast.error("At least one age value is required when age restriction is enabled")
-        return
+        toast.error("At least one age value is required when age restriction is enabled");
+        return;
       }
-      if (formData.minAge !== null && formData.maxAge !== null && formData.minAge > formData.maxAge) {
-        toast.error("Minimum age cannot be greater than maximum age")
-        return
+      if (
+        formData.minAge !== null &&
+        formData.maxAge !== null &&
+        formData.minAge > formData.maxAge
+      ) {
+        toast.error("Minimum age cannot be greater than maximum age");
+        return;
       }
     }
     if (formData.hasLevelRestriction && formData.levelRequirementIds.length === 0) {
-      toast.error("Select at least one level when level restriction is enabled")
-      return
+      toast.error("Select at least one level when level restriction is enabled");
+      return;
     }
     if (formData.hasMembershipRestriction && formData.membershipRequirementIds.length === 0) {
-      toast.error("Select at least one membership when membership restriction is enabled")
-      return
+      toast.error("Select at least one membership when membership restriction is enabled");
+      return;
     }
     if (formData.hasPassRestriction && formData.passRequirementIds.length === 0) {
-      toast.error("Select at least one pass when pass restriction is enabled")
-      return
+      toast.error("Select at least one pass when pass restriction is enabled");
+      return;
     }
     if (formData.hasWaiverRestriction && formData.waiverRequirementIds.length === 0) {
-      toast.error("Select at least one waiver when waiver restriction is enabled")
-      return
+      toast.error("Select at least one waiver when waiver restriction is enabled");
+      return;
     }
-    if (formData.hasFileRequirement && (!formData.fileRequirementConfig?.label?.trim())) {
-      toast.error("Provide a label for the file upload requirement")
-      return
+    if (formData.hasFileRequirement && !formData.fileRequirementConfig?.label?.trim()) {
+      toast.error("Provide a label for the file upload requirement");
+      return;
     }
     if (formData.hasFileRequirement && formData.fileRequirementConfig) {
-      const { acceptedPresets, acceptedExtensions } = formData.fileRequirementConfig
+      const { acceptedPresets, acceptedExtensions } = formData.fileRequirementConfig;
       if (acceptedPresets.length === 0 && acceptedExtensions.length === 0) {
-        toast.error("Select at least one file type preset or add a custom extension")
-        return
+        toast.error("Select at least one file type preset or add a custom extension");
+        return;
       }
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
     try {
-      const isFlatRate = formData.registrationType === "ALL_INSTANCES"
+      const isFlatRate = formData.registrationType === "ALL_INSTANCES";
       const priceValue =
-        formData.price != null
-          ? Math.max(0, Math.round(formData.price * 100) / 100)
-          : null
+        formData.price != null ? Math.max(0, Math.round(formData.price * 100) / 100) : null;
       const recurringPriceValue =
         formData.recurringPrice != null
           ? Math.max(0, Math.round(formData.recurringPrice * 100) / 100)
-          : null
+          : null;
 
       await updateProgram(program.id, {
         name: formData.name,
@@ -527,13 +564,9 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
           ? formData.membershipRequirementIds
           : [],
         hasPassRestriction: formData.hasPassRestriction,
-        passRequirementIds: formData.hasPassRestriction
-          ? formData.passRequirementIds
-          : [],
+        passRequirementIds: formData.hasPassRestriction ? formData.passRequirementIds : [],
         hasWaiverRestriction: formData.hasWaiverRestriction,
-        waiverRequirementIds: formData.hasWaiverRestriction
-          ? formData.waiverRequirementIds
-          : [],
+        waiverRequirementIds: formData.hasWaiverRestriction ? formData.waiverRequirementIds : [],
         hasMedicalRequirement: formData.hasMedicalRequirement,
         hasFileRequirement: formData.hasFileRequirement,
         fileRequirementConfig: formData.hasFileRequirement ? formData.fileRequirementConfig : null,
@@ -550,32 +583,35 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
         showCoachOnSite: formData.showCoachOnSite,
         glCodeId: formData.glCodeId,
         registrationOpen: formData.registrationOpen,
-        registrationStartDate: !formData.registrationOpen && formData.registrationStartDate ? formData.registrationStartDate : null,
+        registrationStartDate:
+          !formData.registrationOpen && formData.registrationStartDate
+            ? formData.registrationStartDate
+            : null,
         registrationStartTime: !formData.registrationOpen ? formData.registrationStartTime : null,
         registrationEndDate: formData.registrationEndDate || null,
         registrationEndTime: formData.registrationEndTime || null,
         earlyAccessCode: formData.earlyAccessCode,
-      } as any)
-      toast.success("Program saved")
-      if (onUpdated) await onUpdated()
-      onClose()
+      } as any);
+      toast.success("Program saved");
+      if (onUpdated) await onUpdated();
+      onClose();
     } catch (error: any) {
       if (error?.status === 422 && error?.data?.certifications) {
         const names = error.data.certifications
           .map((c: { certificationName: string }) => c.certificationName)
-          .join(", ")
-        toast.error(`Staff missing required certifications: ${names}`)
+          .join(", ");
+        toast.error(`Staff missing required certifications: ${names}`);
       } else {
-        toast.error("Failed to save program")
+        toast.error("Failed to save program");
       }
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   // Derived values for schedule tab
-  const startDateObj = formData.startDate ? new Date(formData.startDate + "T12:00:00Z") : null
-  const endDateObj = formData.endDate ? new Date(formData.endDate + "T12:00:00Z") : null
+  const startDateObj = formData.startDate ? new Date(formData.startDate + "T12:00:00Z") : null;
+  const endDateObj = formData.endDate ? new Date(formData.endDate + "T12:00:00Z") : null;
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -586,7 +622,11 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
         <div className="px-6 py-2 border-b bg-muted/30">
-          <ResponsiveTabsList value={activeTab} onValueChange={setActiveTab} className="w-full justify-start">
+          <ResponsiveTabsList
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="w-full justify-start"
+          >
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="schedule">Schedule</TabsTrigger>
             <TabsTrigger value="requirements">Requirements</TabsTrigger>
@@ -729,9 +769,13 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
             )}
 
             {/* Price — contextual based on billing schedule */}
-            {(formData.registrationType === "PER_INSTANCE" || formData.billingInterval === "ONE_TIME") && (
+            {(formData.registrationType === "PER_INSTANCE" ||
+              formData.billingInterval === "ONE_TIME") && (
               <div className="space-y-2">
-                <Label htmlFor="config-price" className="text-base font-medium flex items-center gap-2">
+                <Label
+                  htmlFor="config-price"
+                  className="text-base font-medium flex items-center gap-2"
+                >
                   {formData.registrationType === "PER_INSTANCE" && (
                     <CreditCard className="h-4 w-4 text-muted-foreground" />
                   )}
@@ -752,25 +796,25 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                     className="pl-7"
                     value={formData.price === null ? "" : formData.price}
                     onChange={(e) => {
-                      const raw = e.target.value
+                      const raw = e.target.value;
                       if (raw === "") {
-                        setFormData((prev) => ({ ...prev, price: null }))
-                        return
+                        setFormData((prev) => ({ ...prev, price: null }));
+                        return;
                       }
-                      const parsed = parseFloat(raw)
-                      if (Number.isNaN(parsed)) return
-                      if (parsed < 0) return
-                      const rounded = Math.round(parsed * 100) / 100
-                      setFormData((prev) => ({ ...prev, price: rounded }))
+                      const parsed = parseFloat(raw);
+                      if (Number.isNaN(parsed)) return;
+                      if (parsed < 0) return;
+                      const rounded = Math.round(parsed * 100) / 100;
+                      setFormData((prev) => ({ ...prev, price: rounded }));
                     }}
                     onBlur={(e) => {
-                      const raw = e.target.value
-                      if (raw === "") return
-                      const parsed = parseFloat(raw)
+                      const raw = e.target.value;
+                      if (raw === "") return;
+                      const parsed = parseFloat(raw);
                       if (!Number.isNaN(parsed) && parsed >= 0) {
-                        const rounded = Math.round(parsed * 100) / 100
+                        const rounded = Math.round(parsed * 100) / 100;
                         if (rounded !== formData.price) {
-                          setFormData((prev) => ({ ...prev, price: rounded }))
+                          setFormData((prev) => ({ ...prev, price: rounded }));
                         }
                       }
                     }}
@@ -783,44 +827,46 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
             )}
 
             {/* Recurring Price — only for monthly/yearly billing */}
-            {formData.registrationType === "ALL_INSTANCES" && formData.billingInterval !== "ONE_TIME" && (
-              <div className="space-y-2">
-                <Label htmlFor="config-recurring-price" className="text-base font-medium">
-                  {formData.billingInterval === "MONTHLY" ? "Monthly" : "Annual"} Price
-                </Label>
-                <div className="relative max-w-[200px]">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                    $
-                  </span>
-                  <Input
-                    id="config-recurring-price"
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    placeholder="0.00"
-                    className="pl-7"
-                    value={formData.recurringPrice === null ? "" : formData.recurringPrice}
-                    onChange={(e) => {
-                      const raw = e.target.value
-                      if (raw === "") {
-                        setFormData((prev) => ({ ...prev, recurringPrice: null }))
-                        return
-                      }
-                      const parsed = parseFloat(raw)
-                      if (Number.isNaN(parsed) || parsed < 0) return
-                      setFormData((prev) => ({
-                        ...prev,
-                        recurringPrice: Math.round(parsed * 100) / 100,
-                      }))
-                    }}
-                  />
+            {formData.registrationType === "ALL_INSTANCES" &&
+              formData.billingInterval !== "ONE_TIME" && (
+                <div className="space-y-2">
+                  <Label htmlFor="config-recurring-price" className="text-base font-medium">
+                    {formData.billingInterval === "MONTHLY" ? "Monthly" : "Annual"} Price
+                  </Label>
+                  <div className="relative max-w-[200px]">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      $
+                    </span>
+                    <Input
+                      id="config-recurring-price"
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      placeholder="0.00"
+                      className="pl-7"
+                      value={formData.recurringPrice === null ? "" : formData.recurringPrice}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        if (raw === "") {
+                          setFormData((prev) => ({ ...prev, recurringPrice: null }));
+                          return;
+                        }
+                        const parsed = parseFloat(raw);
+                        if (Number.isNaN(parsed) || parsed < 0) return;
+                        setFormData((prev) => ({
+                          ...prev,
+                          recurringPrice: Math.round(parsed * 100) / 100,
+                        }));
+                      }}
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    This is the amount charged per{" "}
+                    {formData.billingInterval === "MONTHLY" ? "month" : "year"}. The first payment
+                    is collected at checkout.
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  This is the amount charged per {formData.billingInterval === "MONTHLY" ? "month" : "year"}.
-                  The first payment is collected at checkout.
-                </p>
-              </div>
-            )}
+              )}
 
             {/* GL Code */}
             <GLCodeSelector
@@ -829,7 +875,6 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
               entityType="PROGRAM"
               label="GL Code"
             />
-
           </TabsContent>
 
           {/* ============================================= */}
@@ -844,24 +889,34 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
-                      className={cn("w-full justify-start text-left font-normal", !formData.startDate && "text-muted-foreground")}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !formData.startDate && "text-muted-foreground"
+                      )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.startDate ? format(new Date(formData.startDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                      {formData.startDate
+                        ? format(new Date(formData.startDate + "T12:00:00Z"), "PPP")
+                        : "Pick a date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                       mode="single"
-                      selected={formData.startDate ? new Date(formData.startDate + "T12:00:00Z") : undefined}
+                      selected={
+                        formData.startDate ? new Date(formData.startDate + "T12:00:00Z") : undefined
+                      }
                       onSelect={(date) =>
                         setFormData((prev) => {
-                          const newStart = date ? format(date, "yyyy-MM-dd") : ""
+                          const newStart = date ? format(date, "yyyy-MM-dd") : "";
                           return {
                             ...prev,
                             startDate: newStart,
-                            endDate: newStart && prev.endDate && prev.endDate < newStart ? "" : prev.endDate,
-                          }
+                            endDate:
+                              newStart && prev.endDate && prev.endDate < newStart
+                                ? ""
+                                : prev.endDate,
+                          };
                         })
                       }
                       initialFocus
@@ -876,20 +931,34 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
-                      className={cn("w-full justify-start text-left font-normal", !formData.endDate && "text-muted-foreground")}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !formData.endDate && "text-muted-foreground"
+                      )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.endDate ? format(new Date(formData.endDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                      {formData.endDate
+                        ? format(new Date(formData.endDate + "T12:00:00Z"), "PPP")
+                        : "Pick a date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                       mode="single"
-                      selected={formData.endDate ? new Date(formData.endDate + "T12:00:00Z") : undefined}
-                      onSelect={(date) =>
-                        setFormData((prev) => ({ ...prev, endDate: date ? format(date, "yyyy-MM-dd") : "" }))
+                      selected={
+                        formData.endDate ? new Date(formData.endDate + "T12:00:00Z") : undefined
                       }
-                      disabled={(date) => formData.startDate ? date < new Date(formData.startDate + "T12:00:00Z") : false}
+                      onSelect={(date) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          endDate: date ? format(date, "yyyy-MM-dd") : "",
+                        }))
+                      }
+                      disabled={(date) =>
+                        formData.startDate
+                          ? date < new Date(formData.startDate + "T12:00:00Z")
+                          : false
+                      }
                       initialFocus
                     />
                   </PopoverContent>
@@ -954,9 +1023,7 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                       ? parseRRule(formData.rrule, startDateObj, endDateObj)
                       : undefined
                   }
-                  onRRuleChange={(rrule) =>
-                    setFormData((prev) => ({ ...prev, rrule }))
-                  }
+                  onRRuleChange={(rrule) => setFormData((prev) => ({ ...prev, rrule }))}
                 />
               </div>
             )}
@@ -1030,49 +1097,57 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                 ) : (
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {spaces.map(space => {
-                        const isSelected = formData.spaceIds.includes(space.id)
-                        const hasConflicts = space.totalConflicts > 0
-                        const hasClosed = space.closedDays?.length > 0
-                        const hasWarnings = hasConflicts || hasClosed
+                      {spaces.map((space) => {
+                        const isSelected = formData.spaceIds.includes(space.id);
+                        const hasConflicts = space.totalConflicts > 0;
+                        const hasClosed = space.closedDays?.length > 0;
+                        const hasWarnings = hasConflicts || hasClosed;
                         return (
                           <label
                             key={space.id}
                             className={cn(
                               "flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
-                              isSelected
-                                ? "border-primary bg-primary/5"
-                                : "hover:bg-muted/50",
-                              (space.isFullyBooked || !space.isAvailable) && !isSelected && "opacity-60"
+                              isSelected ? "border-primary bg-primary/5" : "hover:bg-muted/50",
+                              (space.isFullyBooked || !space.isAvailable) &&
+                                !isSelected &&
+                                "opacity-60"
                             )}
                           >
                             <Checkbox
                               checked={isSelected}
-                              onCheckedChange={checked => {
+                              onCheckedChange={(checked) => {
                                 if (checked && hasWarnings) {
-                                  setFullyBookedOverride(space.id)
-                                  return
+                                  setFullyBookedOverride(space.id);
+                                  return;
                                 }
-                                setFormData(prev => {
+                                setFormData((prev) => {
                                   const newIds = checked
                                     ? [...prev.spaceIds, space.id]
-                                    : prev.spaceIds.filter(id => id !== space.id)
-                                  const hasSpaces = newIds.length > 0
-                                  const selectedSpaces = spaces.filter(s => newIds.includes(s.id))
-                                  const capacities = selectedSpaces.map(s => s.capacity).filter((c): c is number => c != null)
-                                  const derived = capacities.length > 0
-                                    ? (prev.spaceCapacityMode === "SUM"
+                                    : prev.spaceIds.filter((id) => id !== space.id);
+                                  const hasSpaces = newIds.length > 0;
+                                  const selectedSpaces = spaces.filter((s) =>
+                                    newIds.includes(s.id)
+                                  );
+                                  const capacities = selectedSpaces
+                                    .map((s) => s.capacity)
+                                    .filter((c): c is number => c != null);
+                                  const derived =
+                                    capacities.length > 0
+                                      ? prev.spaceCapacityMode === "SUM"
                                         ? capacities.reduce((sum, c) => sum + c, 0)
-                                        : Math.min(...capacities))
-                                    : null
+                                        : Math.min(...capacities)
+                                      : null;
                                   return {
                                     ...prev,
                                     spaceIds: newIds,
-                                    hasCapacityRestriction: hasSpaces ? true : prev.hasCapacityRestriction,
+                                    hasCapacityRestriction: hasSpaces
+                                      ? true
+                                      : prev.hasCapacityRestriction,
                                     hasSpaceRestriction: hasSpaces ? true : false,
-                                    capacity: hasSpaces && derived != null ? derived : prev.capacity,
-                                  }
-                                })
+                                    capacity:
+                                      hasSpaces && derived != null ? derived : prev.capacity,
+                                  };
+                                });
                               }}
                               className="mt-0.5"
                             />
@@ -1085,29 +1160,45 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                                     Fully booked
                                   </Badge>
                                 ) : hasConflicts && space.totalConflicts <= 3 ? (
-                                  <Badge variant="secondary" className="text-xs text-amber-600 border-amber-300 bg-amber-50">
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs text-amber-600 border-amber-300 bg-amber-50"
+                                  >
                                     <AlertTriangle className="h-3 w-3 mr-1" />
-                                    Full on {space.conflictDates.map((c: { date: string }) => format(new Date(c.date + "T12:00:00Z"), "MMM d")).join(", ")}
+                                    Full on{" "}
+                                    {space.conflictDates
+                                      .map((c: { date: string }) =>
+                                        format(new Date(c.date + "T12:00:00Z"), "MMM d")
+                                      )
+                                      .join(", ")}
                                   </Badge>
                                 ) : hasConflicts ? (
                                   <Badge
                                     variant="secondary"
                                     className="text-xs text-amber-600 border-amber-300 bg-amber-50 cursor-pointer"
-                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConflictDetailsSpaceId(space.id) }}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setConflictDetailsSpaceId(space.id);
+                                    }}
                                   >
                                     <AlertTriangle className="h-3 w-3 mr-1" />
                                     {space.totalConflicts} date conflicts
                                   </Badge>
                                 ) : null}
                                 {hasClosed && (
-                                  <Badge variant="secondary" className="text-xs text-orange-600 border-orange-300 bg-orange-50">
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs text-orange-600 border-orange-300 bg-orange-50"
+                                  >
                                     <Clock className="h-3 w-3 mr-1" />
                                     {space.closedDays.length === 1
                                       ? `Closed ${space.closedDays[0].day}`
-                                      : space.closedDays.every((d: { reason: string }) => d.reason === "closed")
+                                      : space.closedDays.every(
+                                            (d: { reason: string }) => d.reason === "closed"
+                                          )
                                         ? `Closed ${space.closedDays.map((d: { day: string }) => d.day).join(", ")}`
-                                        : `${space.closedDays.length} day${space.closedDays.length !== 1 ? "s" : ""} outside hours`
-                                    }
+                                        : `${space.closedDays.length} day${space.closedDays.length !== 1 ? "s" : ""} outside hours`}
                                   </Badge>
                                 )}
                               </div>
@@ -1115,48 +1206,71 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                                 <p className="text-xs text-muted-foreground mt-1">
                                   Capacity: {space.capacity}
                                   {hasConflicts && !space.isFullyBooked && (
-                                    <> &middot; <span className="text-amber-600">{space.totalConflicts} date{space.totalConflicts !== 1 ? "s" : ""} at capacity</span></>
+                                    <>
+                                      {" "}
+                                      &middot;{" "}
+                                      <span className="text-amber-600">
+                                        {space.totalConflicts} date
+                                        {space.totalConflicts !== 1 ? "s" : ""} at capacity
+                                      </span>
+                                    </>
                                   )}
                                 </p>
                               )}
                             </div>
                           </label>
-                        )
+                        );
                       })}
                     </div>
 
                     {/* Conflict details dialog */}
-                    <Dialog open={!!conflictDetailsSpaceId} onOpenChange={(open) => !open && setConflictDetailsSpaceId(null)}>
+                    <Dialog
+                      open={!!conflictDetailsSpaceId}
+                      onOpenChange={(open) => !open && setConflictDetailsSpaceId(null)}
+                    >
                       <DialogContent className="max-w-md">
                         <DialogHeader>
                           <DialogTitle>
-                            Conflict Details &mdash; {spaces.find(s => s.id === conflictDetailsSpaceId)?.name}
+                            Conflict Details &mdash;{" "}
+                            {spaces.find((s) => s.id === conflictDetailsSpaceId)?.name}
                           </DialogTitle>
                         </DialogHeader>
                         {(() => {
-                          const space = spaces.find(s => s.id === conflictDetailsSpaceId)
-                          if (!space) return null
+                          const space = spaces.find((s) => s.id === conflictDetailsSpaceId);
+                          if (!space) return null;
                           return (
                             <div className="space-y-2">
                               <p className="text-sm text-muted-foreground">
-                                This space (capacity {space.capacity}) is fully booked on the following {space.totalConflicts} date{space.totalConflicts !== 1 ? "s" : ""}:
+                                This space (capacity {space.capacity}) is fully booked on the
+                                following {space.totalConflicts} date
+                                {space.totalConflicts !== 1 ? "s" : ""}:
                               </p>
                               <div className="max-h-64 overflow-y-auto rounded border divide-y">
-                                {space.conflictDates.map(c => (
-                                  <div key={c.date} className="flex items-center justify-between px-3 py-2 text-sm">
-                                    <span>{format(new Date(c.date + "T12:00:00Z"), "EEE, MMM d, yyyy")}</span>
-                                    <span className="text-destructive font-medium">{c.used}/{space.capacity} used</span>
+                                {space.conflictDates.map((c) => (
+                                  <div
+                                    key={c.date}
+                                    className="flex items-center justify-between px-3 py-2 text-sm"
+                                  >
+                                    <span>
+                                      {format(new Date(c.date + "T12:00:00Z"), "EEE, MMM d, yyyy")}
+                                    </span>
+                                    <span className="text-destructive font-medium">
+                                      {c.used}/{space.capacity} used
+                                    </span>
                                   </div>
                                 ))}
                               </div>
                             </div>
-                          )
+                          );
                         })()}
                       </DialogContent>
                     </Dialog>
 
                     {/* Conflict / closed-hours override dialog */}
-                    <AlertDialog open={!!fullyBookedOverride} onOpenChange={(open) => !open && setFullyBookedOverride(null)}>
+                    <AlertDialog
+                      open={!!fullyBookedOverride}
+                      onOpenChange={(open) => !open && setFullyBookedOverride(null)}
+                    >
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle className="flex items-center gap-2">
@@ -1166,54 +1280,85 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                           <AlertDialogDescription asChild>
                             <div className="space-y-3">
                               {(() => {
-                                const space = spaces.find(s => s.id === fullyBookedOverride)
-                                if (!space) return <p>This space has issues.</p>
-                                const sections: React.ReactNode[] = []
+                                const space = spaces.find((s) => s.id === fullyBookedOverride);
+                                if (!space) return <p>This space has issues.</p>;
+                                const sections: React.ReactNode[] = [];
 
                                 if (space.closedDays?.length > 0) {
                                   sections.push(
                                     <div key="closed">
-                                      <p className="font-medium text-foreground">Outside operating hours</p>
+                                      <p className="font-medium text-foreground">
+                                        Outside operating hours
+                                      </p>
                                       <ul className="mt-1 space-y-0.5 text-sm">
-                                        {space.closedDays.map(d => (
+                                        {space.closedDays.map((d) => (
                                           <li key={d.day} className="text-orange-600">
-                                            {d.day}: {d.reason === "closed" ? "Space is closed" : `Space is ${d.reason}`}
+                                            {d.day}:{" "}
+                                            {d.reason === "closed"
+                                              ? "Space is closed"
+                                              : `Space is ${d.reason}`}
                                           </li>
                                         ))}
                                       </ul>
                                     </div>
-                                  )
+                                  );
                                 }
 
                                 if (space.isFullyBooked) {
                                   sections.push(
                                     <div key="full">
                                       <p className="font-medium text-foreground">Fully booked</p>
-                                      <p className="text-sm">This space is at capacity on all dates during the selected time slot.</p>
+                                      <p className="text-sm">
+                                        This space is at capacity on all dates during the selected
+                                        time slot.
+                                      </p>
                                     </div>
-                                  )
+                                  );
                                 } else if (space.totalConflicts > 0) {
                                   sections.push(
                                     <div key="conflicts">
-                                      <p className="font-medium text-foreground">Capacity conflicts</p>
+                                      <p className="font-medium text-foreground">
+                                        Capacity conflicts
+                                      </p>
                                       {space.totalConflicts <= 5 ? (
                                         <ul className="mt-1 space-y-0.5 text-sm">
-                                          {space.conflictDates.map(c => (
+                                          {space.conflictDates.map((c) => (
                                             <li key={c.date} className="text-destructive">
-                                              {format(new Date(c.date + "T12:00:00Z"), "EEE, MMM d, yyyy")} ({c.used}/{space.capacity} used)
+                                              {format(
+                                                new Date(c.date + "T12:00:00Z"),
+                                                "EEE, MMM d, yyyy"
+                                              )}{" "}
+                                              ({c.used}/{space.capacity} used)
                                             </li>
                                           ))}
                                         </ul>
                                       ) : (
                                         <p className="text-sm text-muted-foreground">
-                                          {space.totalConflicts} dates at capacity, from {format(new Date(space.conflictDates[0].date + "T12:00:00Z"), "MMM d")} through {format(new Date(space.conflictDates[space.conflictDates.length - 1].date + "T12:00:00Z"), "MMM d, yyyy")}.
+                                          {space.totalConflicts} dates at capacity, from{" "}
+                                          {format(
+                                            new Date(space.conflictDates[0].date + "T12:00:00Z"),
+                                            "MMM d"
+                                          )}{" "}
+                                          through{" "}
+                                          {format(
+                                            new Date(
+                                              space.conflictDates[space.conflictDates.length - 1]
+                                                .date + "T12:00:00Z"
+                                            ),
+                                            "MMM d, yyyy"
+                                          )}
+                                          .
                                         </p>
                                       )}
                                     </div>
-                                  )
+                                  );
                                 }
 
-                                return sections.length > 0 ? sections : <p>This space has issues.</p>
+                                return sections.length > 0 ? (
+                                  sections
+                                ) : (
+                                  <p>This space has issues.</p>
+                                );
                               })()}
                               <p>Are you sure you want to proceed?</p>
                             </div>
@@ -1224,25 +1369,30 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                           <AlertDialogAction
                             onClick={() => {
                               if (fullyBookedOverride) {
-                                setFormData(prev => {
-                                  const newIds = [...prev.spaceIds, fullyBookedOverride]
-                                  const selectedSpaces = spaces.filter(s => newIds.includes(s.id))
-                                  const capacities = selectedSpaces.map(s => s.capacity).filter((c): c is number => c != null)
-                                  const derived = capacities.length > 0
-                                    ? (prev.spaceCapacityMode === "SUM"
+                                setFormData((prev) => {
+                                  const newIds = [...prev.spaceIds, fullyBookedOverride];
+                                  const selectedSpaces = spaces.filter((s) =>
+                                    newIds.includes(s.id)
+                                  );
+                                  const capacities = selectedSpaces
+                                    .map((s) => s.capacity)
+                                    .filter((c): c is number => c != null);
+                                  const derived =
+                                    capacities.length > 0
+                                      ? prev.spaceCapacityMode === "SUM"
                                         ? capacities.reduce((sum, c) => sum + c, 0)
-                                        : Math.min(...capacities))
-                                    : null
+                                        : Math.min(...capacities)
+                                      : null;
                                   return {
                                     ...prev,
                                     spaceIds: newIds,
                                     hasCapacityRestriction: true,
                                     hasSpaceRestriction: true,
                                     capacity: derived ?? prev.capacity,
-                                  }
-                                })
+                                  };
+                                });
                               }
-                              setFullyBookedOverride(null)
+                              setFullyBookedOverride(null);
                             }}
                           >
                             Proceed Anyway
@@ -1254,7 +1404,6 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                 )}
               </div>
             )}
-
           </TabsContent>
 
           {/* ============================================= */}
@@ -1263,76 +1412,76 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
           <TabsContent value="requirements" className="mt-0 space-y-6 max-w-2xl">
             {/* Level Restriction - only shown when Training feature is enabled */}
             {trainingEnabled && (
-            <div className="rounded-lg border p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-base font-medium">Level Restriction</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Require athletes to be at one of the selected levels
-                  </p>
-                </div>
-                <Switch
-                  checked={formData.hasLevelRestriction}
-                  onCheckedChange={(checked) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      hasLevelRestriction: checked,
-                      levelRequirementIds: checked ? prev.levelRequirementIds : [],
-                    }))
-                  }
-                />
-              </div>
-
-              {formData.hasLevelRestriction && (
-                <div className="pt-2 border-t">
-                  {loadingLevels ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Loading levels...
-                    </div>
-                  ) : levels.length === 0 ? (
+              <div className="rounded-lg border p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-base font-medium">Level Restriction</Label>
                     <p className="text-sm text-muted-foreground">
-                      No levels configured.{" "}
-                      <a href="/dashboard/training/levels" className="text-primary underline">
-                        Create levels
-                      </a>{" "}
-                      first.
+                      Require athletes to be at one of the selected levels
                     </p>
-                  ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {levels.map((level) => (
-                        <label
-                          key={level.id}
-                          className={cn(
-                            "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
-                            formData.levelRequirementIds.includes(level.id)
-                              ? "border-primary bg-primary/5"
-                              : "hover:bg-muted/50"
-                          )}
-                        >
-                          <Checkbox
-                            checked={formData.levelRequirementIds.includes(level.id)}
-                            onCheckedChange={(checked) => {
-                              setFormData((prev) => ({
-                                ...prev,
-                                levelRequirementIds: checked
-                                  ? [...prev.levelRequirementIds, level.id]
-                                  : prev.levelRequirementIds.filter((id) => id !== level.id),
-                              }))
-                            }}
-                          />
-                          <div
-                            className="w-3 h-3 rounded-full shrink-0"
-                            style={{ backgroundColor: level.color || "#64748b" }}
-                          />
-                          <span className="text-sm font-medium">{level.name}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
+                  </div>
+                  <Switch
+                    checked={formData.hasLevelRestriction}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        hasLevelRestriction: checked,
+                        levelRequirementIds: checked ? prev.levelRequirementIds : [],
+                      }))
+                    }
+                  />
                 </div>
-              )}
-            </div>
+
+                {formData.hasLevelRestriction && (
+                  <div className="pt-2 border-t">
+                    {loadingLevels ? (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading levels...
+                      </div>
+                    ) : levels.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No levels configured.{" "}
+                        <a href="/dashboard/training/levels" className="text-primary underline">
+                          Create levels
+                        </a>{" "}
+                        first.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {levels.map((level) => (
+                          <label
+                            key={level.id}
+                            className={cn(
+                              "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                              formData.levelRequirementIds.includes(level.id)
+                                ? "border-primary bg-primary/5"
+                                : "hover:bg-muted/50"
+                            )}
+                          >
+                            <Checkbox
+                              checked={formData.levelRequirementIds.includes(level.id)}
+                              onCheckedChange={(checked) => {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  levelRequirementIds: checked
+                                    ? [...prev.levelRequirementIds, level.id]
+                                    : prev.levelRequirementIds.filter((id) => id !== level.id),
+                                }));
+                              }}
+                            />
+                            <div
+                              className="w-3 h-3 rounded-full shrink-0"
+                              style={{ backgroundColor: level.color || "#64748b" }}
+                            />
+                            <span className="text-sm font-medium">{level.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Capacity Restriction */}
@@ -1370,12 +1519,15 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                         </div>
                         <Switch
                           checked={formData.hasSpaceRestriction}
-                          onCheckedChange={checked => {
-                            setFormData(prev => ({
+                          onCheckedChange={(checked) => {
+                            setFormData((prev) => ({
                               ...prev,
                               hasSpaceRestriction: checked,
-                              capacity: checked && spaceDerivedCapacity ? spaceDerivedCapacity : prev.capacity,
-                            }))
+                              capacity:
+                                checked && spaceDerivedCapacity
+                                  ? spaceDerivedCapacity
+                                  : prev.capacity,
+                            }));
                           }}
                         />
                       </div>
@@ -1386,18 +1538,25 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                           <RadioGroup
                             value={formData.spaceCapacityMode}
                             onValueChange={(value: "MINIMUM" | "SUM") => {
-                              setFormData(prev => {
-                                const selectedSpaces = spaces.filter(s => prev.spaceIds.includes(s.id))
-                                const capacities = selectedSpaces.map(s => s.capacity).filter((c): c is number => c != null)
-                                const derived = value === "SUM"
-                                  ? capacities.reduce((s, c) => s + c, 0)
-                                  : capacities.length > 0 ? Math.min(...capacities) : null
+                              setFormData((prev) => {
+                                const selectedSpaces = spaces.filter((s) =>
+                                  prev.spaceIds.includes(s.id)
+                                );
+                                const capacities = selectedSpaces
+                                  .map((s) => s.capacity)
+                                  .filter((c): c is number => c != null);
+                                const derived =
+                                  value === "SUM"
+                                    ? capacities.reduce((s, c) => s + c, 0)
+                                    : capacities.length > 0
+                                      ? Math.min(...capacities)
+                                      : null;
                                 return {
                                   ...prev,
                                   spaceCapacityMode: value,
                                   capacity: derived ?? prev.capacity,
-                                }
-                              })
+                                };
+                              });
                             }}
                             className="space-y-2"
                           >
@@ -1418,11 +1577,13 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                         </div>
                       )}
 
-                      {formData.hasSpaceRestriction && spaceDerivedCapacity != null && formData.spaceIds.length === 1 && (
-                        <p className="text-xs text-muted-foreground pl-4 border-l-2">
-                          Space capacity: {spaceDerivedCapacity} athletes
-                        </p>
-                      )}
+                      {formData.hasSpaceRestriction &&
+                        spaceDerivedCapacity != null &&
+                        formData.spaceIds.length === 1 && (
+                          <p className="text-xs text-muted-foreground pl-4 border-l-2">
+                            Space capacity: {spaceDerivedCapacity} athletes
+                          </p>
+                        )}
                     </div>
                   )}
 
@@ -1432,15 +1593,20 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                       id="config-capacity"
                       type="number"
                       min={1}
-                      max={formData.hasSpaceRestriction && spaceDerivedCapacity ? spaceDerivedCapacity : undefined}
+                      max={
+                        formData.hasSpaceRestriction && spaceDerivedCapacity
+                          ? spaceDerivedCapacity
+                          : undefined
+                      }
                       placeholder="Max athletes"
                       value={formData.capacity || ""}
                       onChange={(e) => {
-                        const val = e.target.value ? parseInt(e.target.value) : null
-                        const capped = formData.hasSpaceRestriction && spaceDerivedCapacity && val
-                          ? Math.min(val, spaceDerivedCapacity)
-                          : val
-                        setFormData((prev) => ({ ...prev, capacity: capped }))
+                        const val = e.target.value ? parseInt(e.target.value) : null;
+                        const capped =
+                          formData.hasSpaceRestriction && spaceDerivedCapacity && val
+                            ? Math.min(val, spaceDerivedCapacity)
+                            : val;
+                        setFormData((prev) => ({ ...prev, capacity: capped }));
                       }}
                       className="mt-2 max-w-[200px]"
                     />
@@ -1586,7 +1752,7 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                                     : prev.membershipRequirementIds.filter(
                                         (id) => id !== instance.id
                                       ),
-                                }))
+                                }));
                               }}
                             />
                             <div className="flex-1">
@@ -1595,17 +1761,17 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                                 <span className="text-sm font-medium">
                                   {instance.groupName} - {instance.name}
                                 </span>
+                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                ${instance.price.toFixed(2)}
+                              </span>
                             </div>
-                            <span className="text-xs text-muted-foreground">
-                              ${instance.price.toFixed(2)}
-                            </span>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -1641,7 +1807,10 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                     ) : availablePasses.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
                         No passes configured.{" "}
-                        <a href="/dashboard/registrations/passes" className="text-primary underline">
+                        <a
+                          href="/dashboard/registrations/passes"
+                          className="text-primary underline"
+                        >
                           Create passes
                         </a>{" "}
                         first.
@@ -1666,7 +1835,7 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                                   passRequirementIds: checked
                                     ? [...prev.passRequirementIds, pass.id]
                                     : prev.passRequirementIds.filter((id) => id !== pass.id),
-                                }))
+                                }));
                               }}
                             />
                             <div className="flex-1">
@@ -1675,7 +1844,10 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                                 <span className="text-sm font-medium">{pass.name}</span>
                               </div>
                               <span className="text-xs text-muted-foreground">
-                                ${Number(pass.price).toFixed(2)} / {pass.billingInterval.toLowerCase().replace("_", "-")} · {pass.sessionLimit} sessions / {pass.limitPeriod === "WEEKLY" ? "week" : "month"}
+                                ${Number(pass.price).toFixed(2)} /{" "}
+                                {pass.billingInterval.toLowerCase().replace("_", "-")} ·{" "}
+                                {pass.sessionLimit} sessions /{" "}
+                                {pass.limitPeriod === "WEEKLY" ? "week" : "month"}
                               </span>
                             </div>
                           </label>
@@ -1743,7 +1915,7 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                                 waiverRequirementIds: checked
                                   ? [...prev.waiverRequirementIds, waiver.id]
                                   : prev.waiverRequirementIds.filter((id) => id !== waiver.id),
-                              }))
+                              }));
                             }}
                           />
                           <div className="flex-1">
@@ -1788,7 +1960,8 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                       Medical information categories are configured in your{" "}
                       <a href="/dashboard/athletes/medical" className="text-primary underline">
                         Medical Information Settings
-                      </a>.
+                      </a>
+                      .
                     </span>
                   </div>
                 </div>
@@ -1809,9 +1982,10 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                   setFormData((prev) => ({
                     ...prev,
                     hasFileRequirement: checked,
-                    fileRequirementConfig: checked && !prev.fileRequirementConfig
-                      ? { label: "", acceptedPresets: [], acceptedExtensions: [] }
-                      : prev.fileRequirementConfig,
+                    fileRequirementConfig:
+                      checked && !prev.fileRequirementConfig
+                        ? { label: "", acceptedPresets: [], acceptedExtensions: [] }
+                        : prev.fileRequirementConfig,
                   }))
                 }
               />
@@ -1821,70 +1995,79 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
               <div className="pt-2 border-t">
                 <FileRequirementConfigEditor
                   config={formData.fileRequirementConfig}
-                  onChange={(config) => setFormData((prev) => ({ ...prev, fileRequirementConfig: config }))}
+                  onChange={(config) =>
+                    setFormData((prev) => ({ ...prev, fileRequirementConfig: config }))
+                  }
                 />
               </div>
             )}
-
           </TabsContent>
 
           {/* ============================================= */}
           {/* WAITLIST TAB                                   */}
           {/* ============================================= */}
           {waitlistsEnabled && (
-          <TabsContent value="waitlist" className="mt-0 space-y-6 max-w-2xl">
-            <div className="flex items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <Label htmlFor="config-waitlist-enabled" className="text-base">Enable Waitlist</Label>
-                <p className="text-sm text-muted-foreground">
-                  Allow athletes to join a waitlist when the program is full
-                </p>
-              </div>
-              <Switch
-                id="config-waitlist-enabled"
-                checked={formData.waitlistEnabled}
-                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, waitlistEnabled: checked }))}
-              />
-            </div>
-
-            {formData.waitlistEnabled && (
-              <>
-                <div className="flex items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="config-waitlist-auto-promote" className="text-base">Automatic Promotion</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Automatically promote the next person on the waitlist when a spot opens, in registration order
-                    </p>
-                  </div>
-                  <Switch
-                    id="config-waitlist-auto-promote"
-                    checked={formData.waitlistAutoPromote}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, waitlistAutoPromote: checked }))}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="config-waitlist-capacity">Maximum Waitlist Size</Label>
+            <TabsContent value="waitlist" className="mt-0 space-y-6 max-w-2xl">
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label htmlFor="config-waitlist-enabled" className="text-base">
+                    Enable Waitlist
+                  </Label>
                   <p className="text-sm text-muted-foreground">
-                    Limit how many people can join the waitlist. Leave empty for unlimited.
+                    Allow athletes to join a waitlist when the program is full
                   </p>
-                  <Input
-                    id="config-waitlist-capacity"
-                    type="number"
-                    min={1}
-                    placeholder="Unlimited"
-                    value={formData.waitlistCapacity ?? ""}
-                    onChange={(e) => {
-                      const val = e.target.value ? parseInt(e.target.value, 10) : null
-                      setFormData(prev => ({ ...prev, waitlistCapacity: val }))
-                    }}
-                    className="max-w-[200px]"
-                  />
                 </div>
-              </>
-            )}
+                <Switch
+                  id="config-waitlist-enabled"
+                  checked={formData.waitlistEnabled}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({ ...prev, waitlistEnabled: checked }))
+                  }
+                />
+              </div>
 
-          </TabsContent>
+              {formData.waitlistEnabled && (
+                <>
+                  <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="config-waitlist-auto-promote" className="text-base">
+                        Automatic Promotion
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Automatically promote the next person on the waitlist when a spot opens, in
+                        registration order
+                      </p>
+                    </div>
+                    <Switch
+                      id="config-waitlist-auto-promote"
+                      checked={formData.waitlistAutoPromote}
+                      onCheckedChange={(checked) =>
+                        setFormData((prev) => ({ ...prev, waitlistAutoPromote: checked }))
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="config-waitlist-capacity">Maximum Waitlist Size</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Limit how many people can join the waitlist. Leave empty for unlimited.
+                    </p>
+                    <Input
+                      id="config-waitlist-capacity"
+                      type="number"
+                      min={1}
+                      placeholder="Unlimited"
+                      value={formData.waitlistCapacity ?? ""}
+                      onChange={(e) => {
+                        const val = e.target.value ? parseInt(e.target.value, 10) : null;
+                        setFormData((prev) => ({ ...prev, waitlistCapacity: val }));
+                      }}
+                      className="max-w-[200px]"
+                    />
+                  </div>
+                </>
+              )}
+            </TabsContent>
           )}
 
           {/* ============================================= */}
@@ -1913,7 +2096,7 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                   </SelectTrigger>
                   <SelectContent>
                     {unassignedStaff.map((s) => {
-                      const certResult = getMemberStatus(s.id)
+                      const certResult = getMemberStatus(s.id);
                       return (
                         <SelectItem key={s.id} value={s.id} disabled={!certResult.valid}>
                           <div className="flex items-center gap-2">
@@ -1924,17 +2107,16 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                               </AvatarFallback>
                             </Avatar>
                             <span>{s.user?.name || "Unknown"}</span>
-                            {s.title && (
-                              <span className="text-muted-foreground">({s.title})</span>
-                            )}
+                            {s.title && <span className="text-muted-foreground">({s.title})</span>}
                             {!certResult.valid && (
                               <span className="text-destructive text-xs ml-1 shrink-0">
-                                Missing: {certResult.missing.map(m => m.certificationName).join(", ")}
+                                Missing:{" "}
+                                {certResult.missing.map((m) => m.certificationName).join(", ")}
                               </span>
                             )}
                           </div>
                         </SelectItem>
-                      )
+                      );
                     })}
                   </SelectContent>
                 </Select>
@@ -2060,7 +2242,6 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                 />
               </div>
             </div>
-
           </TabsContent>
 
           {/* ============================================= */}
@@ -2076,21 +2257,19 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
               <RadioGroup
                 value={formData.registrationOpen ? "now" : "scheduled"}
                 onValueChange={(value) => {
-                  const isNow = value === "now"
-                  setFormData(prev => ({
+                  const isNow = value === "now";
+                  setFormData((prev) => ({
                     ...prev,
                     registrationOpen: isNow,
                     registrationStartDate: isNow ? "" : prev.registrationStartDate,
-                  }))
+                  }));
                 }}
                 className="space-y-3"
               >
                 <label
                   className={cn(
                     "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
-                    formData.registrationOpen
-                      ? "border-primary bg-primary/5"
-                      : "hover:bg-muted/50"
+                    formData.registrationOpen ? "border-primary bg-primary/5" : "hover:bg-muted/50"
                   )}
                 >
                   <RadioGroupItem value="now" className="mt-1" />
@@ -2105,9 +2284,7 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                 <label
                   className={cn(
                     "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
-                    !formData.registrationOpen
-                      ? "border-primary bg-primary/5"
-                      : "hover:bg-muted/50"
+                    !formData.registrationOpen ? "border-primary bg-primary/5" : "hover:bg-muted/50"
                   )}
                 >
                   <RadioGroupItem value="scheduled" className="mt-1" />
@@ -2119,36 +2296,44 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                   </div>
                 </label>
               </RadioGroup>
-
             </div>
 
             {/* Registration Opens */}
             {!formData.registrationOpen && (
-            <div className="space-y-4">
-              <Label className="text-base font-medium">Registration Opens</Label>
-              <p className="text-sm text-muted-foreground">
-                Set when registration becomes available. Must be on or before the first day of the program{formData.startDate ? ` (${format(new Date(formData.startDate + "T12:00:00Z"), "PPP")})` : ""}.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Open Date</Label>
-                  <Input
-                    type="date"
-                    value={formData.registrationStartDate}
-                    max={formData.startDate || undefined}
-                    onChange={e => setFormData(prev => ({ ...prev, registrationStartDate: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Open Time</Label>
-                  <Input
-                    type="time"
-                    value={formData.registrationStartTime}
-                    onChange={e => setFormData(prev => ({ ...prev, registrationStartTime: e.target.value }))}
-                  />
+              <div className="space-y-4">
+                <Label className="text-base font-medium">Registration Opens</Label>
+                <p className="text-sm text-muted-foreground">
+                  Set when registration becomes available. Must be on or before the first day of the
+                  program
+                  {formData.startDate
+                    ? ` (${format(new Date(formData.startDate + "T12:00:00Z"), "PPP")})`
+                    : ""}
+                  .
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Open Date</Label>
+                    <Input
+                      type="date"
+                      value={formData.registrationStartDate}
+                      max={formData.startDate || undefined}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, registrationStartDate: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Open Time</Label>
+                    <Input
+                      type="time"
+                      value={formData.registrationStartTime}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, registrationStartTime: e.target.value }))
+                      }
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
             )}
 
             {/* Registration End Date */}
@@ -2163,8 +2348,14 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                   <Input
                     type="date"
                     value={formData.registrationEndDate}
-                    min={!formData.registrationOpen && formData.registrationStartDate ? formData.registrationStartDate : new Date().toISOString().split("T")[0]}
-                    onChange={e => setFormData(prev => ({ ...prev, registrationEndDate: e.target.value }))}
+                    min={
+                      !formData.registrationOpen && formData.registrationStartDate
+                        ? formData.registrationStartDate
+                        : new Date().toISOString().split("T")[0]
+                    }
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, registrationEndDate: e.target.value }))
+                    }
                     placeholder={formData.endDate || ""}
                   />
                 </div>
@@ -2173,7 +2364,9 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                   <Input
                     type="time"
                     value={formData.registrationEndTime}
-                    onChange={e => setFormData(prev => ({ ...prev, registrationEndTime: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, registrationEndTime: e.target.value }))
+                    }
                   />
                 </div>
               </div>
@@ -2186,21 +2379,24 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                 Early Access Code
               </Label>
               <p className="text-sm text-muted-foreground">
-                Generate or enter a code that allows registration before the registration window opens
+                Generate or enter a code that allows registration before the registration window
+                opens
               </p>
               <div className="flex items-center gap-2">
                 <Input
                   placeholder="Enter or generate a code"
                   value={formData.earlyAccessCode || ""}
-                  onChange={e => setFormData(prev => ({ ...prev, earlyAccessCode: e.target.value || null }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, earlyAccessCode: e.target.value || null }))
+                  }
                   className="max-w-[300px]"
                 />
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => {
-                    const code = crypto.randomUUID().slice(0, 8).toUpperCase()
-                    setFormData(prev => ({ ...prev, earlyAccessCode: code }))
+                    const code = crypto.randomUUID().slice(0, 8).toUpperCase();
+                    setFormData((prev) => ({ ...prev, earlyAccessCode: code }));
                   }}
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
@@ -2216,16 +2412,17 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                   </Label>
                   <div className="flex items-center gap-2">
                     <code className="flex-1 text-sm bg-background px-3 py-2 rounded border break-all">
-                      {typeof window !== "undefined" ? `${window.location.origin}` : ""}/programs/{program.id}?code={formData.earlyAccessCode}
+                      {typeof window !== "undefined" ? `${window.location.origin}` : ""}/programs/
+                      {program.id}?code={formData.earlyAccessCode}
                     </code>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        const url = `${window.location.origin}/programs/${program.id}?code=${formData.earlyAccessCode}`
-                        navigator.clipboard.writeText(url)
-                        toast.success("Link copied to clipboard")
+                        const url = `${window.location.origin}/programs/${program.id}?code=${formData.earlyAccessCode}`;
+                        navigator.clipboard.writeText(url);
+                        toast.success("Link copied to clipboard");
                       }}
                     >
                       <Copy className="h-4 w-4" />
@@ -2251,5 +2448,5 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
         </Button>
       </div>
     </div>
-  )
+  );
 }

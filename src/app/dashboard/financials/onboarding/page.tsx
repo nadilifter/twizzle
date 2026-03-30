@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { useEffect, useState, useCallback } from "react"
-import { OrganizationAddressForm } from "@/components/organization-address-form"
+import { useEffect, useState, useCallback } from "react";
+import { OrganizationAddressForm } from "@/components/organization-address-form";
 import {
   Card,
   CardContent,
@@ -9,10 +9,10 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   CheckCircle2Icon,
   AlertCircleIcon,
@@ -26,70 +26,70 @@ import {
   XCircleIcon,
   MapPinIcon,
   PhoneIcon,
-} from "lucide-react"
-import { toast } from "sonner"
-import { formatPhoneNumberIntl } from "react-phone-number-input"
+} from "lucide-react";
+import { toast } from "sonner";
+import { formatPhoneNumberIntl } from "react-phone-number-input";
 
 type OnboardingAccount = {
-  onboardingStatus: string
-  verificationStatus: string | null
-  capabilities: Record<string, any> | null
-  hasStore: boolean
-  hasSweep: boolean
-  legalEntityId: string | null
-  accountHolderId: string | null
-  balanceAccountId: string | null
-}
+  onboardingStatus: string;
+  verificationStatus: string | null;
+  capabilities: Record<string, any> | null;
+  hasStore: boolean;
+  hasSweep: boolean;
+  legalEntityId: string | null;
+  accountHolderId: string | null;
+  balanceAccountId: string | null;
+};
 
 type OrganizationDetails = {
-  id: string
-  name: string
-  street: string | null
-  city: string | null
-  stateProvince: string | null
-  postalCode: string | null
-  country: string | null
-  phone: string | null
-  taxRate: string | number | null
-  taxEnabled: boolean
-}
+  id: string;
+  name: string;
+  street: string | null;
+  city: string | null;
+  stateProvince: string | null;
+  postalCode: string | null;
+  country: string | null;
+  phone: string | null;
+  taxRate: string | number | null;
+  taxEnabled: boolean;
+};
 
 export default function OnboardingPage() {
-  const [account, setAccount] = useState<OnboardingAccount | null>(null)
-  const [organization, setOrganization] = useState<OrganizationDetails | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [actionLoading, setActionLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [account, setAccount] = useState<OnboardingAccount | null>(null);
+  const [organization, setOrganization] = useState<OrganizationDetails | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await fetch("/api/organization/adyen-onboarding")
-      const data = await res.json()
+      const res = await fetch("/api/organization/adyen-onboarding");
+      const data = await res.json();
       if (res.ok) {
-        setAccount(data.account)
-        setOrganization(data.organization)
+        setAccount(data.account);
+        setOrganization(data.organization);
       } else {
-        setError(data.error)
+        setError(data.error);
       }
     } catch {
-      setError("Failed to load onboarding status")
+      setError("Failed to load onboarding status");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    fetchStatus()
-  }, [fetchStatus])
+    fetchStatus();
+  }, [fetchStatus]);
 
   const handleInitiate = async () => {
-    setActionLoading(true)
-    setError(null)
+    setActionLoading(true);
+    setError(null);
     try {
       const res = await fetch("/api/organization/adyen-onboarding", {
         method: "POST",
-      })
-      const data = await res.json()
+      });
+      const data = await res.json();
       if (res.ok) {
         setAccount({
           onboardingStatus: data.account.onboardingStatus,
@@ -100,88 +100,81 @@ export default function OnboardingPage() {
           legalEntityId: data.account.legalEntityId,
           accountHolderId: data.account.accountHolderId,
           balanceAccountId: data.account.balanceAccountId,
-        })
+        });
       } else {
-        setError(data.error || "Failed to initiate onboarding")
+        setError(data.error || "Failed to initiate onboarding");
       }
     } catch {
-      setError("Failed to initiate onboarding")
+      setError("Failed to initiate onboarding");
     } finally {
-      setActionLoading(false)
+      setActionLoading(false);
     }
-  }
+  };
 
   const handleGetLink = async () => {
-    setActionLoading(true)
-    setError(null)
+    setActionLoading(true);
+    setError(null);
     try {
       const res = await fetch("/api/organization/adyen-onboarding/link", {
         method: "POST",
-      })
-      const data = await res.json()
+      });
+      const data = await res.json();
       if (res.ok && data.url) {
-        window.location.href = data.url
+        window.location.href = data.url;
       } else {
-        setError(data.error || "Failed to generate onboarding link")
-        setActionLoading(false)
+        setError(data.error || "Failed to generate onboarding link");
+        setActionLoading(false);
       }
     } catch {
-      setError("Failed to generate onboarding link")
-      setActionLoading(false)
+      setError("Failed to generate onboarding link");
+      setActionLoading(false);
     }
-  }
+  };
 
   const handleFinalize = async () => {
-    setActionLoading(true)
-    setError(null)
+    setActionLoading(true);
+    setError(null);
     try {
       const res = await fetch("/api/organization/adyen-onboarding/finalize", {
         method: "POST",
-      })
-      const data = await res.json()
+      });
+      const data = await res.json();
       if (res.ok) {
-        await fetchStatus()
+        await fetchStatus();
       } else {
-        setError(data.error || "Failed to finalize setup")
+        setError(data.error || "Failed to finalize setup");
       }
     } catch {
-      setError("Failed to finalize setup")
+      setError("Failed to finalize setup");
     } finally {
-      setActionLoading(false)
+      setActionLoading(false);
     }
-  }
+  };
 
   const handleRefresh = async () => {
-    setLoading(true)
-    await fetchStatus()
-  }
+    setLoading(true);
+    await fetchStatus();
+  };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
-    )
+    );
   }
 
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-bold tracking-tight">
-            Account Onboarding
-          </h1>
+          <h1 className="text-2xl font-bold tracking-tight">Account Onboarding</h1>
           <p className="text-muted-foreground">
             Verify your business details to start processing payments.
           </p>
         </div>
         {account && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={loading}
-          >
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
             <RefreshCwIcon className="h-4 w-4 mr-2" />
             Refresh
           </Button>
@@ -197,9 +190,9 @@ export default function OnboardingPage() {
       )}
 
       {!account && organization && (
-        <OrganizationAddressCard 
-          organization={organization} 
-          onUpdate={(org) => setOrganization(org)} 
+        <OrganizationAddressCard
+          organization={organization}
+          onUpdate={(org) => setOrganization(org)}
         />
       )}
 
@@ -210,7 +203,12 @@ export default function OnboardingPage() {
       {(account?.onboardingStatus === "IN_PROGRESS" ||
         account?.onboardingStatus === "IN_REVIEW" ||
         account?.onboardingStatus === "AWAITING_DATA") && (
-        <InProgressState account={account} onGetLink={handleGetLink} onRefresh={handleRefresh} loading={actionLoading} />
+        <InProgressState
+          account={account}
+          onGetLink={handleGetLink}
+          onRefresh={handleRefresh}
+          loading={actionLoading}
+        />
       )}
       {account?.onboardingStatus === "VERIFIED" && (
         <VerifiedState account={account} onFinalize={handleFinalize} loading={actionLoading} />
@@ -218,19 +216,18 @@ export default function OnboardingPage() {
       {account?.onboardingStatus === "REJECTED" && (
         <RejectedState account={account} onGetLink={handleGetLink} loading={actionLoading} />
       )}
-
     </div>
-  )
+  );
 }
 
-function OrganizationAddressCard({ 
-  organization, 
-  onUpdate 
-}: { 
-  organization: OrganizationDetails
-  onUpdate: (org: OrganizationDetails) => void 
+function OrganizationAddressCard({
+  organization,
+  onUpdate,
+}: {
+  organization: OrganizationDetails;
+  onUpdate: (org: OrganizationDetails) => void;
 }) {
-  const [isEditing, setIsEditing] = useState(false)
+  const [isEditing, setIsEditing] = useState(false);
 
   const isComplete = Boolean(
     organization.street &&
@@ -239,7 +236,7 @@ function OrganizationAddressCard({
     organization.postalCode &&
     organization.country &&
     organization.phone
-  )
+  );
 
   const address = [
     organization.street,
@@ -249,28 +246,34 @@ function OrganizationAddressCard({
     organization.country,
   ]
     .filter(Boolean)
-    .join(", ")
+    .join(", ");
 
   return (
     <Card>
       <CardHeader className="relative">
         <CardTitle>Organization Contact Details</CardTitle>
         <CardDescription>
-          Your organization&apos;s physical address and phone number. These must be complete before initiating Adyen onboarding.
+          Your organization&apos;s physical address and phone number. These must be complete before
+          initiating Adyen onboarding.
         </CardDescription>
         {!isEditing && (
-          <Button variant="ghost" size="sm" className="absolute right-4 top-4" onClick={() => setIsEditing(true)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="absolute right-4 top-4"
+            onClick={() => setIsEditing(true)}
+          >
             Edit
           </Button>
         )}
       </CardHeader>
       <CardContent>
         {isEditing ? (
-          <OrganizationAddressForm 
-            organization={organization} 
+          <OrganizationAddressForm
+            organization={organization}
             onSuccess={(updated) => {
-              onUpdate(updated)
-              setIsEditing(false)
+              onUpdate(updated);
+              setIsEditing(false);
             }}
             onCancel={() => setIsEditing(false)}
           />
@@ -306,30 +309,22 @@ function OrganizationAddressCard({
                 </div>
               </div>
             </div>
-            {!isComplete && (
-              <Badge variant="destructive">Missing required fields</Badge>
-            )}
+            {!isComplete && <Badge variant="destructive">Missing required fields</Badge>}
           </div>
         )}
       </CardContent>
     </Card>
-  )
+  );
 }
 
-function NotStartedState({
-  onInitiate,
-  loading,
-}: {
-  onInitiate: () => void
-  loading: boolean
-}) {
+function NotStartedState({ onInitiate, loading }: { onInitiate: () => void; loading: boolean }) {
   return (
     <Card>
       <CardHeader>
         <CardTitle>Get Started with Payment Processing</CardTitle>
         <CardDescription>
-          To accept payments and receive payouts, you need to verify your
-          business details with our payment provider, Adyen.
+          To accept payments and receive payouts, you need to verify your business details with our
+          payment provider, Adyen.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -351,10 +346,7 @@ function NotStartedState({
               desc: "Where you'll receive your payouts",
             },
           ].map(({ icon: Icon, title, desc }) => (
-            <div
-              key={title}
-              className="flex items-center gap-4 p-4 border rounded-lg"
-            >
+            <div key={title} className="flex items-center gap-4 p-4 border rounded-lg">
               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <Icon className="h-5 w-5 text-primary" />
               </div>
@@ -373,7 +365,7 @@ function NotStartedState({
         </Button>
       </CardFooter>
     </Card>
-  )
+  );
 }
 
 function PendingHostedState({
@@ -381,17 +373,17 @@ function PendingHostedState({
   onGetLink,
   loading,
 }: {
-  account: OnboardingAccount
-  onGetLink: () => void
-  loading: boolean
+  account: OnboardingAccount;
+  onGetLink: () => void;
+  loading: boolean;
 }) {
   return (
     <Card>
       <CardHeader>
         <CardTitle>Complete Your Verification</CardTitle>
         <CardDescription>
-          Your account structure has been created. Complete the verification
-          process with Adyen to start accepting payments.
+          Your account structure has been created. Complete the verification process with Adyen to
+          start accepting payments.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -399,9 +391,8 @@ function PendingHostedState({
           <ClockIcon className="h-4 w-4" />
           <AlertTitle>Verification Pending</AlertTitle>
           <AlertDescription>
-            Click the button below to continue to Adyen&apos;s secure verification
-            page where you&apos;ll provide business details, identity documents, and
-            bank account information.
+            Click the button below to continue to Adyen&apos;s secure verification page where
+            you&apos;ll provide business details, identity documents, and bank account information.
           </AlertDescription>
         </Alert>
         <StatusRows account={account} />
@@ -414,7 +405,7 @@ function PendingHostedState({
         </Button>
       </CardFooter>
     </Card>
-  )
+  );
 }
 
 function InProgressState({
@@ -423,10 +414,10 @@ function InProgressState({
   onRefresh,
   loading,
 }: {
-  account: OnboardingAccount
-  onGetLink: () => void
-  onRefresh: () => void
-  loading: boolean
+  account: OnboardingAccount;
+  onGetLink: () => void;
+  onRefresh: () => void;
+  loading: boolean;
 }) {
   return (
     <div className="grid gap-6 md:grid-cols-[2fr_1fr]">
@@ -460,7 +451,7 @@ function InProgressState({
 
       <HelpCard />
     </div>
-  )
+  );
 }
 
 function VerifiedState({
@@ -468,25 +459,25 @@ function VerifiedState({
   onFinalize,
   loading,
 }: {
-  account: OnboardingAccount
-  onFinalize: () => void
-  loading: boolean
+  account: OnboardingAccount;
+  onFinalize: () => void;
+  loading: boolean;
 }) {
-  const needsFinalize = !account.hasStore
+  const needsFinalize = !account.hasStore;
 
   return (
     <div className="grid gap-6 md:grid-cols-[2fr_1fr]">
       <Card>
         <CardHeader>
           <CardTitle>Verification Status</CardTitle>
-          <CardDescription>Your account capabilities based on provided information.</CardDescription>
+          <CardDescription>
+            Your account capabilities based on provided information.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Alert className="bg-green-50 border-green-200 text-green-800">
             <CheckCircle2Icon className="h-4 w-4 text-green-600" />
-            <AlertTitle>
-              {needsFinalize ? "Verification Complete" : "Ready to Process"}
-            </AlertTitle>
+            <AlertTitle>{needsFinalize ? "Verification Complete" : "Ready to Process"}</AlertTitle>
             <AlertDescription>
               {needsFinalize
                 ? "Your account is verified. Finalize setup to start accepting payments."
@@ -498,9 +489,7 @@ function VerifiedState({
         <CardFooter className="flex justify-between border-t pt-6">
           <div className="text-sm text-muted-foreground">
             Account Holder:{" "}
-            <span className="font-mono text-foreground">
-              {account.accountHolderId}
-            </span>
+            <span className="font-mono text-foreground">{account.accountHolderId}</span>
           </div>
           {needsFinalize && (
             <Button onClick={onFinalize} disabled={loading}>
@@ -537,7 +526,7 @@ function VerifiedState({
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
 
 function RejectedState({
@@ -545,9 +534,9 @@ function RejectedState({
   onGetLink,
   loading,
 }: {
-  account: OnboardingAccount
-  onGetLink: () => void
-  loading: boolean
+  account: OnboardingAccount;
+  onGetLink: () => void;
+  loading: boolean;
 }) {
   return (
     <Card>
@@ -576,7 +565,7 @@ function RejectedState({
         </Button>
       </CardFooter>
     </Card>
-  )
+  );
 }
 
 // --- Shared components ---
@@ -585,8 +574,8 @@ function StatusRows({
   account,
   verified = false,
 }: {
-  account: OnboardingAccount
-  verified?: boolean
+  account: OnboardingAccount;
+  verified?: boolean;
 }) {
   const rows = [
     {
@@ -607,15 +596,12 @@ function StatusRows({
       desc: "Payout destination details",
       done: verified && account.hasSweep,
     },
-  ]
+  ];
 
   return (
     <div className="grid gap-4">
       {rows.map(({ icon: Icon, title, desc, done }) => (
-        <div
-          key={title}
-          className="flex items-center justify-between p-4 border rounded-lg"
-        >
+        <div key={title} className="flex items-center justify-between p-4 border rounded-lg">
           <div className="flex items-center gap-4">
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
               <Icon className="h-5 w-5 text-primary" />
@@ -633,48 +619,44 @@ function StatusRows({
         </div>
       ))}
     </div>
-  )
+  );
 }
 
-function CapabilitiesDisplay({
-  capabilities,
-}: {
-  capabilities: Record<string, any> | null
-}) {
+function CapabilitiesDisplay({ capabilities }: { capabilities: Record<string, any> | null }) {
   if (!capabilities || Object.keys(capabilities).length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
         Capability information will appear here once verification begins.
       </p>
-    )
+    );
   }
 
   return (
     <div className="grid gap-2">
       {Object.entries(capabilities).map(([name, cap]) => {
-        const allowed = cap.allowed === true
-        const pending = cap.verificationStatus === "pending"
+        const allowed = cap.allowed === true;
+        const pending = cap.verificationStatus === "pending";
 
         return (
           <div
             key={name}
             className="flex items-center justify-between py-2 px-3 rounded-md border text-sm"
           >
-            <span className="capitalize">
-              {name.replace(/([A-Z])/g, " $1").trim()}
-            </span>
+            <span className="capitalize">{name.replace(/([A-Z])/g, " $1").trim()}</span>
             {allowed ? (
-              <Badge variant="default" className="bg-green-600">Allowed</Badge>
+              <Badge variant="default" className="bg-green-600">
+                Allowed
+              </Badge>
             ) : pending ? (
               <Badge variant="secondary">Pending</Badge>
             ) : (
               <Badge variant="destructive">Action needed</Badge>
             )}
           </div>
-        )
+        );
       })}
     </div>
-  )
+  );
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -682,9 +664,9 @@ function StatusBadge({ status }: { status: string }) {
     IN_PROGRESS: { label: "In Progress", className: "bg-blue-100 text-blue-800" },
     IN_REVIEW: { label: "Under Review", className: "bg-amber-100 text-amber-800" },
     AWAITING_DATA: { label: "Action Needed", className: "bg-orange-100 text-orange-800" },
-  }
-  const v = variants[status] || { label: status, className: "" }
-  return <Badge className={v.className}>{v.label}</Badge>
+  };
+  const v = variants[status] || { label: status, className: "" };
+  return <Badge className={v.className}>{v.label}</Badge>;
 }
 
 function HelpCard() {
@@ -695,13 +677,13 @@ function HelpCard() {
       </CardHeader>
       <CardContent className="text-sm text-muted-foreground">
         <p>
-          Verification typically takes 1-2 business days. Status updates arrive
-          automatically. If you need assistance, contact our support team.
+          Verification typically takes 1-2 business days. Status updates arrive automatically. If
+          you need assistance, contact our support team.
         </p>
         <Button variant="link" className="px-0 mt-2">
           Contact Support &rarr;
         </Button>
       </CardContent>
     </Card>
-  )
+  );
 }

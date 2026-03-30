@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useParams, useRouter } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import * as React from "react";
+import { useParams, useRouter } from "next/navigation";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -10,9 +10,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   ArrowLeftIcon,
   LandmarkIcon,
@@ -20,38 +20,38 @@ import {
   CalendarIcon,
   ClockIcon,
   DollarSignIcon,
-} from "lucide-react"
-import { format } from "date-fns"
-import { toast } from "sonner"
-import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
+} from "lucide-react";
+import { format } from "date-fns";
+import { toast } from "sonner";
+import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
 
 interface Transaction {
-  id: string
-  pspReference: string
-  type: string
-  amount: number
-  currency: string
-  status: string
-  method: string | null
-  description: string | null
-  settledAt: string | null
-  createdAt: string
+  id: string;
+  pspReference: string;
+  type: string;
+  amount: number;
+  currency: string;
+  status: string;
+  method: string | null;
+  description: string | null;
+  settledAt: string | null;
+  createdAt: string;
 }
 
 interface PayoutDetail {
-  id: string
-  reference: string
-  amount: number
-  fees: number
-  net: number
-  currency: string
-  status: "PENDING" | "SCHEDULED" | "PAID" | "FAILED"
-  bankAccount: string | null
-  scheduledAt: string | null
-  paidAt: string | null
-  estimatedArrivalTime: string | null
-  createdAt: string
-  transactions: Transaction[]
+  id: string;
+  reference: string;
+  amount: number;
+  fees: number;
+  net: number;
+  currency: string;
+  status: "PENDING" | "SCHEDULED" | "PAID" | "FAILED";
+  bankAccount: string | null;
+  scheduledAt: string | null;
+  paidAt: string | null;
+  estimatedArrivalTime: string | null;
+  createdAt: string;
+  transactions: Transaction[];
 }
 
 const statusColors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -59,7 +59,7 @@ const statusColors: Record<string, "default" | "secondary" | "destructive" | "ou
   SCHEDULED: "secondary",
   PAID: "default",
   FAILED: "destructive",
-}
+};
 
 const txTypeColors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   PAYMENT: "default",
@@ -67,49 +67,49 @@ const txTypeColors: Record<string, "default" | "secondary" | "destructive" | "ou
   CHARGEBACK: "destructive",
   CAPTURE: "secondary",
   CANCEL: "outline",
-}
+};
 
 export default function PayoutDetailPage() {
-  const params = useParams()
-  const router = useRouter()
-  const [payout, setPayout] = React.useState<PayoutDetail | null>(null)
-  const [loading, setLoading] = React.useState(true)
+  const params = useParams();
+  const router = useRouter();
+  const [payout, setPayout] = React.useState<PayoutDetail | null>(null);
+  const [loading, setLoading] = React.useState(true);
 
   useBreadcrumbOverride(
     payout ? `/dashboard/financials/payouts/${params.id}` : undefined,
-    payout?.reference,
-  )
+    payout?.reference
+  );
 
   React.useEffect(() => {
     async function fetchPayout() {
       try {
-        const response = await fetch(`/api/payouts/${params.id}`)
+        const response = await fetch(`/api/payouts/${params.id}`);
         if (!response.ok) {
           if (response.status === 404) {
-            toast.error("Payout not found")
-            router.push("/dashboard/financials/payouts")
-            return
+            toast.error("Payout not found");
+            router.push("/dashboard/financials/payouts");
+            return;
           }
-          throw new Error("Failed to fetch payout")
+          throw new Error("Failed to fetch payout");
         }
-        const data = await response.json()
-        setPayout(data)
+        const data = await response.json();
+        setPayout(data);
       } catch (error) {
-        console.error("Error fetching payout:", error)
-        toast.error("Failed to load payout details")
+        console.error("Error fetching payout:", error);
+        toast.error("Failed to load payout details");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
-    if (params.id) fetchPayout()
-  }, [params.id, router])
+    if (params.id) fetchPayout();
+  }, [params.id, router]);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-    )
+    );
   }
 
   if (!payout) {
@@ -117,10 +117,10 @@ export default function PayoutDetailPage() {
       <div className="p-6">
         <p className="text-muted-foreground">Payout not found.</p>
       </div>
-    )
+    );
   }
 
-  const primaryDate = payout.paidAt || payout.scheduledAt || payout.createdAt
+  const primaryDate = payout.paidAt || payout.scheduledAt || payout.createdAt;
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -202,7 +202,9 @@ export default function PayoutDetailPage() {
               <CalendarIcon className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-muted-foreground">Created</p>
-                <p className="font-medium">{format(new Date(payout.createdAt), "MMM d, yyyy h:mm a")}</p>
+                <p className="font-medium">
+                  {format(new Date(payout.createdAt), "MMM d, yyyy h:mm a")}
+                </p>
               </div>
             </div>
             {payout.scheduledAt && (
@@ -210,7 +212,9 @@ export default function PayoutDetailPage() {
                 <ClockIcon className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="text-muted-foreground">Scheduled</p>
-                  <p className="font-medium">{format(new Date(payout.scheduledAt), "MMM d, yyyy h:mm a")}</p>
+                  <p className="font-medium">
+                    {format(new Date(payout.scheduledAt), "MMM d, yyyy h:mm a")}
+                  </p>
                 </div>
               </div>
             )}
@@ -219,7 +223,9 @@ export default function PayoutDetailPage() {
                 <ClockIcon className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="text-muted-foreground">Est. Arrival</p>
-                  <p className="font-medium">{format(new Date(payout.estimatedArrivalTime), "MMM d, yyyy h:mm a")}</p>
+                  <p className="font-medium">
+                    {format(new Date(payout.estimatedArrivalTime), "MMM d, yyyy h:mm a")}
+                  </p>
                 </div>
               </div>
             )}
@@ -228,7 +234,9 @@ export default function PayoutDetailPage() {
                 <CalendarIcon className="h-4 w-4 text-green-600" />
                 <div>
                   <p className="text-muted-foreground">Paid</p>
-                  <p className="font-medium text-green-600">{format(new Date(payout.paidAt), "MMM d, yyyy h:mm a")}</p>
+                  <p className="font-medium text-green-600">
+                    {format(new Date(payout.paidAt), "MMM d, yyyy h:mm a")}
+                  </p>
                 </div>
               </div>
             )}
@@ -279,15 +287,13 @@ export default function PayoutDetailPage() {
                         {tx.type}
                       </Badge>
                     </TableCell>
-                    <TableCell className="capitalize">
-                      {tx.method || "\u2014"}
-                    </TableCell>
+                    <TableCell className="capitalize">{tx.method || "\u2014"}</TableCell>
                     <TableCell className="max-w-[200px] truncate text-muted-foreground">
                       {tx.description || "\u2014"}
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      {tx.type === "REFUND" || tx.type === "CHARGEBACK" ? "-" : ""}
-                      ${Math.abs(Number(tx.amount)).toFixed(2)}
+                      {tx.type === "REFUND" || tx.type === "CHARGEBACK" ? "-" : ""}$
+                      {Math.abs(Number(tx.amount)).toFixed(2)}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -297,5 +303,5 @@ export default function PayoutDetailPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

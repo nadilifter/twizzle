@@ -96,9 +96,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data: orders, total, limit, offset });
   } catch (error) {
     console.error("Error fetching orders:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch orders" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 });
   }
 }

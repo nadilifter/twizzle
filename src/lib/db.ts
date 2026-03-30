@@ -26,8 +26,13 @@ function _isInsideScopedQuery(): boolean {
 // export the raw client with zero overhead.
 function _createDevWarningDb(client: PrismaClient) {
   const WATCHED_ACTIONS = new Set([
-    "findMany", "findFirst", "count",
-    "update", "updateMany", "delete", "deleteMany",
+    "findMany",
+    "findFirst",
+    "count",
+    "update",
+    "updateMany",
+    "delete",
+    "deleteMany",
   ]);
 
   function warnIfUnscoped(model: string, action: string, args: any) {
@@ -41,7 +46,7 @@ function _createDevWarningDb(client: PrismaClient) {
       if (!where?.organizationId) {
         console.warn(
           `\x1b[33m[TENANT WARNING]\x1b[0m ${action} on ${model} without organizationId. ` +
-          `Use getScopedDb() or add organizationId to the where clause.`
+            `Use getScopedDb() or add organizationId to the where clause.`
         );
       }
     }
@@ -50,23 +55,42 @@ function _createDevWarningDb(client: PrismaClient) {
   return client.$extends({
     query: {
       $allModels: {
-        async findMany({ model, args, query }) { warnIfUnscoped(model, "findMany", args); return query(args); },
-        async findFirst({ model, args, query }) { warnIfUnscoped(model, "findFirst", args); return query(args); },
-        async count({ model, args, query }) { warnIfUnscoped(model, "count", args); return query(args); },
-        async update({ model, args, query }) { warnIfUnscoped(model, "update", args); return query(args); },
-        async updateMany({ model, args, query }) { warnIfUnscoped(model, "updateMany", args); return query(args); },
-        async delete({ model, args, query }) { warnIfUnscoped(model, "delete", args); return query(args); },
-        async deleteMany({ model, args, query }) { warnIfUnscoped(model, "deleteMany", args); return query(args); },
+        async findMany({ model, args, query }) {
+          warnIfUnscoped(model, "findMany", args);
+          return query(args);
+        },
+        async findFirst({ model, args, query }) {
+          warnIfUnscoped(model, "findFirst", args);
+          return query(args);
+        },
+        async count({ model, args, query }) {
+          warnIfUnscoped(model, "count", args);
+          return query(args);
+        },
+        async update({ model, args, query }) {
+          warnIfUnscoped(model, "update", args);
+          return query(args);
+        },
+        async updateMany({ model, args, query }) {
+          warnIfUnscoped(model, "updateMany", args);
+          return query(args);
+        },
+        async delete({ model, args, query }) {
+          warnIfUnscoped(model, "delete", args);
+          return query(args);
+        },
+        async deleteMany({ model, args, query }) {
+          warnIfUnscoped(model, "deleteMany", args);
+          return query(args);
+        },
       },
     },
   });
 }
 
-export const db = (
-  process.env.NODE_ENV !== "production"
-    ? _createDevWarningDb(_rawDb)
-    : _rawDb
-) as unknown as PrismaClient;
+export const db = (process.env.NODE_ENV !== "production"
+  ? _createDevWarningDb(_rawDb)
+  : _rawDb) as unknown as PrismaClient;
 
 // Models that have a direct organizationId field and should be auto-scoped.
 // Platform-level models (OrganizationSubscription, OrganizationFeatureOverride,
@@ -160,13 +184,13 @@ function getModelDelegate(model: string): string {
 /**
  * Creates a scoped database client that enforces tenant isolation.
  * All queries are automatically filtered by organizationId.
- * 
+ *
  * SECURITY: This extension ensures that:
  * - Read operations (findMany, findFirst, findUnique, count) only return records for the organization
  * - Create operations automatically set the organizationId
  * - Update operations verify the record belongs to the organization before updating
  * - Delete operations verify the record belongs to the organization before deleting
- * 
+ *
  * @param organizationId - The organization ID to scope queries to
  */
 export function getScopedDb(organizationId: string) {
@@ -202,7 +226,7 @@ export function getScopedDb(organizationId: string) {
         async findUnique({ model, args, query }) {
           if (TENANT_MODELS.includes(model as TenantModel)) {
             const delegate = getModelDelegate(model);
-            
+
             return scopedQuery(() =>
               (_rawDb as any)[delegate].findFirst({
                 where: {
@@ -255,7 +279,7 @@ export function getScopedDb(organizationId: string) {
           if (TENANT_MODELS.includes(model as TenantModel)) {
             const delegate = getModelDelegate(model);
             const whereClause = (args as any).where || {};
-            
+
             const existingRecord = await scopedQuery(() =>
               (_rawDb as any)[delegate].findFirst({
                 where: {
@@ -265,7 +289,7 @@ export function getScopedDb(organizationId: string) {
                 select: { id: true },
               })
             );
-            
+
             if (!existingRecord) {
               throw new TenantIsolationError(
                 `Cannot update ${model}: Record not found or access denied`
@@ -287,7 +311,7 @@ export function getScopedDb(organizationId: string) {
           if (TENANT_MODELS.includes(model as TenantModel)) {
             const delegate = getModelDelegate(model);
             const whereClause = (args as any).where || {};
-            
+
             const existingRecord = await scopedQuery(() =>
               (_rawDb as any)[delegate].findFirst({
                 where: {
@@ -297,7 +321,7 @@ export function getScopedDb(organizationId: string) {
                 select: { id: true },
               })
             );
-            
+
             if (!existingRecord) {
               throw new TenantIsolationError(
                 `Cannot delete ${model}: Record not found or access denied`
@@ -319,20 +343,20 @@ export function getScopedDb(organizationId: string) {
           if (TENANT_MODELS.includes(model as TenantModel)) {
             const delegate = getModelDelegate(model);
             const whereClause = (args as any).where || {};
-            
+
             const existingRecord = await scopedQuery(() =>
               (_rawDb as any)[delegate].findFirst({
                 where: whereClause,
                 select: { id: true, organizationId: true },
               })
             );
-            
+
             if (existingRecord && (existingRecord as any).organizationId !== organizationId) {
               throw new TenantIsolationError(
                 `Cannot upsert ${model}: Record belongs to a different organization`
               );
             }
-            
+
             (args as any).create = {
               ...((args as any).create || {}),
               organizationId,

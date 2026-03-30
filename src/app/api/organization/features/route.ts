@@ -15,19 +15,13 @@ export async function GET() {
 
     const organizationId = session.user.organizationId;
     if (!organizationId) {
-      return NextResponse.json(
-        { error: "No organization selected" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
     const features = await getOrganizationFeatures(organizationId);
     return NextResponse.json(features);
   } catch (error) {
     console.error("Error fetching organization features:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch features" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch features" }, { status: 500 });
   }
 }

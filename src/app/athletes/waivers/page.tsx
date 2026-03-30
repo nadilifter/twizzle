@@ -1,13 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -64,9 +58,7 @@ interface GroupedWaivers {
 
 export default function AthleteWaiversPage() {
   const [athletes, setAthletes] = useState<Athlete[]>([]);
-  const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(
-    null
-  );
+  const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
   const [isLoadingAthletes, setIsLoadingAthletes] = useState(true);
   const [acceptances, setAcceptances] = useState<WaiverAcceptance[]>([]);
   const [isLoadingWaivers, setIsLoadingWaivers] = useState(false);
@@ -75,9 +67,7 @@ export default function AthleteWaiversPage() {
     async function fetchAthletes() {
       setIsLoadingAthletes(true);
       try {
-        const response = await api.get<{ athletes: Athlete[] }>(
-          "/api/athletes/me"
-        );
+        const response = await api.get<{ athletes: Athlete[] }>("/api/athletes/me");
         const athleteData = response.athletes || [];
         setAthletes(athleteData);
         if (athleteData.length > 0) {
@@ -99,10 +89,9 @@ export default function AthleteWaiversPage() {
     async function fetchWaivers() {
       setIsLoadingWaivers(true);
       try {
-        const response = await api.get<{ data: WaiverAcceptance[] }>(
-          `/api/athletes/waivers`,
-          { athleteId: selectedAthleteId! }
-        );
+        const response = await api.get<{ data: WaiverAcceptance[] }>(`/api/athletes/waivers`, {
+          athleteId: selectedAthleteId!,
+        });
         setAcceptances(response.data || []);
       } catch (error) {
         console.error("Error fetching waivers:", error);
@@ -116,22 +105,19 @@ export default function AthleteWaiversPage() {
 
   const selectedAthlete = athletes.find((a) => a.id === selectedAthleteId);
 
-  const grouped: GroupedWaivers[] = acceptances.reduce<GroupedWaivers[]>(
-    (acc, acceptance) => {
-      const orgId = acceptance.waiver.organization.id;
-      let group = acc.find((g) => g.organization.id === orgId);
-      if (!group) {
-        group = {
-          organization: acceptance.waiver.organization,
-          acceptances: [],
-        };
-        acc.push(group);
-      }
-      group.acceptances.push(acceptance);
-      return acc;
-    },
-    []
-  );
+  const grouped: GroupedWaivers[] = acceptances.reduce<GroupedWaivers[]>((acc, acceptance) => {
+    const orgId = acceptance.waiver.organization.id;
+    let group = acc.find((g) => g.organization.id === orgId);
+    if (!group) {
+      group = {
+        organization: acceptance.waiver.organization,
+        acceptances: [],
+      };
+      acc.push(group);
+    }
+    group.acceptances.push(acceptance);
+    return acc;
+  }, []);
 
   if (isLoadingAthletes) {
     return (
@@ -148,9 +134,7 @@ export default function AthleteWaiversPage() {
         <Card>
           <CardHeader>
             <CardTitle>No Athletes Found</CardTitle>
-            <CardDescription>
-              There are no athletes associated with your account.
-            </CardDescription>
+            <CardDescription>There are no athletes associated with your account.</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -185,10 +169,7 @@ export default function AthleteWaiversPage() {
             <CardTitle className="text-lg">Select Athlete</CardTitle>
           </CardHeader>
           <CardContent>
-            <Select
-              value={selectedAthleteId || undefined}
-              onValueChange={setSelectedAthleteId}
-            >
+            <Select value={selectedAthleteId || undefined} onValueChange={setSelectedAthleteId}>
               <SelectTrigger className="w-full md:w-[300px]">
                 <SelectValue placeholder="Select an athlete" />
               </SelectTrigger>
@@ -251,8 +232,7 @@ export default function AthleteWaiversPage() {
               No signed waivers found for {selectedAthlete?.name}.
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              Waivers will appear here after they are signed during
-              registration.
+              Waivers will appear here after they are signed during registration.
             </p>
           </CardContent>
         </Card>
@@ -280,15 +260,11 @@ export default function AthleteWaiversPage() {
                       <div className="flex items-center gap-3">
                         <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
                         <div>
-                          <p className="font-medium">
-                            {acceptance.waiver.title}
-                          </p>
+                          <p className="font-medium">{acceptance.waiver.title}</p>
                           <div className="flex items-center gap-3 text-sm text-muted-foreground mt-0.5">
                             <span className="inline-flex items-center gap-1">
                               <Calendar className="h-3.5 w-3.5" />
-                              {new Date(
-                                acceptance.completedAt
-                              ).toLocaleDateString("en-US", {
+                              {new Date(acceptance.completedAt).toLocaleDateString("en-US", {
                                 year: "numeric",
                                 month: "short",
                                 day: "numeric",

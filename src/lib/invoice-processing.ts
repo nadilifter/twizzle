@@ -69,7 +69,7 @@ export async function processInvoiceRegistrations(
   metadata: InvoiceMetadata,
   items: CartItem[],
   userId?: string | null,
-  organizationId?: string | null,
+  organizationId?: string | null
 ) {
   const enrollmentEvents: { athleteId: string; programName: string; userId?: string }[] = [];
 
@@ -94,7 +94,9 @@ export async function processInvoiceRegistrations(
           },
         });
         if (currentCount >= comp.capacity) {
-          console.warn(`Competition ${reg.competitionId} at capacity, skipping entries for athlete ${reg.athleteId}`);
+          console.warn(
+            `Competition ${reg.competitionId} at capacity, skipping entries for athlete ${reg.athleteId}`
+          );
           continue;
         }
       }
@@ -238,9 +240,7 @@ export async function processInvoiceRegistrations(
           ) {
             const today = getTodayNoonUTC();
             const nextDate = normalizeToNoonUTC(
-              program.billingInterval === "YEARLY"
-                ? addYears(today, 1)
-                : addMonths(today, 1)
+              program.billingInterval === "YEARLY" ? addYears(today, 1) : addMonths(today, 1)
             )!;
             await tx.recurringCharge.create({
               data: {
@@ -317,7 +317,10 @@ export async function processInvoiceRegistrations(
 
         if (instance?.group?.hasCapacityRestriction) {
           const effectiveCapacity = instance.capacity ?? instance.group.capacity;
-          if (effectiveCapacity != null && instance._count.athleteMemberships >= effectiveCapacity) {
+          if (
+            effectiveCapacity != null &&
+            instance._count.athleteMemberships >= effectiveCapacity
+          ) {
             console.warn(
               `Membership instance ${purchase.membershipInstanceId} is at capacity, skipping for athlete ${purchase.athleteId}`
             );
@@ -351,8 +354,13 @@ export async function processInvoiceRegistrations(
             fullInstance.billingInterval !== "SESSION" &&
             fullInstance.group.allowAutoRenew
           ) {
-            const nextDate = fullInstance.endDate
-              ?? normalizeToNoonUTC(fullInstance.billingInterval === "YEARLY" ? addYears(getTodayNoonUTC(), 1) : addMonths(getTodayNoonUTC(), 1))!;
+            const nextDate =
+              fullInstance.endDate ??
+              normalizeToNoonUTC(
+                fullInstance.billingInterval === "YEARLY"
+                  ? addYears(getTodayNoonUTC(), 1)
+                  : addMonths(getTodayNoonUTC(), 1)
+              )!;
             await tx.recurringCharge.create({
               data: {
                 organizationId,
@@ -373,7 +381,7 @@ export async function processInvoiceRegistrations(
     }
 
     // 4. Pass purchases
-    for (const purchase of (metadata.passPurchases ?? [])) {
+    for (const purchase of metadata.passPurchases ?? []) {
       if (!purchase.passId || !purchase.athleteId) continue;
 
       const existing = await tx.athletePass.findFirst({
@@ -389,9 +397,7 @@ export async function processInvoiceRegistrations(
         const today = getTodayNoonUTC();
         const interval = purchase.billingInterval || "MONTHLY";
         const endDate = normalizeToNoonUTC(
-          interval === "YEARLY"
-            ? addYears(today, 1)
-            : addMonths(today, 1)
+          interval === "YEARLY" ? addYears(today, 1) : addMonths(today, 1)
         )!;
 
         const newAthletePass = await tx.athletePass.create({
@@ -445,7 +451,7 @@ export async function processInvoiceRegistrations(
       for (const purchase of metadata.membershipPurchases) {
         if (purchase.athleteId) allAthleteIds.add(purchase.athleteId);
       }
-      for (const purchase of (metadata.passPurchases ?? [])) {
+      for (const purchase of metadata.passPurchases ?? []) {
         if (purchase.athleteId) allAthleteIds.add(purchase.athleteId);
       }
 

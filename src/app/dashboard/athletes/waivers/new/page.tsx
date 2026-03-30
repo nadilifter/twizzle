@@ -1,5 +1,5 @@
-import { WaiverBuilder } from "../waiver-builder"
-import { DashboardPageHeader } from "@/components/dashboard-page-header"
+import { WaiverBuilder } from "../waiver-builder";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 
 export default function NewWaiverPage() {
   return (
@@ -7,17 +7,5 @@ export default function NewWaiverPage() {
       <DashboardPageHeader title="Create New Waiver" variant="small" />
       <WaiverBuilder />
     </div>
-  )
+  );
 }
-
-
-
-
-
-
-
-
-
-
-
-

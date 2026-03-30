@@ -11,12 +11,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import {
   Dialog,
@@ -26,11 +26,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { 
-  Upload, 
-  Image as ImageIcon, 
-  Video, 
-  X, 
+import {
+  Upload,
+  Image as ImageIcon,
+  Video,
+  X,
   Search,
   Calendar,
   User,
@@ -71,12 +71,12 @@ export default function CoachMediaPage() {
     if (!files || files.length === 0) return;
 
     setIsUploading(true);
-    
+
     try {
       for (const file of Array.from(files)) {
         const isImage = file.type.startsWith("image/");
         const isVideo = file.type.startsWith("video/");
-        
+
         if (!isImage && !isVideo) {
           toast.error(`${file.name} is not a supported file type`);
           continue;
@@ -92,7 +92,7 @@ export default function CoachMediaPage() {
           toast.error(`Failed to upload ${file.name}`);
         }
       }
-      
+
       refresh();
     } catch (error) {
       console.error("Upload error:", error);
@@ -109,7 +109,7 @@ export default function CoachMediaPage() {
   // Handle delete
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this media?")) return;
-    
+
     const success = await deleteMedia(id);
     if (success) {
       toast.success("Media deleted successfully");
@@ -131,7 +131,7 @@ export default function CoachMediaPage() {
   // Handle save edit
   const handleSaveEdit = async () => {
     if (!selectedMedia) return;
-    
+
     const result = await updateMedia(selectedMedia.id, {
       title: editTitle || undefined,
       description: editDescription || undefined,
@@ -150,11 +150,7 @@ export default function CoachMediaPage() {
 
   // Get media type icon
   const getMediaIcon = (type: string) => {
-    return type === "VIDEO" ? (
-      <Video className="h-4 w-4" />
-    ) : (
-      <ImageIcon className="h-4 w-4" />
-    );
+    return type === "VIDEO" ? <Video className="h-4 w-4" /> : <ImageIcon className="h-4 w-4" />;
   };
 
   return (
@@ -165,7 +161,7 @@ export default function CoachMediaPage() {
           <h1 className="text-2xl font-bold">Media</h1>
           <p className="text-muted-foreground">Upload and manage training photos and videos</p>
         </div>
-        
+
         <div>
           <input
             ref={fileInputRef}
@@ -183,7 +179,7 @@ export default function CoachMediaPage() {
       </div>
 
       {/* Upload Drop Zone */}
-      <Card 
+      <Card
         className="border-2 border-dashed hover:border-primary/50 transition-colors cursor-pointer"
         onClick={() => fileInputRef.current?.click()}
       >
@@ -193,9 +189,7 @@ export default function CoachMediaPage() {
               <Upload className="h-8 w-8 text-muted-foreground" />
             </div>
             <h3 className="font-semibold">Drop files here or click to upload</h3>
-            <p className="text-sm text-muted-foreground">
-              Support for images and videos
-            </p>
+            <p className="text-sm text-muted-foreground">Support for images and videos</p>
           </div>
         </CardContent>
       </Card>
@@ -237,17 +231,13 @@ export default function CoachMediaPage() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-2xl font-bold">
-              {media.filter(m => m.type === "IMAGE").length}
-            </p>
+            <p className="text-2xl font-bold">{media.filter((m) => m.type === "IMAGE").length}</p>
             <p className="text-xs text-muted-foreground">Images</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-2xl font-bold">
-              {media.filter(m => m.type === "VIDEO").length}
-            </p>
+            <p className="text-2xl font-bold">{media.filter((m) => m.type === "VIDEO").length}</p>
             <p className="text-xs text-muted-foreground">Videos</p>
           </CardContent>
         </Card>
@@ -278,8 +268,8 @@ export default function CoachMediaPage() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {filteredMedia.map((item) => (
-                <div 
-                  key={item.id} 
+                <div
+                  key={item.id}
                   className="group relative aspect-square rounded-lg overflow-hidden bg-muted border"
                 >
                   {item.type === "VIDEO" ? (
@@ -294,28 +284,28 @@ export default function CoachMediaPage() {
                       className="object-cover"
                     />
                   )}
-                  
+
                   {/* Overlay */}
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-3">
                     <div className="flex justify-end gap-1">
-                      <Button 
-                        size="icon" 
-                        variant="ghost" 
+                      <Button
+                        size="icon"
+                        variant="ghost"
                         className="h-8 w-8 text-white hover:bg-white/20"
                         onClick={() => openEditDialog(item)}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        size="icon" 
-                        variant="ghost" 
+                      <Button
+                        size="icon"
+                        variant="ghost"
                         className="h-8 w-8 text-white hover:bg-white/20"
                         onClick={() => handleDelete(item.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                    
+
                     <div className="space-y-1">
                       <p className="text-white text-sm font-medium truncate">
                         {item.title || "Untitled"}
@@ -332,9 +322,9 @@ export default function CoachMediaPage() {
                       )}
                     </div>
                   </div>
-                  
+
                   {/* Type Badge */}
-                  <Badge 
+                  <Badge
                     className="absolute top-2 left-2 text-xs"
                     variant={item.type === "VIDEO" ? "default" : "secondary"}
                   >
@@ -352,11 +342,9 @@ export default function CoachMediaPage() {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Edit Media</DialogTitle>
-            <DialogDescription>
-              Update media details and tags
-            </DialogDescription>
+            <DialogDescription>Update media details and tags</DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="title">Title</Label>
@@ -413,14 +401,12 @@ export default function CoachMediaPage() {
               </Select>
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveEdit}>
-              Save Changes
-            </Button>
+            <Button onClick={handleSaveEdit}>Save Changes</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

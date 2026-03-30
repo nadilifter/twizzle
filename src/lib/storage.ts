@@ -1,25 +1,25 @@
 /**
  * S3 Storage Abstraction Library
- * 
+ *
  * This module provides a unified interface for file storage that works with:
  * - AWS S3 in production/staging/development environments
  * - MinIO in local development (S3-compatible)
- * 
+ *
  * Usage:
  *   import { uploadFile, getSignedUrl, deleteFile, getPublicUrl } from '@/lib/storage';
  */
 
-import { 
-  S3Client, 
-  PutObjectCommand, 
-  DeleteObjectCommand, 
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
-} from '@aws-sdk/client-s3';
-import { getSignedUrl as awsGetSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { getEnvConfig, getCurrentEnvironment } from './env-domains';
+} from "@aws-sdk/client-s3";
+import { getSignedUrl as awsGetSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { getEnvConfig, getCurrentEnvironment } from "./env-domains";
 
-export type StorageBucket = 'assets' | 'documents';
+export type StorageBucket = "assets" | "documents";
 
 // S3 Client singleton
 let s3Client: S3Client | null = null;
@@ -33,26 +33,27 @@ function getS3Client(): S3Client {
     return s3Client;
   }
 
-  const isLocal = getCurrentEnvironment() === 'local';
-  
+  const isLocal = getCurrentEnvironment() === "local";
+
   s3Client = new S3Client({
-    region: process.env.AWS_S3_REGION || 'us-east-1',
+    region: process.env.AWS_S3_REGION || "us-east-1",
     // For local development with MinIO
     ...(isLocal && {
-      endpoint: process.env.S3_ENDPOINT || 'http://localhost:9000',
-      forcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true' || isLocal,
+      endpoint: process.env.S3_ENDPOINT || "http://localhost:9000",
+      forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true" || isLocal,
       credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'minioadmin',
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'minioadmin',
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID || "minioadmin",
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "minioadmin",
       },
     }),
     // For cloud environments, use standard credentials
-    ...(!isLocal && process.env.AWS_ACCESS_KEY_ID && {
-      credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-      },
-    }),
+    ...(!isLocal &&
+      process.env.AWS_ACCESS_KEY_ID && {
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+        },
+      }),
   });
 
   return s3Client;
@@ -63,7 +64,7 @@ function getS3Client(): S3Client {
  */
 function getBucketName(bucket: StorageBucket): string {
   const config = getEnvConfig();
-  return bucket === 'assets' ? config.s3Bucket : config.s3DocumentsBucket;
+  return bucket === "assets" ? config.s3Bucket : config.s3DocumentsBucket;
 }
 
 /**
@@ -75,9 +76,9 @@ export function getOrganizationAssetKey(
   type?: string
 ): string {
   const timestamp = Date.now();
-  const ext = filename.includes('.') ? filename.split('.').pop() : '';
-  const sanitizedType = (type || 'file').replace(/[^a-z0-9]/gi, '_');
-  return `organizations/${organizationId}/${sanitizedType}-${timestamp}${ext ? `.${ext}` : ''}`;
+  const ext = filename.includes(".") ? filename.split(".").pop() : "";
+  const sanitizedType = (type || "file").replace(/[^a-z0-9]/gi, "_");
+  return `organizations/${organizationId}/${sanitizedType}-${timestamp}${ext ? `.${ext}` : ""}`;
 }
 
 /**
@@ -89,9 +90,9 @@ export function getUserDocumentKey(
   documentType?: string
 ): string {
   const timestamp = Date.now();
-  const ext = filename.includes('.') ? filename.split('.').pop() : '';
-  const sanitizedType = (documentType || 'document').replace(/[^a-z0-9]/gi, '_');
-  return `users/${userId}/documents/${sanitizedType}-${timestamp}${ext ? `.${ext}` : ''}`;
+  const ext = filename.includes(".") ? filename.split(".").pop() : "";
+  const sanitizedType = (documentType || "document").replace(/[^a-z0-9]/gi, "_");
+  return `users/${userId}/documents/${sanitizedType}-${timestamp}${ext ? `.${ext}` : ""}`;
 }
 
 /**
@@ -100,13 +101,13 @@ export function getUserDocumentKey(
 export function getRegistrationFileKey(
   organizationId: string,
   athleteId: string,
-  entityType: 'program' | 'competition' | 'event',
+  entityType: "program" | "competition" | "event",
   entityId: string,
   filename: string
 ): string {
   const timestamp = Date.now();
-  const ext = filename.includes('.') ? filename.split('.').pop() : '';
-  return `organizations/${organizationId}/registration-files/${entityType}/${entityId}/${athleteId}-${timestamp}${ext ? `.${ext}` : ''}`;
+  const ext = filename.includes(".") ? filename.split(".").pop() : "";
+  return `organizations/${organizationId}/registration-files/${entityType}/${entityId}/${athleteId}-${timestamp}${ext ? `.${ext}` : ""}`;
 }
 
 export interface UploadOptions {
@@ -122,7 +123,7 @@ export interface UploadOptions {
 
 /**
  * Upload a file to S3/MinIO
- * 
+ *
  * @param bucket - 'assets' for public files, 'documents' for private files
  * @param key - The storage key (path) for the file
  * @param file - The file data as Buffer
@@ -141,19 +142,19 @@ export async function uploadFile(
 
   // Only set public-read ACL if there's no CDN (CloudFront handles public access)
   // and the bucket is assets and isPublic is not explicitly false
-  const shouldSetPublicAcl = bucket === 'assets' 
-    && options.isPublic !== false 
-    && !config.cdnUrl;
+  const shouldSetPublicAcl = bucket === "assets" && options.isPublic !== false && !config.cdnUrl;
 
   const command = new PutObjectCommand({
     Bucket: bucketName,
     Key: key,
     Body: file,
-    ContentType: options.contentType || 'application/octet-stream',
-    CacheControl: options.cacheControl || (bucket === 'assets' ? 'public, max-age=31536000' : 'private, no-cache'),
+    ContentType: options.contentType || "application/octet-stream",
+    CacheControl:
+      options.cacheControl ||
+      (bucket === "assets" ? "public, max-age=31536000" : "private, no-cache"),
     // Set ACL only when not using CloudFront CDN
     ...(shouldSetPublicAcl && {
-      ACL: 'public-read',
+      ACL: "public-read",
     }),
     ...(options.metadata && { Metadata: options.metadata }),
   });
@@ -164,7 +165,7 @@ export async function uploadFile(
 
 /**
  * Get a signed URL for private file access
- * 
+ *
  * @param bucket - The storage bucket
  * @param key - The storage key
  * @param expiresIn - URL expiration time in seconds (default: 1 hour)
@@ -188,7 +189,7 @@ export async function getSignedUrl(
 
 /**
  * Get a signed URL for uploading a file directly from the client
- * 
+ *
  * @param bucket - The storage bucket
  * @param key - The storage key
  * @param contentType - The content type of the file
@@ -215,14 +216,11 @@ export async function getUploadSignedUrl(
 
 /**
  * Delete a file from storage
- * 
+ *
  * @param bucket - The storage bucket
  * @param key - The storage key to delete
  */
-export async function deleteFile(
-  bucket: StorageBucket,
-  key: string
-): Promise<void> {
+export async function deleteFile(bucket: StorageBucket, key: string): Promise<void> {
   const client = getS3Client();
   const bucketName = getBucketName(bucket);
 
@@ -236,15 +234,12 @@ export async function deleteFile(
 
 /**
  * Check if a file exists in storage
- * 
+ *
  * @param bucket - The storage bucket
  * @param key - The storage key
  * @returns True if the file exists
  */
-export async function fileExists(
-  bucket: StorageBucket,
-  key: string
-): Promise<boolean> {
+export async function fileExists(bucket: StorageBucket, key: string): Promise<boolean> {
   const client = getS3Client();
   const bucketName = getBucketName(bucket);
 
@@ -256,7 +251,7 @@ export async function fileExists(
     await client.send(command);
     return true;
   } catch (error: any) {
-    if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
+    if (error.name === "NotFound" || error.$metadata?.httpStatusCode === 404) {
       return false;
     }
     throw error;
@@ -266,70 +261,70 @@ export async function fileExists(
 /**
  * Get the public URL for an asset
  * Uses CDN URL if available, otherwise direct S3 URL
- * 
+ *
  * @param key - The storage key
  * @returns Public URL for the asset
  */
 export function getPublicUrl(key: string): string {
   const config = getEnvConfig();
-  const isLocal = getCurrentEnvironment() === 'local';
+  const isLocal = getCurrentEnvironment() === "local";
 
   if (config.cdnUrl) {
     return `${config.cdnUrl}/${key}`;
   }
 
   if (isLocal) {
-    const endpoint = process.env.S3_ENDPOINT || 'http://localhost:9000';
+    const endpoint = process.env.S3_ENDPOINT || "http://localhost:9000";
     return `${endpoint}/${config.s3Bucket}/${key}`;
   }
 
   // Direct S3 URL
-  const region = process.env.AWS_S3_REGION || 'us-east-1';
+  const region = process.env.AWS_S3_REGION || "us-east-1";
   return `https://${config.s3Bucket}.s3.${region}.amazonaws.com/${key}`;
 }
 
 /**
  * Parse a public URL to extract the storage key
- * 
+ *
  * @param url - The public URL
  * @returns The storage key, or null if not a valid storage URL
  */
 export function parseStorageUrl(url: string): string | null {
   const config = getEnvConfig();
-  
+
   // Check CDN URL
   if (config.cdnUrl && url.startsWith(config.cdnUrl)) {
     return url.slice(config.cdnUrl.length + 1);
   }
-  
+
   // Check S3 URL patterns
   const s3Patterns = [
     new RegExp(`https://${config.s3Bucket}\\.s3\\.[^/]+\\.amazonaws\\.com/(.+)`),
     new RegExp(`https://s3\\.[^/]+\\.amazonaws\\.com/${config.s3Bucket}/(.+)`),
   ];
-  
+
   for (const pattern of s3Patterns) {
     const match = url.match(pattern);
     if (match) {
       return match[1];
     }
   }
-  
+
   // Check local MinIO URL
-  if (url.includes('localhost:9000') || url.includes('minio')) {
+  if (url.includes("localhost:9000") || url.includes("minio")) {
     const match = url.match(/\/[^/]+\/(.+)$/);
     if (match) {
       return match[1];
     }
   }
-  
+
   return null;
 }
 
 /**
  * Migrate a file from local public/uploads to S3
  * This is a helper for the migration process
- * 
+ *
  * @param localPath - Path relative to public/ (e.g., 'uploads/orgId/logo.png')
  * @param bucket - Target storage bucket
  * @param key - Target storage key
@@ -343,5 +338,5 @@ export async function migrateFromLocal(
   // This would be called during migration
   // In production, files would be read from the filesystem and uploaded
   // For now, this serves as a placeholder for the migration script
-  throw new Error('Migration should be run via a dedicated script, not in application code');
+  throw new Error("Migration should be run via a dedicated script, not in application code");
 }

@@ -16,10 +16,7 @@ export async function GET(request: NextRequest) {
     const waiverIdsParam = searchParams.get("waiverIds");
 
     if (!userId || !waiverIdsParam) {
-      return NextResponse.json(
-        { error: "userId and waiverIds are required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "userId and waiverIds are required" }, { status: 400 });
     }
 
     const waiverIds = waiverIdsParam.split(",").filter(Boolean);
@@ -59,9 +56,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error checking waiver status:", error);
-    return NextResponse.json(
-      { error: "Failed to check waiver status" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to check waiver status" }, { status: 500 });
   }
 }

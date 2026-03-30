@@ -30,6 +30,7 @@ When a club's Adyen balance account goes negative (e.g., from a refund when fund
 The Phase 2 handler logs `balancePlatform.negativeBalanceCompensationWarning.scheduled` events. Enhance it to:
 
 1. **Add fields to `AdyenPlatformAccount`** (schema change):
+
    ```prisma
    // Add to AdyenPlatformAccount model
    hasNegativeBalance        Boolean   @default(false)
@@ -40,6 +41,7 @@ The Phase 2 handler logs `balancePlatform.negativeBalanceCompensationWarning.sch
    Run migration: `pnpm db:migrate` (name: `add_negative_balance_fields`)
 
 2. **Update the webhook handler**:
+
    ```typescript
    async function handleNegativeBalanceWarning(data: any) {
      const balanceAccountId = data.balanceAccountId || data.balancePlatform?.balanceAccountId;
@@ -50,7 +52,9 @@ The Phase 2 handler logs `balancePlatform.negativeBalanceCompensationWarning.sch
      });
 
      if (!platformAccount) {
-       logger.warn("[WEBHOOK] Negative balance warning for unknown balance account", { balanceAccountId });
+       logger.warn("[WEBHOOK] Negative balance warning for unknown balance account", {
+         balanceAccountId,
+       });
        return;
      }
 
@@ -101,17 +105,18 @@ export async function topUpBalanceAccount(
   sourceBalanceAccountId: string,
   destinationBalanceAccountId: string,
   amount: { value: number; currency: string },
-  reference?: string,
-): Promise<{ id: string; status: string; [key: string]: any }>
+  reference?: string
+): Promise<{ id: string; status: string; [key: string]: any }>;
 ```
 
 **Implementation**:
+
 ```typescript
 export async function topUpBalanceAccount(
   sourceBalanceAccountId: string,
   destinationBalanceAccountId: string,
   amount: { value: number; currency: string },
-  reference?: string,
+  reference?: string
 ) {
   try {
     const { TransfersAPI } = require("@adyen/api-library");
@@ -139,6 +144,7 @@ export async function topUpBalanceAccount(
 **Note**: The exact method name on the `TransfersAPI` class may differ. Check the `@adyen/api-library` v30 source for the correct method. It could be `transferFunds`, `makeTransfer`, or `transfers`.
 
 Alternative approach if direct transfers are not available: Use the `POST /transfers` endpoint directly:
+
 ```
 POST https://balanceplatform-api-test.adyen.com/btl/v4/transfers
 {
@@ -160,14 +166,16 @@ POST https://balanceplatform-api-test.adyen.com/btl/v4/transfers
 **Auth**: Superadmin only.
 
 **Request body**:
+
 ```typescript
 {
   organizationId: string;
-  amount: number;  // In dollars
+  amount: number; // In dollars
 }
 ```
 
 **Flow**:
+
 1. Look up `AdyenPlatformAccount` for the organization
 2. Verify account has `balanceAccountId`
 3. Get the liable account's balance account ID (from env or config -- this is Kirra's own balance account)
@@ -189,12 +197,14 @@ POST https://balanceplatform-api-test.adyen.com/btl/v4/transfers
 ### File to modify: `src/app/superadmin/organizations/page.tsx` (or list view)
 
 Add visual indicators for orgs with negative balances:
+
 - Show a warning badge/icon next to orgs where `adyenPlatformAccount.hasNegativeBalance === true`
 - Show the negative balance amount
 
 ### File to modify: `src/app/superadmin/organizations/[slug]/page.tsx`
 
 In the Adyen Platform Account card (added in Phase 3E):
+
 - Show negative balance status and amount
 - "Top Up Balance" button → calls `POST /api/organization/adyen-transfer`
 - Show transfer history for the org

@@ -66,46 +66,47 @@ export function useStaff(options: UseStaffOptions = {}): UseStaffReturn {
     }
   }, []);
 
-  const createStaff = useCallback(async (data: CreateMemberPayload): Promise<MemberWithUser | null> => {
-    setIsCreating(true);
-    setError(null);
+  const createStaff = useCallback(
+    async (data: CreateMemberPayload): Promise<MemberWithUser | null> => {
+      setIsCreating(true);
+      setError(null);
 
-    try {
-      const newStaff = await api.post<MemberWithUser>("/api/organization/staff", data);
-      setStaff((prev) => [...prev, newStaff]);
-      return newStaff;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to create staff";
-      setError(message);
-      console.error("Error creating staff:", err);
-      return null;
-    } finally {
-      setIsCreating(false);
-    }
-  }, []);
+      try {
+        const newStaff = await api.post<MemberWithUser>("/api/organization/staff", data);
+        setStaff((prev) => [...prev, newStaff]);
+        return newStaff;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to create staff";
+        setError(message);
+        console.error("Error creating staff:", err);
+        return null;
+      } finally {
+        setIsCreating(false);
+      }
+    },
+    []
+  );
 
-  const updateStaff = useCallback(async (
-    id: string,
-    data: UpdateMemberPayload
-  ): Promise<MemberWithUser | null> => {
-    setIsUpdating(true);
-    setError(null);
+  const updateStaff = useCallback(
+    async (id: string, data: UpdateMemberPayload): Promise<MemberWithUser | null> => {
+      setIsUpdating(true);
+      setError(null);
 
-    try {
-      const updatedStaff = await api.patch<MemberWithUser>(`/api/organization/staff/${id}`, data);
-      setStaff((prev) =>
-        prev.map((s) => (s.id === id ? updatedStaff : s))
-      );
-      return updatedStaff;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to update staff";
-      setError(message);
-      console.error("Error updating staff:", err);
-      return null;
-    } finally {
-      setIsUpdating(false);
-    }
-  }, []);
+      try {
+        const updatedStaff = await api.patch<MemberWithUser>(`/api/organization/staff/${id}`, data);
+        setStaff((prev) => prev.map((s) => (s.id === id ? updatedStaff : s)));
+        return updatedStaff;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to update staff";
+        setError(message);
+        console.error("Error updating staff:", err);
+        return null;
+      } finally {
+        setIsUpdating(false);
+      }
+    },
+    []
+  );
 
   const deleteStaff = useCallback(async (id: string): Promise<boolean> => {
     setIsDeleting(true);
@@ -205,7 +206,9 @@ export function useMemberAvailability(memberId: string | null) {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await api.get<MemberAvailability[]>(`/api/organization/staff/${memberId}/availability`);
+      const data = await api.get<MemberAvailability[]>(
+        `/api/organization/staff/${memberId}/availability`
+      );
       setAvailability(data);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch availability";
@@ -216,23 +219,29 @@ export function useMemberAvailability(memberId: string | null) {
     }
   }, [memberId]);
 
-  const saveAvailability = useCallback(async (entries: AvailabilityEntry[]): Promise<boolean> => {
-    if (!memberId) return false;
-    setIsSaving(true);
-    setError(null);
-    try {
-      const data = await api.put<MemberAvailability[]>(`/api/organization/staff/${memberId}/availability`, entries);
-      setAvailability(data);
-      return true;
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to save availability";
-      setError(message);
-      console.error("Error saving availability:", err);
-      return false;
-    } finally {
-      setIsSaving(false);
-    }
-  }, [memberId]);
+  const saveAvailability = useCallback(
+    async (entries: AvailabilityEntry[]): Promise<boolean> => {
+      if (!memberId) return false;
+      setIsSaving(true);
+      setError(null);
+      try {
+        const data = await api.put<MemberAvailability[]>(
+          `/api/organization/staff/${memberId}/availability`,
+          entries
+        );
+        setAvailability(data);
+        return true;
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to save availability";
+        setError(message);
+        console.error("Error saving availability:", err);
+        return false;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [memberId]
+  );
 
   useEffect(() => {
     fetchAvailability();

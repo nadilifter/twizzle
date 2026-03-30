@@ -14,11 +14,11 @@ pnpm db:reset
 
 ## Available Scripts
 
-| Script | Description |
-|--------|-------------|
-| `pnpm db:seed` | Run the default Prisma seed (minimal production data) |
+| Script             | Description                                            |
+| ------------------ | ------------------------------------------------------ |
+| `pnpm db:seed`     | Run the default Prisma seed (minimal production data)  |
 | `pnpm db:seed:dev` | Run the comprehensive development seed with dummy data |
-| `pnpm db:reset` | Reset the database and run the development seed |
+| `pnpm db:reset`    | Reset the database and run the development seed        |
 
 ## What Gets Created
 
@@ -26,48 +26,48 @@ The development seed (`seed-dev.ts`) creates two complete organizations with rea
 
 ### Organizations
 
-| Organization | Slug | Focus | Subscription |
-|--------------|------|-------|--------------|
-| Sunrise Gymnastics Academy | `sunrise-gymnastics` | Youth gymnastics club | Gold (yearly) |
-| Metro Sports Complex | `metro-sports` | Multi-sport facility | Starter (monthly) |
+| Organization               | Slug                 | Focus                 | Subscription      |
+| -------------------------- | -------------------- | --------------------- | ----------------- |
+| Sunrise Gymnastics Academy | `sunrise-gymnastics` | Youth gymnastics club | Gold (yearly)     |
+| Metro Sports Complex       | `metro-sports`       | Multi-sport facility  | Starter (monthly) |
 
 ### Data Summary
 
-| Model | Sunrise Gym | Metro Sports |
-|-------|-------------|--------------|
-| Users | 4 (admin, 2 coaches, accountant) | 3 (admin, coach, volunteer) |
-| Families | 5 | 4 |
-| Athletes | 8 | 6 |
-| Programs | 5 | 4 |
-| Events | 5 | 4 |
-| Invoices | 3 | 2 |
-| Products (POS) | 4 | 3 |
-| Skills | 5 | 4 |
+| Model          | Sunrise Gym                      | Metro Sports                |
+| -------------- | -------------------------------- | --------------------------- |
+| Users          | 4 (admin, 2 coaches, accountant) | 3 (admin, coach, volunteer) |
+| Families       | 5                                | 4                           |
+| Athletes       | 8                                | 6                           |
+| Programs       | 5                                | 4                           |
+| Events         | 5                                | 4                           |
+| Invoices       | 3                                | 2                           |
+| Products (POS) | 4                                | 3                           |
+| Skills         | 5                                | 4                           |
 
 ### Test Accounts
 
 Seed accounts are created **without passwords**. Use email-based login (magic link / login code) to sign in during local development.
 
-| Email | Role | Organization |
-|-------|------|--------------|
-| `admin@sunrise-gymnastics.com` | Admin | Sunrise Gymnastics |
-| `coach.maria@sunrise-gymnastics.com` | Coach | Sunrise Gymnastics |
-| `coach.james@sunrise-gymnastics.com` | Coach | Sunrise Gymnastics |
-| `finance@sunrise-gymnastics.com` | Accountant | Sunrise Gymnastics |
-| `admin@metro-sports.com` | Admin | Metro Sports |
-| `coach.sarah@metro-sports.com` | Coach | Metro Sports |
-| `volunteer@metro-sports.com` | Volunteer | Metro Sports |
+| Email                                | Role       | Organization       |
+| ------------------------------------ | ---------- | ------------------ |
+| `admin@sunrise-gymnastics.com`       | Admin      | Sunrise Gymnastics |
+| `coach.maria@sunrise-gymnastics.com` | Coach      | Sunrise Gymnastics |
+| `coach.james@sunrise-gymnastics.com` | Coach      | Sunrise Gymnastics |
+| `finance@sunrise-gymnastics.com`     | Accountant | Sunrise Gymnastics |
+| `admin@metro-sports.com`             | Admin      | Metro Sports       |
+| `coach.sarah@metro-sports.com`       | Coach      | Metro Sports       |
+| `volunteer@metro-sports.com`         | Volunteer  | Metro Sports       |
 
 ## Platform Subscription Plans
 
 The seed also creates platform-level subscription plans:
 
-| Plan | Monthly | Yearly | Athletes | Users |
-|------|---------|--------|----------|-------|
-| Free | $0 | $0 | 25 | 2 |
-| Starter | $49 | $470 | 100 | 5 |
-| Gold | $149 | $1,430 | 500 | 15 |
-| Platinum | $349 | $3,350 | Unlimited | Unlimited |
+| Plan     | Monthly | Yearly | Athletes  | Users     |
+| -------- | ------- | ------ | --------- | --------- |
+| Free     | $0      | $0     | 25        | 2         |
+| Starter  | $49     | $470   | 100       | 5         |
+| Gold     | $149    | $1,430 | 500       | 15        |
+| Platinum | $349    | $3,350 | Unlimited | Unlimited |
 
 ## Maintaining the Seed Script
 
@@ -104,8 +104,8 @@ const ORG2_ID = "seed-org-metro";
 The script provides helper functions for generating dates:
 
 ```typescript
-daysFromNow(30)  // 30 days in the future
-daysAgo(15)      // 15 days in the past
+daysFromNow(30); // 30 days in the future
+daysAgo(15); // 15 days in the past
 ```
 
 ## Troubleshooting
@@ -113,18 +113,21 @@ daysAgo(15)      // 15 days in the past
 ### "Unique constraint failed"
 
 This usually means you have conflicting data. Solutions:
+
 1. Run `pnpm db:reset` to start fresh
 2. Check that your IDs don't conflict with existing data
 
 ### "Foreign key constraint failed"
 
 Entities are created in dependency order. If you're adding new seed data:
+
 1. Ensure parent entities are created before children
 2. Check that all referenced IDs exist
 
 ### Slow Seeding
 
 The seed script uses `Promise.all()` where possible for parallel operations. If it's still slow:
+
 1. Check your database connection
 2. Consider batching large inserts
 

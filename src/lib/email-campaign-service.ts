@@ -424,7 +424,12 @@ export async function getExpandedCampaignRecipients(
 
       members.forEach((m) => {
         if (m.user.status === "ACTIVE") {
-          addUser({ id: m.user.id, email: m.user.email, name: m.user.name, emailOptOut: m.user.emailOptOut });
+          addUser({
+            id: m.user.id,
+            email: m.user.email,
+            name: m.user.name,
+            emailOptOut: m.user.emailOptOut,
+          });
         }
       });
       break;
@@ -488,7 +493,12 @@ export async function getExpandedCampaignRecipients(
       enrollments.forEach((e) => {
         e.athlete.guardians.forEach((g) => {
           if (g.user?.email) {
-            addUser({ id: g.user.id, email: g.user.email, name: g.user.name, emailOptOut: g.user.emailOptOut });
+            addUser({
+              id: g.user.id,
+              email: g.user.email,
+              name: g.user.name,
+              emailOptOut: g.user.emailOptOut,
+            });
           }
         });
       });
@@ -529,7 +539,12 @@ export async function getExpandedCampaignRecipients(
       registrations.forEach((r) => {
         r.athlete.guardians.forEach((g) => {
           if (g.user?.email) {
-            addUser({ id: g.user.id, email: g.user.email, name: g.user.name, emailOptOut: g.user.emailOptOut });
+            addUser({
+              id: g.user.id,
+              email: g.user.email,
+              name: g.user.name,
+              emailOptOut: g.user.emailOptOut,
+            });
           }
         });
       });
@@ -563,7 +578,12 @@ export async function getExpandedCampaignRecipients(
       enrollments.forEach((e) => {
         e.athlete.guardians.forEach((g) => {
           if (g.user?.email) {
-            addUser({ id: g.user.id, email: g.user.email, name: g.user.name, emailOptOut: g.user.emailOptOut });
+            addUser({
+              id: g.user.id,
+              email: g.user.email,
+              name: g.user.name,
+              emailOptOut: g.user.emailOptOut,
+            });
           }
         });
       });
@@ -602,7 +622,12 @@ export async function getExpandedCampaignRecipients(
       registrations.forEach((r) => {
         r.athlete.guardians.forEach((g) => {
           if (g.user?.email) {
-            addUser({ id: g.user.id, email: g.user.email, name: g.user.name, emailOptOut: g.user.emailOptOut });
+            addUser({
+              id: g.user.id,
+              email: g.user.email,
+              name: g.user.name,
+              emailOptOut: g.user.emailOptOut,
+            });
           }
         });
       });
@@ -643,7 +668,12 @@ export async function getExpandedCampaignRecipients(
       memberships.forEach((m) => {
         m.athlete.guardians.forEach((g) => {
           if (g.user?.email) {
-            addUser({ id: g.user.id, email: g.user.email, name: g.user.name, emailOptOut: g.user.emailOptOut });
+            addUser({
+              id: g.user.id,
+              email: g.user.email,
+              name: g.user.name,
+              emailOptOut: g.user.emailOptOut,
+            });
           }
         });
       });
@@ -665,7 +695,8 @@ export async function getExpandedCampaignRecipients(
           },
         });
         users.forEach((u) => {
-          if (u.email) addUser({ id: u.id, email: u.email, name: u.name, emailOptOut: u.emailOptOut });
+          if (u.email)
+            addUser({ id: u.id, email: u.email, name: u.name, emailOptOut: u.emailOptOut });
         });
       }
       break;
@@ -703,7 +734,11 @@ export async function getExpandedCampaignRecipients(
 
     attendances.forEach((a) => {
       a.athlete.guardians.forEach((g) => {
-        if (g.user?.email && !g.user.emailOptOut && !eventSeenEmails.has(g.user.email.toLowerCase())) {
+        if (
+          g.user?.email &&
+          !g.user.emailOptOut &&
+          !eventSeenEmails.has(g.user.email.toLowerCase())
+        ) {
           eventSeenEmails.add(g.user.email.toLowerCase());
           eventRecipients.push({
             userId: g.user.id,
@@ -1001,7 +1036,11 @@ async function buildRecipientContext(
 
   // Date context
   const now = new Date();
-  context.currentDate = now.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  context.currentDate = now.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
   context.currentYear = now.getFullYear().toString();
 
   if (userId) {
@@ -1052,10 +1091,20 @@ async function buildRecipientContext(
         if (membership) {
           context.membershipName = membership.instance.name;
           context.membershipGroupName = membership.instance.group.name;
-          context.membershipStartDate = membership.startDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+          context.membershipStartDate = membership.startDate.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
           if (membership.endDate) {
-            context.membershipEndDate = membership.endDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-            const daysRemaining = Math.ceil((membership.endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            context.membershipEndDate = membership.endDate.toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            });
+            const daysRemaining = Math.ceil(
+              (membership.endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+            );
             context.membershipDaysRemaining = daysRemaining.toString();
           }
           context.membershipStatus = membership.status;
@@ -1064,7 +1113,8 @@ async function buildRecipientContext(
         const enrollment = athlete.enrollments?.[0];
         if (enrollment) {
           context.programName = enrollment.program.name;
-          if (enrollment.program.description) context.programDescription = enrollment.program.description;
+          if (enrollment.program.description)
+            context.programDescription = enrollment.program.description;
         }
       }
     }
@@ -1129,10 +1179,14 @@ export async function executeEmailCampaign(campaignId: string): Promise<void> {
     const context = recipient.userId
       ? await buildRecipientContext(campaign.organizationId, recipient.userId)
       : {
-            organizationName: campaign.organization.name,
-            currentDate: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
-            currentYear: new Date().getFullYear().toString(),
-          };
+          organizationName: campaign.organization.name,
+          currentDate: new Date().toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }),
+          currentYear: new Date().getFullYear().toString(),
+        };
 
     // Render placeholders in subject and body
     const personalizedSubject = renderPlaceholders(campaign.subject, context);
@@ -1413,9 +1467,7 @@ export async function handleEmailClick(sesMessageId: string): Promise<void> {
 /**
  * Handle unsubscribe request
  */
-export async function handleUnsubscribe(
-  identifier: string,
-): Promise<void> {
+export async function handleUnsubscribe(identifier: string): Promise<void> {
   await db.user.update({
     where: { id: identifier },
     data: {

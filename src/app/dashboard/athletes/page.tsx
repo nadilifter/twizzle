@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,15 +19,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+} from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -39,7 +34,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table"
+} from "@tanstack/react-table";
 import {
   Table,
   TableBody,
@@ -47,12 +42,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,14 +55,14 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   MoreHorizontal,
   Plus,
@@ -80,61 +75,62 @@ import {
   Pencil,
   Calendar,
   User,
-} from "lucide-react"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
-import { Calendar as CalendarPicker } from "@/components/ui/calendar"
-import { toast } from "sonner"
-import { format } from "date-fns"
-import { cn } from "@/lib/utils"
+} from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
-import { useFeatures } from "@/components/feature-context"
-import { AthleteConfiguration } from "./athlete-configuration"
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
-import { DataTablePagination } from "@/components/data-table/data-table-pagination"
-import { DataTableViewOptions } from "@/components/data-table/data-table-view-options"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useAthletes } from "@/hooks/use-athletes"
-import { useGuardians } from "@/hooks/use-guardians"
-import { useLevels } from "@/hooks/use-levels"
-import { DashboardPageHeader } from "@/components/dashboard-page-header"
-import type { AthleteWithRelations, CreateAthletePayload, UpdateAthletePayload, AthleteStatus } from "@/types/athletes"
+import { useFeatures } from "@/components/feature-context";
+import { AthleteConfiguration } from "./athlete-configuration";
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAthletes } from "@/hooks/use-athletes";
+import { useGuardians } from "@/hooks/use-guardians";
+import { useLevels } from "@/hooks/use-levels";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
+import type {
+  AthleteWithRelations,
+  CreateAthletePayload,
+  UpdateAthletePayload,
+  AthleteStatus,
+} from "@/types/athletes";
 
 // Transform status for display
 function formatStatus(status: string): string {
-  return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()
+  return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
 }
 
 // Get badge variant based on status
 function getStatusVariant(status: string): "default" | "destructive" | "secondary" {
-  const normalizedStatus = status.toUpperCase()
-  if (normalizedStatus === "ACTIVE") return "default"
-  if (normalizedStatus === "INACTIVE" || normalizedStatus === "GRADUATED") return "secondary"
-  if (normalizedStatus === "TRIAL") return "secondary"
-  return "secondary"
+  const normalizedStatus = status.toUpperCase();
+  if (normalizedStatus === "ACTIVE") return "default";
+  if (normalizedStatus === "INACTIVE" || normalizedStatus === "GRADUATED") return "secondary";
+  if (normalizedStatus === "TRIAL") return "secondary";
+  return "secondary";
 }
 
 export default function AthletesPage() {
-  const router = useRouter()
-  const { isFeatureEnabled } = useFeatures()
-  const competitionsEnabled = isFeatureEnabled("competitions")
-  const membershipsEnabled = isFeatureEnabled("memberships")
-  const [sorting, setSorting] = React.useState<SortingState>([])
+  const router = useRouter();
+  const { isFeatureEnabled } = useFeatures();
+  const competitionsEnabled = isFeatureEnabled("competitions");
+  const membershipsEnabled = isFeatureEnabled("memberships");
+  const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([
     { id: "status", value: ["ACTIVE", "TRIAL", "GRADUATED"] },
-  ])
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = React.useState({})
-  const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
-  const [isEditOpen, setIsEditOpen] = React.useState(false)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
-  const [selectedAthlete, setSelectedAthlete] = React.useState<AthleteWithRelations | null>(null)
-  
+  ]);
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = React.useState({});
+  const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
+  const [isEditOpen, setIsEditOpen] = React.useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  const [selectedAthlete, setSelectedAthlete] = React.useState<AthleteWithRelations | null>(null);
+
   // Form state for adding new athlete
   const [newAthlete, setNewAthlete] = React.useState({
     firstName: "",
@@ -143,7 +139,7 @@ export default function AthletesPage() {
     level: "",
     guardianUserId: "",
     parentEmail: "",
-  })
+  });
 
   // Fetch athletes from API
   const {
@@ -157,259 +153,323 @@ export default function AthletesPage() {
     deleteAthlete,
     fetchAthletes,
     clearError,
-  } = useAthletes()
+  } = useAthletes();
 
   // Fetch guardians for the dropdown
-  const { guardians, isLoading: isGuardiansLoading } = useGuardians()
+  const { guardians, isLoading: isGuardiansLoading } = useGuardians();
 
   // Fetch configured levels for dropdowns
-  const { levels: configuredLevels, isLoading: isLevelsLoading } = useLevels()
+  const { levels: configuredLevels, isLoading: isLevelsLoading } = useLevels();
 
   const levelColorMap = React.useMemo(() => {
-    const map = new Map<string, string>()
+    const map = new Map<string, string>();
     for (const level of configuredLevels) {
-      if (level.color) map.set(level.name, level.color)
+      if (level.color) map.set(level.name, level.color);
     }
-    return map
-  }, [configuredLevels])
+    return map;
+  }, [configuredLevels]);
 
   // Open edit sheet with selected athlete data
   const handleEditClick = React.useCallback((athlete: AthleteWithRelations) => {
-    setSelectedAthlete(athlete)
-    setIsEditOpen(true)
-  }, [])
+    setSelectedAthlete(athlete);
+    setIsEditOpen(true);
+  }, []);
 
   // Open delete confirmation dialog
   const handleDeleteClick = React.useCallback((athlete: AthleteWithRelations) => {
-    setSelectedAthlete(athlete)
-    setIsDeleteDialogOpen(true)
-  }, [])
+    setSelectedAthlete(athlete);
+    setIsDeleteDialogOpen(true);
+  }, []);
 
   // Handle delete confirmation
   const handleConfirmDelete = async () => {
-    if (!selectedAthlete) return
+    if (!selectedAthlete) return;
 
-    const success = await deleteAthlete(selectedAthlete.id)
-    
+    const success = await deleteAthlete(selectedAthlete.id);
+
     if (success) {
-      toast.success("Athlete deleted successfully")
-      setIsDeleteDialogOpen(false)
-      setSelectedAthlete(null)
+      toast.success("Athlete deleted successfully");
+      setIsDeleteDialogOpen(false);
+      setSelectedAthlete(null);
     } else {
-      toast.error(error || "Failed to delete athlete")
+      toast.error(error || "Failed to delete athlete");
     }
-  }
+  };
 
   // Handle contact parent - opens email client
   const handleContactParent = React.useCallback((athlete: AthleteWithRelations) => {
-    const guardianUser = athlete.guardians?.[0]?.user
-    const email = guardianUser?.email
+    const guardianUser = athlete.guardians?.[0]?.user;
+    const email = guardianUser?.email;
     if (email) {
-      window.location.href = `mailto:${email}?subject=Regarding ${athlete.name}`
+      window.location.href = `mailto:${email}?subject=Regarding ${athlete.name}`;
     } else {
-      toast.error("No email address available for this guardian")
+      toast.error("No email address available for this guardian");
     }
-  }, [])
+  }, []);
 
   // Navigate to athlete profile with attendance tab
-  const handleViewAttendance = React.useCallback((athlete: AthleteWithRelations) => {
-    router.push(`/dashboard/athletes/${athlete.id}?tab=attendance`)
-  }, [router])
+  const handleViewAttendance = React.useCallback(
+    (athlete: AthleteWithRelations) => {
+      router.push(`/dashboard/athletes/${athlete.id}?tab=attendance`);
+    },
+    [router]
+  );
 
   // Define columns
-  const columns: ColumnDef<AthleteWithRelations>[] = React.useMemo(() => [
-    {
-      id: "select",
-      header: ({ table }) => (
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
-    {
-      accessorKey: "name",
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Athlete" />,
-      cell: ({ row }) => (
-        <div className="flex items-center gap-3">
-          <Avatar>
-            <AvatarImage src={row.original.avatar ?? undefined} alt={row.original.name} />
-            <AvatarFallback>{row.original.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col">
-            <Link href={`/dashboard/athletes/${row.original.id}`} className="font-medium hover:underline">
-              {row.original.name}
-            </Link>
-            <span className="text-xs text-muted-foreground">{row.original.email ?? "No email"}</span>
-          </div>
-        </div>
-      ),
-    },
-    {
-      accessorKey: "level",
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Level" />,
-      cell: ({ row }) => {
-        const color = levelColorMap.get(row.original.level)
-        return color ? (
-          <Badge
-            variant="outline"
-            style={{ borderColor: color, color, backgroundColor: `${color}15` }}
-          >
-            {row.original.level}
-          </Badge>
-        ) : (
-          <Badge variant="outline">{row.original.level}</Badge>
-        )
+  const columns: ColumnDef<AthleteWithRelations>[] = React.useMemo(
+    () => [
+      {
+        id: "select",
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
       },
-      filterFn: (row, id, value) => {
-        return value.includes(row.getValue(id))
-      },
-    },
-    {
-      accessorKey: "status",
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
-      cell: ({ row }) => (
-        <Badge variant={getStatusVariant(row.original.status)}>
-          {formatStatus(row.original.status)}
-        </Badge>
-      ),
-      filterFn: (row, id, value) => {
-        return value.includes(row.getValue(id))
-      },
-    },
-    {
-      id: "programs",
-      accessorFn: (row) => row.activePrograms ?? 0,
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Programs" className="justify-end" />,
-      cell: ({ row }) => {
-        const count = row.original.activePrograms ?? 0
-        return (
-          <div className="text-right">
-            {count > 0 ? (
-              <Badge variant="outline">{count}</Badge>
-            ) : (
-              <span className="text-muted-foreground">-</span>
-            )}
-          </div>
-        )
-      },
-    },
-    ...(membershipsEnabled ? [{
-      id: "memberships",
-      accessorFn: (row: AthleteWithRelations) => row.activeMemberships ?? 0,
-      header: ({ column }: { column: import("@tanstack/react-table").Column<AthleteWithRelations, unknown> }) => <DataTableColumnHeader column={column} title="Memberships" className="justify-end" />,
-      cell: ({ row }: { row: import("@tanstack/react-table").Row<AthleteWithRelations> }) => {
-        const count = row.original.activeMemberships ?? 0
-        return (
-          <div className="text-right">
-            {count > 0 ? (
-              <Badge variant="outline">{count}</Badge>
-            ) : (
-              <span className="text-muted-foreground">-</span>
-            )}
-          </div>
-        )
-      },
-    }] : []),
-    ...(competitionsEnabled ? [{
-      id: "competitions",
-      accessorFn: (row: AthleteWithRelations) => row.upcomingCompetitions ?? 0,
-      header: ({ column }: { column: import("@tanstack/react-table").Column<AthleteWithRelations, unknown> }) => <DataTableColumnHeader column={column} title="Competitions" className="justify-end" />,
-      cell: ({ row }: { row: import("@tanstack/react-table").Row<AthleteWithRelations> }) => {
-        const count = row.original.upcomingCompetitions ?? 0
-        return (
-          <div className="text-right">
-            {count > 0 ? (
-              <Badge variant="outline">{count}</Badge>
-            ) : (
-              <span className="text-muted-foreground">-</span>
-            )}
-          </div>
-        )
-      },
-    }] : []),
-    {
-      id: "parent",
-      accessorFn: (row) => row.guardians?.[0]?.user?.name ?? row.parent ?? "",
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Parent/Guardian" />,
-      cell: ({ row }) => {
-        const guardian = row.original.guardians?.[0]
-        const name = guardian?.user?.name ?? row.original.parent
-        const email = guardian?.user?.email
-        const guardianUserId = guardian?.user?.id
-        return (
-          <div className="flex flex-col">
-            {guardianUserId ? (
-              <Link href={`/dashboard/athletes/guardians/${guardianUserId}`} className="font-medium hover:underline">
-                {name ?? "N/A"}
-              </Link>
-            ) : (
-              <span>{name ?? "N/A"}</span>
-            )}
-            {email && <span className="text-xs text-muted-foreground">{email}</span>}
-          </div>
-        )
-      },
-    },
-    {
-      id: "actions",
-      cell: ({ row }) => (
-        <div className="text-right">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem asChild>
-                <Link href={`/dashboard/athletes/${row.original.id}`}>
-                  <User className="mr-2 h-4 w-4" />
-                  View Profile
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleEditClick(row.original)}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit Details
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleViewAttendance(row.original)}>
-                <Calendar className="mr-2 h-4 w-4" />
-                View Attendance
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleContactParent(row.original)}>
-                <Mail className="mr-2 h-4 w-4" />
-                Contact Parent
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={() => handleDeleteClick(row.original)}
-                className="text-destructive focus:text-destructive"
+      {
+        accessorKey: "name",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Athlete" />,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-3">
+            <Avatar>
+              <AvatarImage src={row.original.avatar ?? undefined} alt={row.original.name} />
+              <AvatarFallback>
+                {row.original.name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col">
+              <Link
+                href={`/dashboard/athletes/${row.original.id}`}
+                className="font-medium hover:underline"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Athlete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      ),
-    },
-  ], [handleEditClick, handleDeleteClick, handleViewAttendance, handleContactParent, levelColorMap, competitionsEnabled])
+                {row.original.name}
+              </Link>
+              <span className="text-xs text-muted-foreground">
+                {row.original.email ?? "No email"}
+              </span>
+            </div>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "level",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Level" />,
+        cell: ({ row }) => {
+          const color = levelColorMap.get(row.original.level);
+          return color ? (
+            <Badge
+              variant="outline"
+              style={{ borderColor: color, color, backgroundColor: `${color}15` }}
+            >
+              {row.original.level}
+            </Badge>
+          ) : (
+            <Badge variant="outline">{row.original.level}</Badge>
+          );
+        },
+        filterFn: (row, id, value) => {
+          return value.includes(row.getValue(id));
+        },
+      },
+      {
+        accessorKey: "status",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+        cell: ({ row }) => (
+          <Badge variant={getStatusVariant(row.original.status)}>
+            {formatStatus(row.original.status)}
+          </Badge>
+        ),
+        filterFn: (row, id, value) => {
+          return value.includes(row.getValue(id));
+        },
+      },
+      {
+        id: "programs",
+        accessorFn: (row) => row.activePrograms ?? 0,
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Programs" className="justify-end" />
+        ),
+        cell: ({ row }) => {
+          const count = row.original.activePrograms ?? 0;
+          return (
+            <div className="text-right">
+              {count > 0 ? (
+                <Badge variant="outline">{count}</Badge>
+              ) : (
+                <span className="text-muted-foreground">-</span>
+              )}
+            </div>
+          );
+        },
+      },
+      ...(membershipsEnabled
+        ? [
+            {
+              id: "memberships",
+              accessorFn: (row: AthleteWithRelations) => row.activeMemberships ?? 0,
+              header: ({
+                column,
+              }: {
+                column: import("@tanstack/react-table").Column<AthleteWithRelations, unknown>;
+              }) => (
+                <DataTableColumnHeader
+                  column={column}
+                  title="Memberships"
+                  className="justify-end"
+                />
+              ),
+              cell: ({
+                row,
+              }: {
+                row: import("@tanstack/react-table").Row<AthleteWithRelations>;
+              }) => {
+                const count = row.original.activeMemberships ?? 0;
+                return (
+                  <div className="text-right">
+                    {count > 0 ? (
+                      <Badge variant="outline">{count}</Badge>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </div>
+                );
+              },
+            },
+          ]
+        : []),
+      ...(competitionsEnabled
+        ? [
+            {
+              id: "competitions",
+              accessorFn: (row: AthleteWithRelations) => row.upcomingCompetitions ?? 0,
+              header: ({
+                column,
+              }: {
+                column: import("@tanstack/react-table").Column<AthleteWithRelations, unknown>;
+              }) => (
+                <DataTableColumnHeader
+                  column={column}
+                  title="Competitions"
+                  className="justify-end"
+                />
+              ),
+              cell: ({
+                row,
+              }: {
+                row: import("@tanstack/react-table").Row<AthleteWithRelations>;
+              }) => {
+                const count = row.original.upcomingCompetitions ?? 0;
+                return (
+                  <div className="text-right">
+                    {count > 0 ? (
+                      <Badge variant="outline">{count}</Badge>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </div>
+                );
+              },
+            },
+          ]
+        : []),
+      {
+        id: "parent",
+        accessorFn: (row) => row.guardians?.[0]?.user?.name ?? row.parent ?? "",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Parent/Guardian" />,
+        cell: ({ row }) => {
+          const guardian = row.original.guardians?.[0];
+          const name = guardian?.user?.name ?? row.original.parent;
+          const email = guardian?.user?.email;
+          const guardianUserId = guardian?.user?.id;
+          return (
+            <div className="flex flex-col">
+              {guardianUserId ? (
+                <Link
+                  href={`/dashboard/athletes/guardians/${guardianUserId}`}
+                  className="font-medium hover:underline"
+                >
+                  {name ?? "N/A"}
+                </Link>
+              ) : (
+                <span>{name ?? "N/A"}</span>
+              )}
+              {email && <span className="text-xs text-muted-foreground">{email}</span>}
+            </div>
+          );
+        },
+      },
+      {
+        id: "actions",
+        cell: ({ row }) => (
+          <div className="text-right">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">Open menu</span>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuItem asChild>
+                  <Link href={`/dashboard/athletes/${row.original.id}`}>
+                    <User className="mr-2 h-4 w-4" />
+                    View Profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleEditClick(row.original)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit Details
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleViewAttendance(row.original)}>
+                  <Calendar className="mr-2 h-4 w-4" />
+                  View Attendance
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleContactParent(row.original)}>
+                  <Mail className="mr-2 h-4 w-4" />
+                  Contact Parent
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => handleDeleteClick(row.original)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Athlete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        ),
+      },
+    ],
+    [
+      handleEditClick,
+      handleDeleteClick,
+      handleViewAttendance,
+      handleContactParent,
+      levelColorMap,
+      competitionsEnabled,
+    ]
+  );
 
   const table = useReactTable({
     data: athletes,
@@ -426,39 +486,44 @@ export default function AthletesPage() {
     initialState: {
       pagination: { pageSize: 20 },
     },
-  })
+  });
 
   // Get unique values for filters from current data
-  const levels = React.useMemo(() => 
-    Array.from(new Set(athletes.map(a => a.level))).sort(),
+  const levels = React.useMemo(
+    () => Array.from(new Set(athletes.map((a) => a.level))).sort(),
     [athletes]
-  )
-  const statuses = React.useMemo(() => 
-    Array.from(new Set(athletes.map(a => a.status))).sort(),
+  );
+  const statuses = React.useMemo(
+    () => Array.from(new Set(athletes.map((a) => a.status))).sort(),
     [athletes]
-  )
+  );
 
   // Helper to handle checkbox changes for filters
   const handleFilterChange = (columnId: string, value: string, checked: boolean) => {
-    const column = table.getColumn(columnId)
-    const filterValue = (column?.getFilterValue() as string[]) || []
-    
-    if (checked) {
-      column?.setFilterValue([...filterValue, value])
-    } else {
-      column?.setFilterValue(filterValue.filter((v) => v !== value))
-    }
-  }
+    const column = table.getColumn(columnId);
+    const filterValue = (column?.getFilterValue() as string[]) || [];
 
-  const isFiltered = table.getState().columnFilters.length > 0
+    if (checked) {
+      column?.setFilterValue([...filterValue, value]);
+    } else {
+      column?.setFilterValue(filterValue.filter((v) => v !== value));
+    }
+  };
+
+  const isFiltered = table.getState().columnFilters.length > 0;
 
   // Handle form submission for adding athlete
   const handleAddAthlete = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!newAthlete.firstName || !newAthlete.lastName || !newAthlete.level || !newAthlete.guardianUserId) {
-      toast.error("Please fill in all required fields")
-      return
+    e.preventDefault();
+
+    if (
+      !newAthlete.firstName ||
+      !newAthlete.lastName ||
+      !newAthlete.level ||
+      !newAthlete.guardianUserId
+    ) {
+      toast.error("Please fill in all required fields");
+      return;
     }
 
     const payload: CreateAthletePayload = {
@@ -467,13 +532,13 @@ export default function AthletesPage() {
       guardianUserId: newAthlete.guardianUserId,
       birthDate: newAthlete.birthDate || null,
       status: "ACTIVE" as AthleteStatus,
-    }
+    };
 
-    const result = await createAthlete(payload)
-    
+    const result = await createAthlete(payload);
+
     if (result) {
-      toast.success("Athlete added successfully")
-      setIsAddDialogOpen(false)
+      toast.success("Athlete added successfully");
+      setIsAddDialogOpen(false);
       setNewAthlete({
         firstName: "",
         lastName: "",
@@ -481,26 +546,26 @@ export default function AthletesPage() {
         level: "",
         guardianUserId: "",
         parentEmail: "",
-      })
+      });
     } else {
-      toast.error(error || "Failed to add athlete")
+      toast.error(error || "Failed to add athlete");
     }
-  }
+  };
 
   // Show error toast when error changes
   React.useEffect(() => {
     if (error) {
-      toast.error(error)
-      clearError()
+      toast.error(error);
+      clearError();
     }
-  }, [error, clearError])
+  }, [error, clearError]);
 
   return (
     <div className="flex flex-col gap-6 p-6">
       <DashboardPageHeader
         title="Athlete Directory"
         description="Manage your club's gymnasts, levels, and group assignments."
-        actions={(
+        actions={
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -509,137 +574,164 @@ export default function AthletesPage() {
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Add New Athlete</DialogTitle>
-              <DialogDescription>
-                Add a new athlete to your roster manually or invite them via email.
-              </DialogDescription>
-            </DialogHeader>
-            <Tabs defaultValue="manual" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="manual">Manual Entry</TabsTrigger>
-                <TabsTrigger value="invite">Invite via Email</TabsTrigger>
-              </TabsList>
-              <TabsContent value="manual" className="space-y-4 py-4">
-                <form onSubmit={handleAddAthlete}>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName">First Name *</Label>
-                      <Input 
-                        id="firstName" 
-                        placeholder="Enter first name"
-                        value={newAthlete.firstName}
-                        onChange={(e) => setNewAthlete(prev => ({ ...prev, firstName: e.target.value }))}
-                        required
-                      />
+              <DialogHeader>
+                <DialogTitle>Add New Athlete</DialogTitle>
+                <DialogDescription>
+                  Add a new athlete to your roster manually or invite them via email.
+                </DialogDescription>
+              </DialogHeader>
+              <Tabs defaultValue="manual" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="manual">Manual Entry</TabsTrigger>
+                  <TabsTrigger value="invite">Invite via Email</TabsTrigger>
+                </TabsList>
+                <TabsContent value="manual" className="space-y-4 py-4">
+                  <form onSubmit={handleAddAthlete}>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="firstName">First Name *</Label>
+                        <Input
+                          id="firstName"
+                          placeholder="Enter first name"
+                          value={newAthlete.firstName}
+                          onChange={(e) =>
+                            setNewAthlete((prev) => ({ ...prev, firstName: e.target.value }))
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="lastName">Last Name *</Label>
+                        <Input
+                          id="lastName"
+                          placeholder="Enter last name"
+                          value={newAthlete.lastName}
+                          onChange={(e) =>
+                            setNewAthlete((prev) => ({ ...prev, lastName: e.target.value }))
+                          }
+                          required
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName">Last Name *</Label>
-                      <Input 
-                        id="lastName" 
-                        placeholder="Enter last name"
-                        value={newAthlete.lastName}
-                        onChange={(e) => setNewAthlete(prev => ({ ...prev, lastName: e.target.value }))}
-                        required
-                      />
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      <div className="space-y-2">
+                        <Label>Date of Birth</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !newAthlete.birthDate && "text-muted-foreground"
+                              )}
+                            >
+                              <Calendar className="mr-2 h-4 w-4" />
+                              {newAthlete.birthDate
+                                ? format(new Date(newAthlete.birthDate + "T12:00:00Z"), "PPP")
+                                : "Pick a date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarPicker
+                              mode="single"
+                              selected={
+                                newAthlete.birthDate
+                                  ? new Date(newAthlete.birthDate + "T12:00:00Z")
+                                  : undefined
+                              }
+                              onSelect={(date) =>
+                                setNewAthlete((prev) => ({
+                                  ...prev,
+                                  birthDate: date ? format(date, "yyyy-MM-dd") : "",
+                                }))
+                              }
+                              captionLayout="dropdown"
+                              fromYear={1940}
+                              toYear={new Date().getFullYear()}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="guardian">Guardian *</Label>
+                        <Select
+                          value={newAthlete.guardianUserId}
+                          onValueChange={(value) =>
+                            setNewAthlete((prev) => ({ ...prev, guardianUserId: value }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue
+                              placeholder={isGuardiansLoading ? "Loading..." : "Select guardian"}
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {guardians.map((guardian) => (
+                              <SelectItem key={guardian.id} value={guardian.id}>
+                                {guardian.name ?? guardian.email}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div className="space-y-2">
-                      <Label>Date of Birth</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className={cn("w-full justify-start text-left font-normal", !newAthlete.birthDate && "text-muted-foreground")}
-                          >
-                            <Calendar className="mr-2 h-4 w-4" />
-                            {newAthlete.birthDate ? format(new Date(newAthlete.birthDate + "T12:00:00Z"), "PPP") : "Pick a date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarPicker
-                            mode="single"
-                            selected={newAthlete.birthDate ? new Date(newAthlete.birthDate + "T12:00:00Z") : undefined}
-                            onSelect={(date) => setNewAthlete(prev => ({ ...prev, birthDate: date ? format(date, "yyyy-MM-dd") : "" }))}
-                            captionLayout="dropdown"
-                            fromYear={1940}
-                            toYear={new Date().getFullYear()}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="guardian">Guardian *</Label>
-                      <Select 
-                        value={newAthlete.guardianUserId}
-                        onValueChange={(value) => setNewAthlete(prev => ({ ...prev, guardianUserId: value }))}
+                    <div className="space-y-2 mt-4">
+                      <Label htmlFor="level">Level *</Label>
+                      <Select
+                        value={newAthlete.level}
+                        onValueChange={(value) =>
+                          setNewAthlete((prev) => ({ ...prev, level: value }))
+                        }
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder={isGuardiansLoading ? "Loading..." : "Select guardian"} />
+                          <SelectValue
+                            placeholder={isLevelsLoading ? "Loading..." : "Select level"}
+                          />
                         </SelectTrigger>
                         <SelectContent>
-                          {guardians.map((guardian) => (
-                            <SelectItem key={guardian.id} value={guardian.id}>
-                              {guardian.name ?? guardian.email}
+                          {configuredLevels.map((level) => (
+                            <SelectItem key={level.id} value={level.name}>
+                              {level.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
+                    <DialogFooter className="mt-6">
+                      <Button type="submit" className="w-full" disabled={isCreating}>
+                        {isCreating ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Adding...
+                          </>
+                        ) : (
+                          "Add Athlete"
+                        )}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </TabsContent>
+                <TabsContent value="invite" className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="inviteEmail">Email Address</Label>
+                    <Input id="inviteEmail" type="email" placeholder="athlete@example.com" />
                   </div>
-                  <div className="space-y-2 mt-4">
-                    <Label htmlFor="level">Level *</Label>
-                    <Select 
-                      value={newAthlete.level}
-                      onValueChange={(value) => setNewAthlete(prev => ({ ...prev, level: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={isLevelsLoading ? "Loading..." : "Select level"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {configuredLevels.map((level) => (
-                          <SelectItem key={level.id} value={level.name}>
-                            {level.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="space-y-2">
+                    <Label htmlFor="message">Custom Message (Optional)</Label>
+                    <Textarea id="message" placeholder="Join our team on Uplifter!" />
                   </div>
-                  <DialogFooter className="mt-6">
-                    <Button type="submit" className="w-full" disabled={isCreating}>
-                      {isCreating ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Adding...
-                        </>
-                      ) : (
-                        "Add Athlete"
-                      )}
+                  <DialogFooter>
+                    <Button type="submit" className="w-full">
+                      Send Invitation
                     </Button>
                   </DialogFooter>
-                </form>
-              </TabsContent>
-              <TabsContent value="invite" className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="inviteEmail">Email Address</Label>
-                  <Input id="inviteEmail" type="email" placeholder="athlete@example.com" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="message">Custom Message (Optional)</Label>
-                  <Textarea id="message" placeholder="Join our team on Uplifter!" />
-                </div>
-                <DialogFooter>
-                  <Button type="submit" className="w-full">Send Invitation</Button>
-                </DialogFooter>
-              </TabsContent>
-            </Tabs>
-          </DialogContent>
+                </TabsContent>
+              </Tabs>
+            </DialogContent>
           </Dialog>
-        )
-      }
+        }
       />
 
       <div className="flex items-center gap-4">
@@ -648,9 +740,7 @@ export default function AthletesPage() {
           <Input
             placeholder="Search athletes..."
             value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-            onChange={(event) =>
-              table.getColumn("name")?.setFilterValue(event.target.value)
-            }
+            onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
             className="pl-8"
           />
         </div>
@@ -676,9 +766,11 @@ export default function AthletesPage() {
                 <div className="grid gap-2">
                   {levels.map((level) => (
                     <div key={level} className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={`level-${level}`} 
-                        checked={(table.getColumn("level")?.getFilterValue() as string[])?.includes(level)}
+                      <Checkbox
+                        id={`level-${level}`}
+                        checked={(table.getColumn("level")?.getFilterValue() as string[])?.includes(
+                          level
+                        )}
                         onCheckedChange={(checked) => handleFilterChange("level", level, !!checked)}
                       />
                       <label
@@ -696,10 +788,14 @@ export default function AthletesPage() {
                 <div className="grid gap-2">
                   {statuses.map((status) => (
                     <div key={status} className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={`status-${status}`} 
-                        checked={(table.getColumn("status")?.getFilterValue() as string[])?.includes(status)}
-                        onCheckedChange={(checked) => handleFilterChange("status", status, !!checked)}
+                      <Checkbox
+                        id={`status-${status}`}
+                        checked={(
+                          table.getColumn("status")?.getFilterValue() as string[]
+                        )?.includes(status)}
+                        onCheckedChange={(checked) =>
+                          handleFilterChange("status", status, !!checked)
+                        }
                       />
                       <label
                         htmlFor={`status-${status}`}
@@ -712,8 +808,8 @@ export default function AthletesPage() {
                 </div>
               </div>
               {isFiltered && (
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   className="w-full justify-center text-center"
                   onClick={() => table.resetColumnFilters()}
                 >
@@ -725,11 +821,7 @@ export default function AthletesPage() {
         </Popover>
         <DataTableViewOptions table={table} />
         <Button variant="outline" onClick={() => fetchAthletes()} disabled={isLoading}>
-          {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            "Refresh"
-          )}
+          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refresh"}
         </Button>
       </div>
 
@@ -769,12 +861,9 @@ export default function AthletesPage() {
                         <TableHead key={header.id}>
                           {header.isPlaceholder
                             ? null
-                            : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
+                            : flexRender(header.column.columnDef.header, header.getContext())}
                         </TableHead>
-                      )
+                      );
                     })}
                   </TableRow>
                 ))}
@@ -782,26 +871,17 @@ export default function AthletesPage() {
               <TableBody>
                 {table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      data-state={row.getIsSelected() && "selected"}
-                    >
+                    <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                       {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id}>
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
                       ))}
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="h-24 text-center"
-                    >
+                    <TableCell colSpan={columns.length} className="h-24 text-center">
                       No results.
                     </TableCell>
                   </TableRow>
@@ -830,15 +910,19 @@ export default function AthletesPage() {
                 birthDate: selectedAthlete.birthDate,
                 gender: selectedAthlete.gender ?? null,
                 guardian: selectedAthlete.guardians?.[0]?.user
-                  ? { id: selectedAthlete.guardians[0].user.id, name: selectedAthlete.guardians[0].user.name, email: selectedAthlete.guardians[0].user.email }
+                  ? {
+                      id: selectedAthlete.guardians[0].user.id,
+                      name: selectedAthlete.guardians[0].user.name,
+                      email: selectedAthlete.guardians[0].user.email,
+                    }
                   : null,
               }}
               onClose={() => {
-                setIsEditOpen(false)
-                setSelectedAthlete(null)
+                setIsEditOpen(false);
+                setSelectedAthlete(null);
               }}
               onUpdated={async (data) => {
-                await updateAthlete(selectedAthlete.id, data)
+                await updateAthlete(selectedAthlete.id, data);
               }}
             />
           ) : (
@@ -856,7 +940,8 @@ export default function AthletesPage() {
             <AlertDialogTitle>Delete Athlete</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete {selectedAthlete?.name}? This action cannot be undone.
-              All associated data including attendance records and evaluations will be permanently removed.
+              All associated data including attendance records and evaluations will be permanently
+              removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -879,5 +964,5 @@ export default function AthletesPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
+  );
 }

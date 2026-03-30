@@ -1,57 +1,57 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useIsMobile } from "@/hooks/use-mobile"
+import * as React from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { TabsList } from "@/components/ui/tabs"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/select";
+import { TabsList } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
 interface TabItem {
-  value: string
-  label: string
-  disabled?: boolean
+  value: string;
+  label: string;
+  disabled?: boolean;
 }
 
 function extractText(node: React.ReactNode): string {
-  if (typeof node === "string") return node
-  if (typeof node === "number") return String(node)
-  if (!node) return ""
-  if (Array.isArray(node)) return node.map(extractText).filter(Boolean).join(" ")
+  if (typeof node === "string") return node;
+  if (typeof node === "number") return String(node);
+  if (!node) return "";
+  if (Array.isArray(node)) return node.map(extractText).filter(Boolean).join(" ");
   if (React.isValidElement(node)) {
-    if (typeof node.type === "string" && node.type === "svg") return ""
-    const props = node.props as Record<string, unknown>
-    if (typeof props.className === "string" && /\bh-[34]\b/.test(props.className)) return ""
-    return extractText(props.children as React.ReactNode)
+    if (typeof node.type === "string" && node.type === "svg") return "";
+    const props = node.props as Record<string, unknown>;
+    if (typeof props.className === "string" && /\bh-[34]\b/.test(props.className)) return "";
+    return extractText(props.children as React.ReactNode);
   }
-  return ""
+  return "";
 }
 
 function extractTabItems(children: React.ReactNode): TabItem[] {
-  const items: TabItem[] = []
+  const items: TabItem[] = [];
   React.Children.forEach(children, (child) => {
-    if (!React.isValidElement(child)) return
-    const props = child.props as Record<string, unknown>
-    if (typeof props.value !== "string") return
+    if (!React.isValidElement(child)) return;
+    const props = child.props as Record<string, unknown>;
+    if (typeof props.value !== "string") return;
     items.push({
       value: props.value,
       label: extractText(props.children as React.ReactNode).trim() || props.value,
       disabled: !!props.disabled,
-    })
-  })
-  return items
+    });
+  });
+  return items;
 }
 
 interface ResponsiveTabsListProps {
-  children: React.ReactNode
-  value: string
-  onValueChange: (value: string) => void
-  className?: string
+  children: React.ReactNode;
+  value: string;
+  onValueChange: (value: string) => void;
+  className?: string;
 }
 
 export function ResponsiveTabsList({
@@ -60,8 +60,8 @@ export function ResponsiveTabsList({
   onValueChange,
   className,
 }: ResponsiveTabsListProps) {
-  const isMobile = useIsMobile()
-  const items = React.useMemo(() => extractTabItems(children), [children])
+  const isMobile = useIsMobile();
+  const items = React.useMemo(() => extractTabItems(children), [children]);
 
   if (isMobile) {
     return (
@@ -71,22 +71,16 @@ export function ResponsiveTabsList({
         </SelectTrigger>
         <SelectContent>
           {items.map((item) => (
-            <SelectItem
-              key={item.value}
-              value={item.value}
-              disabled={item.disabled}
-            >
+            <SelectItem key={item.value} value={item.value} disabled={item.disabled}>
               {item.label}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
-    )
+    );
   }
 
   return (
-    <TabsList className={cn("overflow-x-auto scrollbar-hide", className)}>
-      {children}
-    </TabsList>
-  )
+    <TabsList className={cn("overflow-x-auto scrollbar-hide", className)}>{children}</TabsList>
+  );
 }

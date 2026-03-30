@@ -14,25 +14,25 @@ import { useEvents } from "@/hooks/use-events";
 export function CalendarView() {
   const router = useRouter();
   const { currentWeekStart, goToNextWeek, goToPreviousWeek } = useCalendarStore();
-  
+
   const weekDays = useMemo(() => {
-      const days = [];
-      for (let i = 0; i < 7; i++) {
-        days.push(addDays(currentWeekStart, i));
-      }
-      return days;
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      days.push(addDays(currentWeekStart, i));
+    }
+    return days;
   }, [currentWeekStart]);
 
   const startDate = format(weekDays[0], "yyyy-MM-dd");
   const endDate = format(weekDays[6], "yyyy-MM-dd");
 
-  const { events, fetchEvents } = useEvents({ 
-      initialParams: { startDate, endDate },
-      autoFetch: false 
+  const { events, fetchEvents } = useEvents({
+    initialParams: { startDate, endDate },
+    autoFetch: false,
   });
 
   useEffect(() => {
-      fetchEvents({ startDate, endDate });
+    fetchEvents({ startDate, endDate });
   }, [startDate, endDate, fetchEvents]);
 
   const hoursScrollRef = useRef<HTMLDivElement>(null);
@@ -53,7 +53,7 @@ export function CalendarView() {
   const eventsByDay: Record<string, EventWithRelations[]> = {};
   weekDays.forEach((day) => {
     const dayStr = format(day, "yyyy-MM-dd");
-    eventsByDay[dayStr] = events.filter((e) => e.date.split('T')[0] === dayStr);
+    eventsByDay[dayStr] = events.filter((e) => e.date.split("T")[0] === dayStr);
   });
 
   const isTodayInWeek = weekDays.some(
@@ -87,18 +87,17 @@ export function CalendarView() {
     });
   };
 
-  const handleDayScroll =
-    (index: number) => (e: React.UIEvent<HTMLDivElement>) => {
-      const scrollTop = e.currentTarget.scrollTop;
-      if (hoursScrollRef.current) {
-        hoursScrollRef.current.scrollTop = scrollTop;
+  const handleDayScroll = (index: number) => (e: React.UIEvent<HTMLDivElement>) => {
+    const scrollTop = e.currentTarget.scrollTop;
+    if (hoursScrollRef.current) {
+      hoursScrollRef.current.scrollTop = scrollTop;
+    }
+    daysScrollRefs.current.forEach((ref, idx) => {
+      if (ref && idx !== index) {
+        ref.scrollTop = scrollTop;
       }
-      daysScrollRefs.current.forEach((ref, idx) => {
-        if (ref && idx !== index) {
-          ref.scrollTop = scrollTop;
-        }
-      });
-    };
+    });
+  };
 
   const handleEventClick = (event: EventWithRelations) => {
     router.push(`/dashboard/events/${event.id}`);
@@ -114,10 +113,7 @@ export function CalendarView() {
         />
 
         <div className="flex min-w-full w-max">
-          <CalendarHoursColumn
-            onScroll={handleHoursScroll}
-            scrollRef={hoursScrollRef}
-          />
+          <CalendarHoursColumn onScroll={handleHoursScroll} scrollRef={hoursScrollRef} />
 
           {weekDays.map((day, dayIndex) => {
             const dayStr = format(day, "yyyy-MM-dd");

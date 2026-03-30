@@ -1,68 +1,74 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Suspense } from "react"
-import { useSearchParams } from "next/navigation"
-import { useSession } from "next-auth/react"
-import { AlertTriangle, Mail, LogOut, CreditCard, RotateCcw, Loader2 } from "lucide-react"
-import { toast } from "sonner"
-import { logout } from "@/lib/logout"
-import { getSubdomainUrl } from "@/lib/env-domains"
+import * as React from "react";
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { AlertTriangle, Mail, LogOut, CreditCard, RotateCcw, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { logout } from "@/lib/logout";
+import { getSubdomainUrl } from "@/lib/env-domains";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { ShineBorder } from "@/components/ui/shine-border"
-import { UplifterLogo } from "@/components/uplifter-logo"
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { ShineBorder } from "@/components/ui/shine-border";
+import { UplifterLogo } from "@/components/uplifter-logo";
 
-const SELF_SERVICE_REASONS = ["Non-payment", "Requested by customer"]
+const SELF_SERVICE_REASONS = ["Non-payment", "Requested by customer"];
 
-const SUPPORT_EMAIL = "support@uplifterinc.com"
+const SUPPORT_EMAIL = "support@uplifterinc.com";
 
 export default function OrganizationDeactivatedPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>}>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      }
+    >
       <OrganizationDeactivatedContent />
     </Suspense>
-  )
+  );
 }
 
 function OrganizationDeactivatedContent() {
-  const { data: session } = useSession()
-  const searchParams = useSearchParams()
-  const [isReactivating, setIsReactivating] = React.useState(false)
+  const { data: session } = useSession();
+  const searchParams = useSearchParams();
+  const [isReactivating, setIsReactivating] = React.useState(false);
 
-  const reason = searchParams.get("reason") || "Unknown"
-  const orgName = searchParams.get("org") || "Your organization"
-  const orgId = searchParams.get("orgId")
-  const canSelfService = SELF_SERVICE_REASONS.includes(reason)
-  const canReactivateOnline = reason === "Requested by customer" && !!orgId
+  const reason = searchParams.get("reason") || "Unknown";
+  const orgName = searchParams.get("org") || "Your organization";
+  const orgId = searchParams.get("orgId");
+  const canSelfService = SELF_SERVICE_REASONS.includes(reason);
+  const canReactivateOnline = reason === "Requested by customer" && !!orgId;
 
   const handleSignOut = () => {
-    logout("/login")
-  }
+    logout("/login");
+  };
 
   const handleReactivate = async () => {
-    if (!orgId) return
-    setIsReactivating(true)
+    if (!orgId) return;
+    setIsReactivating(true);
     try {
       const response = await fetch("/api/organization/reactivate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ organizationId: orgId }),
-      })
+      });
 
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || "Failed to reactivate organization")
+        const data = await response.json();
+        throw new Error(data.error || "Failed to reactivate organization");
       }
 
-      toast.success("Organization reactivated!")
-      window.location.href = getSubdomainUrl("admin")
+      toast.success("Organization reactivated!");
+      window.location.href = getSubdomainUrl("admin");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to reactivate")
-      setIsReactivating(false)
+      toast.error(error instanceof Error ? error.message : "Failed to reactivate");
+      setIsReactivating(false);
     }
-  }
+  };
 
   return (
     <Card className="relative overflow-hidden w-full max-w-[480px]">
@@ -84,16 +90,16 @@ function OrganizationDeactivatedContent() {
             <span className="font-medium">Reason:</span> {reason}
           </p>
           <p className="text-muted-foreground">
-            While deactivated, the admin dashboard, marketing site, and
-            automated services for this organization are unavailable.
+            While deactivated, the admin dashboard, marketing site, and automated services for this
+            organization are unavailable.
           </p>
         </div>
 
         {canReactivateOnline ? (
           <div className="space-y-3">
             <p className="text-sm text-center text-muted-foreground">
-              You cancelled your plan. You can reactivate your organization
-              to restore access to the dashboard and all services.
+              You cancelled your plan. You can reactivate your organization to restore access to the
+              dashboard and all services.
             </p>
             <Button className="w-full" onClick={handleReactivate} disabled={isReactivating}>
               {isReactivating ? (
@@ -107,11 +113,12 @@ function OrganizationDeactivatedContent() {
         ) : canSelfService ? (
           <div className="space-y-3">
             <p className="text-sm text-center text-muted-foreground">
-              You may be able to restore your organization by updating your
-              payment information.
+              You may be able to restore your organization by updating your payment information.
             </p>
             <Button asChild className="w-full">
-              <a href={`mailto:${SUPPORT_EMAIL}?subject=Reactivate ${encodeURIComponent(orgName)}&body=I would like to reactivate my organization and update my payment details.`}>
+              <a
+                href={`mailto:${SUPPORT_EMAIL}?subject=Reactivate ${encodeURIComponent(orgName)}&body=I would like to reactivate my organization and update my payment details.`}
+              >
                 <CreditCard className="mr-2 h-4 w-4" />
                 Contact Us to Reactivate
               </a>
@@ -123,7 +130,9 @@ function OrganizationDeactivatedContent() {
               Please contact support for assistance with your account.
             </p>
             <Button asChild className="w-full">
-              <a href={`mailto:${SUPPORT_EMAIL}?subject=Organization Deactivated - ${encodeURIComponent(orgName)}`}>
+              <a
+                href={`mailto:${SUPPORT_EMAIL}?subject=Organization Deactivated - ${encodeURIComponent(orgName)}`}
+              >
                 <Mail className="mr-2 h-4 w-4" />
                 Contact Support
               </a>
@@ -146,5 +155,5 @@ function OrganizationDeactivatedContent() {
         </Button>
       </CardContent>
     </Card>
-  )
+  );
 }

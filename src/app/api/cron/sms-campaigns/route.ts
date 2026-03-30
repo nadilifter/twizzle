@@ -19,10 +19,7 @@ export async function GET(request: NextRequest) {
   try {
     if (!CRON_SECRET) {
       console.error("CRON_SECRET is not configured");
-      return NextResponse.json(
-        { error: "Server misconfiguration" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
     }
 
     const authHeader = request.headers.get("authorization");
@@ -73,10 +70,12 @@ export async function GET(request: NextRequest) {
         const message = error instanceof Error ? error.message : "Unknown error";
         console.error(`Failed to execute scheduled campaign ${campaign.id}:`, error);
 
-        await db.smsCampaign.update({
-          where: { id: campaign.id },
-          data: { status: "FAILED" },
-        }).catch(() => {});
+        await db.smsCampaign
+          .update({
+            where: { id: campaign.id },
+            data: { status: "FAILED" },
+          })
+          .catch(() => {});
 
         results.push({ id: campaign.id, name: campaign.name, status: "failed", error: message });
       }

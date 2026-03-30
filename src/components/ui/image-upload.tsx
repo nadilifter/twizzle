@@ -32,9 +32,9 @@ export function ImageUpload({ label, value, onChange, type, required = false }: 
         method: "POST",
         body: formData,
       });
-      
+
       if (!res.ok) throw new Error("Upload failed");
-      
+
       const data = await res.json();
       onChange(data.url);
     } catch (error) {
@@ -49,19 +49,17 @@ export function ImageUpload({ label, value, onChange, type, required = false }: 
     <div className="flex flex-col gap-2">
       <Label>
         {label}
-        {required ? <span className="text-destructive ml-1">*</span> : <span className="text-muted-foreground ml-1 text-xs font-normal">(Optional)</span>}
+        {required ? (
+          <span className="text-destructive ml-1">*</span>
+        ) : (
+          <span className="text-muted-foreground ml-1 text-xs font-normal">(Optional)</span>
+        )}
       </Label>
       <div className="flex items-start gap-4">
         {value ? (
           <div className="relative group">
             <div className="relative w-32 h-32 border rounded-md overflow-hidden bg-muted flex items-center justify-center">
-              <Image 
-                src={value} 
-                alt={label} 
-                fill 
-                className="object-contain"
-                sizes="128px"
-              />
+              <Image src={value} alt={label} fill className="object-contain" sizes="128px" />
             </div>
             <Button
               variant="destructive"
@@ -73,7 +71,7 @@ export function ImageUpload({ label, value, onChange, type, required = false }: 
             </Button>
           </div>
         ) : (
-          <div 
+          <div
             className="w-32 h-32 border-2 border-dashed rounded-md flex flex-col items-center justify-center gap-2 text-muted-foreground bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
             onClick={() => inputRef.current?.click()}
           >
@@ -82,16 +80,16 @@ export function ImageUpload({ label, value, onChange, type, required = false }: 
           </div>
         )}
         <div className="flex flex-col gap-2">
-          <Input 
+          <Input
             ref={inputRef}
-            type="file" 
-            accept="image/*" 
-            className="hidden" 
+            type="file"
+            accept="image/*"
+            className="hidden"
             onChange={handleUpload}
             disabled={isUploading}
           />
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             onClick={() => inputRef.current?.click()}
             disabled={isUploading}
@@ -99,7 +97,20 @@ export function ImageUpload({ label, value, onChange, type, required = false }: 
             {isUploading ? "Uploading..." : "Select Image"}
           </Button>
           <p className="text-xs text-muted-foreground">
-            Recommended: {type === "favicon" ? "32x32px" : type === "logo" ? "Transparent PNG" : type === "program" ? "Landscape, 800×450px" : type === "product" ? "Square, 800×800px" : type === "team" ? "Portrait, 600×800px" : type === "category" ? "Landscape, 800×450px" : "1920x1080px"}
+            Recommended:{" "}
+            {type === "favicon"
+              ? "32x32px"
+              : type === "logo"
+                ? "Transparent PNG"
+                : type === "program"
+                  ? "Landscape, 800×450px"
+                  : type === "product"
+                    ? "Square, 800×800px"
+                    : type === "team"
+                      ? "Portrait, 600×800px"
+                      : type === "category"
+                        ? "Landscape, 800×450px"
+                        : "1920x1080px"}
           </p>
         </div>
       </div>

@@ -1,5 +1,5 @@
-import { SurveyBuilder } from "../survey-builder"
-import { DashboardPageHeader } from "@/components/dashboard-page-header"
+import { SurveyBuilder } from "../survey-builder";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 
 export default function NewSurveyPage() {
   return (
@@ -7,17 +7,5 @@ export default function NewSurveyPage() {
       <DashboardPageHeader title="Create New Survey" variant="small" />
       <SurveyBuilder />
     </div>
-  )
+  );
 }
-
-
-
-
-
-
-
-
-
-
-
-

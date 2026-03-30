@@ -51,7 +51,10 @@ export async function generateHolidayAnnouncements(): Promise<{
         holidayDate.getUTCFullYear(),
         holidayDate.getUTCMonth(),
         holidayDate.getUTCDate(),
-        23, 59, 59, 999
+        23,
+        59,
+        59,
+        999
       )
     );
 

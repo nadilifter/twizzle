@@ -1,22 +1,34 @@
 import { Status } from "./types";
 
-export function getStatusVariant(status: Status | string): "default" | "secondary" | "destructive" | "outline" {
+export function getStatusVariant(
+  status: Status | string
+): "default" | "secondary" | "destructive" | "outline" {
   switch (status) {
-    case "PLANNED": return "secondary";
-    case "IN_PROGRESS": return "default"; 
-    case "DONE": return "outline";
-    case "CLOSED": return "destructive"; 
-    default: return "secondary";
+    case "PLANNED":
+      return "secondary";
+    case "IN_PROGRESS":
+      return "default";
+    case "DONE":
+      return "outline";
+    case "CLOSED":
+      return "destructive";
+    default:
+      return "secondary";
   }
 }
 
 export function formatStatus(status: Status | string): string {
   switch (status) {
-    case "PLANNED": return "Planned";
-    case "IN_PROGRESS": return "In Progress";
-    case "DONE": return "Done";
-    case "CLOSED": return "Closed";
-    default: return status;
+    case "PLANNED":
+      return "Planned";
+    case "IN_PROGRESS":
+      return "In Progress";
+    case "DONE":
+      return "Done";
+    case "CLOSED":
+      return "Closed";
+    default:
+      return status;
   }
 }
 

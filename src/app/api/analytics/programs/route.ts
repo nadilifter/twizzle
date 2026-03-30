@@ -154,9 +154,10 @@ export async function GET() {
         name: row.name,
         enrolled: Number(row.enrolled),
         capacity: Number(row.capacity),
-        rate: Number(row.capacity) > 0
-          ? Math.round((Number(row.enrolled) / Number(row.capacity)) * 100)
-          : 0,
+        rate:
+          Number(row.capacity) > 0
+            ? Math.round((Number(row.enrolled) / Number(row.capacity)) * 100)
+            : 0,
       })),
       enrollmentsByStatus: enrollmentsByStatus.map((row) => ({
         status: row.status,
@@ -171,9 +172,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Error fetching programs analytics:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch programs data" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch programs data" }, { status: 500 });
   }
 }

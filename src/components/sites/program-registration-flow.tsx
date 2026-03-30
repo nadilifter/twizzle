@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react"
-import { useSession, signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { sanitizeHtml } from "@/lib/sanitize"
-import { toast } from "sonner"
-import { format } from "date-fns"
-import { calculateAge, isAgeEligible } from "@/lib/age-utils"
-import { useCart } from "@/components/sites/cart-context"
-import { getClientSubdomainUrl } from "@/lib/client-domains"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useSession, signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { sanitizeHtml } from "@/lib/sanitize";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { calculateAge, isAgeEligible } from "@/lib/age-utils";
+import { useCart } from "@/components/sites/cart-context";
+import { getClientSubdomainUrl } from "@/lib/client-domains";
 import {
   defineStepper,
   StepperNav,
@@ -17,26 +17,33 @@ import {
   StepperSeparator,
   StepperTitle,
   getStepStatus,
-} from "@/components/ui/stepper"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/stepper";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { SignaturePad, type SignaturePadRef } from "@/components/ui/signature-pad"
-import { CheckoutMedicalForm } from "@/components/sites/checkout-medical-form"
-import { FileUploadStep } from "@/components/sites/file-upload-step"
-import { CustomInformationForm } from "@/components/sites/custom-information-form"
-import type { MedicalFormConfig, CustomMedicalQuestion } from "@/types/medical"
-import type { CustomInfoQuestion, CustomInfoResponse } from "@/types/custom-information"
-import type { FileRequirementConfig } from "@/types/file-requirements"
+} from "@/components/ui/select";
+import { SignaturePad, type SignaturePadRef } from "@/components/ui/signature-pad";
+import { CheckoutMedicalForm } from "@/components/sites/checkout-medical-form";
+import { FileUploadStep } from "@/components/sites/file-upload-step";
+import { CustomInformationForm } from "@/components/sites/custom-information-form";
+import type { MedicalFormConfig, CustomMedicalQuestion } from "@/types/medical";
+import type { CustomInfoQuestion, CustomInfoResponse } from "@/types/custom-information";
+import type { FileRequirementConfig } from "@/types/file-requirements";
 import {
   User,
   Calendar as CalendarIcon,
@@ -56,116 +63,116 @@ import {
   ClipboardList,
   ExternalLink,
   Ticket,
-} from "lucide-react"
-import { cn } from "@/lib/utils"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 // ---------- Types ----------
 
 interface Instance {
-  id: string
-  date: string
-  startTime: string
-  endTime: string
-  capacity?: number
-  registrationCount: number
-  facility?: { name: string; city?: string | null }
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  capacity?: number;
+  registrationCount: number;
+  facility?: { name: string; city?: string | null };
 }
 
 interface RequiredMembership {
-  id: string
-  name: string
-  price: number
-  billingInterval: string
+  id: string;
+  name: string;
+  price: number;
+  billingInterval: string;
   group: {
-    id: string
-    name: string
-    hasGenderRestriction?: boolean
-    allowedGenders?: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[]
-  }
+    id: string;
+    name: string;
+    hasGenderRestriction?: boolean;
+    allowedGenders?: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[];
+  };
 }
 
 interface RequiredPass {
-  id: string
-  name: string
-  price: number
-  billingInterval: string
-  sessionLimit: number
-  limitPeriod: string
-  hasGenderRestriction?: boolean
-  allowedGenders?: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[]
+  id: string;
+  name: string;
+  price: number;
+  billingInterval: string;
+  sessionLimit: number;
+  limitPeriod: string;
+  hasGenderRestriction?: boolean;
+  allowedGenders?: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[];
 }
 
 interface WaiverRequirement {
-  id: string
-  waiverId: string
+  id: string;
+  waiverId: string;
 }
 
 interface WaiverToSign {
-  waiverId: string
-  waiverTitle: string
-  isSigned: boolean
+  waiverId: string;
+  waiverTitle: string;
+  isSigned: boolean;
 }
 
 interface WaiverPage {
-  id: string
-  pageNumber: number
-  title: string | null
-  content: string
+  id: string;
+  pageNumber: number;
+  title: string | null;
+  content: string;
 }
 
 interface AthleteOption {
-  id: string
-  firstName: string
-  lastName: string
-  name: string
-  birthDate: string | null
-  gender: string | null
+  id: string;
+  firstName: string;
+  lastName: string;
+  name: string;
+  birthDate: string | null;
+  gender: string | null;
 }
 
 interface ProgramData {
-  id: string
-  name: string
-  description: string | null
-  pricingModel: string
-  basePrice: number | null
-  perSessionPrice: number | null
-  registrationType: string | null
-  hasAgeRestriction: boolean
-  minAge: number | null
-  maxAge: number | null
-  hasGenderRestriction: boolean
-  allowedGenders: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[]
-  hasWaiverRestriction: boolean
-  hasMedicalRequirement: boolean
-  hasFileRequirement: boolean
-  fileRequirementConfig: FileRequirementConfig | null
-  hasMembershipRestriction: boolean
-  hasPassRestriction: boolean
-  organizationId: string
-  capacity: number | null
-  hasCapacityRestriction: boolean
-  waitlistEnabled?: boolean
-  waitlistCapacity?: number | null
-  enrolled?: number
-  waitlistedCount?: number
-  requiredMemberships: RequiredMembership[]
-  requiredPasses?: RequiredPass[]
-  waiverRequirements: WaiverRequirement[]
-  registrationOpen?: boolean
-  registrationStartDate?: string | null
-  registrationStartTime?: string | null
-  registrationEndDate?: string | null
-  registrationEndTime?: string | null
+  id: string;
+  name: string;
+  description: string | null;
+  pricingModel: string;
+  basePrice: number | null;
+  perSessionPrice: number | null;
+  registrationType: string | null;
+  hasAgeRestriction: boolean;
+  minAge: number | null;
+  maxAge: number | null;
+  hasGenderRestriction: boolean;
+  allowedGenders: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[];
+  hasWaiverRestriction: boolean;
+  hasMedicalRequirement: boolean;
+  hasFileRequirement: boolean;
+  fileRequirementConfig: FileRequirementConfig | null;
+  hasMembershipRestriction: boolean;
+  hasPassRestriction: boolean;
+  organizationId: string;
+  capacity: number | null;
+  hasCapacityRestriction: boolean;
+  waitlistEnabled?: boolean;
+  waitlistCapacity?: number | null;
+  enrolled?: number;
+  waitlistedCount?: number;
+  requiredMemberships: RequiredMembership[];
+  requiredPasses?: RequiredPass[];
+  waiverRequirements: WaiverRequirement[];
+  registrationOpen?: boolean;
+  registrationStartDate?: string | null;
+  registrationStartTime?: string | null;
+  registrationEndDate?: string | null;
+  registrationEndTime?: string | null;
 }
 
 interface ProgramRegistrationFlowProps {
-  program: ProgramData
-  instances: Instance[]
-  slug: string
-  primaryColor?: string
-  earlyAccessCode?: string | null
+  program: ProgramData;
+  instances: Instance[];
+  slug: string;
+  primaryColor?: string;
+  earlyAccessCode?: string | null;
 }
 
 // ---------- Stepper definition ----------
@@ -179,8 +186,8 @@ const { useStepper } = defineStepper(
   { id: "customInfo", title: "Custom Info" },
   { id: "medical", title: "Medical Info" },
   { id: "files", title: "File Upload" },
-  { id: "review", title: "Review & Register" },
-)
+  { id: "review", title: "Review & Register" }
+);
 
 // ---------- Helpers ----------
 
@@ -189,16 +196,16 @@ const GENDER_LABELS: Record<string, string> = {
   FEMALE: "Female",
   OTHER: "Other",
   PREFER_NOT_TO_SAY: "Prefer Not to Say",
-}
+};
 
 function formatPrice(price: number): string {
-  if (price === 0) return "Free"
+  if (price === 0) return "Free";
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
-  }).format(price)
+  }).format(price);
 }
 
 // ---------- Main Component ----------
@@ -209,171 +216,191 @@ export function ProgramRegistrationFlow({
   slug,
   earlyAccessCode,
 }: ProgramRegistrationFlowProps) {
-  const { data: session } = useSession()
-  const { addItem, setIsOpen, items: cartItems } = useCart()
-  const router = useRouter()
-  const stepper = useStepper()
+  const { data: session } = useSession();
+  const { addItem, setIsOpen, items: cartItems } = useCart();
+  const router = useRouter();
+  const stepper = useStepper();
 
-  const isPerInstance = program.registrationType === "PER_INSTANCE"
-  const needsWaivers = program.hasWaiverRestriction && program.waiverRequirements.length > 0
-  const needsMedicalStep = program.hasMedicalRequirement
-  const needsFiles = program.hasFileRequirement && !!program.fileRequirementConfig
-  const needsMembership = program.hasMembershipRestriction && program.requiredMemberships.length > 0
-  const needsPass = program.hasPassRestriction && (program.requiredPasses?.length ?? 0) > 0
+  const isPerInstance = program.registrationType === "PER_INSTANCE";
+  const needsWaivers = program.hasWaiverRestriction && program.waiverRequirements.length > 0;
+  const needsMedicalStep = program.hasMedicalRequirement;
+  const needsFiles = program.hasFileRequirement && !!program.fileRequirementConfig;
+  const needsMembership =
+    program.hasMembershipRestriction && program.requiredMemberships.length > 0;
+  const needsPass = program.hasPassRestriction && (program.requiredPasses?.length ?? 0) > 0;
 
-  const programIsFull = program.hasCapacityRestriction
-    && program.capacity != null
-    && (program.enrolled ?? 0) >= program.capacity
-  const waitlistHasRoom = program.waitlistEnabled && (
-    program.waitlistCapacity == null || (program.waitlistedCount ?? 0) < program.waitlistCapacity
-  )
-  const isWaitlistMode = programIsFull && waitlistHasRoom
+  const programIsFull =
+    program.hasCapacityRestriction &&
+    program.capacity != null &&
+    (program.enrolled ?? 0) >= program.capacity;
+  const waitlistHasRoom =
+    program.waitlistEnabled &&
+    (program.waitlistCapacity == null || (program.waitlistedCount ?? 0) < program.waitlistCapacity);
+  const isWaitlistMode = programIsFull && waitlistHasRoom;
 
-  const price = program.pricingModel === "PER_SESSION"
-    ? (program.perSessionPrice || 0)
-    : (program.basePrice || 0)
+  const price =
+    program.pricingModel === "PER_SESSION" ? program.perSessionPrice || 0 : program.basePrice || 0;
 
   // ---------- State ----------
 
-  const [athletes, setAthletes] = useState<AthleteOption[]>([])
-  const [isLoadingAthletes, setIsLoadingAthletes] = useState(false)
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const [isCreatingAthlete, setIsCreatingAthlete] = useState(false)
+  const [athletes, setAthletes] = useState<AthleteOption[]>([]);
+  const [isLoadingAthletes, setIsLoadingAthletes] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [isCreatingAthlete, setIsCreatingAthlete] = useState(false);
   const [newAthlete, setNewAthlete] = useState({
     firstName: "",
     lastName: "",
     birthDate: "",
     gender: "",
-  })
+  });
 
-  const [selectedAthlete, setSelectedAthlete] = useState<AthleteOption | null>(null)
-  const [selectedInstanceIds, setSelectedInstanceIds] = useState<Set<string>>(new Set())
-  const [selectedMembership, setSelectedMembership] = useState<RequiredMembership | null>(null)
-  const [athleteHasMembership, setAthleteHasMembership] = useState(false)
-  const [isCheckingMembership, setIsCheckingMembership] = useState(false)
-  const [selectedPass, setSelectedPass] = useState<RequiredPass | null>(null)
-  const [athleteHasPass, setAthleteHasPass] = useState(false)
-  const [isCheckingPass, setIsCheckingPass] = useState(false)
+  const [selectedAthlete, setSelectedAthlete] = useState<AthleteOption | null>(null);
+  const [selectedInstanceIds, setSelectedInstanceIds] = useState<Set<string>>(new Set());
+  const [selectedMembership, setSelectedMembership] = useState<RequiredMembership | null>(null);
+  const [athleteHasMembership, setAthleteHasMembership] = useState(false);
+  const [isCheckingMembership, setIsCheckingMembership] = useState(false);
+  const [selectedPass, setSelectedPass] = useState<RequiredPass | null>(null);
+  const [athleteHasPass, setAthleteHasPass] = useState(false);
+  const [isCheckingPass, setIsCheckingPass] = useState(false);
 
   // Existing registration check
-  const [alreadyRegisteredIds, setAlreadyRegisteredIds] = useState<Set<string>>(new Set())
-  const [hasFullEnrollment, setHasFullEnrollment] = useState(false)
-  const [isCheckingRegistrations, setIsCheckingRegistrations] = useState(false)
+  const [alreadyRegisteredIds, setAlreadyRegisteredIds] = useState<Set<string>>(new Set());
+  const [hasFullEnrollment, setHasFullEnrollment] = useState(false);
+  const [isCheckingRegistrations, setIsCheckingRegistrations] = useState(false);
 
   // Waiver state
-  const [requiredWaivers, setRequiredWaivers] = useState<WaiverToSign[]>([])
-  const [currentWaiverIndex, setCurrentWaiverIndex] = useState(0)
-  const [currentWaiverPages, setCurrentWaiverPages] = useState<WaiverPage[]>([])
-  const [currentPageIndex, setCurrentPageIndex] = useState(0)
-  const [isLoadingWaiver, setIsLoadingWaiver] = useState(false)
-  const [isSigningWaiver, setIsSigningWaiver] = useState(false)
-  const [signatureEmpty, setSignatureEmpty] = useState(true)
-  const [signAllMode, setSignAllMode] = useState(false)
-  const [userId, setUserId] = useState<string | null>(null)
-  const [isCheckingWaivers, setIsCheckingWaivers] = useState(false)
-  const signaturePadRef = useRef<SignaturePadRef>(null)
+  const [requiredWaivers, setRequiredWaivers] = useState<WaiverToSign[]>([]);
+  const [currentWaiverIndex, setCurrentWaiverIndex] = useState(0);
+  const [currentWaiverPages, setCurrentWaiverPages] = useState<WaiverPage[]>([]);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [isLoadingWaiver, setIsLoadingWaiver] = useState(false);
+  const [isSigningWaiver, setIsSigningWaiver] = useState(false);
+  const [signatureEmpty, setSignatureEmpty] = useState(true);
+  const [signAllMode, setSignAllMode] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isCheckingWaivers, setIsCheckingWaivers] = useState(false);
+  const signaturePadRef = useRef<SignaturePadRef>(null);
 
   // Medical state
-  const [medicalConfig, setMedicalConfig] = useState<MedicalFormConfig | null>(null)
-  const [medicalCustomQuestions, setMedicalCustomQuestions] = useState<CustomMedicalQuestion[]>([])
-  const [isLoadingMedicalConfig, setIsLoadingMedicalConfig] = useState(false)
-  const [needsMedical, setNeedsMedical] = useState(false)
+  const [medicalConfig, setMedicalConfig] = useState<MedicalFormConfig | null>(null);
+  const [medicalCustomQuestions, setMedicalCustomQuestions] = useState<CustomMedicalQuestion[]>([]);
+  const [isLoadingMedicalConfig, setIsLoadingMedicalConfig] = useState(false);
+  const [needsMedical, setNeedsMedical] = useState(false);
 
   // Custom info state
-  const [customInfoQuestions, setCustomInfoQuestions] = useState<CustomInfoQuestion[]>([])
-  const [customInfoResponses, setCustomInfoResponses] = useState<CustomInfoResponse[]>([])
-  const [needsCustomInfo, setNeedsCustomInfo] = useState(false)
-  const [isLoadingCustomInfo, setIsLoadingCustomInfo] = useState(false)
+  const [customInfoQuestions, setCustomInfoQuestions] = useState<CustomInfoQuestion[]>([]);
+  const [customInfoResponses, setCustomInfoResponses] = useState<CustomInfoResponse[]>([]);
+  const [needsCustomInfo, setNeedsCustomInfo] = useState(false);
+  const [isLoadingCustomInfo, setIsLoadingCustomInfo] = useState(false);
 
   // File upload state
-  const [uploadedFileId, setUploadedFileId] = useState<string | null>(null)
+  const [uploadedFileId, setUploadedFileId] = useState<string | null>(null);
 
   // Navigation direction: only auto-skip completed steps on the first forward pass
-  const isNavigatingBackRef = useRef(false)
+  const isNavigatingBackRef = useRef(false);
 
   // ---------- Visible steps ----------
 
-  const needsMembershipPurchase = needsMembership && !athleteHasMembership
+  const needsMembershipPurchase = needsMembership && !athleteHasMembership;
 
   const visibleStepIds = useMemo(() => {
-    const ids = ["athlete"]
-    if (isPerInstance) ids.push("sessions")
-    if (needsMembershipPurchase) ids.push("membership")
-    if (needsPass) ids.push("pass")
-    if (needsWaivers) ids.push("waivers")
-    ids.push("customInfo")
-    if (needsMedicalStep) ids.push("medical")
-    if (needsFiles) ids.push("files")
-    ids.push("review")
-    return ids
-  }, [isPerInstance, needsMembershipPurchase, needsPass, needsWaivers, needsMedicalStep, needsFiles])
+    const ids = ["athlete"];
+    if (isPerInstance) ids.push("sessions");
+    if (needsMembershipPurchase) ids.push("membership");
+    if (needsPass) ids.push("pass");
+    if (needsWaivers) ids.push("waivers");
+    ids.push("customInfo");
+    if (needsMedicalStep) ids.push("medical");
+    if (needsFiles) ids.push("files");
+    ids.push("review");
+    return ids;
+  }, [
+    isPerInstance,
+    needsMembershipPurchase,
+    needsPass,
+    needsWaivers,
+    needsMedicalStep,
+    needsFiles,
+  ]);
 
   const getNextStepId = useCallback(
     (currentId: string): string | null => {
-      isNavigatingBackRef.current = false
-      const idx = visibleStepIds.indexOf(currentId)
-      if (idx === -1 || idx >= visibleStepIds.length - 1) return null
-      return visibleStepIds[idx + 1]
+      isNavigatingBackRef.current = false;
+      const idx = visibleStepIds.indexOf(currentId);
+      if (idx === -1 || idx >= visibleStepIds.length - 1) return null;
+      return visibleStepIds[idx + 1];
     },
     [visibleStepIds]
-  )
+  );
 
   const getPreviousStepId = useCallback(
     (currentId: string): string | null => {
-      isNavigatingBackRef.current = true
-      const idx = visibleStepIds.indexOf(currentId)
-      if (idx <= 0) return null
-      return visibleStepIds[idx - 1]
+      isNavigatingBackRef.current = true;
+      const idx = visibleStepIds.indexOf(currentId);
+      if (idx <= 0) return null;
+      return visibleStepIds[idx - 1];
     },
     [visibleStepIds]
-  )
+  );
 
   // ---------- Athlete helpers ----------
 
   useEffect(() => {
-    if (session?.user) fetchAthletes()
-  }, [session?.user, slug])
+    if (session?.user) fetchAthletes();
+  }, [session?.user, slug]);
 
   const fetchAthletes = async () => {
-    setIsLoadingAthletes(true)
+    setIsLoadingAthletes(true);
     try {
-      const response = await fetch(`/api/sites/${slug}/athletes`)
+      const response = await fetch(`/api/sites/${slug}/athletes`);
       if (response.ok) {
-        const data = await response.json()
-        setAthletes(data.athletes || [])
+        const data = await response.json();
+        setAthletes(data.athletes || []);
       }
     } catch (error) {
-      console.error("Error fetching athletes:", error)
+      console.error("Error fetching athletes:", error);
     } finally {
-      setIsLoadingAthletes(false)
+      setIsLoadingAthletes(false);
     }
-  }
+  };
 
   const handleCreateAthlete = async () => {
-    if (!newAthlete.firstName.trim()) { toast.error("First name is required"); return }
-    if (!newAthlete.lastName.trim()) { toast.error("Last name is required"); return }
-    if (!newAthlete.birthDate) { toast.error("Date of birth is required"); return }
-    if (!newAthlete.gender) { toast.error("Gender declaration is required"); return }
+    if (!newAthlete.firstName.trim()) {
+      toast.error("First name is required");
+      return;
+    }
+    if (!newAthlete.lastName.trim()) {
+      toast.error("Last name is required");
+      return;
+    }
+    if (!newAthlete.birthDate) {
+      toast.error("Date of birth is required");
+      return;
+    }
+    if (!newAthlete.gender) {
+      toast.error("Gender declaration is required");
+      return;
+    }
 
-    setIsCreatingAthlete(true)
+    setIsCreatingAthlete(true);
     try {
       const response = await fetch(`/api/sites/${slug}/athletes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newAthlete),
-      })
+      });
 
       if (!response.ok) {
-        const errData = await response.json()
-        throw new Error(errData.error || "Failed to create athlete")
+        const errData = await response.json();
+        throw new Error(errData.error || "Failed to create athlete");
       }
 
-      const data = await response.json()
-      const created = data.athlete
-      toast.success(`${created.firstName} ${created.lastName} added successfully`)
-      await fetchAthletes()
-      setShowCreateForm(false)
-      setNewAthlete({ firstName: "", lastName: "", birthDate: "", gender: "" })
+      const data = await response.json();
+      const created = data.athlete;
+      toast.success(`${created.firstName} ${created.lastName} added successfully`);
+      await fetchAthletes();
+      setShowCreateForm(false);
+      setNewAthlete({ firstName: "", lastName: "", birthDate: "", gender: "" });
 
       const athleteOption: AthleteOption = {
         id: created.id,
@@ -382,52 +409,61 @@ export function ProgramRegistrationFlow({
         name: `${created.firstName} ${created.lastName}`,
         birthDate: created.birthDate,
         gender: created.gender,
-      }
-      setSelectedAthlete(athleteOption)
+      };
+      setSelectedAthlete(athleteOption);
     } catch (error: any) {
-      toast.error(error.message || "Failed to create athlete")
+      toast.error(error.message || "Failed to create athlete");
     } finally {
-      setIsCreatingAthlete(false)
+      setIsCreatingAthlete(false);
     }
-  }
+  };
 
   const { eligibleAthletes, ineligibleAthletes } = useMemo(() => {
-    const hasRestrictions = program.hasAgeRestriction || program.hasGenderRestriction
+    const hasRestrictions = program.hasAgeRestriction || program.hasGenderRestriction;
     if (!hasRestrictions) {
-      return { eligibleAthletes: athletes, ineligibleAthletes: [] as AthleteOption[] }
+      return { eligibleAthletes: athletes, ineligibleAthletes: [] as AthleteOption[] };
     }
-    const eligible: AthleteOption[] = []
-    const ineligible: AthleteOption[] = []
+    const eligible: AthleteOption[] = [];
+    const ineligible: AthleteOption[] = [];
     for (const athlete of athletes) {
-      let isEligible = true
+      let isEligible = true;
       if (program.hasAgeRestriction) {
-        const age = calculateAge(athlete.birthDate)
-        if (!isAgeEligible(age, program.minAge, program.maxAge)) isEligible = false
+        const age = calculateAge(athlete.birthDate);
+        if (!isAgeEligible(age, program.minAge, program.maxAge)) isEligible = false;
       }
       if (program.hasGenderRestriction && program.allowedGenders.length > 0) {
-        if (!athlete.gender || !program.allowedGenders.includes(athlete.gender as any)) isEligible = false
+        if (!athlete.gender || !program.allowedGenders.includes(athlete.gender as any))
+          isEligible = false;
       }
       if (isEligible) {
-        eligible.push(athlete)
+        eligible.push(athlete);
       } else {
-        ineligible.push(athlete)
+        ineligible.push(athlete);
       }
     }
-    return { eligibleAthletes: eligible, ineligibleAthletes: ineligible }
-  }, [athletes, program.hasAgeRestriction, program.minAge, program.maxAge, program.hasGenderRestriction, program.allowedGenders])
+    return { eligibleAthletes: eligible, ineligibleAthletes: ineligible };
+  }, [
+    athletes,
+    program.hasAgeRestriction,
+    program.minAge,
+    program.maxAge,
+    program.hasGenderRestriction,
+    program.allowedGenders,
+  ]);
 
-  const ageLabel = program.hasAgeRestriction && (program.minAge != null || program.maxAge != null)
-    ? program.minAge != null && program.maxAge != null
-      ? `Ages ${program.minAge}–${program.maxAge}`
-      : program.minAge != null
-      ? `Ages ${program.minAge}+`
-      : `Up to age ${program.maxAge}`
-    : null
+  const ageLabel =
+    program.hasAgeRestriction && (program.minAge != null || program.maxAge != null)
+      ? program.minAge != null && program.maxAge != null
+        ? `Ages ${program.minAge}–${program.maxAge}`
+        : program.minAge != null
+          ? `Ages ${program.minAge}+`
+          : `Up to age ${program.maxAge}`
+      : null;
 
   // ---------- Existing registration check ----------
 
   const inCartIds = useMemo(() => {
-    if (!selectedAthlete) return new Set<string>()
+    if (!selectedAthlete) return new Set<string>();
     return new Set(
       cartItems
         .filter(
@@ -437,182 +473,201 @@ export function ProgramRegistrationFlow({
             item.details?.instanceId
         )
         .map((item) => item.details!.instanceId as string)
-    )
-  }, [cartItems, selectedAthlete])
+    );
+  }, [cartItems, selectedAthlete]);
 
   const isFullProgramInCart = useMemo(() => {
-    if (!selectedAthlete) return false
+    if (!selectedAthlete) return false;
     return cartItems.some(
       (item) =>
         item.type === "program" &&
         item.athleteId === selectedAthlete.id &&
         item.referenceId === program.id &&
         !item.details?.instanceId
-    )
-  }, [cartItems, selectedAthlete, program.id])
+    );
+  }, [cartItems, selectedAthlete, program.id]);
 
-  const isAlreadyFullyRegistered = hasFullEnrollment || isFullProgramInCart
+  const isAlreadyFullyRegistered = hasFullEnrollment || isFullProgramInCart;
 
   const checkExistingRegistrations = useCallback(
     async (athleteId: string) => {
-      setIsCheckingRegistrations(true)
+      setIsCheckingRegistrations(true);
       try {
         const res = await fetch(
           `/api/public/programs/registrations?programId=${encodeURIComponent(program.id)}&athleteId=${encodeURIComponent(athleteId)}`
-        )
+        );
         if (res.ok) {
-          const data = await res.json()
-          const registered = new Set<string>(data.registeredInstanceIds || [])
-          setAlreadyRegisteredIds(registered)
-          setHasFullEnrollment(!!data.hasFullEnrollment)
+          const data = await res.json();
+          const registered = new Set<string>(data.registeredInstanceIds || []);
+          setAlreadyRegisteredIds(registered);
+          setHasFullEnrollment(!!data.hasFullEnrollment);
           // Deselect any instances that are already registered
           if (registered.size > 0) {
-            setSelectedInstanceIds(prev => {
-              const next = new Set(prev)
-              for (const id of registered) next.delete(id)
-              return next.size !== prev.size ? next : prev
-            })
+            setSelectedInstanceIds((prev) => {
+              const next = new Set(prev);
+              for (const id of registered) next.delete(id);
+              return next.size !== prev.size ? next : prev;
+            });
           }
         }
       } catch {
         // non-critical — just leave sets empty
       } finally {
-        setIsCheckingRegistrations(false)
+        setIsCheckingRegistrations(false);
       }
     },
     [program.id]
-  )
+  );
 
   useEffect(() => {
     if (selectedAthlete) {
-      checkExistingRegistrations(selectedAthlete.id)
+      checkExistingRegistrations(selectedAthlete.id);
     } else {
-      setAlreadyRegisteredIds(new Set())
-      setHasFullEnrollment(false)
+      setAlreadyRegisteredIds(new Set());
+      setHasFullEnrollment(false);
     }
-  }, [selectedAthlete, checkExistingRegistrations])
+  }, [selectedAthlete, checkExistingRegistrations]);
 
   // ---------- Session helpers ----------
 
-  const toggleInstance = useCallback((id: string) => {
-    if (alreadyRegisteredIds.has(id) || inCartIds.has(id)) return
-    setSelectedInstanceIds(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }, [alreadyRegisteredIds, inCartIds])
+  const toggleInstance = useCallback(
+    (id: string) => {
+      if (alreadyRegisteredIds.has(id) || inCartIds.has(id)) return;
+      setSelectedInstanceIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+    },
+    [alreadyRegisteredIds, inCartIds]
+  );
 
   const selectAllInstances = () => {
     const available = instances
-      .filter(i => !i.capacity || i.registrationCount < i.capacity)
-      .filter(i => !alreadyRegisteredIds.has(i.id))
-      .filter(i => !inCartIds.has(i.id))
-      .map(i => i.id)
-    setSelectedInstanceIds(new Set(available))
-  }
+      .filter((i) => !i.capacity || i.registrationCount < i.capacity)
+      .filter((i) => !alreadyRegisteredIds.has(i.id))
+      .filter((i) => !inCartIds.has(i.id))
+      .map((i) => i.id);
+    setSelectedInstanceIds(new Set(available));
+  };
 
   // ---------- Gender-eligible memberships & passes ----------
 
   const genderEligibleMemberships = useMemo(() => {
-    if (!selectedAthlete || !needsMembership) return program.requiredMemberships
-    return program.requiredMemberships.filter(m => {
-      if (!m.group.hasGenderRestriction || !m.group.allowedGenders?.length) return true
-      return !!selectedAthlete.gender && m.group.allowedGenders.includes(selectedAthlete.gender as any)
-    })
-  }, [selectedAthlete, needsMembership, program.requiredMemberships])
+    if (!selectedAthlete || !needsMembership) return program.requiredMemberships;
+    return program.requiredMemberships.filter((m) => {
+      if (!m.group.hasGenderRestriction || !m.group.allowedGenders?.length) return true;
+      return (
+        !!selectedAthlete.gender && m.group.allowedGenders.includes(selectedAthlete.gender as any)
+      );
+    });
+  }, [selectedAthlete, needsMembership, program.requiredMemberships]);
 
   const genderEligiblePasses = useMemo(() => {
-    if (!selectedAthlete || !needsPass) return program.requiredPasses ?? []
-    return (program.requiredPasses ?? []).filter(p => {
-      if (!p.hasGenderRestriction || !p.allowedGenders?.length) return true
-      return !!selectedAthlete.gender && p.allowedGenders.includes(selectedAthlete.gender as any)
-    })
-  }, [selectedAthlete, needsPass, program.requiredPasses])
+    if (!selectedAthlete || !needsPass) return program.requiredPasses ?? [];
+    return (program.requiredPasses ?? []).filter((p) => {
+      if (!p.hasGenderRestriction || !p.allowedGenders?.length) return true;
+      return !!selectedAthlete.gender && p.allowedGenders.includes(selectedAthlete.gender as any);
+    });
+  }, [selectedAthlete, needsPass, program.requiredPasses]);
 
   // ---------- Membership helpers ----------
 
   useEffect(() => {
     if (needsMembership && selectedAthlete && session?.user?.email) {
-      setIsCheckingMembership(true)
-      setAthleteHasMembership(false)
+      setIsCheckingMembership(true);
+      setAthleteHasMembership(false);
       fetch(
         `/api/public/athletes/${selectedAthlete.id}/memberships?email=${encodeURIComponent(session.user.email)}`
       )
         .then((r) => r.json())
         .then((data) => {
-          const activeIds: string[] = data.activeMembershipInstanceIds || []
-          const requiredIds = program.requiredMemberships.map((m) => m.id)
-          const alreadyHas = requiredIds.some((id) => activeIds.includes(id))
-          setAthleteHasMembership(alreadyHas)
+          const activeIds: string[] = data.activeMembershipInstanceIds || [];
+          const requiredIds = program.requiredMemberships.map((m) => m.id);
+          const alreadyHas = requiredIds.some((id) => activeIds.includes(id));
+          setAthleteHasMembership(alreadyHas);
           if (!alreadyHas && genderEligibleMemberships.length === 1) {
-            setSelectedMembership(genderEligibleMemberships[0])
+            setSelectedMembership(genderEligibleMemberships[0]);
           }
         })
         .catch(() => {
-          setAthleteHasMembership(false)
+          setAthleteHasMembership(false);
           if (genderEligibleMemberships.length === 1) {
-            setSelectedMembership(genderEligibleMemberships[0])
+            setSelectedMembership(genderEligibleMemberships[0]);
           }
         })
-        .finally(() => setIsCheckingMembership(false))
+        .finally(() => setIsCheckingMembership(false));
     } else if (needsMembership && genderEligibleMemberships.length === 1) {
-      setSelectedMembership(genderEligibleMemberships[0])
+      setSelectedMembership(genderEligibleMemberships[0]);
     }
-  }, [needsMembership, selectedAthlete, session?.user?.email, program.requiredMemberships, genderEligibleMemberships])
+  }, [
+    needsMembership,
+    selectedAthlete,
+    session?.user?.email,
+    program.requiredMemberships,
+    genderEligibleMemberships,
+  ]);
 
   // ---------- Pass helpers ----------
 
   useEffect(() => {
     if (needsPass && selectedAthlete) {
-      setIsCheckingPass(true)
+      setIsCheckingPass(true);
       fetch(`/api/public/passes?organizationId=${program.organizationId}`)
         .then((r) => r.json())
         .then((data) => {
-          const requiredPassIds = new Set(program.requiredPasses?.map((p) => p.id) || [])
-          const activePasses = (data.data || []).filter((p: { id: string }) => requiredPassIds.has(p.id))
+          const requiredPassIds = new Set(program.requiredPasses?.map((p) => p.id) || []);
+          const activePasses = (data.data || []).filter((p: { id: string }) =>
+            requiredPassIds.has(p.id)
+          );
           if (activePasses.length > 0) {
-            setAthleteHasPass(false)
+            setAthleteHasPass(false);
             if (genderEligiblePasses.length === 1) {
-              setSelectedPass(genderEligiblePasses[0])
+              setSelectedPass(genderEligiblePasses[0]);
             }
           }
         })
         .catch((err) => console.error("Failed to check athlete passes:", err))
-        .finally(() => setIsCheckingPass(false))
+        .finally(() => setIsCheckingPass(false));
     }
-  }, [needsPass, selectedAthlete, program.organizationId, program.requiredPasses, genderEligiblePasses])
+  }, [
+    needsPass,
+    selectedAthlete,
+    program.organizationId,
+    program.requiredPasses,
+    genderEligiblePasses,
+  ]);
 
   // ---------- Waiver helpers ----------
 
   const loadWaiverContent = useCallback(
     async (waiverId: string) => {
-      setIsLoadingWaiver(true)
+      setIsLoadingWaiver(true);
       try {
         const response = await fetch(
           `/api/public/waivers/${waiverId}?organizationId=${program.organizationId}`
-        )
+        );
         if (response.ok) {
-          const data = await response.json()
-          setCurrentWaiverPages(data.pages || [])
-          setCurrentPageIndex(0)
+          const data = await response.json();
+          setCurrentWaiverPages(data.pages || []);
+          setCurrentPageIndex(0);
         }
       } catch (error) {
-        console.error("Failed to load waiver:", error)
+        console.error("Failed to load waiver:", error);
       } finally {
-        setIsLoadingWaiver(false)
+        setIsLoadingWaiver(false);
       }
     },
     [program.organizationId]
-  )
+  );
 
   const handleEnterWaiversStep = useCallback(async () => {
-    if (!selectedAthlete || !session?.user?.email) return
-    setIsCheckingWaivers(true)
+    if (!selectedAthlete || !session?.user?.email) return;
+    setIsCheckingWaivers(true);
 
     try {
-      const waiverIds = program.waiverRequirements.map(w => w.waiverId)
+      const waiverIds = program.waiverRequirements.map((w) => w.waiverId);
       const checkResponse = await fetch("/api/public/waivers/check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -622,227 +677,262 @@ export function ProgramRegistrationFlow({
           organizationId: program.organizationId,
           athleteId: selectedAthlete.id,
         }),
-      })
+      });
 
-      if (!checkResponse.ok) throw new Error("Failed to check waiver status")
-      const checkData = await checkResponse.json()
-      setUserId(checkData.userId)
+      if (!checkResponse.ok) throw new Error("Failed to check waiver status");
+      const checkData = await checkResponse.json();
+      setUserId(checkData.userId);
 
       const stillUnsigned: WaiverToSign[] = (checkData.data || []).filter(
         (w: WaiverToSign) => !w.isSigned
-      )
+      );
 
       if (stillUnsigned.length === 0) {
         if (!isNavigatingBackRef.current) {
-          const nextId = getNextStepId("waivers")
-          if (nextId) stepper.navigation.goTo(nextId as any)
+          const nextId = getNextStepId("waivers");
+          if (nextId) stepper.navigation.goTo(nextId as any);
         }
-        return
+        return;
       }
 
-      setRequiredWaivers(stillUnsigned)
-      setCurrentWaiverIndex(0)
-      setSignAllMode(false)
-      signaturePadRef.current?.clear()
-      setSignatureEmpty(true)
-      await loadWaiverContent(stillUnsigned[0].waiverId)
+      setRequiredWaivers(stillUnsigned);
+      setCurrentWaiverIndex(0);
+      setSignAllMode(false);
+      signaturePadRef.current?.clear();
+      setSignatureEmpty(true);
+      await loadWaiverContent(stillUnsigned[0].waiverId);
     } catch (error) {
-      console.error("Failed to check waivers:", error)
-      toast.error("Failed to check waiver requirements. Please try again.")
+      console.error("Failed to check waivers:", error);
+      toast.error("Failed to check waiver requirements. Please try again.");
     } finally {
-      setIsCheckingWaivers(false)
+      setIsCheckingWaivers(false);
     }
-  }, [selectedAthlete, session?.user?.email, program.waiverRequirements, program.organizationId, getNextStepId, loadWaiverContent, stepper.navigation])
+  }, [
+    selectedAthlete,
+    session?.user?.email,
+    program.waiverRequirements,
+    program.organizationId,
+    getNextStepId,
+    loadWaiverContent,
+    stepper.navigation,
+  ]);
 
   const handleSignCurrentPage = useCallback(async () => {
     if (signaturePadRef.current?.isEmpty()) {
-      toast.error("Please provide your signature")
-      return
+      toast.error("Please provide your signature");
+      return;
     }
 
-    const signatureData = signaturePadRef.current!.toDataURL()
-    setIsSigningWaiver(true)
+    const signatureData = signaturePadRef.current!.toDataURL();
+    setIsSigningWaiver(true);
 
     try {
-      const currentWaiver = requiredWaivers[currentWaiverIndex]
+      const currentWaiver = requiredWaivers[currentWaiverIndex];
       const pagesToSign = signAllMode
-        ? currentWaiverPages.map(page => ({ waiverPageId: page.id, signatureData }))
-        : [{ waiverPageId: currentWaiverPages[currentPageIndex].id, signatureData }]
+        ? currentWaiverPages.map((page) => ({ waiverPageId: page.id, signatureData }))
+        : [{ waiverPageId: currentWaiverPages[currentPageIndex].id, signatureData }];
 
-      const response = await fetch(
-        `/api/public/waivers/${currentWaiver.waiverId}/sign`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            organizationId: program.organizationId,
-            userId,
-            athleteId: selectedAthlete?.id || null,
-            email: session?.user?.email,
-            name: session?.user?.name || "",
-            signatures: pagesToSign,
-          }),
-        }
-      )
+      const response = await fetch(`/api/public/waivers/${currentWaiver.waiverId}/sign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          organizationId: program.organizationId,
+          userId,
+          athleteId: selectedAthlete?.id || null,
+          email: session?.user?.email,
+          name: session?.user?.name || "",
+          signatures: pagesToSign,
+        }),
+      });
 
-      if (!response.ok) throw new Error("Failed to sign waiver")
-      const result = await response.json()
-      setUserId(result.userId)
+      if (!response.ok) throw new Error("Failed to sign waiver");
+      const result = await response.json();
+      setUserId(result.userId);
 
       if (result.allPagesSigned || signAllMode) {
-        toast.success(`"${currentWaiver.waiverTitle}" signed successfully`)
+        toast.success(`"${currentWaiver.waiverTitle}" signed successfully`);
 
         if (currentWaiverIndex < requiredWaivers.length - 1) {
-          const nextIndex = currentWaiverIndex + 1
-          setCurrentWaiverIndex(nextIndex)
-          setSignAllMode(false)
-          signaturePadRef.current?.clear()
-          setSignatureEmpty(true)
-          await loadWaiverContent(requiredWaivers[nextIndex].waiverId)
+          const nextIndex = currentWaiverIndex + 1;
+          setCurrentWaiverIndex(nextIndex);
+          setSignAllMode(false);
+          signaturePadRef.current?.clear();
+          setSignatureEmpty(true);
+          await loadWaiverContent(requiredWaivers[nextIndex].waiverId);
         } else {
-          const nextId = getNextStepId("waivers")
-          if (nextId) stepper.navigation.goTo(nextId as any)
+          const nextId = getNextStepId("waivers");
+          if (nextId) stepper.navigation.goTo(nextId as any);
         }
       } else {
-        setCurrentPageIndex(prev => prev + 1)
-        signaturePadRef.current?.clear()
-        setSignatureEmpty(true)
+        setCurrentPageIndex((prev) => prev + 1);
+        signaturePadRef.current?.clear();
+        setSignatureEmpty(true);
       }
     } catch (error: any) {
-      console.error("Failed to sign waiver:", error)
-      toast.error(error.message || "Failed to sign waiver")
+      console.error("Failed to sign waiver:", error);
+      toast.error(error.message || "Failed to sign waiver");
     } finally {
-      setIsSigningWaiver(false)
+      setIsSigningWaiver(false);
     }
-  }, [requiredWaivers, currentWaiverIndex, currentWaiverPages, currentPageIndex, signAllMode, program.organizationId, userId, selectedAthlete?.id, session?.user?.email, session?.user?.name, getNextStepId, loadWaiverContent, stepper.navigation])
+  }, [
+    requiredWaivers,
+    currentWaiverIndex,
+    currentWaiverPages,
+    currentPageIndex,
+    signAllMode,
+    program.organizationId,
+    userId,
+    selectedAthlete?.id,
+    session?.user?.email,
+    session?.user?.name,
+    getNextStepId,
+    loadWaiverContent,
+    stepper.navigation,
+  ]);
 
   // ---------- Custom info helpers ----------
 
   const handleEnterCustomInfoStep = useCallback(async () => {
-    if (!selectedAthlete) return
-    setIsLoadingCustomInfo(true)
+    if (!selectedAthlete) return;
+    setIsLoadingCustomInfo(true);
 
     try {
-      const membershipIds = selectedMembership ? [selectedMembership.id] : []
-      const passIds = selectedPass ? [selectedPass.id] : []
+      const membershipIds = selectedMembership ? [selectedMembership.id] : [];
+      const passIds = selectedPass ? [selectedPass.id] : [];
       const params = new URLSearchParams({
         organizationId: program.organizationId,
         programIds: program.id,
-      })
-      if (membershipIds.length > 0) params.set("membershipIds", membershipIds.join(","))
-      if (passIds.length > 0) params.set("passIds", passIds.join(","))
+      });
+      if (membershipIds.length > 0) params.set("membershipIds", membershipIds.join(","));
+      if (passIds.length > 0) params.set("passIds", passIds.join(","));
 
-      const questionsRes = await fetch(`/api/public/custom-information?${params}`)
+      const questionsRes = await fetch(`/api/public/custom-information?${params}`);
       if (!questionsRes.ok) {
-        setNeedsCustomInfo(false)
+        setNeedsCustomInfo(false);
         if (!isNavigatingBackRef.current) {
-          const nextId = getNextStepId("customInfo")
-          if (nextId) stepper.navigation.goTo(nextId as any)
+          const nextId = getNextStepId("customInfo");
+          if (nextId) stepper.navigation.goTo(nextId as any);
         }
-        return
+        return;
       }
 
-      const { questions, config } = await questionsRes.json()
+      const { questions, config } = await questionsRes.json();
       if (!questions || questions.length === 0) {
-        setNeedsCustomInfo(false)
+        setNeedsCustomInfo(false);
         if (!isNavigatingBackRef.current) {
-          const nextId = getNextStepId("customInfo")
-          if (nextId) stepper.navigation.goTo(nextId as any)
+          const nextId = getNextStepId("customInfo");
+          if (nextId) stepper.navigation.goTo(nextId as any);
         }
-        return
+        return;
       }
 
       // Check existing responses
       const responsesRes = await fetch(
         `/api/public/athletes/${selectedAthlete.id}/custom-information?organizationId=${program.organizationId}&email=${encodeURIComponent(session?.user?.email || "")}`
-      )
+      );
       if (responsesRes.ok) {
-        const { responses, isCurrent } = await responsesRes.json()
+        const { responses, isCurrent } = await responsesRes.json();
         if (isCurrent && responses.length >= questions.length) {
-          setNeedsCustomInfo(false)
+          setNeedsCustomInfo(false);
           if (!isNavigatingBackRef.current) {
-            const nextId = getNextStepId("customInfo")
-            if (nextId) stepper.navigation.goTo(nextId as any)
+            const nextId = getNextStepId("customInfo");
+            if (nextId) stepper.navigation.goTo(nextId as any);
           }
-          return
+          return;
         }
-        setCustomInfoResponses(responses || [])
+        setCustomInfoResponses(responses || []);
       }
 
-      setCustomInfoQuestions(questions)
-      setNeedsCustomInfo(true)
+      setCustomInfoQuestions(questions);
+      setNeedsCustomInfo(true);
     } catch (error) {
-      console.error("Failed to load custom info:", error)
-      setNeedsCustomInfo(false)
+      console.error("Failed to load custom info:", error);
+      setNeedsCustomInfo(false);
       if (!isNavigatingBackRef.current) {
-        const nextId = getNextStepId("customInfo")
-        if (nextId) stepper.navigation.goTo(nextId as any)
+        const nextId = getNextStepId("customInfo");
+        if (nextId) stepper.navigation.goTo(nextId as any);
       }
     } finally {
-      setIsLoadingCustomInfo(false)
+      setIsLoadingCustomInfo(false);
     }
-  }, [selectedAthlete, selectedMembership, selectedPass, program.organizationId, program.id, session?.user?.email, getNextStepId, stepper.navigation])
+  }, [
+    selectedAthlete,
+    selectedMembership,
+    selectedPass,
+    program.organizationId,
+    program.id,
+    session?.user?.email,
+    getNextStepId,
+    stepper.navigation,
+  ]);
 
   // ---------- Medical helpers ----------
 
   const handleEnterMedicalStep = useCallback(async () => {
-    if (!selectedAthlete) return
-    setIsLoadingMedicalConfig(true)
+    if (!selectedAthlete) return;
+    setIsLoadingMedicalConfig(true);
 
     try {
       const medicalCheckResponse = await fetch(
         `/api/public/athletes/${selectedAthlete.id}/medical?organizationId=${program.organizationId}&email=${encodeURIComponent(session?.user?.email || "")}`
-      )
+      );
 
       if (medicalCheckResponse.ok) {
-        const data = await medicalCheckResponse.json()
+        const data = await medicalCheckResponse.json();
         if (data.isCurrent) {
-          setNeedsMedical(false)
+          setNeedsMedical(false);
           if (!isNavigatingBackRef.current) {
-            const nextId = getNextStepId("medical")
-            if (nextId) stepper.navigation.goTo(nextId as any)
+            const nextId = getNextStepId("medical");
+            if (nextId) stepper.navigation.goTo(nextId as any);
           }
-          return
+          return;
         }
       }
 
       const configResponse = await fetch(
         `/api/public/medical-config?organizationId=${program.organizationId}`
-      )
+      );
 
       if (configResponse.ok) {
-        const configData = await configResponse.json()
-        setMedicalConfig(configData.config)
-        setMedicalCustomQuestions(configData.customQuestions || [])
-        setNeedsMedical(true)
+        const configData = await configResponse.json();
+        setMedicalConfig(configData.config);
+        setMedicalCustomQuestions(configData.customQuestions || []);
+        setNeedsMedical(true);
       }
     } catch (error) {
-      console.error("Failed to load medical config:", error)
-      toast.error("Failed to load medical form. Please try again.")
+      console.error("Failed to load medical config:", error);
+      toast.error("Failed to load medical form. Please try again.");
     } finally {
-      setIsLoadingMedicalConfig(false)
+      setIsLoadingMedicalConfig(false);
     }
-  }, [selectedAthlete, program.organizationId, session?.user?.email, getNextStepId, stepper.navigation])
+  }, [
+    selectedAthlete,
+    program.organizationId,
+    session?.user?.email,
+    getNextStepId,
+    stepper.navigation,
+  ]);
 
   // ---------- Pricing ----------
 
   const totalPrice = useMemo(() => {
     if (isPerInstance) {
-      return selectedInstanceIds.size * (program.perSessionPrice || 0)
+      return selectedInstanceIds.size * (program.perSessionPrice || 0);
     }
-    return program.basePrice || 0
-  }, [isPerInstance, selectedInstanceIds.size, program.perSessionPrice, program.basePrice])
+    return program.basePrice || 0;
+  }, [isPerInstance, selectedInstanceIds.size, program.perSessionPrice, program.basePrice]);
 
-  const membershipPrice = (needsMembershipPurchase && selectedMembership) ? selectedMembership.price : 0
-  const passPrice = (needsPass && selectedPass && !athleteHasPass) ? selectedPass.price : 0
-  const combinedTotal = totalPrice + membershipPrice + passPrice
+  const membershipPrice =
+    needsMembershipPurchase && selectedMembership ? selectedMembership.price : 0;
+  const passPrice = needsPass && selectedPass && !athleteHasPass ? selectedPass.price : 0;
+  const combinedTotal = totalPrice + membershipPrice + passPrice;
 
   // ---------- Add to cart ----------
 
   const handleAddToCart = (goToCheckout: boolean) => {
-    if (!selectedAthlete) return
+    if (!selectedAthlete) return;
 
-    const athleteName = `${selectedAthlete.firstName} ${selectedAthlete.lastName}`.trim()
+    const athleteName = `${selectedAthlete.firstName} ${selectedAthlete.lastName}`.trim();
 
     if (needsMembershipPurchase && selectedMembership) {
       addItem({
@@ -860,7 +950,7 @@ export function ProgramRegistrationFlow({
           groupName: selectedMembership.group.name,
           billingInterval: selectedMembership.billingInterval,
         },
-      })
+      });
     }
 
     if (needsPass && selectedPass && !athleteHasPass) {
@@ -877,13 +967,14 @@ export function ProgramRegistrationFlow({
           passId: selectedPass.id,
           billingInterval: selectedPass.billingInterval,
         },
-      })
+      });
     }
 
     if (isPerInstance) {
-      const selectedInstances = instances.filter(i => selectedInstanceIds.has(i.id))
+      const selectedInstances = instances.filter((i) => selectedInstanceIds.has(i.id));
       for (const instance of selectedInstances) {
-        const instanceIsFull = instance.capacity !== undefined && instance.registrationCount >= instance.capacity
+        const instanceIsFull =
+          instance.capacity !== undefined && instance.registrationCount >= instance.capacity;
         addItem({
           referenceId: instance.id,
           type: "program",
@@ -903,7 +994,7 @@ export function ProgramRegistrationFlow({
             ...(uploadedFileId && { fileUploadId: uploadedFileId }),
             ...(earlyAccessCode && { earlyAccessCode }),
           },
-        })
+        });
       }
     } else {
       addItem({
@@ -918,21 +1009,21 @@ export function ProgramRegistrationFlow({
         details: {
           programId: program.id,
           pricingModel: program.pricingModel,
-          requiredMemberships: program.requiredMemberships.map(m => m.id),
+          requiredMemberships: program.requiredMemberships.map((m) => m.id),
           waitlist: isWaitlistMode,
           ...(uploadedFileId && { fileUploadId: uploadedFileId }),
           ...(earlyAccessCode && { earlyAccessCode }),
         },
-      })
+      });
     }
 
     if (goToCheckout) {
-      setIsOpen(false)
-      router.push(`/checkout`)
+      setIsOpen(false);
+      router.push(`/checkout`);
     } else {
-      router.push(`/`)
+      router.push(`/`);
     }
-  }
+  };
 
   // ---------- Auth gate ----------
 
@@ -950,27 +1041,27 @@ export function ProgramRegistrationFlow({
           </Button>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   // ---------- Rendering ----------
 
-  const allSteps = stepper.state.all
-  const currentStepId = stepper.state.current.data.id
-  const visibleSteps = allSteps.filter((s: { id: string }) => visibleStepIds.includes(s.id))
-  const currentVisibleIndex = visibleSteps.findIndex((s: { id: string }) => s.id === currentStepId)
+  const allSteps = stepper.state.all;
+  const currentStepId = stepper.state.current.data.id;
+  const visibleSteps = allSteps.filter((s: { id: string }) => visibleStepIds.includes(s.id));
+  const currentVisibleIndex = visibleSteps.findIndex((s: { id: string }) => s.id === currentStepId);
 
-  const canProceedFromAthlete = selectedAthlete !== null
-  const canProceedFromSessions = selectedInstanceIds.size > 0
-  const canProceedFromMembership = athleteHasMembership || selectedMembership !== null
-  const canProceedFromPass = athleteHasPass || selectedPass !== null
+  const canProceedFromAthlete = selectedAthlete !== null;
+  const canProceedFromSessions = selectedInstanceIds.size > 0;
+  const canProceedFromMembership = athleteHasMembership || selectedMembership !== null;
+  const canProceedFromPass = athleteHasPass || selectedPass !== null;
 
   return (
     <div className="space-y-6">
       {/* Stepper Navigation */}
       <StepperNav>
         {visibleSteps.map((step: { id: string; title: string }, index: number) => {
-          const status = getStepStatus(index, currentVisibleIndex)
+          const status = getStepStatus(index, currentVisibleIndex);
           return (
             <div key={step.id} className="flex items-center flex-1 last:flex-initial">
               <StepperItem status={status}>
@@ -981,7 +1072,7 @@ export function ProgramRegistrationFlow({
                 <StepperSeparator status={status} className="mx-2" />
               )}
             </div>
-          )
+          );
         })}
       </StepperNav>
 
@@ -995,7 +1086,8 @@ export function ProgramRegistrationFlow({
                 This program is currently full
               </p>
               <p className="text-sm text-amber-700 dark:text-amber-300">
-                You are joining the waitlist. You will not be charged until a spot becomes available and you are moved into the program.
+                You are joining the waitlist. You will not be charged until a spot becomes available
+                and you are moved into the program.
               </p>
             </div>
           </div>
@@ -1024,7 +1116,9 @@ export function ProgramRegistrationFlow({
                     <Input
                       id="prog-athlete-first"
                       value={newAthlete.firstName}
-                      onChange={e => setNewAthlete(prev => ({ ...prev, firstName: e.target.value }))}
+                      onChange={(e) =>
+                        setNewAthlete((prev) => ({ ...prev, firstName: e.target.value }))
+                      }
                       placeholder="First name"
                       disabled={isCreatingAthlete}
                     />
@@ -1034,7 +1128,9 @@ export function ProgramRegistrationFlow({
                     <Input
                       id="prog-athlete-last"
                       value={newAthlete.lastName}
-                      onChange={e => setNewAthlete(prev => ({ ...prev, lastName: e.target.value }))}
+                      onChange={(e) =>
+                        setNewAthlete((prev) => ({ ...prev, lastName: e.target.value }))
+                      }
                       placeholder="Last name"
                       disabled={isCreatingAthlete}
                     />
@@ -1048,17 +1144,31 @@ export function ProgramRegistrationFlow({
                         type="button"
                         variant="outline"
                         disabled={isCreatingAthlete}
-                        className={cn("w-full justify-start text-left font-normal", !newAthlete.birthDate && "text-muted-foreground")}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !newAthlete.birthDate && "text-muted-foreground"
+                        )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {newAthlete.birthDate ? format(new Date(newAthlete.birthDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                        {newAthlete.birthDate
+                          ? format(new Date(newAthlete.birthDate + "T12:00:00Z"), "PPP")
+                          : "Pick a date"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
-                        selected={newAthlete.birthDate ? new Date(newAthlete.birthDate + "T12:00:00Z") : undefined}
-                        onSelect={(date) => setNewAthlete(prev => ({ ...prev, birthDate: date ? format(date, "yyyy-MM-dd") : "" }))}
+                        selected={
+                          newAthlete.birthDate
+                            ? new Date(newAthlete.birthDate + "T12:00:00Z")
+                            : undefined
+                        }
+                        onSelect={(date) =>
+                          setNewAthlete((prev) => ({
+                            ...prev,
+                            birthDate: date ? format(date, "yyyy-MM-dd") : "",
+                          }))
+                        }
                         captionLayout="dropdown"
                         fromYear={1940}
                         toYear={new Date().getFullYear()}
@@ -1071,7 +1181,7 @@ export function ProgramRegistrationFlow({
                   <Label htmlFor="prog-athlete-gender">Gender Declaration</Label>
                   <Select
                     value={newAthlete.gender}
-                    onValueChange={value => setNewAthlete(prev => ({ ...prev, gender: value }))}
+                    onValueChange={(value) => setNewAthlete((prev) => ({ ...prev, gender: value }))}
                     disabled={isCreatingAthlete}
                   >
                     <SelectTrigger id="prog-athlete-gender">
@@ -1086,11 +1196,20 @@ export function ProgramRegistrationFlow({
                   </Select>
                 </div>
                 <div className="flex gap-2 pt-2">
-                  <Button variant="outline" onClick={() => setShowCreateForm(false)} disabled={isCreatingAthlete} className="flex-1">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowCreateForm(false)}
+                    disabled={isCreatingAthlete}
+                    className="flex-1"
+                  >
                     <ChevronLeft className="mr-1 h-4 w-4" />
                     Back
                   </Button>
-                  <Button onClick={handleCreateAthlete} disabled={isCreatingAthlete} className="flex-1">
+                  <Button
+                    onClick={handleCreateAthlete}
+                    disabled={isCreatingAthlete}
+                    className="flex-1"
+                  >
                     {isCreatingAthlete && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Add Athlete
                   </Button>
@@ -1120,10 +1239,10 @@ export function ProgramRegistrationFlow({
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        setSelectedAthlete(null)
-                        setSelectedInstanceIds(new Set())
-                        setAthleteHasMembership(false)
-                        setSelectedMembership(null)
+                        setSelectedAthlete(null);
+                        setSelectedInstanceIds(new Set());
+                        setAthleteHasMembership(false);
+                        setSelectedMembership(null);
                       }}
                     >
                       Change
@@ -1135,12 +1254,18 @@ export function ProgramRegistrationFlow({
                   <>
                     {athletes.length > 0 && (
                       <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                        {eligibleAthletes.map(athlete => {
-                          const displayName = `${athlete.firstName} ${athlete.lastName}`.trim()
+                        {eligibleAthletes.map((athlete) => {
+                          const displayName = `${athlete.firstName} ${athlete.lastName}`.trim();
                           const birthLabel = athlete.birthDate
-                            ? new Date(athlete.birthDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-                            : null
-                          const genderLabel = athlete.gender ? GENDER_LABELS[athlete.gender] || athlete.gender : null
+                            ? new Date(athlete.birthDate).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })
+                            : null;
+                          const genderLabel = athlete.gender
+                            ? GENDER_LABELS[athlete.gender] || athlete.gender
+                            : null;
 
                           return (
                             <button
@@ -1164,25 +1289,38 @@ export function ProgramRegistrationFlow({
                                 </div>
                               </div>
                             </button>
-                          )
+                          );
                         })}
 
                         {ineligibleAthletes.length > 0 && (
                           <>
                             <div className="pt-2 pb-1">
-                              <p className="text-xs font-medium text-muted-foreground">Ineligible for this program</p>
+                              <p className="text-xs font-medium text-muted-foreground">
+                                Ineligible for this program
+                              </p>
                             </div>
-                            {ineligibleAthletes.map(athlete => {
-                              const displayName = `${athlete.firstName} ${athlete.lastName}`.trim()
-                              const age = calculateAge(athlete.birthDate)
-                              const reasons: string[] = []
-                              if (program.hasAgeRestriction && !isAgeEligible(age, program.minAge, program.maxAge)) {
-                                reasons.push(`Age ${age} — requires ${ageLabel?.toLowerCase()}`)
+                            {ineligibleAthletes.map((athlete) => {
+                              const displayName = `${athlete.firstName} ${athlete.lastName}`.trim();
+                              const age = calculateAge(athlete.birthDate);
+                              const reasons: string[] = [];
+                              if (
+                                program.hasAgeRestriction &&
+                                !isAgeEligible(age, program.minAge, program.maxAge)
+                              ) {
+                                reasons.push(`Age ${age} — requires ${ageLabel?.toLowerCase()}`);
                               }
-                              if (program.hasGenderRestriction && program.allowedGenders.length > 0) {
-                                if (!athlete.gender || !program.allowedGenders.includes(athlete.gender as any)) {
-                                  const allowed = program.allowedGenders.map(g => GENDER_LABELS[g] || g).join(", ")
-                                  reasons.push(`Gender — restricted to ${allowed}`)
+                              if (
+                                program.hasGenderRestriction &&
+                                program.allowedGenders.length > 0
+                              ) {
+                                if (
+                                  !athlete.gender ||
+                                  !program.allowedGenders.includes(athlete.gender as any)
+                                ) {
+                                  const allowed = program.allowedGenders
+                                    .map((g) => GENDER_LABELS[g] || g)
+                                    .join(", ");
+                                  reasons.push(`Gender — restricted to ${allowed}`);
                                 }
                               }
                               return (
@@ -1194,13 +1332,15 @@ export function ProgramRegistrationFlow({
                                     <User className="h-5 w-5" />
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <div className="font-medium text-sm truncate">{displayName}</div>
+                                    <div className="font-medium text-sm truncate">
+                                      {displayName}
+                                    </div>
                                     <div className="text-xs text-destructive mt-1">
                                       {reasons.join(" · ")}
                                     </div>
                                   </div>
                                 </div>
-                              )
+                              );
                             })}
                           </>
                         )}
@@ -1213,7 +1353,11 @@ export function ProgramRegistrationFlow({
                       </p>
                     )}
 
-                    <Button variant="outline" className="w-full gap-2" onClick={() => setShowCreateForm(true)}>
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2"
+                      onClick={() => setShowCreateForm(true)}
+                    >
                       <Plus className="h-4 w-4" />
                       Add New Athlete
                     </Button>
@@ -1225,8 +1369,8 @@ export function ProgramRegistrationFlow({
                     <Button
                       className="w-full gap-2"
                       onClick={() => {
-                        const nextId = getNextStepId("athlete")
-                        if (nextId) stepper.navigation.goTo(nextId as any)
+                        const nextId = getNextStepId("athlete");
+                        if (nextId) stepper.navigation.goTo(nextId as any);
                       }}
                     >
                       Continue
@@ -1248,15 +1392,14 @@ export function ProgramRegistrationFlow({
               <CalendarIcon className="h-5 w-5" />
               Select Sessions for {selectedAthlete?.firstName}
             </CardTitle>
-            <CardDescription>
-              Choose individual sessions you&apos;d like to attend.
-            </CardDescription>
+            <CardDescription>Choose individual sessions you&apos;d like to attend.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {hasFullEnrollment && (
                 <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950 p-4 text-sm text-blue-800 dark:text-blue-200">
-                  {selectedAthlete?.firstName} is already enrolled in this program for the full season.
+                  {selectedAthlete?.firstName} is already enrolled in this program for the full
+                  season.
                 </div>
               )}
 
@@ -1269,10 +1412,20 @@ export function ProgramRegistrationFlow({
 
               <div className="flex items-center justify-between pb-3 border-b border-border">
                 <div className="flex items-center gap-3">
-                  <Button variant="outline" size="sm" onClick={selectAllInstances} disabled={instances.length === 0}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={selectAllInstances}
+                    disabled={instances.length === 0}
+                  >
                     Select All
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedInstanceIds(new Set())} disabled={selectedInstanceIds.size === 0}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedInstanceIds(new Set())}
+                    disabled={selectedInstanceIds.size === 0}
+                  >
                     Clear
                   </Button>
                 </div>
@@ -1282,14 +1435,19 @@ export function ProgramRegistrationFlow({
               </div>
 
               <div className="divide-y divide-border max-h-[400px] overflow-y-auto">
-                {instances.map(instance => {
-                  const isFull = instance.capacity !== undefined && instance.registrationCount >= instance.capacity
-                  const isAlreadyRegistered = alreadyRegisteredIds.has(instance.id)
-                  const isInCart = inCartIds.has(instance.id)
-                  const instanceWaitlistAvailable = isFull && program.waitlistEnabled
-                  const isUnavailable = (isFull && !instanceWaitlistAvailable) || isAlreadyRegistered || isInCart
-                  const isSelected = selectedInstanceIds.has(instance.id)
-                  const spotsLeft = instance.capacity ? instance.capacity - instance.registrationCount : null
+                {instances.map((instance) => {
+                  const isFull =
+                    instance.capacity !== undefined &&
+                    instance.registrationCount >= instance.capacity;
+                  const isAlreadyRegistered = alreadyRegisteredIds.has(instance.id);
+                  const isInCart = inCartIds.has(instance.id);
+                  const instanceWaitlistAvailable = isFull && program.waitlistEnabled;
+                  const isUnavailable =
+                    (isFull && !instanceWaitlistAvailable) || isAlreadyRegistered || isInCart;
+                  const isSelected = selectedInstanceIds.has(instance.id);
+                  const spotsLeft = instance.capacity
+                    ? instance.capacity - instance.registrationCount
+                    : null;
 
                   return (
                     <div
@@ -1326,11 +1484,14 @@ export function ProgramRegistrationFlow({
                         </div>
                       </div>
                       <div className="text-right shrink-0">
-                        {program.perSessionPrice != null && program.perSessionPrice > 0 && !isAlreadyRegistered && !isInCart && (
-                          <div className="font-medium text-foreground">
-                            {formatPrice(program.perSessionPrice)}
-                          </div>
-                        )}
+                        {program.perSessionPrice != null &&
+                          program.perSessionPrice > 0 &&
+                          !isAlreadyRegistered &&
+                          !isInCart && (
+                            <div className="font-medium text-foreground">
+                              {formatPrice(program.perSessionPrice)}
+                            </div>
+                          )}
                         {isAlreadyRegistered ? (
                           <div className="text-xs font-medium text-blue-600 dark:text-blue-400">
                             Already registered
@@ -1340,15 +1501,27 @@ export function ProgramRegistrationFlow({
                             In cart
                           </div>
                         ) : spotsLeft !== null ? (
-                          <div className={`text-xs ${
-                            isFull && instanceWaitlistAvailable ? "text-amber-600 dark:text-amber-400" : isFull ? "text-red-600 dark:text-red-400" : spotsLeft <= 3 ? "text-orange-600 dark:text-orange-400" : "text-green-600 dark:text-green-400"
-                          }`}>
-                            {isFull && instanceWaitlistAvailable ? "Waitlist" : isFull ? "Full" : `${spotsLeft} spot${spotsLeft !== 1 ? "s" : ""} left`}
+                          <div
+                            className={`text-xs ${
+                              isFull && instanceWaitlistAvailable
+                                ? "text-amber-600 dark:text-amber-400"
+                                : isFull
+                                  ? "text-red-600 dark:text-red-400"
+                                  : spotsLeft <= 3
+                                    ? "text-orange-600 dark:text-orange-400"
+                                    : "text-green-600 dark:text-green-400"
+                            }`}
+                          >
+                            {isFull && instanceWaitlistAvailable
+                              ? "Waitlist"
+                              : isFull
+                                ? "Full"
+                                : `${spotsLeft} spot${spotsLeft !== 1 ? "s" : ""} left`}
                           </div>
                         ) : null}
                       </div>
                     </div>
-                  )
+                  );
                 })}
               </div>
 
@@ -1362,7 +1535,8 @@ export function ProgramRegistrationFlow({
                 <div className="rounded-lg border bg-muted/30 p-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">
-                      {selectedInstanceIds.size} session{selectedInstanceIds.size !== 1 ? "s" : ""} selected
+                      {selectedInstanceIds.size} session{selectedInstanceIds.size !== 1 ? "s" : ""}{" "}
+                      selected
                     </span>
                     <span className="text-lg font-bold">{formatPrice(totalPrice)}</span>
                   </div>
@@ -1370,7 +1544,11 @@ export function ProgramRegistrationFlow({
               )}
 
               <div className="flex gap-2 pt-2">
-                <Button variant="outline" onClick={() => stepper.navigation.goTo("athlete")} className="gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => stepper.navigation.goTo("athlete")}
+                  className="gap-2"
+                >
                   <ChevronLeft className="h-4 w-4" />
                   Back
                 </Button>
@@ -1378,8 +1556,8 @@ export function ProgramRegistrationFlow({
                   className="flex-1 gap-2"
                   disabled={!canProceedFromSessions}
                   onClick={() => {
-                    const nextId = getNextStepId("sessions")
-                    if (nextId) stepper.navigation.goTo(nextId as any)
+                    const nextId = getNextStepId("sessions");
+                    if (nextId) stepper.navigation.goTo(nextId as any);
                   }}
                 >
                   Continue
@@ -1411,7 +1589,8 @@ export function ProgramRegistrationFlow({
                   <div>
                     <p className="font-medium text-sm">No eligible memberships</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {selectedAthlete?.firstName} does not meet the gender requirements for any of the available membership options.
+                      {selectedAthlete?.firstName} does not meet the gender requirements for any of
+                      the available membership options.
                     </p>
                   </div>
                 </div>
@@ -1420,30 +1599,38 @@ export function ProgramRegistrationFlow({
                   <CreditCard className="h-5 w-5 text-primary shrink-0" />
                   <div className="flex-1">
                     <div className="font-medium text-sm">{genderEligibleMemberships[0].name}</div>
-                    <div className="text-xs text-muted-foreground">{genderEligibleMemberships[0].group.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {genderEligibleMemberships[0].group.name}
+                    </div>
                   </div>
-                  <span className="font-bold">{formatPrice(genderEligibleMemberships[0].price)}</span>
+                  <span className="font-bold">
+                    {formatPrice(genderEligibleMemberships[0].price)}
+                  </span>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {genderEligibleMemberships.map(m => {
-                    const isSelected = selectedMembership?.id === m.id
+                  {genderEligibleMemberships.map((m) => {
+                    const isSelected = selectedMembership?.id === m.id;
                     return (
                       <button
                         key={m.id}
                         onClick={() => setSelectedMembership(m)}
                         className={`w-full flex items-center gap-3 p-4 rounded-lg border transition-colors text-left ${
-                          isSelected ? "border-primary/40 bg-primary/5" : "border-border hover:bg-accent"
+                          isSelected
+                            ? "border-primary/40 bg-primary/5"
+                            : "border-border hover:bg-accent"
                         }`}
                       >
-                        <CreditCard className={`h-5 w-5 shrink-0 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                        <CreditCard
+                          className={`h-5 w-5 shrink-0 ${isSelected ? "text-primary" : "text-muted-foreground"}`}
+                        />
                         <div className="flex-1">
                           <div className="font-medium text-sm">{m.name}</div>
                           <div className="text-xs text-muted-foreground">{m.group.name}</div>
                         </div>
                         <span className="font-bold">{formatPrice(m.price)}</span>
                       </button>
-                    )
+                    );
                   })}
                 </div>
               )}
@@ -1452,8 +1639,8 @@ export function ProgramRegistrationFlow({
                 <Button
                   variant="outline"
                   onClick={() => {
-                    const prevId = getPreviousStepId("membership")
-                    if (prevId) stepper.navigation.goTo(prevId as any)
+                    const prevId = getPreviousStepId("membership");
+                    if (prevId) stepper.navigation.goTo(prevId as any);
                   }}
                   className="gap-2"
                 >
@@ -1464,8 +1651,8 @@ export function ProgramRegistrationFlow({
                   className="flex-1 gap-2"
                   disabled={!canProceedFromMembership}
                   onClick={() => {
-                    const nextId = getNextStepId("membership")
-                    if (nextId) stepper.navigation.goTo(nextId as any)
+                    const nextId = getNextStepId("membership");
+                    if (nextId) stepper.navigation.goTo(nextId as any);
                   }}
                 >
                   Continue
@@ -1486,7 +1673,8 @@ export function ProgramRegistrationFlow({
               Pass Required
             </CardTitle>
             <CardDescription>
-              This program requires an active pass. Select a pass to purchase or continue if you already have one.
+              This program requires an active pass. Select a pass to purchase or continue if you
+              already have one.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -1499,8 +1687,12 @@ export function ProgramRegistrationFlow({
                 <div className="flex items-center gap-3 p-4 rounded-lg border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30">
                   <Check className="h-5 w-5 text-green-600 shrink-0" />
                   <div>
-                    <p className="font-medium text-sm text-green-800 dark:text-green-200">Active pass found</p>
-                    <p className="text-xs text-green-700 dark:text-green-300">You already have an active pass that covers this program.</p>
+                    <p className="font-medium text-sm text-green-800 dark:text-green-200">
+                      Active pass found
+                    </p>
+                    <p className="text-xs text-green-700 dark:text-green-300">
+                      You already have an active pass that covers this program.
+                    </p>
                   </div>
                 </div>
               ) : genderEligiblePasses.length === 0 ? (
@@ -1509,7 +1701,8 @@ export function ProgramRegistrationFlow({
                   <div>
                     <p className="font-medium text-sm">No eligible passes</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {selectedAthlete?.firstName} does not meet the gender requirements for any of the available pass options.
+                      {selectedAthlete?.firstName} does not meet the gender requirements for any of
+                      the available pass options.
                     </p>
                   </div>
                 </div>
@@ -1519,33 +1712,44 @@ export function ProgramRegistrationFlow({
                   <div className="flex-1">
                     <div className="font-medium text-sm">{genderEligiblePasses[0].name}</div>
                     <div className="text-xs text-muted-foreground">
-                      {genderEligiblePasses[0].sessionLimit} sessions / {genderEligiblePasses[0].limitPeriod === "WEEKLY" ? "week" : "month"}
+                      {genderEligiblePasses[0].sessionLimit} sessions /{" "}
+                      {genderEligiblePasses[0].limitPeriod === "WEEKLY" ? "week" : "month"}
                     </div>
                   </div>
-                  <span className="font-bold">{formatPrice(genderEligiblePasses[0].price)}/{genderEligiblePasses[0].billingInterval.toLowerCase().replace("_", "-")}</span>
+                  <span className="font-bold">
+                    {formatPrice(genderEligiblePasses[0].price)}/
+                    {genderEligiblePasses[0].billingInterval.toLowerCase().replace("_", "-")}
+                  </span>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {genderEligiblePasses.map(p => {
-                    const isSelected = selectedPass?.id === p.id
+                  {genderEligiblePasses.map((p) => {
+                    const isSelected = selectedPass?.id === p.id;
                     return (
                       <button
                         key={p.id}
                         onClick={() => setSelectedPass(p)}
                         className={`w-full flex items-center gap-3 p-4 rounded-lg border transition-colors text-left ${
-                          isSelected ? "border-primary/40 bg-primary/5" : "border-border hover:bg-accent"
+                          isSelected
+                            ? "border-primary/40 bg-primary/5"
+                            : "border-border hover:bg-accent"
                         }`}
                       >
-                        <Ticket className={`h-5 w-5 shrink-0 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                        <Ticket
+                          className={`h-5 w-5 shrink-0 ${isSelected ? "text-primary" : "text-muted-foreground"}`}
+                        />
                         <div className="flex-1">
                           <div className="font-medium text-sm">{p.name}</div>
                           <div className="text-xs text-muted-foreground">
-                            {p.sessionLimit} sessions / {p.limitPeriod === "WEEKLY" ? "week" : "month"}
+                            {p.sessionLimit} sessions /{" "}
+                            {p.limitPeriod === "WEEKLY" ? "week" : "month"}
                           </div>
                         </div>
-                        <span className="font-bold">{formatPrice(p.price)}/{p.billingInterval.toLowerCase().replace("_", "-")}</span>
+                        <span className="font-bold">
+                          {formatPrice(p.price)}/{p.billingInterval.toLowerCase().replace("_", "-")}
+                        </span>
                       </button>
-                    )
+                    );
                   })}
                 </div>
               )}
@@ -1554,8 +1758,8 @@ export function ProgramRegistrationFlow({
                 <Button
                   variant="outline"
                   onClick={() => {
-                    const prevId = getPreviousStepId("pass")
-                    if (prevId) stepper.navigation.goTo(prevId as any)
+                    const prevId = getPreviousStepId("pass");
+                    if (prevId) stepper.navigation.goTo(prevId as any);
                   }}
                   className="gap-2"
                 >
@@ -1566,8 +1770,8 @@ export function ProgramRegistrationFlow({
                   className="flex-1 gap-2"
                   disabled={!canProceedFromPass}
                   onClick={() => {
-                    const nextId = getNextStepId("pass")
-                    if (nextId) stepper.navigation.goTo(nextId as any)
+                    const nextId = getNextStepId("pass");
+                    if (nextId) stepper.navigation.goTo(nextId as any);
                   }}
                 >
                   Continue
@@ -1598,12 +1802,12 @@ export function ProgramRegistrationFlow({
           onSetSignAllMode={setSignAllMode}
           onSetSignatureEmpty={setSignatureEmpty}
           onBack={() => {
-            const prevId = getPreviousStepId("waivers")
-            if (prevId) stepper.navigation.goTo(prevId as any)
+            const prevId = getPreviousStepId("waivers");
+            if (prevId) stepper.navigation.goTo(prevId as any);
           }}
           onContinue={() => {
-            const nextId = getNextStepId("waivers")
-            if (nextId) stepper.navigation.goTo(nextId as any)
+            const nextId = getNextStepId("waivers");
+            if (nextId) stepper.navigation.goTo(nextId as any);
           }}
         />
       )}
@@ -1619,12 +1823,12 @@ export function ProgramRegistrationFlow({
           organizationId={program.organizationId}
           onEnterStep={handleEnterCustomInfoStep}
           onComplete={() => {
-            const nextId = getNextStepId("customInfo")
-            if (nextId) stepper.navigation.goTo(nextId as any)
+            const nextId = getNextStepId("customInfo");
+            if (nextId) stepper.navigation.goTo(nextId as any);
           }}
           onBack={() => {
-            const prevId = getPreviousStepId("customInfo")
-            if (prevId) stepper.navigation.goTo(prevId as any)
+            const prevId = getPreviousStepId("customInfo");
+            if (prevId) stepper.navigation.goTo(prevId as any);
           }}
         />
       )}
@@ -1642,12 +1846,12 @@ export function ProgramRegistrationFlow({
           email={session?.user?.email || ""}
           onEnterStep={handleEnterMedicalStep}
           onComplete={() => {
-            const nextId = getNextStepId("medical")
-            if (nextId) stepper.navigation.goTo(nextId as any)
+            const nextId = getNextStepId("medical");
+            if (nextId) stepper.navigation.goTo(nextId as any);
           }}
           onBack={() => {
-            const prevId = getPreviousStepId("medical")
-            if (prevId) stepper.navigation.goTo(prevId as any)
+            const prevId = getPreviousStepId("medical");
+            if (prevId) stepper.navigation.goTo(prevId as any);
           }}
         />
       )}
@@ -1660,13 +1864,13 @@ export function ProgramRegistrationFlow({
           athleteId={selectedAthlete?.id || ""}
           programId={program.id}
           onComplete={(fileId) => {
-            setUploadedFileId(fileId)
-            const nextId = getNextStepId("files")
-            if (nextId) stepper.navigation.goTo(nextId as any)
+            setUploadedFileId(fileId);
+            const nextId = getNextStepId("files");
+            if (nextId) stepper.navigation.goTo(nextId as any);
           }}
           onBack={() => {
-            const prevId = getPreviousStepId("files")
-            if (prevId) stepper.navigation.goTo(prevId as any)
+            const prevId = getPreviousStepId("files");
+            if (prevId) stepper.navigation.goTo(prevId as any);
           }}
         />
       )}
@@ -1681,7 +1885,8 @@ export function ProgramRegistrationFlow({
             </CardTitle>
             {isWaitlistMode && (
               <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                You will be added to the waitlist. You will not be charged until a spot becomes available.
+                You will be added to the waitlist. You will not be charged until a spot becomes
+                available.
               </p>
             )}
           </CardHeader>
@@ -1710,12 +1915,16 @@ export function ProgramRegistrationFlow({
                 {isPerInstance ? (
                   <div className="space-y-1.5">
                     {instances
-                      .filter(i => selectedInstanceIds.has(i.id))
-                      .map(instance => (
-                        <div key={instance.id} className="flex items-center justify-between p-2 rounded-lg border bg-card">
+                      .filter((i) => selectedInstanceIds.has(i.id))
+                      .map((instance) => (
+                        <div
+                          key={instance.id}
+                          className="flex items-center justify-between p-2 rounded-lg border bg-card"
+                        >
                           <div className="min-w-0">
                             <span className="text-sm">
-                              {format(new Date(instance.date), "EEE, MMM d")} — {instance.startTime} – {instance.endTime}
+                              {format(new Date(instance.date), "EEE, MMM d")} — {instance.startTime}{" "}
+                              – {instance.endTime}
                             </span>
                           </div>
                           {program.perSessionPrice != null && program.perSessionPrice > 0 && (
@@ -1744,7 +1953,9 @@ export function ProgramRegistrationFlow({
                   </h3>
                   <div className="flex items-center gap-3 p-2 rounded-lg border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30">
                     <Check className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
-                    <span className="text-sm text-green-800 dark:text-green-200">Active membership on file</span>
+                    <span className="text-sm text-green-800 dark:text-green-200">
+                      Active membership on file
+                    </span>
                   </div>
                 </div>
               )}
@@ -1758,7 +1969,9 @@ export function ProgramRegistrationFlow({
                       <Shield className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                       <span className="text-sm">{selectedMembership.name}</span>
                     </div>
-                    <span className="text-sm font-medium">{formatPrice(selectedMembership.price)}</span>
+                    <span className="text-sm font-medium">
+                      {formatPrice(selectedMembership.price)}
+                    </span>
                   </div>
                 </div>
               )}
@@ -1788,7 +2001,8 @@ export function ProgramRegistrationFlow({
               {/* Duplicate warning for full-program enrollment */}
               {!isPerInstance && isAlreadyFullyRegistered && (
                 <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950 p-4 text-sm text-blue-800 dark:text-blue-200">
-                  {selectedAthlete?.firstName} is already {hasFullEnrollment ? "enrolled in" : "in your cart for"} this program.
+                  {selectedAthlete?.firstName} is already{" "}
+                  {hasFullEnrollment ? "enrolled in" : "in your cart for"} this program.
                 </div>
               )}
 
@@ -1809,14 +2023,16 @@ export function ProgramRegistrationFlow({
                   disabled={!isPerInstance && isAlreadyFullyRegistered}
                 >
                   <ShoppingCart className="h-4 w-4" />
-                  {isWaitlistMode ? "Add to Cart & Continue Browsing" : "Add to Cart & Continue Browsing"}
+                  {isWaitlistMode
+                    ? "Add to Cart & Continue Browsing"
+                    : "Add to Cart & Continue Browsing"}
                 </Button>
                 <Button
                   variant="ghost"
                   className="w-full gap-2"
                   onClick={() => {
-                    const prevId = getPreviousStepId("review")
-                    if (prevId) stepper.navigation.goTo(prevId as any)
+                    const prevId = getPreviousStepId("review");
+                    if (prevId) stepper.navigation.goTo(prevId as any);
                   }}
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -1828,7 +2044,7 @@ export function ProgramRegistrationFlow({
         </Card>
       )}
     </div>
-  )
+  );
 }
 
 // ---------- Waiver Step Sub-component ----------
@@ -1852,27 +2068,27 @@ function WaiverStep({
   onBack,
   onContinue,
 }: {
-  isCheckingWaivers: boolean
-  isLoadingWaiver: boolean
-  isSigningWaiver: boolean
-  requiredWaivers: WaiverToSign[]
-  currentWaiverIndex: number
-  currentWaiverPages: WaiverPage[]
-  currentPageIndex: number
-  signAllMode: boolean
-  signatureEmpty: boolean
-  signaturePadRef: React.RefObject<SignaturePadRef>
-  selectedAthleteName: string
-  onEnterStep: () => void
-  onSign: () => void
-  onSetSignAllMode: (v: boolean) => void
-  onSetSignatureEmpty: (v: boolean) => void
-  onBack: () => void
-  onContinue: () => void
+  isCheckingWaivers: boolean;
+  isLoadingWaiver: boolean;
+  isSigningWaiver: boolean;
+  requiredWaivers: WaiverToSign[];
+  currentWaiverIndex: number;
+  currentWaiverPages: WaiverPage[];
+  currentPageIndex: number;
+  signAllMode: boolean;
+  signatureEmpty: boolean;
+  signaturePadRef: React.RefObject<SignaturePadRef>;
+  selectedAthleteName: string;
+  onEnterStep: () => void;
+  onSign: () => void;
+  onSetSignAllMode: (v: boolean) => void;
+  onSetSignatureEmpty: (v: boolean) => void;
+  onBack: () => void;
+  onContinue: () => void;
 }) {
   useEffect(() => {
-    onEnterStep()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    onEnterStep();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isCheckingWaivers) {
     return (
@@ -1882,7 +2098,7 @@ function WaiverStep({
           <p className="text-sm text-muted-foreground">Checking waiver requirements...</p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   if (requiredWaivers.length === 0) {
@@ -1913,7 +2129,7 @@ function WaiverStep({
           </Button>
         </CardFooter>
       </Card>
-    )
+    );
   }
 
   return (
@@ -1967,7 +2183,7 @@ function WaiverStep({
                 <input
                   type="checkbox"
                   checked={signAllMode}
-                  onChange={e => onSetSignAllMode(e.target.checked)}
+                  onChange={(e) => onSetSignAllMode(e.target.checked)}
                   className="rounded border-border"
                 />
                 <span className="text-sm">
@@ -1984,7 +2200,7 @@ function WaiverStep({
               <SignaturePad
                 ref={signaturePadRef}
                 height={150}
-                onSignatureChange={isEmpty => onSetSignatureEmpty(isEmpty)}
+                onSignatureChange={(isEmpty) => onSetSignatureEmpty(isEmpty)}
               />
             </div>
           </>
@@ -1995,23 +2211,20 @@ function WaiverStep({
           <ChevronLeft className="mr-1 h-4 w-4" />
           Back
         </Button>
-        <Button
-          onClick={onSign}
-          disabled={isSigningWaiver || signatureEmpty || isLoadingWaiver}
-        >
+        <Button onClick={onSign} disabled={isSigningWaiver || signatureEmpty || isLoadingWaiver}>
           {isSigningWaiver && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {signAllMode
             ? "Sign All Pages & Continue"
             : currentPageIndex < currentWaiverPages.length - 1
-            ? "Sign & Next Page"
-            : currentWaiverIndex < requiredWaivers.length - 1
-            ? "Sign & Next Waiver"
-            : "Sign & Continue"}
+              ? "Sign & Next Page"
+              : currentWaiverIndex < requiredWaivers.length - 1
+                ? "Sign & Next Waiver"
+                : "Sign & Continue"}
           <ChevronRight className="ml-1 h-4 w-4" />
         </Button>
       </CardFooter>
     </Card>
-  )
+  );
 }
 
 // ---------- Custom Info Step Sub-component ----------
@@ -2027,19 +2240,19 @@ function CustomInfoStep({
   onComplete,
   onBack,
 }: {
-  isLoading: boolean
-  needsCustomInfo: boolean
-  questions: CustomInfoQuestion[]
-  existingResponses: CustomInfoResponse[]
-  athleteId: string
-  organizationId: string
-  onEnterStep: () => void
-  onComplete: () => void
-  onBack: () => void
+  isLoading: boolean;
+  needsCustomInfo: boolean;
+  questions: CustomInfoQuestion[];
+  existingResponses: CustomInfoResponse[];
+  athleteId: string;
+  organizationId: string;
+  onEnterStep: () => void;
+  onComplete: () => void;
+  onBack: () => void;
 }) {
   useEffect(() => {
-    onEnterStep()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    onEnterStep();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isLoading) {
     return (
@@ -2049,11 +2262,11 @@ function CustomInfoStep({
           <p className="text-sm text-muted-foreground">Loading...</p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   if (!needsCustomInfo || questions.length === 0) {
-    return null
+    return null;
   }
 
   return (
@@ -2069,7 +2282,7 @@ function CustomInfoStep({
         />
       </CardContent>
     </Card>
-  )
+  );
 }
 
 // ---------- Medical Step Sub-component ----------
@@ -2087,21 +2300,21 @@ function MedicalStep({
   onComplete,
   onBack,
 }: {
-  isLoadingConfig: boolean
-  needsMedical: boolean
-  medicalConfig: MedicalFormConfig | null
-  medicalCustomQuestions: CustomMedicalQuestion[]
-  organizationId: string
-  athleteId: string
-  athleteName: string
-  email: string
-  onEnterStep: () => void
-  onComplete: () => void
-  onBack: () => void
+  isLoadingConfig: boolean;
+  needsMedical: boolean;
+  medicalConfig: MedicalFormConfig | null;
+  medicalCustomQuestions: CustomMedicalQuestion[];
+  organizationId: string;
+  athleteId: string;
+  athleteName: string;
+  email: string;
+  onEnterStep: () => void;
+  onComplete: () => void;
+  onBack: () => void;
 }) {
   useEffect(() => {
-    onEnterStep()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    onEnterStep();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isLoadingConfig) {
     return (
@@ -2111,7 +2324,7 @@ function MedicalStep({
           <p className="text-sm text-muted-foreground">Loading medical form...</p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   if (!needsMedical || !medicalConfig) {
@@ -2142,7 +2355,7 @@ function MedicalStep({
           </Button>
         </CardFooter>
       </Card>
-    )
+    );
   }
 
   return (
@@ -2157,5 +2370,5 @@ function MedicalStep({
       onComplete={onComplete}
       onBack={onBack}
     />
-  )
+  );
 }

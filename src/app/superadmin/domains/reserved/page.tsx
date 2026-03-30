@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   Table,
   TableBody,
@@ -9,12 +9,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/table";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -23,14 +23,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,93 +41,93 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { ArrowLeft, Plus, Trash2, Shield } from "lucide-react"
-import { toast } from "sonner"
+} from "@/components/ui/alert-dialog";
+import { ArrowLeft, Plus, Trash2, Shield } from "lucide-react";
+import { toast } from "sonner";
 
 type ReservedDomain = {
-  id: string
-  pattern: string
-  type: "EXACT" | "PREFIX"
-  reason: string | null
-  createdAt: string
-}
+  id: string;
+  pattern: string;
+  type: "EXACT" | "PREFIX";
+  reason: string | null;
+  createdAt: string;
+};
 
 export default function AdminReservedDomainsPage() {
-  const [reservedDomains, setReservedDomains] = useState<ReservedDomain[]>([])
-  const [loading, setLoading] = useState(true)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-  
+  const [reservedDomains, setReservedDomains] = useState<ReservedDomain[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
   // Form state
-  const [pattern, setPattern] = useState("")
-  const [type, setType] = useState<"EXACT" | "PREFIX">("EXACT")
-  const [reason, setReason] = useState("")
+  const [pattern, setPattern] = useState("");
+  const [type, setType] = useState<"EXACT" | "PREFIX">("EXACT");
+  const [reason, setReason] = useState("");
 
   const fetchReservedDomains = async () => {
     try {
-      const res = await fetch("/api/admin/reserved-domains")
+      const res = await fetch("/api/admin/reserved-domains");
       if (res.ok) {
-        const data = await res.json()
-        setReservedDomains(data)
+        const data = await res.json();
+        setReservedDomains(data);
       }
     } catch (error) {
-      console.error("Failed to fetch reserved domains:", error)
-      toast.error("Failed to load reserved domains")
+      console.error("Failed to fetch reserved domains:", error);
+      toast.error("Failed to load reserved domains");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchReservedDomains()
-  }, [])
+    fetchReservedDomains();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubmitting(true)
+    e.preventDefault();
+    setSubmitting(true);
 
     try {
       const res = await fetch("/api/admin/reserved-domains", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pattern: pattern.toLowerCase(), type, reason })
-      })
+        body: JSON.stringify({ pattern: pattern.toLowerCase(), type, reason }),
+      });
 
       if (res.ok) {
-        toast.success("Reserved domain added successfully")
-        setDialogOpen(false)
-        setPattern("")
-        setType("EXACT")
-        setReason("")
-        fetchReservedDomains()
+        toast.success("Reserved domain added successfully");
+        setDialogOpen(false);
+        setPattern("");
+        setType("EXACT");
+        setReason("");
+        fetchReservedDomains();
       } else {
-        const error = await res.json()
-        toast.error(error.error || "Failed to add reserved domain")
+        const error = await res.json();
+        toast.error(error.error || "Failed to add reserved domain");
       }
     } catch (error) {
-      toast.error("Failed to add reserved domain")
+      toast.error("Failed to add reserved domain");
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   const handleDelete = async (id: string) => {
     try {
       const res = await fetch(`/api/admin/reserved-domains/${id}`, {
-        method: "DELETE"
-      })
+        method: "DELETE",
+      });
 
       if (res.ok) {
-        toast.success("Reserved domain removed")
-        fetchReservedDomains()
+        toast.success("Reserved domain removed");
+        fetchReservedDomains();
       } else {
-        toast.error("Failed to remove reserved domain")
+        toast.error("Failed to remove reserved domain");
       }
     } catch (error) {
-      toast.error("Failed to remove reserved domain")
+      toast.error("Failed to remove reserved domain");
     }
-  }
+  };
 
   return (
     <div className="flex flex-col gap-6 p-4">
@@ -150,7 +150,7 @@ export default function AdminReservedDomainsPage() {
             Manage reserved domain patterns that organizations cannot use
           </p>
         </div>
-        
+
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -229,9 +229,7 @@ export default function AdminReservedDomainsPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Loading...
-            </div>
+            <div className="text-center py-8 text-muted-foreground">Loading...</div>
           ) : reservedDomains.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               No reserved domains configured. Add patterns that should be blocked.
@@ -259,16 +257,16 @@ export default function AdminReservedDomainsPage() {
                         {domain.type === "EXACT" ? "Exact" : "Prefix"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {domain.reason || "-"}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(domain.createdAt).toLocaleDateString()}
-                    </TableCell>
+                    <TableCell className="text-muted-foreground">{domain.reason || "-"}</TableCell>
+                    <TableCell>{new Date(domain.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>
@@ -276,8 +274,8 @@ export default function AdminReservedDomainsPage() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Remove Reserved Domain?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              This will allow organizations to use &quot;{domain.pattern}&quot; as a subdomain.
-                              This action cannot be undone.
+                              This will allow organizations to use &quot;{domain.pattern}&quot; as a
+                              subdomain. This action cannot be undone.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -300,5 +298,5 @@ export default function AdminReservedDomainsPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

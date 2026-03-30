@@ -94,7 +94,8 @@ export default function PageVisibilityPage() {
     {
       key: "showRegistration",
       label: "Programs",
-      description: "Allow visitors to browse and register for your programs online. This page displays all active programs with pricing, schedules, and registration forms.",
+      description:
+        "Allow visitors to browse and register for your programs online. This page displays all active programs with pricing, schedules, and registration forms.",
       icon: <ClipboardList className="h-5 w-5" />,
       defaultValue: true,
       manageLink: { href: "/dashboard/registrations/programs", label: "Manage Programs" },
@@ -102,7 +103,8 @@ export default function PageVisibilityPage() {
     {
       key: "showCalendar",
       label: "Calendar",
-      description: "Display your class and event schedule in an interactive calendar view. Visitors can see upcoming sessions, special events, and class times.",
+      description:
+        "Display your class and event schedule in an interactive calendar view. Visitors can see upcoming sessions, special events, and class times.",
       icon: <CalendarDays className="h-5 w-5" />,
       defaultValue: true,
       manageLink: { href: "/dashboard/registrations/programs", label: "Manage Programs" },
@@ -110,7 +112,8 @@ export default function PageVisibilityPage() {
     {
       key: "showContact",
       label: "Contact",
-      description: "Show a contact page with your organization's information and a contact form so visitors can reach out with questions or inquiries.",
+      description:
+        "Show a contact page with your organization's information and a contact form so visitors can reach out with questions or inquiries.",
       icon: <Mail className="h-5 w-5" />,
       defaultValue: true,
       manageLink: { href: "/dashboard/organization/overview", label: "Organization Overview" },
@@ -118,7 +121,8 @@ export default function PageVisibilityPage() {
     {
       key: "showLocations",
       label: "Facilities",
-      description: "Display your facilities with interactive maps, addresses, operating hours, and directions to help visitors find you.",
+      description:
+        "Display your facilities with interactive maps, addresses, operating hours, and directions to help visitors find you.",
       icon: <MapPin className="h-5 w-5" />,
       defaultValue: false,
       manageLink: { href: "/dashboard/organization/facilities", label: "Manage Facilities" },
@@ -126,7 +130,8 @@ export default function PageVisibilityPage() {
     {
       key: "showTeam",
       label: "Team",
-      description: "Showcase your coaching staff and team members with photos, bios, and credentials on your public website.",
+      description:
+        "Showcase your coaching staff and team members with photos, bios, and credentials on your public website.",
       icon: <Users className="h-5 w-5" />,
       defaultValue: false,
       manageLink: { href: "/dashboard/website/team", label: "Manage Team" },
@@ -134,7 +139,8 @@ export default function PageVisibilityPage() {
     {
       key: "showCompetitions",
       label: "Competitions",
-      description: "Display upcoming competitions and events with registration links. Visitors can browse events and sign up directly.",
+      description:
+        "Display upcoming competitions and events with registration links. Visitors can browse events and sign up directly.",
       icon: <Trophy className="h-5 w-5" />,
       defaultValue: false,
       manageLink: { href: "/dashboard/competitions", label: "Manage Competitions" },
@@ -143,7 +149,8 @@ export default function PageVisibilityPage() {
     {
       key: "showStore",
       label: "Store",
-      description: "Display your product store for merchandise, gear, and other items available for online purchase.",
+      description:
+        "Display your product store for merchandise, gear, and other items available for online purchase.",
       icon: <ShoppingBag className="h-5 w-5" />,
       defaultValue: false,
       manageLink: { href: "/dashboard/store/products", label: "Manage Products" },
@@ -151,9 +158,7 @@ export default function PageVisibilityPage() {
     },
   ];
 
-  const visiblePages = pages.filter(
-    (p) => !p.featureGated || isFeatureEnabled(p.featureGated)
-  );
+  const visiblePages = pages.filter((p) => !p.featureGated || isFeatureEnabled(p.featureGated));
 
   const enabledCount = visiblePages.filter((p) => {
     const val = config[p.key];
@@ -174,7 +179,8 @@ export default function PageVisibilityPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Page Visibility</h1>
           <p className="text-muted-foreground">
-            Control which pages are visible on your public website. {enabledCount} of {visiblePages.length} pages enabled.
+            Control which pages are visible on your public website. {enabledCount} of{" "}
+            {visiblePages.length} pages enabled.
           </p>
         </div>
         <Button onClick={handleSave} disabled={saving}>
@@ -192,16 +198,13 @@ export default function PageVisibilityPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {visiblePages.map((page) => {
           const isEnabled =
-            config[page.key] === true ||
-            (config[page.key] !== false && page.defaultValue);
+            config[page.key] === true || (config[page.key] !== false && page.defaultValue);
 
           return (
             <Card
               key={page.key}
               className={`relative transition-colors ${
-                isEnabled
-                  ? "border-primary/30 bg-primary/[0.02]"
-                  : "opacity-60"
+                isEnabled ? "border-primary/30 bg-primary/[0.02]" : "opacity-60"
               }`}
             >
               <CardHeader className="pb-3">
@@ -209,9 +212,7 @@ export default function PageVisibilityPage() {
                   <div className="flex items-center gap-3">
                     <div
                       className={`rounded-lg p-2 ${
-                        isEnabled
-                          ? "bg-primary/10 text-primary"
-                          : "bg-muted text-muted-foreground"
+                        isEnabled ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
                       }`}
                     >
                       {page.icon}
@@ -229,10 +230,7 @@ export default function PageVisibilityPage() {
                       )}
                     </div>
                   </div>
-                  <Switch
-                    checked={isEnabled}
-                    onCheckedChange={(c) => updateConfig(page.key, c)}
-                  />
+                  <Switch checked={isEnabled} onCheckedChange={(c) => updateConfig(page.key, c)} />
                 </div>
               </CardHeader>
               <CardContent>

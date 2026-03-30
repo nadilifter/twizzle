@@ -33,11 +33,7 @@ import Link from "@tiptap/extension-link";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
 import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -55,10 +51,7 @@ interface ChatBottombarProps {
   isMobile: boolean;
 }
 
-export default function ChatBottombar({
-  sendMessage,
-  isMobile,
-}: ChatBottombarProps) {
+export default function ChatBottombar({ sendMessage, isMobile }: ChatBottombarProps) {
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
 
@@ -152,13 +145,8 @@ export default function ChatBottombar({
 
   return (
     <div className="p-2 flex justify-between w-full items-center gap-2">
-      <input
-        type="file"
-        ref={fileInputRef}
-        className="hidden"
-        onChange={handleFileChange}
-      />
-      
+      <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
+
       <div className="flex flex-col w-full border rounded-md bg-background">
         {/* Toolbar */}
         <div className="flex items-center gap-1 p-1 border-b bg-muted/30 overflow-x-auto no-scrollbar">
@@ -190,7 +178,7 @@ export default function ChatBottombar({
           >
             <UnderlineIcon className="w-4 h-4" />
           </Button>
-           <Button
+          <Button
             variant="ghost"
             size="icon"
             onClick={() => editor.chain().focus().toggleStrike().run()}
@@ -208,36 +196,42 @@ export default function ChatBottombar({
           >
             <Code className="w-4 h-4" />
           </Button>
-          
+
           <div className="w-px h-4 bg-border mx-1 shrink-0" />
-          
+
           {/* Alignment */}
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => editor.chain().focus().setTextAlign('left').run()}
-            className={cn("h-8 w-8 shrink-0", editor.isActive({ textAlign: 'left' }) && "bg-muted")}
+            onClick={() => editor.chain().focus().setTextAlign("left").run()}
+            className={cn("h-8 w-8 shrink-0", editor.isActive({ textAlign: "left" }) && "bg-muted")}
           >
             <AlignLeft className="w-4 h-4" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => editor.chain().focus().setTextAlign('center').run()}
-            className={cn("h-8 w-8 shrink-0", editor.isActive({ textAlign: 'center' }) && "bg-muted")}
+            onClick={() => editor.chain().focus().setTextAlign("center").run()}
+            className={cn(
+              "h-8 w-8 shrink-0",
+              editor.isActive({ textAlign: "center" }) && "bg-muted"
+            )}
           >
             <AlignCenter className="w-4 h-4" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => editor.chain().focus().setTextAlign('right').run()}
-            className={cn("h-8 w-8 shrink-0", editor.isActive({ textAlign: 'right' }) && "bg-muted")}
+            onClick={() => editor.chain().focus().setTextAlign("right").run()}
+            className={cn(
+              "h-8 w-8 shrink-0",
+              editor.isActive({ textAlign: "right" }) && "bg-muted"
+            )}
           >
             <AlignRight className="w-4 h-4" />
           </Button>
 
-           <div className="w-px h-4 bg-border mx-1 shrink-0" />
+          <div className="w-px h-4 bg-border mx-1 shrink-0" />
 
           {/* Lists & Quotes */}
           <Button
@@ -256,7 +250,7 @@ export default function ChatBottombar({
           >
             <ListOrdered className="w-4 h-4" />
           </Button>
-           <Button
+          <Button
             variant="ghost"
             size="icon"
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
@@ -266,14 +260,17 @@ export default function ChatBottombar({
           </Button>
 
           <div className="w-px h-4 bg-border mx-1 shrink-0" />
-          
-          <Dialog open={isLinkDialogOpen} onOpenChange={(open) => {
-            setIsLinkDialogOpen(open);
-            if (open && editor) {
-              const previousUrl = editor.getAttributes("link").href;
-              setLinkUrl(previousUrl || "");
-            }
-          }}>
+
+          <Dialog
+            open={isLinkDialogOpen}
+            onOpenChange={(open) => {
+              setIsLinkDialogOpen(open);
+              if (open && editor) {
+                const previousUrl = editor.getAttributes("link").href;
+                setLinkUrl(previousUrl || "");
+              }
+            }}
+          >
             <DialogTrigger asChild>
               <Button
                 variant="ghost"
@@ -286,9 +283,7 @@ export default function ChatBottombar({
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
                 <DialogTitle>Insert Link</DialogTitle>
-                <DialogDescription>
-                  Enter the URL for the link.
-                </DialogDescription>
+                <DialogDescription>Enter the URL for the link.</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
@@ -305,15 +300,16 @@ export default function ChatBottombar({
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit" onClick={handleSaveLink}>Save changes</Button>
+                <Button type="submit" onClick={handleSaveLink}>
+                  Save changes
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
-
         </div>
 
         <div className="relative min-h-[60px] w-full">
-            <EditorContent editor={editor} />
+          <EditorContent editor={editor} />
         </div>
 
         <div className="flex items-center justify-between p-2">
@@ -326,7 +322,7 @@ export default function ChatBottombar({
             >
               <PlusCircle className="w-5 h-5" />
             </Button>
-            
+
             <Popover>
               <PopoverTrigger asChild>
                 <Button

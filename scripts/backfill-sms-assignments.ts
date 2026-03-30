@@ -17,7 +17,10 @@ const db = new PrismaClient();
 function getPhonePool(): string[] {
   const poolEnv = process.env.SMS_PHONE_POOL;
   if (poolEnv) {
-    const pool = poolEnv.split(",").map((n) => n.trim()).filter(Boolean);
+    const pool = poolEnv
+      .split(",")
+      .map((n) => n.trim())
+      .filter(Boolean);
     if (pool.length > 0) return pool;
   }
   const fallback = process.env.TWILIO_PHONE_NUMBER;

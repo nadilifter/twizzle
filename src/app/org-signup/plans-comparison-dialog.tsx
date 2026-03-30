@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Check, X } from "lucide-react"
+import * as React from "react";
+import { Check, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -17,48 +17,48 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import {
   FEATURE_KEYS,
   FEATURE_LABELS,
   type FeatureToggles,
   parseFeatureToggles,
-} from "@/lib/feature-toggles"
+} from "@/lib/feature-toggles";
 
 interface Plan {
-  id: string
-  name: string
-  slug: string
-  description: string | null
-  monthlyPrice: string
-  yearlyPrice: string | null
-  transactionFee: string
-  perTransactionFee: string
-  features: string[]
-  featureToggles: Record<string, boolean>
-  isPopular: boolean
-  maxAthletes: number | null
-  maxUsers: number | null
-  maxPrograms: number | null
-  maxEvents: number | null
-  smsIncluded: number | null
-  smsOverageRate: string | null
-  emailIncluded: number | null
-  emailOverageRate: string | null
-  maxStorageMB: number | null
-  maxMembershipTypes: number | null
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  monthlyPrice: string;
+  yearlyPrice: string | null;
+  transactionFee: string;
+  perTransactionFee: string;
+  features: string[];
+  featureToggles: Record<string, boolean>;
+  isPopular: boolean;
+  maxAthletes: number | null;
+  maxUsers: number | null;
+  maxPrograms: number | null;
+  maxEvents: number | null;
+  smsIncluded: number | null;
+  smsOverageRate: string | null;
+  emailIncluded: number | null;
+  emailOverageRate: string | null;
+  maxStorageMB: number | null;
+  maxMembershipTypes: number | null;
 }
 
 interface PlansComparisonDialogProps {
-  plans: Plan[]
-  selectedPlanId: string
-  onSelectPlan: (planId: string) => void
-  children: React.ReactNode
+  plans: Plan[];
+  selectedPlanId: string;
+  onSelectPlan: (planId: string) => void;
+  children: React.ReactNode;
 }
 
 function formatCurrency(amount: string | number) {
@@ -66,7 +66,7 @@ function formatCurrency(amount: string | number) {
     style: "currency",
     currency: "USD",
     minimumFractionDigits: 0,
-  }).format(Number(amount))
+  }).format(Number(amount));
 }
 
 function formatRate(amount: string | number) {
@@ -75,21 +75,21 @@ function formatRate(amount: string | number) {
     currency: "USD",
     minimumFractionDigits: 2,
     maximumFractionDigits: 4,
-  }).format(Number(amount))
+  }).format(Number(amount));
 }
 
 function formatPercent(decimal: string | number) {
-  return `${(Number(decimal) * 100).toFixed(1)}%`
+  return `${(Number(decimal) * 100).toFixed(1)}%`;
 }
 
 function formatStorage(mb: number | null) {
-  if (mb === null) return "Unlimited"
-  if (mb >= 1000) return `${mb / 1000} GB`
-  return `${mb} MB`
+  if (mb === null) return "Unlimited";
+  if (mb >= 1000) return `${mb / 1000} GB`;
+  return `${mb} MB`;
 }
 
 function formatLimit(value: number | null) {
-  return value === null ? "Unlimited" : value.toLocaleString()
+  return value === null ? "Unlimited" : value.toLocaleString();
 }
 
 // --- Desktop table helpers ---
@@ -104,7 +104,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
         {children}
       </TableCell>
     </TableRow>
-  )
+  );
 }
 
 function FeatureCheck({ enabled }: { enabled: boolean }) {
@@ -112,33 +112,21 @@ function FeatureCheck({ enabled }: { enabled: boolean }) {
     <Check className="h-4 w-4 text-green-500 mx-auto" />
   ) : (
     <X className="h-4 w-4 text-muted-foreground/40 mx-auto" />
-  )
+  );
 }
 
 // --- Mobile card helpers ---
 
-function DetailRow({
-  label,
-  value,
-}: {
-  label: string
-  value: React.ReactNode
-}) {
+function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between py-1.5">
       <span className="text-sm text-muted-foreground">{label}</span>
       <span className="text-sm font-medium text-right">{value}</span>
     </div>
-  )
+  );
 }
 
-function MobileFeatureRow({
-  label,
-  enabled,
-}: {
-  label: string
-  enabled: boolean
-}) {
+function MobileFeatureRow({ label, enabled }: { label: string; enabled: boolean }) {
   return (
     <div className="flex items-center justify-between py-1.5">
       <span className="text-sm text-muted-foreground">{label}</span>
@@ -148,7 +136,7 @@ function MobileFeatureRow({
         <X className="h-4 w-4 text-muted-foreground/40" />
       )}
     </div>
-  )
+  );
 }
 
 function MobileSectionLabel({ children }: { children: React.ReactNode }) {
@@ -156,7 +144,7 @@ function MobileSectionLabel({ children }: { children: React.ReactNode }) {
     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pt-3 pb-1">
       {children}
     </p>
-  )
+  );
 }
 
 function MobilePlanCard({
@@ -165,29 +153,18 @@ function MobilePlanCard({
   isSelected,
   onSelect,
 }: {
-  plan: Plan
-  toggles: FeatureToggles
-  isSelected: boolean
-  onSelect: () => void
+  plan: Plan;
+  toggles: FeatureToggles;
+  isSelected: boolean;
+  onSelect: () => void;
 }) {
   return (
     <div className="space-y-1">
       <MobileSectionLabel>Pricing</MobileSectionLabel>
       <DetailRow label="Monthly" value={formatCurrency(plan.monthlyPrice)} />
-      <DetailRow
-        label="Yearly"
-        value={
-          plan.yearlyPrice ? formatCurrency(plan.yearlyPrice) : "—"
-        }
-      />
-      <DetailRow
-        label="Transaction fee"
-        value={formatPercent(plan.transactionFee)}
-      />
-      <DetailRow
-        label="Per-transaction fee"
-        value={formatRate(plan.perTransactionFee)}
-      />
+      <DetailRow label="Yearly" value={plan.yearlyPrice ? formatCurrency(plan.yearlyPrice) : "—"} />
+      <DetailRow label="Transaction fee" value={formatPercent(plan.transactionFee)} />
+      <DetailRow label="Per-transaction fee" value={formatRate(plan.perTransactionFee)} />
 
       <Separator />
       <MobileSectionLabel>Capacity Limits</MobileSectionLabel>
@@ -196,10 +173,7 @@ function MobilePlanCard({
       <DetailRow label="Programs" value={formatLimit(plan.maxPrograms)} />
       <DetailRow label="Events" value={formatLimit(plan.maxEvents)} />
       <DetailRow label="Storage" value={formatStorage(plan.maxStorageMB)} />
-      <DetailRow
-        label="Membership types"
-        value={formatLimit(plan.maxMembershipTypes)}
-      />
+      <DetailRow label="Membership types" value={formatLimit(plan.maxMembershipTypes)} />
 
       <Separator />
       <MobileSectionLabel>Usage Limits</MobileSectionLabel>
@@ -209,48 +183,30 @@ function MobilePlanCard({
       />
       <DetailRow
         label="SMS overage"
-        value={
-          plan.smsOverageRate ? `${formatRate(plan.smsOverageRate)}/msg` : "—"
-        }
+        value={plan.smsOverageRate ? `${formatRate(plan.smsOverageRate)}/msg` : "—"}
       />
       <DetailRow
         label="Emails / month"
-        value={
-          plan.emailIncluded !== null
-            ? plan.emailIncluded.toLocaleString()
-            : "—"
-        }
+        value={plan.emailIncluded !== null ? plan.emailIncluded.toLocaleString() : "—"}
       />
       <DetailRow
         label="Email overage"
-        value={
-          plan.emailOverageRate
-            ? `${formatRate(plan.emailOverageRate)}/email`
-            : "—"
-        }
+        value={plan.emailOverageRate ? `${formatRate(plan.emailOverageRate)}/email` : "—"}
       />
 
       <Separator />
       <MobileSectionLabel>Features</MobileSectionLabel>
       {FEATURE_KEYS.map((key) => (
-        <MobileFeatureRow
-          key={key}
-          label={FEATURE_LABELS[key]}
-          enabled={toggles[key]}
-        />
+        <MobileFeatureRow key={key} label={FEATURE_LABELS[key]} enabled={toggles[key]} />
       ))}
 
       <div className="pt-4">
-        <Button
-          className="w-full"
-          variant={isSelected ? "default" : "outline"}
-          onClick={onSelect}
-        >
+        <Button className="w-full" variant={isSelected ? "default" : "outline"} onClick={onSelect}>
           {isSelected ? "Selected" : "Select Plan"}
         </Button>
       </div>
     </div>
-  )
+  );
 }
 
 // --- Main component ---
@@ -261,20 +217,19 @@ export function PlansComparisonDialog({
   onSelectPlan,
   children,
 }: PlansComparisonDialogProps) {
-  const [open, setOpen] = React.useState(false)
+  const [open, setOpen] = React.useState(false);
 
   const handleSelect = (planId: string) => {
-    onSelectPlan(planId)
-    setOpen(false)
-  }
+    onSelectPlan(planId);
+    setOpen(false);
+  };
 
   const parsedToggles = React.useMemo(
     () => plans.map((p) => parseFeatureToggles(p.featureToggles)),
     [plans]
-  )
+  );
 
-  const defaultTab =
-    plans.find((p) => p.id === selectedPlanId)?.slug ?? plans[0]?.slug ?? ""
+  const defaultTab = plans.find((p) => p.id === selectedPlanId)?.slug ?? plans[0]?.slug ?? "";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -283,8 +238,7 @@ export function PlansComparisonDialog({
         <DialogHeader className="px-6 pt-6 pb-2">
           <DialogTitle>Compare Plans</DialogTitle>
           <DialogDescription>
-            See exactly what each plan includes. Select the plan that fits your
-            organization.
+            See exactly what each plan includes. Select the plan that fits your organization.
           </DialogDescription>
         </DialogHeader>
 
@@ -293,11 +247,7 @@ export function PlansComparisonDialog({
           <Tabs defaultValue={defaultTab}>
             <TabsList className="w-full">
               {plans.map((plan) => (
-                <TabsTrigger
-                  key={plan.slug}
-                  value={plan.slug}
-                  className="flex-1 text-xs"
-                >
+                <TabsTrigger key={plan.slug} value={plan.slug} className="flex-1 text-xs">
                   {plan.name}
                 </TabsTrigger>
               ))}
@@ -309,21 +259,15 @@ export function PlansComparisonDialog({
                   <div className="flex items-center gap-2">
                     <span className="text-lg font-semibold">{plan.name}</span>
                     {plan.isPopular && (
-                      <Badge className="bg-primary text-[10px] px-1.5 py-0">
-                        Popular
-                      </Badge>
+                      <Badge className="bg-primary text-[10px] px-1.5 py-0">Popular</Badge>
                     )}
                   </div>
                   {plan.description && (
-                    <p className="text-sm text-muted-foreground">
-                      {plan.description}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{plan.description}</p>
                   )}
                   <div className="text-2xl font-bold">
                     {formatCurrency(plan.monthlyPrice)}
-                    <span className="text-sm font-normal text-muted-foreground">
-                      /mo
-                    </span>
+                    <span className="text-sm font-normal text-muted-foreground">/mo</span>
                   </div>
                 </div>
 
@@ -359,16 +303,12 @@ export function PlansComparisonDialog({
                             {plan.name}
                           </span>
                           {plan.isPopular && (
-                            <Badge className="bg-primary text-[10px] px-1.5 py-0">
-                              Popular
-                            </Badge>
+                            <Badge className="bg-primary text-[10px] px-1.5 py-0">Popular</Badge>
                           )}
                         </div>
                         <div className="text-lg font-bold text-foreground">
                           {formatCurrency(plan.monthlyPrice)}
-                          <span className="text-xs font-normal text-muted-foreground">
-                            /mo
-                          </span>
+                          <span className="text-xs font-normal text-muted-foreground">/mo</span>
                         </div>
                         {plan.yearlyPrice && (
                           <span className="text-xs text-muted-foreground">
@@ -377,15 +317,11 @@ export function PlansComparisonDialog({
                         )}
                         <Button
                           size="sm"
-                          variant={
-                            selectedPlanId === plan.id ? "default" : "outline"
-                          }
+                          variant={selectedPlanId === plan.id ? "default" : "outline"}
                           className="mt-1 text-xs h-7"
                           onClick={() => handleSelect(plan.id)}
                         >
-                          {selectedPlanId === plan.id
-                            ? "Selected"
-                            : "Select Plan"}
+                          {selectedPlanId === plan.id ? "Selected" : "Select Plan"}
                         </Button>
                       </div>
                     </TableHead>
@@ -402,10 +338,7 @@ export function PlansComparisonDialog({
                   {plans.map((plan) => (
                     <TableCell
                       key={plan.id}
-                      className={cn(
-                        "text-center",
-                        selectedPlanId === plan.id && "bg-primary/5"
-                      )}
+                      className={cn("text-center", selectedPlanId === plan.id && "bg-primary/5")}
                     >
                       {formatCurrency(plan.monthlyPrice)}
                     </TableCell>
@@ -418,14 +351,9 @@ export function PlansComparisonDialog({
                   {plans.map((plan) => (
                     <TableCell
                       key={plan.id}
-                      className={cn(
-                        "text-center",
-                        selectedPlanId === plan.id && "bg-primary/5"
-                      )}
+                      className={cn("text-center", selectedPlanId === plan.id && "bg-primary/5")}
                     >
-                      {plan.yearlyPrice
-                        ? formatCurrency(plan.yearlyPrice)
-                        : "—"}
+                      {plan.yearlyPrice ? formatCurrency(plan.yearlyPrice) : "—"}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -436,10 +364,7 @@ export function PlansComparisonDialog({
                   {plans.map((plan) => (
                     <TableCell
                       key={plan.id}
-                      className={cn(
-                        "text-center",
-                        selectedPlanId === plan.id && "bg-primary/5"
-                      )}
+                      className={cn("text-center", selectedPlanId === plan.id && "bg-primary/5")}
                     >
                       {formatPercent(plan.transactionFee)}
                     </TableCell>
@@ -452,10 +377,7 @@ export function PlansComparisonDialog({
                   {plans.map((plan) => (
                     <TableCell
                       key={plan.id}
-                      className={cn(
-                        "text-center",
-                        selectedPlanId === plan.id && "bg-primary/5"
-                      )}
+                      className={cn("text-center", selectedPlanId === plan.id && "bg-primary/5")}
                     >
                       {formatRate(plan.perTransactionFee)}
                     </TableCell>
@@ -470,10 +392,7 @@ export function PlansComparisonDialog({
                   {plans.map((plan) => (
                     <TableCell
                       key={plan.id}
-                      className={cn(
-                        "text-center",
-                        selectedPlanId === plan.id && "bg-primary/5"
-                      )}
+                      className={cn("text-center", selectedPlanId === plan.id && "bg-primary/5")}
                     >
                       {formatLimit(plan.maxAthletes)}
                     </TableCell>
@@ -486,10 +405,7 @@ export function PlansComparisonDialog({
                   {plans.map((plan) => (
                     <TableCell
                       key={plan.id}
-                      className={cn(
-                        "text-center",
-                        selectedPlanId === plan.id && "bg-primary/5"
-                      )}
+                      className={cn("text-center", selectedPlanId === plan.id && "bg-primary/5")}
                     >
                       {formatLimit(plan.maxUsers)}
                     </TableCell>
@@ -502,42 +418,29 @@ export function PlansComparisonDialog({
                   {plans.map((plan) => (
                     <TableCell
                       key={plan.id}
-                      className={cn(
-                        "text-center",
-                        selectedPlanId === plan.id && "bg-primary/5"
-                      )}
+                      className={cn("text-center", selectedPlanId === plan.id && "bg-primary/5")}
                     >
                       {formatLimit(plan.maxPrograms)}
                     </TableCell>
                   ))}
                 </TableRow>
                 <TableRow>
-                  <TableCell className="font-medium sticky left-0 bg-background">
-                    Events
-                  </TableCell>
+                  <TableCell className="font-medium sticky left-0 bg-background">Events</TableCell>
                   {plans.map((plan) => (
                     <TableCell
                       key={plan.id}
-                      className={cn(
-                        "text-center",
-                        selectedPlanId === plan.id && "bg-primary/5"
-                      )}
+                      className={cn("text-center", selectedPlanId === plan.id && "bg-primary/5")}
                     >
                       {formatLimit(plan.maxEvents)}
                     </TableCell>
                   ))}
                 </TableRow>
                 <TableRow>
-                  <TableCell className="font-medium sticky left-0 bg-background">
-                    Storage
-                  </TableCell>
+                  <TableCell className="font-medium sticky left-0 bg-background">Storage</TableCell>
                   {plans.map((plan) => (
                     <TableCell
                       key={plan.id}
-                      className={cn(
-                        "text-center",
-                        selectedPlanId === plan.id && "bg-primary/5"
-                      )}
+                      className={cn("text-center", selectedPlanId === plan.id && "bg-primary/5")}
                     >
                       {formatStorage(plan.maxStorageMB)}
                     </TableCell>
@@ -550,10 +453,7 @@ export function PlansComparisonDialog({
                   {plans.map((plan) => (
                     <TableCell
                       key={plan.id}
-                      className={cn(
-                        "text-center",
-                        selectedPlanId === plan.id && "bg-primary/5"
-                      )}
+                      className={cn("text-center", selectedPlanId === plan.id && "bg-primary/5")}
                     >
                       {formatLimit(plan.maxMembershipTypes)}
                     </TableCell>
@@ -568,14 +468,9 @@ export function PlansComparisonDialog({
                   {plans.map((plan) => (
                     <TableCell
                       key={plan.id}
-                      className={cn(
-                        "text-center",
-                        selectedPlanId === plan.id && "bg-primary/5"
-                      )}
+                      className={cn("text-center", selectedPlanId === plan.id && "bg-primary/5")}
                     >
-                      {plan.smsIncluded !== null
-                        ? plan.smsIncluded.toLocaleString()
-                        : "—"}
+                      {plan.smsIncluded !== null ? plan.smsIncluded.toLocaleString() : "—"}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -586,14 +481,9 @@ export function PlansComparisonDialog({
                   {plans.map((plan) => (
                     <TableCell
                       key={plan.id}
-                      className={cn(
-                        "text-center",
-                        selectedPlanId === plan.id && "bg-primary/5"
-                      )}
+                      className={cn("text-center", selectedPlanId === plan.id && "bg-primary/5")}
                     >
-                      {plan.smsOverageRate
-                        ? `${formatRate(plan.smsOverageRate)}/msg`
-                        : "—"}
+                      {plan.smsOverageRate ? `${formatRate(plan.smsOverageRate)}/msg` : "—"}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -604,14 +494,9 @@ export function PlansComparisonDialog({
                   {plans.map((plan) => (
                     <TableCell
                       key={plan.id}
-                      className={cn(
-                        "text-center",
-                        selectedPlanId === plan.id && "bg-primary/5"
-                      )}
+                      className={cn("text-center", selectedPlanId === plan.id && "bg-primary/5")}
                     >
-                      {plan.emailIncluded !== null
-                        ? plan.emailIncluded.toLocaleString()
-                        : "—"}
+                      {plan.emailIncluded !== null ? plan.emailIncluded.toLocaleString() : "—"}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -622,14 +507,9 @@ export function PlansComparisonDialog({
                   {plans.map((plan) => (
                     <TableCell
                       key={plan.id}
-                      className={cn(
-                        "text-center",
-                        selectedPlanId === plan.id && "bg-primary/5"
-                      )}
+                      className={cn("text-center", selectedPlanId === plan.id && "bg-primary/5")}
                     >
-                      {plan.emailOverageRate
-                        ? `${formatRate(plan.emailOverageRate)}/email`
-                        : "—"}
+                      {plan.emailOverageRate ? `${formatRate(plan.emailOverageRate)}/email` : "—"}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -643,10 +523,7 @@ export function PlansComparisonDialog({
                     {plans.map((plan, i) => (
                       <TableCell
                         key={plan.id}
-                        className={cn(
-                          "text-center",
-                          selectedPlanId === plan.id && "bg-primary/5"
-                        )}
+                        className={cn("text-center", selectedPlanId === plan.id && "bg-primary/5")}
                       >
                         <FeatureCheck enabled={parsedToggles[i][key]} />
                       </TableCell>
@@ -659,5 +536,5 @@ export function PlansComparisonDialog({
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

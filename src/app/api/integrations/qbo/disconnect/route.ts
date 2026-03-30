@@ -35,9 +35,6 @@ export async function POST() {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[QBO Disconnect] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to disconnect QuickBooks" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to disconnect QuickBooks" }, { status: 500 });
   }
 }

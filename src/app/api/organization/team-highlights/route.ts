@@ -88,9 +88,7 @@ export async function PUT(request: NextRequest) {
       await tx.teamMemberHighlight.deleteMany({
         where: {
           organizationId,
-          ...(memberIds.length > 0
-            ? { memberId: { notIn: memberIds } }
-            : {}),
+          ...(memberIds.length > 0 ? { memberId: { notIn: memberIds } } : {}),
         },
       });
 

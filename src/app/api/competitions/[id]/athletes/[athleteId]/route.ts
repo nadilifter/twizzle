@@ -1,33 +1,33 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getAuthSession } from "@/lib/auth"
-import { checkFeatureGate } from "@/lib/feature-resolver"
-import { db } from "@/lib/db"
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthSession } from "@/lib/auth";
+import { checkFeatureGate } from "@/lib/feature-resolver";
+import { db } from "@/lib/db";
 import {
   formatSeedMarkForDisplay,
   type SeedMarkFields,
   type ResultType,
-} from "@/lib/athletics-formats"
+} from "@/lib/athletics-formats";
 
 function getCategoryLabel(category: {
-  sportEvent?: { name: string; code: string } | null
-  ageCategory?: { name: string; code: string } | null
-  individualEntry?: { name: string } | null
+  sportEvent?: { name: string; code: string } | null;
+  ageCategory?: { name: string; code: string } | null;
+  individualEntry?: { name: string } | null;
   combinationEntry?: {
-    rowValue: { name: string }
-    colValue: { name: string }
-  } | null
-  id: string
+    rowValue: { name: string };
+    colValue: { name: string };
+  } | null;
+  id: string;
 }): string {
   if (category.ageCategory && category.sportEvent) {
-    return `${category.ageCategory.code} ${category.sportEvent.name}`
+    return `${category.ageCategory.code} ${category.sportEvent.name}`;
   }
-  if (category.sportEvent) return category.sportEvent.name
-  if (category.ageCategory) return category.ageCategory.name
-  if (category.individualEntry?.name) return category.individualEntry.name
+  if (category.sportEvent) return category.sportEvent.name;
+  if (category.ageCategory) return category.ageCategory.name;
+  if (category.individualEntry?.name) return category.individualEntry.name;
   if (category.combinationEntry) {
-    return `${category.combinationEntry.rowValue.name} - ${category.combinationEntry.colValue.name}`
+    return `${category.combinationEntry.rowValue.name} - ${category.combinationEntry.colValue.name}`;
   }
-  return `Category ${category.id.slice(-4)}`
+  return `Category ${category.id.slice(-4)}`;
 }
 
 /**
@@ -39,20 +39,20 @@ export async function GET(
   { params }: { params: Promise<{ id: string; athleteId: string }> }
 ) {
   try {
-    const session = await getAuthSession()
+    const session = await getAuthSession();
     if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const organizationId = session.user.organizationId
+    const organizationId = session.user.organizationId;
     if (!organizationId) {
-      return NextResponse.json({ error: "No organization" }, { status: 400 })
+      return NextResponse.json({ error: "No organization" }, { status: 400 });
     }
 
-    const gateResponse = await checkFeatureGate(organizationId, "competitions")
-    if (gateResponse) return gateResponse
+    const gateResponse = await checkFeatureGate(organizationId, "competitions");
+    if (gateResponse) return gateResponse;
 
-    const { id, athleteId } = await params
+    const { id, athleteId } = await params;
 
     const competition = await db.competition.findFirst({
       where: { id, organizationId },
@@ -67,9 +67,9 @@ export async function GET(
         waiverRequirementIds: true,
         hasMedicalRequirement: true,
       },
-    })
+    });
     if (!competition) {
-      return NextResponse.json({ error: "Competition not found" }, { status: 404 })
+      return NextResponse.json({ error: "Competition not found" }, { status: 404 });
     }
 
     const athlete = await db.athlete.findFirst({
@@ -93,20 +93,20 @@ export async function GET(
           orderBy: { isPrimary: "desc" },
         },
       },
-    })
+    });
     if (!athlete) {
-      return NextResponse.json({ error: "Athlete not found" }, { status: 404 })
+      return NextResponse.json({ error: "Athlete not found" }, { status: 404 });
     }
 
     // Resolve level name from org-specific data
     const orgAthleteLevel = athlete.organizationAthletes[0]?.level ?? null;
-    let level: { id: string; name: string } | null = null
+    let level: { id: string; name: string } | null = null;
     if (orgAthleteLevel && orgAthleteLevel !== "Unassigned") {
       const levelRecord = await db.level.findFirst({
         where: { id: orgAthleteLevel, organizationId },
         select: { id: true, name: true },
-      })
-      level = levelRecord ?? { id: orgAthleteLevel, name: orgAthleteLevel }
+      });
+      level = levelRecord ?? { id: orgAthleteLevel, name: orgAthleteLevel };
     }
 
     const guardians = athlete.guardians
@@ -118,7 +118,7 @@ export async function GET(
         phone: g.user!.phone,
         relationship: g.relationship,
         isPrimary: g.isPrimary,
-      }))
+      }));
 
     // Fetch entries for this athlete in this competition
     const entries = await db.competitionEntry.findMany({
@@ -134,7 +134,7 @@ export async function GET(
         },
       },
       orderBy: { createdAt: "asc" },
-    })
+    });
 
     const formattedEntries = entries.map((entry) => ({
       id: entry.id,
@@ -155,59 +155,59 @@ export async function GET(
           seedPoints: entry.seedPoints,
           seedPlacement: entry.seedPlacement,
         } as SeedMarkFields,
-        (entry.category.resultType ?? "TIME") as ResultType,
+        (entry.category.resultType ?? "TIME") as ResultType
       ),
       seedMarkStatus: entry.seedMarkStatus,
-    }))
+    }));
 
     // Build compliance data
     const compliance: {
       membership: {
-        required: boolean
-        status: string
-        memberships: { name: string; groupName: string; status: string }[]
-      }
+        required: boolean;
+        status: string;
+        memberships: { name: string; groupName: string; status: string }[];
+      };
       waivers: {
-        required: boolean
-        status: string
+        required: boolean;
+        status: string;
         waivers: {
-          id: string
-          title: string
-          signed: boolean
-          signedAt: string | null
+          id: string;
+          title: string;
+          signed: boolean;
+          signedAt: string | null;
           pages: {
-            id: string
-            pageNumber: number
-            title: string | null
-            content: string
+            id: string;
+            pageNumber: number;
+            title: string | null;
+            content: string;
             signature: {
-              signatureData: string
-              signedByName: string
-              signedByEmail: string
-              signedAt: string
-            } | null
-          }[]
-        }[]
-      }
+              signatureData: string;
+              signedByName: string;
+              signedByEmail: string;
+              signedAt: string;
+            } | null;
+          }[];
+        }[];
+      };
       medical: {
-        required: boolean
-        status: string
-        info: Record<string, unknown> | null
-      }
+        required: boolean;
+        status: string;
+        info: Record<string, unknown> | null;
+      };
     } = {
       membership: { required: false, status: "not_required", memberships: [] },
       waivers: { required: false, status: "not_required", waivers: [] },
       medical: { required: false, status: "not_required", info: null },
-    }
+    };
 
     // Membership compliance
     if (competition.hasMembershipRestriction && competition.membershipRequirementIds.length > 0) {
-      compliance.membership.required = true
+      compliance.membership.required = true;
 
       const requiredInstances = await db.membershipInstance.findMany({
         where: { id: { in: competition.membershipRequirementIds }, group: { organizationId } },
         select: { id: true, name: true, group: { select: { name: true } } },
-      })
+      });
 
       const athleteMemberships = await db.athleteMembership.findMany({
         where: {
@@ -215,28 +215,28 @@ export async function GET(
           membershipInstanceId: { in: competition.membershipRequirementIds },
         },
         select: { membershipInstanceId: true, status: true },
-      })
+      });
       const membershipStatusMap = new Map(
         athleteMemberships.map((m) => [m.membershipInstanceId, m.status])
-      )
+      );
 
       const membershipDetails = requiredInstances.map((inst) => {
-        const status = membershipStatusMap.get(inst.id)
+        const status = membershipStatusMap.get(inst.id);
         return {
           name: inst.name,
           groupName: inst.group.name,
           status: status === "ACTIVE" ? "active" : status ? String(status).toLowerCase() : "none",
-        }
-      })
+        };
+      });
 
-      const hasActive = athleteMemberships.some((m) => m.status === "ACTIVE")
-      compliance.membership.status = hasActive ? "verified" : "missing"
-      compliance.membership.memberships = membershipDetails
+      const hasActive = athleteMemberships.some((m) => m.status === "ACTIVE");
+      compliance.membership.status = hasActive ? "verified" : "missing";
+      compliance.membership.memberships = membershipDetails;
     }
 
     // Waiver compliance
     if (competition.hasWaiverRestriction && competition.waiverRequirementIds.length > 0) {
-      compliance.waivers.required = true
+      compliance.waivers.required = true;
 
       const requiredWaivers = await db.waiver.findMany({
         where: { id: { in: competition.waiverRequirementIds }, organizationId },
@@ -246,7 +246,7 @@ export async function GET(
             select: { id: true, pageNumber: true, title: true, content: true },
           },
         },
-      })
+      });
 
       const acceptances = await db.waiverAcceptance.findMany({
         where: {
@@ -254,10 +254,8 @@ export async function GET(
           waiverId: { in: competition.waiverRequirementIds },
         },
         select: { waiverId: true, completedAt: true },
-      })
-      const acceptanceMap = new Map(
-        acceptances.map((a) => [a.waiverId, a.completedAt])
-      )
+      });
+      const acceptanceMap = new Map(acceptances.map((a) => [a.waiverId, a.completedAt]));
 
       // Fetch all signatures for these waivers for this athlete
       const signatures = await db.waiverSignature.findMany({
@@ -274,20 +272,18 @@ export async function GET(
           signedByEmail: true,
           signedAt: true,
         },
-      })
-      const signaturesByPage = new Map(
-        signatures.map((s) => [s.waiverPageId, s])
-      )
+      });
+      const signaturesByPage = new Map(signatures.map((s) => [s.waiverPageId, s]));
 
       const waiverDetails = requiredWaivers.map((w) => {
-        const completedAt = acceptanceMap.get(w.id)
+        const completedAt = acceptanceMap.get(w.id);
         return {
           id: w.id,
           title: w.title,
           signed: !!completedAt,
           signedAt: completedAt?.toISOString() ?? null,
           pages: w.pages.map((p) => {
-            const sig = signaturesByPage.get(p.id)
+            const sig = signaturesByPage.get(p.id);
             return {
               id: p.id,
               pageNumber: p.pageNumber,
@@ -301,19 +297,19 @@ export async function GET(
                     signedAt: sig.signedAt.toISOString(),
                   }
                 : null,
-            }
+            };
           }),
-        }
-      })
+        };
+      });
 
-      const allSigned = waiverDetails.every((w) => w.signed)
-      compliance.waivers.status = allSigned ? "signed" : "unsigned"
-      compliance.waivers.waivers = waiverDetails
+      const allSigned = waiverDetails.every((w) => w.signed);
+      compliance.waivers.status = allSigned ? "signed" : "unsigned";
+      compliance.waivers.waivers = waiverDetails;
     }
 
     // Medical compliance
     if (competition.hasMedicalRequirement) {
-      compliance.medical.required = true
+      compliance.medical.required = true;
 
       const medicalInfo = await db.athleteMedicalInfo.findUnique({
         where: { athleteId },
@@ -322,9 +318,9 @@ export async function GET(
             include: { question: true },
           },
         },
-      })
+      });
 
-      compliance.medical.status = medicalInfo ? "complete" : "incomplete"
+      compliance.medical.status = medicalInfo ? "complete" : "incomplete";
       compliance.medical.info = medicalInfo
         ? {
             id: medicalInfo.id,
@@ -349,7 +345,7 @@ export async function GET(
               updatedAt: r.updatedAt.toISOString(),
             })),
           }
-        : null
+        : null;
     }
 
     return NextResponse.json({
@@ -371,12 +367,9 @@ export async function GET(
         hasWaiverRestriction: competition.hasWaiverRestriction,
         hasMedicalRequirement: competition.hasMedicalRequirement,
       },
-    })
+    });
   } catch (error) {
-    console.error("Error fetching competition athlete detail:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch athlete details" },
-      { status: 500 }
-    )
+    console.error("Error fetching competition athlete detail:", error);
+    return NextResponse.json({ error: "Failed to fetch athlete details" }, { status: 500 });
   }
 }

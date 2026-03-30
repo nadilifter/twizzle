@@ -61,9 +61,7 @@ export async function GET(request: NextRequest) {
     const allProgramIds = Array.from(
       new Set([
         ...programStaffAssignments.map((a) => a.programId),
-        ...coachEventPrograms
-          .map((e) => e.programId)
-          .filter((id): id is string => id !== null),
+        ...coachEventPrograms.map((e) => e.programId).filter((id): id is string => id !== null),
       ])
     );
 
@@ -232,9 +230,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching coach overview:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch overview data" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch overview data" }, { status: 500 });
   }
 }

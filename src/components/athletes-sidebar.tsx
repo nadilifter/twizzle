@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { usePathname } from "next/navigation"
+import * as React from "react";
+import { usePathname } from "next/navigation";
 import {
   Building2,
   CalendarDays,
@@ -14,10 +14,10 @@ import {
   Stethoscope,
   Users,
   Wallet,
-} from "lucide-react"
-import { useSession } from "next-auth/react"
+} from "lucide-react";
+import { useSession } from "next-auth/react";
 
-import { NavUser } from "@/components/nav-user"
+import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
   SidebarContent,
@@ -31,45 +31,47 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-} from "@/components/ui/sidebar"
-import { Skeleton } from "@/components/ui/skeleton"
+} from "@/components/ui/sidebar";
+import { Skeleton } from "@/components/ui/skeleton";
 
-let chatUnreadCache: { count: number; fetchedAt: number } | null = null
-const CHAT_UNREAD_CACHE_MS = 60_000
-const CHAT_URL = "/athletes/chat"
+let chatUnreadCache: { count: number; fetchedAt: number } | null = null;
+const CHAT_UNREAD_CACHE_MS = 60_000;
+const CHAT_URL = "/athletes/chat";
 
 function ChatUnreadBadge() {
   const [count, setCount] = React.useState(() =>
     chatUnreadCache && Date.now() - chatUnreadCache.fetchedAt < CHAT_UNREAD_CACHE_MS
       ? chatUnreadCache.count
       : 0
-  )
+  );
 
   React.useEffect(() => {
     if (chatUnreadCache && Date.now() - chatUnreadCache.fetchedAt < CHAT_UNREAD_CACHE_MS) {
-      setCount(chatUnreadCache.count)
-      return
+      setCount(chatUnreadCache.count);
+      return;
     }
 
-    let cancelled = false
+    let cancelled = false;
     fetch("/api/athletes/chat/unread-count")
-      .then((res) => res.ok ? res.json() : null)
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (cancelled || !data) return
-        chatUnreadCache = { count: data.unreadCount, fetchedAt: Date.now() }
-        setCount(data.unreadCount)
+        if (cancelled || !data) return;
+        chatUnreadCache = { count: data.unreadCount, fetchedAt: Date.now() };
+        setCount(data.unreadCount);
       })
-      .catch(() => {})
-    return () => { cancelled = true }
-  }, [])
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  if (count <= 0) return null
+  if (count <= 0) return null;
 
   return (
     <SidebarMenuBadge className="bg-destructive text-destructive-foreground rounded-full text-[10px] font-medium">
       {count}
     </SidebarMenuBadge>
-  )
+  );
 }
 
 const navItems = [
@@ -119,7 +121,7 @@ const navItems = [
     url: "/athletes/chat",
     icon: MessageSquare,
   },
-]
+];
 
 const superadminItems = [
   {
@@ -127,20 +129,22 @@ const superadminItems = [
     url: "/athletes/admin/view-as-user",
     icon: Eye,
   },
-]
+];
 
 export function AthletesSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const pathname = usePathname()
-  const { data: session, status } = useSession()
+  const pathname = usePathname();
+  const { data: session, status } = useSession();
 
-  const user = session?.user ? {
-    name: session.user.name || "User",
-    email: session.user.email || "",
-    avatar: session.user.image || null,
-  } : null
+  const user = session?.user
+    ? {
+        name: session.user.name || "User",
+        email: session.user.email || "",
+        avatar: session.user.image || null,
+      }
+    : null;
 
-  const isSuperAdmin = session?.user?.isSuperAdmin === true
-  const isLoading = status === "loading"
+  const isSuperAdmin = session?.user?.isSuperAdmin === true;
+  const isLoading = status === "loading";
 
   return (
     <Sidebar {...props}>
@@ -161,9 +165,7 @@ export function AthletesSidebar({ ...props }: React.ComponentProps<typeof Sideba
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => {
-                const isActive = item.exact
-                  ? pathname === item.url
-                  : pathname.startsWith(item.url)
+                const isActive = item.exact ? pathname === item.url : pathname.startsWith(item.url);
 
                 return (
                   <SidebarMenuItem key={item.title}>
@@ -175,7 +177,7 @@ export function AthletesSidebar({ ...props }: React.ComponentProps<typeof Sideba
                     </SidebarMenuButton>
                     {item.url === CHAT_URL && <ChatUnreadBadge />}
                   </SidebarMenuItem>
-                )
+                );
               })}
             </SidebarMenu>
           </SidebarGroupContent>
@@ -187,7 +189,7 @@ export function AthletesSidebar({ ...props }: React.ComponentProps<typeof Sideba
             <SidebarGroupContent>
               <SidebarMenu>
                 {superadminItems.map((item) => {
-                  const isActive = pathname.startsWith(item.url)
+                  const isActive = pathname.startsWith(item.url);
                   return (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild isActive={isActive}>
@@ -197,7 +199,7 @@ export function AthletesSidebar({ ...props }: React.ComponentProps<typeof Sideba
                         </a>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                  )
+                  );
                 })}
               </SidebarMenu>
             </SidebarGroupContent>
@@ -219,5 +221,5 @@ export function AthletesSidebar({ ...props }: React.ComponentProps<typeof Sideba
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }

@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback } from "react";
 import {
   Building2,
   Mail,
@@ -11,67 +11,61 @@ import {
   BookOpen,
   Loader2,
   Check,
-} from "lucide-react"
-import { toast } from "sonner"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Skeleton } from "@/components/ui/skeleton"
-import { DashboardPageHeader } from "@/components/dashboard-page-header"
-import { OrganizationAddressForm } from "@/components/organization-address-form"
-import { cn } from "@/lib/utils"
+} from "lucide-react";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
+import { OrganizationAddressForm } from "@/components/organization-address-form";
+import { cn } from "@/lib/utils";
 
 interface OrgDetails {
-  id: string
-  name: string
-  slug: string
-  email: string | null
-  phone: string | null
-  street: string | null
-  city: string | null
-  stateProvince: string | null
-  postalCode: string | null
-  country: string | null
-  createdAt: string
+  id: string;
+  name: string;
+  slug: string;
+  email: string | null;
+  phone: string | null;
+  street: string | null;
+  city: string | null;
+  stateProvince: string | null;
+  postalCode: string | null;
+  country: string | null;
+  createdAt: string;
   _count: {
-    members: number
-    organizationAthletes: number
-    programs: number
-  }
+    members: number;
+    organizationAthletes: number;
+    programs: number;
+  };
   subscription: {
-    status: string
+    status: string;
     plan: {
-      name: string
-    }
-  } | null
+      name: string;
+    };
+  } | null;
   sports: {
-    sport: Sport
-  }[]
+    sport: Sport;
+  }[];
 }
 
 interface Sport {
-  id: string
-  name: string
-  slug: string
-  description: string | null
-  icon: string | null
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  icon: string | null;
 }
 
 export default function OrganizationOverviewPage() {
-  const [orgDetails, setOrgDetails] = useState<OrgDetails | null>(null)
-  const [allSports, setAllSports] = useState<Sport[]>([])
-  const [selectedSportIds, setSelectedSportIds] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
-  const [savingSports, setSavingSports] = useState(false)
-  const [sportsChanged, setSportsChanged] = useState(false)
-  const [editingAddress, setEditingAddress] = useState(false)
+  const [orgDetails, setOrgDetails] = useState<OrgDetails | null>(null);
+  const [allSports, setAllSports] = useState<Sport[]>([]);
+  const [selectedSportIds, setSelectedSportIds] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [savingSports, setSavingSports] = useState(false);
+  const [sportsChanged, setSportsChanged] = useState(false);
+  const [editingAddress, setEditingAddress] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -79,69 +73,65 @@ export default function OrganizationOverviewPage() {
         fetch("/api/organization/details"),
         fetch("/api/organization/sports"),
         fetch("/api/sports"),
-      ])
+      ]);
 
       if (orgRes.ok) {
-        const org = await orgRes.json()
-        setOrgDetails(org)
+        const org = await orgRes.json();
+        setOrgDetails(org);
       }
 
       if (sportsRes.ok) {
-        const orgSports: Sport[] = await sportsRes.json()
-        setSelectedSportIds(orgSports.map((s) => s.id))
+        const orgSports: Sport[] = await sportsRes.json();
+        setSelectedSportIds(orgSports.map((s) => s.id));
       }
 
       if (allSportsRes.ok) {
-        const sports: Sport[] = await allSportsRes.json()
-        setAllSports(sports)
+        const sports: Sport[] = await allSportsRes.json();
+        setAllSports(sports);
       }
     } catch (error) {
-      toast.error("Failed to load organization details")
+      toast.error("Failed to load organization details");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    fetchData()
-  }, [fetchData])
+    fetchData();
+  }, [fetchData]);
 
   const handleSportToggle = (sportId: string, checked: boolean) => {
     setSelectedSportIds((prev) => {
-      const updated = checked
-        ? [...prev, sportId]
-        : prev.filter((id) => id !== sportId)
-      return updated
-    })
-    setSportsChanged(true)
-  }
+      const updated = checked ? [...prev, sportId] : prev.filter((id) => id !== sportId);
+      return updated;
+    });
+    setSportsChanged(true);
+  };
 
   const handleSaveSports = async () => {
-    setSavingSports(true)
+    setSavingSports(true);
     try {
       const response = await fetch("/api/organization/sports", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sportIds: selectedSportIds }),
-      })
+      });
 
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || "Failed to update sports")
+        const data = await response.json();
+        throw new Error(data.error || "Failed to update sports");
       }
 
-      const updatedSports: Sport[] = await response.json()
-      setSelectedSportIds(updatedSports.map((s) => s.id))
-      setSportsChanged(false)
-      toast.success("Sports updated successfully")
+      const updatedSports: Sport[] = await response.json();
+      setSelectedSportIds(updatedSports.map((s) => s.id));
+      setSportsChanged(false);
+      toast.success("Sports updated successfully");
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to update sports"
-      )
+      toast.error(error instanceof Error ? error.message : "Failed to update sports");
     } finally {
-      setSavingSports(false)
+      setSavingSports(false);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -155,17 +145,15 @@ export default function OrganizationOverviewPage() {
         <Skeleton className="h-64" />
         <Skeleton className="h-64" />
       </div>
-    )
+    );
   }
 
   if (!orgDetails) {
     return (
       <div className="flex items-center justify-center py-20">
-        <p className="text-muted-foreground">
-          Unable to load organization details.
-        </p>
+        <p className="text-muted-foreground">Unable to load organization details.</p>
       </div>
-    )
+    );
   }
 
   const address = [
@@ -176,7 +164,7 @@ export default function OrganizationOverviewPage() {
     orgDetails.country,
   ]
     .filter(Boolean)
-    .join(", ")
+    .join(", ");
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -233,15 +221,17 @@ export default function OrganizationOverviewPage() {
               </Button>
             )}
           </div>
-          <CardDescription>Basic information and contact details for your organization</CardDescription>
+          <CardDescription>
+            Basic information and contact details for your organization
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {editingAddress ? (
-            <OrganizationAddressForm 
+            <OrganizationAddressForm
               organization={orgDetails}
               onSuccess={(updated) => {
-                setOrgDetails((prev) => prev ? { ...prev, ...updated } : null)
-                setEditingAddress(false)
+                setOrgDetails((prev) => (prev ? { ...prev, ...updated } : null));
+                setEditingAddress(false);
               }}
               onCancel={() => setEditingAddress(false)}
             />
@@ -303,9 +293,7 @@ export default function OrganizationOverviewPage() {
               )}
               <div>
                 <p className="text-sm text-muted-foreground">Member Since</p>
-                <p className="font-medium">
-                  {new Date(orgDetails.createdAt).toLocaleDateString()}
-                </p>
+                <p className="font-medium">{new Date(orgDetails.createdAt).toLocaleDateString()}</p>
               </div>
             </div>
           )}
@@ -332,8 +320,8 @@ export default function OrganizationOverviewPage() {
             )}
           </div>
           <CardDescription>
-            Select the sports your organization offers. This helps tailor the
-            platform experience for your needs.
+            Select the sports your organization offers. This helps tailor the platform experience
+            for your needs.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -344,39 +332,33 @@ export default function OrganizationOverviewPage() {
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {allSports.map((sport) => {
-                const isSelected = selectedSportIds.includes(sport.id)
+                const isSelected = selectedSportIds.includes(sport.id);
                 return (
                   <label
                     key={sport.id}
                     className={cn(
                       "flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
-                      isSelected
-                        ? "border-primary bg-primary/5"
-                        : "hover:bg-muted/50"
+                      isSelected ? "border-primary bg-primary/5" : "hover:bg-muted/50"
                     )}
                   >
                     <Checkbox
                       checked={isSelected}
-                      onCheckedChange={(checked) =>
-                        handleSportToggle(sport.id, !!checked)
-                      }
+                      onCheckedChange={(checked) => handleSportToggle(sport.id, !!checked)}
                       className="mt-0.5"
                     />
                     <div className="flex-1 space-y-0.5">
                       <span className="font-medium text-sm">{sport.name}</span>
                       {sport.description && (
-                        <p className="text-xs text-muted-foreground">
-                          {sport.description}
-                        </p>
+                        <p className="text-xs text-muted-foreground">{sport.description}</p>
                       )}
                     </div>
                   </label>
-                )
+                );
               })}
             </div>
           )}
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

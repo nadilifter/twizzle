@@ -18,10 +18,7 @@ const updateDiscountSchema = z.object({
 });
 
 // GET /api/discounts/[id] - Get a specific discount
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -93,7 +90,7 @@ export async function GET(
     const totalSavings = discount.lineItems.reduce((sum, item) => {
       // For line items with this discount, calculate the discount amount
       if (discount.type === "PERCENTAGE") {
-        return sum + (Number(item.unitPrice) * item.quantity * discount.amount.toNumber() / 100);
+        return sum + (Number(item.unitPrice) * item.quantity * discount.amount.toNumber()) / 100;
       } else {
         return sum + discount.amount.toNumber();
       }
@@ -108,18 +105,12 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error fetching discount:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch discount" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch discount" }, { status: 500 });
   }
 }
 
 // PATCH /api/discounts/[id] - Update a discount
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -173,10 +164,13 @@ export async function PATCH(
     if (validatedData.code !== undefined) updateData.code = validatedData.code;
     if (validatedData.type !== undefined) updateData.type = validatedData.type;
     if (validatedData.amount !== undefined) updateData.amount = validatedData.amount;
-    if (validatedData.validFrom !== undefined) updateData.validFrom = parseDateOnly(validatedData.validFrom);
-    if (validatedData.validTo !== undefined) updateData.validTo = validatedData.validTo ? parseDateOnly(validatedData.validTo) : null;
+    if (validatedData.validFrom !== undefined)
+      updateData.validFrom = parseDateOnly(validatedData.validFrom);
+    if (validatedData.validTo !== undefined)
+      updateData.validTo = validatedData.validTo ? parseDateOnly(validatedData.validTo) : null;
     if (validatedData.userScope !== undefined) updateData.userScope = validatedData.userScope;
-    if (validatedData.productScope !== undefined) updateData.productScope = validatedData.productScope;
+    if (validatedData.productScope !== undefined)
+      updateData.productScope = validatedData.productScope;
     if (validatedData.usageLimit !== undefined) updateData.usageLimit = validatedData.usageLimit;
     if (validatedData.status !== undefined) updateData.status = validatedData.status;
 
@@ -188,16 +182,10 @@ export async function PATCH(
     return NextResponse.json(discount);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error updating discount:", error);
-    return NextResponse.json(
-      { error: "Failed to update discount" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update discount" }, { status: 500 });
   }
 }
 
@@ -249,9 +237,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting discount:", error);
-    return NextResponse.json(
-      { error: "Failed to delete discount" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete discount" }, { status: 500 });
   }
 }

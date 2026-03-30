@@ -18,9 +18,7 @@ export function createSignedState(organizationId: string): string {
   };
 
   const data = JSON.stringify(payload);
-  const signature = createHmac("sha256", getSecret())
-    .update(data)
-    .digest("base64url");
+  const signature = createHmac("sha256", getSecret()).update(data).digest("base64url");
 
   return Buffer.from(JSON.stringify({ data, signature })).toString("base64url");
 }
@@ -33,9 +31,7 @@ export function verifySignedState(state: string): { organizationId: string } {
     throw new Error("Invalid state format");
   }
 
-  const expectedSig = createHmac("sha256", getSecret())
-    .update(parsed.data)
-    .digest("base64url");
+  const expectedSig = createHmac("sha256", getSecret()).update(parsed.data).digest("base64url");
 
   const expectedBuf = Buffer.from(expectedSig);
   const actualBuf = Buffer.from(parsed.signature);

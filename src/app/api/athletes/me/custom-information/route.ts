@@ -56,11 +56,14 @@ export async function GET() {
 
     const result = athletes.map((athlete) => {
       // Group responses by organization
-      const byOrg = new Map<string, {
-        organizationId: string;
-        organizationName: string;
-        responses: typeof athlete.customInfoResponses;
-      }>();
+      const byOrg = new Map<
+        string,
+        {
+          organizationId: string;
+          organizationName: string;
+          responses: typeof athlete.customInfoResponses;
+        }
+      >();
 
       for (const response of athlete.customInfoResponses) {
         const orgId = response.organizationId;

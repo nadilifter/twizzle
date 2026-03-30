@@ -36,11 +36,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   DndContext,
   closestCenter,
@@ -58,21 +54,8 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import {
-  Plus,
-  Trash2,
-  GripVertical,
-  Loader2,
-  FileText,
-  Info,
-  ChevronDown,
-} from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Plus, Trash2, GripVertical, Loader2, FileText, Info, ChevronDown } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useCustomInfoQuestions } from "@/hooks/use-custom-information";
 import { useFeatures } from "@/components/feature-context";
@@ -135,20 +118,24 @@ function ScopeSelector({
     setLoadingEntities(true);
     try {
       const safeGet = async (url: string): Promise<any> => {
-        try { return await api.get<any>(url); }
-        catch { return null; }
+        try {
+          return await api.get<any>(url);
+        } catch {
+          return null;
+        }
       };
 
       const unwrap = (res: any): any[] =>
         res == null ? [] : Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
 
-      const [programsRes, eventsRes, competitionsRes, membershipsRes, passesRes] = await Promise.all([
-        safeGet("/api/programs?limit=500"),
-        safeGet("/api/events?limit=500"),
-        safeGet("/api/competitions"),
-        safeGet("/api/memberships?limit=500"),
-        safeGet("/api/passes?limit=500"),
-      ]);
+      const [programsRes, eventsRes, competitionsRes, membershipsRes, passesRes] =
+        await Promise.all([
+          safeGet("/api/programs?limit=500"),
+          safeGet("/api/events?limit=500"),
+          safeGet("/api/competitions"),
+          safeGet("/api/memberships?limit=500"),
+          safeGet("/api/passes?limit=500"),
+        ]);
 
       setPrograms(unwrap(programsRes).map((p: any) => ({ id: p.id, name: p.name })));
       setEvents(unwrap(eventsRes).map((e: any) => ({ id: e.id, name: e.title || e.name })));
@@ -173,7 +160,9 @@ function ScopeSelector({
   }, [loadEntities]);
 
   const hasScope = (scopeType: CustomInfoScopeType, targetId?: string | null) =>
-    scopes.some((s) => s.scopeType === scopeType && (targetId === undefined || s.targetId === targetId));
+    scopes.some(
+      (s) => s.scopeType === scopeType && (targetId === undefined || s.targetId === targetId)
+    );
 
   const toggleAllScope = (scopeType: CustomInfoScopeType) => {
     if (hasScope(scopeType)) {
@@ -191,13 +180,29 @@ function ScopeSelector({
     }
   };
 
-  const switchToSeason = () => { onChange([]); setScopeMode("season"); };
-  const switchToManual = () => { onChange([]); setScopeMode("manual"); };
+  const switchToSeason = () => {
+    onChange([]);
+    setScopeMode("season");
+  };
+  const switchToManual = () => {
+    onChange([]);
+    setScopeMode("manual");
+  };
 
-  const allScopeTypes: { all: CustomInfoScopeType; specific: CustomInfoScopeType; label: string; entities: EntityOption[] }[] = [
+  const allScopeTypes: {
+    all: CustomInfoScopeType;
+    specific: CustomInfoScopeType;
+    label: string;
+    entities: EntityOption[];
+  }[] = [
     { all: "ALL_PROGRAMS", specific: "PROGRAM", label: "Programs", entities: programs },
     { all: "ALL_EVENTS", specific: "EVENT", label: "Events", entities: events },
-    { all: "ALL_COMPETITIONS", specific: "COMPETITION", label: "Competitions", entities: competitions },
+    {
+      all: "ALL_COMPETITIONS",
+      specific: "COMPETITION",
+      label: "Competitions",
+      entities: competitions,
+    },
     { all: "ALL_MEMBERSHIPS", specific: "MEMBERSHIP", label: "Memberships", entities: memberships },
     { all: "ALL_PASSES", specific: "PASS", label: "Passes", entities: passes },
   ];
@@ -243,7 +248,10 @@ function ScopeSelector({
                         checked={hasScope(specific, entity.id)}
                         onCheckedChange={() => toggleSpecificScope(specific, entity.id)}
                       />
-                      <Label htmlFor={`${specific}-${entity.id}`} className="text-sm font-normal cursor-pointer truncate">
+                      <Label
+                        htmlFor={`${specific}-${entity.id}`}
+                        className="text-sm font-normal cursor-pointer truncate"
+                      >
                         {entity.name}
                       </Label>
                     </div>
@@ -266,7 +274,10 @@ function ScopeSelector({
             checked={hasScope("SEASON", season.id)}
             onCheckedChange={() => toggleSpecificScope("SEASON", season.id)}
           />
-          <Label htmlFor={`SEASON-${season.id}`} className="text-sm font-normal cursor-pointer truncate">
+          <Label
+            htmlFor={`SEASON-${season.id}`}
+            className="text-sm font-normal cursor-pointer truncate"
+          >
             {season.name}
           </Label>
         </div>
@@ -281,7 +292,9 @@ function ScopeSelector({
     return (
       <div className="space-y-3">
         <Label>Scope</Label>
-        <p className="text-sm text-muted-foreground">Select when this question should appear during registration</p>
+        <p className="text-sm text-muted-foreground">
+          Select when this question should appear during registration
+        </p>
         {entityScopeList}
       </div>
     );
@@ -290,14 +303,18 @@ function ScopeSelector({
   return (
     <div className="space-y-3">
       <Label>Scope</Label>
-      <p className="text-sm text-muted-foreground">Select when this question should appear during registration</p>
+      <p className="text-sm text-muted-foreground">
+        Select when this question should appear during registration
+      </p>
 
       <div className="flex gap-2">
         <Button
           type="button"
           size="sm"
           variant={scopeMode === "season" ? "default" : "outline"}
-          onClick={() => { if (scopeMode !== "season") switchToSeason(); }}
+          onClick={() => {
+            if (scopeMode !== "season") switchToSeason();
+          }}
           className="text-xs"
         >
           By Season
@@ -306,7 +323,9 @@ function ScopeSelector({
           type="button"
           size="sm"
           variant={scopeMode === "manual" ? "default" : "outline"}
-          onClick={() => { if (scopeMode !== "manual") switchToManual(); }}
+          onClick={() => {
+            if (scopeMode !== "manual") switchToManual();
+          }}
           className="text-xs"
         >
           Select Manually
@@ -331,13 +350,9 @@ function SortableQuestion({
   onEdit: (question: CustomInfoQuestion) => void;
   onDelete: (id: string) => void;
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({ id: question.id });
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+    id: question.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -364,18 +379,23 @@ function SortableQuestion({
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <p className="font-medium truncate">{question.questionText}</p>
             {question.required && (
-              <Badge variant="destructive" className="text-xs shrink-0">Required</Badge>
+              <Badge variant="destructive" className="text-xs shrink-0">
+                Required
+              </Badge>
             )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Badge variant="secondary" className="text-xs">
               {QUESTION_TYPE_LABELS[question.questionType]}
             </Badge>
-            {question.questionType === "VALUE" && question.valueMin != null && question.valueMax != null && (
-              <Badge variant="secondary" className="text-xs">
-                Range: {question.valueMin}–{question.valueMax}{question.allowDecimals ? " (decimals)" : " (whole numbers)"}
-              </Badge>
-            )}
+            {question.questionType === "VALUE" &&
+              question.valueMin != null &&
+              question.valueMax != null && (
+                <Badge variant="secondary" className="text-xs">
+                  Range: {question.valueMin}–{question.valueMax}
+                  {question.allowDecimals ? " (decimals)" : " (whole numbers)"}
+                </Badge>
+              )}
             {question.questionType === "BOOLEAN" && question.requireSignatureOnYes && (
               <Badge variant="secondary" className="text-xs">
                 + Signature on Yes
@@ -408,14 +428,13 @@ function SortableQuestion({
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete Question</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete this question? Existing responses will be preserved but the question will no longer appear during registration.
+                  Are you sure you want to delete this question? Existing responses will be
+                  preserved but the question will no longer appear during registration.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => onDelete(question.id)}>
-                  Delete
-                </AlertDialogAction>
+                <AlertDialogAction onClick={() => onDelete(question.id)}>Delete</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
@@ -514,15 +533,17 @@ function QuestionEditor({
       questionType,
       required,
       scopes,
-      ...(questionType === "VALUE" ? {
-        valueMin: parseFloat(valueMin) || null,
-        valueMax: parseFloat(valueMax) || null,
-        allowDecimals,
-      } : {
-        valueMin: null,
-        valueMax: null,
-        allowDecimals: false,
-      }),
+      ...(questionType === "VALUE"
+        ? {
+            valueMin: parseFloat(valueMin) || null,
+            valueMax: parseFloat(valueMax) || null,
+            allowDecimals,
+          }
+        : {
+            valueMin: null,
+            valueMax: null,
+            allowDecimals: false,
+          }),
       requireSignatureOnYes: questionType === "BOOLEAN" ? requireSignatureOnYes : false,
       validityDays: validityMode === "indefinite" ? null : parseInt(validityDaysValue, 10),
     });
@@ -561,7 +582,10 @@ function QuestionEditor({
             </div>
             <div className="space-y-2">
               <Label htmlFor="questionType">Answer Type</Label>
-              <Select value={questionType} onValueChange={(v) => setQuestionType(v as CustomInfoQuestionType)}>
+              <Select
+                value={questionType}
+                onValueChange={(v) => setQuestionType(v as CustomInfoQuestionType)}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -580,7 +604,9 @@ function QuestionEditor({
                 <p className="text-sm font-medium">Number Settings</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label htmlFor="valueMin" className="text-xs">Minimum</Label>
+                    <Label htmlFor="valueMin" className="text-xs">
+                      Minimum
+                    </Label>
                     <Input
                       id="valueMin"
                       type="number"
@@ -592,7 +618,9 @@ function QuestionEditor({
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="valueMax" className="text-xs">Maximum</Label>
+                    <Label htmlFor="valueMax" className="text-xs">
+                      Maximum
+                    </Label>
                     <Input
                       id="valueMax"
                       type="number"
@@ -610,7 +638,9 @@ function QuestionEditor({
                     checked={allowDecimals}
                     onCheckedChange={setAllowDecimals}
                   />
-                  <Label htmlFor="allowDecimals" className="text-sm font-normal">Allow decimal values</Label>
+                  <Label htmlFor="allowDecimals" className="text-sm font-normal">
+                    Allow decimal values
+                  </Label>
                 </div>
               </div>
             )}
@@ -623,17 +653,15 @@ function QuestionEditor({
                     checked={requireSignatureOnYes}
                     onCheckedChange={setRequireSignatureOnYes}
                   />
-                  <Label htmlFor="requireSignatureOnYes" className="text-sm font-normal">Require signature when answered &ldquo;Yes&rdquo;</Label>
+                  <Label htmlFor="requireSignatureOnYes" className="text-sm font-normal">
+                    Require signature when answered &ldquo;Yes&rdquo;
+                  </Label>
                 </div>
               </div>
             )}
 
             <div className="flex items-center space-x-2">
-              <Switch
-                id="required"
-                checked={required}
-                onCheckedChange={setRequired}
-              />
+              <Switch id="required" checked={required} onCheckedChange={setRequired} />
               <Label htmlFor="required">Required question</Label>
             </div>
 
@@ -646,12 +674,16 @@ function QuestionEditor({
                       <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent side="right" className="max-w-xs">
-                      How long a response remains valid. Athletes with expired responses will be asked to re-submit during registration.
+                      How long a response remains valid. Athletes with expired responses will be
+                      asked to re-submit during registration.
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <Select value={validityMode} onValueChange={(v) => setValidityMode(v as "indefinite" | "days")}>
+              <Select
+                value={validityMode}
+                onValueChange={(v) => setValidityMode(v as "indefinite" | "days")}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -681,7 +713,15 @@ function QuestionEditor({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSaving || !questionText.trim() || scopes.length === 0 || (questionType === "VALUE" && (!valueMin || !valueMax))}>
+            <Button
+              type="submit"
+              disabled={
+                isSaving ||
+                !questionText.trim() ||
+                scopes.length === 0 ||
+                (questionType === "VALUE" && (!valueMin || !valueMax))
+              }
+            >
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {question ? "Save Changes" : "Add Question"}
             </Button>

@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   Table,
   TableBody,
@@ -8,23 +8,23 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Search,
   Loader2,
@@ -41,49 +41,52 @@ import {
   FileText,
   Wallet,
   BadgeDollarSign,
-} from "lucide-react"
-import { format } from "date-fns"
-import { toast } from "sonner"
+} from "lucide-react";
+import { format } from "date-fns";
+import { toast } from "sonner";
 
 interface OrderLineItem {
-  id: string
-  description: string
-  quantity: number
-  unitPrice: number
-  total: number
-  productId: string | null
-  productVariantId: string | null
-  productVariant: { id: string; label: string } | null
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  productId: string | null;
+  productVariantId: string | null;
+  productVariant: { id: string; label: string } | null;
 }
 
 interface Order {
-  id: string
-  source: "POS" | "ONLINE"
-  fulfillmentStatus: "PENDING" | "FULFILLED" | "CANCELLED"
-  customerName: string | null
-  customerEmail: string | null
-  customerPhone: string | null
-  fulfilledAt: string | null
-  notes: string | null
-  createdAt: string
+  id: string;
+  source: "POS" | "ONLINE";
+  fulfillmentStatus: "PENDING" | "FULFILLED" | "CANCELLED";
+  customerName: string | null;
+  customerEmail: string | null;
+  customerPhone: string | null;
+  fulfilledAt: string | null;
+  notes: string | null;
+  createdAt: string;
   invoice: {
-    id: string
-    reference: string
-    subtotal: number
-    tax: number
-    total: number
-    status: string
-    lineItems: OrderLineItem[]
-    payments: { method: string; status: string; transaction: { method: string | null } | null }[]
-  }
+    id: string;
+    reference: string;
+    subtotal: number;
+    tax: number;
+    total: number;
+    status: string;
+    lineItems: OrderLineItem[];
+    payments: { method: string; status: string; transaction: { method: string | null } | null }[];
+  };
 }
 
-const paymentMethodConfig: Record<string, { label: string; icon: React.ElementType; variant: "default" | "outline" | "secondary" }> = {
+const paymentMethodConfig: Record<
+  string,
+  { label: string; icon: React.ElementType; variant: "default" | "outline" | "secondary" }
+> = {
   CASH: { label: "Cash", icon: Banknote, variant: "secondary" },
   CARD: { label: "Card", icon: CreditCard, variant: "outline" },
   BANK: { label: "Bank", icon: Landmark, variant: "outline" },
   CHECK: { label: "Check", icon: FileText, variant: "outline" },
-}
+};
 
 const transactionMethodLabels: Record<string, { label: string; icon: React.ElementType }> = {
   applepay: { label: "Apple Pay", icon: Wallet },
@@ -101,84 +104,90 @@ const transactionMethodLabels: Record<string, { label: string; icon: React.Eleme
   ach: { label: "ACH", icon: Landmark },
   paybybank_us: { label: "Pay by Bank", icon: Landmark },
   venmo: { label: "Venmo", icon: Wallet },
-}
+};
 
-function getPaymentLabel(payment: { method: string; transaction: { method: string | null } | null }): { label: string; icon: React.ElementType; variant: "default" | "outline" | "secondary" } {
-  const txMethod = payment.transaction?.method?.toLowerCase()
+function getPaymentLabel(payment: {
+  method: string;
+  transaction: { method: string | null } | null;
+}): { label: string; icon: React.ElementType; variant: "default" | "outline" | "secondary" } {
+  const txMethod = payment.transaction?.method?.toLowerCase();
   if (txMethod) {
-    const txConfig = transactionMethodLabels[txMethod]
+    const txConfig = transactionMethodLabels[txMethod];
     if (txConfig) {
-      return { ...txConfig, variant: "outline" }
+      return { ...txConfig, variant: "outline" };
     }
   }
-  const config = paymentMethodConfig[payment.method]
+  const config = paymentMethodConfig[payment.method];
   if (config) {
     if (txMethod && payment.method === "CARD") {
-      const network = txMethod.charAt(0).toUpperCase() + txMethod.slice(1)
-      return { ...config, label: network }
+      const network = txMethod.charAt(0).toUpperCase() + txMethod.slice(1);
+      return { ...config, label: network };
     }
-    return config
+    return config;
   }
-  return { label: payment.method, icon: CreditCard, variant: "outline" }
+  return { label: payment.method, icon: CreditCard, variant: "outline" };
 }
 
 const fulfillmentColors: Record<string, "default" | "outline" | "secondary" | "destructive"> = {
   PENDING: "outline",
   FULFILLED: "default",
   CANCELLED: "secondary",
-}
+};
 
 const fulfillmentIcons: Record<string, React.ElementType> = {
   PENDING: Clock,
   FULFILLED: CheckCircle2,
   CANCELLED: XCircle,
-}
+};
 
 export default function OrdersPage() {
-  const [orders, setOrders] = React.useState<Order[]>([])
-  const [total, setTotal] = React.useState(0)
-  const [loading, setLoading] = React.useState(true)
-  const [search, setSearch] = React.useState("")
-  const [statusFilter, setStatusFilter] = React.useState("all")
-  const [sourceFilter, setSourceFilter] = React.useState("all")
-  const [expandedRows, setExpandedRows] = React.useState<Set<string>>(new Set())
+  const [orders, setOrders] = React.useState<Order[]>([]);
+  const [total, setTotal] = React.useState(0);
+  const [loading, setLoading] = React.useState(true);
+  const [search, setSearch] = React.useState("");
+  const [statusFilter, setStatusFilter] = React.useState("all");
+  const [sourceFilter, setSourceFilter] = React.useState("all");
+  const [expandedRows, setExpandedRows] = React.useState<Set<string>>(new Set());
 
   const fetchOrders = React.useCallback(async () => {
     try {
-      setLoading(true)
-      const params = new URLSearchParams()
-      if (search) params.set("search", search)
-      if (statusFilter !== "all") params.set("status", statusFilter)
-      if (sourceFilter !== "all") params.set("source", sourceFilter)
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      if (statusFilter !== "all") params.set("status", statusFilter);
+      if (sourceFilter !== "all") params.set("source", sourceFilter);
 
-      const response = await fetch(`/api/orders?${params.toString()}`)
-      if (!response.ok) throw new Error("Failed to fetch orders")
-      const data = await response.json()
-      setOrders(data.data || [])
-      setTotal(data.total || 0)
+      const response = await fetch(`/api/orders?${params.toString()}`);
+      if (!response.ok) throw new Error("Failed to fetch orders");
+      const data = await response.json();
+      setOrders(data.data || []);
+      setTotal(data.total || 0);
     } catch (error) {
-      console.error("Error fetching orders:", error)
-      toast.error("Failed to load orders")
+      console.error("Error fetching orders:", error);
+      toast.error("Failed to load orders");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [search, statusFilter, sourceFilter])
+  }, [search, statusFilter, sourceFilter]);
 
   React.useEffect(() => {
-    fetchOrders()
-  }, [fetchOrders])
+    fetchOrders();
+  }, [fetchOrders]);
 
-  const handleUpdateStatus = async (orderId: string, fulfillmentStatus: "FULFILLED" | "CANCELLED" | "PENDING") => {
+  const handleUpdateStatus = async (
+    orderId: string,
+    fulfillmentStatus: "FULFILLED" | "CANCELLED" | "PENDING"
+  ) => {
     try {
       const response = await fetch(`/api/orders/${orderId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fulfillmentStatus }),
-      })
+      });
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to update order")
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update order");
       }
 
       toast.success(
@@ -187,35 +196,35 @@ export default function OrdersPage() {
           : fulfillmentStatus === "CANCELLED"
             ? "Order cancelled"
             : "Order reopened"
-      )
-      fetchOrders()
+      );
+      fetchOrders();
     } catch (error) {
-      console.error("Error updating order:", error)
-      toast.error(error instanceof Error ? error.message : "Failed to update order")
+      console.error("Error updating order:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to update order");
     }
-  }
+  };
 
   const toggleRow = (orderId: string) => {
     setExpandedRows((prev) => {
-      const next = new Set(prev)
+      const next = new Set(prev);
       if (next.has(orderId)) {
-        next.delete(orderId)
+        next.delete(orderId);
       } else {
-        next.add(orderId)
+        next.add(orderId);
       }
-      return next
-    })
-  }
+      return next;
+    });
+  };
 
   const getItemsSummary = (lineItems: OrderLineItem[]) => {
-    const totalQty = lineItems.reduce((sum, li) => sum + li.quantity, 0)
-    const uniqueProducts = lineItems.length
-    if (uniqueProducts === 0) return "No items"
-    if (uniqueProducts === 1) return `${lineItems[0].description} (x${totalQty})`
-    return `${uniqueProducts} products, ${totalQty} items`
-  }
+    const totalQty = lineItems.reduce((sum, li) => sum + li.quantity, 0);
+    const uniqueProducts = lineItems.length;
+    if (uniqueProducts === 0) return "No items";
+    if (uniqueProducts === 1) return `${lineItems[0].description} (x${totalQty})`;
+    return `${uniqueProducts} products, ${totalQty} items`;
+  };
 
-  const pendingCount = orders.filter((o) => o.fulfillmentStatus === "PENDING").length
+  const pendingCount = orders.filter((o) => o.fulfillmentStatus === "PENDING").length;
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
@@ -298,8 +307,8 @@ export default function OrdersPage() {
               </TableRow>
             ) : (
               orders.map((order) => {
-                const isExpanded = expandedRows.has(order.id)
-                const StatusIcon = fulfillmentIcons[order.fulfillmentStatus]
+                const isExpanded = expandedRows.has(order.id);
+                const StatusIcon = fulfillmentIcons[order.fulfillmentStatus];
                 return (
                   <React.Fragment key={order.id}>
                     <TableRow className="cursor-pointer" onClick={() => toggleRow(order.id)}>
@@ -310,9 +319,7 @@ export default function OrdersPage() {
                           <ChevronRight className="h-4 w-4 text-muted-foreground" />
                         )}
                       </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {order.invoice.reference}
-                      </TableCell>
+                      <TableCell className="font-mono text-sm">{order.invoice.reference}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {format(new Date(order.createdAt), "MMM d, yyyy h:mm a")}
                       </TableCell>
@@ -341,15 +348,16 @@ export default function OrdersPage() {
                       </TableCell>
                       <TableCell>
                         {(() => {
-                          const payment = order.invoice.payments?.[0]
-                          if (!payment) return <span className="text-xs text-muted-foreground">—</span>
-                          const { label, icon: PaymentIcon, variant } = getPaymentLabel(payment)
+                          const payment = order.invoice.payments?.[0];
+                          if (!payment)
+                            return <span className="text-xs text-muted-foreground">—</span>;
+                          const { label, icon: PaymentIcon, variant } = getPaymentLabel(payment);
                           return (
                             <Badge variant={variant}>
                               <PaymentIcon className="h-3 w-3 mr-1" />
                               {label}
                             </Badge>
-                          )
+                          );
                         })()}
                       </TableCell>
                       <TableCell>
@@ -428,10 +436,14 @@ export default function OrdersPage() {
                                     <TableCell className="text-sm">
                                       {item.description}
                                       {item.productVariant && (
-                                        <span className="text-xs text-muted-foreground ml-1">({item.productVariant.label})</span>
+                                        <span className="text-xs text-muted-foreground ml-1">
+                                          ({item.productVariant.label})
+                                        </span>
                                       )}
                                     </TableCell>
-                                    <TableCell className="text-right text-sm">{item.quantity}</TableCell>
+                                    <TableCell className="text-right text-sm">
+                                      {item.quantity}
+                                    </TableCell>
                                     <TableCell className="text-right text-sm">
                                       ${Number(item.unitPrice).toFixed(2)}
                                     </TableCell>
@@ -446,7 +458,8 @@ export default function OrdersPage() {
                               <div className="text-muted-foreground">
                                 {order.fulfilledAt && (
                                   <span>
-                                    Fulfilled on {format(new Date(order.fulfilledAt), "MMM d, yyyy h:mm a")}
+                                    Fulfilled on{" "}
+                                    {format(new Date(order.fulfilledAt), "MMM d, yyyy h:mm a")}
                                   </span>
                                 )}
                               </div>
@@ -469,7 +482,7 @@ export default function OrdersPage() {
                       </TableRow>
                     )}
                   </React.Fragment>
-                )
+                );
               })
             )}
           </TableBody>
@@ -482,5 +495,5 @@ export default function OrdersPage() {
         </p>
       )}
     </div>
-  )
+  );
 }

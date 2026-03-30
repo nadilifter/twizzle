@@ -44,7 +44,16 @@ export async function GET(request: NextRequest) {
             },
           },
           coveredPrograms: include.includes("programs")
-            ? { select: { id: true, name: true, status: true, basePrice: true, perSessionPrice: true, pricingModel: true } }
+            ? {
+                select: {
+                  id: true,
+                  name: true,
+                  status: true,
+                  basePrice: true,
+                  perSessionPrice: true,
+                  pricingModel: true,
+                },
+              }
             : undefined,
           athletePasses: include.includes("athletes")
             ? {
@@ -105,7 +114,11 @@ export async function POST(request: NextRequest) {
     const validatedData = createPassSchema.parse(body);
     const scopedDb = getScopedDb(session.user.organizationId);
 
-    if (validatedData.programIds && validatedData.programIds.length > 0 && !validatedData.coversAllPrograms) {
+    if (
+      validatedData.programIds &&
+      validatedData.programIds.length > 0 &&
+      !validatedData.coversAllPrograms
+    ) {
       const validPrograms = await scopedDb.program.findMany({
         where: { id: { in: validatedData.programIds } },
         select: { id: true },
@@ -133,14 +146,27 @@ export async function POST(request: NextRequest) {
         limitPeriod: validatedData.limitPeriod,
         coversAllPrograms: validatedData.coversAllPrograms,
         hasGenderRestriction: validatedData.hasGenderRestriction ?? false,
-        allowedGenders: validatedData.hasGenderRestriction ? (validatedData.allowedGenders ?? []) : [],
+        allowedGenders: validatedData.hasGenderRestriction
+          ? (validatedData.allowedGenders ?? [])
+          : [],
         glCodeId: validatedData.glCodeId ?? undefined,
-        ...(validatedData.programIds && validatedData.programIds.length > 0 && !validatedData.coversAllPrograms
+        ...(validatedData.programIds &&
+        validatedData.programIds.length > 0 &&
+        !validatedData.coversAllPrograms
           ? { coveredPrograms: { connect: validatedData.programIds.map((id) => ({ id })) } }
           : {}),
       },
       include: {
-        coveredPrograms: { select: { id: true, name: true, status: true, basePrice: true, perSessionPrice: true, pricingModel: true } },
+        coveredPrograms: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+            basePrice: true,
+            perSessionPrice: true,
+            pricingModel: true,
+          },
+        },
         _count: { select: { athletePasses: true, coveredPrograms: true } },
       },
     });

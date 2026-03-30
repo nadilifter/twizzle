@@ -153,9 +153,8 @@ export async function GET() {
 
     const thisMonthRevenue = Number(revenueThisMonth[0]?.total ?? 0);
     const lastMonthRevenue = Number(revenueLastMonth[0]?.total ?? 0);
-    const collectionRate = totalNonDraftInvoices > 0
-      ? Math.round((paidInvoices / totalNonDraftInvoices) * 100)
-      : 0;
+    const collectionRate =
+      totalNonDraftInvoices > 0 ? Math.round((paidInvoices / totalNonDraftInvoices) * 100) : 0;
 
     return NextResponse.json({
       kpis: {
@@ -188,9 +187,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Error fetching revenue analytics:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch revenue data" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch revenue data" }, { status: 500 });
   }
 }

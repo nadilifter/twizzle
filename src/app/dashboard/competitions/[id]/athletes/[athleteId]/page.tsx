@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { useParams } from "next/navigation"
-import { sanitizeHtml } from "@/lib/sanitize"
-import { format } from "date-fns"
-import { toast } from "sonner"
+import * as React from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { sanitizeHtml } from "@/lib/sanitize";
+import { format } from "date-fns";
+import { toast } from "sonner";
 import {
   type ColumnDef,
   type SortingState,
@@ -13,7 +13,7 @@ import {
   getCoreRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table"
+} from "@tanstack/react-table";
 import {
   ArrowLeft,
   CalendarDays,
@@ -27,23 +27,23 @@ import {
   Users,
   X,
   Eye,
-} from "lucide-react"
-import { calculateAge } from "@/lib/age-utils"
-import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+} from "lucide-react";
+import { calculateAge } from "@/lib/age-utils";
+import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Separator } from "@/components/ui/separator"
-import { RegistrationFileViewer } from "@/components/registration-file-viewer"
+} from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { RegistrationFileViewer } from "@/components/registration-file-viewer";
 import {
   Table,
   TableBody,
@@ -51,94 +51,94 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 
 // ─── Types ──────────────────────────────────────────────────────────
 
 interface WaiverPageData {
-  id: string
-  pageNumber: number
-  title: string | null
-  content: string
+  id: string;
+  pageNumber: number;
+  title: string | null;
+  content: string;
   signature: {
-    signatureData: string
-    signedByName: string
-    signedByEmail: string
-    signedAt: string
-  } | null
+    signatureData: string;
+    signedByName: string;
+    signedByEmail: string;
+    signedAt: string;
+  } | null;
 }
 
 interface WaiverData {
-  id: string
-  title: string
-  signed: boolean
-  signedAt: string | null
-  pages: WaiverPageData[]
+  id: string;
+  title: string;
+  signed: boolean;
+  signedAt: string | null;
+  pages: WaiverPageData[];
 }
 
 interface AthleteDetail {
-  competitionName: string
+  competitionName: string;
   athlete: {
-    id: string
-    firstName: string | null
-    lastName: string | null
-    avatar: string | null
-    birthDate: string | null
-    gender: string | null
-    level: { id: string; name: string } | null
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    avatar: string | null;
+    birthDate: string | null;
+    gender: string | null;
+    level: { id: string; name: string } | null;
     guardians: {
-      id: string
-      name: string
-      email: string
-      phone: string | null
-      relationship: string | null
-      isPrimary: boolean
-    }[]
-  }
+      id: string;
+      name: string;
+      email: string;
+      phone: string | null;
+      relationship: string | null;
+      isPrimary: boolean;
+    }[];
+  };
   entries: {
-    id: string
-    status: string
-    category: { id: string; label: string; resultType: string }
-    seedMark: string | null
-    seedMarkStatus: string | null
-  }[]
+    id: string;
+    status: string;
+    category: { id: string; label: string; resultType: string };
+    seedMark: string | null;
+    seedMarkStatus: string | null;
+  }[];
   compliance: {
     membership: {
-      required: boolean
-      status: string
-      memberships: { name: string; groupName: string; status: string }[]
-    }
+      required: boolean;
+      status: string;
+      memberships: { name: string; groupName: string; status: string }[];
+    };
     waivers: {
-      required: boolean
-      status: string
-      waivers: WaiverData[]
-    }
+      required: boolean;
+      status: string;
+      waivers: WaiverData[];
+    };
     medical: {
-      required: boolean
-      status: string
+      required: boolean;
+      status: string;
       info: {
-        id: string
-        allergies: string[]
-        medications: string[]
-        conditions: string[]
-        dietaryRestrictions: string[]
-        insuranceProvider: string | null
-        insurancePolicyNumber: string | null
-        emergencyContactName: string | null
-        emergencyContactPhone: string | null
-        emergencyContactRelation: string | null
-        additionalNotes: string | null
-        createdAt: string
-        updatedAt: string
-      } | null
-    }
-  }
+        id: string;
+        allergies: string[];
+        medications: string[];
+        conditions: string[];
+        dietaryRestrictions: string[];
+        insuranceProvider: string | null;
+        insurancePolicyNumber: string | null;
+        emergencyContactName: string | null;
+        emergencyContactPhone: string | null;
+        emergencyContactRelation: string | null;
+        additionalNotes: string | null;
+        createdAt: string;
+        updatedAt: string;
+      } | null;
+    };
+  };
   requirements: {
-    hasLevelRestriction: boolean
-    hasMembershipRestriction: boolean
-    hasWaiverRestriction: boolean
-    hasMedicalRequirement: boolean
-  }
+    hasLevelRestriction: boolean;
+    hasMembershipRestriction: boolean;
+    hasWaiverRestriction: boolean;
+    hasMedicalRequirement: boolean;
+  };
 }
 
 // ─── Constants ──────────────────────────────────────────────────────
@@ -150,60 +150,58 @@ const ENTRY_STATUS_STYLES: Record<string, string> = {
   REJECTED: "bg-red-50 text-red-700 border-red-200",
   WITHDRAWN: "bg-muted text-muted-foreground",
   SCRATCHED: "bg-muted text-muted-foreground",
-}
+};
 
 function formatEntryStatus(status: string): string {
-  return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+  return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function getInitials(firstName: string | null, lastName: string | null): string {
-  const f = firstName?.charAt(0) ?? ""
-  const l = lastName?.charAt(0) ?? ""
-  return (f + l).toUpperCase() || "?"
+  const f = firstName?.charAt(0) ?? "";
+  const l = lastName?.charAt(0) ?? "";
+  return (f + l).toUpperCase() || "?";
 }
 
 // ─── Page Component ─────────────────────────────────────────────────
 
 export default function CompetitionAthleteDetailPage() {
-  const params = useParams()
-  const competitionId = typeof params.id === "string" ? params.id : ""
-  const athleteId = typeof params.athleteId === "string" ? params.athleteId : ""
+  const params = useParams();
+  const competitionId = typeof params.id === "string" ? params.id : "";
+  const athleteId = typeof params.athleteId === "string" ? params.athleteId : "";
 
-  const [data, setData] = React.useState<AthleteDetail | null>(null)
-  const [loading, setLoading] = React.useState(true)
-  const [viewingWaiver, setViewingWaiver] = React.useState<WaiverData | null>(null)
+  const [data, setData] = React.useState<AthleteDetail | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [viewingWaiver, setViewingWaiver] = React.useState<WaiverData | null>(null);
 
   const athleteName = data
     ? [data.athlete.firstName, data.athlete.lastName].filter(Boolean).join(" ") || "Unknown Athlete"
-    : undefined
+    : undefined;
 
   useBreadcrumbOverride(
     data ? `/dashboard/competitions/${competitionId}` : undefined,
-    data?.competitionName,
-  )
+    data?.competitionName
+  );
   useBreadcrumbOverride(
     data ? `/dashboard/competitions/${competitionId}/athletes/${athleteId}` : undefined,
-    athleteName,
-  )
+    athleteName
+  );
 
   React.useEffect(() => {
     const fetchData = async () => {
-      setLoading(true)
+      setLoading(true);
       try {
-        const response = await fetch(
-          `/api/competitions/${competitionId}/athletes/${athleteId}`
-        )
-        if (!response.ok) throw new Error("Failed to fetch")
-        const json = await response.json()
-        setData(json)
+        const response = await fetch(`/api/competitions/${competitionId}/athletes/${athleteId}`);
+        if (!response.ok) throw new Error("Failed to fetch");
+        const json = await response.json();
+        setData(json);
       } catch {
-        toast.error("Failed to load athlete details")
+        toast.error("Failed to load athlete details");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    if (competitionId && athleteId) fetchData()
-  }, [competitionId, athleteId])
+    };
+    if (competitionId && athleteId) fetchData();
+  }, [competitionId, athleteId]);
 
   if (loading) {
     return (
@@ -213,7 +211,7 @@ export default function CompetitionAthleteDetailPage() {
           <p className="text-muted-foreground">Loading athlete details...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (!data) {
@@ -231,12 +229,12 @@ export default function CompetitionAthleteDetailPage() {
           </Link>
         </Button>
       </div>
-    )
+    );
   }
 
-  const { athlete, entries, compliance, requirements } = data
-  const age = calculateAge(athlete.birthDate)
-  const primaryGuardian = athlete.guardians.find((g) => g.isPrimary) ?? athlete.guardians[0]
+  const { athlete, entries, compliance, requirements } = data;
+  const age = calculateAge(athlete.birthDate);
+  const primaryGuardian = athlete.guardians.find((g) => g.isPrimary) ?? athlete.guardians[0];
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -262,9 +260,13 @@ export default function CompetitionAthleteDetailPage() {
                   {getInitials(athlete.firstName, athlete.lastName)}
                 </AvatarFallback>
               </Avatar>
-              <h1 className="text-xl font-bold tracking-tight mt-4">{athleteName ?? "Unknown Athlete"}</h1>
+              <h1 className="text-xl font-bold tracking-tight mt-4">
+                {athleteName ?? "Unknown Athlete"}
+              </h1>
               {athlete.level && (
-                <Badge variant="outline" className="mt-2">{athlete.level.name}</Badge>
+                <Badge variant="outline" className="mt-2">
+                  {athlete.level.name}
+                </Badge>
               )}
               <Separator className="my-4 w-full" />
               <div className="w-full space-y-2.5 text-sm text-left">
@@ -285,7 +287,8 @@ export default function CompetitionAthleteDetailPage() {
                       {athlete.gender.charAt(0).toUpperCase()}
                     </span>
                     <span>
-                      {athlete.gender.charAt(0).toUpperCase() + athlete.gender.slice(1).toLowerCase()}
+                      {athlete.gender.charAt(0).toUpperCase() +
+                        athlete.gender.slice(1).toLowerCase()}
                     </span>
                   </div>
                 )}
@@ -295,9 +298,7 @@ export default function CompetitionAthleteDetailPage() {
                     <span className="truncate">
                       {primaryGuardian.name}
                       {primaryGuardian.email && (
-                        <span className="text-xs ml-1">
-                          ({primaryGuardian.email})
-                        </span>
+                        <span className="text-xs ml-1">({primaryGuardian.email})</span>
                       )}
                     </span>
                   </div>
@@ -444,39 +445,27 @@ export default function CompetitionAthleteDetailPage() {
       </Card>
 
       {/* Waiver Viewer Dialog */}
-      <WaiverViewerDialog
-        waiver={viewingWaiver}
-        onClose={() => setViewingWaiver(null)}
-      />
+      <WaiverViewerDialog waiver={viewingWaiver} onClose={() => setViewingWaiver(null)} />
     </div>
-  )
+  );
 }
 
 // ─── Registrations Table ─────────────────────────────────────────────
 
-type EntryRow = AthleteDetail["entries"][number]
+type EntryRow = AthleteDetail["entries"][number];
 
 const registrationColumns: ColumnDef<EntryRow>[] = [
   {
     id: "event",
     accessorFn: (row) => row.category.label,
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Event" />
-    ),
-    cell: ({ row }) => (
-      <span className="font-medium">{row.original.category.label}</span>
-    ),
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Event" />,
+    cell: ({ row }) => <span className="font-medium">{row.original.category.label}</span>,
   },
   {
     accessorKey: "status",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Status" />
-    ),
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
     cell: ({ row }) => (
-      <Badge
-        variant="outline"
-        className={ENTRY_STATUS_STYLES[row.original.status] ?? ""}
-      >
+      <Badge variant="outline" className={ENTRY_STATUS_STYLES[row.original.status] ?? ""}>
         {formatEntryStatus(row.original.status)}
       </Badge>
     ),
@@ -484,40 +473,31 @@ const registrationColumns: ColumnDef<EntryRow>[] = [
   {
     id: "resultType",
     accessorFn: (row) => row.category.resultType,
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Result Type" />
-    ),
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Result Type" />,
     cell: ({ row }) => row.original.category.resultType,
   },
   {
     accessorKey: "seedMark",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Seed Mark" />
-    ),
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Seed Mark" />,
     cell: ({ row }) => row.original.seedMark ?? "-",
   },
   {
     accessorKey: "seedMarkStatus",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Seed Status" />
-    ),
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Seed Status" />,
     cell: ({ row }) => {
-      const status = row.original.seedMarkStatus
-      if (!status) return "-"
+      const status = row.original.seedMarkStatus;
+      if (!status) return "-";
       return (
-        <Badge
-          variant="outline"
-          className={ENTRY_STATUS_STYLES[status] ?? ""}
-        >
+        <Badge variant="outline" className={ENTRY_STATUS_STYLES[status] ?? ""}>
           {formatEntryStatus(status)}
         </Badge>
-      )
+      );
     },
   },
-]
+];
 
 function RegistrationsTable({ entries }: { entries: EntryRow[] }) {
-  const [sorting, setSorting] = React.useState<SortingState>([])
+  const [sorting, setSorting] = React.useState<SortingState>([]);
 
   const table = useReactTable({
     data: entries,
@@ -526,7 +506,7 @@ function RegistrationsTable({ entries }: { entries: EntryRow[] }) {
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-  })
+  });
 
   return (
     <Card>
@@ -568,10 +548,7 @@ function RegistrationsTable({ entries }: { entries: EntryRow[] }) {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell
-                    colSpan={registrationColumns.length}
-                    className="h-24 text-center"
-                  >
+                  <TableCell colSpan={registrationColumns.length} className="h-24 text-center">
                     No event registrations found.
                   </TableCell>
                 </TableRow>
@@ -581,7 +558,7 @@ function RegistrationsTable({ entries }: { entries: EntryRow[] }) {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 // ─── Waiver Viewer Dialog ───────────────────────────────────────────
@@ -590,13 +567,18 @@ function WaiverViewerDialog({
   waiver,
   onClose,
 }: {
-  waiver: WaiverData | null
-  onClose: () => void
+  waiver: WaiverData | null;
+  onClose: () => void;
 }) {
-  if (!waiver) return null
+  if (!waiver) return null;
 
   return (
-    <Dialog open={!!waiver} onOpenChange={(open) => { if (!open) onClose() }}>
+    <Dialog
+      open={!!waiver}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -639,8 +621,12 @@ function WaiverViewerDialog({
                     />
                   </div>
                   <div className="text-xs text-muted-foreground space-y-0.5">
-                    <p>Signed by: {page.signature.signedByName} ({page.signature.signedByEmail})</p>
-                    <p>Date: {format(new Date(page.signature.signedAt), "MMMM d, yyyy 'at' h:mm a")}</p>
+                    <p>
+                      Signed by: {page.signature.signedByName} ({page.signature.signedByEmail})
+                    </p>
+                    <p>
+                      Date: {format(new Date(page.signature.signedAt), "MMMM d, yyyy 'at' h:mm a")}
+                    </p>
                   </div>
                 </div>
               ) : (
@@ -658,14 +644,14 @@ function WaiverViewerDialog({
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 // ─── Status Badges ──────────────────────────────────────────────────
 
 function ComplianceStatusBadge({ status }: { status: string }) {
-  const isGood = status === "verified" || status === "signed" || status === "complete"
-  if (status === "not_required") return null
+  const isGood = status === "verified" || status === "signed" || status === "complete";
+  if (status === "not_required") return null;
 
   const label =
     status === "verified"
@@ -678,7 +664,7 @@ function ComplianceStatusBadge({ status }: { status: string }) {
             ? "Incomplete"
             : status === "complete"
               ? "On File"
-              : "Incomplete"
+              : "Incomplete";
 
   return (
     <Badge
@@ -696,7 +682,7 @@ function ComplianceStatusBadge({ status }: { status: string }) {
       )}
       {label}
     </Badge>
-  )
+  );
 }
 
 function MembershipStatusBadge({ status }: { status: string }) {
@@ -706,7 +692,7 @@ function MembershipStatusBadge({ status }: { status: string }) {
         <CheckCircle2 className="h-3 w-3 mr-1" />
         Active
       </Badge>
-    )
+    );
   }
   if (status === "none") {
     return (
@@ -714,13 +700,13 @@ function MembershipStatusBadge({ status }: { status: string }) {
         <AlertCircle className="h-3 w-3 mr-1" />
         Not Found
       </Badge>
-    )
+    );
   }
   return (
     <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </Badge>
-  )
+  );
 }
 
 // ─── Medical Display ────────────────────────────────────────────────
@@ -728,20 +714,22 @@ function MembershipStatusBadge({ status }: { status: string }) {
 function MedicalInfoDisplay({
   info,
 }: {
-  info: NonNullable<AthleteDetail["compliance"]["medical"]["info"]>
+  info: NonNullable<AthleteDetail["compliance"]["medical"]["info"]>;
 }) {
-  const hasAllergies = info.allergies.length > 0
-  const hasConditions = info.conditions.length > 0
-  const hasMedications = info.medications.length > 0
-  const hasDietary = info.dietaryRestrictions.length > 0
-  const hasEmergencyContact = info.emergencyContactName || info.emergencyContactPhone
-  const hasInsurance = info.insuranceProvider || info.insurancePolicyNumber
+  const hasAllergies = info.allergies.length > 0;
+  const hasConditions = info.conditions.length > 0;
+  const hasMedications = info.medications.length > 0;
+  const hasDietary = info.dietaryRestrictions.length > 0;
+  const hasEmergencyContact = info.emergencyContactName || info.emergencyContactPhone;
+  const hasInsurance = info.insuranceProvider || info.insurancePolicyNumber;
 
   return (
     <div className="space-y-3">
       {/* Allergies + Conditions (most critical) */}
       <div>
-        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">Allergies</h4>
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
+          Allergies
+        </h4>
         {hasAllergies ? (
           <div className="flex flex-wrap gap-1.5">
             {info.allergies.map((a, i) => (
@@ -759,7 +747,9 @@ function MedicalInfoDisplay({
       </div>
 
       <div>
-        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">Conditions</h4>
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
+          Conditions
+        </h4>
         {hasConditions ? (
           <div className="flex flex-wrap gap-1.5">
             {info.conditions.map((c, i) => (
@@ -778,7 +768,9 @@ function MedicalInfoDisplay({
 
       {hasMedications && (
         <div>
-          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">Medications</h4>
+          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
+            Medications
+          </h4>
           <div className="flex flex-wrap gap-1.5">
             {info.medications.map((m, i) => (
               <Badge key={i} variant="outline" className="text-xs">
@@ -793,7 +785,9 @@ function MedicalInfoDisplay({
         <>
           <Separator />
           <div>
-            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Emergency Contact</h4>
+            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+              Emergency Contact
+            </h4>
             <p className="text-sm">
               {info.emergencyContactName}
               {info.emergencyContactPhone && ` \u2022 ${info.emergencyContactPhone}`}
@@ -810,7 +804,9 @@ function MedicalInfoDisplay({
           <Separator />
           {hasDietary && (
             <div>
-              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">Dietary Restrictions</h4>
+              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
+                Dietary Restrictions
+              </h4>
               <div className="flex flex-wrap gap-1.5">
                 {info.dietaryRestrictions.map((d, i) => (
                   <Badge key={i} variant="outline" className="text-xs">
@@ -822,21 +818,27 @@ function MedicalInfoDisplay({
           )}
           {hasInsurance && (
             <div>
-              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Insurance</h4>
+              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                Insurance
+              </h4>
               <p className="text-sm">{info.insuranceProvider}</p>
               {info.insurancePolicyNumber && (
-                <p className="text-xs text-muted-foreground">Policy: {info.insurancePolicyNumber}</p>
+                <p className="text-xs text-muted-foreground">
+                  Policy: {info.insurancePolicyNumber}
+                </p>
               )}
             </div>
           )}
           {info.additionalNotes && (
             <div>
-              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Notes</h4>
+              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                Notes
+              </h4>
               <p className="text-sm text-muted-foreground">{info.additionalNotes}</p>
             </div>
           )}
         </>
       )}
     </div>
-  )
+  );
 }
