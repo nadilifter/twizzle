@@ -175,8 +175,8 @@ export async function PATCH(request: NextRequest) {
       // Update all questions in a transaction
       await db.$transaction(
         validatedData.questions.map((q) =>
-          db.customMedicalQuestion.update({
-            // tenant-isolation-ok: organizationId in where clause
+          // prettier-ignore
+          db.customMedicalQuestion.update({ // tenant-isolation-ok: organizationId in where clause
             where: {
               id: q.id,
               organizationId: organizationId,
