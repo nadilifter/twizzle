@@ -19,6 +19,8 @@
     "secrets:decrypt": "./scripts/secrets-decrypt.sh",
     "secrets:encrypt": "./scripts/secrets-encrypt.sh",
     "secrets:edit": "./scripts/secrets-edit.sh",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "lint:tenant": "bash scripts/check-tenant-isolation.sh",
     "prepare": "husky"
   },
@@ -132,12 +134,26 @@
     "eslint": "^8.57.1",
     "eslint-config-next": "14.2.3",
     "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "pg": "^8.20.0",
     "postcss": "^8",
+    "prettier": "^3.8.1",
     "prisma": "^6.19.2",
     "tailwindcss": "^3.4.1",
     "ts-node": "^10.9.2",
     "typescript": "^5"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "prettier --write",
+      "next lint --fix --file"
+    ],
+    "*.{js,cjs,mjs}": [
+      "prettier --write"
+    ],
+    "*.{json,css,md}": [
+      "prettier --write"
+    ]
   },
   "pnpm": {
     "onlyBuiltDependencies": [
