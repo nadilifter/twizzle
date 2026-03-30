@@ -1,0 +1,265 @@
+# Agents Guide
+
+This file gives AI coding agents (Claude Code, Cursor, Copilot, etc.) the context needed to work effectively in this codebase without making architectural mistakes or breaking tenant isolation.
+
+Read this before making changes. Cross-reference with `ARCHITECTURE.md` for deep dives.
+
+---
+
+## What This Project Is
+
+**Uplifter** is a multi-tenant SaaS platform for sports club management. Each customer is an `Organization`. A single Next.js 14 app (App Router) serves multiple portals via subdomain routing. The database is PostgreSQL accessed through Prisma ORM.
+
+---
+
+## Critical Rules
+
+### 1. Never Trust Client-Provided `organizationId`
+
+Every API route must derive the organization from the authenticated session — never from query params, request body, or headers.
+
+```typescript
+// CORRECT
+const session = await getAuthSession();
+const organizationId = session.user.organizationId;
+
+// WRONG — security vulnerability
+const { organizationId } = await request.json();
+```
+
+### 2. Always Use `getScopedDb` for Tenant-Scoped Models
+
+`getScopedDb(organizationId)` wraps Prisma with a Proxy that automatically injects `organizationId` into every read/write for models in the `TENANT_MODELS` list (`src/lib/db.ts`).
+
+```typescript
+import { getScopedDb } from "@/lib/db";
+
+const scopedDb = getScopedDb(session.user.organizationId);
+
+// organizationId injected automatically
+const programs = await scopedDb.program.findMany();
+const program = await scopedDb.program.create({ data: { name: "New" } });
+await scopedDb.program.delete({ where: { id } });
+```
+
+### 3. Filter Relation-Scoped Models Manually
+
+Some models don't have a direct `organizationId` — filter through their relation chain:
+
+```typescript
+// Payment → via Invoice
+await db.payment.findMany({
+  where: { invoice: { organizationId } },
+});
+
+// Enrollment → via Program
+await db.enrollment.findMany({
+  where: { program: { organizationId } },
+});
+
+// AthleteMembership → via instance → group
+await db.athleteMembership.findMany({
+  where: { instance: { group: { organizationId } } },
+});
+
+// Athlete list → via organizationAthletes junction
+await db.athlete.findMany({
+  where: { organizationAthletes: { some: { organizationId } } },
+});
+```
+
+### 4. Add Defensive Org Checks Inside Transactions
+
+`getScopedDb` extensions do not propagate into `$transaction` callbacks. Always verify ownership inside the callback before mutating.
+
+```typescript
+const result = await db.$transaction(async (tx) => {
+  const record = await tx.program.findFirst({
+    where: { id, organizationId: session.user.organizationId },
+  });
+  if (!record) throw new Error("Not found or access denied");
+  return tx.program.update({ where: { id }, data });
+});
+```
+
+### 5. Don't Org-Scope Medical Data
+
+`AthleteMedicalInfo` is intentionally shared across organizations. Do not add `organizationId` filters when querying it. Medical records follow the athlete, not the org.
+
+---
+
+## Standard Patterns
+
+### API Route Template
+
+```typescript
+import { NextResponse } from "next/server";
+import { getAuthSession } from "@/lib/auth";
+import { getScopedDb } from "@/lib/db";
+import { z } from "zod";
+
+const bodySchema = z.object({
+  name: z.string().min(1),
+});
+
+export async function POST(request: Request) {
+  const session = await getAuthSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await request.json();
+  const parsed = bodySchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const scopedDb = getScopedDb(session.user.organizationId);
+  const record = await scopedDb.program.create({
+    data: { name: parsed.data.name },
+  });
+
+  return NextResponse.json(record);
+}
+```
+
+### Date Fields
+
+Use `parseDateOnly()` for date-only values (no time component). Using `new Date(dateString)` directly causes timezone drift bugs. See `docs/DATE-HANDLING.md`.
+
+```typescript
+import { parseDateOnly } from "@/lib/date-utils";
+
+// CORRECT
+const date = parseDateOnly(body.startDate); // returns a UTC midnight date
+
+// WRONG — can shift date by timezone offset
+const date = new Date(body.startDate);
+```
+
+### Phone Fields
+
+Always use `PhoneInput` from `@/components/ui/phone-input`. Store in E.164 format. Validate with `isValidPhoneNumber()` from `react-phone-number-input` on both client and server.
+
+```typescript
+// Display
+import { formatPhoneNumberIntl } from "react-phone-number-input";
+formatPhoneNumberIntl(phone) || phone;
+
+// Never use
+<input type="tel" />
+```
+
+### Data Tables
+
+Use TanStack React Table v8 (`@tanstack/react-table`). See `docs/data-table-migration.md` for the standard column/table setup used throughout the app.
+
+---
+
+## Where Things Live
+
+| What                         | Where                                            |
+| ---------------------------- | ------------------------------------------------ |
+| All API routes               | `src/app/api/`                                   |
+| Tenant isolation logic       | `src/lib/db.ts` → `getScopedDb`, `TENANT_MODELS` |
+| Auth config + session        | `src/lib/auth.ts`                                |
+| Subdomain routing middleware | `src/middleware.ts`                              |
+| Email service                | `src/lib/email.ts`                               |
+| SMS service                  | `src/lib/sms-service.ts`, `src/lib/twilio.ts`    |
+| Payment processing           | `src/lib/adyen.ts`, `src/lib/adyen-platform.ts`  |
+| File storage                 | `src/lib/storage.ts`                             |
+| Feature flags                | `src/lib/feature-toggles.ts`                     |
+| Accounting integrations      | `src/lib/qbo.ts`, `src/lib/xero.ts`              |
+| Prisma schema                | `prisma/schema.prisma`                           |
+| Custom React hooks           | `src/hooks/`                                     |
+| Shared UI components         | `src/components/`                                |
+| Type definitions             | `src/types/`                                     |
+| Zustand stores               | `src/store/`                                     |
+
+---
+
+## Portal Routing
+
+Each portal is a subdomain. The middleware (`src/middleware.ts`) parses the subdomain and rewrites the request to the correct internal path.
+
+| Subdomain     | Internal path prefix | Audience                       |
+| ------------- | -------------------- | ------------------------------ |
+| `admin.`      | `/dashboard/`        | Org admins, staff              |
+| `athletes.`   | `/athletes/`         | Parents, self-managed athletes |
+| `coach.`      | `/coach/`            | Coaches                        |
+| `pos.`        | `/pos/`              | Front desk                     |
+| `superadmin.` | `/superadmin/`       | Uplifter staff only            |
+| `[org-slug].` | `/sites/[slug]/`     | Public visitors                |
+| `login.`      | `/(auth)/`           | All unauthenticated users      |
+
+**Tenant site navigation rule:** Client-side `Link` hrefs and `router.push` calls inside `/sites/[slug]/` must use simple paths (`/checkout`, `/register`). Never include `/sites/{slug}/` — the middleware inserts that prefix automatically.
+
+---
+
+## Adding Things
+
+### New API Route
+
+1. Create the file under `src/app/api/your-path/route.ts`
+2. Check auth with `getAuthSession()` — return 401 if missing
+3. Validate input with Zod
+4. Use `getScopedDb` for tenant-scoped models, or filter manually for relation-scoped ones
+5. Inside `$transaction`, add a defensive org check before any mutation
+6. Return `NextResponse.json()`
+
+Full checklist: `src/app/api/README.md`
+
+### New Database Model
+
+1. Add the model to `prisma/schema.prisma`
+2. Run `pnpm prisma migrate dev --name <descriptive-name>`
+3. If the model has a direct `organizationId` column, add it to `TENANT_MODELS` in `src/lib/db.ts`
+4. Add TypeScript types to `src/types/` if needed
+
+### New Cron Job
+
+1. Add the handler at `src/app/api/cron/your-job/route.ts`
+2. Verify the `CRON_SECRET` header before processing
+3. Register the schedule in `vercel.json` under `"crons"`
+
+### New Notification Trigger Type
+
+1. Add the value to the `NotificationTriggerType` enum in `prisma/schema.prisma`
+2. Migrate
+3. Add handling in the `process-notifications` cron logic
+4. Update `NotificationDeduplication` logic if the trigger can fire repeatedly
+
+---
+
+## Multi-Organization Users
+
+A single `User` can belong to multiple `Organization` records via `OrganizationMember`. The active org is stored in the session (`session.user.organizationId`). Users switch orgs via the org switcher — this updates the session, not the user record. When writing code that reads the current user's data, always scope to the active `organizationId`, not just the `userId`.
+
+---
+
+## External Services Quick Reference
+
+| Service           | Env vars                                  | Dev equivalent             |
+| ----------------- | ----------------------------------------- | -------------------------- |
+| PostgreSQL        | `DATABASE_URL`                            | Docker (postgres:16)       |
+| Email (SES)       | `AWS_SES_FROM_EMAIL`, `AWS_SES_REGION`    | MailHog (`localhost:8025`) |
+| SMS (Twilio)      | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | `TWILIO_ENVIRONMENT=TEST`  |
+| Payments (Adyen)  | `ADYEN_API_KEY`, `ADYEN_MERCHANT_ACCOUNT` | `ADYEN_ENVIRONMENT=TEST`   |
+| File storage (S3) | `AWS_S3_BUCKET`, `AWS_S3_REGION`          | MinIO (`localhost:9000`)   |
+| Redis             | Upstash `UPSTASH_REDIS_REST_URL`          | Docker Redis               |
+
+Toggle between local and cloud storage with `USE_S3_STORAGE=false` (uses local filesystem) vs `USE_S3_STORAGE=true`.
+
+---
+
+## What Not To Do
+
+- **Don't add `organizationId` to `AthleteMedicalInfo` queries** — intentionally shared across orgs
+- **Don't use raw `db` client for tenant-scoped writes** — always use `getScopedDb` or include the org filter explicitly
+- **Don't use `new Date(dateString)` for date-only fields** — use `parseDateOnly()`
+- **Don't use `<input type="tel">`** — use `PhoneInput` component
+- **Don't trust `organizationId` from request bodies or query params** — always read from session
+- **Don't add `/sites/{slug}/` to client-side navigation hrefs** inside tenant site pages
+- **Don't mutate inside a transaction without first verifying org ownership** — `getScopedDb` doesn't propagate into `$transaction` callbacks
+- **Don't create new abstractions for one-off operations** — inline the logic
+- **Don't add error handling for impossible states** — only validate at system boundaries
