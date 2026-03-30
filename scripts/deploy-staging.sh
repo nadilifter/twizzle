@@ -61,20 +61,11 @@ log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
 echo ""
-# Check if git is configured correctly
-log_info "Checking git configuration..."
-REMOTE_URL=$(git remote get-url origin 2>/dev/null || echo "none")
-if [[ "$REMOTE_URL" == *"https://"* ]] || [[ "$REMOTE_URL" == "none" ]]; then
-    log_warn "Git remote is using HTTPS or not configured"
-    log_info "Setting up SSH remote..."
-    git remote set-url origin git@github.com:uplifter-us/clubs.git || \
-        git remote add origin git@github.com:uplifter-us/clubs.git
-fi
-
 log_info "Pulling latest changes from GitHub..."
 if ! git fetch origin 2>/dev/null; then
-    log_error "Git fetch failed! Is the deploy key configured?"
-    log_info "Run 'setup-github-deploy-key.sh' on the server to set up GitHub access"
+    log_error "Git fetch failed! Check credentials or deploy key."
+    log_info "For HTTPS: ensure ~/.git-credentials has a valid PAT"
+    log_info "For SSH: ensure deploy key is added to the repo"
     exit 1
 fi
 git reset --hard origin/main
