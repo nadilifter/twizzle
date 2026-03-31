@@ -22,7 +22,7 @@ function isLocalSubdomain(): boolean {
 }
 
 /**
- * KNOWN ISSUE: Google OAuth on local subdomains (e.g., login.uplifterinc.localhost:3000)
+ * KNOWN ISSUE: Google OAuth on local subdomains (e.g., login.uplifter.localhost:3000)
  *
  * STATUS: Not fully working in local development. Works in production.
  * See git history for full context on this limitation.
@@ -183,7 +183,7 @@ export function LoginForm() {
     if (isLocalEnv) {
       const destination = callbackUrl.startsWith("http")
         ? callbackUrl
-        : `http://admin.uplifterinc.localhost:3000${callbackUrl}`;
+        : `http://admin.uplifter.localhost:3000${callbackUrl}`;
       window.location.href = `/api/auth/credentials-bridge?callbackUrl=${encodeURIComponent(destination)}`;
     } else {
       const destination =

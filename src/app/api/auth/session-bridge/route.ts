@@ -11,11 +11,11 @@ import { logger } from "@/lib/logger";
  * LOCAL DEVELOPMENT ONLY:
  * This endpoint handles cross-domain authentication for Google OAuth and credentials login.
  * Since Google OAuth only accepts localhost:3000 as an authorized origin,
- * but our app runs on *.uplifterinc.localhost subdomains, we need to:
+ * but our app runs on *.uplifter.localhost subdomains, we need to:
  *
  * 1. Complete OAuth/credentials login on localhost:3000
- * 2. Pass a signed bridge token to this endpoint on uplifterinc.localhost
- * 3. This endpoint verifies the token and sets the session cookie for .uplifterinc.localhost
+ * 2. Pass a signed bridge token to this endpoint on uplifter.localhost
+ * 3. This endpoint verifies the token and sets the session cookie for .uplifter.localhost
  *
  * The bridge token contains the user's email (signed with NEXTAUTH_SECRET)
  * and is only valid for a short time (60 seconds).
@@ -171,7 +171,7 @@ export async function GET(req: NextRequest) {
     let cookieDomain: string;
     if (currentEnv === "local") {
       // In local dev, use the shared local domain
-      cookieDomain = ".uplifterinc.localhost";
+      cookieDomain = ".uplifter.localhost";
     } else {
       // In cloud environments, use the configured cookie domain
       cookieDomain = config.cookieDomain;

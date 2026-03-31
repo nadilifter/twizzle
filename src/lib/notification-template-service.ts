@@ -341,7 +341,7 @@ export const PLACEHOLDER_DEFINITIONS: PlaceholderDefinition[] = [
     key: "paymentUrl",
     label: "Payment URL",
     description: "Link to make payment online",
-    example: "https://pay.uplifterinc.com/inv/abc123",
+    example: "https://pay.uplifter.app/inv/abc123",
     category: "payment",
   },
   {
@@ -385,7 +385,7 @@ export const PLACEHOLDER_DEFINITIONS: PlaceholderDefinition[] = [
     key: "websiteUrl",
     label: "Website URL",
     description: "Organization's website URL",
-    example: "https://sunrise-gymnastics.uplifterinc.com",
+    example: "https://sunrise-gymnastics.uplifter.app",
     category: "organization",
   },
 

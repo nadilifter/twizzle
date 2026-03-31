@@ -10,7 +10,7 @@ The platform runs across four environments with distinct domains:
 
 | Environment   | Domain                    | Purpose                    |
 |---------------|---------------------------|----------------------------|
-| Production    | `uplifterinc.com`        | Live customer traffic      |
+| Production    | `uplifter.app`           | Live customer traffic      |
 | Staging       | `upliftergymnastics.com` | QA/UAT testing             |
 | Development   | `uplifterdev.com`        | Development testing        |
 | Local         | `*.localhost:3000`       | Local development          |

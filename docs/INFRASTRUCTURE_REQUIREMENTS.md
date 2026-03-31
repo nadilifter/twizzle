@@ -61,7 +61,7 @@ Or preferably, IAM role ARN for assumed role access.
 
 | Environment | Domain                   | Status                        |
 | ----------- | ------------------------ | ----------------------------- |
-| Production  | `uplifterinc.com`        | ☐ Owned? ☐ DNS managed where? |
+| Production  | `uplifter.app`           | ☐ Owned? ☐ DNS managed where? |
 | Staging     | `upliftergymnastics.com` | ☐ Owned? ☐ DNS managed where? |
 | Development | `uplifterdev.com`        | ☐ Owned? ☐ DNS managed where? |
 
@@ -87,7 +87,7 @@ For each domain, provide:
 
 | Domain                 | Route 53 Hosted Zone ID |
 | ---------------------- | ----------------------- |
-| uplifterinc.com        | (will be created)       |
+| uplifter.app           | (will be created)       |
 | upliftergymnastics.com | (will be created)       |
 | uplifterdev.com        | (will be created)       |
 
@@ -103,9 +103,9 @@ AWS Certificate Manager (ACM) will be used for SSL certificates. Certificates ar
 
 | Domain                     | Certificate Type | Region                 |
 | -------------------------- | ---------------- | ---------------------- |
-| `*.uplifterinc.com`        | Wildcard         | us-east-1 (CloudFront) |
-| `uplifterinc.com`          | Root             | us-east-1 (CloudFront) |
-| `*.uplifterinc.com`        | Wildcard         | Primary region (ALB)   |
+| `*.uplifter.app`           | Wildcard         | us-east-1 (CloudFront) |
+| `uplifter.app`             | Root             | us-east-1 (CloudFront) |
+| `*.uplifter.app`           | Wildcard         | Primary region (ALB)   |
 | `*.upliftergymnastics.com` | Wildcard         | us-east-1 + Primary    |
 | `*.uplifterdev.com`        | Wildcard         | us-east-1 + Primary    |
 
@@ -177,13 +177,13 @@ AWS Certificate Manager (ACM) will be used for SSL certificates. Certificates ar
 
 #### Production (LIVE)
 
-| Item                     | Value                                              |
-| ------------------------ | -------------------------------------------------- |
-| Merchant Account         |                                                    |
-| API Key                  |                                                    |
-| Client Key               |                                                    |
-| Webhook HMAC Key         |                                                    |
-| Webhook URL to configure | `https://admin.uplifterinc.com/api/webhooks/adyen` |
+| Item                     | Value                                           |
+| ------------------------ | ----------------------------------------------- |
+| Merchant Account         |                                                 |
+| API Key                  |                                                 |
+| Client Key               |                                                 |
+| Webhook HMAC Key         |                                                 |
+| Webhook URL to configure | `https://admin.uplifter.app/api/webhooks/adyen` |
 
 #### Test Environment (for Staging/Dev/Local)
 
@@ -227,7 +227,7 @@ AWS Certificate Manager (ACM) will be used for SSL certificates. Certificates ar
 
 | Environment | Webhook URL                                               |
 | ----------- | --------------------------------------------------------- |
-| Production  | `https://admin.uplifterinc.com/api/twilio/webhook`        |
+| Production  | `https://admin.uplifter.app/api/twilio/webhook`           |
 | Staging     | `https://admin.upliftergymnastics.com/api/twilio/webhook` |
 | Development | `https://admin.uplifterdev.com/api/twilio/webhook`        |
 
@@ -278,11 +278,11 @@ You need **4 separate OAuth 2.0 Client IDs** (one per environment) because each 
 
 #### Production OAuth App
 
-| Item          | Value                                                    |
-| ------------- | -------------------------------------------------------- |
-| Client ID     |                                                          |
-| Client Secret |                                                          |
-| Redirect URI  | `https://login.uplifterinc.com/api/auth/callback/google` |
+| Item          | Value                                                 |
+| ------------- | ----------------------------------------------------- |
+| Client ID     |                                                       |
+| Client Secret |                                                       |
+| Redirect URI  | `https://login.uplifter.app/api/auth/callback/google` |
 
 #### Staging OAuth App
 

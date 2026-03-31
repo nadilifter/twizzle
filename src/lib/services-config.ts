@@ -112,10 +112,14 @@ export function getSESConfig(): SESConfig {
   const config = getEnvConfig();
   const currentEnv = getCurrentEnvironment();
 
-  // Determine from email based on environment
+  // Determine from email based on environment.
+  // Production must keep sending from @uplifterinc.com until SES is verified for uplifter.app.
   let fromEmail = process.env.AWS_SES_FROM_EMAIL;
   if (!fromEmail) {
-    fromEmail = `noreply@${config.baseDomain.split(":")[0]}`;
+    fromEmail =
+      currentEnv === "production"
+        ? "noreply@uplifterinc.com"
+        : `noreply@${config.baseDomain.split(":")[0]}`;
   }
 
   return {

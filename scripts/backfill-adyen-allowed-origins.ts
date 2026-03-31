@@ -31,10 +31,10 @@ const DRY_RUN = process.argv.includes("--dry-run");
 const FIXED_SUBDOMAINS = ["startup", "admin", "athletes"];
 
 const DOMAIN_MAP: Record<string, { baseDomain: string; https: boolean }> = {
-  production: { baseDomain: "uplifterinc.com", https: true },
+  production: { baseDomain: "uplifter.app", https: true },
   staging: { baseDomain: "upliftergymnastics.com", https: true },
   development: { baseDomain: "uplifterdev.com", https: true },
-  local: { baseDomain: "uplifterinc.localhost:3000", https: false },
+  local: { baseDomain: "uplifter.localhost:3000", https: false },
 };
 
 function getSubdomainUrl(subdomain: string): string {

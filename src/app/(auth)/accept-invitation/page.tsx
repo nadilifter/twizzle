@@ -171,7 +171,7 @@ function AcceptInvitationContent() {
         // to transfer the session to the correct cookie domain
         const isLocal = window.location.hostname.includes("localhost");
         if (isLocal) {
-          const adminUrl = `http://admin.uplifterinc.localhost:3000/`;
+          const adminUrl = `http://admin.uplifter.localhost:3000/`;
           window.location.href = `/api/auth/credentials-bridge?callbackUrl=${encodeURIComponent(adminUrl)}`;
         } else {
           router.push("/dashboard");

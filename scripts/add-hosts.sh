@@ -6,11 +6,11 @@ set -euo pipefail
 
 HOSTS_FILE="/etc/hosts"
 ENTRIES=(
-  "127.0.0.1	login.uplifterinc.localhost"
-  "127.0.0.1	startup.uplifterinc.localhost"
-  "127.0.0.1	events.uplifterinc.localhost"
-  "127.0.0.1	competitions.uplifterinc.localhost"
-  "127.0.0.1	results.uplifterinc.localhost"
+  "127.0.0.1	login.uplifter.localhost"
+  "127.0.0.1	startup.uplifter.localhost"
+  "127.0.0.1	events.uplifter.localhost"
+  "127.0.0.1	competitions.uplifter.localhost"
+  "127.0.0.1	results.uplifter.localhost"
 )
 
 if [ "$(id -u)" -ne 0 ]; then

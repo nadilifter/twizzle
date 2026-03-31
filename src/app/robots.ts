@@ -40,6 +40,6 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
     ],
-    sitemap: "https://uplifterinc.com/sitemap.xml",
+    sitemap: "https://uplifter.app/sitemap.xml",
   };
 }

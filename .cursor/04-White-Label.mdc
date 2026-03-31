@@ -13,10 +13,10 @@ globs: ["apps/**/*", "packages/ui/**/*", "src/lib/env-domains.ts"]
 ### Multi-Domain Architecture
 - **Custom Domains**: Code supports custom domain mapping for white-labeled instances via wildcard subdomains.
 - **Environment Domains**: Each environment has its own base domain:
-  - Production: `*.uplifterinc.com`
+  - Production: `*.uplifter.app`
   - Staging: `*.upliftergymnastics.com`
   - Development: `*.uplifterdev.com`
-  - Local: `*.uplifterinc.localhost:3000`
+  - Local: `*.uplifter.localhost:3000`
 
 ### Tenant Assets
 - **S3 Storage**: Organization logos, favicons, hero images stored in S3 under `organizations/{orgId}/`.

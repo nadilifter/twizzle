@@ -8,7 +8,7 @@
 export type Environment = "production" | "staging" | "development" | "local";
 
 export interface EnvironmentConfig {
-  /** Base domain without protocol (e.g., 'uplifterinc.com') */
+  /** Base domain without protocol (e.g., 'uplifter.app') */
   baseDomain: string;
   /** Cookie domain for session sharing across subdomains */
   cookieDomain: string;
@@ -26,13 +26,13 @@ export interface EnvironmentConfig {
 
 export const ENV_CONFIG: Record<Environment, EnvironmentConfig> = {
   production: {
-    baseDomain: "uplifterinc.com",
-    cookieDomain: ".uplifterinc.com",
+    baseDomain: "uplifter.app",
+    cookieDomain: ".uplifter.app",
     s3Bucket: "uplifter-assets-prod",
     s3DocumentsBucket: "uplifter-documents-prod",
-    cdnUrl: "https://cdn.uplifterinc.com",
+    cdnUrl: "https://cdn.uplifter.app",
     useHttps: true,
-    corsOrigins: ["https://uplifterinc.com", "https://*.uplifterinc.com"],
+    corsOrigins: ["https://uplifter.app", "https://*.uplifter.app"],
   },
   staging: {
     baseDomain: "upliftergymnastics.com",
@@ -53,7 +53,7 @@ export const ENV_CONFIG: Record<Environment, EnvironmentConfig> = {
     corsOrigins: ["https://uplifterdev.com", "https://*.uplifterdev.com"],
   },
   local: {
-    baseDomain: "uplifterinc.localhost:3000",
+    baseDomain: "uplifter.localhost:3000",
     cookieDomain: "localhost",
     s3Bucket: "local-assets",
     s3DocumentsBucket: "local-documents",
@@ -62,8 +62,8 @@ export const ENV_CONFIG: Record<Environment, EnvironmentConfig> = {
     corsOrigins: [
       "http://localhost:3000",
       "http://*.localhost:3000",
-      "http://uplifterinc.localhost:3000",
-      "http://*.uplifterinc.localhost:3000",
+      "http://uplifter.localhost:3000",
+      "http://*.uplifter.localhost:3000",
     ],
   },
 };
@@ -143,10 +143,10 @@ export function getLoginUrlForHost(hostHeader: string | null): string {
   const protocol = useHttps ? "https" : "http";
   let baseDomain: string;
   if (hostname.includes("localhost")) {
-    baseDomain = parts.length >= 2 ? parts.slice(-2).join(".") : "uplifterinc.localhost";
+    baseDomain = parts.length >= 2 ? parts.slice(-2).join(".") : "uplifter.localhost";
     if (port) baseDomain += `:${port}`;
   } else {
-    baseDomain = parts.length >= 2 ? parts.slice(-2).join(".") : "uplifterinc.com";
+    baseDomain = parts.length >= 2 ? parts.slice(-2).join(".") : "uplifter.app";
   }
   return `${protocol}://login.${baseDomain}`;
 }
@@ -208,7 +208,7 @@ export function isAllowedOrigin(origin: string | null): boolean {
   // Local environment allows localhost variations
   if (currentEnv === "local") {
     if (origin.includes("localhost")) return true;
-    if (origin.includes("uplifterinc.localhost")) return true;
+    if (origin.includes("uplifter.localhost")) return true;
   }
 
   // Check against the current environment's domain

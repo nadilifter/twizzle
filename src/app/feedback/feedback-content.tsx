@@ -39,7 +39,7 @@ function getLoginUrlWithCallback(): string {
 
   if (hostname.includes("localhost")) {
     // Local development
-    const baseDomain = parts.slice(1).join(".") || "uplifterinc.localhost";
+    const baseDomain = parts.slice(1).join(".") || "uplifter.localhost";
     loginUrl = `${protocol}//login.${baseDomain}${port ? `:${port}` : ""}`;
   } else {
     // Production/staging
