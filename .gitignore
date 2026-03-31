@@ -54,3 +54,6 @@ next-env.d.ts
 
 # Local environment file
 .env
+package-lock.json
+
+/.vscode/
