@@ -772,6 +772,7 @@ export default function EmailCampaignsPage() {
   // Fetch recipient count
   useEffect(() => {
     if (!isComposeOpen) return;
+    if (targetType === "SPECIFIC_USERS") return;
     const fetchRecipients = async () => {
       setIsLoadingRecipients(true);
       try {
@@ -1037,7 +1038,10 @@ export default function EmailCampaignsPage() {
 
   // Step validation
   const canProceedFromStep1 =
-    !!campaignName.trim() && recipientCount !== null && recipientCount > 0;
+    !!campaignName.trim() &&
+    (targetType === "SPECIFIC_USERS"
+      ? targetUserIds.length > 0
+      : recipientCount !== null && recipientCount > 0);
   const canProceedFromStep2 = !!subject.trim() && hasEditorContent;
 
   const filteredCampaigns = useMemo(() => {
@@ -1605,22 +1609,28 @@ export default function EmailCampaignsPage() {
 
                   <div className="flex items-center gap-2 mt-2 p-3 rounded-md bg-muted/50">
                     <Users className="h-4 w-4 text-muted-foreground" />
-                    {isLoadingRecipients ? (
-                      <span className="text-sm text-muted-foreground">Counting recipients...</span>
-                    ) : recipientCount !== null ? (
-                      <span className="text-sm">
-                        <span className="font-semibold">{recipientCount}</span>{" "}
-                        <span className="text-muted-foreground">
-                          {recipientCount === 1
-                            ? "recipient will receive this email"
-                            : "recipients will receive this email"}
+                    {(() => {
+                      const count =
+                        targetType === "SPECIFIC_USERS" ? targetUserIds.length : recipientCount;
+                      return isLoadingRecipients ? (
+                        <span className="text-sm text-muted-foreground">
+                          Counting recipients...
                         </span>
-                      </span>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">
-                        Select targeting to see recipient count
-                      </span>
-                    )}
+                      ) : count !== null ? (
+                        <span className="text-sm">
+                          <span className="font-semibold">{count}</span>{" "}
+                          <span className="text-muted-foreground">
+                            {count === 1
+                              ? "recipient will receive this email"
+                              : "recipients will receive this email"}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">
+                          Select targeting to see recipient count
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
