@@ -93,7 +93,7 @@ export default function SeasonsPage() {
         title="Seasons"
         description="Create recurring seasons to group programs, memberships, and competitions."
         actions={
-          <Button onClick={() => setCreateDialogOpen(true)}>
+          <Button onClick={() => setCreateDialogOpen(true)} disabled={!!error}>
             <Plus className="mr-2 h-4 w-4" />
             Create Season
           </Button>
