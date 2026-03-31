@@ -288,7 +288,10 @@ const nextConfig = {
 };
 
 export default withSentryConfig(nextConfig, {
+  org: "uplifter-us-llc",
+  project: "uplifter-nextjs",
   silent: !process.env.CI,
   disableLogger: true,
   telemetry: false,
+  widenClientFileUpload: true,
 });
