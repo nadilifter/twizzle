@@ -41,7 +41,7 @@ provider "aws" {
 
 locals {
   environment = "production"
-  domain      = "uplifterinc.com"
+  domain      = "uplifter.app"
 
   common_tags = {
     Environment = local.environment
@@ -117,8 +117,8 @@ module "s3" {
   enable_versioning     = true
 
   cors_allowed_origins = [
-    "https://uplifterinc.com",
-    "https://*.uplifterinc.com"
+    "https://uplifter.app",
+    "https://*.uplifter.app"
   ]
 
   cloudfront_oai_arn = module.cloudfront.origin_access_identity_arn
@@ -174,7 +174,7 @@ module "ecs" {
   environment_variables = [
     { name = "NODE_ENV", value = "production" },
     { name = "APP_ENVIRONMENT", value = "production" },
-    { name = "NEXTAUTH_URL", value = "https://login.uplifterinc.com" },
+    { name = "NEXTAUTH_URL", value = "https://login.uplifter.app" },
     { name = "AWS_S3_BUCKET", value = module.s3.assets_bucket_name },
     { name = "AWS_S3_REGION", value = var.aws_region },
   ]

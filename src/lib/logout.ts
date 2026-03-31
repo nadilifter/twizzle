@@ -3,7 +3,7 @@
  *
  * This is needed because NextAuth's default signOut doesn't correctly clear cookies
  * when using cross-subdomain sessions. The session cookie is set on a parent domain
- * (e.g., .uplifterinc.localhost or .uplifterinc.com), but NextAuth's signOut may
+ * (e.g., .uplifter.localhost or .uplifter.app), but NextAuth's signOut may
  * try to clear a cookie on the exact hostname only.
  *
  * Usage:

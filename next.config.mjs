@@ -10,9 +10,9 @@ import { withSentryConfig } from "@sentry/nextjs";
  */
 const ENV_CONFIG = {
   production: {
-    baseDomain: "uplifterinc.com",
+    baseDomain: "uplifter.app",
     useHttps: true,
-    cdnDomain: "cdn.uplifterinc.com",
+    cdnDomain: "cdn.uplifter.app",
     s3Bucket: "uplifter-assets-prod",
   },
   staging: {
@@ -28,7 +28,7 @@ const ENV_CONFIG = {
     s3Bucket: "uplifter-assets-dev",
   },
   local: {
-    baseDomain: "uplifterinc.localhost:3000",
+    baseDomain: "uplifter.localhost:3000",
     useHttps: false,
     cdnDomain: null,
     s3Bucket: "local-assets",

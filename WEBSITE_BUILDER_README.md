@@ -1,6 +1,6 @@
 # Website Builder & Subdomains
 
-This project supports multi-tenancy via subdomains (e.g., `gym-name.uplifterinc.com` or `gym-name.localhost:3000`).
+This project supports multi-tenancy via subdomains (e.g., `gym-name.uplifter.app` or `gym-name.localhost:3000`).
 
 ## Local Development Setup
 
@@ -39,7 +39,7 @@ Visit `http://test.localhost:3000` or `http://gym.localhost:3000`.
 
 The middleware rewrites tenant subdomain requests **internally** — the `/sites/[slug]` prefix must never appear in browser-visible URLs. Getting this wrong causes 404 errors from double-prefixing.
 
-**How it works:** When a user visits `gym-name.uplifterinc.com/checkout`, the middleware rewrites the request internally to `/sites/gym-name/checkout`. The browser URL stays as `/checkout`. If client-side code navigates to `/sites/gym-name/checkout` directly, the middleware rewrites it again to `/sites/gym-name/sites/gym-name/checkout` — a path that doesn't exist.
+**How it works:** When a user visits `gym-name.uplifter.app/checkout`, the middleware rewrites the request internally to `/sites/gym-name/checkout`. The browser URL stays as `/checkout`. If client-side code navigates to `/sites/gym-name/checkout` directly, the middleware rewrites it again to `/sites/gym-name/sites/gym-name/checkout` — a path that doesn't exist.
 
 ### Client-side navigation (Link, router.push)
 

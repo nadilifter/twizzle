@@ -63,7 +63,7 @@ The platform operates across four distinct environments:
 
 | Environment | Domain                   | Purpose               |
 | ----------- | ------------------------ | --------------------- |
-| Production  | `uplifterinc.com`        | Live customer traffic |
+| Production  | `uplifter.app`           | Live customer traffic |
 | Staging     | `upliftergymnastics.com` | QA/UAT testing        |
 | Development | `uplifterdev.com`        | Development testing   |
 | Local       | `*.localhost:3000`       | Local development     |
@@ -296,49 +296,49 @@ To develop locally with the multi-portal architecture, you must update your `/et
 **Add these lines:**
 
 ```
-127.0.0.1   uplifterinc.localhost
-127.0.0.1   login.uplifterinc.localhost
-127.0.0.1   startup.uplifterinc.localhost
-127.0.0.1   admin.uplifterinc.localhost
-127.0.0.1   superadmin.uplifterinc.localhost
-127.0.0.1   coach.uplifterinc.localhost
-127.0.0.1   athletes.uplifterinc.localhost
-127.0.0.1   pos.uplifterinc.localhost
-127.0.0.1   feedback.uplifterinc.localhost
-127.0.0.1   events.uplifterinc.localhost
-127.0.0.1   competitions.uplifterinc.localhost
-127.0.0.1   results.uplifterinc.localhost
-127.0.0.1   demo-gym.uplifterinc.localhost
+127.0.0.1   uplifter.localhost
+127.0.0.1   login.uplifter.localhost
+127.0.0.1   startup.uplifter.localhost
+127.0.0.1   admin.uplifter.localhost
+127.0.0.1   superadmin.uplifter.localhost
+127.0.0.1   coach.uplifter.localhost
+127.0.0.1   athletes.uplifter.localhost
+127.0.0.1   pos.uplifter.localhost
+127.0.0.1   feedback.uplifter.localhost
+127.0.0.1   events.uplifter.localhost
+127.0.0.1   competitions.uplifter.localhost
+127.0.0.1   results.uplifter.localhost
+127.0.0.1   demo-gym.uplifter.localhost
 ```
 
 **Access Points:**
 
-- **Login Portal**: `http://login.uplifterinc.localhost:3000` - Centralized authentication
-- **Organization Startup**: `http://startup.uplifterinc.localhost:3000` - New organization registration (supports URL parameters for partner referrals)
-- **Super Admin**: `http://superadmin.uplifterinc.localhost:3000`
-- **Business Dashboard**: `http://admin.uplifterinc.localhost:3000`
-- **Coach Portal**: `http://coach.uplifterinc.localhost:3000`
-- **Athlete Portal**: `http://athletes.uplifterinc.localhost:3000`
-- **POS**: `http://pos.uplifterinc.localhost:3000`
-- **Feedback**: `http://feedback.uplifterinc.localhost:3000`
-- **Events Portal**: `http://events.uplifterinc.localhost:3000` - Day-of-event operations (QR check-in, athlete search, schedule)
-- **Competitions Portal**: `http://competitions.uplifterinc.localhost:3000` - Competition browsing and management (planned)
-- **Results Portal**: `http://results.uplifterinc.localhost:3000` - Competition results and scores (planned)
-- **Tenant Site 1**: `http://demo-gym.uplifterinc.localhost:3000`
-- **Tenant Site 2**: `http://londonwestern.uplifterinc.localhost:3000`
+- **Login Portal**: `http://login.uplifter.localhost:3000` - Centralized authentication
+- **Organization Startup**: `http://startup.uplifter.localhost:3000` - New organization registration (supports URL parameters for partner referrals)
+- **Super Admin**: `http://superadmin.uplifter.localhost:3000`
+- **Business Dashboard**: `http://admin.uplifter.localhost:3000`
+- **Coach Portal**: `http://coach.uplifter.localhost:3000`
+- **Athlete Portal**: `http://athletes.uplifter.localhost:3000`
+- **POS**: `http://pos.uplifter.localhost:3000`
+- **Feedback**: `http://feedback.uplifter.localhost:3000`
+- **Events Portal**: `http://events.uplifter.localhost:3000` - Day-of-event operations (QR check-in, athlete search, schedule)
+- **Competitions Portal**: `http://competitions.uplifter.localhost:3000` - Competition browsing and management (planned)
+- **Results Portal**: `http://results.uplifter.localhost:3000` - Competition results and scores (planned)
+- **Tenant Site 1**: `http://demo-gym.uplifter.localhost:3000`
+- **Tenant Site 2**: `http://londonwestern.uplifter.localhost:3000`
 
 ### Authentication Architecture
 
-Authentication is centralized at `login.uplifterinc.com` (production) or `login.uplifterinc.localhost:3000` (local).
+Authentication is centralized at `login.uplifter.app` (production) or `login.uplifter.localhost:3000` (local).
 
 **How it works:**
 
 1. All protected portals redirect unauthenticated users to the login portal
 2. After successful login, users are redirected back to the original portal via `callbackUrl`
-3. Session cookies are shared across all subdomains via the `.uplifterinc.com` cookie domain
+3. Session cookies are shared across all subdomains via the `.uplifter.app` cookie domain
 
 **Google OAuth (Local Development):**
-Google doesn't allow subdomains on localhost (e.g., `login.uplifterinc.localhost`) as OAuth redirect URIs. To work around this:
+Google doesn't allow subdomains on localhost (e.g., `login.uplifter.localhost`) as OAuth redirect URIs. To work around this:
 
 1. OAuth callbacks go through `localhost:3000` (which Google accepts)
 2. The `oauth-bridge` endpoint creates a signed bridge token
@@ -348,7 +348,7 @@ Google doesn't allow subdomains on localhost (e.g., `login.uplifterinc.localhost
 **Google OAuth (Production):**
 Configure these redirect URIs in Google Cloud Console:
 
-- `https://login.uplifterinc.com/api/auth/callback/google`
+- `https://login.uplifter.app/api/auth/callback/google`
 
 Turborepo task filtering should be used sparingly and intentionally. Default workflows should remain simple.
 
@@ -462,7 +462,7 @@ See `docs/adyen-platform/README.md` for the full integration spec and phase brea
 
 | Environment | Bucket                     | CDN                           |
 | ----------- | -------------------------- | ----------------------------- |
-| Production  | uplifter-assets-prod       | cdn.uplifterinc.com           |
+| Production  | uplifter-assets-prod       | cdn.uplifter.app              |
 | Staging     | uplifter-gymnastics-assets | assets.upliftergymnastics.com |
 | Development | uplifter-assets-dev        | None                          |
 | Local       | MinIO (localhost:9000)     | None                          |

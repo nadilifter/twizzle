@@ -354,7 +354,7 @@ export default function WebsitePage() {
                                 <strong>Name:</strong> www (or your chosen subdomain)
                               </li>
                               <li>
-                                <strong>Value/Target:</strong> domains.uplifterinc.com
+                                <strong>Value/Target:</strong> domains.uplifter.app
                               </li>
                             </ul>
                           </li>

@@ -15,7 +15,7 @@ Verify `chat.uplifterinc.com` in SES (us-east-1). If `uplifterinc.com` already h
 ## 3. SNS — Create topic
 
 - Create SNS topic `ses-inbound-chat` in us-east-1
-- Add an HTTPS subscription: `https://uplifterinc.com/api/ses/inbound`
+- Add an HTTPS subscription: `https://uplifter.app/api/ses/inbound`
 - The app auto-confirms the subscription on first delivery
 
 ## 4. SES — Receipt rule

@@ -16,7 +16,7 @@ globs: ["**/*"]
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    DNS (Route 53)                           │
-│  uplifterinc.com │ upliftergymnastics.com │ uplifterdev.com │
+│  uplifter.app │ upliftergymnastics.com │ uplifterdev.com │
 └────────────────────────────┬────────────────────────────────┘
                              │
 ┌────────────────────────────▼────────────────────────────────┐

@@ -25,11 +25,11 @@ ingress:
     alb.ingress.kubernetes.io/ssl-redirect: "443"
     alb.ingress.kubernetes.io/group.name: "uplifter-production"
   hosts:
-    - host: "*.uplifterinc.com"
+    - host: "*.uplifter.app"
       paths:
         - path: /
           pathType: Prefix
-    - host: "uplifterinc.com"
+    - host: "uplifter.app"
       paths:
         - path: /
           pathType: Prefix

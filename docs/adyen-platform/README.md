@@ -240,7 +240,7 @@ The following subdomains are shared infrastructure and must be registered **manu
 - `admin` — admin dashboard
 - `athletes` — athlete billing
 
-Register the appropriate full URLs for each environment (e.g. `https://startup.upliftergymnastics.com` for staging, `https://startup.uplifterinc.com` for production).
+Register the appropriate full URLs for each environment (e.g. `https://startup.upliftergymnastics.com` for staging, `https://startup.uplifter.app` for production).
 
 ### Backfill script
 
@@ -258,7 +258,7 @@ The script also registers the fixed subdomains. It reads `APP_ENVIRONMENT` / `AD
 For local development, add these origins manually in the Adyen Customer Area:
 
 - `http://localhost:3000`
-- `http://<your-test-subdomain>.uplifterinc.localhost:3000`
+- `http://<your-test-subdomain>.uplifter.localhost:3000`
 
 ### Troubleshooting
 

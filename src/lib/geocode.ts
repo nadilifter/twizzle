@@ -43,7 +43,7 @@ export async function geocodeAddress(address: {
   try {
     const response = await fetch(url.toString(), {
       headers: {
-        "User-Agent": "Uplifter/1.0 (https://uplifterinc.com)",
+        "User-Agent": "Uplifter/1.0 (https://uplifter.app)",
         Accept: "application/json",
       },
     });

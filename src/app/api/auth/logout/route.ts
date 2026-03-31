@@ -5,8 +5,8 @@ import { getCurrentEnvironment, getEnvConfig, getSessionCookieName } from "@/lib
 /**
  * Custom Logout Endpoint
  *
- * Clears the session cookie on the shared parent domain (.uplifterinc.localhost
- * in local dev, .upliftergymnastics.com in production) using
+ * Clears the session cookie on the shared parent domain (.uplifter.localhost
+ * in local dev, .upliftergymnastics.com in staging) using
  * response.cookies.set() with maxAge: 0.
  */
 
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
 
   logExistingCookies();
 
-  const cookieDomain = currentEnv === "local" ? ".uplifterinc.localhost" : config.cookieDomain;
+  const cookieDomain = currentEnv === "local" ? ".uplifter.localhost" : config.cookieDomain;
   const isSecure = currentEnv !== "local";
 
   let callbackUrl = "/login";
@@ -92,7 +92,7 @@ export async function GET(req: NextRequest) {
 
   logExistingCookies();
 
-  const cookieDomain = currentEnv === "local" ? ".uplifterinc.localhost" : config.cookieDomain;
+  const cookieDomain = currentEnv === "local" ? ".uplifter.localhost" : config.cookieDomain;
   const isSecure = currentEnv !== "local";
 
   const protocol = config.useHttps ? "https" : "http";

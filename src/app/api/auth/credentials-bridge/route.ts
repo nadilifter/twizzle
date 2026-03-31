@@ -12,7 +12,7 @@ import { logger } from "@/lib/logger";
  * This endpoint is called after credentials login completes on a local subdomain.
  * It reads the session (which was set on the exact hostname) and creates a bridge
  * token to transfer to the session-bridge, which sets the cookie with the correct
- * shared domain (.uplifterinc.localhost).
+ * shared domain (.uplifter.localhost).
  *
  * This is needed because NextAuth sets cookies on the exact hostname by default
  * in local development, but we need cookies shared across all subdomains.

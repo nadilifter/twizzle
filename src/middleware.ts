@@ -67,7 +67,7 @@ export async function middleware(req: NextRequest) {
   const baseDomain = config.baseDomain.split(":")[0]; // Remove port if present
   const isLocal = currentEnv === "local";
 
-  // For local environment, support both uplifterinc.localhost:3000 and localhost:3000
+  // For local environment, support both uplifter.localhost:3000 and localhost:3000
   const localRoot = config.baseDomain;
   let currentHost = hostname;
 
@@ -81,7 +81,7 @@ export async function middleware(req: NextRequest) {
     ) {
       currentHost = "main";
     } else if (hostname.endsWith(localRoot)) {
-      // Handle admin.uplifterinc.localhost:3000 -> admin
+      // Handle admin.uplifter.localhost:3000 -> admin
       currentHost = hostname.replace(`.${localRoot}`, "");
     } else if (hostname.endsWith(".localhost:3000")) {
       // Handle admin.localhost:3000 -> admin (legacy fallback)

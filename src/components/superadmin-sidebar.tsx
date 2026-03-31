@@ -51,12 +51,12 @@ function getSubdomainUrl(subdomain: string | null): string {
   // Parse current hostname to extract base domain
   const parts = hostname.split(".");
 
-  // Handle local development (e.g., superadmin.uplifterinc.localhost:3000)
+  // Handle local development (e.g., superadmin.uplifter.localhost:3000)
   if (hostname.includes("localhost")) {
-    // Find the base domain pattern (e.g., uplifterinc.localhost)
+    // Find the base domain pattern (e.g., uplifter.localhost)
     const localhostIndex = parts.findIndex((p) => p.includes("localhost"));
     if (localhostIndex > 0) {
-      // Has subdomain structure like subdomain.uplifterinc.localhost
+      // Has subdomain structure like subdomain.uplifter.localhost
       const baseParts = parts.slice(1); // Remove current subdomain
       if (subdomain) {
         return `${protocol}//${subdomain}.${baseParts.join(".")}${port && !hostname.includes(":") ? ":" + port : ""}`;
@@ -69,7 +69,7 @@ function getSubdomainUrl(subdomain: string | null): string {
     return subdomain ? `${protocol}//${subdomain}.localhost:3000` : `${protocol}//localhost:3000`;
   }
 
-  // Handle production/staging domains (e.g., superadmin.uplifterinc.com)
+  // Handle production/staging domains (e.g., superadmin.uplifter.app)
   if (parts.length >= 2) {
     const baseParts = parts.slice(1); // Remove current subdomain
     if (subdomain) {

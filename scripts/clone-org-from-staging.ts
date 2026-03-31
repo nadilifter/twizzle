@@ -409,7 +409,7 @@ async function main() {
 
   // Safety: refuse if local DB looks like production
   const localUrl = LOCAL_DB_URL;
-  if (localUrl.includes("prod") || localUrl.includes("uplifterinc.com")) {
+  if (localUrl.includes("prod") || localUrl.includes("uplifter.app")) {
     logError("DATABASE_URL looks like a production database. This script only targets local.");
     process.exit(1);
   }

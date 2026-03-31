@@ -14,7 +14,7 @@ flowchart TB
 
     subgraph DNS["DNS / Routing Layer"]
         direction LR
-        Router{{"*.uplifterinc.com"}}
+        Router{{"*.uplifter.app"}}
     end
 
     User --> Router
@@ -23,27 +23,27 @@ flowchart TB
         direction TB
 
         subgraph Auth["Authentication & Onboarding"]
-            Login["login.uplifterinc.com"]
-            Startup["startup.uplifterinc.com"]
+            Login["login.uplifter.app"]
+            Startup["startup.uplifter.app"]
         end
 
         subgraph Admin["Administration"]
-            OrgAdmin["admin.uplifterinc.com"]
-            SuperAdmin["superadmin.uplifterinc.com"]
+            OrgAdmin["admin.uplifter.app"]
+            SuperAdmin["superadmin.uplifter.app"]
         end
 
         subgraph Operations["Operational Portals"]
-            POS["pos.uplifterinc.com"]
-            Coach["coach.uplifterinc.com"]
-            Events["events.uplifterinc.com"]
-            Athletes["athletes.uplifterinc.com"]
-            Competitions["competitions.uplifterinc.com"]
-            Results["results.uplifterinc.com"]
+            POS["pos.uplifter.app"]
+            Coach["coach.uplifter.app"]
+            Events["events.uplifter.app"]
+            Athletes["athletes.uplifter.app"]
+            Competitions["competitions.uplifter.app"]
+            Results["results.uplifter.app"]
         end
 
         subgraph Public["Public-Facing"]
-            Sites["[org-slug].uplifterinc.com"]
-            Feedback["feedback.uplifterinc.com"]
+            Sites["[org-slug].uplifter.app"]
+            Feedback["feedback.uplifter.app"]
         end
     end
 
@@ -171,7 +171,7 @@ sequenceDiagram
     participant API
     participant Database
 
-    User->>DNS: admin.uplifterinc.com
+    User->>DNS: admin.uplifter.app
     DNS->>Middleware: Route request
     Middleware->>Middleware: Parse subdomain
     Middleware->>NextAuth: Check session
@@ -190,7 +190,7 @@ sequenceDiagram
 
 ## Tenant Site Routing
 
-The middleware rewrites tenant subdomain requests internally: a visit to `gym-name.uplifterinc.com/checkout` becomes `/sites/gym-name/checkout` at the routing layer, but the browser URL stays as `/checkout`.
+The middleware rewrites tenant subdomain requests internally: a visit to `gym-name.uplifter.app/checkout` becomes `/sites/gym-name/checkout` at the routing layer, but the browser URL stays as `/checkout`.
 
 **Key rule:** Client-side navigation within tenant sites (Link hrefs, router.push) must use simple paths (`/checkout`, `/register`, `/account`). Never include `/sites/{slug}/` in client-visible URLs — the middleware handles that prefix automatically. API fetch calls (`/api/sites/{slug}/...`) are unaffected since API routes bypass the rewrite. See `WEBSITE_BUILDER_README.md` for detailed examples.
 

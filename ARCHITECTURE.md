@@ -58,12 +58,12 @@ The platform routes by subdomain. A single Next.js deployment serves every porta
 
 | Env         | Base Domain              | Notes            |
 | ----------- | ------------------------ | ---------------- |
-| Production  | `uplifterinc.com`        | Live traffic     |
+| Production  | `uplifter.app`           | Live traffic     |
 | Staging     | `upliftergymnastics.com` | QA/UAT           |
 | Development | `uplifterdev.com`        | Team dev testing |
 | Local       | `*.localhost:3000`       | Local dev        |
 
-**Tenant site rewriting:** A visit to `gym-name.uplifterinc.com/checkout` is rewritten internally to `/sites/gym-name/checkout`. Client-side navigation inside tenant sites must use simple paths (`/checkout`, `/register`) — never include the `/sites/{slug}/` prefix in `Link` hrefs or `router.push` calls. The middleware inserts that prefix transparently.
+**Tenant site rewriting:** A visit to `gym-name.uplifter.app/checkout` is rewritten internally to `/sites/gym-name/checkout`. Client-side navigation inside tenant sites must use simple paths (`/checkout`, `/register`) — never include the `/sites/{slug}/` prefix in `Link` hrefs or `router.push` calls. The middleware inserts that prefix transparently.
 
 ---
 
@@ -125,7 +125,7 @@ clubs/
 ### Request Lifecycle
 
 ```
-User visits admin.uplifterinc.com
+User visits admin.uplifter.app
         ↓
 middleware.ts
   - Parses subdomain
@@ -497,7 +497,7 @@ Tokens are encrypted at rest (AES-256) in `AccountingConnection.accessToken / re
 | ---------- | ----------------- | ------------------------------- |
 | Local      | Docker Compose    | Postgres, Redis, MinIO, MailHog |
 | Staging    | ECS Fargate       | `upliftergymnastics.com`        |
-| Production | ECS Fargate / EKS | `uplifterinc.com`               |
+| Production | ECS Fargate / EKS | `uplifter.app`                  |
 
 ### CI/CD
 

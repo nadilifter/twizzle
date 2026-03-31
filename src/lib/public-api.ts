@@ -65,7 +65,7 @@ type ResolveResult =
 /**
  * Securely resolve the organizationId for a public API route.
  *
- * 1. If the request originates from a tenant subdomain (e.g. demo-gym.uplifterinc.com),
+ * 1. If the request originates from a tenant subdomain (e.g. demo-gym.uplifter.app),
  *    the org is resolved from the Host header via WebsiteConfig. Any client-provided
  *    organizationId is validated against it.
  * 2. Otherwise, if an organizationId is provided via query/body, it is validated by

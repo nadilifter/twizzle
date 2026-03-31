@@ -52,4 +52,4 @@ spec:
     - name: environment
       value: production
     - name: domain
-      value: uplifterinc.com
+      value: uplifter.app

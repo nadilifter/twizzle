@@ -2773,7 +2773,7 @@ model WebsiteConfig {
 
   // Domain
   domain            String? @unique
-  subdomain         String? @unique // prefix to uplifterinc.com
+  subdomain         String? @unique // prefix to uplifter.app
   emailSenderDomain String?
 
   // Status
