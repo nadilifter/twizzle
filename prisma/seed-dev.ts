@@ -563,6 +563,30 @@ async function main() {
       isSuperAdmin: true,
     },
   });
+  const drewUser = await prisma.user.upsert({
+    where: { email: "drew.williams@uplifterinc.com" },
+    update: { isSuperAdmin: true },
+    create: {
+      email: "drew.williams@uplifterinc.com",
+      name: "Drew Williams",
+      passwordHash: null,
+      role: "ADMIN",
+      status: "ACTIVE",
+      isSuperAdmin: true,
+    },
+  });
+  const okechiUser = await prisma.user.upsert({
+    where: { email: "okechi.onyeje@uplifterinc.com" },
+    update: { isSuperAdmin: true },
+    create: {
+      email: "okechi.onyeje@uplifterinc.com",
+      name: "Okechi Onyeje",
+      passwordHash: null,
+      role: "ADMIN",
+      status: "ACTIVE",
+      isSuperAdmin: true,
+    },
+  });
   const demoAdmin = await prisma.user.upsert({
     where: { email: "admin@demo.com" },
     update: {},
@@ -585,7 +609,7 @@ async function main() {
       status: "ACTIVE",
     },
   });
-  console.log("  ✓ Created 10 users across all organizations");
+  console.log("  ✓ Created 12 users across all organizations");
 
   // ============================================
   // ORGANIZATION MEMBERS
@@ -703,6 +727,50 @@ async function main() {
       status: "ACTIVE",
     },
   });
+  const uplifterDrewMember = await prisma.organizationMember.upsert({
+    where: { organizationId_userId: { organizationId: orgUplifter.id, userId: drewUser.id } },
+    update: { role: "ADMIN", status: "ACTIVE" },
+    create: {
+      id: `${ORG_UPLIFTER_ID}-member-drew`,
+      organizationId: orgUplifter.id,
+      userId: drewUser.id,
+      role: "ADMIN",
+      status: "ACTIVE",
+    },
+  });
+  const demoDrewMember = await prisma.organizationMember.upsert({
+    where: { organizationId_userId: { organizationId: orgDemo.id, userId: drewUser.id } },
+    update: { role: "ADMIN", status: "ACTIVE" },
+    create: {
+      id: `${ORG_DEMO_ID}-member-drew`,
+      organizationId: orgDemo.id,
+      userId: drewUser.id,
+      role: "ADMIN",
+      status: "ACTIVE",
+    },
+  });
+  const uplifterOkechiMember = await prisma.organizationMember.upsert({
+    where: { organizationId_userId: { organizationId: orgUplifter.id, userId: okechiUser.id } },
+    update: { role: "ADMIN", status: "ACTIVE" },
+    create: {
+      id: `${ORG_UPLIFTER_ID}-member-okechi`,
+      organizationId: orgUplifter.id,
+      userId: okechiUser.id,
+      role: "ADMIN",
+      status: "ACTIVE",
+    },
+  });
+  const demoOkechiMember = await prisma.organizationMember.upsert({
+    where: { organizationId_userId: { organizationId: orgDemo.id, userId: okechiUser.id } },
+    update: { role: "ADMIN", status: "ACTIVE" },
+    create: {
+      id: `${ORG_DEMO_ID}-member-okechi`,
+      organizationId: orgDemo.id,
+      userId: okechiUser.id,
+      role: "ADMIN",
+      status: "ACTIVE",
+    },
+  });
   const demoAdminMember = await prisma.organizationMember.upsert({
     where: { organizationId_userId: { organizationId: orgDemo.id, userId: demoAdmin.id } },
     update: { role: "ADMIN", status: "ACTIVE" },
@@ -725,7 +793,7 @@ async function main() {
       status: "ACTIVE",
     },
   });
-  console.log("  ✓ Created 12 organization memberships");
+  console.log("  ✓ Created 16 organization memberships");
 
   // ============================================
   // MEMBER PERMISSIONS
@@ -776,6 +844,10 @@ async function main() {
     // Demo Gym and Uplifter permissions
     { memberId: uplifterAndrewMember.id, permission: "*" },
     { memberId: demoAndrewMember.id, permission: "*" },
+    { memberId: uplifterDrewMember.id, permission: "*" },
+    { memberId: demoDrewMember.id, permission: "*" },
+    { memberId: uplifterOkechiMember.id, permission: "*" },
+    { memberId: demoOkechiMember.id, permission: "*" },
     { memberId: demoAdminMember.id, permission: "*" },
     { memberId: demoCoachMember.id, permission: "dashboard.view" },
     { memberId: demoCoachMember.id, permission: "athletes.view" },
@@ -7695,6 +7767,8 @@ See you at Metro Sports!
   console.log("  Demo Gym Admin: admin@demo.com");
   console.log("  Demo Gym Coach: coach@demo.com");
   console.log("  Superadmin: andrewkarzel@uplifterinc.com");
+  console.log("  Superadmin: drew.williams@uplifterinc.com");
+  console.log("  Superadmin: okechi.onyeje@uplifterinc.com");
 }
 
 main()
