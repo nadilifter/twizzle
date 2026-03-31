@@ -1,0 +1,120 @@
+name: Promote — Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      staging_image_tag:
+        description: "Staging image tag to promote (e.g. staging-abc12345). Copy from the staging deployment summary."
+        required: true
+        type: string
+      release_notes:
+        description: "Brief description of what is being released"
+        required: false
+        type: string
+
+# Prevent concurrent production promotions
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    name: Promote to Production
+    runs-on: ubuntu-latest
+    # GitHub Environment with required reviewers enforces the approval gate.
+    # Configure reviewers at: Settings → Environments → production
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      prod_tag: ${{ steps.promote.outputs.prod_tag }}
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Validate staging image exists in ECR
+        env:
+          STAGING_TAG: ${{ inputs.staging_image_tag }}
+        run: |
+          if ! aws ecr describe-images \
+            --repository-name "${{ secrets.ECR_REPOSITORY }}" \
+            --image-ids "imageTag=${STAGING_TAG}" \
+            --query 'imageDetails[0].imageTags' \
+            --output text 2>/dev/null | grep -q "${STAGING_TAG}"; then
+            echo "Error: image '${STAGING_TAG}' not found in ECR repository '${{ secrets.ECR_REPOSITORY }}'"
+            exit 1
+          fi
+          echo "Validated: ${STAGING_TAG} exists in ECR"
+
+      - name: Retag staging image as production
+        id: promote
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPO: ${{ secrets.ECR_REPOSITORY }}
+          STAGING_TAG: ${{ inputs.staging_image_tag }}
+        run: |
+          # Derive prod tag from staging tag: staging-<sha> → prod-<sha>
+          SHORT_SHA="${STAGING_TAG#staging-}"
+          PROD_TAG="prod-${SHORT_SHA}"
+
+          docker pull "${ECR_REGISTRY}/${ECR_REPO}:${STAGING_TAG}"
+          docker tag  "${ECR_REGISTRY}/${ECR_REPO}:${STAGING_TAG}" \
+                      "${ECR_REGISTRY}/${ECR_REPO}:${PROD_TAG}"
+          docker tag  "${ECR_REGISTRY}/${ECR_REPO}:${STAGING_TAG}" \
+                      "${ECR_REGISTRY}/${ECR_REPO}:prod-latest"
+
+          docker push "${ECR_REGISTRY}/${ECR_REPO}:${PROD_TAG}"
+          docker push "${ECR_REGISTRY}/${ECR_REPO}:prod-latest"
+
+          echo "prod_tag=${PROD_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Promoted ${STAGING_TAG} → ${PROD_TAG}"
+
+      - name: Post promotion summary
+        run: |
+          echo "### Production Promotion" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| --- | --- |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Promoted From | \`${{ inputs.staging_image_tag }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Production Tag | \`${{ steps.promote.outputs.prod_tag }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Approved By | @${{ github.actor }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Release Notes | ${{ inputs.release_notes || 'N/A' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "ArgoCD Image Updater will detect the \`prod-*\` tag and sync to the \`production\` namespace."
+
+  health-check:
+    name: Production Health Check
+    runs-on: ubuntu-latest
+    needs: promote
+
+    steps:
+      - name: Wait for ArgoCD rollout
+        run: |
+          echo "Waiting for ArgoCD Image Updater to detect prod-* tag and sync..."
+          sleep 180
+
+      - name: Health check
+        run: |
+          for i in 1 2 3; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 15 \
+              https://uplifterinc.com/api/health || echo "000")
+            echo "Attempt $i — HTTP $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "Production health check passed"
+              exit 0
+            fi
+            [ $i -lt 3 ] && sleep 30
+          done
+          echo "Production health check failed — consider rolling back via ArgoCD"
+          echo "  argocd app rollback uplifter-production"
+          exit 1

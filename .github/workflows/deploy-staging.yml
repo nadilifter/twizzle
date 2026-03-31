@@ -1,0 +1,123 @@
+name: Deploy — Staging
+
+on:
+  push:
+    branches: [staging]
+
+# Do not cancel in-flight staging deploys — let them finish so staging stays consistent
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  build-and-push:
+    name: Build & Push (staging)
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+      ecr_image: ${{ steps.meta.outputs.ecr_image }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set image metadata
+        id: meta
+        run: |
+          SHORT_SHA="${GITHUB_SHA::8}"
+          echo "image_tag=staging-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "ecr_image=${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.ecr_image }}:${{ steps.meta.outputs.image_tag }}
+            ${{ steps.meta.outputs.ecr_image }}:staging-latest
+          build-args: |
+            APP_ENVIRONMENT=staging
+            NEXT_PUBLIC_APP_ENVIRONMENT=staging
+            NEXT_PUBLIC_ADYEN_CLIENT_KEY=${{ secrets.NEXT_PUBLIC_ADYEN_CLIENT_KEY }}
+            NEXT_PUBLIC_ADYEN_ENVIRONMENT=${{ vars.NEXT_PUBLIC_ADYEN_ENVIRONMENT }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+          cache-from: type=gha,scope=staging
+          cache-to: type=gha,scope=staging,mode=max
+
+  smoke-test:
+    name: Staging Smoke Test
+    runs-on: ubuntu-latest
+    needs: build-and-push
+
+    steps:
+      # ArgoCD Image Updater polls every 2 minutes by default; wait for it to
+      # detect the new tag and for ArgoCD to complete the rollout.
+      - name: Wait for ArgoCD rollout
+        run: |
+          echo "Waiting for ArgoCD Image Updater to detect staging-* tag and sync..."
+          sleep 180
+
+      - name: Health check
+        run: |
+          for i in 1 2 3; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 15 \
+              https://upliftergymnastics.com/api/health || echo "000")
+            echo "Attempt $i — HTTP $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "Health check passed"
+              exit 0
+            fi
+            [ $i -lt 3 ] && sleep 30
+          done
+          echo "Health check failed after 3 attempts"
+          exit 1
+
+  summarize:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [build-and-push, smoke-test]
+    if: always()
+
+    steps:
+      - name: Post deployment summary
+        run: |
+          SMOKE_STATUS="${{ needs.smoke-test.result }}"
+          if [ "$SMOKE_STATUS" = "success" ]; then
+            STATUS_LABEL="✅ Healthy"
+          else
+            STATUS_LABEL="❌ Failed"
+          fi
+
+          echo "### Staging Deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| --- | --- |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Image Tag | \`${{ needs.build-and-push.outputs.image_tag }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Commit | \`${{ github.sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Health | ${STATUS_LABEL} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$SMOKE_STATUS" = "success" ]; then
+            echo "To promote to production, run the **Promote — Production** workflow and enter:" >> "$GITHUB_STEP_SUMMARY"
+            echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "staging_image_tag: ${{ needs.build-and-push.outputs.image_tag }}" >> "$GITHUB_STEP_SUMMARY"
+            echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+          fi

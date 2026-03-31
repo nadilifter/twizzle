@@ -6,6 +6,14 @@ metadata:
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
+  annotations:
+    # ArgoCD Image Updater — watches for prod-* tags in ECR and updates image.tag automatically.
+    # Replace YOUR_ACCOUNT_ID and YOUR_ECR_REPO_NAME with actual values.
+    argocd-image-updater.argoproj.io/image-list: uplifter=YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/YOUR_ECR_REPO_NAME
+    argocd-image-updater.argoproj.io/uplifter.update-strategy: latest
+    argocd-image-updater.argoproj.io/uplifter.allow-tags: regexp:^prod-.*$
+    argocd-image-updater.argoproj.io/uplifter.helm.image-tag: image.tag
+    argocd-image-updater.argoproj.io/write-back-method: argocd
 spec:
   project: default
 
