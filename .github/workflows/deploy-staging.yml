@@ -59,6 +59,8 @@ jobs:
             NEXT_PUBLIC_ADYEN_CLIENT_KEY=${{ secrets.NEXT_PUBLIC_ADYEN_CLIENT_KEY }}
             NEXT_PUBLIC_ADYEN_ENVIRONMENT=${{ vars.NEXT_PUBLIC_ADYEN_ENVIRONMENT }}
             NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+            NEXT_PUBLIC_SENTRY_RELEASE=${{ github.sha }}
+            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
           cache-from: type=gha,scope=staging
           cache-to: type=gha,scope=staging,mode=max
 
