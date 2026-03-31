@@ -656,6 +656,7 @@ export default function EmailCampaignsPage() {
   const [membershipGroups, setMembershipGroups] = useState<MembershipGroupOption[]>([]);
   const [guardians, setGuardians] = useState<GuardianOption[]>([]);
   const [guardianSearch, setGuardianSearch] = useState("");
+  const [isLoadingGuardians, setIsLoadingGuardians] = useState(false);
 
   // Recipient count
   const [recipientCount, setRecipientCount] = useState<number | null>(null);
@@ -754,6 +755,7 @@ export default function EmailCampaignsPage() {
 
   useEffect(() => {
     if (targetType !== "SPECIFIC_USERS") return;
+    setIsLoadingGuardians(true);
     const params = guardianSearch ? `?search=${encodeURIComponent(guardianSearch)}` : "";
     fetch(`/api/guardians${params}`)
       .then((r) => r.json())
@@ -766,7 +768,8 @@ export default function EmailCampaignsPage() {
           }))
         )
       )
-      .catch((err) => console.error("Failed to load guardians:", err));
+      .catch((err) => console.error("Failed to load guardians:", err))
+      .finally(() => setIsLoadingGuardians(false));
   }, [targetType, guardianSearch]);
 
   // Fetch recipient count
@@ -1592,9 +1595,11 @@ export default function EmailCampaignsPage() {
                         })}
                         {guardians.length === 0 && (
                           <p className="text-xs text-muted-foreground text-center py-4">
-                            {guardianSearch
-                              ? "No guardians match your search."
-                              : "Loading guardians..."}
+                            {isLoadingGuardians
+                              ? "Loading guardians..."
+                              : guardianSearch
+                                ? "No guardians match your search."
+                                : "No guardians available."}
                           </p>
                         )}
                       </div>
