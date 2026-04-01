@@ -8,6 +8,8 @@ import { Loader2, CheckCircle2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { validatePassword, PASSWORD_PLACEHOLDER, PASSWORD_MIN_LENGTH } from "@/lib/password";
 
+type SignupStep = "email" | "verify" | "details";
+
 interface OrganizationInfo {
   name: string;
   subdomain: string;
@@ -23,6 +25,9 @@ export default function MarketingSiteSignupPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [step, setStep] = useState<SignupStep>("email");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -35,13 +40,11 @@ export default function MarketingSiteSignupPage() {
   useEffect(() => {
     async function fetchOrgInfo() {
       try {
-        // Use the checkout session endpoint's org lookup pattern
         const response = await fetch(`/api/sites/${slug}/info`);
         if (response.ok) {
           const data = await response.json();
           setOrgInfo({ name: data.organizationName, subdomain: slug });
         } else {
-          // Fallback: just use the subdomain
           setOrgInfo({ name: slug, subdomain: slug });
         }
       } catch {
@@ -59,17 +62,104 @@ export default function MarketingSiteSignupPage() {
     if (error) setError(null);
   };
 
+  const handleSendCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      const res = await fetch("/api/org-signup/verify-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email }),
+      });
+
+      if (res.status === 429) {
+        const data = await res.json();
+        setError(data.message || "Too many attempts. Please wait and try again.");
+        return;
+      }
+
+      if (!res.ok) {
+        setError("Failed to send verification code. Please try again.");
+        return;
+      }
+
+      setStep("verify");
+      toast.success("Verification code sent to your email.");
+    } catch {
+      setError("An error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      const res = await fetch("/api/org-signup/verify-email/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email, code: verificationCode }),
+      });
+
+      if (res.status === 429) {
+        const data = await res.json();
+        setError(data.message || "Too many attempts. Please wait and try again.");
+        return;
+      }
+
+      const data = await res.json();
+
+      if (!res.ok || !data.verified) {
+        setError("Invalid or expired code. Please try again.");
+        return;
+      }
+
+      setStep("details");
+    } catch {
+      setError("An error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    setError(null);
+    setIsSubmitting(true);
+    setVerificationCode("");
+
+    try {
+      const res = await fetch("/api/org-signup/verify-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email }),
+      });
+
+      if (res.ok) {
+        toast.success("A new verification code has been sent to your email.");
+      } else if (res.status === 429) {
+        const data = await res.json();
+        setError(data.message || "Too many attempts. Please wait and try again.");
+      } else {
+        setError("Failed to resend code. Please try again.");
+      }
+    } catch {
+      setError("An error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    // Client-side validation
     if (!formData.name.trim()) {
       setError("Name is required");
-      return;
-    }
-    if (!formData.email.trim()) {
-      setError("Email is required");
       return;
     }
     const pwError = validatePassword(formData.password);
@@ -79,6 +169,10 @@ export default function MarketingSiteSignupPage() {
     }
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
+      return;
+    }
+    if (!acceptedTerms) {
+      setError("You must accept the terms and conditions to continue.");
       return;
     }
 
@@ -115,11 +209,9 @@ export default function MarketingSiteSignupPage() {
       });
 
       if (signInResult?.ok) {
-        // Redirect to dashboard or back to the site
         router.push("/");
         router.refresh();
       } else {
-        // If auto-login fails, redirect to login page
         toast.info("Please log in with your new credentials.");
         router.push(`/login?email=${encodeURIComponent(formData.email)}`);
       }
@@ -130,7 +222,6 @@ export default function MarketingSiteSignupPage() {
     }
   };
 
-  // Loading state
   if (isLoadingOrg) {
     return (
       <div className="container mx-auto px-4 py-12 max-w-md">
@@ -142,7 +233,6 @@ export default function MarketingSiteSignupPage() {
     );
   }
 
-  // Success state
   if (success) {
     return (
       <div className="container mx-auto px-4 py-12 max-w-md">
@@ -158,6 +248,169 @@ export default function MarketingSiteSignupPage() {
     );
   }
 
+  const inputClass =
+    "w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-muted-foreground";
+
+  // ── Step 1: Email entry ───────────────────────────────────────────────
+  if (step === "email") {
+    return (
+      <div className="container mx-auto px-4 py-12 max-w-md">
+        <div className="bg-card p-8 rounded-xl shadow-sm border border-border">
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-primary/10 text-primary rounded-full mb-4">
+              <UserPlus className="h-6 w-6" />
+            </div>
+            <h1 className="text-2xl font-bold">Create Your Account</h1>
+            <p className="text-muted-foreground mt-2">
+              Join <span className="font-medium text-foreground">{orgInfo?.name}</span>
+            </p>
+          </div>
+
+          <form onSubmit={handleSendCode} className="space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium mb-1 text-foreground">
+                Email
+              </label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                autoComplete="email"
+                autoFocus
+                value={formData.email}
+                onChange={handleInputChange}
+                className={inputClass}
+                placeholder="you@example.com"
+                disabled={isSubmitting}
+                required
+              />
+            </div>
+
+            {error && (
+              <div className="rounded-md bg-destructive/15 px-3 py-2 text-sm text-destructive">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isSubmitting || !formData.email}
+              className="w-full bg-primary text-primary-foreground py-3 rounded-md hover:bg-primary/90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                "Send verification code"
+              )}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center text-sm text-muted-foreground">
+            Already have an account?{" "}
+            <Link href="/login" className="text-primary hover:underline font-medium">
+              Log in
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Step 2: Verify email code ─────────────────────────────────────────
+  if (step === "verify") {
+    return (
+      <div className="container mx-auto px-4 py-12 max-w-md">
+        <div className="bg-card p-8 rounded-xl shadow-sm border border-border">
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-primary/10 text-primary rounded-full mb-4">
+              <UserPlus className="h-6 w-6" />
+            </div>
+            <h1 className="text-2xl font-bold">Check your email</h1>
+            <p className="text-muted-foreground mt-2">
+              Enter the verification code sent to{" "}
+              <span className="font-medium text-foreground">{formData.email}</span>
+            </p>
+          </div>
+
+          <form onSubmit={handleVerifyCode} className="space-y-4">
+            <div>
+              <label
+                htmlFor="verification-code"
+                className="block text-sm font-medium mb-1 text-foreground"
+              >
+                Verification Code
+              </label>
+              <input
+                type="text"
+                id="verification-code"
+                autoFocus
+                autoComplete="one-time-code"
+                placeholder="e.g. A3K9X2"
+                maxLength={6}
+                className="w-full px-3 py-2 text-center text-lg tracking-widest font-mono uppercase border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-muted-foreground"
+                value={verificationCode}
+                onChange={(e) => {
+                  setVerificationCode(e.target.value.toUpperCase());
+                  if (error) setError(null);
+                }}
+                disabled={isSubmitting}
+                required
+              />
+            </div>
+
+            {error && (
+              <div className="rounded-md bg-destructive/15 px-3 py-2 text-sm text-destructive">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isSubmitting || verificationCode.length < 6}
+              className="w-full bg-primary text-primary-foreground py-3 rounded-md hover:bg-primary/90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Verifying...
+                </>
+              ) : (
+                "Verify email"
+              )}
+            </button>
+
+            <div className="flex items-center justify-between text-sm">
+              <button
+                type="button"
+                className="text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                onClick={handleResendCode}
+                disabled={isSubmitting}
+              >
+                Resend code
+              </button>
+              <button
+                type="button"
+                className="text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                onClick={() => {
+                  setStep("email");
+                  setVerificationCode("");
+                  setError(null);
+                }}
+                disabled={isSubmitting}
+              >
+                Change email
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Step 3: Complete profile ──────────────────────────────────────────
   return (
     <div className="container mx-auto px-4 py-12 max-w-md">
       <div className="bg-card p-8 rounded-xl shadow-sm border border-border">
@@ -165,9 +418,9 @@ export default function MarketingSiteSignupPage() {
           <div className="inline-flex items-center justify-center w-12 h-12 bg-primary/10 text-primary rounded-full mb-4">
             <UserPlus className="h-6 w-6" />
           </div>
-          <h1 className="text-2xl font-bold">Create Your Account</h1>
+          <h1 className="text-2xl font-bold">Complete your account</h1>
           <p className="text-muted-foreground mt-2">
-            Join <span className="font-medium text-foreground">{orgInfo?.name}</span>
+            Signing up as <span className="font-medium text-foreground">{formData.email}</span>
           </p>
         </div>
 
@@ -181,28 +434,11 @@ export default function MarketingSiteSignupPage() {
               id="name"
               name="name"
               autoComplete="name"
+              autoFocus
               value={formData.name}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-muted-foreground"
+              className={inputClass}
               placeholder="Your full name"
-              disabled={isSubmitting}
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-1 text-foreground">
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              autoComplete="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-muted-foreground"
-              placeholder="you@example.com"
               disabled={isSubmitting}
               required
             />
@@ -219,7 +455,7 @@ export default function MarketingSiteSignupPage() {
               autoComplete="new-password"
               value={formData.password}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-muted-foreground"
+              className={inputClass}
               placeholder={PASSWORD_PLACEHOLDER}
               disabled={isSubmitting}
               required
@@ -241,11 +477,39 @@ export default function MarketingSiteSignupPage() {
               autoComplete="new-password"
               value={formData.confirmPassword}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-muted-foreground"
+              className={inputClass}
               placeholder="Confirm your password"
               disabled={isSubmitting}
               required
             />
+          </div>
+
+          <div className="flex items-start gap-3 pt-1">
+            <input
+              type="checkbox"
+              id="acceptTerms"
+              checked={acceptedTerms}
+              onChange={(e) => {
+                setAcceptedTerms(e.target.checked);
+                if (error) setError(null);
+              }}
+              disabled={isSubmitting}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border border-input accent-primary cursor-pointer"
+            />
+            <label
+              htmlFor="acceptTerms"
+              className="text-sm text-muted-foreground leading-snug cursor-pointer"
+            >
+              I confirm I am 18 years of age or older and I agree to the{" "}
+              <a
+                href="https://www.uplifterinc.com/terms-of-service"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline font-medium"
+              >
+                Terms of Service
+              </a>
+            </label>
           </div>
 
           {error && (
@@ -256,7 +520,7 @@ export default function MarketingSiteSignupPage() {
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !acceptedTerms}
             className="w-full bg-primary text-primary-foreground py-3 rounded-md hover:bg-primary/90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {isSubmitting ? (
