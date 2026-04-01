@@ -5102,3 +5102,12 @@ model OrganizationHoliday {
   @@index([organizationId, year])
   @@index([organizationId, date])
 }
+
+model CacheVersion {
+  organizationId String
+  entityType     String
+  version        Int      @default(0)
+  updatedAt      DateTime @updatedAt
+
+  @@id([organizationId, entityType])
+}

@@ -1,6 +1,7 @@
 import React from "react";
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
+import { getCacheVersion } from "@/lib/cache-version";
 import { notFound } from "next/navigation";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
@@ -34,7 +35,7 @@ const getCachedSiteConfig = unstable_cache(
 );
 
 const getCachedHomePrograms = unstable_cache(
-  async (organizationId: string) => {
+  async (organizationId: string, _version: number) => {
     const [programs, levels] = await Promise.all([
       db.program.findMany({
         where: { organizationId, status: "ACTIVE" },
@@ -107,7 +108,7 @@ const getCachedHomePrograms = unstable_cache(
     return { programs, levels, waitlistedCounts };
   },
   ["site-programs-home"],
-  { revalidate: 30, tags: ["site-programs"] }
+  { revalidate: 3600 }
 );
 
 const getCachedSeasons = unstable_cache(
@@ -150,9 +151,11 @@ export default async function SitePage({ params }: { params: { slug: string } })
   const primaryColor = config.primaryColor || "#000000";
   const hero = getHeroContrastStyles(primaryColor);
 
+  const programsVersion = await getCacheVersion(config.organizationId, "programs");
+
   const [{ programs, levels, waitlistedCounts }, seasonsEnabled, siteCategories] =
     await Promise.all([
-      getCachedHomePrograms(config.organizationId),
+      getCachedHomePrograms(config.organizationId, programsVersion),
       isFeatureEnabled(config.organizationId, "seasons"),
       getCachedCategories(config.organizationId),
     ]);

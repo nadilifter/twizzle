@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
+import { getCacheVersion } from "@/lib/cache-version";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -40,7 +41,7 @@ const getCachedProgramConfig = unstable_cache(
 );
 
 const getCachedProgramDetail = unstable_cache(
-  async (programId: string, organizationId: string) => {
+  async (programId: string, organizationId: string, _version: number) => {
     const program = await db.program.findFirst({
       where: { id: programId, organizationId, status: "ACTIVE" },
       include: {
@@ -120,7 +121,7 @@ const getCachedProgramDetail = unstable_cache(
     return { program, waitlistedCount };
   },
   ["site-program-detail"],
-  { revalidate: 30, tags: ["site-programs"] }
+  { revalidate: 3600 }
 );
 
 export default async function ProgramDetailPage({
@@ -138,7 +139,8 @@ export default async function ProgramDetailPage({
 
   if (!config) return notFound();
 
-  const result = await getCachedProgramDetail(programId, config.organizationId);
+  const programsVersion = await getCacheVersion(config.organizationId, "programs");
+  const result = await getCachedProgramDetail(programId, config.organizationId, programsVersion);
 
   if (!result) return notFound();
 

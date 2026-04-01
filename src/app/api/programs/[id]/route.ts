@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidateTag } from "next/cache";
 import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
+import { bumpCacheVersion } from "@/lib/cache-version";
 import { parseDateOnly } from "@/lib/date-utils";
 import { checkMemberCertifications } from "@/lib/services/certification-check";
 import { z } from "zod";
@@ -744,7 +744,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       });
     });
 
-    revalidateTag("site-programs");
+    await bumpCacheVersion(session.user.organizationId, "programs");
 
     return NextResponse.json(program);
   } catch (error) {
@@ -805,7 +805,7 @@ export async function DELETE(
     const scopedDb = getScopedDb(session.user.organizationId);
     await scopedDb.program.delete({ where: { id } });
 
-    revalidateTag("site-programs");
+    await bumpCacheVersion(session.user.organizationId, "programs");
 
     return NextResponse.json({ success: true });
   } catch (error) {

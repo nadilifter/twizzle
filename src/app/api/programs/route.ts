@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidateTag } from "next/cache";
 import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
+import { bumpCacheVersion } from "@/lib/cache-version";
 import { parseDateOnly } from "@/lib/date-utils";
 import {
   checkMemberCertifications,
@@ -550,7 +550,7 @@ export async function POST(request: NextRequest) {
       });
     });
 
-    revalidateTag("site-programs");
+    await bumpCacheVersion(session.user.organizationId, "programs");
 
     return NextResponse.json(program);
   } catch (error) {

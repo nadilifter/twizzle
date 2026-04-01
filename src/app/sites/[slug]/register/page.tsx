@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
+import { getCacheVersion } from "@/lib/cache-version";
 import { notFound } from "next/navigation";
 import { isFeatureEnabled } from "@/lib/feature-resolver";
 import { QueueGateWrapper } from "@/components/sites/queue-gate-wrapper";
@@ -29,7 +30,7 @@ const getCachedRegisterConfig = unstable_cache(
 );
 
 const getCachedRegisterPrograms = unstable_cache(
-  async (organizationId: string) => {
+  async (organizationId: string, _version: number) => {
     const [programs, levels] = await Promise.all([
       db.program.findMany({
         where: { organizationId, status: "ACTIVE" },
@@ -91,7 +92,7 @@ const getCachedRegisterPrograms = unstable_cache(
     return { programs, levels, waitlistedCounts };
   },
   ["site-programs-register"],
-  { revalidate: 30, tags: ["site-programs"] }
+  { revalidate: 3600 }
 );
 
 const getCachedSeasons = unstable_cache(
@@ -119,9 +120,11 @@ export default async function RegisterPage({
 
   if (!config) return notFound();
 
+  const programsVersion = await getCacheVersion(config.organizationId, "programs");
+
   const [{ programs, levels, waitlistedCounts }, seasonsEnabled, registerCategories] =
     await Promise.all([
-      getCachedRegisterPrograms(config.organizationId),
+      getCachedRegisterPrograms(config.organizationId, programsVersion),
       isFeatureEnabled(config.organizationId, "seasons"),
       getCachedRegisterCategories(config.organizationId),
     ]);
