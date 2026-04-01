@@ -286,7 +286,7 @@ export default async function SiteLayout({
 
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-      <SessionProviderWrapper>
+      <SessionProviderWrapper session={session}>
         <QueueProvider organizationSlug={subdomain}>
           <CartProvider organizationId={config.organizationId}>
             <div className="min-h-screen flex flex-col bg-background font-sans">

@@ -236,9 +236,10 @@ model User {
   role         Role       @default(COACH)
   status       UserStatus @default(ACTIVE)
   isSuperAdmin Boolean    @default(false)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  lastActiveAt DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  lastActiveAt     DateTime?
+  termsAcceptedAt  DateTime?
 
   // SMS Preferences
   smsOptOut   Boolean   @default(false)

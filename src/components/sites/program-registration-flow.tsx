@@ -218,7 +218,7 @@ export function ProgramRegistrationFlow({
   slug,
   earlyAccessCode,
 }: ProgramRegistrationFlowProps) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const { addItem, setIsOpen, items: cartItems } = useCart();
   const router = useRouter();
   const stepper = useStepper();
@@ -1046,6 +1046,9 @@ export function ProgramRegistrationFlow({
 
   // ---------- Auth gate ----------
 
+  if (status === "loading") {
+    return <p>Loading...</p>; // or whatever loading UI fits here
+  }
   if (!session?.user) {
     return (
       <Card>
