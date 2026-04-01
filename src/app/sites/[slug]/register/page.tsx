@@ -91,7 +91,7 @@ const getCachedRegisterPrograms = unstable_cache(
     return { programs, levels, waitlistedCounts };
   },
   ["site-programs-register"],
-  { revalidate: 30 }
+  { revalidate: 30, tags: ["site-programs"] }
 );
 
 const getCachedSeasons = unstable_cache(
@@ -133,6 +133,7 @@ export default async function RegisterPage({
     ...program,
     basePrice: program.basePrice ? Number(program.basePrice) : null,
     perSessionPrice: program.perSessionPrice ? Number(program.perSessionPrice) : null,
+    recurringPrice: program.recurringPrice ? Number(program.recurringPrice) : null,
     _count: {
       ...program._count,
       waitlistedEnrollments: waitlistCountMap.get(program.id) || 0,

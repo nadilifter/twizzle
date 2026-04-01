@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
@@ -743,6 +744,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       });
     });
 
+    revalidateTag("site-programs");
+
     return NextResponse.json(program);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -801,6 +804,8 @@ export async function DELETE(
 
     const scopedDb = getScopedDb(session.user.organizationId);
     await scopedDb.program.delete({ where: { id } });
+
+    revalidateTag("site-programs");
 
     return NextResponse.json({ success: true });
   } catch (error) {

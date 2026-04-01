@@ -107,7 +107,7 @@ const getCachedHomePrograms = unstable_cache(
     return { programs, levels, waitlistedCounts };
   },
   ["site-programs-home"],
-  { revalidate: 30 }
+  { revalidate: 30, tags: ["site-programs"] }
 );
 
 const getCachedSeasons = unstable_cache(
@@ -317,6 +317,7 @@ export default async function SitePage({ params }: { params: { slug: string } })
                 ...program,
                 basePrice: program.basePrice ? Number(program.basePrice) : null,
                 perSessionPrice: program.perSessionPrice ? Number(program.perSessionPrice) : null,
+                recurringPrice: program.recurringPrice ? Number(program.recurringPrice) : null,
                 staffAssignments: program.staffAssignments.map((sa) => ({
                   id: sa.id,
                   role: sa.role,

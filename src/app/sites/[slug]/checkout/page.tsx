@@ -1664,6 +1664,18 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                               </div>
                               <span className="text-muted-foreground">
                                 ${(item.price * item.quantity).toFixed(2)}
+                                {item.details?.billingInterval &&
+                                  item.details.billingInterval !== "ONE_TIME" &&
+                                  item.details.billingInterval !== "SESSION" && (
+                                    <span className="text-xs">
+                                      /
+                                      {item.details.billingInterval === "MONTHLY"
+                                        ? "mo"
+                                        : item.details.billingInterval === "YEARLY"
+                                          ? "yr"
+                                          : item.details.billingInterval.toLowerCase()}
+                                    </span>
+                                  )}
                               </span>
                             </div>
                           ))}
@@ -1769,7 +1781,21 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                                 )}
                               </div>
                             </div>
-                            <span>${(item.price * item.quantity).toFixed(2)}</span>
+                            <span>
+                              ${(item.price * item.quantity).toFixed(2)}
+                              {item.details?.billingInterval &&
+                                item.details.billingInterval !== "ONE_TIME" &&
+                                item.details.billingInterval !== "SESSION" && (
+                                  <span className="text-xs text-muted-foreground">
+                                    /
+                                    {item.details.billingInterval === "MONTHLY"
+                                      ? "mo"
+                                      : item.details.billingInterval === "YEARLY"
+                                        ? "yr"
+                                        : item.details.billingInterval.toLowerCase()}
+                                  </span>
+                                )}
+                            </span>
                           </div>
                         ))}
                       </div>

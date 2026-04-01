@@ -166,7 +166,12 @@ export default function ProgramsPage() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {programs.map((program) => {
             const p = program as any;
-            const price = p.basePrice || p.perSessionPrice;
+            const isRecurring =
+              p.billingInterval &&
+              p.billingInterval !== "ONE_TIME" &&
+              p.billingInterval !== "SESSION" &&
+              p.recurringPrice;
+            const price = isRecurring ? p.recurringPrice : p.basePrice || p.perSessionPrice;
             const levelReqs = p.levelRequirements || [];
             const staffAssignments = p.staffAssignments || [];
             const requiredMemberships = p.requiredMemberships || [];
@@ -276,7 +281,13 @@ export default function ProgramsPage() {
                       </div>
                       <div className="flex items-center gap-1 text-xs font-medium">
                         <span>{formatPrice(price)}</span>
-                        {price && p.pricingModel === "PER_SESSION" && (
+                        {price && isRecurring && p.billingInterval === "MONTHLY" && (
+                          <span className="text-muted-foreground">/month</span>
+                        )}
+                        {price && isRecurring && p.billingInterval === "YEARLY" && (
+                          <span className="text-muted-foreground">/year</span>
+                        )}
+                        {price && !isRecurring && p.pricingModel === "PER_SESSION" && (
                           <span className="text-muted-foreground">/session</span>
                         )}
                       </div>
