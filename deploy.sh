@@ -93,12 +93,8 @@ log_step "Starting deployment..."
 # Pull latest changes from git
 log_info "Pulling latest changes from git..."
 git fetch origin
-git checkout staging 2>/dev/null || git checkout -b staging origin/staging
-if ! git merge --ff-only origin/staging; then
-    log_error "Fast-forward merge failed. Local branch has diverged from origin/staging."
-    log_info "Resolve conflicts manually and re-run the script."
-    exit 1
-fi
+git checkout origin/staging 2>/dev/null                                                         
+git reset --hard origin/staging
 
 # Tag the current image as backup for rollback
 log_info "Backing up current image..."
