@@ -172,6 +172,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         body: validatedData.htmlBody,
         branding,
       });
+      updateData.rawBody = validatedData.htmlBody;
       updateData.htmlBody = renderedHtml;
       if (!validatedData.textBody) {
         updateData.textBody = renderedText;

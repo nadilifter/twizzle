@@ -2629,6 +2629,7 @@ model EmailCampaign {
   name           String
   subject        String
   htmlBody       String              @db.Text
+  rawBody        String?             @db.Text
   textBody       String?             @db.Text
   classification EmailClassification @default(GENERAL)
 
