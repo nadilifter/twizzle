@@ -20,6 +20,7 @@ const recipientsQuerySchema = z.object({
   targetMembershipStatus: z.enum(["ACTIVE", "EXPIRED"]).optional(),
   targetProgramInstanceId: z.string().optional(),
   targetMembershipGroupIds: z.array(z.string()).optional(),
+  targetUserIds: z.array(z.string()).optional(),
 });
 
 /**
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
       targetMembershipStatus: validatedData.targetMembershipStatus,
       targetProgramInstanceId: validatedData.targetProgramInstanceId,
       targetMembershipGroupIds: validatedData.targetMembershipGroupIds,
+      targetUserIds: validatedData.targetUserIds,
     });
 
     return NextResponse.json({
