@@ -213,16 +213,11 @@ export const EmailComposeStep = forwardRef<EmailComposeStepHandle, Props>(functi
               </Button>
             </div>
             <EditorContent editor={editor} className="p-1" />
+            <div className="p-3">
+              <PlaceholderPicker editor={editor} placeholders={activePlaceholders} />
+            </div>
           </div>
         )}
-      </div>
-
-      <div className="border rounded-md p-3">
-        <Label className="text-sm font-medium mb-2 block">Insert Placeholders</Label>
-        <p className="text-xs text-muted-foreground mb-2">
-          Click a placeholder to insert it as a styled chip into the email body.
-        </p>
-        <PlaceholderPicker editor={editor} placeholders={activePlaceholders} />
       </div>
     </div>
   );
