@@ -65,6 +65,10 @@ interface Program {
   duration: number | null;
   capacity: number | null;
   basePrice: number | null;
+  perSessionPrice: number | null;
+  pricingModel: string;
+  billingInterval: string;
+  recurringPrice: number | null;
   waitlistEnabled: boolean;
   waitlistAutoPromote: boolean;
   waitlistCapacity: number | null;
@@ -451,7 +455,31 @@ export default function ProgramDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {program.basePrice ? `$${Number(program.basePrice).toFixed(0)}` : "Free"}
+              {(() => {
+                const isRecurring =
+                  program.billingInterval &&
+                  program.billingInterval !== "ONE_TIME" &&
+                  program.billingInterval !== "SESSION" &&
+                  program.recurringPrice;
+                const displayPrice = isRecurring
+                  ? Number(program.recurringPrice)
+                  : program.basePrice
+                    ? Number(program.basePrice)
+                    : program.perSessionPrice
+                      ? Number(program.perSessionPrice)
+                      : null;
+                if (!displayPrice) return "Free";
+                const formatted = `$${displayPrice.toFixed(0)}`;
+                const suffix =
+                  isRecurring && program.billingInterval === "MONTHLY"
+                    ? "/mo"
+                    : isRecurring && program.billingInterval === "YEARLY"
+                      ? "/yr"
+                      : program.pricingModel === "PER_SESSION"
+                        ? "/session"
+                        : "";
+                return formatted + suffix;
+              })()}
             </div>
           </CardContent>
         </Card>
