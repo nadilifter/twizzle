@@ -105,7 +105,12 @@ export default function MarketingSiteSignupPage() {
       }
 
       if (!res.ok) {
-        setError("Failed to send verification code. Please try again.");
+        const data = await res.json().catch(() => ({}));
+        if (data.code === "UPLIFTER_EMAIL") {
+          setError("UPLIFTER_EMAIL");
+        } else {
+          setError("Failed to send verification code. Please try again.");
+        }
         return;
       }
 
@@ -323,7 +328,17 @@ export default function MarketingSiteSignupPage() {
 
             {error && (
               <div className="rounded-md bg-destructive/15 px-3 py-2 text-sm text-destructive">
-                {error}
+                {error === "UPLIFTER_EMAIL" ? (
+                  <>
+                    Uplifter staff cannot sign up here. Please use the{" "}
+                    <Link href="/login" className="underline font-medium">
+                      login page
+                    </Link>{" "}
+                    to sign in with Microsoft.
+                  </>
+                ) : (
+                  error
+                )}
               </div>
             )}
 

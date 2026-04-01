@@ -38,7 +38,10 @@ export async function POST(request: NextRequest) {
     const email = validated.email.toLowerCase().trim();
 
     if (isUplifterEmail(email)) {
-      return NextResponse.json({ sent: true }, { headers: rateLimitHeaders(rateLimit) });
+      return NextResponse.json(
+        { error: "Uplifter staff should sign in with Microsoft instead.", code: "UPLIFTER_EMAIL" },
+        { status: 400, headers: rateLimitHeaders(rateLimit) }
+      );
     }
 
     const existingUser = await db.user.findUnique({

@@ -740,7 +740,6 @@ If you didn't attempt to sign in, someone may have your password. We recommend r
         preheaderText: "Your Uplifter sign-in code. Expires in {{expiresIn}}.",
         bodyHtml: `
               <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #050D22;">Sign In to Uplifter</h1>
-              <p style="margin: 0 0 20px; color: #6b7280; font-size: 14px;">Use this code to access your account</p>
               <p style="margin: 0 0 24px;">Use the code below to sign in to your account:</p>
               <!-- Code box -->
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
