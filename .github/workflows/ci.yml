@@ -40,3 +40,6 @@ jobs:
 
       - name: Format check
         run: pnpm run format:check
+
+      - name: DB Schema Drift Check
+        run: pnpm run db:check
