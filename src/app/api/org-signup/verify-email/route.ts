@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { isUplifterEmail } from "@/lib/auth";
 import { sendTemplatedEmail } from "@/lib/email";
 import { checkRateLimit, getClientIp, RATE_LIMITS, rateLimitHeaders } from "@/lib/rate-limit";
 import { createVerificationCode, CODE_EXPIRY_MINUTES } from "@/lib/mfa";
@@ -36,13 +37,16 @@ export async function POST(request: NextRequest) {
     const validated = verifyEmailSchema.parse(body);
     const email = validated.email.toLowerCase().trim();
 
+    if (isUplifterEmail(email)) {
+      return NextResponse.json({ sent: true }, { headers: rateLimitHeaders(rateLimit) });
+    }
+
     const existingUser = await db.user.findUnique({
       where: { email },
       select: { id: true },
     });
 
     if (existingUser) {
-      // Return same shape to prevent email enumeration
       return NextResponse.json({ sent: true }, { headers: rateLimitHeaders(rateLimit) });
     }
 

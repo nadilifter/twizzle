@@ -13,7 +13,7 @@ const signupSchema = z
     confirmPassword: z.string(),
     verificationToken: z.string().min(1, "Email verification is required"),
     acceptedTerms: z.literal(true, {
-      errorMap: () => ({ message: "You must accept the terms and conditions" }),
+      message: "You must accept the terms and conditions",
     }),
   })
   .refine((data) => data.password === data.confirmPassword, {
