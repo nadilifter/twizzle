@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
@@ -27,7 +27,10 @@ export default function MarketingSiteSignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<SignupStep>("email");
   const [verificationCode, setVerificationCode] = useState("");
+  const [verificationToken, setVerificationToken] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -55,6 +58,27 @@ export default function MarketingSiteSignupPage() {
     }
     fetchOrgInfo();
   }, [slug]);
+
+  const startResendCooldown = useCallback(() => {
+    setResendCooldown(30);
+    if (cooldownRef.current) clearInterval(cooldownRef.current);
+    cooldownRef.current = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(cooldownRef.current!);
+          cooldownRef.current = null;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (cooldownRef.current) clearInterval(cooldownRef.current);
+    };
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -86,6 +110,7 @@ export default function MarketingSiteSignupPage() {
       }
 
       setStep("verify");
+      startResendCooldown();
       toast.success("Verification code sent to your email.");
     } catch {
       setError("An error occurred. Please try again.");
@@ -119,6 +144,7 @@ export default function MarketingSiteSignupPage() {
         return;
       }
 
+      setVerificationToken(data.proofToken);
       setStep("details");
     } catch {
       setError("An error occurred. Please try again.");
@@ -140,6 +166,7 @@ export default function MarketingSiteSignupPage() {
       });
 
       if (res.ok) {
+        startResendCooldown();
         toast.success("A new verification code has been sent to your email.");
       } else if (res.status === 429) {
         const data = await res.json();
@@ -182,7 +209,11 @@ export default function MarketingSiteSignupPage() {
       const response = await fetch(`/api/sites/${slug}/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          verificationToken,
+          acceptedTerms,
+        }),
       });
 
       const data = await response.json();
@@ -192,6 +223,10 @@ export default function MarketingSiteSignupPage() {
           setError("An account with this email already exists. Please log in instead.");
         } else if (data.code === "UPLIFTER_EMAIL") {
           setError("Uplifter staff should sign in with Google instead.");
+        } else if (data.code === "EMAIL_NOT_VERIFIED") {
+          setStep("email");
+          setVerificationToken("");
+          setError("Your email verification expired. Please verify again.");
         } else {
           setError(data.error || "Failed to create account");
         }
@@ -385,11 +420,11 @@ export default function MarketingSiteSignupPage() {
             <div className="flex items-center justify-between text-sm">
               <button
                 type="button"
-                className="text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                className="text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:no-underline disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleResendCode}
-                disabled={isSubmitting}
+                disabled={isSubmitting || resendCooldown > 0}
               >
-                Resend code
+                {resendCooldown > 0 ? `Resend code (${resendCooldown}s)` : "Resend code"}
               </button>
               <button
                 type="button"
@@ -508,6 +543,15 @@ export default function MarketingSiteSignupPage() {
                 className="text-primary hover:underline font-medium"
               >
                 Terms of Service
+              </a>{" "}
+              and{" "}
+              <a
+                href="https://www.uplifterinc.com/privacy-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline font-medium"
+              >
+                Privacy Policy
               </a>
             </label>
           </div>
