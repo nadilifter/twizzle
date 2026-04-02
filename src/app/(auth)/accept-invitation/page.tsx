@@ -32,6 +32,7 @@ interface InvitationData {
     name: string | null;
     email: string;
     needsPassword: boolean;
+    hasAcceptedTerms: boolean;
   };
 }
 
@@ -48,6 +49,7 @@ function AcceptInvitationContent() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [autoLoginFailed, setAutoLoginFailed] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -97,7 +99,7 @@ function AcceptInvitationContent() {
       const response = await fetch(`/api/invitations/${token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password, confirmPassword }),
+        body: JSON.stringify({ password, confirmPassword, acceptedTerms }),
       });
 
       const data = await response.json();
@@ -136,7 +138,7 @@ function AcceptInvitationContent() {
       const response = await fetch(`/api/invitations/${token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ acceptedTerms: acceptedTerms || undefined }),
       });
 
       const data = await response.json();
@@ -318,13 +320,50 @@ function AcceptInvitationContent() {
               />
             </div>
 
+            <div className="flex items-start gap-3 pt-1">
+              <input
+                type="checkbox"
+                id="acceptTerms"
+                checked={acceptedTerms}
+                onChange={(e) => {
+                  setAcceptedTerms(e.target.checked);
+                  if (error) setError(null);
+                }}
+                disabled={isSubmitting}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border border-input accent-primary cursor-pointer"
+              />
+              <label
+                htmlFor="acceptTerms"
+                className="text-sm text-muted-foreground leading-snug cursor-pointer"
+              >
+                I confirm I am 18 years of age or older and I agree to the{" "}
+                <a
+                  href="https://www.uplifterinc.com/terms-of-service"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline font-medium"
+                >
+                  Terms of Service
+                </a>{" "}
+                and{" "}
+                <a
+                  href="https://www.uplifterinc.com/privacy-policy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline font-medium"
+                >
+                  Privacy Policy
+                </a>
+              </label>
+            </div>
+
             {error && (
               <div className="rounded-md bg-destructive/15 px-3 py-2 text-sm text-destructive">
                 {error}
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button type="submit" className="w-full" disabled={isSubmitting || !acceptedTerms}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -358,13 +397,56 @@ function AcceptInvitationContent() {
           </p>
         </div>
 
+        {!user?.hasAcceptedTerms && (
+          <div className="flex items-start gap-3 pt-1">
+            <input
+              type="checkbox"
+              id="acceptTermsExisting"
+              checked={acceptedTerms}
+              onChange={(e) => {
+                setAcceptedTerms(e.target.checked);
+                if (error) setError(null);
+              }}
+              disabled={isSubmitting}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border border-input accent-primary cursor-pointer"
+            />
+            <label
+              htmlFor="acceptTermsExisting"
+              className="text-sm text-muted-foreground leading-snug cursor-pointer"
+            >
+              I confirm I am 18 years of age or older and I agree to the{" "}
+              <a
+                href="https://www.uplifterinc.com/terms-of-service"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline font-medium"
+              >
+                Terms of Service
+              </a>{" "}
+              and{" "}
+              <a
+                href="https://www.uplifterinc.com/privacy-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline font-medium"
+              >
+                Privacy Policy
+              </a>
+            </label>
+          </div>
+        )}
+
         {error && (
           <div className="rounded-md bg-destructive/15 px-3 py-2 text-sm text-destructive">
             {error}
           </div>
         )}
 
-        <Button onClick={handleExistingUserAccept} className="w-full" disabled={isSubmitting}>
+        <Button
+          onClick={handleExistingUserAccept}
+          className="w-full"
+          disabled={isSubmitting || (!user?.hasAcceptedTerms && !acceptedTerms)}
+        >
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
