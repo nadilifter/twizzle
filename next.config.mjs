@@ -249,6 +249,7 @@ const nextConfig = {
           getConnectSrcCsp(),
           "frame-src 'self' https://*.adyen.com https://pay.google.com https://*.zendesk.com",
           "frame-ancestors 'none'",
+          "worker-src 'self' blob:",
           getFormActionCsp(),
           "base-uri 'self'",
           "object-src 'none'",
