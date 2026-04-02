@@ -109,7 +109,7 @@ function SortableCategoryItem({ category }: { category: Category }) {
 }
 
 export default function CategoriesPage() {
-  const { categories, isLoading, isDeleting, error, fetchCategories, deleteCategory } =
+  const { categories, allPrograms, isLoading, isDeleting, error, fetchCategories, deleteCategory } =
     useCategories({ autoFetch: false });
   const { isFeatureEnabled } = useFeatures();
   const competitionsEnabled = isFeatureEnabled("competitions");
@@ -244,6 +244,61 @@ export default function CategoriesPage() {
 
       {!isLoading && !error && (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {/* All Programs — always first, non-deletable */}
+          {!searchTerm && allPrograms && (
+            <Card className="flex flex-col overflow-hidden">
+              {allPrograms.imageUrl ? (
+                <div className="relative aspect-video w-full bg-muted">
+                  <Image
+                    src={allPrograms.imageUrl}
+                    alt="All Programs"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center justify-center aspect-video w-full bg-muted">
+                  <ImageIcon className="h-12 w-12 text-muted-foreground/40" />
+                </div>
+              )}
+              <CardHeader className="pb-2">
+                <CardTitle className="leading-tight">All Programs</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 pb-3">
+                <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                  Shows all programs on your marketing site regardless of category.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary" className="gap-1">
+                    <BookOpen className="h-3 w-3" />
+                    {allPrograms._count.programs}{" "}
+                    {allPrograms._count.programs === 1 ? "Program" : "Programs"}
+                  </Badge>
+                  <Badge variant="secondary" className="gap-1">
+                    <CalendarDays className="h-3 w-3" />
+                    {allPrograms._count.events}{" "}
+                    {allPrograms._count.events === 1 ? "Event" : "Events"}
+                  </Badge>
+                  {competitionsEnabled && (
+                    <Badge variant="secondary" className="gap-1">
+                      <Trophy className="h-3 w-3" />
+                      {allPrograms._count.competitions}{" "}
+                      {allPrograms._count.competitions === 1 ? "Competition" : "Competitions"}
+                    </Badge>
+                  )}
+                </div>
+              </CardContent>
+              <CardFooter className="border-t pt-3 gap-2">
+                <Button variant="outline" size="sm" className="flex-1" asChild>
+                  <Link href="/dashboard/registrations/categories/all-programs">
+                    <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                    Edit
+                  </Link>
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
+
           {categories.map((category) => (
             <Card key={category.id} className="flex flex-col overflow-hidden">
               {category.imageUrl ? (
@@ -325,11 +380,14 @@ export default function CategoriesPage() {
               </CardFooter>
             </Card>
           ))}
-          {categories.length === 0 && (
+          {categories.length === 0 && !searchTerm && (
             <div className="col-span-full text-center py-12 text-muted-foreground">
-              {searchTerm
-                ? "No categories match your search."
-                : "No categories found. Create one to get started."}
+              No additional categories. Create one to further organize your programs.
+            </div>
+          )}
+          {categories.length === 0 && searchTerm && (
+            <div className="col-span-full text-center py-12 text-muted-foreground">
+              No categories match your search.
             </div>
           )}
         </div>

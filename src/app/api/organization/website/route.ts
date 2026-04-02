@@ -36,6 +36,7 @@ const websiteConfigSchema = z.object({
   infoBox2Content: z.string().optional().nullable(),
   infoBox3Title: z.string().optional().nullable(),
   infoBox3Content: z.string().optional().nullable(),
+  allProgramsCategoryImageUrl: z.string().url().optional().nullable(),
 });
 
 export async function GET() {

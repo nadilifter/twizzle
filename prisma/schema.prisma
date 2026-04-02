@@ -2793,6 +2793,9 @@ model WebsiteConfig {
   infoBox3Title   String?
   infoBox3Content String? @db.Text
 
+  // Default "All Programs" category tile image
+  allProgramsCategoryImageUrl String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

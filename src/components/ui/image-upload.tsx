@@ -62,6 +62,7 @@ export function ImageUpload({ label, value, onChange, type, required = false }: 
               <Image src={value} alt={label} fill className="object-contain" sizes="128px" />
             </div>
             <Button
+              type="button"
               variant="destructive"
               size="icon"
               className="absolute -top-2 -right-2 w-6 h-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
@@ -89,6 +90,7 @@ export function ImageUpload({ label, value, onChange, type, required = false }: 
             disabled={isUploading}
           />
           <Button
+            type="button"
             variant="outline"
             size="sm"
             onClick={() => inputRef.current?.click()}
