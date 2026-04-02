@@ -1,12 +1,6 @@
-export interface SmsPlaceholderDef {
-  key: string;
-  label: string;
-  description: string;
-  example: string;
-  category: string;
-}
+import type { PlaceholderDefinition } from "@/components/placeholder-picker";
 
-export const SMS_PLACEHOLDER_DEFS: SmsPlaceholderDef[] = [
+export const SMS_PLACEHOLDER_DEFS: PlaceholderDefinition[] = [
   {
     key: "athleteName",
     label: "Athlete Name",

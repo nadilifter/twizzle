@@ -327,6 +327,7 @@ Follow Conventional Commits. Format: `type: lowercase imperative description`
 - Imperative mood — "add", "fix", "remove" not "added", "fixes", "removed"
 - Single line unless explicitly asked for a body
 - Concise — short phrase, not a full sentence
+- No "Co-Authored-By" trailers — never add Claude attribution to commits
 
 **Examples:**
 

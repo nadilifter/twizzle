@@ -63,7 +63,7 @@ import {
   type GuardianOption,
 } from "./constants";
 import { EmailComposeStep, type EmailComposeStepHandle } from "./EmailComposeStep";
-import { SmsComposeStep } from "./SmsComposeStep";
+import { SmsComposeStep, type SmsComposeStepHandle } from "./SmsComposeStep";
 import { calculateSegmentsClient } from "./sms-segments";
 
 const { useStepper: useCampaignStepper } = defineStepper(
@@ -121,6 +121,7 @@ export const CampaignWizard = forwardRef<CampaignWizardHandle, Props>(function C
   const apiBase = channel === "email" ? "/api/email" : "/api/sms";
   const stepper = useCampaignStepper();
   const emailComposeRef = useRef<EmailComposeStepHandle>(null);
+  const smsComposeRef = useRef<SmsComposeStepHandle>(null);
   const didConsumeComposeQuery = useRef(false);
 
   const [campaignName, setCampaignName] = useState("");
@@ -185,6 +186,7 @@ export const CampaignWizard = forwardRef<CampaignWizardHandle, Props>(function C
     setComposeStepValid(false);
     stepper.navigation.goTo("campaign");
     emailComposeRef.current?.reset();
+    smsComposeRef.current?.reset();
   }, [stepper.navigation]);
 
   useImperativeHandle(ref, () => ({
@@ -209,6 +211,9 @@ export const CampaignWizard = forwardRef<CampaignWizardHandle, Props>(function C
       setMessageBody(campaign.body);
       setClassification(campaign.classification);
       setComposeStepValid(campaign.body.trim().length > 0);
+      setTimeout(() => {
+        smsComposeRef.current?.applyDraft(campaign.body);
+      }, 0);
       stepper.navigation.goTo("campaign");
       onOpenChange(true);
     },
@@ -423,138 +428,83 @@ export const CampaignWizard = forwardRef<CampaignWizardHandle, Props>(function C
       ? targetUserIds.length > 0
       : recipientCount !== null && recipientCount > 0);
 
-  const handleSubmit = useCallback(
-    async (mode: "send" | "schedule" | "draft") => {
-      if (isSending || isSaving) return;
-      if (channel === "email") {
-        if (!campaignName || !subject.trim()) {
-          toast.error("Campaign name and subject are required");
-          return;
-        }
-        const content = emailComposeRef.current?.getSerializedHtml() ?? "";
-        if (mode !== "draft" && (!content || content === "<p></p>")) {
-          toast.error("Email body is required");
-          return;
-        }
-        if (mode === "schedule" && !scheduledAt) {
-          toast.error("Please select a date and time to schedule");
-          return;
-        }
-        const setter = mode === "draft" ? setIsSaving : setIsSending;
-        setter(true);
-        try {
-          const response = await fetch("/api/email/campaigns", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              name: campaignName,
-              subject,
-              htmlBody: content,
-              classification,
-              targetType,
-              targetProgramId: targetProgramId || undefined,
-              targetProgramInstanceId: targetProgramInstanceId || undefined,
-              targetMembershipGroupIds:
-                targetMembershipGroupIds.length > 0 ? targetMembershipGroupIds : undefined,
-              targetUserIds: targetUserIds.length > 0 ? targetUserIds : undefined,
-              sendImmediately: mode === "send",
-              scheduledAt: mode === "schedule" ? new Date(scheduledAt).toISOString() : undefined,
-            }),
-          });
-          if (response.ok) {
-            const data = await response.json();
-            const msg =
-              mode === "send"
-                ? `Campaign sent to ${data.totalRecipients} recipients`
-                : mode === "schedule"
-                  ? "Campaign scheduled successfully"
-                  : "Campaign saved as draft";
-            toast.success(msg);
-            onOpenChange(false);
-            resetWizardState();
-            onSuccess?.();
-          } else {
-            const data = await response.json();
-            toast.error(data.error || "Failed to save campaign");
-          }
-        } catch {
-          toast.error("Failed to save campaign");
-        } finally {
-          setter(false);
-        }
-      } else {
-        if (!campaignName) {
-          toast.error("Campaign name is required");
-          return;
-        }
-        if (mode !== "draft" && !messageBody.trim()) {
-          toast.error("Message body is required");
-          return;
-        }
-        if (mode === "schedule" && !scheduledAt) {
-          toast.error("Please select a date and time to schedule");
-          return;
-        }
-        const setter = mode === "draft" ? setIsSaving : setIsSending;
-        setter(true);
-        try {
-          const response = await fetch("/api/sms/campaigns", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              name: campaignName,
-              body: messageBody,
-              classification,
-              targetType,
-              targetProgramId: targetProgramId || undefined,
-              targetProgramInstanceId: targetProgramInstanceId || undefined,
-              targetMembershipGroupIds:
-                targetMembershipGroupIds.length > 0 ? targetMembershipGroupIds : undefined,
-              targetUserIds: targetUserIds.length > 0 ? targetUserIds : undefined,
-              sendImmediately: mode === "send",
-              scheduledAt: mode === "schedule" ? new Date(scheduledAt).toISOString() : undefined,
-            }),
-          });
-          if (response.ok) {
-            const data = await response.json();
-            const msg =
-              mode === "send"
-                ? `Campaign sent to ${data.totalRecipients} recipients`
-                : mode === "schedule"
-                  ? "Campaign scheduled successfully"
-                  : "Campaign saved as draft";
-            toast.success(msg);
-            onOpenChange(false);
-            resetWizardState();
-            onSuccess?.();
-          } else {
-            const data = await response.json();
-            toast.error(data.error || "Failed to save campaign");
-          }
-        } catch {
-          toast.error("Failed to save campaign");
-        } finally {
-          setter(false);
-        }
+  const handleSubmit = async (mode: "send" | "schedule" | "draft") => {
+    if (isSending || isSaving) return;
+
+    let url: string;
+    let channelPayload: Record<string, unknown>;
+
+    if (channel === "email") {
+      if (!campaignName || !subject.trim()) {
+        toast.error("Campaign name and subject are required");
+        return;
       }
-    },
-    [
-      channel,
-      campaignName,
-      subject,
-      messageBody,
-      classification,
-      targetType,
-      targetProgramId,
-      targetProgramInstanceId,
-      targetMembershipGroupIds,
-      targetUserIds,
-      scheduledAt,
-      onOpenChange,
-      resetWizardState,
-      onSuccess,
-    ]
-  );
+      const content = emailComposeRef.current?.getSerializedHtml() ?? "";
+      if (mode !== "draft" && (!content || content === "<p></p>")) {
+        toast.error("Email body is required");
+        return;
+      }
+      url = "/api/email/campaigns";
+      channelPayload = { name: campaignName, subject, htmlBody: content };
+    } else {
+      if (!campaignName) {
+        toast.error("Campaign name is required");
+        return;
+      }
+      if (mode !== "draft" && !messageBody.trim()) {
+        toast.error("Message body is required");
+        return;
+      }
+      url = "/api/sms/campaigns";
+      channelPayload = { name: campaignName, body: messageBody };
+    }
+
+    if (mode === "schedule" && !scheduledAt) {
+      toast.error("Please select a date and time to schedule");
+      return;
+    }
+
+    const setter = mode === "draft" ? setIsSaving : setIsSending;
+    setter(true);
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...channelPayload,
+          classification,
+          targetType,
+          targetProgramId: targetProgramId || undefined,
+          targetProgramInstanceId: targetProgramInstanceId || undefined,
+          targetMembershipGroupIds:
+            targetMembershipGroupIds.length > 0 ? targetMembershipGroupIds : undefined,
+          targetUserIds: targetUserIds.length > 0 ? targetUserIds : undefined,
+          sendImmediately: mode === "send",
+          scheduledAt: mode === "schedule" ? new Date(scheduledAt).toISOString() : undefined,
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const msg =
+          mode === "send"
+            ? `Campaign sent to ${data.totalRecipients} recipients`
+            : mode === "schedule"
+              ? "Campaign scheduled successfully"
+              : "Campaign saved as draft";
+        toast.success(msg);
+        onOpenChange(false);
+        resetWizardState();
+        onSuccess?.();
+      } else {
+        const data = await response.json();
+        toast.error(data.error || "Failed to save campaign");
+      }
+    } catch {
+      toast.error("Failed to save campaign");
+    } finally {
+      setter(false);
+    }
+  };
 
   const dialogTitle = channel === "email" ? "New Email Campaign" : "New SMS Campaign";
   const dialogDescription =
@@ -843,8 +793,8 @@ export const CampaignWizard = forwardRef<CampaignWizardHandle, Props>(function C
               style={{ display: currentStepId === "content" ? undefined : "none" }}
             >
               <SmsComposeStep
+                ref={smsComposeRef}
                 membershipsEnabled={membershipsEnabled}
-                messageBody={messageBody}
                 onMessageBodyChange={setMessageBody}
                 onValidityChange={setComposeStepValid}
               />
