@@ -376,17 +376,13 @@ async function handleAuthorisation(
         .join("\n");
 
       const invoiceTax = Number(invoice.tax);
-      const invoiceFee = Number(invoice.processingFee);
       const taxHtml =
         invoiceTax > 0
           ? `<tr><td style="padding: 4px 0;">Tax</td><td style="padding: 4px 0; text-align: right;">$${invoiceTax.toFixed(2)}</td></tr>`
           : "";
-      const processingFeeHtml =
-        invoiceFee > 0
-          ? `<tr><td style="padding: 4px 0;">Processing Fee</td><td style="padding: 4px 0; text-align: right;">$${invoiceFee.toFixed(2)}</td></tr>`
-          : "";
+      const processingFeeHtml = "";
       const taxText = invoiceTax > 0 ? `Tax: $${invoiceTax.toFixed(2)}` : "";
-      const processingFeeText = invoiceFee > 0 ? `Processing Fee: $${invoiceFee.toFixed(2)}` : "";
+      const processingFeeText = "";
 
       sendTemplatedEmail("checkout-receipt", [recipientEmail], {
         name: recipientName || "Customer",
