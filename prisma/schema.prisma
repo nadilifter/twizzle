@@ -65,7 +65,6 @@ model Organization {
   taxRate    Decimal?  @db.Decimal(5, 4) // e.g. 0.0600 = 6%; null = 0 (no tax)
   taxEnabled Boolean   @default(true)
   taxPaidBy           FeePayer @default(CUSTOMER)
-  processingFeePaidBy FeePayer @default(CUSTOMER)
 
   // Financials
   discounts        Discount[]
@@ -236,9 +235,10 @@ model User {
   role         Role       @default(COACH)
   status       UserStatus @default(ACTIVE)
   isSuperAdmin Boolean    @default(false)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  lastActiveAt DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  lastActiveAt     DateTime?
+  termsAcceptedAt  DateTime?
 
   // SMS Preferences
   smsOptOut   Boolean   @default(false)
@@ -5102,4 +5102,13 @@ model OrganizationHoliday {
   @@unique([organizationId, date, name])
   @@index([organizationId, year])
   @@index([organizationId, date])
+}
+
+model CacheVersion {
+  organizationId String
+  entityType     String
+  version        Int      @default(0)
+  updatedAt      DateTime @updatedAt
+
+  @@id([organizationId, entityType])
 }

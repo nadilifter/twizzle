@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Loader2, DollarSign, Receipt, TrendingUp } from "lucide-react";
+import { Loader2, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -33,7 +33,6 @@ interface TaxFeeConfig {
   taxEnabled: boolean;
   taxRate: number;
   taxPaidBy: "CUSTOMER" | "ORGANIZATION";
-  processingFeePaidBy: "CUSTOMER" | "ORGANIZATION";
   plan: {
     name: string;
     transactionFee: number;
@@ -133,9 +132,6 @@ export default function TaxesAndFeesPage() {
   const [taxEnabled, setTaxEnabled] = useState(true);
   const [ratePercent, setRatePercent] = useState("");
   const [taxPaidBy, setTaxPaidBy] = useState<"CUSTOMER" | "ORGANIZATION">("CUSTOMER");
-  const [processingFeePaidBy, setProcessingFeePaidBy] = useState<"CUSTOMER" | "ORGANIZATION">(
-    "CUSTOMER"
-  );
 
   // Report state
   const [report, setReport] = useState<ReportData | null>(null);
@@ -153,7 +149,6 @@ export default function TaxesAndFeesPage() {
       setTaxEnabled(data.taxEnabled);
       setRatePercent((data.taxRate * 100).toFixed(2).replace(/\.?0+$/, ""));
       setTaxPaidBy(data.taxPaidBy);
-      setProcessingFeePaidBy(data.processingFeePaidBy);
     } catch {
       toast.error("Failed to load tax and fee settings");
     } finally {
@@ -198,8 +193,7 @@ export default function TaxesAndFeesPage() {
     config &&
     (taxEnabled !== config.taxEnabled ||
       ratePercent !== (config.taxRate * 100).toFixed(2).replace(/\.?0+$/, "") ||
-      taxPaidBy !== config.taxPaidBy ||
-      processingFeePaidBy !== config.processingFeePaidBy);
+      taxPaidBy !== config.taxPaidBy);
 
   const handleSave = async () => {
     const parsed = parseFloat(ratePercent);
@@ -217,7 +211,6 @@ export default function TaxesAndFeesPage() {
           taxEnabled,
           taxRate: taxEnabled ? parsed / 100 : (config?.taxRate ?? 0),
           taxPaidBy,
-          processingFeePaidBy,
         }),
       });
 
@@ -230,7 +223,6 @@ export default function TaxesAndFeesPage() {
                 taxEnabled: updated.taxEnabled,
                 taxRate: updated.taxRate,
                 taxPaidBy: updated.taxPaidBy,
-                processingFeePaidBy: updated.processingFeePaidBy,
               }
             : prev
         );
@@ -276,81 +268,10 @@ export default function TaxesAndFeesPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Processing Fee Card */}
-        <Card className="flex flex-col">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              Processing Fee
-            </CardTitle>
-            <CardDescription>
-              Your processing fee rate is determined by your{" "}
-              <Link href="/dashboard/usage/billing" className="underline hover:text-foreground">
-                subscription plan
-              </Link>
-              .
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex-1 space-y-4">
-            {config?.plan ? (
-              <div className="rounded-lg border p-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Plan</span>
-                  <span className="font-medium">{config.plan.name}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Transaction Fee</span>
-                  <span className="font-medium">
-                    {(config.plan.transactionFee * 100).toFixed(1)}% + $
-                    {config.plan.perTransactionFee.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No subscription plan found. Processing fees require an active plan.
-              </p>
-            )}
-
-            <Separator />
-
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">Who pays the processing fee?</Label>
-              <RadioGroup
-                value={processingFeePaidBy}
-                onValueChange={(v) => setProcessingFeePaidBy(v as "CUSTOMER" | "ORGANIZATION")}
-                className="space-y-2"
-              >
-                <div className="flex items-start space-x-3">
-                  <RadioGroupItem value="CUSTOMER" id="fee-customer" className="mt-0.5" />
-                  <Label htmlFor="fee-customer" className="flex flex-col gap-0.5 cursor-pointer">
-                    <span>Customer pays</span>
-                    <span className="font-normal text-xs text-muted-foreground">
-                      Fee appears as a separate line item at checkout.
-                    </span>
-                  </Label>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <RadioGroupItem value="ORGANIZATION" id="fee-org" className="mt-0.5" />
-                  <Label htmlFor="fee-org" className="flex flex-col gap-0.5 cursor-pointer">
-                    <span>Organization pays</span>
-                    <span className="font-normal text-xs text-muted-foreground">
-                      Fee is deducted from your payouts. Customers do not see the fee.
-                    </span>
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Sales Tax Card */}
         <Card className="flex flex-col">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Receipt className="h-5 w-5" />
-              Sales Tax Configuration
-            </CardTitle>
+            <CardTitle>Sales Tax Configuration</CardTitle>
             <CardDescription>
               Configure whether your organization collects sales tax and at what rate. The rate was
               defaulted from your state when you signed up.
@@ -421,6 +342,47 @@ export default function TaxesAndFeesPage() {
                 </div>
               </>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Processing Fee Card */}
+        <Card className="flex flex-col">
+          <CardHeader>
+            <CardTitle>Processing Fee</CardTitle>
+            <CardDescription>
+              Your processing fee rate is determined by your{" "}
+              <Link href="/dashboard/usage/billing" className="underline hover:text-foreground">
+                subscription plan
+              </Link>
+              .
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex-1 space-y-4">
+            {config?.plan ? (
+              <div className="rounded-lg border p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Plan</span>
+                  <span className="font-medium">{config.plan.name}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Transaction Fee</span>
+                  <span className="font-medium">
+                    {(config.plan.transactionFee * 100).toFixed(1)}% + $
+                    {config.plan.perTransactionFee.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No subscription plan found. Processing fees require an active plan.
+              </p>
+            )}
+
+            <Separator />
+
+            <p className="text-sm text-muted-foreground">
+              Processing fees are deducted from your payouts. Customers do not see the fee.
+            </p>
           </CardContent>
         </Card>
       </div>

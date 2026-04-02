@@ -577,7 +577,7 @@ function CoachEvaluationsContent() {
                 <SelectContent>
                   {loadingAthletes ? (
                     <SelectItem value="loading" disabled>
-                      Loading...
+                      Loading....
                     </SelectItem>
                   ) : athletes.length === 0 ? (
                     <SelectItem value="none" disabled>
