@@ -100,19 +100,19 @@ export default function GuardiansPage() {
     if (!inviteEmail) return;
     setIsInviting(true);
     try {
-      const res = await fetch("/api/users", {
+      const res = await fetch("/api/guardians/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: inviteName || inviteEmail,
           email: inviteEmail,
-          role: "PARENT",
         }),
       });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Failed to invite guardian");
       }
+      toast.success("Invitation sent");
       setDialogOpen(false);
       setInviteEmail("");
       setInviteName("");
