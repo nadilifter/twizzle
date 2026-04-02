@@ -271,7 +271,7 @@ export async function recordEmailUsage(organizationId: string): Promise<void> {
   const overageCost = newOverage * overageRate;
 
   await db.emailUsage.update({
-    where: { id: usage.id },
+    where: { id: usage.id, organizationId },
     data: {
       emailsSent: { increment: 1 },
       overageEmails: newOverage,
@@ -299,7 +299,7 @@ export async function updateEmailUsageOnStatus(
   }[status];
 
   await db.emailUsage.update({
-    where: { id: usage.id },
+    where: { id: usage.id, organizationId },
     data: {
       [updateField]: { increment: 1 },
     },
@@ -898,7 +898,7 @@ export async function sendSingleEmail(
   if (result.success && result.messageId) {
     // Update message with SES message ID
     await db.emailMessage.update({
-      where: { id: emailMessage.id },
+      where: { id: emailMessage.id, organizationId },
       data: {
         sesMessageId: result.messageId,
         status: "SENT",
@@ -917,7 +917,7 @@ export async function sendSingleEmail(
   } else {
     // Update message with error
     await db.emailMessage.update({
-      where: { id: emailMessage.id },
+      where: { id: emailMessage.id, organizationId },
       data: {
         status: "FAILED",
         failedAt: new Date(),
@@ -1152,7 +1152,7 @@ export async function executeEmailCampaign(campaignId: string): Promise<void> {
 
   // Update status to sending
   await db.emailCampaign.update({
-    where: { id: campaignId },
+    where: { id: campaignId, organizationId: campaign.organizationId },
     data: {
       status: "SENDING",
       startedAt: new Date(),
@@ -1218,7 +1218,7 @@ export async function executeEmailCampaign(campaignId: string): Promise<void> {
 
   // Update campaign status
   await db.emailCampaign.update({
-    where: { id: campaignId },
+    where: { id: campaignId, organizationId: campaign.organizationId },
     data: {
       status: failedCount === recipients.length ? "FAILED" : "COMPLETED",
       sentCount,
@@ -1245,7 +1245,7 @@ export async function cancelEmailCampaign(campaignId: string): Promise<boolean> 
   }
 
   await db.emailCampaign.update({
-    where: { id: campaignId },
+    where: { id: campaignId, organizationId: campaign.organizationId },
     data: {
       status: "CANCELLED",
     },
@@ -1272,7 +1272,7 @@ export async function handleEmailDelivery(sesMessageId: string): Promise<void> {
   }
 
   await db.emailMessage.update({
-    where: { id: message.id },
+    where: { id: message.id, organizationId: message.organizationId },
     data: {
       status: "DELIVERED",
       deliveredAt: new Date(),
@@ -1284,7 +1284,7 @@ export async function handleEmailDelivery(sesMessageId: string): Promise<void> {
   // Update campaign stats
   if (message.campaignId) {
     await db.emailCampaign.update({
-      where: { id: message.campaignId },
+      where: { id: message.campaignId, organizationId: message.organizationId },
       data: {
         deliveredCount: { increment: 1 },
       },
@@ -1310,7 +1310,7 @@ export async function handleEmailBounce(
   }
 
   await db.emailMessage.update({
-    where: { id: message.id },
+    where: { id: message.id, organizationId: message.organizationId },
     data: {
       status: "BOUNCED",
       bouncedAt: new Date(),
@@ -1324,7 +1324,7 @@ export async function handleEmailBounce(
   // Update campaign stats
   if (message.campaignId) {
     await db.emailCampaign.update({
-      where: { id: message.campaignId },
+      where: { id: message.campaignId, organizationId: message.organizationId },
       data: {
         bouncedCount: { increment: 1 },
       },
@@ -1356,7 +1356,7 @@ export async function handleEmailComplaint(sesMessageId: string): Promise<void> 
   }
 
   await db.emailMessage.update({
-    where: { id: message.id },
+    where: { id: message.id, organizationId: message.organizationId },
     data: {
       status: "COMPLAINED",
       complainedAt: new Date(),
@@ -1368,7 +1368,7 @@ export async function handleEmailComplaint(sesMessageId: string): Promise<void> 
   // Update campaign stats
   if (message.campaignId) {
     await db.emailCampaign.update({
-      where: { id: message.campaignId },
+      where: { id: message.campaignId, organizationId: message.organizationId },
       data: {
         complainedCount: { increment: 1 },
       },
@@ -1402,7 +1402,7 @@ export async function handleEmailOpen(sesMessageId: string): Promise<void> {
   const isFirstOpen = !message.openedAt;
 
   await db.emailMessage.update({
-    where: { id: message.id },
+    where: { id: message.id, organizationId: message.organizationId },
     data: {
       status: message.status === "DELIVERED" ? "OPENED" : message.status,
       openedAt: message.openedAt || new Date(),
@@ -1416,7 +1416,7 @@ export async function handleEmailOpen(sesMessageId: string): Promise<void> {
     // Update campaign stats
     if (message.campaignId) {
       await db.emailCampaign.update({
-        where: { id: message.campaignId },
+        where: { id: message.campaignId, organizationId: message.organizationId },
         data: {
           openedCount: { increment: 1 },
         },
@@ -1441,7 +1441,7 @@ export async function handleEmailClick(sesMessageId: string): Promise<void> {
   const isFirstClick = !message.clickedAt;
 
   await db.emailMessage.update({
-    where: { id: message.id },
+    where: { id: message.id, organizationId: message.organizationId },
     data: {
       status: "CLICKED",
       clickedAt: message.clickedAt || new Date(),
@@ -1455,7 +1455,7 @@ export async function handleEmailClick(sesMessageId: string): Promise<void> {
     // Update campaign stats
     if (message.campaignId) {
       await db.emailCampaign.update({
-        where: { id: message.campaignId },
+        where: { id: message.campaignId, organizationId: message.organizationId },
         data: {
           clickedCount: { increment: 1 },
         },
