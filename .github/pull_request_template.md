@@ -9,6 +9,7 @@
 - [ ] Refactor (no behavior change)
 - [ ] Chore / dependency / config
 - [ ] Docs
+- [ ] Contains DB Migrations
 
 ## Testing
 
