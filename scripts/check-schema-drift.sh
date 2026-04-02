@@ -2,9 +2,12 @@
 # check-schema-drift.sh
 #
 # Detects if prisma/schema.prisma has changes that are not reflected in
-# the migration history.  Uses `prisma migrate diff` to compare the
-# schema file against the current migration history; if the diff
-# produces any SQL output, there are un-migrated changes.
+# the migration history by comparing git history — no database required.
+#
+# In CI (GitHub Actions), compares the PR branch against its base branch.
+# Locally, compares the working tree against the last commit.
+#
+# Exits 1 if schema.prisma was modified without a corresponding new migration.
 #
 # Usage:
 #   ./scripts/check-schema-drift.sh          # exits 1 on drift
@@ -19,33 +22,41 @@ cd "$PROJECT_ROOT"
 
 echo "Checking for schema drift..."
 
-# Generate a diff between the migration history and the current schema.
-# --from-migrations  = state the database would be in after all migrations
-# --to-schema-datamodel = state declared in schema.prisma
-# --exit-code        = exit 2 when there IS a diff (non-empty output)
-DIFF_OUTPUT=$(npx prisma migrate diff \
-  --from-migrations prisma/migrations \
-  --to-schema-datamodel prisma/schema.prisma \
-  --exit-code 2>&1) || EXIT_CODE=$?
+# Determine the base ref to diff against.
+# In GitHub Actions pull_request events, GITHUB_BASE_REF is set to the target branch.
+# Locally, fall back to diffing against HEAD (uncommitted changes).
+if [ -n "${GITHUB_BASE_REF:-}" ]; then
+  BASE_SHA=$(git merge-base HEAD "origin/${GITHUB_BASE_REF}" 2>/dev/null || echo "")
+  if [ -z "$BASE_SHA" ]; then
+    echo "WARNING: Could not determine merge base against origin/${GITHUB_BASE_REF}. Falling back to HEAD."
+    BASE_SHA="HEAD"
+  fi
+else
+  # Local: diff uncommitted changes
+  BASE_SHA="HEAD"
+fi
 
-EXIT_CODE=${EXIT_CODE:-0}
+# Check if schema.prisma changed since the base
+SCHEMA_DIFF=$(git diff "${BASE_SHA}" HEAD -- prisma/schema.prisma 2>/dev/null || git diff -- prisma/schema.prisma)
 
-if [ "$EXIT_CODE" -eq 2 ]; then
+# Check if any new migration SQL files were added since the base
+NEW_MIGRATIONS=$(git diff --name-only "${BASE_SHA}" HEAD -- "prisma/migrations/*.sql" "prisma/migrations/**/*.sql" 2>/dev/null || git diff --name-only -- "prisma/migrations/*.sql" "prisma/migrations/**/*.sql")
+
+if [ -n "$SCHEMA_DIFF" ] && [ -z "$NEW_MIGRATIONS" ]; then
   echo ""
   echo "ERROR: Schema drift detected!"
-  echo "The following changes in schema.prisma have no corresponding migration:"
+  echo "prisma/schema.prisma has been modified but no new migration was created."
   echo ""
-  echo "$DIFF_OUTPUT"
+  echo "Run 'pnpm db:migrate' to generate a migration for these changes:"
   echo ""
-  echo "Run 'pnpm db:migrate' to generate a migration, or if you intentionally"
-  echo "want to skip migration generation, set SKIP_SCHEMA_CHECK=1."
+  echo "$SCHEMA_DIFF"
   exit 1
-elif [ "$EXIT_CODE" -ne 0 ]; then
-  echo ""
-  echo "WARNING: prisma migrate diff exited with unexpected code $EXIT_CODE"
-  echo "$DIFF_OUTPUT"
-  exit 1
+elif [ -n "$SCHEMA_DIFF" ] && [ -n "$NEW_MIGRATIONS" ]; then
+  echo "Schema changes detected with corresponding migrations:"
+  echo "$NEW_MIGRATIONS"
+  echo "No drift detected."
+  exit 0
 else
-  echo "No schema drift detected. Migrations are up to date."
+  echo "No schema changes detected. Migrations are up to date."
   exit 0
 fi

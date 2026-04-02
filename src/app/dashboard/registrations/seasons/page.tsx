@@ -70,8 +70,16 @@ const STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "des
 };
 
 export default function SeasonsPage() {
-  const { seasons, isLoading, error, deleteSeason, createSeason, isCreating, refresh } =
-    useSeasons();
+  const {
+    seasons,
+    isLoading,
+    error,
+    isFeatureGated,
+    deleteSeason,
+    createSeason,
+    isCreating,
+    refresh,
+  } = useSeasons();
   const [createDialogOpen, setCreateDialogOpen] = React.useState(false);
 
   const handleDelete = async (id: string) => {
@@ -93,7 +101,7 @@ export default function SeasonsPage() {
         title="Seasons"
         description="Create recurring seasons to group programs, memberships, and competitions."
         actions={
-          <Button onClick={() => setCreateDialogOpen(true)}>
+          <Button onClick={() => setCreateDialogOpen(true)} disabled={isFeatureGated}>
             <Plus className="mr-2 h-4 w-4" />
             Create Season
           </Button>

@@ -33,6 +33,7 @@ const createCampaignSchema = z.object({
   targetMembershipStatus: z.enum(["ACTIVE", "EXPIRED"]).optional(),
   targetProgramInstanceId: z.string().optional(),
   targetMembershipGroupIds: z.array(z.string()).optional(),
+  targetUserIds: z.array(z.string()).optional(),
   scheduledAt: z.string().datetime().optional(),
   sendImmediately: z.boolean().optional().default(false),
 });
@@ -219,6 +220,7 @@ export async function POST(request: NextRequest) {
       targetMembershipStatus: validatedData.targetMembershipStatus,
       targetProgramInstanceId: validatedData.targetProgramInstanceId,
       targetMembershipGroupIds: validatedData.targetMembershipGroupIds,
+      targetUserIds: validatedData.targetUserIds,
       createdById: session.user.id,
       scheduledAt: validatedData.scheduledAt ? new Date(validatedData.scheduledAt) : undefined,
       sendImmediately: validatedData.sendImmediately,

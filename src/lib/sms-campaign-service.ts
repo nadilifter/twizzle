@@ -803,7 +803,7 @@ export async function executeSmsCampaign(campaignId: string): Promise<void> {
 
   // Update status to sending
   await db.smsCampaign.update({
-    where: { id: campaignId },
+    where: { id: campaignId, organizationId: campaign.organizationId },
     data: {
       status: "SENDING",
       startedAt: new Date(),
@@ -875,7 +875,7 @@ export async function executeSmsCampaign(campaignId: string): Promise<void> {
 
     if (result.success && result.sid) {
       await db.message.update({
-        where: { id: smsMessage.id },
+        where: { id: smsMessage.id, organizationId: campaign.organizationId },
         data: {
           twilioSid: result.sid,
           twilioStatus: mapTwilioStatus(result.status || "queued"),
@@ -887,7 +887,7 @@ export async function executeSmsCampaign(campaignId: string): Promise<void> {
       sentCount++;
     } else {
       await db.message.update({
-        where: { id: smsMessage.id },
+        where: { id: smsMessage.id, organizationId: campaign.organizationId },
         data: {
           twilioStatus: "FAILED",
           failedAt: new Date(),
@@ -904,7 +904,7 @@ export async function executeSmsCampaign(campaignId: string): Promise<void> {
 
   // Update campaign status
   await db.smsCampaign.update({
-    where: { id: campaignId },
+    where: { id: campaignId, organizationId: campaign.organizationId },
     data: {
       status: failedCount === recipients.length ? "FAILED" : "COMPLETED",
       sentCount,
@@ -931,7 +931,7 @@ export async function cancelSmsCampaign(campaignId: string): Promise<boolean> {
   }
 
   await db.smsCampaign.update({
-    where: { id: campaignId },
+    where: { id: campaignId, organizationId: campaign.organizationId },
     data: { status: "CANCELLED" },
   });
 

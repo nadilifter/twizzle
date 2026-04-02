@@ -72,6 +72,7 @@ interface UseSeasonsReturn {
   isLoading: boolean;
   isCreating: boolean;
   isDeleting: boolean;
+  isFeatureGated: boolean;
   error: string | null;
   fetchSeasons: (params?: SeasonsQueryParams) => Promise<void>;
   createSeason: (data: CreateSeasonPayload) => Promise<Season | null>;
@@ -90,6 +91,7 @@ export function useSeasons(options: UseSeasonsOptions = {}): UseSeasonsReturn {
   const [isLoading, setIsLoading] = useState(autoFetch);
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isFeatureGated, setIsFeatureGated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentParams, setCurrentParams] = useState<SeasonsQueryParams>(initialParams);
 
@@ -107,6 +109,7 @@ export function useSeasons(options: UseSeasonsOptions = {}): UseSeasonsReturn {
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to fetch seasons";
         setError(message);
+        setIsFeatureGated(err instanceof ApiError && err.status === 403);
         console.error("Error fetching seasons:", err);
       } finally {
         setIsLoading(false);
@@ -192,6 +195,7 @@ export function useSeasons(options: UseSeasonsOptions = {}): UseSeasonsReturn {
     isLoading,
     isCreating,
     isDeleting,
+    isFeatureGated,
     error,
     fetchSeasons,
     createSeason,

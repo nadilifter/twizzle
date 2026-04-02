@@ -23,7 +23,6 @@ export async function GET(request: NextRequest) {
             taxRate: true,
             taxEnabled: true,
             taxPaidBy: true,
-            processingFeePaidBy: true,
             subscription: {
               select: {
                 plan: {
@@ -52,7 +51,6 @@ export async function GET(request: NextRequest) {
         config.organization.taxEnabled !== false ? Number(config.organization.taxRate ?? 0) : 0,
       taxEnabled: config.organization.taxEnabled,
       taxPaidBy: config.organization.taxPaidBy,
-      processingFeePaidBy: config.organization.processingFeePaidBy,
       transactionFee: plan ? Number(plan.transactionFee) : 0,
       perTransactionFee: plan ? Number(plan.perTransactionFee) : 0,
     });

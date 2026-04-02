@@ -263,3 +263,78 @@ Toggle between local and cloud storage with `USE_S3_STORAGE=false` (uses local f
 - **Don't mutate inside a transaction without first verifying org ownership** — `getScopedDb` doesn't propagate into `$transaction` callbacks
 - **Don't create new abstractions for one-off operations** — inline the logic
 - **Don't add error handling for impossible states** — only validate at system boundaries
+
+---
+
+## Commits
+
+Follow Conventional Commits. Format: `type: lowercase imperative description`
+
+**Types:** `feat`, `fix`, `refactor`, `chore`, `style`, `docs`, `test`, `perf`
+
+- No scope — `feat: add billing page` not `feat(billing): add page`
+- Lowercase after the colon, imperative mood, single line, concise
+
+```
+feat: add organization deactivation for superadmins
+fix: resolve timezone shift on date-only fields
+refactor: migrate ledger tables to reusable DataTable components
+chore: remove defunct quick link from superadmin sidebar
+```
+
+## Pull Requests
+
+When asked to create a PR, use `gh pr create`. Use this description structure:
+
+```
+## What does this PR do?
+<one or two sentences>
+
+## Type of change
+<feat / fix / refactor / chore / docs>
+
+## Testing
+<numbered steps>
+
+## Screenshots / recordings
+<if UI changed>
+```
+
+## Package Manager
+
+Always `pnpm`. Never `npm` or `npx`.
+
+- `pnpm add <pkg>` not `npm install <pkg>`
+- `pnpm dlx <cmd>` not `npx <cmd>`
+
+## Commits
+
+Follow Conventional Commits. Format: `type: lowercase imperative description`
+
+| Type       | When to use                                  |
+| ---------- | -------------------------------------------- |
+| `feat`     | New feature or capability                    |
+| `fix`      | Bug fix                                      |
+| `refactor` | Code restructuring with no behavior change   |
+| `chore`    | Maintenance, deps, scripts, config           |
+| `style`    | Visual/UI-only changes (not code formatting) |
+| `docs`     | Documentation only                           |
+| `test`     | Adding or updating tests                     |
+| `perf`     | Performance improvement                      |
+
+- No scope — `feat: add billing page` not `feat(billing): add page`
+- Lowercase after the colon, no capital first word
+- Imperative mood — "add", "fix", "remove" not "added", "fixes", "removed"
+- Single line unless explicitly asked for a body
+- Concise — short phrase, not a full sentence
+- No "Co-Authored-By" trailers — never add Claude attribution to commits
+
+**Examples:**
+
+```
+feat: add organization deactivation/reactivation for superadmins
+fix: resolve all non-Adyen TypeScript errors across the project
+refactor: migrate ledger tables to reusable DataTable components
+chore: remove defunct User Signup quick link from superadmin sidebar
+style: move Directory to top of Athletes section in admin sidebar
+```

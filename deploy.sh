@@ -93,10 +93,7 @@ log_step "Starting deployment..."
 # Pull latest changes from git
 log_info "Pulling latest changes from git..."
 git fetch origin
-if ! git pull origin main 2>/dev/null; then
-    log_warn "Git pull failed, resetting to origin/main..."
-    git reset --hard origin/main
-fi
+git checkout origin/staging 2>/dev/null
 
 # Tag the current image as backup for rollback
 log_info "Backing up current image..."

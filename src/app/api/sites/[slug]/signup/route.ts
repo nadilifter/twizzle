@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { hashPassword, isUplifterEmail } from "@/lib/auth";
+import { verifyVerifiedToken } from "@/lib/mfa";
 import { z } from "zod";
 import { passwordSchema } from "@/lib/password";
 
@@ -10,6 +11,10 @@ const signupSchema = z
     email: z.string().email("Invalid email address"),
     password: passwordSchema,
     confirmPassword: z.string(),
+    verificationToken: z.string().min(1, "Email verification is required"),
+    acceptedTerms: z.literal(true, {
+      message: "You must accept the terms and conditions",
+    }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
@@ -33,6 +38,18 @@ export async function POST(
     // Validate input
     const validatedData = signupSchema.parse(body);
     const email = validatedData.email.toLowerCase().trim();
+
+    // Verify the email was confirmed via the verification flow
+    const proofResult = verifyVerifiedToken(validatedData.verificationToken, "SIGNUP_VERIFICATION");
+    if (!proofResult || proofResult.email !== email) {
+      return NextResponse.json(
+        {
+          error: "Email verification is invalid or expired. Please verify your email again.",
+          code: "EMAIL_NOT_VERIFIED",
+        },
+        { status: 403 }
+      );
+    }
 
     // Reject Uplifter staff emails - they must use Microsoft OAuth
     if (isUplifterEmail(email)) {
@@ -86,6 +103,7 @@ export async function POST(
           passwordHash,
           role: "PARENT",
           status: "ACTIVE",
+          termsAcceptedAt: new Date(),
         },
       });
 

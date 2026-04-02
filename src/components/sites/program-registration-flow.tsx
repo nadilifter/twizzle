@@ -138,6 +138,8 @@ interface ProgramData {
   pricingModel: string;
   basePrice: number | null;
   perSessionPrice: number | null;
+  billingInterval?: string;
+  recurringPrice?: number | null;
   registrationType: string | null;
   hasAgeRestriction: boolean;
   minAge: number | null;
@@ -216,7 +218,7 @@ export function ProgramRegistrationFlow({
   slug,
   earlyAccessCode,
 }: ProgramRegistrationFlowProps) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const { addItem, setIsOpen, items: cartItems } = useCart();
   const router = useRouter();
   const stepper = useStepper();
@@ -915,12 +917,28 @@ export function ProgramRegistrationFlow({
 
   // ---------- Pricing ----------
 
+  const isRecurringProgram =
+    program.billingInterval &&
+    program.billingInterval !== "ONE_TIME" &&
+    program.billingInterval !== "SESSION" &&
+    program.recurringPrice;
+
   const totalPrice = useMemo(() => {
     if (isPerInstance) {
       return selectedInstanceIds.size * (program.perSessionPrice || 0);
     }
+    if (isRecurringProgram) {
+      return program.recurringPrice || 0;
+    }
     return program.basePrice || 0;
-  }, [isPerInstance, selectedInstanceIds.size, program.perSessionPrice, program.basePrice]);
+  }, [
+    isPerInstance,
+    selectedInstanceIds.size,
+    program.perSessionPrice,
+    program.basePrice,
+    isRecurringProgram,
+    program.recurringPrice,
+  ]);
 
   const membershipPrice =
     needsMembershipPurchase && selectedMembership ? selectedMembership.price : 0;
@@ -1002,13 +1020,14 @@ export function ProgramRegistrationFlow({
         type: "program",
         name: program.name,
         description: program.description || undefined,
-        price: program.basePrice || 0,
+        price: isRecurringProgram ? program.recurringPrice || 0 : program.basePrice || 0,
         quantity: 1,
         athleteId: selectedAthlete.id,
         athleteName,
         details: {
           programId: program.id,
           pricingModel: program.pricingModel,
+          billingInterval: program.billingInterval,
           requiredMemberships: program.requiredMemberships.map((m) => m.id),
           waitlist: isWaitlistMode,
           ...(uploadedFileId && { fileUploadId: uploadedFileId }),
@@ -1027,6 +1046,9 @@ export function ProgramRegistrationFlow({
 
   // ---------- Auth gate ----------
 
+  if (status === "loading") {
+    return <p>Loading...</p>; // or whatever loading UI fits here
+  }
   if (!session?.user) {
     return (
       <Card>
@@ -1982,9 +2004,20 @@ export function ProgramRegistrationFlow({
                   <span className="text-muted-foreground">
                     {isPerInstance
                       ? `${selectedInstanceIds.size} session${selectedInstanceIds.size !== 1 ? "s" : ""}`
-                      : "Program fee"}
+                      : isRecurringProgram
+                        ? program.billingInterval === "MONTHLY"
+                          ? "Monthly fee"
+                          : "Annual fee"
+                        : "Program fee"}
                   </span>
-                  <span className="font-medium">{formatPrice(totalPrice)}</span>
+                  <span className="font-medium">
+                    {formatPrice(totalPrice)}
+                    {isRecurringProgram && totalPrice > 0 && (
+                      <span className="text-muted-foreground">
+                        {program.billingInterval === "MONTHLY" ? "/mo" : "/yr"}
+                      </span>
+                    )}
+                  </span>
                 </div>
                 {needsMembershipPurchase && selectedMembership && (
                   <div className="flex items-center justify-between text-sm">
