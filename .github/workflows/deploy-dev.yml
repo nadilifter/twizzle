@@ -2,7 +2,7 @@ name: Deploy — Development
 
 on:
   push:
-    branches: [dev]
+    branches: [dev_disabled_until_cluster is up]
 
 concurrency:
   group: deploy-dev

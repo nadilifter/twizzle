@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: staging
     permissions:
+      id-token: write
       contents: read
     outputs:
       short_sha: ${{ steps.sha.outputs.short_sha }}
@@ -24,76 +25,94 @@ jobs:
         id: sha
         run: echo "short_sha=${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
 
-      - name: Deploy to EC2 via SSH
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Deploy to EC2 via SSM
         env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
+          INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
         run: |
-          echo "${{ secrets.EC2_SSH_KEY }}" > /tmp/staging.pem
-          chmod 600 /tmp/staging.pem
+          cat > /tmp/ssm-params.json << 'EOF'
+          {
+            "commands": [
+              "set -e",
+              "cd /home/ec2-user/uplifter || { echo 'Project directory not found'; exit 1; }",
+              "echo '=== Pulling latest code ==='",
+              "git fetch origin",
+              "git reset --hard origin/main",
+              "echo '=== Loading environment variables ==='",
+              "set -a",
+              "source /home/ec2-user/.env.uplifter",
+              "set +a",
+              "echo '=== Building Docker image ==='",
+              "DOCKER_BUILDKIT=1 docker build --build-arg APP_ENVIRONMENT=staging --build-arg NEXT_PUBLIC_APP_ENVIRONMENT=staging --build-arg NEXT_PUBLIC_ADYEN_CLIENT_KEY=\"${NEXT_PUBLIC_ADYEN_CLIENT_KEY}\" --build-arg NEXT_PUBLIC_ADYEN_ENVIRONMENT=\"${NEXT_PUBLIC_ADYEN_ENVIRONMENT}\" --build-arg NEXT_PUBLIC_SENTRY_DSN=\"${NEXT_PUBLIC_SENTRY_DSN}\" -t uplifter:new .",
+              "echo '=== Ensuring PostgreSQL is running ==='",
+              "docker compose -f docker-compose.staging.yml up -d postgres",
+              "echo '=== Waiting for PostgreSQL to be healthy ==='",
+              "RETRIES=30; COUNT=0; while [ $COUNT -lt $RETRIES ]; do if docker compose -f docker-compose.staging.yml exec -T postgres pg_isready -U uplifter -d uplifter > /dev/null 2>&1; then echo 'PostgreSQL is ready'; break; fi; COUNT=$((COUNT + 1)); sleep 2; done; if [ $COUNT -eq $RETRIES ]; then echo 'PostgreSQL failed to become healthy'; exit 1; fi",
+              "echo '=== Running database migrations ==='",
+              "docker run --rm --network uplifter-network -e DATABASE_URL=\"postgresql://uplifter:${POSTGRES_PASSWORD}@uplifter-postgres:5432/uplifter\" uplifter:new prisma migrate deploy",
+              "echo '=== Swapping to new image ==='",
+              "docker tag uplifter:new uplifter:latest",
+              "echo '=== Restarting application ==='",
+              "docker compose -f docker-compose.staging.yml up -d app cron",
+              "echo '=== Cleaning up old images ==='",
+              "docker image prune -f > /dev/null 2>&1 || true",
+              "echo '=== Container status ==='",
+              "docker ps --filter 'name=uplifter' --format 'table {{.Names}}\\t{{.Status}}\\t{{.Ports}}'"
+            ],
+            "executionTimeout": ["1800"]
+          }
+          EOF
 
-          ssh -o StrictHostKeyChecking=no -i /tmp/staging.pem "ec2-user@${EC2_HOST}" << 'ENDSSH'
-          set -e
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-id "${INSTANCE_ID}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters file:///tmp/ssm-params.json \
+            --timeout-seconds 1800 \
+            --query "Command.CommandId" \
+            --output text)
 
-          cd ~/uplifter || { echo "Project directory not found"; exit 1; }
+          echo "SSM Command ID: ${COMMAND_ID}"
+          echo "Waiting for deployment to complete..."
 
-          echo "=== Pulling latest code ==="
-          git fetch origin
-          git reset --hard origin/main
+          while true; do
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "${COMMAND_ID}" \
+              --instance-id "${INSTANCE_ID}" \
+              --query "Status" \
+              --output text 2>/dev/null || echo "Pending")
 
-          echo "=== Loading environment variables ==="
-          set -a
-          source ~/.env.uplifter
-          set +a
-
-          echo "=== Building Docker image ==="
-          sudo DOCKER_BUILDKIT=1 docker build \
-            --build-arg APP_ENVIRONMENT=staging \
-            --build-arg NEXT_PUBLIC_APP_ENVIRONMENT=staging \
-            --build-arg NEXT_PUBLIC_ADYEN_CLIENT_KEY="${NEXT_PUBLIC_ADYEN_CLIENT_KEY}" \
-            --build-arg NEXT_PUBLIC_ADYEN_ENVIRONMENT="${NEXT_PUBLIC_ADYEN_ENVIRONMENT}" \
-            --build-arg NEXT_PUBLIC_SENTRY_DSN="${NEXT_PUBLIC_SENTRY_DSN}" \
-            -t uplifter:new .
-
-          echo "=== Ensuring PostgreSQL is running ==="
-          sudo docker compose -f docker-compose.staging.yml up -d postgres
-
-          echo "=== Waiting for PostgreSQL to be healthy ==="
-          RETRIES=30
-          COUNT=0
-          while [ $COUNT -lt $RETRIES ]; do
-            if sudo docker compose -f docker-compose.staging.yml exec -T postgres pg_isready -U uplifter -d uplifter > /dev/null 2>&1; then
-              echo "PostgreSQL is ready"
+            if [ "${STATUS}" = "Success" ]; then
+              echo "=== Deployment Output ==="
+              aws ssm get-command-invocation \
+                --command-id "${COMMAND_ID}" \
+                --instance-id "${INSTANCE_ID}" \
+                --query "StandardOutputContent" \
+                --output text
               break
+            elif [ "${STATUS}" = "Failed" ] || [ "${STATUS}" = "TimedOut" ] || [ "${STATUS}" = "Cancelled" ]; then
+              echo "=== Deployment Output ==="
+              aws ssm get-command-invocation \
+                --command-id "${COMMAND_ID}" \
+                --instance-id "${INSTANCE_ID}" \
+                --query "StandardOutputContent" \
+                --output text
+              echo "=== Error Output ==="
+              aws ssm get-command-invocation \
+                --command-id "${COMMAND_ID}" \
+                --instance-id "${INSTANCE_ID}" \
+                --query "StandardErrorContent" \
+                --output text
+              exit 1
             fi
-            COUNT=$((COUNT + 1))
-            sleep 2
+
+            echo "Status: ${STATUS} — waiting..."
+            sleep 10
           done
-          if [ $COUNT -eq $RETRIES ]; then
-            echo "PostgreSQL failed to become healthy"
-            exit 1
-          fi
-
-          echo "=== Running database migrations ==="
-          sudo docker run --rm \
-            --network uplifter-network \
-            -e DATABASE_URL="postgresql://uplifter:${POSTGRES_PASSWORD}@uplifter-postgres:5432/uplifter" \
-            uplifter:new \
-            prisma migrate deploy
-
-          echo "=== Swapping to new image ==="
-          sudo docker tag uplifter:new uplifter:latest
-
-          echo "=== Restarting application ==="
-          sudo docker compose -f docker-compose.staging.yml up -d app cron
-
-          echo "=== Cleaning up old images ==="
-          sudo docker image prune -f > /dev/null 2>&1 || true
-
-          echo "=== Container status ==="
-          sudo docker ps --filter "name=uplifter" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-          ENDSSH
-
-          rm -f /tmp/staging.pem
 
   smoke-test:
     name: Staging Smoke Test
