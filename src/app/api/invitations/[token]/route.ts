@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthSession, hashPassword } from "@/lib/auth";
+import { hashPassword } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { passwordSchema } from "@/lib/password";
@@ -253,36 +253,9 @@ export async function POST(
         organizationName: invitation.organization.name,
       });
     } else {
-      // Existing user flow - verify they are authenticated
-      const session = await getAuthSession();
-
-      if (!session) {
-        // Return special code so frontend knows to redirect to login
-        return NextResponse.json(
-          {
-            success: false,
-            error: "Please log in to accept this invitation",
-            requiresAuth: true,
-            redirectUrl: `/login?callbackUrl=/accept-invitation?token=${token}`,
-          },
-          { status: 401 }
-        );
-      }
-
-      // Verify the logged-in user matches the invitation email
-      if (session.user.email !== invitation.email) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `This invitation was sent to ${invitation.email}. Please log in with that account.`,
-          },
-          { status: 403 }
-        );
-      }
-
-      // Accept invitation in transaction
+      // Existing user — the token itself proves they have access to the
+      // invited email address, so no session/login is required.
       await db.$transaction(async (tx) => {
-        // Update invitation status
         await tx.organizationInvitation.update({
           where: { id: invitation.id },
           data: {
@@ -291,7 +264,6 @@ export async function POST(
           },
         });
 
-        // Update organization member status
         await tx.organizationMember.updateMany({
           where: {
             organizationId: invitation.organizationId,
@@ -302,15 +274,12 @@ export async function POST(
             status: "ACTIVE",
           },
         });
-
-        // User is now an active member of the organization
-        // (membership status already updated above)
       });
 
       return NextResponse.json({
         success: true,
         message: `Welcome to ${invitation.organization.name}!`,
-        redirectUrl: "/dashboard",
+        email: invitation.email,
         organizationId: invitation.organizationId,
         organizationName: invitation.organization.name,
       });
