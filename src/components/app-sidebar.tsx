@@ -764,8 +764,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   // Search state
   const [searchQuery, setSearchQuery] = React.useState("");
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
   const { results: entityResults, isLoading: isEntitySearchLoading } =
     useSidebarSearch(searchQuery);
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Filter navigation based on feature toggles
   const filteredNavMain = React.useMemo(
@@ -873,6 +885,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   Search
                 </Label>
                 <SidebarInput
+                  ref={searchInputRef}
                   id="sidebar-search"
                   placeholder="Search..."
                   className="pl-8 pr-8"
@@ -880,7 +893,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
                 <Search className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 opacity-50 select-none" />
-                {searchQuery && (
+                {searchQuery ? (
                   <button
                     type="button"
                     onClick={() => setSearchQuery("")}
@@ -889,6 +902,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <X className="size-4" />
                     <span className="sr-only">Clear search</span>
                   </button>
+                ) : (
+                  <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 hidden h-5 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline-flex">
+                    <span className="text-xs">⌘</span>K
+                  </kbd>
                 )}
               </>
             )}
