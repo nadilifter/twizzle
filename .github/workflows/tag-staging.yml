@@ -19,6 +19,13 @@ jobs:
       new_tag: ${{ steps.bump.outputs.new_tag }}
 
     steps:
+      - name: Validate source branch
+        run: |
+          if [ "${{ github.ref_name }}" != "main" ]; then
+            echo "Error: this workflow must be run from the 'main' branch. Current branch: '${{ github.ref_name }}'"
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -67,4 +74,4 @@ jobs:
           echo "| Commit | \`${{ github.sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Tagged By | @${{ github.actor }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "The \`deploy-ec2-staging\` workflow will now automatically deploy this tag to staging." >> "$GITHUB_STEP_SUMMARY"
+          echo "The \`deploy-staging\` workflow will now automatically deploy this tag to staging." >> "$GITHUB_STEP_SUMMARY"
