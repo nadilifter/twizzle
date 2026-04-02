@@ -122,6 +122,7 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [plans, setPlans] = React.useState<SubscriptionPlan[]>([]);
   const [plansLoading, setPlansLoading] = React.useState(true);
+  const [selectedPlan, setSelectedPlan] = React.useState<string | null>(null);
   const [sports, setSports] = React.useState<Sport[]>([]);
   const [sportsLoading, setSportsLoading] = React.useState(true);
 
@@ -141,6 +142,7 @@ export default function SignupPage() {
       const data = JSON.parse(raw);
       const { planName, planPrice, useExistingAccount: wasExisting, ...formFields } = data;
       setFormData((prev) => ({ ...prev, ...formFields }));
+      if (formFields.planId) setSelectedPlan(formFields.planId);
 
       if (wasExisting) {
         setSignupMode("existingAccount");
@@ -233,15 +235,6 @@ export default function SignupPage() {
         if (!response.ok) throw new Error("Failed to fetch plans");
         const data = await response.json();
         setPlans(data);
-        setFormData((prev) => {
-          if (prev.planId && data.some((p: SubscriptionPlan) => p.id === prev.planId)) {
-            return prev;
-          }
-          const popularPlan = data.find((p: SubscriptionPlan) => p.isPopular);
-          if (popularPlan) return { ...prev, planId: popularPlan.id };
-          if (data.length > 0) return { ...prev, planId: data[0].id };
-          return prev;
-        });
       } catch (error) {
         toast.error("Failed to load subscription plans");
       } finally {
@@ -541,7 +534,7 @@ export default function SignupPage() {
   const validatePlanStep = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.planId) {
+    if (!selectedPlan) {
       newErrors.planId = "Please select a plan";
     }
 
@@ -578,8 +571,8 @@ export default function SignupPage() {
       return;
     }
 
-    const selectedPlan = plans.find((p) => p.id === formData.planId);
-    const isPaidPlan = selectedPlan && Number(selectedPlan.monthlyPrice) > 0;
+    const chosenPlan = plans.find((p) => p.id === selectedPlan);
+    const isPaidPlan = chosenPlan && Number(chosenPlan.monthlyPrice) > 0;
 
     const submitData = useExistingAccount
       ? (() => {
@@ -591,8 +584,8 @@ export default function SignupPage() {
     if (isPaidPlan) {
       const signupData = {
         ...submitData,
-        planName: selectedPlan.name,
-        planPrice: selectedPlan.monthlyPrice,
+        planName: chosenPlan.name,
+        planPrice: chosenPlan.monthlyPrice,
         ...(useExistingAccount ? { email: session?.user?.email ?? "" } : {}),
       };
       sessionStorage.setItem("org-signup-data", JSON.stringify(signupData));
@@ -618,7 +611,7 @@ export default function SignupPage() {
       const successParams = new URLSearchParams({
         subdomain: formData.subdomain,
         orgName: formData.orgName,
-        ...(selectedPlan ? { planPrice: String(selectedPlan.monthlyPrice) } : {}),
+        ...(chosenPlan ? { planPrice: String(chosenPlan.monthlyPrice) } : {}),
       });
       router.push(`/org-signup/success?${successParams.toString()}`);
     } catch (error) {
@@ -1391,7 +1384,7 @@ export default function SignupPage() {
                     <CardTitle>Choose Your Plan</CardTitle>
                   </div>
                   <CardDescription>
-                    {plans.find((p) => p.id === formData.planId && Number(p.monthlyPrice) > 0)
+                    {plans.find((p) => p.id === selectedPlan && Number(p.monthlyPrice) > 0)
                       ? "All paid plans include a 30-day free trial. Credit card required."
                       : "No credit card required. Get started instantly."}
                   </CardDescription>
@@ -1415,20 +1408,23 @@ export default function SignupPage() {
                           <div
                             key={plan.id}
                             onClick={() => {
+                              setSelectedPlan(plan.id);
                               setFormData((prev) => ({ ...prev, planId: plan.id }));
                               if (errors.planId) setErrors((prev) => ({ ...prev, planId: "" }));
                             }}
                             className={cn(
                               "relative cursor-pointer rounded-lg border-2 p-4 transition-all hover:border-primary/50",
-                              formData.planId === plan.id
+                              selectedPlan === plan.id
                                 ? "border-primary bg-primary/5"
-                                : "border-border"
+                                : plan.isPopular && selectedPlan === null
+                                  ? "border-primary/40 bg-primary/[0.02]"
+                                  : "border-border"
                             )}
                           >
                             {plan.isPopular && (
                               <Badge className="absolute -top-2 right-2 bg-primary">Popular</Badge>
                             )}
-                            {formData.planId === plan.id && (
+                            {selectedPlan === plan.id && (
                               <div className="absolute -top-2 -left-2">
                                 <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center ring-2 ring-background">
                                   <Check className="h-3 w-3 text-primary-foreground" />
@@ -1533,8 +1529,9 @@ export default function SignupPage() {
                       <div className="mt-4 text-center">
                         <PlansComparisonDialog
                           plans={plans}
-                          selectedPlanId={formData.planId}
+                          selectedPlanId={selectedPlan ?? ""}
                           onSelectPlan={(planId) => {
+                            setSelectedPlan(planId);
                             setFormData((prev) => ({ ...prev, planId }));
                             if (errors.planId) setErrors((prev) => ({ ...prev, planId: "" }));
                           }}
@@ -1601,8 +1598,8 @@ export default function SignupPage() {
                       </Button>
                     ) : stepper.state.isLast ? (
                       (() => {
-                        const selectedPlan = plans.find((p) => p.id === formData.planId);
-                        const isPaidPlan = selectedPlan && Number(selectedPlan.monthlyPrice) > 0;
+                        const chosenPlan = plans.find((p) => p.id === selectedPlan);
+                        const isPaidPlan = chosenPlan && Number(chosenPlan.monthlyPrice) > 0;
                         return (
                           <Button
                             type="submit"
