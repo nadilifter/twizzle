@@ -73,7 +73,6 @@ export async function POST(request: NextRequest) {
         taxRate: true,
         taxEnabled: true,
         taxPaidBy: true,
-        processingFeePaidBy: true,
         subscription: {
           select: {
             plan: {
@@ -88,7 +87,6 @@ export async function POST(request: NextRequest) {
     });
     const taxRate = org?.taxEnabled !== false ? Number(org?.taxRate ?? 0) : 0;
     const taxPaidBy = org?.taxPaidBy ?? "CUSTOMER";
-    const processingFeePaidBy = org?.processingFeePaidBy ?? "CUSTOMER";
     const planTransactionFee = org?.subscription?.plan
       ? Number(org.subscription.plan.transactionFee)
       : 0;
@@ -181,7 +179,6 @@ export async function POST(request: NextRequest) {
 
       let total = subtotal;
       if (taxPaidBy === "CUSTOMER") total += tax;
-      if (processingFeePaidBy === "CUSTOMER") total += processingFee;
       total = Math.round(total * 100) / 100;
 
       const invoice = await tx.invoice.create({
@@ -233,18 +230,6 @@ export async function POST(request: NextRequest) {
           });
         })
       );
-
-      if (processingFeePaidBy === "CUSTOMER" && processingFee > 0) {
-        await tx.lineItem.create({
-          data: {
-            invoiceId: invoice.id,
-            description: "Processing Fee",
-            quantity: 1,
-            unitPrice: processingFee,
-            total: processingFee,
-          },
-        });
-      }
 
       await tx.order.create({
         data: {

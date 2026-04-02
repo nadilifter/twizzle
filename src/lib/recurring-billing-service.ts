@@ -62,7 +62,6 @@ export async function executeRecurringCharge(
       taxEnabled: true,
       taxRate: true,
       taxPaidBy: true,
-      processingFeePaidBy: true,
       subscription: {
         select: {
           plan: {
@@ -78,7 +77,6 @@ export async function executeRecurringCharge(
 
   const taxRate = org?.taxEnabled !== false ? Number(org?.taxRate ?? 0) : 0;
   const taxPaidBy = org?.taxPaidBy ?? "CUSTOMER";
-  const processingFeePaidBy = org?.processingFeePaidBy ?? "CUSTOMER";
   const planTransactionFee = org?.subscription?.plan
     ? Number(org.subscription.plan.transactionFee)
     : 0;
@@ -93,7 +91,6 @@ export async function executeRecurringCharge(
 
   let chargeTotal = baseAmount;
   if (taxPaidBy === "CUSTOMER") chargeTotal += tax;
-  if (processingFeePaidBy === "CUSTOMER") chargeTotal += processingFee;
   chargeTotal = Math.round(chargeTotal * 100) / 100;
 
   try {
@@ -140,18 +137,6 @@ export async function executeRecurringCharge(
           total: baseAmount,
         },
       });
-
-      if (processingFeePaidBy === "CUSTOMER" && processingFee > 0) {
-        await tx.lineItem.create({
-          data: {
-            invoiceId: invoice.id,
-            description: "Processing Fee",
-            quantity: 1,
-            unitPrice: processingFee,
-            total: processingFee,
-          },
-        });
-      }
 
       const payment = await tx.payment.create({
         data: {
