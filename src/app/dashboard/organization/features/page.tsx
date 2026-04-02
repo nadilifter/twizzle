@@ -103,7 +103,7 @@ export default function OrganizationFeaturesPage() {
     );
   })();
 
-  useDebounce(overrideToggles, 500, isSuperAdmin && hasChanges ? autoSave : null);
+  useDebounce(overrideToggles, 1000, isSuperAdmin && hasChanges ? autoSave : null);
 
   const handleToggleOverride = (key: FeatureKey, enabled: boolean) => {
     if (!superadminData) return;
