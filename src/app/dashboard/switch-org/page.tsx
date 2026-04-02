@@ -80,6 +80,7 @@ function SwitchOrgContent() {
     if (session !== undefined) {
       switchOrg();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, orgId, orgName, update, switching, router]);
 
   if (error) {

@@ -88,6 +88,7 @@ function POSSelectOrganizationForm() {
     };
 
     handleAutoSelect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preselect, organizations, fetching, autoSelectAttempted]);
 
   React.useEffect(() => {

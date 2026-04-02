@@ -713,6 +713,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     };
 
     computeNavSecondary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFeaturesLoaded, session?.user?.organizationId, filteredAccessPoints, navSecondaryCacheKey]);
 
   return (

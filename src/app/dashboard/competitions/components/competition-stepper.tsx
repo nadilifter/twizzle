@@ -1165,6 +1165,7 @@ export function CompetitionStepper({
     if (!visibleStepIds.includes(stepper.state.current.data.id)) {
       stepper.navigation.goTo(visibleStepIds[0] as "general");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleStepIds, stepper.state.current.data.id, stepper.navigation]);
 
   React.useEffect(() => {
@@ -1181,6 +1182,7 @@ export function CompetitionStepper({
         return { ...prev, ...updates };
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepper.state.current.data.id]);
 
   const visibleSteps = stepper.state.all.filter((s) => visibleStepIds.includes(s.id));

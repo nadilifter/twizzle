@@ -294,6 +294,7 @@ export default function UserDetailPage() {
   React.useEffect(() => {
     fetchMember();
     fetchCertStatuses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [memberId]);
 
   const fetchMember = async () => {

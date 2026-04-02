@@ -120,6 +120,7 @@ export function AthleteSelectionDialog({
     if (open) {
       fetchAthletes();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, slug]);
 
   const fetchAthletes = async () => {

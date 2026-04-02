@@ -189,6 +189,7 @@ function MapTileLayer({
         attribution: resolvedAttribution,
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [context, name, url, attribution]);
 
   if (context && context.selectedTileLayer !== name) {
@@ -645,6 +646,7 @@ function MapLocateControl({
 
   useEffect(() => {
     return () => stopLocating();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -730,6 +732,7 @@ function MapDrawControl({
       map.off(L.Draw.Event.EDITED, handleDrawEditedOrDeleted);
       map.off(L.Draw.Event.DELETED, handleDrawEditedOrDeleted);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [L, LeafletDraw, map, onLayersChange]);
 
   return (
@@ -980,6 +983,7 @@ function MapDrawActionButton<T extends EditToolbar.Edit | EditToolbar.Delete>({
       control.disable?.();
       controlRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [L, map, isActive, featureGroup, createDrawTool]);
 
   function handleClick() {
@@ -1040,6 +1044,7 @@ function MapDrawEdit({
     L.drawLocal.edit.handlers.remove.tooltip = {
       text: "Click on a shape to remove.",
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapDrawHandleIcon]);
 
   return (
