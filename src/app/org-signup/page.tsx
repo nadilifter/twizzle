@@ -153,6 +153,9 @@ export default function SignupPage() {
 
       stepper.navigation.goTo("plan");
       restoredFromSession.current = true;
+      // Clear the cache so that if the user navigates back through the stepper
+      // and the page remounts, it doesn't auto-jump to the plan step again.
+      sessionStorage.removeItem("org-signup-data");
     } catch {
       // Invalid saved data — ignore and start fresh
     }
@@ -558,14 +561,13 @@ export default function SignupPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Prevents the form from submitting via Enter key or any other implicit mechanism.
+  // All step navigation and plan submission are handled by explicit button onClick handlers.
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+  };
 
-    if (stepper.state.current.data.id !== "plan") {
-      handleNext();
-      return;
-    }
-
+  const handlePlanContinue = async () => {
     if (!validatePlanStep()) {
       toast.error("Please fix the errors in the form");
       return;
@@ -1569,7 +1571,12 @@ export default function SignupPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => stepper.navigation.prev()}
+                        onClick={() => {
+                          if (currentStepId === "plan") {
+                            sessionStorage.removeItem("org-signup-data");
+                          }
+                          stepper.navigation.prev();
+                        }}
                       >
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back
@@ -1602,8 +1609,9 @@ export default function SignupPage() {
                         const isPaidPlan = chosenPlan && Number(chosenPlan.monthlyPrice) > 0;
                         return (
                           <Button
-                            type="submit"
+                            type="button"
                             size="lg"
+                            onClick={handlePlanContinue}
                             disabled={
                               isLoading ||
                               subdomainStatus === "checking" ||
