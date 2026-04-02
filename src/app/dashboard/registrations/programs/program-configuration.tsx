@@ -59,6 +59,7 @@ import { toast } from "sonner";
 import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-config";
 import type { FileRequirementConfig } from "@/types/file-requirements";
 import { usePrograms } from "@/hooks/use-programs";
+import { useCategories } from "@/hooks/use-categories";
 import { useStaff } from "@/hooks/use-staff";
 import { useStaffCertStatus } from "@/hooks/use-staff-cert-status";
 import { useMemberships } from "@/hooks/use-memberships";
@@ -126,6 +127,7 @@ const ROLE_LABELS: Record<ProgramStaffRole, string> = {
 
 export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramConfigProps) {
   const { updateProgram } = usePrograms();
+  const { categories, isLoading: categoriesLoading } = useCategories();
   const { isFeatureEnabled } = useFeatures();
   const trainingEnabled = isFeatureEnabled("training");
   const membershipsEnabled = isFeatureEnabled("memberships");
@@ -229,6 +231,9 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
 
     // GL Code
     glCodeId: (program.glCodeId || null) as string | null,
+
+    // Category
+    categoryId: (program.categoryId || null) as string | null,
 
     // Registration
     registrationOpen: program.registrationOpen ?? true,
@@ -586,6 +591,7 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
         })),
         showCoachOnSite: formData.showCoachOnSite,
         glCodeId: formData.glCodeId,
+        categoryId: formData.categoryId,
         registrationOpen: formData.registrationOpen,
         registrationStartDate:
           !formData.registrationOpen && formData.registrationStartDate
@@ -871,6 +877,31 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                   </p>
                 </div>
               )}
+
+            {/* Category */}
+            {!categoriesLoading && categories.length > 0 && (
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select
+                  value={formData.categoryId || "none"}
+                  onValueChange={(val) =>
+                    setFormData((prev) => ({ ...prev, categoryId: val === "none" ? null : val }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="No Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Category</SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* GL Code */}
             <GLCodeSelector

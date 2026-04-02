@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
+import { getCacheVersion } from "@/lib/cache-version";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -40,7 +41,7 @@ const getCachedProgramConfig = unstable_cache(
 );
 
 const getCachedProgramDetail = unstable_cache(
-  async (programId: string, organizationId: string) => {
+  async (programId: string, organizationId: string, _version: number) => {
     const program = await db.program.findFirst({
       where: { id: programId, organizationId, status: "ACTIVE" },
       include: {
@@ -120,7 +121,7 @@ const getCachedProgramDetail = unstable_cache(
     return { program, waitlistedCount };
   },
   ["site-program-detail"],
-  { revalidate: 30 }
+  { revalidate: 3600 }
 );
 
 export default async function ProgramDetailPage({
@@ -138,7 +139,8 @@ export default async function ProgramDetailPage({
 
   if (!config) return notFound();
 
-  const result = await getCachedProgramDetail(programId, config.organizationId);
+  const programsVersion = await getCacheVersion(config.organizationId, "programs");
+  const result = await getCachedProgramDetail(programId, config.organizationId, programsVersion);
 
   if (!result) return notFound();
 
@@ -191,10 +193,22 @@ export default async function ProgramDetailPage({
     ? `${program.facility.name}${program.facility.city ? `, ${program.facility.city}` : ""}`
     : null;
 
-  const priceDisplay =
-    program.basePrice || program.perSessionPrice
+  const isRecurringProgram =
+    program.billingInterval !== "ONE_TIME" &&
+    program.billingInterval !== "SESSION" &&
+    program.recurringPrice;
+  const priceDisplay = isRecurringProgram
+    ? `$${Number(program.recurringPrice).toFixed(2)}`
+    : program.basePrice || program.perSessionPrice
       ? `$${Number(program.basePrice || program.perSessionPrice).toFixed(2)}`
       : "FREE";
+  const pricePeriod = isRecurringProgram
+    ? program.billingInterval === "MONTHLY"
+      ? " / month"
+      : " / year"
+    : program.pricingModel === "PER_SESSION"
+      ? " / session"
+      : "";
 
   const serializedProgramForFlow = {
     id: program.id,
@@ -203,6 +217,8 @@ export default async function ProgramDetailPage({
     pricingModel: program.pricingModel,
     basePrice: program.basePrice ? Number(program.basePrice) : null,
     perSessionPrice: program.perSessionPrice ? Number(program.perSessionPrice) : null,
+    billingInterval: program.billingInterval,
+    recurringPrice: program.recurringPrice ? Number(program.recurringPrice) : null,
     registrationType: program.registrationType,
     hasAgeRestriction: program.hasAgeRestriction,
     minAge: program.minAge,
@@ -441,7 +457,7 @@ export default async function ProgramDetailPage({
               <DollarSign className="h-4 w-4" />
               <span>
                 {priceDisplay}
-                {program.pricingModel === "PER_SESSION" ? " / session" : ""}
+                {pricePeriod}
               </span>
             </div>
           </div>

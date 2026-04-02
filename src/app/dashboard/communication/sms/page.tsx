@@ -2,13 +2,11 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useFeatures } from "@/components/feature-context";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -16,13 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Sheet,
   SheetContent,
@@ -36,17 +27,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  defineStepper,
-  StepperNav,
-  StepperItem,
-  StepperIndicator,
-  StepperSeparator,
-  StepperTitle,
-  getStepStatus,
-} from "@/components/ui/stepper";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Plus,
   Search,
@@ -57,24 +37,14 @@ import {
   MessageSquare,
   AlertTriangle,
   CheckCircle2,
-  Loader2,
-  Users,
-  Save,
-  ArrowRight,
-  ArrowLeft,
-  Eye,
-  Clock,
-  Braces,
-  Calendar as CalendarIcon,
-  Phone,
-  Hash,
 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-
-// ============================================
-// Types
-// ============================================
+import {
+  CampaignWizard,
+  type CampaignWizardHandle,
+  SMS_PLACEHOLDER_LABEL_MAP,
+} from "@/components/campaign-wizard";
+import { TARGET_TYPE_LABELS, type TargetType } from "@/components/campaign-wizard/constants";
 
 interface SmsCampaign {
   id: string;
@@ -92,65 +62,6 @@ interface SmsCampaign {
   classification: string;
 }
 
-type TargetType =
-  | "ALL_USERS"
-  | "ALL_MEMBERS"
-  | "ALL_PROGRAM_REGISTRANTS"
-  | "PROGRAM_ANY_INSTANCE"
-  | "PROGRAM_SPECIFIC_INSTANCE"
-  | "MEMBERSHIP_HOLDERS"
-  | "SPECIFIC_USERS"
-  | "ALL_GUARDIANS";
-
-interface ProgramOption {
-  id: string;
-  name: string;
-}
-interface ProgramInstanceOption {
-  id: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  status: string;
-}
-interface MembershipGroupOption {
-  id: string;
-  name: string;
-}
-interface GuardianOption {
-  id: string;
-  name: string;
-  email: string;
-}
-
-// ============================================
-// Constants
-// ============================================
-
-const TARGET_TYPE_LABELS: Record<TargetType, string> = {
-  ALL_USERS: "All Staff & Users",
-  ALL_MEMBERS: "All Members",
-  ALL_PROGRAM_REGISTRANTS: "All Program Registrants",
-  PROGRAM_ANY_INSTANCE: "Program Registrants (Any Instance)",
-  PROGRAM_SPECIFIC_INSTANCE: "Program Registrants (Specific Instance)",
-  MEMBERSHIP_HOLDERS: "Membership Holders",
-  SPECIFIC_USERS: "Specific Guardians",
-  ALL_GUARDIANS: "All Guardians",
-};
-
-const TARGET_TYPE_DESCRIPTIONS: Record<TargetType, string> = {
-  ALL_USERS: "Send to all staff members, coaches, and admins in your organization.",
-  ALL_MEMBERS: "Send to all guardians in your organization.",
-  ALL_PROGRAM_REGISTRANTS: "Send to guardians with athletes enrolled in any active program.",
-  PROGRAM_ANY_INSTANCE:
-    "Send to guardians with athletes registered for any instance of a specific program.",
-  PROGRAM_SPECIFIC_INSTANCE:
-    "Send to guardians with athletes registered for a specific instance of a program.",
-  MEMBERSHIP_HOLDERS: "Send to guardians with athletes holding specific membership types.",
-  SPECIFIC_USERS: "Hand-pick specific guardians to send to.",
-  ALL_GUARDIANS: "Send to all guardians in your organization.",
-};
-
 const STATUS_COLORS: Record<string, string> = {
   DRAFT: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300",
   SCHEDULED: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
@@ -160,144 +71,13 @@ const STATUS_COLORS: Record<string, string> = {
   CANCELLED: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300",
 };
 
-const CLASSIFICATION_LABELS: Record<string, string> = {
-  GENERAL: "General",
-  REMINDER: "Reminder",
-  ALERT: "Alert",
-  BILLING: "Billing",
-  EVENT: "Event",
-  NEWS: "News",
-};
-
-interface PlaceholderDef {
-  key: string;
-  label: string;
-  description: string;
-  example: string;
-  category: string;
-}
-
-const PLACEHOLDER_DEFS: PlaceholderDef[] = [
-  {
-    key: "athleteName",
-    label: "Athlete Name",
-    description: "Full name of the athlete",
-    example: "Emma Johnson",
-    category: "athlete",
-  },
-  {
-    key: "athleteFirstName",
-    label: "Athlete First Name",
-    description: "First name of the athlete",
-    example: "Emma",
-    category: "athlete",
-  },
-  {
-    key: "guardianName",
-    label: "Guardian Name",
-    description: "Name of the guardian",
-    example: "Sarah Johnson",
-    category: "guardian",
-  },
-  {
-    key: "guardianFirstName",
-    label: "Guardian First Name",
-    description: "First name of the guardian",
-    example: "Sarah",
-    category: "guardian",
-  },
-  {
-    key: "guardianPhone",
-    label: "Guardian Phone",
-    description: "Phone of the guardian",
-    example: "(555) 123-4567",
-    category: "guardian",
-  },
-  {
-    key: "guardianBalance",
-    label: "Guardian Balance",
-    description: "Guardian account balance",
-    example: "$150.00",
-    category: "guardian",
-  },
-  {
-    key: "membershipName",
-    label: "Membership Name",
-    description: "Name of the membership instance",
-    example: "Annual Membership 2026",
-    category: "membership",
-  },
-  {
-    key: "membershipGroupName",
-    label: "Membership Type",
-    description: "Name of the membership type",
-    example: "Annual Membership",
-    category: "membership",
-  },
-  {
-    key: "membershipEndDate",
-    label: "Membership End Date",
-    description: "When the membership expires",
-    example: "December 31, 2026",
-    category: "membership",
-  },
-  {
-    key: "membershipStatus",
-    label: "Membership Status",
-    description: "Current status of the membership",
-    example: "Active",
-    category: "membership",
-  },
-  {
-    key: "programName",
-    label: "Program Name",
-    description: "Name of the program",
-    example: "JO Team Training",
-    category: "program",
-  },
-  {
-    key: "organizationName",
-    label: "Organization Name",
-    description: "Name of your organization",
-    example: "Sunrise Gymnastics",
-    category: "organization",
-  },
-  {
-    key: "organizationPhone",
-    label: "Organization Phone",
-    description: "Contact phone",
-    example: "(555) 987-6543",
-    category: "organization",
-  },
-  {
-    key: "currentDate",
-    label: "Current Date",
-    description: "Today's date",
-    example: "February 11, 2026",
-    category: "date",
-  },
-];
-
-const QUICK_PLACEHOLDERS = [
-  "guardianFirstName",
-  "athleteFirstName",
-  "organizationName",
-  "programName",
-  "membershipName",
-];
-
-// ============================================
-// Helpers
-// ============================================
-
 function renderPlaceholderPills(text: string) {
   if (!text) return null;
   const parts = text.split(/(\{\{\w+\}\})/g);
   return parts.map((part, i) => {
     const match = part.match(/^\{\{(\w+)\}\}$/);
     if (match) {
-      const def = PLACEHOLDER_DEFS.find((p) => p.key === match[1]);
-      const label = def?.label || match[1];
+      const label = SMS_PLACEHOLDER_LABEL_MAP[match[1]] || match[1];
       return (
         <span
           key={i}
@@ -311,133 +91,17 @@ function renderPlaceholderPills(text: string) {
   });
 }
 
-/**
- * Simple GSM-7 segment calculator (mirrors server-side logic).
- * GSM-7: 160 chars per segment (or 153 if multi-part)
- * UCS-2: 70 chars per segment (or 67 if multi-part)
- */
-function calculateSegmentsClient(text: string): {
-  segments: number;
-  encoding: string;
-  charsPerSegment: number;
-  charsRemaining: number;
-} {
-  if (!text) return { segments: 0, encoding: "GSM-7", charsPerSegment: 160, charsRemaining: 160 };
-
-  // Check if text is GSM-7 compatible
-  const gsm7 =
-    /^[@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞ ÆæßÉ!\"#¤%&'()*+,\-.\/0-9:;<=>?¡A-ZÄÖÑÜa-zäöñüà\^{}\\\[~\]|€]*$/;
-  const isGsm7 = gsm7.test(text);
-  const len = text.length;
-
-  if (isGsm7) {
-    if (len <= 160)
-      return { segments: 1, encoding: "GSM-7", charsPerSegment: 160, charsRemaining: 160 - len };
-    const segments = Math.ceil(len / 153);
-    return {
-      segments,
-      encoding: "GSM-7",
-      charsPerSegment: 153,
-      charsRemaining: segments * 153 - len,
-    };
-  } else {
-    if (len <= 70)
-      return { segments: 1, encoding: "UCS-2", charsPerSegment: 70, charsRemaining: 70 - len };
-    const segments = Math.ceil(len / 67);
-    return {
-      segments,
-      encoding: "UCS-2",
-      charsPerSegment: 67,
-      charsRemaining: segments * 67 - len,
-    };
-  }
-}
-
-// ============================================
-// Stepper definition
-// ============================================
-
-const { useStepper: useSmsStepper } = defineStepper(
-  { id: "campaign", title: "Campaign" },
-  { id: "compose", title: "Compose" },
-  { id: "preview", title: "Preview" },
-  { id: "send", title: "Send" }
-);
-
-// ============================================
-// Page Component
-// ============================================
-
 export default function SmsCampaignsPage() {
   const { isFeatureEnabled } = useFeatures();
   const membershipsEnabled = isFeatureEnabled("memberships");
+  const campaignWizardRef = useRef<CampaignWizardHandle>(null);
 
-  const activePlaceholders = useMemo(
-    () =>
-      membershipsEnabled
-        ? PLACEHOLDER_DEFS
-        : PLACEHOLDER_DEFS.filter((p) => p.category !== "membership"),
-    [membershipsEnabled]
-  );
-  const activeQuickPlaceholders = useMemo(
-    () =>
-      membershipsEnabled
-        ? QUICK_PLACEHOLDERS
-        : QUICK_PLACEHOLDERS.filter((k) => k !== "membershipName"),
-    [membershipsEnabled]
-  );
-
-  // List state
   const [campaigns, setCampaigns] = useState<SmsCampaign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedCampaign, setSelectedCampaign] = useState<SmsCampaign | null>(null);
-
-  // Compose dialog state
   const [isComposeOpen, setIsComposeOpen] = useState(false);
-  const smsStepper = useSmsStepper();
-  const [isSending, setIsSending] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-
-  // Campaign form state
-  const [campaignName, setCampaignName] = useState("");
-  const [messageBody, setMessageBody] = useState("");
-  const [classification, setClassification] = useState("GENERAL");
-  const [targetType, setTargetType] = useState<TargetType>("ALL_MEMBERS");
-  const [targetProgramId, setTargetProgramId] = useState("");
-  const [targetProgramInstanceId, setTargetProgramInstanceId] = useState("");
-  const [targetMembershipGroupIds, setTargetMembershipGroupIds] = useState<string[]>([]);
-  const [targetUserIds, setTargetUserIds] = useState<string[]>([]);
-  const [scheduledAt, setScheduledAt] = useState("");
-
-  // Options for selectors
-  const [programs, setPrograms] = useState<ProgramOption[]>([]);
-  const [programInstances, setProgramInstances] = useState<ProgramInstanceOption[]>([]);
-  const [membershipGroups, setMembershipGroups] = useState<MembershipGroupOption[]>([]);
-  const [guardians, setGuardians] = useState<GuardianOption[]>([]);
-  const [guardianSearch, setGuardianSearch] = useState("");
-
-  // Recipient count
-  const [recipientCount, setRecipientCount] = useState<number | null>(null);
-  const [isLoadingRecipients, setIsLoadingRecipients] = useState(false);
-
-  // Preview state
-  const [previewBody, setPreviewBody] = useState("");
-  const [previewSegments, setPreviewSegments] = useState(0);
-  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
-
-  // Placeholder picker
-  const [placeholderSearch, setPlaceholderSearch] = useState("");
-  const [placeholderOpen, setPlaceholderOpen] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // Segment info for the body
-  const segmentInfo = useMemo(() => calculateSegmentsClient(messageBody), [messageBody]);
-
-  // ============================================
-  // Data fetching
-  // ============================================
 
   const fetchCampaigns = useCallback(async () => {
     try {
@@ -460,253 +124,9 @@ export default function SmsCampaignsPage() {
     fetchCampaigns();
   }, [fetchCampaigns]);
 
-  useEffect(() => {
-    fetch("/api/programs")
-      .then((r) => r.json())
-      .then((data) =>
-        setPrograms(
-          (data.data || data.programs || []).map((p: any) => ({ id: p.id, name: p.name }))
-        )
-      )
-      .catch((err) => console.error("Failed to load programs:", err));
-  }, []);
-
-  useEffect(() => {
-    if (!membershipsEnabled) return;
-    fetch("/api/memberships")
-      .then((r) => r.json())
-      .then((data) =>
-        setMembershipGroups(
-          (data.data || data.groups || []).map((g: any) => ({ id: g.id, name: g.name }))
-        )
-      )
-      .catch((err) => console.error("Failed to load membership groups:", err));
-  }, [membershipsEnabled]);
-
-  useEffect(() => {
-    if (!targetProgramId) {
-      setProgramInstances([]);
-      return;
-    }
-    fetch(`/api/programs/${targetProgramId}/instances`)
-      .then((r) => r.json())
-      .then((data) => setProgramInstances(data.data || data.instances || []))
-      .catch((err) => console.error("Failed to load program instances:", err));
-  }, [targetProgramId]);
-
-  useEffect(() => {
-    if (targetType !== "SPECIFIC_USERS") return;
-    const params = guardianSearch ? `?search=${encodeURIComponent(guardianSearch)}` : "";
-    fetch(`/api/guardians${params}`)
-      .then((r) => r.json())
-      .then((data) =>
-        setGuardians(
-          (data.data || data.guardians || []).map((g: any) => ({
-            id: g.id,
-            name: g.name,
-            email: g.email,
-          }))
-        )
-      )
-      .catch((err) => console.error("Failed to load guardians:", err));
-  }, [targetType, guardianSearch]);
-
-  // Fetch recipient count
-  useEffect(() => {
-    if (!isComposeOpen) return;
-    const fetchRecipients = async () => {
-      setIsLoadingRecipients(true);
-      try {
-        const body: any = { targetType };
-        if (targetProgramId) body.targetProgramId = targetProgramId;
-        if (targetProgramInstanceId) body.targetProgramInstanceId = targetProgramInstanceId;
-        if (targetMembershipGroupIds.length > 0)
-          body.targetMembershipGroupIds = targetMembershipGroupIds;
-        if (targetUserIds.length > 0) body.targetUserIds = targetUserIds;
-        const response = await fetch("/api/sms/campaigns/recipients", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setRecipientCount(data.count);
-        }
-      } catch {
-        setRecipientCount(null);
-      } finally {
-        setIsLoadingRecipients(false);
-      }
-    };
-    const timeout = setTimeout(fetchRecipients, 300);
-    return () => clearTimeout(timeout);
-  }, [
-    isComposeOpen,
-    targetType,
-    targetProgramId,
-    targetProgramInstanceId,
-    targetMembershipGroupIds,
-    targetUserIds,
-  ]);
-
-  // Fetch preview when entering step 3
-  const fetchPreview = useCallback(async () => {
-    if (!messageBody.trim()) return;
-    setIsLoadingPreview(true);
-    try {
-      const response = await fetch("/api/sms/campaigns/preview", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          body: messageBody,
-          targetType,
-          targetProgramId: targetProgramId || undefined,
-          targetProgramInstanceId: targetProgramInstanceId || undefined,
-          targetMembershipGroupIds:
-            targetMembershipGroupIds.length > 0 ? targetMembershipGroupIds : undefined,
-          targetUserIds: targetUserIds.length > 0 ? targetUserIds : undefined,
-        }),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setPreviewBody(data.previewBody);
-        setPreviewSegments(data.segments);
-      }
-    } catch {
-    } finally {
-      setIsLoadingPreview(false);
-    }
-  }, [
-    messageBody,
-    targetType,
-    targetProgramId,
-    targetProgramInstanceId,
-    targetMembershipGroupIds,
-    targetUserIds,
-  ]);
-
-  const currentStepId = smsStepper.state.current.data.id;
-
-  useEffect(() => {
-    if (currentStepId === "preview") fetchPreview();
-  }, [currentStepId, fetchPreview]);
-
-  // ============================================
-  // Actions
-  // ============================================
-
-  const resetForm = useCallback(() => {
-    setCampaignName("");
-    setMessageBody("");
-    setClassification("GENERAL");
-    setTargetType("ALL_MEMBERS");
-    setTargetProgramId("");
-    setTargetProgramInstanceId("");
-    setTargetMembershipGroupIds([]);
-    setTargetUserIds([]);
-    setScheduledAt("");
-    setRecipientCount(null);
-    setPreviewBody("");
-    setPreviewSegments(0);
-    smsStepper.navigation.goTo("campaign");
-  }, [smsStepper.navigation]);
-
   const handleOpenCompose = useCallback(() => {
-    resetForm();
-    setIsComposeOpen(true);
-  }, [resetForm]);
-
-  const insertPlaceholder = useCallback(
-    (key: string) => {
-      const placeholder = `{{${key}}}`;
-      const textarea = textareaRef.current;
-      if (textarea) {
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const newValue = messageBody.substring(0, start) + placeholder + messageBody.substring(end);
-        setMessageBody(newValue);
-        // Set cursor position after the inserted placeholder
-        setTimeout(() => {
-          textarea.focus();
-          textarea.setSelectionRange(start + placeholder.length, start + placeholder.length);
-        }, 0);
-      } else {
-        setMessageBody((prev) => prev + placeholder);
-      }
-      setPlaceholderOpen(false);
-    },
-    [messageBody]
-  );
-
-  const handleSubmit = useCallback(
-    async (mode: "send" | "schedule" | "draft") => {
-      if (!campaignName) {
-        toast.error("Campaign name is required");
-        return;
-      }
-      if (mode !== "draft" && !messageBody.trim()) {
-        toast.error("Message body is required");
-        return;
-      }
-      if (mode === "schedule" && !scheduledAt) {
-        toast.error("Please select a date and time to schedule");
-        return;
-      }
-
-      const setter = mode === "draft" ? setIsSaving : setIsSending;
-      setter(true);
-      try {
-        const response = await fetch("/api/sms/campaigns", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: campaignName,
-            body: messageBody,
-            classification,
-            targetType,
-            targetProgramId: targetProgramId || undefined,
-            targetProgramInstanceId: targetProgramInstanceId || undefined,
-            targetMembershipGroupIds:
-              targetMembershipGroupIds.length > 0 ? targetMembershipGroupIds : undefined,
-            targetUserIds: targetUserIds.length > 0 ? targetUserIds : undefined,
-            sendImmediately: mode === "send",
-            scheduledAt: mode === "schedule" ? new Date(scheduledAt).toISOString() : undefined,
-          }),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          const msg =
-            mode === "send"
-              ? `Campaign sent to ${data.totalRecipients} recipients`
-              : mode === "schedule"
-                ? "Campaign scheduled successfully"
-                : "Campaign saved as draft";
-          toast.success(msg);
-          setIsComposeOpen(false);
-          fetchCampaigns();
-        } else {
-          const data = await response.json();
-          toast.error(data.error || "Failed to save campaign");
-        }
-      } catch {
-        toast.error("Failed to save campaign");
-      } finally {
-        setter(false);
-      }
-    },
-    [
-      campaignName,
-      messageBody,
-      classification,
-      targetType,
-      targetProgramId,
-      targetProgramInstanceId,
-      targetMembershipGroupIds,
-      targetUserIds,
-      scheduledAt,
-      fetchCampaigns,
-    ]
-  );
+    campaignWizardRef.current?.openNew();
+  }, []);
 
   const handleDeleteCampaign = useCallback(
     async (id: string) => {
@@ -724,17 +144,14 @@ export default function SmsCampaignsPage() {
     [fetchCampaigns]
   );
 
-  const handleDuplicateCampaign = useCallback(
-    (campaign: SmsCampaign) => {
-      setCampaignName(`${campaign.name} (Copy)`);
-      setMessageBody(campaign.body);
-      setClassification(campaign.classification);
-      smsStepper.navigation.goTo("campaign");
-      setSelectedCampaign(null);
-      setIsComposeOpen(true);
-    },
-    [smsStepper.navigation]
-  );
+  const handleDuplicateCampaign = useCallback((campaign: SmsCampaign) => {
+    campaignWizardRef.current?.openDuplicateSms({
+      name: campaign.name,
+      body: campaign.body,
+      classification: campaign.classification,
+    });
+    setSelectedCampaign(null);
+  }, []);
 
   const handleSendExisting = useCallback(
     async (id: string) => {
@@ -755,11 +172,6 @@ export default function SmsCampaignsPage() {
     [fetchCampaigns]
   );
 
-  // Step validation
-  const canProceedFromStep1 =
-    !!campaignName.trim() && recipientCount !== null && recipientCount > 0;
-  const canProceedFromStep2 = messageBody.trim().length > 0;
-
   const filteredCampaigns = useMemo(() => {
     return campaigns.filter((c) => {
       if (searchQuery) {
@@ -770,22 +182,9 @@ export default function SmsCampaignsPage() {
     });
   }, [campaigns, searchQuery]);
 
-  const filteredPlaceholders = placeholderSearch
-    ? activePlaceholders.filter(
-        (p) =>
-          p.label.toLowerCase().includes(placeholderSearch.toLowerCase()) ||
-          p.key.toLowerCase().includes(placeholderSearch.toLowerCase())
-      )
-    : activePlaceholders;
-
-  // ============================================
-  // Render
-  // ============================================
-
   return (
     <div className="@container/main flex flex-1 flex-col gap-2">
       <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-        {/* Header */}
         <div className="flex items-center justify-between px-4 lg:px-6">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">SMS Campaigns</h1>
@@ -799,7 +198,6 @@ export default function SmsCampaignsPage() {
           </Button>
         </div>
 
-        {/* Search & Filters */}
         <div className="flex items-center gap-3 px-4 lg:px-6">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -826,7 +224,6 @@ export default function SmsCampaignsPage() {
           </Select>
         </div>
 
-        {/* Campaign List */}
         <div className="px-4 lg:px-6">
           <Card>
             <CardContent className="p-0">
@@ -959,8 +356,7 @@ export default function SmsCampaignsPage() {
         </div>
       </div>
 
-      {/* Campaign Details Sheet */}
-      <Sheet open={!!selectedCampaign} onOpenChange={(open) => !open && setSelectedCampaign(null)}>
+      <Sheet open={!!selectedCampaign} onOpenChange={(o) => !o && setSelectedCampaign(null)}>
         <SheetContent className="sm:max-w-[540px] overflow-y-auto">
           <SheetHeader className="mb-6">
             <SheetTitle>Campaign Details</SheetTitle>
@@ -1059,578 +455,14 @@ export default function SmsCampaignsPage() {
         </SheetContent>
       </Sheet>
 
-      {/* ========== Compose Dialog with Stepper ========== */}
-      <Dialog
+      <CampaignWizard
+        ref={campaignWizardRef}
+        channel="sms"
         open={isComposeOpen}
-        onOpenChange={(open) => {
-          if (!open) setIsComposeOpen(false);
-        }}
-      >
-        <DialogContent className="sm:max-w-[900px] max-h-[90vh] flex flex-col overflow-hidden p-0">
-          <DialogHeader className="px-6 pt-6 pb-0">
-            <DialogTitle>New SMS Campaign</DialogTitle>
-            <DialogDescription>
-              Follow the steps to compose and send your text message campaign.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex flex-col gap-4 px-6 pt-4">
-            {/* Step Navigation */}
-            <StepperNav>
-              {smsStepper.state.all.map((step, index) => {
-                const smsCurrentIndex = smsStepper.state.all.findIndex(
-                  (s) => s.id === smsStepper.state.current.data.id
-                );
-                const status = getStepStatus(index, smsCurrentIndex);
-                return (
-                  <React.Fragment key={step.id}>
-                    <StepperItem status={status}>
-                      <StepperIndicator
-                        status={status}
-                        step={index + 1}
-                        onClick={() => {
-                          if (index < smsCurrentIndex) smsStepper.navigation.goTo(step.id);
-                        }}
-                      />
-                      <StepperTitle status={status} className="hidden sm:block">
-                        {step.title}
-                      </StepperTitle>
-                    </StepperItem>
-                    {index < smsStepper.state.all.length - 1 && (
-                      <StepperSeparator status={status} />
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </StepperNav>
-
-            {/* Step 1: Campaign Name & Recipients */}
-            {currentStepId === "campaign" && (
-              <div className="overflow-y-auto max-h-[calc(90vh-280px)] px-1 space-y-5 py-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="campaign-name">Campaign Name</Label>
-                  <Input
-                    id="campaign-name"
-                    placeholder="e.g., February Reminder"
-                    value={campaignName}
-                    onChange={(e) => setCampaignName(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    This is for your internal reference only and won&apos;t be visible to
-                    recipients.
-                  </p>
-                </div>
-
-                <div className="grid gap-2">
-                  <Label>Classification</Label>
-                  <Select value={classification} onValueChange={setClassification}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(CLASSIFICATION_LABELS).map(([key, label]) => (
-                        <SelectItem key={key} value={key}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid gap-2">
-                  <Label>Send To</Label>
-                  <Select value={targetType} onValueChange={(v) => setTargetType(v as TargetType)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(Object.entries(TARGET_TYPE_LABELS) as [TargetType, string][])
-                        .filter(([key]) => membershipsEnabled || key !== "MEMBERSHIP_HOLDERS")
-                        .map(([key, label]) => (
-                          <SelectItem key={key} value={key}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    {TARGET_TYPE_DESCRIPTIONS[targetType]}
-                  </p>
-
-                  {(targetType === "PROGRAM_ANY_INSTANCE" ||
-                    targetType === "PROGRAM_SPECIFIC_INSTANCE") && (
-                    <div className="grid gap-2 mt-2">
-                      <Label>Program</Label>
-                      <Select value={targetProgramId} onValueChange={setTargetProgramId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a program" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {programs.map((p) => (
-                            <SelectItem key={p.id} value={p.id}>
-                              {p.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {targetType === "PROGRAM_SPECIFIC_INSTANCE" && targetProgramId && (
-                    <div className="grid gap-2 mt-2">
-                      <Label>Instance</Label>
-                      <Select
-                        value={targetProgramInstanceId}
-                        onValueChange={setTargetProgramInstanceId}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select an instance" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {programInstances.map((i) => (
-                            <SelectItem key={i.id} value={i.id}>
-                              {new Date(i.date).toLocaleDateString()} {i.startTime} - {i.endTime}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {targetType === "MEMBERSHIP_HOLDERS" && (
-                    <div className="grid gap-2 mt-2">
-                      <Label>Membership Types</Label>
-                      <div className="flex flex-wrap gap-2 p-3 border rounded-md min-h-[40px]">
-                        {membershipGroups.map((g) => {
-                          const isSelected = targetMembershipGroupIds.includes(g.id);
-                          return (
-                            <button
-                              key={g.id}
-                              type="button"
-                              onClick={() =>
-                                setTargetMembershipGroupIds((prev) =>
-                                  isSelected ? prev.filter((id) => id !== g.id) : [...prev, g.id]
-                                )
-                              }
-                              className={cn(
-                                "px-3 py-1 rounded-full text-xs font-medium border transition-colors",
-                                isSelected
-                                  ? "bg-primary text-primary-foreground border-primary"
-                                  : "bg-muted text-muted-foreground border-transparent hover:bg-muted/80"
-                              )}
-                            >
-                              {g.name}
-                            </button>
-                          );
-                        })}
-                        {membershipGroups.length === 0 && (
-                          <p className="text-xs text-muted-foreground">
-                            No membership types found.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {targetType === "SPECIFIC_USERS" && (
-                    <div className="grid gap-2 mt-2">
-                      <Label>Select Guardians</Label>
-                      <Input
-                        placeholder="Search guardians..."
-                        value={guardianSearch}
-                        onChange={(e) => setGuardianSearch(e.target.value)}
-                        className="mb-1"
-                      />
-                      <div className="border rounded-md max-h-[160px] overflow-y-auto">
-                        {guardians.map((g) => {
-                          const isSelected = targetUserIds.includes(g.id);
-                          return (
-                            <button
-                              key={g.id}
-                              type="button"
-                              onClick={() =>
-                                setTargetUserIds((prev) =>
-                                  isSelected ? prev.filter((id) => id !== g.id) : [...prev, g.id]
-                                )
-                              }
-                              className={cn(
-                                "flex items-center justify-between w-full px-3 py-2 text-sm text-left hover:bg-muted/50 transition-colors",
-                                isSelected && "bg-primary/5"
-                              )}
-                            >
-                              <div>
-                                <p className="font-medium">{g.name}</p>
-                                <p className="text-xs text-muted-foreground">{g.email}</p>
-                              </div>
-                              {isSelected && <CheckCircle2 className="h-4 w-4 text-primary" />}
-                            </button>
-                          );
-                        })}
-                        {guardians.length === 0 && (
-                          <p className="text-xs text-muted-foreground text-center py-4">
-                            {guardianSearch
-                              ? "No guardians match your search."
-                              : "Loading guardians..."}
-                          </p>
-                        )}
-                      </div>
-                      {targetUserIds.length > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          {targetUserIds.length}{" "}
-                          {targetUserIds.length === 1 ? "guardian" : "guardians"} selected
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-2 mt-2 p-3 rounded-md bg-muted/50">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    {isLoadingRecipients ? (
-                      <span className="text-sm text-muted-foreground">Counting recipients...</span>
-                    ) : recipientCount !== null ? (
-                      <span className="text-sm">
-                        <span className="font-semibold">{recipientCount}</span>{" "}
-                        <span className="text-muted-foreground">
-                          {recipientCount === 1
-                            ? "recipient will receive this text"
-                            : "recipients will receive this text"}
-                        </span>
-                      </span>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">
-                        Select targeting to see recipient count
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Step 2: Message Body (forceMount to preserve textarea state) */}
-            <div
-              className="px-0"
-              style={{ display: currentStepId === "compose" ? undefined : "none" }}
-            >
-              <div className="overflow-y-auto max-h-[calc(90vh-280px)] px-1 space-y-5 py-2">
-                <div className="grid gap-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Message Body</Label>
-                    <Popover open={placeholderOpen} onOpenChange={setPlaceholderOpen}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-8">
-                          <Braces className="mr-1.5 h-3.5 w-3.5" />
-                          Insert Placeholder
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent align="end" className="w-[300px] p-3">
-                        <div className="space-y-3">
-                          <div>
-                            <p className="text-sm font-medium mb-1">Insert Placeholder</p>
-                            <p className="text-xs text-muted-foreground">
-                              Click to insert at cursor position.
-                            </p>
-                          </div>
-                          <Input
-                            placeholder="Search..."
-                            value={placeholderSearch}
-                            onChange={(e) => setPlaceholderSearch(e.target.value)}
-                            className="h-8 text-xs"
-                          />
-                          <div
-                            className="max-h-[240px] overflow-y-auto space-y-1"
-                            onWheel={(e) => {
-                              const el = e.currentTarget;
-                              if (el.scrollHeight > el.clientHeight) {
-                                el.scrollTop += e.deltaY;
-                                e.stopPropagation();
-                              }
-                            }}
-                          >
-                            {filteredPlaceholders.map((p) => (
-                              <button
-                                key={p.key}
-                                type="button"
-                                onClick={() => insertPlaceholder(p.key)}
-                                className="flex items-center justify-between w-full px-2 py-1.5 text-left text-xs rounded-md hover:bg-muted transition-colors"
-                              >
-                                <div>
-                                  <span className="font-medium">{p.label}</span>
-                                  <span className="text-muted-foreground ml-2">{p.example}</span>
-                                </div>
-                              </button>
-                            ))}
-                            {filteredPlaceholders.length === 0 && (
-                              <p className="text-xs text-muted-foreground text-center py-2">
-                                No matches.
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <Textarea
-                    ref={textareaRef}
-                    placeholder="Type your message here... Use placeholders like {{guardianFirstName}} for personalization."
-                    value={messageBody}
-                    onChange={(e) => setMessageBody(e.target.value)}
-                    rows={8}
-                    className="resize-none font-mono text-sm"
-                    maxLength={1600}
-                  />
-
-                  {/* Segment counter */}
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <div className="flex items-center gap-3">
-                      <span className="flex items-center gap-1">
-                        <Hash className="h-3 w-3" />
-                        {messageBody.length} characters
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MessageSquare className="h-3 w-3" />
-                        {segmentInfo.segments} {segmentInfo.segments === 1 ? "segment" : "segments"}{" "}
-                        ({segmentInfo.encoding})
-                      </span>
-                    </div>
-                    <span>{segmentInfo.charsRemaining} chars remaining in segment</span>
-                  </div>
-                </div>
-
-                {/* Quick placeholder chips */}
-                <div className="border rounded-md p-3">
-                  <Label className="text-sm font-medium mb-2 block">Quick Insert</Label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {activeQuickPlaceholders.map((key) => {
-                      const def = activePlaceholders.find((p) => p.key === key);
-                      if (!def) return null;
-                      return (
-                        <TooltipProvider key={key} delayDuration={200}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                type="button"
-                                onClick={() => insertPlaceholder(key)}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors cursor-pointer dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800 dark:hover:bg-blue-900"
-                              >
-                                {def.label}
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom">
-                              <p className="text-xs">{def.description}</p>
-                              <p className="text-xs text-muted-foreground">e.g. {def.example}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Opt-out notice */}
-                <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3">
-                  <p className="text-xs text-amber-800 dark:text-amber-300">
-                    <strong>Note:</strong> Recipients can reply STOP to opt out of future messages.
-                    This is required for A2P 10DLC compliance.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 3: Preview */}
-            {currentStepId === "preview" && (
-              <div className="overflow-y-auto max-h-[calc(90vh-280px)] px-1 py-2">
-                <div className="space-y-4">
-                  {/* Summary */}
-                  <Card className="bg-muted/50">
-                    <CardContent className="p-4">
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Campaign:</span>{" "}
-                          <span className="font-medium">{campaignName}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Recipients:</span>{" "}
-                          <span className="font-medium">{recipientCount ?? "..."}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Segments/msg:</span>{" "}
-                          <span className="font-medium">{segmentInfo.segments}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Audience:</span>{" "}
-                          <span className="font-medium">{TARGET_TYPE_LABELS[targetType]}</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* SMS Preview */}
-                  <Label className="text-sm font-medium">Message Preview</Label>
-
-                  <div className="mx-auto w-[320px]">
-                    {/* Phone mockup */}
-                    <div className="relative bg-gray-100 dark:bg-gray-900 rounded-[2rem] border-4 border-gray-300 dark:border-gray-700 p-4 pt-8 pb-6">
-                      {/* Notch */}
-                      <div className="absolute top-2 left-1/2 -translate-x-1/2 w-20 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full" />
-
-                      {/* Message bubble */}
-                      <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm min-h-[120px]">
-                        {isLoadingPreview ? (
-                          <div className="flex items-center justify-center h-[120px]">
-                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                          </div>
-                        ) : (
-                          <p className="text-sm whitespace-pre-wrap leading-relaxed">
-                            {previewBody || messageBody}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Cost estimate */}
-                      <div className="mt-3 text-center">
-                        <p className="text-[10px] text-muted-foreground">
-                          {previewSegments || segmentInfo.segments} segment
-                          {(previewSegments || segmentInfo.segments) !== 1 ? "s" : ""} &times;{" "}
-                          {recipientCount ?? 0} recipients ={" "}
-                          <span className="font-semibold">
-                            {(previewSegments || segmentInfo.segments) * (recipientCount ?? 0)}{" "}
-                            total segments
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Step 4: Send / Schedule / Draft */}
-            {currentStepId === "send" && (
-              <div className="overflow-y-auto max-h-[calc(90vh-280px)] px-1 py-2">
-                <div className="space-y-6">
-                  <p className="text-sm text-muted-foreground">
-                    Your campaign &quot;{campaignName}&quot; is ready to go to{" "}
-                    <span className="font-medium text-foreground">{recipientCount}</span>{" "}
-                    {recipientCount === 1 ? "recipient" : "recipients"}. Choose how you&apos;d like
-                    to proceed.
-                  </p>
-
-                  {/* Send Now */}
-                  <Card
-                    className="border-2 hover:border-primary/50 transition-colors cursor-pointer"
-                    onClick={() => handleSubmit("send")}
-                  >
-                    <CardContent className="p-5 flex items-start gap-4">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <Send className="h-5 w-5 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-base">Send Now</h3>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Immediately send this campaign to all {recipientCount}{" "}
-                          {recipientCount === 1 ? "recipient" : "recipients"}.
-                        </p>
-                      </div>
-                      {isSending && <Loader2 className="h-5 w-5 animate-spin text-primary mt-1" />}
-                    </CardContent>
-                  </Card>
-
-                  {/* Schedule */}
-                  <Card className="border-2 hover:border-primary/50 transition-colors">
-                    <CardContent className="p-5 flex items-start gap-4">
-                      <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
-                        <Clock className="h-5 w-5 text-blue-500" />
-                      </div>
-                      <div className="flex-1 space-y-3">
-                        <div>
-                          <h3 className="font-semibold text-base">Schedule for Later</h3>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Pick a date and time to automatically send this campaign.
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <Input
-                            type="datetime-local"
-                            value={scheduledAt}
-                            onChange={(e) => setScheduledAt(e.target.value)}
-                            min={new Date().toISOString().slice(0, 16)}
-                            className="max-w-[260px]"
-                          />
-                          <Button
-                            size="sm"
-                            disabled={!scheduledAt || isSaving}
-                            onClick={() => handleSubmit("schedule")}
-                          >
-                            {isSaving ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                            )}
-                            Schedule
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Save as Draft */}
-                  <Card
-                    className="border-2 hover:border-muted-foreground/30 transition-colors cursor-pointer"
-                    onClick={() => handleSubmit("draft")}
-                  >
-                    <CardContent className="p-5 flex items-start gap-4">
-                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0">
-                        <Save className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-base">Save as Draft</h3>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Save this campaign to come back and send it later.
-                        </p>
-                      </div>
-                      {isSaving && (
-                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mt-1" />
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Footer Navigation */}
-          <div className="flex items-center justify-between border-t px-6 py-4 mt-auto">
-            <Button
-              variant="outline"
-              onClick={() => {
-                if (smsStepper.state.isFirst) setIsComposeOpen(false);
-                else smsStepper.navigation.prev();
-              }}
-            >
-              {smsStepper.state.isFirst ? (
-                "Cancel"
-              ) : (
-                <>
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back
-                </>
-              )}
-            </Button>
-            {!smsStepper.state.isLast && (
-              <Button
-                onClick={() => smsStepper.navigation.next()}
-                disabled={
-                  (currentStepId === "campaign" && !canProceedFromStep1) ||
-                  (currentStepId === "compose" && !canProceedFromStep2)
-                }
-              >
-                Next
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+        onOpenChange={setIsComposeOpen}
+        membershipsEnabled={membershipsEnabled}
+        onSuccess={fetchCampaigns}
+      />
     </div>
   );
 }

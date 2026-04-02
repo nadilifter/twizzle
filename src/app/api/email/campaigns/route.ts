@@ -41,6 +41,7 @@ const createCampaignSchema = z.object({
   // New targeting fields
   targetProgramInstanceId: z.string().optional(),
   targetMembershipGroupIds: z.array(z.string()).optional(),
+  targetUserIds: z.array(z.string()).optional(),
   scheduledAt: z.string().datetime().optional(),
   sendImmediately: z.boolean().optional().default(false),
 });
@@ -246,6 +247,7 @@ export async function POST(request: NextRequest) {
       targetMembershipStatus: validatedData.targetMembershipStatus,
       targetProgramInstanceId: validatedData.targetProgramInstanceId,
       targetMembershipGroupIds: validatedData.targetMembershipGroupIds,
+      targetUserIds: validatedData.targetUserIds,
     });
 
     if (recipients.length === 0) {
@@ -268,6 +270,7 @@ export async function POST(request: NextRequest) {
         name: validatedData.name,
         subject: validatedData.subject,
         htmlBody: renderedHtml,
+        rawBody: validatedData.htmlBody,
         textBody: validatedData.textBody || renderedText,
         classification: validatedData.classification,
         targetScope: (targetScopeMap[validatedData.targetType] || "ALL") as any,
@@ -277,6 +280,7 @@ export async function POST(request: NextRequest) {
         targetMembershipStatus: validatedData.targetMembershipStatus,
         targetProgramInstanceId: validatedData.targetProgramInstanceId,
         targetMembershipGroupIds: validatedData.targetMembershipGroupIds || [],
+        targetUserIds: validatedData.targetUserIds || [],
         totalRecipients: recipients.length,
         createdById: session.user.id,
         status: validatedData.scheduledAt ? "SCHEDULED" : "DRAFT",

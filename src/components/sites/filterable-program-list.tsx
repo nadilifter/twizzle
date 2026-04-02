@@ -78,6 +78,8 @@ interface Program {
   pricingModel?: string;
   basePrice?: number | string | null;
   perSessionPrice?: number | string | null;
+  billingInterval?: string;
+  recurringPrice?: number | string | null;
   registrationType?: "ALL_INSTANCES" | "PER_INSTANCE" | null;
   startDate?: string | Date | null;
   endDate?: string | Date | null;

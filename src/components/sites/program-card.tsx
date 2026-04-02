@@ -90,6 +90,8 @@ interface ProgramCardProps {
     pricingModel?: string;
     basePrice?: number | string | null;
     perSessionPrice?: number | string | null;
+    billingInterval?: string;
+    recurringPrice?: number | string | null;
     registrationType?: "ALL_INSTANCES" | "PER_INSTANCE" | null;
     startDate?: string | Date | null;
     endDate?: string | Date | null;
@@ -150,15 +152,24 @@ export function ProgramCard({ program }: ProgramCardProps) {
   const bulkDiscounts = program.bulkDiscounts || [];
   const showCoach = program.showCoachOnSite !== false;
 
-  const directPrice = program.basePrice
-    ? typeof program.basePrice === "string"
-      ? parseFloat(program.basePrice)
-      : program.basePrice
-    : program.perSessionPrice
-      ? typeof program.perSessionPrice === "string"
-        ? parseFloat(program.perSessionPrice)
-        : program.perSessionPrice
-      : 0;
+  const isRecurring =
+    program.billingInterval &&
+    program.billingInterval !== "ONE_TIME" &&
+    program.billingInterval !== "SESSION" &&
+    program.recurringPrice;
+  const directPrice = isRecurring
+    ? typeof program.recurringPrice === "string"
+      ? parseFloat(program.recurringPrice)
+      : Number(program.recurringPrice)
+    : program.basePrice
+      ? typeof program.basePrice === "string"
+        ? parseFloat(program.basePrice)
+        : program.basePrice
+      : program.perSessionPrice
+        ? typeof program.perSessionPrice === "string"
+          ? parseFloat(program.perSessionPrice)
+          : program.perSessionPrice
+        : 0;
 
   const totalCapacity = program.capacity || 0;
   const enrolled = program._count?.enrollments || 0;
@@ -420,11 +431,26 @@ export function ProgramCard({ program }: ProgramCardProps) {
           <span className="text-sm font-medium">
             {directPrice === 0
               ? "Free Program"
-              : program.pricingModel === "PER_SESSION"
-                ? "Per Session"
-                : "Program Fee"}
+              : isRecurring && program.billingInterval === "MONTHLY"
+                ? "Monthly Fee"
+                : isRecurring && program.billingInterval === "YEARLY"
+                  ? "Annual Fee"
+                  : program.pricingModel === "PER_SESSION"
+                    ? "Per Session"
+                    : "Program Fee"}
           </span>
-          <span className="font-bold">{formatPrice(directPrice)}</span>
+          <span className="font-bold">
+            {formatPrice(directPrice)}
+            {directPrice !== 0 && isRecurring && program.billingInterval === "MONTHLY" && (
+              <span className="text-sm font-normal text-muted-foreground">/mo</span>
+            )}
+            {directPrice !== 0 && isRecurring && program.billingInterval === "YEARLY" && (
+              <span className="text-sm font-normal text-muted-foreground">/yr</span>
+            )}
+            {directPrice !== 0 && !isRecurring && program.pricingModel === "PER_SESSION" && (
+              <span className="text-sm font-normal text-muted-foreground">/session</span>
+            )}
+          </span>
         </div>
 
         <Button

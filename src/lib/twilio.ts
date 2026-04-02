@@ -209,12 +209,16 @@ export async function sendSms(options: SendSmsOptions): Promise<SendSmsResult> {
     };
   }
 
+  // In local/test environments, redirect all SMS to the test phone number
+  const testPhoneNumber = process.env.TWILIO_TEST_PHONENUMBER;
+  const resolvedTo = testPhoneNumber ? testPhoneNumber : to;
+
   // Normalize and validate phone number
-  const normalizedTo = normalizePhoneNumber(to);
+  const normalizedTo = normalizePhoneNumber(resolvedTo);
   if (!isValidE164(normalizedTo)) {
     return {
       success: false,
-      error: `Invalid phone number format: ${to}`,
+      error: `Invalid phone number format: ${resolvedTo}`,
       errorCode: "INVALID_PHONE",
     };
   }
