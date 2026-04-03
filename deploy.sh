@@ -93,7 +93,7 @@ log_step "Starting deployment..."
 # Pull latest changes from git
 log_info "Pulling latest changes from git..."
 git fetch origin
-git checkout origin/staging 2>/dev/null
+git checkout origin/main 2>/dev/null
 
 # Tag the current image as backup for rollback
 log_info "Backing up current image..."
