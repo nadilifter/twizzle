@@ -48,7 +48,7 @@ jobs:
               "source /home/ec2-user/.env.uplifter",
               "set +a",
               "echo '=== Building Docker image ==='",
-              "DOCKER_BUILDKIT=1 docker build --build-arg APP_ENVIRONMENT=staging --build-arg NEXT_PUBLIC_APP_ENVIRONMENT=staging --build-arg NEXT_PUBLIC_ADYEN_CLIENT_KEY=\"\${NEXT_PUBLIC_ADYEN_CLIENT_KEY}\" --build-arg NEXT_PUBLIC_ADYEN_ENVIRONMENT=\"\${NEXT_PUBLIC_ADYEN_ENVIRONMENT}\" --build-arg NEXT_PUBLIC_SENTRY_DSN=\"\${NEXT_PUBLIC_SENTRY_DSN}\" -t uplifter:new . 2>&1",
+              "DOCKER_BUILDKIT=1 docker build --build-arg APP_ENVIRONMENT=staging --build-arg NEXT_PUBLIC_APP_ENVIRONMENT=staging --build-arg NEXT_PUBLIC_APP_VERSION=\"${DEPLOY_TAG}\" --build-arg NEXT_PUBLIC_ADYEN_CLIENT_KEY=\"\${NEXT_PUBLIC_ADYEN_CLIENT_KEY}\" --build-arg NEXT_PUBLIC_ADYEN_ENVIRONMENT=\"\${NEXT_PUBLIC_ADYEN_ENVIRONMENT}\" --build-arg NEXT_PUBLIC_SENTRY_DSN=\"\${NEXT_PUBLIC_SENTRY_DSN}\" -t uplifter:new .",
               "echo '=== Ensuring PostgreSQL is running ==='",
               "docker compose -f docker-compose.staging.yml up -d postgres 2>&1",
               "echo '=== Waiting for PostgreSQL to be healthy ==='",
