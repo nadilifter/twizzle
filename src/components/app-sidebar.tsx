@@ -527,8 +527,8 @@ const data = {
           url: "/dashboard/organization/features",
         },
         {
-          title: "Users",
-          url: "/dashboard/organization/users",
+          title: "Staff",
+          url: "/dashboard/organization/staff",
         },
       ],
     },
