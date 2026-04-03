@@ -10,6 +10,7 @@ import { createDefaultGLCodes } from "@/lib/gl-code-defaults";
 import { getDefaultTaxRate } from "@/lib/tax-utils";
 import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { isValidPhoneNumber } from "libphonenumber-js";
+import { geocodeAddress } from "@/lib/geocode";
 
 const MAX_NAME_LENGTH = 255;
 const HEX_COLOR_REGEX = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
@@ -217,6 +218,14 @@ export async function POST(request: NextRequest) {
     const now = new Date();
     const trialEndsAt = isFreePlan ? null : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
+    const facilityCoords = await geocodeAddress({
+      street: validatedData.street,
+      city: validatedData.city,
+      stateProvince: validatedData.stateProvince,
+      postalCode: validatedData.postalCode,
+      country: validatedData.country,
+    });
+
     const result = await db.$transaction(async (tx) => {
       // 1. Create the organization
       const defaultTaxRate = getDefaultTaxRate(validatedData.stateProvince, validatedData.country);
@@ -303,6 +312,8 @@ export async function POST(request: NextRequest) {
           stateProvince: validatedData.stateProvince || null,
           postalCode: validatedData.postalCode || null,
           country: validatedData.country || null,
+          latitude: facilityCoords?.latitude ?? null,
+          longitude: facilityCoords?.longitude ?? null,
           phone: validatedData.phone || null,
           email: validatedData.orgEmail || null,
           isDefault: true,
