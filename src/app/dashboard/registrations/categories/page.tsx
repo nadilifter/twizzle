@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import Image from "next/image";
 import {
   DndContext,
@@ -32,7 +31,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Plus,
   Search,
@@ -58,9 +67,22 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { ImageUpload } from "@/components/ui/image-upload";
 import { useCategories, type Category } from "@/hooks/use-categories";
 import { useFeatures } from "@/components/feature-context";
 import { toast } from "sonner";
+
+interface CategoryFormData {
+  name: string;
+  description: string;
+  imageUrl: string | null;
+}
+
+const defaultFormData: CategoryFormData = {
+  name: "",
+  description: "",
+  imageUrl: null,
+};
 
 function SortableCategoryItem({ category }: { category: Category }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -109,15 +131,32 @@ function SortableCategoryItem({ category }: { category: Category }) {
 }
 
 export default function CategoriesPage() {
-  const { categories, isLoading, isDeleting, error, fetchCategories, deleteCategory } =
-    useCategories({ autoFetch: false });
+  const {
+    categories,
+    isLoading,
+    isCreating,
+    isUpdating,
+    isDeleting,
+    error,
+    fetchCategories,
+    createCategory,
+    updateCategory,
+    deleteCategory,
+    clearError,
+  } = useCategories({ autoFetch: false });
   const { isFeatureEnabled } = useFeatures();
   const competitionsEnabled = isFeatureEnabled("competitions");
   const [searchTerm, setSearchTerm] = React.useState("");
 
+  const [formOpen, setFormOpen] = React.useState(false);
+  const [editingCategory, setEditingCategory] = React.useState<Category | null>(null);
+  const [formData, setFormData] = React.useState<CategoryFormData>(defaultFormData);
+
   const [isReorderDialogOpen, setIsReorderDialogOpen] = React.useState(false);
   const [reorderCategories, setReorderCategories] = React.useState<Category[]>([]);
   const [isSavingOrder, setIsSavingOrder] = React.useState(false);
+
+  const isSaving = isCreating || isUpdating;
 
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
@@ -136,6 +175,57 @@ export default function CategoriesPage() {
     const timer = setTimeout(() => fetchCategories(params), 500);
     return () => clearTimeout(timer);
   }, [searchTerm, fetchCategories]);
+
+  const openCreateForm = () => {
+    setEditingCategory(null);
+    setFormData(defaultFormData);
+    setFormOpen(true);
+  };
+
+  const openEditForm = (category: Category) => {
+    setEditingCategory(category);
+    setFormData({
+      name: category.name,
+      description: category.description || "",
+      imageUrl: category.imageUrl,
+    });
+    setFormOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!formData.name.trim()) {
+      toast.error("Name is required");
+      return;
+    }
+
+    const payload = {
+      name: formData.name.trim(),
+      description: formData.description.trim() || null,
+      imageUrl: formData.imageUrl,
+    };
+
+    if (editingCategory) {
+      const result = await updateCategory(editingCategory.id, payload);
+      if (result) {
+        toast.success("Category updated");
+        setFormOpen(false);
+        fetchCategories({ search: searchTerm });
+      } else {
+        toast.error("Failed to update category");
+        clearError();
+      }
+    } else {
+      const result = await createCategory(payload);
+      if (result) {
+        toast.success("Category created");
+        setFormOpen(false);
+        fetchCategories({ search: searchTerm });
+      } else {
+        toast.error("Failed to create category");
+        clearError();
+      }
+    }
+  };
 
   const handleDelete = async (id: string) => {
     const success = await deleteCategory(id);
@@ -207,11 +297,9 @@ export default function CategoriesPage() {
               Reorder
             </Button>
           )}
-          <Button asChild>
-            <Link href="/dashboard/registrations/categories/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Category
-            </Link>
+          <Button onClick={openCreateForm}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Category
           </Button>
         </div>
       </div>
@@ -289,11 +377,14 @@ export default function CategoriesPage() {
                 </div>
               </CardContent>
               <CardFooter className="border-t pt-3 gap-2">
-                <Button variant="outline" size="sm" className="flex-1" asChild>
-                  <Link href={`/dashboard/registrations/categories/${category.id}`}>
-                    <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                    Edit
-                  </Link>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => openEditForm(category)}
+                >
+                  <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                  Edit
                 </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
@@ -334,6 +425,60 @@ export default function CategoriesPage() {
           )}
         </div>
       )}
+
+      {/* Create/Edit Sheet */}
+      <Sheet open={formOpen} onOpenChange={setFormOpen}>
+        <SheetContent className="sm:max-w-md overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>{editingCategory ? "Edit Category" : "New Category"}</SheetTitle>
+            <SheetDescription>
+              {editingCategory
+                ? `Update details for "${editingCategory.name}".`
+                : "Create a new category to group programs, events, and competitions."}
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="category-name">Name</Label>
+              <Input
+                id="category-name"
+                value={formData.name}
+                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="e.g. Recreational Programs"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="category-description">Description</Label>
+              <Textarea
+                id="category-description"
+                value={formData.description}
+                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                placeholder="A short description of what this category includes..."
+                rows={3}
+              />
+            </div>
+
+            <ImageUpload
+              label="Category Image"
+              value={formData.imageUrl}
+              onChange={(url) => setFormData((prev) => ({ ...prev, imageUrl: url }))}
+              type="category"
+            />
+          </div>
+
+          <SheetFooter>
+            <Button variant="outline" onClick={() => setFormOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {editingCategory ? "Save Changes" : "Create Category"}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       {/* Reorder Dialog */}
       <Dialog open={isReorderDialogOpen} onOpenChange={setIsReorderDialogOpen}>

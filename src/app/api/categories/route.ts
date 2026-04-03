@@ -6,7 +6,7 @@ import { z } from "zod";
 const createCategorySchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional().nullable(),
-  imageUrl: z.string().url().optional().nullable(),
+  imageUrl: z.string().min(1).optional().nullable(),
 });
 
 // GET /api/categories
