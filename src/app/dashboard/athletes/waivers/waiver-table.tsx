@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -41,8 +40,8 @@ import { Badge } from "@/components/ui/badge";
 import type { Waiver } from "@/types/waivers";
 
 function getColumns(
-  onDelete: (id: string) => void,
-  router: ReturnType<typeof useRouter>
+  onEdit: (waiver: Waiver) => void,
+  onDelete: (id: string) => void
 ): ColumnDef<Waiver>[] {
   return [
     {
@@ -100,11 +99,7 @@ function getColumns(
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={() => router.push(`/dashboard/athletes/waivers/${waiver.id}`)}
-              >
-                Edit Waiver
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onEdit(waiver)}>Edit Waiver</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-destructive" onClick={() => onDelete(waiver.id)}>
                 Delete Waiver
@@ -119,13 +114,14 @@ function getColumns(
 
 export function WaiverTable({
   data,
+  onEdit,
   onDelete,
 }: {
   data: Waiver[];
+  onEdit: (waiver: Waiver) => void;
   onDelete: (id: string) => void;
 }) {
-  const router = useRouter();
-  const columns = React.useMemo(() => getColumns(onDelete, router), [onDelete, router]);
+  const columns = React.useMemo(() => getColumns(onEdit, onDelete), [onEdit, onDelete]);
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});

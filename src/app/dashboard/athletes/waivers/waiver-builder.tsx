@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,12 +12,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, Loader2, GripVertical, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Trash2, Loader2, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
-import type { Waiver, WaiverPage } from "@/types/waivers";
+import type { Waiver } from "@/types/waivers";
 
 interface PageData {
   id?: string;
@@ -29,10 +27,11 @@ interface PageData {
 
 interface WaiverBuilderProps {
   waiver?: Waiver | null;
+  onSaved?: () => void;
+  onCancel?: () => void;
 }
 
-export function WaiverBuilder({ waiver }: WaiverBuilderProps) {
-  const router = useRouter();
+export function WaiverBuilder({ waiver, onSaved, onCancel }: WaiverBuilderProps) {
   const isEditing = !!waiver;
 
   const [title, setTitle] = React.useState(waiver?.title || "");
@@ -50,6 +49,29 @@ export function WaiverBuilder({ waiver }: WaiverBuilderProps) {
   });
   const [activePage, setActivePage] = React.useState("page-1");
   const [isSaving, setIsSaving] = React.useState(false);
+
+  React.useEffect(() => {
+    if (waiver) {
+      setTitle(waiver.title || "");
+      setStatus(waiver.status || "DRAFT");
+      setPages(
+        waiver.pages?.length
+          ? waiver.pages.map((p) => ({
+              id: p.id,
+              pageNumber: p.pageNumber,
+              title: p.title || "",
+              content: p.content,
+            }))
+          : [{ pageNumber: 1, title: "", content: "" }]
+      );
+      setActivePage("page-1");
+    } else {
+      setTitle("");
+      setStatus("DRAFT");
+      setPages([{ pageNumber: 1, title: "", content: "" }]);
+      setActivePage("page-1");
+    }
+  }, [waiver]);
 
   const handleAddPage = () => {
     const newPageNumber = pages.length + 1;
@@ -130,7 +152,7 @@ export function WaiverBuilder({ waiver }: WaiverBuilderProps) {
       }
 
       toast.success(isEditing ? "Waiver updated successfully" : "Waiver created successfully");
-      router.push("/dashboard/athletes/waivers");
+      onSaved?.();
     } catch (error: any) {
       console.error("Failed to save waiver:", error);
       toast.error(error.message || "Failed to save waiver");
@@ -140,7 +162,7 @@ export function WaiverBuilder({ waiver }: WaiverBuilderProps) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8 space-y-8">
+    <div className="space-y-6">
       {/* Title and Status */}
       <div className="grid gap-4 md:grid-cols-[1fr_200px]">
         <div className="space-y-2">
@@ -278,7 +300,7 @@ export function WaiverBuilder({ waiver }: WaiverBuilderProps) {
 
       {/* Actions */}
       <div className="flex justify-end gap-4">
-        <Button variant="outline" onClick={() => router.push("/dashboard/athletes/waivers")}>
+        <Button variant="outline" onClick={onCancel}>
           Cancel
         </Button>
         <Button onClick={handleSave} disabled={isSaving}>
