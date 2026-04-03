@@ -37,7 +37,7 @@ jobs:
           {
             "commands": [
               "set -e",
-              "git config --global --add safe.directory /home/ec2-user/uplifter",
+              "HOME=/root git config --global --add safe.directory /home/ec2-user/uplifter",
               "cd /home/ec2-user/uplifter || { echo 'Project directory not found'; exit 1; }",
               "echo '=== Checking out tag ${DEPLOY_TAG} ==='",
               "git fetch --tags origin",
