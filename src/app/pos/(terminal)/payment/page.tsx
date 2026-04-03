@@ -114,6 +114,7 @@ function PaymentPageContent() {
     }, 3000); // Poll every 3 seconds
 
     return () => clearInterval(pollInterval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paymentStatus, paymentLinkId]);
 
   // Auto-generate payment link for card payments

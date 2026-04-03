@@ -63,6 +63,7 @@ export function OrganizationSwitcher() {
       }
     };
     fetchOrgs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id]);
 
   const activeOrg = React.useMemo(() => {

@@ -128,6 +128,7 @@ export function QueueProvider({ children, organizationSlug }: QueueProviderProps
     }, 1000);
 
     return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reservation]);
 
   const enterQueue = useCallback(

@@ -134,7 +134,10 @@ export default function EvaluationDetailPage() {
     };
   }, [evaluationId]);
 
-  const skillRatings = evaluation?.skillRatings ?? [];
+  const skillRatings = React.useMemo(
+    () => evaluation?.skillRatings ?? [],
+    [evaluation?.skillRatings]
+  );
 
   const groupedSkills = React.useMemo(() => {
     const groups: Record<string, EvaluationSkillRating[]> = {};
