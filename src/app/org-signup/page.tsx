@@ -68,6 +68,7 @@ import {
   StepperTitle,
   getStepStatus,
 } from "@/components/ui/stepper";
+import { Spinner } from "@/components/ui/spinner";
 
 interface Sport {
   id: string;
@@ -583,6 +584,8 @@ export default function SignupPage() {
         })()
       : formData;
 
+    setIsLoading(true);
+
     if (isPaidPlan) {
       const signupData = {
         ...submitData,
@@ -595,31 +598,14 @@ export default function SignupPage() {
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const response = await fetch("/api/org-signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(submitData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to create organization");
-      }
-
-      toast.success("Organization created successfully!");
-      const successParams = new URLSearchParams({
-        subdomain: formData.subdomain,
-        orgName: formData.orgName,
-        ...(chosenPlan ? { planPrice: String(chosenPlan.monthlyPrice) } : {}),
-      });
-      router.push(`/org-signup/success?${successParams.toString()}`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Something went wrong");
-      setIsLoading(false);
-    }
+    const signupData = {
+      ...submitData,
+      planName: chosenPlan?.name ?? "Free",
+      planPrice: chosenPlan ? chosenPlan.monthlyPrice : "0",
+      ...(useExistingAccount ? { email: session?.user?.email ?? "" } : {}),
+    };
+    sessionStorage.setItem("org-signup-data", JSON.stringify(signupData));
+    router.push("/org-signup/review");
   };
 
   const formatCurrency = (amount: string | number) => {
@@ -1621,10 +1607,8 @@ export default function SignupPage() {
                           >
                             {isLoading ? (
                               <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                {isPaidPlan
-                                  ? "Proceeding to Payment..."
-                                  : "Creating Organization..."}
+                                <Spinner size="sm" className="mr-2" />
+                                {isPaidPlan ? "Proceeding to Payment..." : "Continuing..."}
                               </>
                             ) : isPaidPlan ? (
                               <>
@@ -1632,7 +1616,7 @@ export default function SignupPage() {
                                 Continue to Payment
                               </>
                             ) : (
-                              "Create Organization"
+                              "Review Organization"
                             )}
                           </Button>
                         );
