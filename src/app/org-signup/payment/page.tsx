@@ -155,6 +155,7 @@ export default function PaymentPage() {
       const successParams = new URLSearchParams({
         subdomain: signupData.subdomain,
         orgName: signupData.orgName,
+        orgId: data.organizationId,
         planPrice: String(signupData.planPrice),
       });
       router.push(`/org-signup/success?${successParams.toString()}`);
