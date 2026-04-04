@@ -230,6 +230,112 @@ describe("getScopedDb proxy behavior", () => {
     expect(raw.program.delete).not.toHaveBeenCalled();
   });
 
+  it("createMany injects organizationId into every element of the data array", async () => {
+    raw.program.createMany.mockResolvedValueOnce({ count: 2 });
+    const scoped = getScopedDb("org-1");
+
+    const result = await scoped.program.createMany({
+      data: [{ name: "Swim" }, { name: "Dive" }],
+    });
+
+    expect(result).toEqual({ count: 2 });
+    expect(raw.program.createMany).toHaveBeenCalledWith({
+      data: [
+        { name: "Swim", organizationId: "org-1" },
+        { name: "Dive", organizationId: "org-1" },
+      ],
+    });
+  });
+
+  // --- updateMany / deleteMany: where-injection (no ownership pre-check) ----
+
+  it("updateMany injects organizationId into where instead of doing an ownership check", async () => {
+    raw.program.updateMany.mockResolvedValueOnce({ count: 3 });
+    const scoped = getScopedDb("org-1");
+
+    const result = await scoped.program.updateMany({
+      where: { status: "DRAFT" },
+      data: { status: "PUBLISHED" },
+    });
+
+    expect(result).toEqual({ count: 3 });
+    expect(raw.program.updateMany).toHaveBeenCalledWith({
+      where: { status: "DRAFT", organizationId: "org-1" },
+      data: { status: "PUBLISHED" },
+    });
+    expect(raw.program.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("deleteMany injects organizationId into where instead of doing an ownership check", async () => {
+    raw.program.deleteMany.mockResolvedValueOnce({ count: 2 });
+    const scoped = getScopedDb("org-1");
+
+    const result = await scoped.program.deleteMany({
+      where: { status: "ARCHIVED" },
+    });
+
+    expect(result).toEqual({ count: 2 });
+    expect(raw.program.deleteMany).toHaveBeenCalledWith({
+      where: { status: "ARCHIVED", organizationId: "org-1" },
+    });
+    expect(raw.program.findFirst).not.toHaveBeenCalled();
+  });
+
+  // --- upsert: cross-org check on existing record before upserting ----------
+
+  it("upsert throws TenantIsolationError when existing record belongs to a different org", async () => {
+    raw.program.findFirst.mockResolvedValueOnce({ id: "prog-1", organizationId: "org-2" });
+    const scoped = getScopedDb("org-1");
+
+    await expect(
+      scoped.program.upsert({
+        where: { id: "prog-1" },
+        create: { name: "New" },
+        update: { name: "Updated" },
+      })
+    ).rejects.toThrow(TenantIsolationError);
+
+    expect(raw.program.findFirst).toHaveBeenCalledWith({
+      where: { id: "prog-1" },
+      select: { id: true, organizationId: true },
+    });
+    expect(raw.program.upsert).not.toHaveBeenCalled();
+  });
+
+  it("upsert proceeds and injects organizationId into create when no existing record", async () => {
+    raw.program.findFirst.mockResolvedValueOnce(null);
+    raw.program.upsert.mockResolvedValueOnce({ id: "new-1", name: "New", organizationId: "org-1" });
+    const scoped = getScopedDb("org-1");
+
+    const result = await scoped.program.upsert({
+      where: { id: "nonexistent" },
+      create: { name: "New" },
+      update: { name: "Updated" },
+    });
+
+    expect(result).toEqual({ id: "new-1", name: "New", organizationId: "org-1" });
+    expect(raw.program.upsert).toHaveBeenCalledWith({
+      where: { id: "nonexistent" },
+      create: { name: "New", organizationId: "org-1" },
+      update: { name: "Updated" },
+    });
+  });
+
+  it("upsert proceeds when existing record belongs to the same org", async () => {
+    raw.program.findFirst.mockResolvedValueOnce({ id: "prog-1", organizationId: "org-1" });
+    raw.program.upsert.mockResolvedValueOnce({ id: "prog-1", name: "Updated" });
+    const scoped = getScopedDb("org-1");
+
+    const result = await scoped.program.upsert({
+      where: { id: "prog-1" },
+      create: { name: "New" },
+      update: { name: "Updated" },
+    });
+
+    expect(result).toEqual({ id: "prog-1", name: "Updated" });
+    expect(raw.program.upsert).toHaveBeenCalled();
+  });
+
   // --- non-tenant model passthrough -----------------------------------------
 
   it("passes queries on non-tenant models through without org scoping", async () => {
