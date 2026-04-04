@@ -26,7 +26,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
-  const rateLimited = await checkApiRateLimit(request, "invitations", RATE_LIMITS.sensitive);
+  const rateLimited = await checkApiRateLimit(request, "invitations", RATE_LIMITS.sensitive, {
+    failClosed: true,
+  });
   if (rateLimited) return rateLimited;
 
   try {
@@ -149,7 +151,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
-  const rateLimited = await checkApiRateLimit(request, "invitations", RATE_LIMITS.sensitive);
+  const rateLimited = await checkApiRateLimit(request, "invitations", RATE_LIMITS.sensitive, {
+    failClosed: true,
+  });
   if (rateLimited) return rateLimited;
 
   try {
