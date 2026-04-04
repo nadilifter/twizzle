@@ -497,6 +497,48 @@ const data = {
     },
     */
     {
+      title: "Reports",
+      url: "/dashboard/reports",
+      items: [
+        {
+          title: "All Reports",
+          url: "/dashboard/reports",
+        },
+        {
+          title: "Accounts Receivable",
+          url: "/dashboard/reports/accounts-receivable",
+        },
+        {
+          title: "Attendance",
+          url: "/dashboard/reports/attendance",
+        },
+        {
+          title: "Enrollment Summary",
+          url: "/dashboard/reports/enrollment",
+        },
+        {
+          title: "Membership Growth",
+          url: "/dashboard/reports/membership-growth",
+        },
+        {
+          title: "Program Performance",
+          url: "/dashboard/reports/program-performance",
+        },
+        {
+          title: "Retention & Churn",
+          url: "/dashboard/reports/retention",
+        },
+        {
+          title: "Revenue Summary",
+          url: "/dashboard/reports/revenue",
+        },
+        {
+          title: "Tax Collection",
+          url: "/dashboard/reports/tax-collection",
+        },
+      ],
+    },
+    {
       title: "Usage",
       url: "/dashboard/usage",
       items: [

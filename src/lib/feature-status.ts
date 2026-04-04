@@ -320,6 +320,44 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     apiRoutes: ["/api/transactions"],
   },
 
+  // Reports Section
+  "/dashboard/reports": {
+    status: "demo",
+    description: "Reports overview with available business reports",
+  },
+  "/dashboard/reports/revenue": {
+    status: "demo",
+    description: "Monthly revenue breakdown by source",
+  },
+  "/dashboard/reports/enrollment": {
+    status: "demo",
+    description: "Enrollment trends and program enrollment summary",
+  },
+  "/dashboard/reports/retention": {
+    status: "demo",
+    description: "Member retention rates and churn analysis",
+  },
+  "/dashboard/reports/attendance": {
+    status: "demo",
+    description: "Attendance rates by program and trends over time",
+  },
+  "/dashboard/reports/program-performance": {
+    status: "demo",
+    description: "Revenue and utilization per program",
+  },
+  "/dashboard/reports/accounts-receivable": {
+    status: "demo",
+    description: "Outstanding invoices and aging buckets",
+  },
+  "/dashboard/reports/tax-collection": {
+    status: "demo",
+    description: "Tax amounts collected by type and jurisdiction",
+  },
+  "/dashboard/reports/membership-growth": {
+    status: "demo",
+    description: "Active memberships over time with growth rate trends",
+  },
+
   // Forms Section
   "/dashboard/forms": {
     status: "demo",
