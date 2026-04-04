@@ -9,9 +9,29 @@ import { ColorPicker } from "@/components/ui/color-picker";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { toast } from "sonner";
-import { Loader2, AlertCircle, Check, Globe, Palette, Image, LayoutGrid } from "lucide-react";
+import {
+  Loader2,
+  AlertCircle,
+  AlertTriangle,
+  Check,
+  Globe,
+  Palette,
+  Image,
+  LayoutGrid,
+  Info,
+} from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { getBaseDomainSuffix, getBaseDomainFromHostname } from "@/lib/client-domains";
 import { useFeatures } from "@/components/feature-context";
 
@@ -26,8 +46,8 @@ export default function WebsitePage() {
     "idle" | "available" | "taken" | "invalid" | "error"
   >("idle");
   const [domainType, setDomainType] = useState<"subdomain" | "custom">("subdomain");
-  // Track the subdomain that's currently saved/owned by this org
   const [ownedSubdomain, setOwnedSubdomain] = useState<string | null>(null);
+  const [showPublishWarning, setShowPublishWarning] = useState(false);
 
   // Fetch config on mount
   useEffect(() => {
@@ -142,7 +162,6 @@ export default function WebsitePage() {
   const handlePublishToggle = async () => {
     const newStatus = !config.isPublished;
 
-    // Validate before publishing
     if (newStatus) {
       if (!config.subdomain) {
         toast.error("Please set a subdomain before going live");
@@ -156,9 +175,19 @@ export default function WebsitePage() {
         toast.error("Please fix subdomain issues before going live");
         return;
       }
+      if (config.canPublish && !config.adyenOnboardingComplete) {
+        setShowPublishWarning(true);
+        return;
+      }
     }
 
-    updateConfig("isPublished", newStatus); // Optimistic update
+    performPublishToggle();
+  };
+
+  const performPublishToggle = async () => {
+    const newStatus = !config.isPublished;
+    setShowPublishWarning(false);
+    updateConfig("isPublished", newStatus);
 
     setSaving(true);
     try {
@@ -167,18 +196,20 @@ export default function WebsitePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...config, isPublished: newStatus }),
       });
-      if (!res.ok) throw new Error("Failed to update status");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to update status");
+      }
       const data = await res.json();
       setConfig(data);
-      // After save, the current subdomain is now owned by this org
       if (data.subdomain) {
         setOwnedSubdomain(data.subdomain);
       }
       toast.success(newStatus ? "Site is now live!" : "Site unpublished");
     } catch (error) {
       console.error(error);
-      toast.error("Failed to update site status");
-      updateConfig("isPublished", !newStatus); // Revert
+      toast.error(error instanceof Error ? error.message : "Failed to update site status");
+      updateConfig("isPublished", !newStatus);
     } finally {
       setSaving(false);
     }
@@ -224,6 +255,21 @@ export default function WebsitePage() {
             >
               Unpublish
             </Button>
+          ) : config.canPublish === false ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span tabIndex={0}>
+                    <Button variant="outline" disabled>
+                      Go Live
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Adyen verification must be completed before publishing</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           ) : (
             <Button
               variant="outline"
@@ -245,6 +291,20 @@ export default function WebsitePage() {
           </Button>
         </div>
       </div>
+
+      {!config.isPublished && config.adyenOnboardingComplete === false && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-4">
+          <div className="flex items-center gap-3">
+            <Info className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+            <div className="text-sm text-amber-800 dark:text-amber-200">
+              Payment processing must be set up before this site can go live.{" "}
+              <a href="/financials/onboarding" className="underline font-medium hover:no-underline">
+                Set up payments
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Domain Settings */}
       <Card>
@@ -582,6 +642,31 @@ export default function WebsitePage() {
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={showPublishWarning} onOpenChange={setShowPublishWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="h-5 w-5" />
+              Payment Processing Not Set Up
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">
+                This organization has not completed payment processing setup. Publishing the site
+                means visitors may attempt to register but won&apos;t be able to pay.
+              </span>
+              <span className="block">Are you sure you want to publish this site?</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button onClick={performPublishToggle} disabled={saving}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Yes, Publish Anyway
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

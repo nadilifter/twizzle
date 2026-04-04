@@ -613,6 +613,7 @@ export default function SignupPage() {
       const successParams = new URLSearchParams({
         subdomain: formData.subdomain,
         orgName: formData.orgName,
+        orgId: data.organizationId,
         ...(chosenPlan ? { planPrice: String(chosenPlan.monthlyPrice) } : {}),
       });
       router.push(`/org-signup/success?${successParams.toString()}`);

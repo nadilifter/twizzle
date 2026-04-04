@@ -1,0 +1,182 @@
+# When dev is merged into main, move Linear issues from "Ready for Staging" → "In Staging QA".
+# Requires repository secrets: LINEAR_API_KEY, LINEAR_TEAM_ID
+name: Linear — dev merged to main
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+concurrency:
+  group: linear-dev-to-main
+  cancel-in-progress: false
+
+jobs:
+  transition-linear-issues:
+    name: Move Linear issues to In Staging QA
+    runs-on: ubuntu-latest
+    if: >
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.ref == 'dev' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Transition issues in Linear
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+          LINEAR_TEAM_ID: ${{ secrets.LINEAR_TEAM_ID }}
+        run: |
+          node <<'SCRIPT'
+          const fs = require("fs");
+
+          const API_URL = "https://api.linear.app/graphql";
+          const SOURCE_STATE_NAME = "Ready for Staging";
+          const TARGET_STATE_NAME = "In Staging QA";
+
+          const apiKey = process.env.LINEAR_API_KEY;
+          const teamId = process.env.LINEAR_TEAM_ID;
+
+          function summary(line) {
+            const p = process.env.GITHUB_STEP_SUMMARY;
+            if (p) fs.appendFileSync(p, `${line}\n`);
+          }
+
+          async function gql(query, variables) {
+            const res = await fetch(API_URL, {
+              method: "POST",
+              headers: {
+                Authorization: apiKey,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ query, variables }),
+            });
+            const body = await res.json();
+            if (!res.ok) {
+              throw new Error(`Linear HTTP ${res.status}: ${JSON.stringify(body)}`);
+            }
+            if (body.errors?.length) {
+              throw new Error(body.errors.map((e) => e.message).join("; "));
+            }
+            return body.data;
+          }
+
+          async function main() {
+            if (!apiKey || !teamId) {
+              console.error("Missing LINEAR_API_KEY or LINEAR_TEAM_ID");
+              process.exit(1);
+            }
+
+            const statesData = await gql(
+              `query WorkflowStates($teamId: String!) {
+                workflowStates(filter: { team: { id: { eq: $teamId } } }) {
+                  nodes { id name }
+                }
+              }`,
+              { teamId },
+            );
+
+            const states = statesData.workflowStates?.nodes ?? [];
+            const sourceState = states.find((s) => s.name === SOURCE_STATE_NAME);
+            const targetState = states.find((s) => s.name === TARGET_STATE_NAME);
+
+            if (!sourceState) {
+              console.error(
+                `No workflow state named "${SOURCE_STATE_NAME}" for this team. Available: ${states.map((s) => s.name).join(", ") || "(none)"}`,
+              );
+              process.exit(1);
+            }
+            if (!targetState) {
+              console.error(
+                `No workflow state named "${TARGET_STATE_NAME}" for this team. Available: ${states.map((s) => s.name).join(", ") || "(none)"}`,
+              );
+              process.exit(1);
+            }
+
+            const issues = [];
+            let after = null;
+            let hasNext = true;
+
+            while (hasNext) {
+              const page = await gql(
+                `query Issues($teamId: String!, $stateId: String!, $after: String) {
+                  issues(
+                    first: 50
+                    after: $after
+                    filter: {
+                      team: { id: { eq: $teamId } }
+                      state: { id: { eq: $stateId } }
+                    }
+                  ) {
+                    pageInfo {
+                      hasNextPage
+                      endCursor
+                    }
+                    nodes {
+                      id
+                      identifier
+                      title
+                    }
+                  }
+                }`,
+                {
+                  teamId,
+                  stateId: sourceState.id,
+                  after,
+                },
+              );
+
+              const conn = page.issues;
+              const nodes = conn?.nodes ?? [];
+              for (const n of nodes) issues.push(n);
+
+              hasNext = conn?.pageInfo?.hasNextPage ?? false;
+              after = conn?.pageInfo?.endCursor ?? null;
+            }
+
+            summary("### Linear");
+            summary("");
+            summary(`Transition **${SOURCE_STATE_NAME}** → **${TARGET_STATE_NAME}** after dev → main merge.`);
+            summary(`Found **${issues.length}** issue(s).`);
+            summary("");
+
+            for (const issue of issues) {
+              const upd = await gql(
+                `mutation UpdateIssue($id: String!, $stateId: String!) {
+                  issueUpdate(id: $id, input: { stateId: $stateId }) {
+                    success
+                    issue {
+                      identifier
+                      title
+                    }
+                  }
+                }`,
+                { id: issue.id, stateId: targetState.id },
+              );
+
+              if (!upd.issueUpdate?.success) {
+                console.error(`Failed to update ${issue.identifier}`);
+                process.exit(1);
+              }
+              console.log(`Updated ${issue.identifier}: ${issue.title}`);
+              summary(`- ${upd.issueUpdate.issue.identifier} — ${upd.issueUpdate.issue.title}`);
+            }
+
+            if (issues.length === 0) {
+              summary("_No issues were in Ready for Staging._");
+            }
+
+            console.log(`Done. Updated ${issues.length} issue(s).`);
+          }
+
+          main().catch((err) => {
+            console.error(err);
+            process.exit(1);
+          });
+          SCRIPT

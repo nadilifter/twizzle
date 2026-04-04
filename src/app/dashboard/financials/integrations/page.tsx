@@ -237,11 +237,9 @@ export default function IntegrationsPage() {
           ) : xeroState === "disconnected" && !hasActiveConnection ? (
             <DisconnectedCard
               provider="xero"
-              actionLoading={actionLoading === "xero"}
-              onConnect={() => {
-                setActionLoading("xero");
-                window.location.href = "/api/integrations/xero/connect";
-              }}
+              actionLoading={false}
+              onConnect={() => {}}
+              comingSoon
             />
           ) : null}
         </div>
@@ -254,10 +252,12 @@ function DisconnectedCard({
   provider,
   actionLoading,
   onConnect,
+  comingSoon,
 }: {
   provider: Provider;
   actionLoading: boolean;
   onConnect: () => void;
+  comingSoon?: boolean;
 }) {
   const config = PROVIDER_CONFIG[provider];
 
@@ -292,16 +292,16 @@ function DisconnectedCard({
       </CardContent>
       <CardFooter>
         <Button
-          className={`w-full ${config.buttonBg}`}
-          disabled={actionLoading}
+          className={`w-full ${comingSoon ? "" : config.buttonBg}`}
+          disabled={actionLoading || comingSoon}
           onClick={onConnect}
         >
           {actionLoading ? (
             <Loader2 className="h-4 w-4 animate-spin mr-2" />
-          ) : (
+          ) : comingSoon ? null : (
             <ExternalLink className="h-4 w-4 mr-2" />
           )}
-          Connect to {config.label}
+          {comingSoon ? "Coming soon" : `Connect to ${config.label}`}
         </Button>
       </CardFooter>
     </Card>
