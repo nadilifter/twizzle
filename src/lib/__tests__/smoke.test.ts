@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { db } from "@/lib/db";
 
 describe("test infrastructure", () => {
@@ -9,7 +9,7 @@ describe("test infrastructure", () => {
   });
 
   it("mock resets between tests", () => {
-    db.organization.findMany.mockResolvedValueOnce([]);
+    vi.mocked(db.organization.findMany).mockResolvedValueOnce([]);
     expect(db.organization.findMany).toHaveBeenCalledTimes(0);
   });
 });
