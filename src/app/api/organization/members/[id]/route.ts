@@ -194,6 +194,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         },
         permissions: true,
         availability: { orderBy: { dayOfWeek: "asc" } },
+        shifts: {
+          orderBy: { date: "desc" },
+          take: 20,
+          include: { facility: { select: { name: true } } },
+        },
+        eventAssignments: {
+          take: 20,
+          include: {
+            event: { select: { id: true, title: true, date: true } },
+          },
+        },
+        programAssignments: {
+          include: {
+            program: { select: { id: true, name: true } },
+          },
+        },
         _count: {
           select: {
             shifts: true,

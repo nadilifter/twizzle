@@ -2,10 +2,8 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
-import Link from "next/link";
 import {
   CheckCircle2,
-  ExternalLink,
   ArrowRight,
   ChevronRight,
   Users,
@@ -26,39 +24,41 @@ function SuccessContent() {
     sessionStorage.removeItem("org-signup-data");
   }, []);
 
-  const subdomain = searchParams.get("subdomain") || "your-site";
   const orgName = searchParams.get("orgName") || "Your Organization";
+  const orgId = searchParams.get("orgId");
   const planPrice = searchParams.get("planPrice");
   const isFreePlan = planPrice !== null && Number(planPrice) === 0;
 
   const { baseDomain, protocol } = getBaseDomainFromHostname();
-  const siteUrl = `${protocol}://${subdomain}.${baseDomain}`;
-  const adminUrl = `${protocol}://admin.${baseDomain}`;
+  const adminBase = `${protocol}://admin.${baseDomain}`;
+  const adminUrl = orgId
+    ? `${adminBase}/dashboard/switch-org?orgId=${encodeURIComponent(orgId)}&orgName=${encodeURIComponent(orgName)}`
+    : adminBase;
 
   const nextSteps = [
     {
       icon: Users,
       title: "Invite team members",
       description: "Add coaches, staff, and other administrators",
-      url: `${adminUrl}/organization/users`,
+      url: `${adminBase}/organization/users`,
     },
     {
       icon: Calendar,
       title: "Create events and programs",
       description: "Set up your schedule and registration options",
-      url: `${adminUrl}/events`,
+      url: `${adminBase}/events`,
     },
     {
       icon: Globe,
       title: "Customize your website",
       description: "Update your public site with content and branding",
-      url: `${adminUrl}/organization/website`,
+      url: `${adminBase}/organization/website`,
     },
     {
       icon: CreditCard,
       title: "Set up payments",
       description: "Complete Adyen verification to accept payments and receive payouts",
-      url: `${adminUrl}/financials/onboarding`,
+      url: `${adminBase}/financials/onboarding`,
     },
   ];
 
@@ -73,46 +73,13 @@ function SuccessContent() {
 
       {/* Success Message */}
       <h1 className="text-3xl font-bold mb-2">Welcome to Uplifter!</h1>
-      <p className="text-lg text-muted-foreground mb-8">
+      <p className="text-lg text-muted-foreground mb-2">
         <span className="font-semibold text-foreground">{orgName}</span> has been successfully
         created.
       </p>
-
-      {/* Site URLs */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle className="text-lg">Your Sites</CardTitle>
-          <CardDescription>
-            {isFreePlan ? "Your free plan is active" : "Your 30-day free trial has started"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-            <div className="text-left">
-              <p className="text-sm font-medium">Public Website</p>
-              <p className="text-sm text-muted-foreground">{siteUrl}</p>
-            </div>
-            <Button variant="outline" size="sm" asChild>
-              <a href={siteUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4 mr-1" />
-                Visit
-              </a>
-            </Button>
-          </div>
-          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-            <div className="text-left">
-              <p className="text-sm font-medium">Admin Dashboard</p>
-              <p className="text-sm text-muted-foreground">{adminUrl}</p>
-            </div>
-            <Button variant="outline" size="sm" asChild>
-              <a href={adminUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4 mr-1" />
-                Open
-              </a>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <p className="text-sm text-muted-foreground mb-8">
+        {isFreePlan ? "Your free plan is active." : "Your 30-day free trial has started."}
+      </p>
 
       {/* Next Steps */}
       <Card className="mb-8 text-left">
@@ -143,18 +110,12 @@ function SuccessContent() {
         </CardContent>
       </Card>
 
-      {/* CTA Buttons */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-center">
+      {/* CTA Button */}
+      <div className="flex justify-center">
         <Button size="lg" asChild>
-          <Link href={adminUrl}>
+          <a href={adminUrl}>
             Go to Dashboard
             <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </Button>
-        <Button variant="outline" size="lg" asChild>
-          <a href={siteUrl} target="_blank" rel="noopener noreferrer">
-            View Your Website
-            <ExternalLink className="ml-2 h-4 w-4" />
           </a>
         </Button>
       </div>
