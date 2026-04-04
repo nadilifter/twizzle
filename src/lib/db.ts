@@ -1,18 +1,11 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { AsyncLocalStorage } from "async_hooks";
 import { logger } from "@/lib/logger";
 
-declare global {
-  // eslint-disable-next-line no-var
-  var prismaClient: PrismaClient | undefined;
-}
-
 const SLOW_QUERY_THRESHOLD_MS = 500;
 
-// Prevent multiple instances of Prisma Client in development
-const _rawDb =
-  globalThis.prismaClient ||
-  new PrismaClient({
+function createPrismaClient() {
+  const client = new PrismaClient<Prisma.PrismaClientOptions, "query">({
     log: [
       { emit: "event", level: "query" },
       { emit: "stdout", level: "warn" },
@@ -20,14 +13,25 @@ const _rawDb =
     ],
   });
 
-_rawDb.$on("query", (e) => {
-  if (e.duration > SLOW_QUERY_THRESHOLD_MS) {
-    logger.warn(`Slow query (${e.duration}ms)`, {
-      query: e.query.slice(0, 200),
-      duration: e.duration,
-    });
-  }
-});
+  client.$on("query", (e) => {
+    if (e.duration > SLOW_QUERY_THRESHOLD_MS) {
+      logger.warn(`Slow query (${e.duration}ms)`, {
+        query: e.query.slice(0, 200),
+        duration: e.duration,
+      });
+    }
+  });
+
+  return client as unknown as PrismaClient;
+}
+
+declare global {
+  // eslint-disable-next-line no-var
+  var prismaClient: PrismaClient | undefined;
+}
+
+// Prevent multiple instances of Prisma Client in development
+const _rawDb = globalThis.prismaClient || createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") {
   globalThis.prismaClient = _rawDb;
