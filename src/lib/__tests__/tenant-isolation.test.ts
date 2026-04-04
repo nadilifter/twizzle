@@ -28,12 +28,15 @@ describe("getScopedDb", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Proxy-level tests: verify that getScopedDb actually intercepts Prisma calls
-// and injects / enforces organizationId.
+// Proxy-level tests for getScopedDb
 //
-// Strategy: replace globalThis.prismaClient with a lightweight fake that
-// implements $extends just enough to thread Prisma-style query callbacks
-// back into vi.fn() stubs we can assert against.
+// Approach modelled after olivierwilkinson/prisma-extension-soft-delete:
+//   A lightweight MockClient exposes per-operation vi.fn() stubs that the
+//   real getScopedDb extension threads through via $extends.  We assert on
+//   the stubs to verify args transformation AND result passthrough.
+//
+// Also informed by sweetr-dev/sweetr.dev RLS integration tests which
+// validate bidirectional isolation ("tenant A reads own, tenant B cannot").
 // ---------------------------------------------------------------------------
 
 const PROXY_ACTIONS = [
@@ -51,12 +54,14 @@ const PROXY_ACTIONS = [
 ] as const;
 
 /**
- * Minimal PrismaClient stand-in that supports $extends well enough for
- * getScopedDb's interceptors to run end-to-end against mock functions.
+ * Minimal PrismaClient stand-in whose $extends faithfully threads
+ * per-operation $allModels callbacks so the real getScopedDb interceptors
+ * run end-to-end against vi.fn() stubs.
  *
- * $extends creates a wrapper where each model action passes through the
- * extension's $allModels callback (if one exists for that action), with a
- * `query` function that resolves to the underlying mock.
+ * Modelled after prisma-extension-soft-delete's MockClient pattern:
+ * each model delegate has one vi.fn() per Prisma action. $extends returns
+ * a new wrapper where every action is routed through the matching extension
+ * callback (if registered), with `query` resolving to the underlying stub.
  */
 function createMockRawDb(modelNames: string[]) {
   const client: Record<string, any> = {};
@@ -152,7 +157,31 @@ describe("getScopedDb proxy behavior", () => {
     expect(raw.program.findUnique).not.toHaveBeenCalled();
   });
 
+  it("findUnique returns the record when it belongs to the scoped org", async () => {
+    const record = { id: "prog-1", name: "Swim", organizationId: "org-1" };
+    raw.program.findFirst.mockResolvedValueOnce(record);
+    const scoped = getScopedDb("org-1");
+
+    const result = await scoped.program.findUnique({
+      where: { id: "prog-1" },
+    });
+
+    expect(result).toEqual(record);
+  });
+
   // --- writes ---------------------------------------------------------------
+
+  it("create auto-injects organizationId into data", async () => {
+    raw.program.create.mockResolvedValueOnce({ id: "new-1", organizationId: "org-1" });
+    const scoped = getScopedDb("org-1");
+
+    const result = await scoped.program.create({ data: { name: "New Program" } });
+
+    expect(result).toEqual({ id: "new-1", organizationId: "org-1" });
+    expect(raw.program.create).toHaveBeenCalledWith({
+      data: { name: "New Program", organizationId: "org-1" },
+    });
+  });
 
   it("update throws TenantIsolationError when record belongs to a different org", async () => {
     raw.program.findFirst.mockResolvedValueOnce(null);
@@ -172,16 +201,33 @@ describe("getScopedDb proxy behavior", () => {
     expect(raw.program.update).not.toHaveBeenCalled();
   });
 
-  it("create auto-injects organizationId into data", async () => {
-    raw.program.create.mockResolvedValueOnce({ id: "new-1", organizationId: "org-1" });
+  it("update proceeds when the ownership check passes", async () => {
+    raw.program.findFirst.mockResolvedValueOnce({ id: "prog-1" });
+    raw.program.update.mockResolvedValueOnce({ id: "prog-1", name: "Renamed" });
     const scoped = getScopedDb("org-1");
 
-    const result = await scoped.program.create({ data: { name: "New Program" } });
-
-    expect(result).toEqual({ id: "new-1", organizationId: "org-1" });
-    expect(raw.program.create).toHaveBeenCalledWith({
-      data: { name: "New Program", organizationId: "org-1" },
+    const result = await scoped.program.update({
+      where: { id: "prog-1" },
+      data: { name: "Renamed" },
     });
+
+    expect(result).toEqual({ id: "prog-1", name: "Renamed" });
+    expect(raw.program.update).toHaveBeenCalled();
+  });
+
+  it("delete throws TenantIsolationError when record belongs to a different org", async () => {
+    raw.program.findFirst.mockResolvedValueOnce(null);
+    const scoped = getScopedDb("org-1");
+
+    await expect(scoped.program.delete({ where: { id: "prog-from-org-2" } })).rejects.toThrow(
+      TenantIsolationError
+    );
+
+    expect(raw.program.findFirst).toHaveBeenCalledWith({
+      where: { id: "prog-from-org-2", organizationId: "org-1" },
+      select: { id: true },
+    });
+    expect(raw.program.delete).not.toHaveBeenCalled();
   });
 
   // --- non-tenant model passthrough -----------------------------------------
