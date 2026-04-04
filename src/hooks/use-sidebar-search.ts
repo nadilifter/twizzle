@@ -12,6 +12,9 @@ interface SidebarSearchEntity {
 }
 
 export interface SidebarSearchResults {
+  staff: SidebarSearchEntity[];
+  guardians: SidebarSearchEntity[];
+  athletes: SidebarSearchEntity[];
   programs: SidebarSearchEntity[];
   events: SidebarSearchEntity[];
   competitions: SidebarSearchEntity[];
@@ -21,6 +24,9 @@ export interface SidebarSearchResults {
 }
 
 const EMPTY_RESULTS: SidebarSearchResults = {
+  staff: [],
+  guardians: [],
+  athletes: [],
   programs: [],
   events: [],
   competitions: [],

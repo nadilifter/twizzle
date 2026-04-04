@@ -641,6 +641,24 @@ const ENTITY_SECTIONS: {
   linkToDetail: boolean;
 }[] = [
   {
+    key: "staff",
+    label: "Staff",
+    urlPrefix: "/dashboard/organization/staff/",
+    linkToDetail: true,
+  },
+  {
+    key: "guardians",
+    label: "Guardians",
+    urlPrefix: "/dashboard/athletes/guardians/",
+    linkToDetail: true,
+  },
+  {
+    key: "athletes",
+    label: "Athletes",
+    urlPrefix: "/dashboard/athletes/",
+    linkToDetail: true,
+  },
+  {
     key: "programs",
     label: "Programs",
     urlPrefix: "/dashboard/registrations/programs/",
