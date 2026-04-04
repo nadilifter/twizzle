@@ -1,9 +1,12 @@
-name: Deploy — Staging
+name: Deploy Pre-Release [Staging]
 
 on:
-  push:
-    tags:
-      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      deploy_tag:
+        description: "Version tag to deploy (e.g. v1.2.3)"
+        required: true
+        type: string
 
 concurrency:
   group: deploy-staging
@@ -28,7 +31,7 @@ jobs:
       - name: Deploy to EC2 via SSM
         env:
           INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
-          DEPLOY_TAG: ${{ github.ref_name }}
+          DEPLOY_TAG: ${{ github.event.inputs.deploy_tag }}
         run: |
           cat > /tmp/ssm-params.json << EOF
           {
@@ -154,7 +157,7 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
           echo "| --- | --- |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Version | \`${{ github.ref_name }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Version | \`${{ github.event.inputs.deploy_tag }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Commit | \`${{ github.sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Triggered By | @${{ github.actor }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Health | ${STATUS_LABEL} |" >> "$GITHUB_STEP_SUMMARY"

@@ -140,7 +140,7 @@ function isPermissionAvailable(
   return isFeatureEnabled(requiredFeature);
 }
 
-export default function UserDetailPage() {
+export default function StaffDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { isFeatureEnabled } = useFeatures();
@@ -219,7 +219,7 @@ export default function UserDetailPage() {
   >([]);
 
   useBreadcrumbOverride(
-    member ? `/dashboard/organization/users/${memberId}` : undefined,
+    member ? `/dashboard/organization/staff/${memberId}` : undefined,
     member?.user.name
   );
 
@@ -306,8 +306,8 @@ export default function UserDetailPage() {
       setMember(data);
       populateFormState(data);
     } catch {
-      toast.error("Failed to load user details");
-      router.push("/dashboard/organization/users");
+      toast.error("Failed to load staff member details");
+      router.push("/dashboard/organization/staff");
     } finally {
       setIsLoading(false);
     }
@@ -495,7 +495,7 @@ export default function UserDetailPage() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/dashboard/organization/users">
+          <Link href="/dashboard/organization/staff">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
@@ -596,7 +596,7 @@ export default function UserDetailPage() {
             <CardHeader>
               <CardTitle>Role & Permissions</CardTitle>
               <CardDescription>
-                Configure the role template and granular permissions for this user in this
+                Configure the role template and granular permissions for this staff member in this
                 organization.
               </CardDescription>
             </CardHeader>
@@ -690,7 +690,7 @@ export default function UserDetailPage() {
             <CardHeader>
               <CardTitle>Employment Details</CardTitle>
               <CardDescription>
-                Manage employment information for this user at this organization.
+                Manage employment information for this staff member at this organization.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">

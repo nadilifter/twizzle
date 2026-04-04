@@ -40,7 +40,7 @@ function SuccessContent() {
       icon: Users,
       title: "Invite team members",
       description: "Add coaches, staff, and other administrators",
-      url: `${adminUrl}/organization/users`,
+      url: `${adminUrl}/organization/staff`,
     },
     {
       icon: Calendar,
