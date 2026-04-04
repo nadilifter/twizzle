@@ -3,6 +3,7 @@ import { getAuthSession, hashPassword } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { passwordSchema } from "@/lib/password";
+import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 const acceptInvitationSchema = z
   .object({
@@ -25,6 +26,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
+  const rateLimited = await checkApiRateLimit(request, "invitations", RATE_LIMITS.sensitive);
+  if (rateLimited) return rateLimited;
+
   try {
     const { token } = await params;
 
@@ -145,6 +149,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
+  const rateLimited = await checkApiRateLimit(request, "invitations", RATE_LIMITS.sensitive);
+  if (rateLimited) return rateLimited;
+
   try {
     const { token } = await params;
     const body = await request.json();

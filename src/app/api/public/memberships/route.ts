@@ -4,6 +4,7 @@ import { subDays } from "date-fns";
 import { isFeatureEnabled } from "@/lib/feature-resolver";
 import { resolvePublicRequest } from "@/lib/public-api";
 import { getRegistrationStatus } from "@/lib/registration-utils";
+import { checkApiRateLimit } from "@/lib/rate-limit";
 
 /**
  * GET /api/public/memberships?organizationId=xxx
@@ -18,6 +19,8 @@ import { getRegistrationStatus } from "@/lib/registration-utils";
  *   - athleteLevel: filter by level restriction
  */
 export async function GET(request: NextRequest) {
+  const rateLimited = await checkApiRateLimit(request, "public");
+  if (rateLimited) return rateLimited;
   try {
     const { searchParams } = new URL(request.url);
     const result = await resolvePublicRequest(request, searchParams.get("organizationId"));
