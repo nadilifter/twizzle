@@ -261,6 +261,9 @@ export function ProgramRegistrationFlow({
   const [selectedMembership, setSelectedMembership] = useState<RequiredMembership | null>(null);
   const [athleteHasMembership, setAthleteHasMembership] = useState(false);
   const [isCheckingMembership, setIsCheckingMembership] = useState(false);
+  const [membershipEligibility, setMembershipEligibility] = useState<
+    Map<string, { eligible: boolean; reason?: string }>
+  >(new Map());
   const [selectedPass, setSelectedPass] = useState<RequiredPass | null>(null);
   const [athleteHasPass, setAthleteHasPass] = useState(false);
   const [isCheckingPass, setIsCheckingPass] = useState(false);
@@ -555,17 +558,27 @@ export function ProgramRegistrationFlow({
     setSelectedInstanceIds(new Set(available));
   };
 
-  // ---------- Gender-eligible memberships & passes ----------
+  // ---------- Eligible memberships & passes ----------
 
-  const genderEligibleMemberships = useMemo(() => {
-    if (!selectedAthlete || !needsMembership) return program.requiredMemberships;
-    return program.requiredMemberships.filter((m) => {
-      if (!m.group.hasGenderRestriction || !m.group.allowedGenders?.length) return true;
-      return (
-        !!selectedAthlete.gender && m.group.allowedGenders.includes(selectedAthlete.gender as any)
-      );
-    });
-  }, [selectedAthlete, needsMembership, program.requiredMemberships]);
+  const { eligibleMemberships, ineligibleMemberships: ineligibleMembershipsList } = useMemo(() => {
+    if (!selectedAthlete || !needsMembership) {
+      return {
+        eligibleMemberships: program.requiredMemberships,
+        ineligibleMemberships: [] as (RequiredMembership & { reason: string })[],
+      };
+    }
+    const eligible: RequiredMembership[] = [];
+    const ineligible: (RequiredMembership & { reason: string })[] = [];
+    for (const m of program.requiredMemberships) {
+      const eligibilityResult = membershipEligibility.get(m.id);
+      if (eligibilityResult && !eligibilityResult.eligible) {
+        ineligible.push({ ...m, reason: eligibilityResult.reason || "Not eligible" });
+      } else {
+        eligible.push(m);
+      }
+    }
+    return { eligibleMemberships: eligible, ineligibleMemberships: ineligible };
+  }, [selectedAthlete, needsMembership, program.requiredMemberships, membershipEligibility]);
 
   const genderEligiblePasses = useMemo(() => {
     if (!selectedAthlete || !needsPass) return program.requiredPasses ?? [];
@@ -581,35 +594,67 @@ export function ProgramRegistrationFlow({
     if (needsMembership && selectedAthlete && session?.user?.email) {
       setIsCheckingMembership(true);
       setAthleteHasMembership(false);
-      fetch(
-        `/api/public/athletes/${selectedAthlete.id}/memberships?email=${encodeURIComponent(session.user.email)}`
-      )
-        .then((r) => r.json())
-        .then((data) => {
-          const activeIds: string[] = data.activeMembershipInstanceIds || [];
+      setMembershipEligibility(new Map());
+      setSelectedMembership(null);
+
+      const membershipInstanceIds = program.requiredMemberships.map((m) => m.id);
+
+      Promise.all([
+        fetch(
+          `/api/public/athletes/${selectedAthlete.id}/memberships?email=${encodeURIComponent(session.user.email)}`
+        ).then((r) => r.json()),
+        fetch("/api/public/memberships/eligibility", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            athleteId: selectedAthlete.id,
+            membershipInstanceIds,
+            organizationId: program.organizationId,
+          }),
+        }).then((r) => r.json()),
+      ])
+        .then(([activeData, eligibilityData]) => {
+          const activeIds: string[] = activeData.activeMembershipInstanceIds || [];
           const requiredIds = program.requiredMemberships.map((m) => m.id);
           const alreadyHas = requiredIds.some((id) => activeIds.includes(id));
           setAthleteHasMembership(alreadyHas);
-          if (!alreadyHas && genderEligibleMemberships.length === 1) {
-            setSelectedMembership(genderEligibleMemberships[0]);
+
+          const eligMap = new Map<string, { eligible: boolean; reason?: string }>();
+          for (const item of eligibilityData.memberships || []) {
+            eligMap.set(item.id, { eligible: item.eligible, reason: item.reason });
           }
+          setMembershipEligibility(eligMap);
         })
         .catch(() => {
           setAthleteHasMembership(false);
-          if (genderEligibleMemberships.length === 1) {
-            setSelectedMembership(genderEligibleMemberships[0]);
-          }
         })
         .finally(() => setIsCheckingMembership(false));
-    } else if (needsMembership && genderEligibleMemberships.length === 1) {
-      setSelectedMembership(genderEligibleMemberships[0]);
     }
   }, [
     needsMembership,
     selectedAthlete,
     session?.user?.email,
     program.requiredMemberships,
-    genderEligibleMemberships,
+    program.organizationId,
+  ]);
+
+  useEffect(() => {
+    if (needsMembership && !athleteHasMembership && !isCheckingMembership) {
+      if (eligibleMemberships.length === 1 && !selectedMembership) {
+        setSelectedMembership(eligibleMemberships[0]);
+      } else if (
+        selectedMembership &&
+        !eligibleMemberships.some((m) => m.id === selectedMembership.id)
+      ) {
+        setSelectedMembership(null);
+      }
+    }
+  }, [
+    needsMembership,
+    athleteHasMembership,
+    isCheckingMembership,
+    eligibleMemberships,
+    selectedMembership,
   ]);
 
   // ---------- Pass helpers ----------
@@ -1266,6 +1311,7 @@ export function ProgramRegistrationFlow({
                         setSelectedInstanceIds(new Set());
                         setAthleteHasMembership(false);
                         setSelectedMembership(null);
+                        setMembershipEligibility(new Map());
                       }}
                     >
                       Change
@@ -1387,15 +1433,32 @@ export function ProgramRegistrationFlow({
                   </>
                 )}
 
+                {canProceedFromAthlete &&
+                  needsMembership &&
+                  !athleteHasMembership &&
+                  !isCheckingMembership &&
+                  eligibleMemberships.length === 0 &&
+                  membershipEligibility.size > 0 && (
+                    <div className="flex items-start gap-3 p-3 rounded-lg border border-destructive/40 bg-destructive/5 mt-2">
+                      <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                      <p className="text-xs text-destructive">
+                        {selectedAthlete?.firstName} is not eligible for any of the required
+                        memberships for this program and will be unable to register.
+                      </p>
+                    </div>
+                  )}
+
                 {canProceedFromAthlete && (
                   <div className="pt-4">
                     <Button
                       className="w-full gap-2"
+                      disabled={isCheckingMembership}
                       onClick={() => {
                         const nextId = getNextStepId("athlete");
                         if (nextId) stepper.navigation.goTo(nextId as any);
                       }}
                     >
+                      {isCheckingMembership && <Loader2 className="h-4 w-4 animate-spin" />}
                       Continue
                       <ChevronRight className="h-4 w-4" />
                     </Button>
@@ -1606,33 +1669,59 @@ export function ProgramRegistrationFlow({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {genderEligibleMemberships.length === 0 ? (
-                <div className="flex items-start gap-3 p-4 rounded-lg border border-destructive/40 bg-destructive/5">
-                  <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-sm">No eligible memberships</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {selectedAthlete?.firstName} does not meet the gender requirements for any of
-                      the available membership options.
-                    </p>
-                  </div>
+              {isCheckingMembership ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
-              ) : genderEligibleMemberships.length === 1 ? (
+              ) : eligibleMemberships.length === 0 ? (
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3 p-4 rounded-lg border border-destructive/40 bg-destructive/5">
+                    <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-sm">No eligible memberships</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {selectedAthlete?.firstName} does not meet the requirements for any of the
+                        available membership options. This athlete cannot register for this program.
+                      </p>
+                    </div>
+                  </div>
+                  {ineligibleMembershipsList.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Ineligible memberships
+                      </p>
+                      {ineligibleMembershipsList.map((m) => (
+                        <div
+                          key={m.id}
+                          className="w-full flex items-center gap-3 p-4 rounded-lg border border-border bg-muted/30 opacity-60 cursor-not-allowed"
+                        >
+                          <CreditCard className="h-5 w-5 shrink-0 text-muted-foreground" />
+                          <div className="flex-1">
+                            <div className="font-medium text-sm">{m.name}</div>
+                            <div className="text-xs text-destructive mt-0.5">{m.reason}</div>
+                          </div>
+                          <span className="font-bold text-muted-foreground">
+                            {formatPrice(m.price)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : eligibleMemberships.length === 1 && ineligibleMembershipsList.length === 0 ? (
                 <div className="flex items-center gap-3 p-4 rounded-lg border border-primary/40 bg-primary/5">
                   <CreditCard className="h-5 w-5 text-primary shrink-0" />
                   <div className="flex-1">
-                    <div className="font-medium text-sm">{genderEligibleMemberships[0].name}</div>
+                    <div className="font-medium text-sm">{eligibleMemberships[0].name}</div>
                     <div className="text-xs text-muted-foreground">
-                      {genderEligibleMemberships[0].group.name}
+                      {eligibleMemberships[0].group.name}
                     </div>
                   </div>
-                  <span className="font-bold">
-                    {formatPrice(genderEligibleMemberships[0].price)}
-                  </span>
+                  <span className="font-bold">{formatPrice(eligibleMemberships[0].price)}</span>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {genderEligibleMemberships.map((m) => {
+                  {eligibleMemberships.map((m) => {
                     const isSelected = selectedMembership?.id === m.id;
                     return (
                       <button
@@ -1655,6 +1744,30 @@ export function ProgramRegistrationFlow({
                       </button>
                     );
                   })}
+                  {ineligibleMembershipsList.length > 0 && (
+                    <>
+                      <div className="pt-2 pb-1">
+                        <p className="text-xs font-medium text-muted-foreground">
+                          Ineligible for {selectedAthlete?.firstName}
+                        </p>
+                      </div>
+                      {ineligibleMembershipsList.map((m) => (
+                        <div
+                          key={m.id}
+                          className="w-full flex items-center gap-3 p-4 rounded-lg border border-border bg-muted/30 opacity-60 cursor-not-allowed"
+                        >
+                          <CreditCard className="h-5 w-5 shrink-0 text-muted-foreground" />
+                          <div className="flex-1">
+                            <div className="font-medium text-sm">{m.name}</div>
+                            <div className="text-xs text-destructive mt-0.5">{m.reason}</div>
+                          </div>
+                          <span className="font-bold text-muted-foreground">
+                            {formatPrice(m.price)}
+                          </span>
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
               )}
 
@@ -1672,7 +1785,7 @@ export function ProgramRegistrationFlow({
                 </Button>
                 <Button
                   className="flex-1 gap-2"
-                  disabled={!canProceedFromMembership}
+                  disabled={!canProceedFromMembership || eligibleMemberships.length === 0}
                   onClick={() => {
                     const nextId = getNextStepId("membership");
                     if (nextId) stepper.navigation.goTo(nextId as any);
