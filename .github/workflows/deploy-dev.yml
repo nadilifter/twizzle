@@ -1,8 +1,8 @@
-name: Deploy — Development
+name: Deploy Development [Development]
 
 on:
   push:
-    branches: [dev_disabled_until_cluster is up]
+    branches: [dev_disabled_until_cluster_is_up]
 
 concurrency:
   group: deploy-dev

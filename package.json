@@ -19,6 +19,9 @@
     "secrets:decrypt": "./scripts/secrets-decrypt.sh",
     "secrets:encrypt": "./scripts/secrets-encrypt.sh",
     "secrets:edit": "./scripts/secrets-edit.sh",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint:tenant": "bash scripts/check-tenant-isolation.sh",
@@ -121,6 +124,8 @@
   "devDependencies": {
     "@commitlint/cli": "^20.4.2",
     "@commitlint/config-conventional": "^20.4.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/leaflet": "^1.9.21",
     "@types/leaflet-draw": "^1.0.13",
@@ -142,7 +147,10 @@
     "prisma": "^6.19.2",
     "tailwindcss": "^3.4.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite-tsconfig-paths": "^6.1.1",
+    "vitest": "^4.1.2",
+    "vitest-mock-extended": "^3.1.1"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
