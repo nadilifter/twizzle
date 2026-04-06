@@ -42,6 +42,7 @@ import { FeatureOverrides } from "./feature-overrides";
 import { DeactivationDialog } from "./deactivation-dialog";
 import { ReactivationDialog } from "./reactivation-dialog";
 import { AdyenPlatformCard } from "./adyen-platform-card";
+import { WebsitePublishToggle } from "./website-publish-toggle";
 import { getSubdomainUrl } from "@/lib/env-domains";
 
 function getMarketingSiteUrl(
@@ -226,6 +227,12 @@ export default async function OrganizationDetailPage({ params }: Props) {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <WebsitePublishToggle
+            organizationId={organization.id}
+            organizationName={organization.name}
+            isPublished={organization.websiteConfig?.isPublished ?? false}
+            adyenVerified={organization.adyenPlatformAccount?.onboardingStatus === "VERIFIED"}
+          />
           <Button asChild variant="outline">
             <a
               href={getMarketingSiteUrl(organization.slug, organization.websiteConfig)}
