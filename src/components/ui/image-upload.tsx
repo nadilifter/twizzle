@@ -14,9 +14,23 @@ interface ImageUploadProps {
   required?: boolean;
 }
 
+const PREVIEW_CONFIG: Record<
+  ImageUploadProps["type"],
+  { container: string; objectFit: string; sizes: string }
+> = {
+  category: { container: "w-48 aspect-[16/10]", objectFit: "object-cover", sizes: "192px" },
+  program: { container: "w-48 aspect-video", objectFit: "object-cover", sizes: "192px" },
+  hero: { container: "w-48 aspect-video", objectFit: "object-cover", sizes: "192px" },
+  team: { container: "w-32 aspect-[3/4]", objectFit: "object-cover", sizes: "128px" },
+  logo: { container: "w-32 h-32", objectFit: "object-contain", sizes: "128px" },
+  favicon: { container: "w-32 h-32", objectFit: "object-contain", sizes: "128px" },
+  product: { container: "w-32 h-32", objectFit: "object-contain", sizes: "128px" },
+};
+
 export function ImageUpload({ label, value, onChange, type, required = false }: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const preview = PREVIEW_CONFIG[type];
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -58,8 +72,16 @@ export function ImageUpload({ label, value, onChange, type, required = false }: 
       <div className="flex items-start gap-4">
         {value ? (
           <div className="relative group">
-            <div className="relative w-32 h-32 border rounded-md overflow-hidden bg-muted flex items-center justify-center">
-              <Image src={value} alt={label} fill className="object-contain" sizes="128px" />
+            <div
+              className={`relative ${preview.container} border rounded-md overflow-hidden bg-muted`}
+            >
+              <Image
+                src={value}
+                alt={label}
+                fill
+                className={preview.objectFit}
+                sizes={preview.sizes}
+              />
             </div>
             <Button
               type="button"
@@ -73,7 +95,7 @@ export function ImageUpload({ label, value, onChange, type, required = false }: 
           </div>
         ) : (
           <div
-            className="w-32 h-32 border-2 border-dashed rounded-md flex flex-col items-center justify-center gap-2 text-muted-foreground bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
+            className={`${preview.container} border-2 border-dashed rounded-md flex flex-col items-center justify-center gap-2 text-muted-foreground bg-muted/50 hover:bg-muted cursor-pointer transition-colors`}
             onClick={() => inputRef.current?.click()}
           >
             <Upload className="w-6 h-6" />
