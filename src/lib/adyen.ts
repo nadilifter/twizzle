@@ -6,6 +6,8 @@
  *   - ADYEN_MERCHANT_ACCOUNT: Your Adyen merchant account name
  *   - ADYEN_ENVIRONMENT: "TEST" or "LIVE" (defaults to TEST in development, required in production)
  *   - ADYEN_WEBHOOK_HMAC_KEY: HMAC key for webhook signature verification
+ *   - ADYEN_ALLOWED_PAYMENT_METHODS: Optional comma-separated Checkout payment method types
+ *     (e.g. scheme,googlepay,applepay,paypal,ach). Defaults to card + wallets + PayPal + ACH.
  */
 
 /**
@@ -147,6 +149,30 @@ export interface TokenizationOptions {
   recurringProcessingModel?: "CardOnFile" | "Subscription" | "UnscheduledCardOnFile";
 }
 
+/** Default payment method types for Checkout POST /sessions (must match Adyen PM type strings). */
+export const DEFAULT_CHECKOUT_ALLOWED_PAYMENT_METHODS = [
+  "scheme",
+  "googlepay",
+  "applepay",
+  "paypal",
+  "ach",
+] as const;
+
+/**
+ * Payment methods to expose in Drop-in for sessions created by this app.
+ * Override with env ADYEN_ALLOWED_PAYMENT_METHODS (comma-separated).
+ */
+export function getCheckoutAllowedPaymentMethods(): string[] {
+  const raw = process.env.ADYEN_ALLOWED_PAYMENT_METHODS?.trim();
+  if (!raw) {
+    return [...DEFAULT_CHECKOUT_ALLOWED_PAYMENT_METHODS];
+  }
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 export async function createPaymentSession(
   amount: number,
   currency: string = "USD",
@@ -166,6 +192,7 @@ export async function createPaymentSession(
       lineItems,
       channel: "Web",
       countryCode: "US",
+      allowedPaymentMethods: getCheckoutAllowedPaymentMethods(),
     };
 
     if (tokenization) {
@@ -175,6 +202,7 @@ export async function createPaymentSession(
       sessionRequest.recurringProcessingModel =
         tokenization.recurringProcessingModel ?? "CardOnFile";
       sessionRequest.shopperInteraction = "Ecommerce";
+      sessionRequest.enableRecurring = true;
     }
 
     const response = await checkoutApi.PaymentsApi.sessions(sessionRequest);
@@ -245,15 +273,15 @@ export interface StoredPaymentMethod {
  * @param returnUrl - URL to redirect after payment/tokenization
  * @param shopperEmail - Optional shopper email
  * @param amount - Amount in dollars (use 0 for $0 authorization)
- * @param storeMode - "askForConsent" shows a save-card checkbox (default),
- *                    "enabled" always stores the card without asking
+ * @param storeMode - With askForConsent, Adyen only stores card details (wallets/ACH need enabled).
+ *                    Default "enabled" so PayPal, Apple Pay, Google Pay, ACH can appear for subscription tokenization.
  */
 export async function createTokenizationSession(
   shopperReference: string,
   returnUrl: string,
   shopperEmail?: string,
   amount: number = 0,
-  storeMode: "askForConsent" | "enabled" = "askForConsent"
+  storeMode: "askForConsent" | "enabled" = "enabled"
 ) {
   try {
     const response = await checkoutApi.PaymentsApi.sessions({
@@ -268,7 +296,8 @@ export async function createTokenizationSession(
       shopperEmail,
       channel: "Web" as any,
       countryCode: "US",
-      storePaymentMethod: true,
+      allowedPaymentMethods: getCheckoutAllowedPaymentMethods(),
+      enableRecurring: true,
       storePaymentMethodMode: storeMode as any,
       recurringProcessingModel: "Subscription" as any,
       shopperInteraction: "Ecommerce" as any,
