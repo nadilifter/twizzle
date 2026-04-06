@@ -68,7 +68,6 @@ import {
   StepperTitle,
   getStepStatus,
 } from "@/components/ui/stepper";
-import { Spinner } from "@/components/ui/spinner";
 
 interface Sport {
   id: string;
