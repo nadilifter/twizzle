@@ -118,7 +118,12 @@ export default function PaymentPage() {
     }
 
     const existing = sessionStorage.getItem("org-signup-data");
-    const existingData = existing ? JSON.parse(existing) : {};
+    let existingData = {};
+    try {
+      existingData = existing ? JSON.parse(existing) : {};
+    } catch (e: unknown) {
+      console.error(e);
+    }
     sessionStorage.setItem(
       "org-signup-data",
       JSON.stringify({

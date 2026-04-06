@@ -1607,7 +1607,7 @@ export default function SignupPage() {
                           >
                             {isLoading ? (
                               <>
-                                <Spinner size="sm" className="mr-2" />
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                 {isPaidPlan ? "Proceeding to Payment..." : "Continuing..."}
                               </>
                             ) : isPaidPlan ? (
