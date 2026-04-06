@@ -160,12 +160,14 @@ export default function ProgramDetailPage() {
     fetchProgram();
     fetchInstances();
     fetchWaitlist();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [programId]);
 
   useEffect(() => {
     if (selectedInstance) {
       fetchRegistrations(selectedInstance.id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedInstance]);
 
   const fetchProgram = async () => {

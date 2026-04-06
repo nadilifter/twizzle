@@ -1,4 +1,4 @@
-name: Release — Staging
+name: Tag Pre-Release Version [Staging]
 
 on:
   workflow_dispatch:
@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
     outputs:
       new_tag: ${{ steps.bump.outputs.new_tag }}
 
@@ -63,6 +64,16 @@ jobs:
           git tag "${NEW_TAG}" "${{ github.sha }}"
           git push origin "${NEW_TAG}"
 
+      - name: Trigger deploy-staging workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_TAG: ${{ steps.bump.outputs.new_tag }}
+        run: |
+          gh workflow run deploy-staging.yml \
+            --repo uplifterinc/us-clubs \
+            --ref main \
+            --field deploy_tag="${NEW_TAG}"
+
       - name: Post summary
         run: |
           echo "### Release Tagged" >> "$GITHUB_STEP_SUMMARY"
@@ -74,4 +85,4 @@ jobs:
           echo "| Commit | \`${{ github.sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Tagged By | @${{ github.actor }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "The \`deploy-staging\` workflow will now automatically deploy this tag to staging." >> "$GITHUB_STEP_SUMMARY"
+          echo "The \`deploy-staging\` workflow is now automatically deploying this tag to staging." >> "$GITHUB_STEP_SUMMARY"

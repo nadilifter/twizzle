@@ -310,11 +310,13 @@ export default function NotificationsPage() {
   useEffect(() => {
     fetchRules();
     fetchPlaceholders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fetch placeholders when trigger type changes
   useEffect(() => {
     fetchPlaceholders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerType]);
 
   const fetchRules = async () => {
@@ -398,10 +400,12 @@ export default function NotificationsPage() {
   useEffect(() => {
     if (recipientType === "MEMBERSHIP_HOLDERS" && availableMembershipGroups.length === 0)
       fetchMembershipGroups();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recipientType]);
 
   useEffect(() => {
     if (showLogs) fetchLogs(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showLogs, logStatusFilter]);
 
   // Auto-set timing defaults when trigger changes (only for new rules, only if user hasn't manually edited)

@@ -209,6 +209,7 @@ export default function SuperadminFeedbackPage() {
 
   useEffect(() => {
     fetchFeatures(activeTab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, searchQuery]);
 
   useEffect(() => {

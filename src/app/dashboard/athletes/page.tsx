@@ -467,6 +467,7 @@ export default function AthletesPage() {
       handleViewAttendance,
       handleContactParent,
       levelColorMap,
+      membershipsEnabled,
       competitionsEnabled,
     ]
   );

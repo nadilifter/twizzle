@@ -349,6 +349,7 @@ export function ProgramRegistrationFlow({
 
   useEffect(() => {
     if (session?.user) fetchAthletes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user, slug]);
 
   const fetchAthletes = async () => {

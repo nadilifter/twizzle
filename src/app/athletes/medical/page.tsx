@@ -65,6 +65,7 @@ export default function AthleteMedicalPage() {
     }
 
     fetchAthletes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const selectedAthlete = athletes.find((a) => a.id === selectedAthleteId);
