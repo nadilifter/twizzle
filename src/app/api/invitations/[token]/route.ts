@@ -8,10 +8,10 @@ const acceptInvitationSchema = z
   .object({
     password: passwordSchema.optional(),
     confirmPassword: z.string().optional(),
+    acceptedTerms: z.boolean().optional(),
   })
   .refine(
     (data) => {
-      // If password is provided, confirmPassword must match
       if (data.password && data.confirmPassword) {
         return data.password === data.confirmPassword;
       }
@@ -104,6 +104,7 @@ export async function GET(
         email: true,
         passwordHash: true,
         status: true,
+        termsAcceptedAt: true,
       },
     });
 
@@ -129,6 +130,7 @@ export async function GET(
         name: existingUser?.name || null,
         email: invitation.email,
         needsPassword,
+        hasAcceptedTerms: !!existingUser?.termsAcceptedAt,
       },
     });
   } catch (error) {
@@ -182,6 +184,8 @@ export async function POST(
       );
     }
 
+    const validatedData = acceptInvitationSchema.parse(body);
+
     // Find the user
     const user = await db.user.findUnique({
       where: { email: invitation.email },
@@ -189,6 +193,7 @@ export async function POST(
         id: true,
         passwordHash: true,
         status: true,
+        termsAcceptedAt: true,
       },
     });
 
@@ -197,11 +202,17 @@ export async function POST(
     }
 
     const needsPassword = !user.passwordHash || user.status === "INVITED";
+    const needsTermsAcceptance = !user.termsAcceptedAt;
+
+    if (needsTermsAcceptance && validatedData.acceptedTerms !== true) {
+      return NextResponse.json(
+        { success: false, error: "You must accept the terms and conditions" },
+        { status: 400 }
+      );
+    }
 
     // For new users (no password), require password in body
     if (needsPassword) {
-      const validatedData = acceptInvitationSchema.parse(body);
-
       if (!validatedData.password) {
         return NextResponse.json(
           { success: false, error: "Password is required" },
@@ -209,12 +220,9 @@ export async function POST(
         );
       }
 
-      // Hash the password
       const passwordHash = await hashPassword(validatedData.password);
 
-      // Accept invitation in transaction
       await db.$transaction(async (tx) => {
-        // Update invitation status
         await tx.organizationInvitation.update({
           where: { id: invitation.id },
           data: {
@@ -223,7 +231,6 @@ export async function POST(
           },
         });
 
-        // Update organization member status
         await tx.organizationMember.updateMany({
           where: {
             organizationId: invitation.organizationId,
@@ -235,12 +242,12 @@ export async function POST(
           },
         });
 
-        // Update user: set password and activate
         await tx.user.update({
           where: { id: user.id },
           data: {
             passwordHash,
             status: "ACTIVE",
+            ...(needsTermsAcceptance && { termsAcceptedAt: new Date() }),
           },
         });
       });
@@ -253,7 +260,7 @@ export async function POST(
         organizationName: invitation.organization.name,
       });
     } else {
-      // Existing user — the token itself proves they have access to the
+      // Existing user -- the token itself proves they have access to the
       // invited email address, so no session/login is required.
       await db.$transaction(async (tx) => {
         await tx.organizationInvitation.update({
@@ -274,6 +281,13 @@ export async function POST(
             status: "ACTIVE",
           },
         });
+
+        if (needsTermsAcceptance) {
+          await tx.user.update({
+            where: { id: user.id },
+            data: { termsAcceptedAt: new Date() },
+          });
+        }
       });
 
       return NextResponse.json({
