@@ -20,7 +20,6 @@ export async function GET() {
         taxEnabled: true,
         taxRate: true,
         taxPaidBy: true,
-        processingFeePaidBy: true,
         subscription: {
           select: {
             plan: {
@@ -45,7 +44,6 @@ export async function GET() {
       taxEnabled: organization.taxEnabled,
       taxRate: organization.taxRate ? Number(organization.taxRate) : 0,
       taxPaidBy: organization.taxPaidBy,
-      processingFeePaidBy: organization.processingFeePaidBy,
       plan: plan
         ? {
             name: plan.name,
@@ -83,7 +81,7 @@ export async function PATCH(request: Request) {
     }
 
     const data = await request.json();
-    const { taxEnabled, taxRate, taxPaidBy, processingFeePaidBy } = data;
+    const { taxEnabled, taxRate, taxPaidBy } = data;
 
     if (taxEnabled !== undefined && typeof taxEnabled !== "boolean") {
       return NextResponse.json({ error: "taxEnabled must be a boolean" }, { status: 400 });
@@ -106,26 +104,17 @@ export async function PATCH(request: Request) {
       );
     }
 
-    if (processingFeePaidBy !== undefined && !VALID_FEE_PAYERS.includes(processingFeePaidBy)) {
-      return NextResponse.json(
-        { error: "processingFeePaidBy must be CUSTOMER or ORGANIZATION" },
-        { status: 400 }
-      );
-    }
-
     const organization = await db.organization.update({
       where: { id: organizationId },
       data: {
         ...(taxEnabled !== undefined && { taxEnabled }),
         ...(taxRate !== undefined && { taxRate }),
         ...(taxPaidBy !== undefined && { taxPaidBy }),
-        ...(processingFeePaidBy !== undefined && { processingFeePaidBy }),
       },
       select: {
         taxEnabled: true,
         taxRate: true,
         taxPaidBy: true,
-        processingFeePaidBy: true,
       },
     });
 
@@ -133,7 +122,6 @@ export async function PATCH(request: Request) {
       taxEnabled: organization.taxEnabled,
       taxRate: organization.taxRate ? Number(organization.taxRate) : 0,
       taxPaidBy: organization.taxPaidBy,
-      processingFeePaidBy: organization.processingFeePaidBy,
     });
   } catch (error) {
     console.error("Failed to update tax and fee settings:", error);

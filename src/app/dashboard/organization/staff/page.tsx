@@ -142,6 +142,7 @@ export default function StaffPage() {
     if (sheetOpen && !editingStaff) {
       fetchAvailableUsers();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheetOpen, editingStaff]);
 
   const fetchAvailableUsers = async () => {

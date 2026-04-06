@@ -201,6 +201,7 @@ export function MembershipStepper() {
     if (!visibleStepIds.includes(stepper.state.current.data.id)) {
       stepper.navigation.goTo(visibleStepIds[0] as "details");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleStepIds, stepper.state.current.data.id, stepper.navigation]);
 
   function makeEmptyInstance(): PendingInstance {

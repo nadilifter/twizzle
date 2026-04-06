@@ -268,18 +268,21 @@ Toggle between local and cloud storage with `USE_S3_STORAGE=false` (uses local f
 
 ## Commits
 
-Follow Conventional Commits. Format: `type: lowercase imperative description`
+Follow Conventional Commits. Format: `type: US-### lowercase imperative description`
+
+Every commit must include a ticket number (`US-` followed by digits) immediately after the colon.
 
 **Types:** `feat`, `fix`, `refactor`, `chore`, `style`, `docs`, `test`, `perf`
 
-- No scope — `feat: add billing page` not `feat(billing): add page`
-- Lowercase after the colon, imperative mood, single line, concise
+- Ticket number required — `feat: US-42 add billing page` not `feat: add billing page`
+- No scope — `feat: US-42 add billing page` not `feat(billing): US-42 add page`
+- Lowercase after the ticket number, imperative mood, single line, concise
 
 ```
-feat: add organization deactivation for superadmins
-fix: resolve timezone shift on date-only fields
-refactor: migrate ledger tables to reusable DataTable components
-chore: remove defunct quick link from superadmin sidebar
+feat: US-42 add organization deactivation for superadmins
+fix: US-118 resolve timezone shift on date-only fields
+refactor: US-95 migrate ledger tables to reusable DataTable components
+chore: US-7 remove defunct quick link from superadmin sidebar
 ```
 
 ## Pull Requests
@@ -309,7 +312,9 @@ Always `pnpm`. Never `npm` or `npx`.
 
 ## Commits
 
-Follow Conventional Commits. Format: `type: lowercase imperative description`
+Follow Conventional Commits. Format: `type: US-### lowercase imperative description`
+
+Every commit must include a ticket number (`US-` followed by digits) immediately after the colon.
 
 | Type       | When to use                                  |
 | ---------- | -------------------------------------------- |
@@ -322,18 +327,20 @@ Follow Conventional Commits. Format: `type: lowercase imperative description`
 | `test`     | Adding or updating tests                     |
 | `perf`     | Performance improvement                      |
 
-- No scope — `feat: add billing page` not `feat(billing): add page`
-- Lowercase after the colon, no capital first word
+- Ticket number required — `feat: US-42 add billing page` not `feat: add billing page`
+- No scope — `feat: US-42 add billing page` not `feat(billing): US-42 add page`
+- Lowercase after the ticket number, no capital first word
 - Imperative mood — "add", "fix", "remove" not "added", "fixes", "removed"
 - Single line unless explicitly asked for a body
 - Concise — short phrase, not a full sentence
+- No "Co-Authored-By" trailers — never add Claude attribution to commits
 
 **Examples:**
 
 ```
-feat: add organization deactivation/reactivation for superadmins
-fix: resolve all non-Adyen TypeScript errors across the project
-refactor: migrate ledger tables to reusable DataTable components
-chore: remove defunct User Signup quick link from superadmin sidebar
-style: move Directory to top of Athletes section in admin sidebar
+feat: US-42 add organization deactivation/reactivation for superadmins
+fix: US-118 resolve all non-Adyen TypeScript errors across the project
+refactor: US-95 migrate ledger tables to reusable DataTable components
+chore: US-7 remove defunct User Signup quick link from superadmin sidebar
+style: US-203 move Directory to top of Athletes section in admin sidebar
 ```

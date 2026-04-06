@@ -129,6 +129,7 @@ export function FeedbackContent() {
   useEffect(() => {
     fetchFeatures();
     fetchCategories();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCategory, sortBy]);
 
   // Fetch feature details when selected

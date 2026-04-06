@@ -35,11 +35,6 @@ function PaymentPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [taxRate, setTaxRate] = useState(0);
   const [taxPaidBy, setTaxPaidBy] = useState<"CUSTOMER" | "ORGANIZATION">("CUSTOMER");
-  const [processingFeePaidBy, setProcessingFeePaidBy] = useState<"CUSTOMER" | "ORGANIZATION">(
-    "CUSTOMER"
-  );
-  const [planTransactionFee, setPlanTransactionFee] = useState(0);
-  const [planPerTransactionFee, setPlanPerTransactionFee] = useState(0);
 
   useEffect(() => {
     fetch("/api/organization/taxes-and-fees")
@@ -50,23 +45,14 @@ function PaymentPageContent() {
           setTaxRate(Number(data.taxRate));
         }
         if (data.taxPaidBy) setTaxPaidBy(data.taxPaidBy);
-        if (data.processingFeePaidBy) setProcessingFeePaidBy(data.processingFeePaidBy);
-        if (data.plan) {
-          setPlanTransactionFee(data.plan.transactionFee);
-          setPlanPerTransactionFee(data.plan.perTransactionFee);
-        }
       })
       .catch((err) => console.error("Failed to load tax/fee settings:", err));
   }, []);
 
   const tax = Math.round(subtotal * taxRate * 100) / 100;
-  const feeBase = taxPaidBy === "CUSTOMER" ? subtotal + tax : subtotal;
-  const processingFeeRaw = feeBase > 0 ? feeBase * planTransactionFee + planPerTransactionFee : 0;
-  const processingFee = Math.round(processingFeeRaw * 100) / 100;
 
   let total = subtotal;
   if (taxPaidBy === "CUSTOMER") total += tax;
-  if (processingFeePaidBy === "CUSTOMER") total += processingFee;
   total = Math.round(total * 100) / 100;
 
   // Generate payment link for card payments
@@ -128,6 +114,7 @@ function PaymentPageContent() {
     }, 3000); // Poll every 3 seconds
 
     return () => clearInterval(pollInterval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paymentStatus, paymentLinkId]);
 
   // Auto-generate payment link for card payments
@@ -395,12 +382,6 @@ function PaymentPageContent() {
               <div className="flex justify-between text-sm text-muted-foreground">
                 <span>Tax ({(taxRate * 100).toFixed(2).replace(/\.?0+$/, "")}%)</span>
                 <span>${tax.toFixed(2)}</span>
-              </div>
-            )}
-            {processingFeePaidBy === "CUSTOMER" && processingFee > 0 && (
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Processing Fee</span>
-                <span>${processingFee.toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between text-xl font-bold pt-2 border-t">

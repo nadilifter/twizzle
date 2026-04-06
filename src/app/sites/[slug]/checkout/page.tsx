@@ -383,11 +383,6 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [taxRate, setTaxRate] = useState(0);
   const [taxPaidBy, setTaxPaidBy] = useState<"CUSTOMER" | "ORGANIZATION">("CUSTOMER");
-  const [processingFeePaidBy, setProcessingFeePaidBy] = useState<"CUSTOMER" | "ORGANIZATION">(
-    "CUSTOMER"
-  );
-  const [planTransactionFee, setPlanTransactionFee] = useState(0);
-  const [planPerTransactionFee, setPlanPerTransactionFee] = useState(0);
   const [signAllMode, setSignAllMode] = useState(false);
   const signaturePadRef = useRef<SignaturePadRef>(null);
   const [signatureEmpty, setSignatureEmpty] = useState(true);
@@ -462,10 +457,6 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
             setTaxRate(Number(data.taxRate));
           }
           if (data.taxPaidBy) setTaxPaidBy(data.taxPaidBy);
-          if (data.processingFeePaidBy) setProcessingFeePaidBy(data.processingFeePaidBy);
-          if (data.transactionFee != null) setPlanTransactionFee(Number(data.transactionFee));
-          if (data.perTransactionFee != null)
-            setPlanPerTransactionFee(Number(data.perTransactionFee));
         }
       })
       .catch((err) => console.error("Failed to load organization settings:", err));
@@ -1019,13 +1010,8 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   const taxableSubtotal = Math.max(subtotal - discountAmount, 0);
   const taxAmount = Math.round(taxableSubtotal * taxRate * 100) / 100;
 
-  const feeBase = taxPaidBy === "CUSTOMER" ? taxableSubtotal + taxAmount : taxableSubtotal;
-  const processingFeeRaw = feeBase > 0 ? feeBase * planTransactionFee + planPerTransactionFee : 0;
-  const processingFee = Math.round(processingFeeRaw * 100) / 100;
-
   let total = taxableSubtotal;
   if (taxPaidBy === "CUSTOMER") total += taxAmount;
-  if (processingFeePaidBy === "CUSTOMER") total += processingFee;
   total = Math.round(total * 100) / 100;
 
   // Show loading while checking queue status
@@ -1879,12 +1865,6 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                       Tax ({(taxRate * 100).toFixed(2).replace(/\.?0+$/, "")}%)
                     </span>
                     <span>${taxAmount.toFixed(2)}</span>
-                  </div>
-                )}
-                {processingFeePaidBy === "CUSTOMER" && processingFee > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Processing Fee</span>
-                    <span>${processingFee.toFixed(2)}</span>
                   </div>
                 )}
                 <Separator className="my-2" />

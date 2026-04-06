@@ -1431,7 +1431,6 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
     const tax = Math.round(discountedSubtotal * taxRate * 100) / 100;
 
     const taxPaidBy = config.organization.taxPaidBy;
-    const processingFeePaidBy = config.organization.processingFeePaidBy;
     const plan = config.organization.subscription?.plan;
     const planTransactionFee = plan ? Number(plan.transactionFee) : 0;
     const planPerTransactionFee = plan ? Number(plan.perTransactionFee) : 0;
@@ -1443,7 +1442,6 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
 
     let total = discountedSubtotal;
     if (taxPaidBy === "CUSTOMER") total += tax;
-    if (processingFeePaidBy === "CUSTOMER") total += processingFee;
     total = Math.round(total * 100) / 100;
 
     // 4. Resolve User Contact and Billing Address
@@ -1794,19 +1792,6 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
       });
     }
 
-    // 7b2. Add processing fee line item (only when customer pays)
-    if (processingFeePaidBy === "CUSTOMER" && processingFee > 0) {
-      await db.lineItem.create({
-        data: {
-          invoiceId: invoice.id,
-          description: "Processing Fee",
-          quantity: 1,
-          unitPrice: processingFee,
-          total: processingFee,
-        },
-      });
-    }
-
     // 7c. Create Order record if cart contains store products
     const productItems = items.filter((i: CartItem) => i.type === "item");
     if (productItems.length > 0) {
@@ -1955,15 +1940,9 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
         tax > 0 && taxPaidBy === "CUSTOMER"
           ? `<tr><td style="padding: 4px 0;">Tax</td><td style="padding: 4px 0; text-align: right;">$${tax.toFixed(2)}</td></tr>`
           : "";
-      const processingFeeHtml =
-        processingFee > 0 && processingFeePaidBy === "CUSTOMER"
-          ? `<tr><td style="padding: 4px 0;">Processing Fee</td><td style="padding: 4px 0; text-align: right;">$${processingFee.toFixed(2)}</td></tr>`
-          : "";
+      const processingFeeHtml = "";
       const taxText = tax > 0 && taxPaidBy === "CUSTOMER" ? `Tax: $${tax.toFixed(2)}` : "";
-      const processingFeeText =
-        processingFee > 0 && processingFeePaidBy === "CUSTOMER"
-          ? `Processing Fee: $${processingFee.toFixed(2)}`
-          : "";
+      const processingFeeText = "";
 
       sendTemplatedEmail("checkout-receipt", [resolvedContact.email], {
         name: resolvedContact.firstName,
@@ -1994,10 +1973,7 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
     const taxPct = Math.round(customerTaxRate * 10000); // Adyen wants percentage × 100 (e.g. 6.25% = 625)
     const totalMinor = Math.round(total * 100);
     const customerTaxMinor = taxPaidBy === "CUSTOMER" ? Math.round(tax * 100) : 0;
-    const subtotalMinor =
-      totalMinor -
-      customerTaxMinor -
-      (processingFeePaidBy === "CUSTOMER" ? Math.round(processingFee * 100) : 0);
+    const subtotalMinor = totalMinor - customerTaxMinor;
 
     const adyenLineItems: AdyenLineItem[] = items.map((item: CartItem, index: number) => {
       const itemTotal = serverPrices.has(index)
@@ -2042,19 +2018,6 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
         amountExcludingTax: 0,
         taxAmount: 0,
         amountIncludingTax: 0,
-        taxPercentage: 0,
-      });
-    }
-
-    if (processingFeePaidBy === "CUSTOMER" && processingFee > 0) {
-      const feeMinor = Math.round(processingFee * 100);
-      adyenLineItems.push({
-        id: "processing-fee",
-        description: "Processing Fee",
-        quantity: 1,
-        amountExcludingTax: feeMinor,
-        taxAmount: 0,
-        amountIncludingTax: feeMinor,
         taxPercentage: 0,
       });
     }

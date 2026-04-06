@@ -38,6 +38,35 @@ const websiteConfigSchema = z.object({
   infoBox3Content: z.string().optional().nullable(),
 });
 
+async function getPublishEligibility(organizationId: string): Promise<{
+  canPublish: boolean;
+  publishBlockReason: string | null;
+}> {
+  // tenant-isolation-ok: AdyenPlatformAccount is a platform-level model
+  const platformAccount = await db.adyenPlatformAccount.findUnique({
+    where: { organizationId },
+    select: { onboardingStatus: true, storeId: true },
+  });
+
+  if (!platformAccount || platformAccount.onboardingStatus !== "VERIFIED") {
+    return {
+      canPublish: false,
+      publishBlockReason:
+        "Payment processing must be set up before publishing your site. Complete Adyen verification first.",
+    };
+  }
+
+  if (!platformAccount.storeId) {
+    return {
+      canPublish: false,
+      publishBlockReason:
+        "Payment processing setup is not finalized. Please complete the onboarding process.",
+    };
+  }
+
+  return { canPublish: true, publishBlockReason: null };
+}
+
 export async function GET() {
   try {
     const session = await getAuthSession();
@@ -52,21 +81,24 @@ export async function GET() {
       return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
-    const config = await db.websiteConfig.findUnique({
-      where: {
-        organizationId: organizationId,
-      },
-    });
+    const [config, publishEligibility] = await Promise.all([
+      db.websiteConfig.findUnique({
+        where: { organizationId },
+      }),
+      getPublishEligibility(organizationId),
+    ]);
 
-    // If config exists, mark the subdomain as owned by this org
+    const publishStatus = {
+      canPublish: session.user.isSuperAdmin || publishEligibility.canPublish,
+      publishBlockReason: session.user.isSuperAdmin ? null : publishEligibility.publishBlockReason,
+      adyenOnboardingComplete: publishEligibility.canPublish,
+    };
+
     if (config) {
-      return NextResponse.json({
-        ...config,
-        subdomainOwned: true, // Flag to indicate this org owns the subdomain
-      });
+      return NextResponse.json({ ...config, subdomainOwned: true, ...publishStatus });
     }
 
-    return NextResponse.json({});
+    return NextResponse.json(publishStatus);
   } catch (error) {
     console.error("Error fetching website config:", error);
     return NextResponse.json({ error: "Failed to fetch website config" }, { status: 500 });
@@ -83,6 +115,15 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const validatedData = websiteConfigSchema.parse(body);
 
+    if (validatedData.isPublished === true && !session.user.isSuperAdmin) {
+      const { canPublish, publishBlockReason } = await getPublishEligibility(
+        session.user.organizationId
+      );
+      if (!canPublish) {
+        return NextResponse.json({ error: publishBlockReason }, { status: 403 });
+      }
+    }
+
     const config = await db.websiteConfig.upsert({
       where: {
         organizationId: session.user.organizationId,
@@ -94,8 +135,14 @@ export async function PUT(request: NextRequest) {
       },
     });
 
-    // Include subdomainOwned flag so frontend knows this org owns this subdomain
-    return NextResponse.json({ ...config, subdomainOwned: true });
+    const publishEligibility = await getPublishEligibility(session.user.organizationId);
+    const publishStatus = {
+      canPublish: session.user.isSuperAdmin || publishEligibility.canPublish,
+      publishBlockReason: session.user.isSuperAdmin ? null : publishEligibility.publishBlockReason,
+      adyenOnboardingComplete: publishEligibility.canPublish,
+    };
+
+    return NextResponse.json({ ...config, subdomainOwned: true, ...publishStatus });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
