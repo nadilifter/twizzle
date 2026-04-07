@@ -163,6 +163,18 @@ export const CampaignWizard = forwardRef<CampaignWizardHandle, Props>(function C
 
   const segmentInfo = useMemo(() => calculateSegmentsClient(messageBody), [messageBody]);
 
+  const mobilePreviewHtml = useMemo(() => {
+    if (!previewHtml || previewDevice !== "mobile") return previewHtml;
+    const mobileStyles = `<style type="text/css">
+      table { max-width: 100% !important; width: 100% !important; }
+      td { word-break: break-word !important; }
+      .email-container { width: 100% !important; max-width: 100% !important; }
+      .email-content { padding: 24px 16px !important; }
+      img { max-width: 100% !important; height: auto !important; }
+    </style>`;
+    return previewHtml.replace("</head>", `${mobileStyles}\n</head>`);
+  }, [previewHtml, previewDevice]);
+
   const displayRecipientCount = useMemo(() => {
     if (targetType === "SPECIFIC_USERS") return targetUserIds.length;
     return recipientCount;
@@ -862,7 +874,8 @@ export const CampaignWizard = forwardRef<CampaignWizardHandle, Props>(function C
                   )}
                   {previewHtml ? (
                     <iframe
-                      srcDoc={previewHtml}
+                      key={previewDevice}
+                      srcDoc={mobilePreviewHtml}
                       className={cn(
                         "w-full border-0 bg-white transition-all duration-300",
                         previewDevice === "desktop" ? "h-[450px]" : "h-[550px]"

@@ -188,6 +188,7 @@ src/app/api/sites/[slug]/competitions/[id]/eligibility/route.ts
 src/app/api/sites/[slug]/discount/validate/route.ts
 src/app/api/sites/[slug]/info/route.ts
 src/app/api/sites/[slug]/contact/route.ts
+src/app/api/sites/[slug]/receipt/[invoiceId]/route.ts
 
 # --- User-scoped routes (no org data, personal to user) ---
 src/app/api/avatar/route.ts

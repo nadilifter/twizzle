@@ -22,7 +22,7 @@ const ENV_CONFIG = {
     s3Bucket: "uplifter-gymnastics-assets",
   },
   development: {
-    baseDomain: "uplifterdev.com",
+    baseDomain: "upliftergymnastics-dev.com",
     useHttps: true,
     cdnDomain: null,
     s3Bucket: "uplifter-assets-dev",
@@ -292,7 +292,11 @@ export default withSentryConfig(nextConfig, {
   org: "uplifter-us-llc",
   project: "uplifter-nextjs",
   silent: !process.env.CI,
-  disableLogger: true,
   telemetry: false,
   widenClientFileUpload: true,
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
 });

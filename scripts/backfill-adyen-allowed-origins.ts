@@ -33,7 +33,7 @@ const FIXED_SUBDOMAINS = ["startup", "admin", "athletes"];
 const DOMAIN_MAP: Record<string, { baseDomain: string; https: boolean }> = {
   production: { baseDomain: "uplifter.app", https: true },
   staging: { baseDomain: "upliftergymnastics.com", https: true },
-  development: { baseDomain: "uplifterdev.com", https: true },
+  development: { baseDomain: "upliftergymnastics-dev.com", https: true },
   local: { baseDomain: "uplifter.localhost:3000", https: false },
 };
 
