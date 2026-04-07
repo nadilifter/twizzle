@@ -61,12 +61,12 @@ This repository is for our app focused on US gymnastics. It is intentionally opi
 
 The platform operates across four distinct environments:
 
-| Environment | Domain                   | Purpose               |
-| ----------- | ------------------------ | --------------------- |
-| Production  | `uplifter.app`           | Live customer traffic |
-| Staging     | `upliftergymnastics.com` | QA/UAT testing        |
-| Development | `uplifterdev.com`        | Development testing   |
-| Local       | `*.localhost:3000`       | Local development     |
+| Environment | Domain                       | Purpose               |
+| ----------- | ---------------------------- | --------------------- |
+| Production  | `uplifter.app`               | Live customer traffic |
+| Staging     | `upliftergymnastics.com`     | QA/UAT testing        |
+| Development | `upliftergymnastics-dev.com` | Development testing   |
+| Local       | `*.localhost:3000`           | Local development     |
 
 ### Environment Configuration
 

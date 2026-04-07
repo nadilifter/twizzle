@@ -2,6 +2,11 @@
 
 <!-- One or two sentences. What changed and why? -->
 
+## Requires DB Migration?
+
+- [ ] Yes
+- [ ] No
+
 ## Type of change
 
 - [ ] New feature

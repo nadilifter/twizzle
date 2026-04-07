@@ -16,27 +16,39 @@ export async function GET(request: NextRequest) {
 
     const organizationId = session.user.organizationId;
 
-    const guardianLinks = await db.athleteGuardian.findMany({
-      where: {
-        userId: { not: null },
-        athlete: {
-          organizationAthletes: { some: { organizationId } },
+    // Get user IDs from two sources and union them:
+    // 1. PARENT org members (includes invited guardians who haven't added athletes yet)
+    // 2. AthleteGuardian links to org athletes (catches guardians without PARENT membership)
+    const [parentMembers, guardianLinks] = await Promise.all([
+      db.organizationMember.findMany({
+        where: { organizationId, role: "PARENT" },
+        select: { userId: true },
+      }),
+      db.athleteGuardian.findMany({
+        where: {
+          userId: { not: null },
+          athlete: {
+            organizationAthletes: { some: { organizationId } },
+          },
         },
-      },
-      select: { userId: true },
-      distinct: ["userId"],
-    });
+        select: { userId: true },
+        distinct: ["userId"],
+      }),
+    ]);
 
-    const guardianUserIds = guardianLinks
-      .map((g) => g.userId)
-      .filter((id): id is string => id != null);
+    const allUserIds = [
+      ...new Set([
+        ...parentMembers.map((m) => m.userId),
+        ...guardianLinks.map((g) => g.userId).filter((id): id is string => id != null),
+      ]),
+    ];
 
-    if (guardianUserIds.length === 0) {
+    if (allUserIds.length === 0) {
       return NextResponse.json({ data: [], total: 0, limit, offset });
     }
 
     const where: Record<string, unknown> = {
-      id: { in: guardianUserIds },
+      id: { in: allUserIds },
     };
 
     if (search) {
@@ -57,6 +69,11 @@ export async function GET(request: NextRequest) {
           phoneVerified: true,
           balance: true,
           status: true,
+          memberships: {
+            where: { organizationId, role: "PARENT" },
+            select: { status: true },
+            take: 1,
+          },
           athleteGuardians: {
             where: {
               athlete: {
@@ -84,6 +101,7 @@ export async function GET(request: NextRequest) {
       phoneVerified: u.phoneVerified,
       balance: u.balance,
       status: u.status,
+      memberStatus: u.memberships[0]?.status ?? null,
       athletes: u.athleteGuardians.map((ag) => ag.athlete),
     }));
 
