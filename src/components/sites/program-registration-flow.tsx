@@ -993,45 +993,54 @@ export function ProgramRegistrationFlow({
 
   // ---------- Add to cart ----------
 
-  const handleAddToCart = (goToCheckout: boolean) => {
+  const [isNavigatingToCheckout, setIsNavigatingToCheckout] = useState(false);
+
+  const addCartItems = (silent: boolean) => {
     if (!selectedAthlete) return;
 
     const athleteName = `${selectedAthlete.firstName} ${selectedAthlete.lastName}`.trim();
+    const opts = silent ? ({ silent: true } as const) : undefined;
 
     if (needsMembershipPurchase && selectedMembership) {
-      addItem({
-        referenceId: selectedMembership.id,
-        type: "membership",
-        name: selectedMembership.name,
-        description: `${selectedMembership.group.name} Membership`,
-        price: selectedMembership.price,
-        quantity: 1,
-        athleteId: selectedAthlete.id,
-        athleteName,
-        details: {
-          membershipInstanceId: selectedMembership.id,
-          groupId: selectedMembership.group.id,
-          groupName: selectedMembership.group.name,
-          billingInterval: selectedMembership.billingInterval,
+      addItem(
+        {
+          referenceId: selectedMembership.id,
+          type: "membership",
+          name: selectedMembership.name,
+          description: `${selectedMembership.group.name} Membership`,
+          price: selectedMembership.price,
+          quantity: 1,
+          athleteId: selectedAthlete.id,
+          athleteName,
+          details: {
+            membershipInstanceId: selectedMembership.id,
+            groupId: selectedMembership.group.id,
+            groupName: selectedMembership.group.name,
+            billingInterval: selectedMembership.billingInterval,
+          },
         },
-      });
+        opts
+      );
     }
 
     if (needsPass && selectedPass && !athleteHasPass) {
-      addItem({
-        referenceId: selectedPass.id,
-        type: "pass",
-        name: selectedPass.name,
-        description: `${selectedPass.sessionLimit} sessions / ${selectedPass.limitPeriod === "WEEKLY" ? "week" : "month"}`,
-        price: selectedPass.price,
-        quantity: 1,
-        athleteId: selectedAthlete.id,
-        athleteName,
-        details: {
-          passId: selectedPass.id,
-          billingInterval: selectedPass.billingInterval,
+      addItem(
+        {
+          referenceId: selectedPass.id,
+          type: "pass",
+          name: selectedPass.name,
+          description: `${selectedPass.sessionLimit} sessions / ${selectedPass.limitPeriod === "WEEKLY" ? "week" : "month"}`,
+          price: selectedPass.price,
+          quantity: 1,
+          athleteId: selectedAthlete.id,
+          athleteName,
+          details: {
+            passId: selectedPass.id,
+            billingInterval: selectedPass.billingInterval,
+          },
         },
-      });
+        opts
+      );
     }
 
     if (isPerInstance) {
@@ -1039,54 +1048,66 @@ export function ProgramRegistrationFlow({
       for (const instance of selectedInstances) {
         const instanceIsFull =
           instance.capacity !== undefined && instance.registrationCount >= instance.capacity;
-        addItem({
-          referenceId: instance.id,
+        addItem(
+          {
+            referenceId: instance.id,
+            type: "program",
+            name: `${program.name} – ${format(new Date(instance.date), "MMM d, yyyy")}`,
+            description: `${instance.startTime} – ${instance.endTime}`,
+            price: program.perSessionPrice || 0,
+            quantity: 1,
+            athleteId: selectedAthlete.id,
+            athleteName,
+            details: {
+              programId: program.id,
+              instanceId: instance.id,
+              date: instance.date,
+              startTime: instance.startTime,
+              waitlist: instanceIsFull && program.waitlistEnabled,
+              endTime: instance.endTime,
+              ...(uploadedFileId && { fileUploadId: uploadedFileId }),
+              ...(earlyAccessCode && { earlyAccessCode }),
+            },
+          },
+          opts
+        );
+      }
+    } else {
+      addItem(
+        {
+          referenceId: program.id,
           type: "program",
-          name: `${program.name} – ${format(new Date(instance.date), "MMM d, yyyy")}`,
-          description: `${instance.startTime} – ${instance.endTime}`,
-          price: program.perSessionPrice || 0,
+          name: program.name,
+          description: program.description || undefined,
+          price: isRecurringProgram ? program.recurringPrice || 0 : program.basePrice || 0,
           quantity: 1,
           athleteId: selectedAthlete.id,
           athleteName,
           details: {
             programId: program.id,
-            instanceId: instance.id,
-            date: instance.date,
-            startTime: instance.startTime,
-            waitlist: instanceIsFull && program.waitlistEnabled,
-            endTime: instance.endTime,
+            pricingModel: program.pricingModel,
+            billingInterval: program.billingInterval,
+            requiredMemberships: program.requiredMemberships.map((m) => m.id),
+            waitlist: isWaitlistMode,
             ...(uploadedFileId && { fileUploadId: uploadedFileId }),
             ...(earlyAccessCode && { earlyAccessCode }),
           },
-        });
-      }
-    } else {
-      addItem({
-        referenceId: program.id,
-        type: "program",
-        name: program.name,
-        description: program.description || undefined,
-        price: isRecurringProgram ? program.recurringPrice || 0 : program.basePrice || 0,
-        quantity: 1,
-        athleteId: selectedAthlete.id,
-        athleteName,
-        details: {
-          programId: program.id,
-          pricingModel: program.pricingModel,
-          billingInterval: program.billingInterval,
-          requiredMemberships: program.requiredMemberships.map((m) => m.id),
-          waitlist: isWaitlistMode,
-          ...(uploadedFileId && { fileUploadId: uploadedFileId }),
-          ...(earlyAccessCode && { earlyAccessCode }),
         },
-      });
+        opts
+      );
     }
+  };
+
+  const handleAddToCart = (goToCheckout: boolean) => {
+    if (!selectedAthlete) return;
 
     if (goToCheckout) {
-      setIsOpen(false);
-      router.push(`/checkout`);
+      setIsNavigatingToCheckout(true);
+      addCartItems(true);
+      router.push("/checkout");
     } else {
-      router.push(`/`);
+      addCartItems(false);
+      router.push("/");
     }
   };
 
@@ -2158,16 +2179,24 @@ export function ProgramRegistrationFlow({
                 <Button
                   className="w-full gap-2"
                   onClick={() => handleAddToCart(true)}
-                  disabled={!isPerInstance && isAlreadyFullyRegistered}
+                  disabled={isNavigatingToCheckout || (!isPerInstance && isAlreadyFullyRegistered)}
                 >
-                  <ClipboardList className="h-4 w-4" />
-                  {isWaitlistMode ? "Join Waitlist & Checkout" : "Register & Checkout"}
+                  {isNavigatingToCheckout ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ClipboardList className="h-4 w-4" />
+                  )}
+                  {isNavigatingToCheckout
+                    ? "Going to checkout…"
+                    : isWaitlistMode
+                      ? "Join Waitlist & Checkout"
+                      : "Register & Checkout"}
                 </Button>
                 <Button
                   variant="outline"
                   className="w-full gap-2"
                   onClick={() => handleAddToCart(false)}
-                  disabled={!isPerInstance && isAlreadyFullyRegistered}
+                  disabled={isNavigatingToCheckout || (!isPerInstance && isAlreadyFullyRegistered)}
                 >
                   <ShoppingCart className="h-4 w-4" />
                   {isWaitlistMode
