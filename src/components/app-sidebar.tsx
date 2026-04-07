@@ -13,6 +13,9 @@ import {
   ShoppingCart,
   UserCheck,
   Globe,
+  Search,
+  X,
+  Loader2,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 
@@ -25,7 +28,9 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
+  SidebarGroupContent,
   SidebarHeader,
+  SidebarInput,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -48,6 +53,8 @@ import {
   type FeatureKey,
   type FeatureToggles,
 } from "@/lib/feature-toggles";
+import { Label } from "@/components/ui/label";
+import { useSidebarSearch, type SidebarSearchResults } from "@/hooks/use-sidebar-search";
 import type { LucideIcon } from "lucide-react";
 
 type NavSecondaryItem = { title: string; url: string; icon: LucideIcon; external?: boolean };
@@ -627,6 +634,135 @@ function filterAccessPointsByFeatures(
   return accessPoints.filter((item) => !titlesToRemove.has(item.title));
 }
 
+const ENTITY_SECTIONS: {
+  key: keyof SidebarSearchResults;
+  label: string;
+  urlPrefix: string;
+  linkToDetail: boolean;
+}[] = [
+  {
+    key: "staff",
+    label: "Staff",
+    urlPrefix: "/dashboard/organization/staff/",
+    linkToDetail: true,
+  },
+  {
+    key: "guardians",
+    label: "Guardians",
+    urlPrefix: "/dashboard/athletes/guardians/",
+    linkToDetail: true,
+  },
+  {
+    key: "athletes",
+    label: "Athletes",
+    urlPrefix: "/dashboard/athletes/",
+    linkToDetail: true,
+  },
+  {
+    key: "programs",
+    label: "Programs",
+    urlPrefix: "/dashboard/registrations/programs/",
+    linkToDetail: true,
+  },
+  { key: "events", label: "Events", urlPrefix: "/dashboard/events/", linkToDetail: true },
+  {
+    key: "competitions",
+    label: "Competitions",
+    urlPrefix: "/dashboard/competitions/",
+    linkToDetail: true,
+  },
+  {
+    key: "memberships",
+    label: "Memberships",
+    urlPrefix: "/dashboard/athletes/memberships",
+    linkToDetail: false,
+  },
+  {
+    key: "categories",
+    label: "Categories",
+    urlPrefix: "/dashboard/registrations/categories/",
+    linkToDetail: true,
+  },
+  {
+    key: "seasons",
+    label: "Seasons",
+    urlPrefix: "/dashboard/registrations/seasons/",
+    linkToDetail: true,
+  },
+];
+
+function EntitySearchResults({
+  results,
+  isLoading,
+  show,
+}: {
+  results: SidebarSearchResults;
+  isLoading: boolean;
+  show: boolean;
+}) {
+  if (!show) return null;
+
+  const hasResults = ENTITY_SECTIONS.some((s) => results[s.key].length > 0);
+
+  if (isLoading && !hasResults) {
+    return (
+      <SidebarGroup>
+        <SidebarMenu>
+          {Array.from({ length: 2 }).map((_, i) => (
+            <SidebarMenuItem key={i}>
+              <SidebarMenuSkeleton />
+              <SidebarMenuSub>
+                <SidebarMenuSkeleton />
+                <SidebarMenuSkeleton />
+              </SidebarMenuSub>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      </SidebarGroup>
+    );
+  }
+
+  if (!hasResults) return null;
+
+  return (
+    <SidebarGroup>
+      <SidebarMenu>
+        {ENTITY_SECTIONS.map((section) => {
+          const items = results[section.key];
+          if (items.length === 0) return null;
+          return (
+            <SidebarMenuItem key={section.key}>
+              <SidebarMenuButton className="pointer-events-none">
+                <span className="font-medium">{section.label}</span>
+                {isLoading && (
+                  <Loader2 className="ml-auto size-3 animate-spin text-muted-foreground" />
+                )}
+              </SidebarMenuButton>
+              <SidebarMenuSub>
+                {items.map((entity) => (
+                  <SidebarMenuSubItem key={entity.id}>
+                    <SidebarMenuSubButton asChild>
+                      <Link
+                        href={
+                          section.linkToDetail
+                            ? `${section.urlPrefix}${entity.id}`
+                            : section.urlPrefix
+                        }
+                      >
+                        <span>{entity.name}</span>
+                      </Link>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                ))}
+              </SidebarMenuSub>
+            </SidebarMenuItem>
+          );
+        })}
+      </SidebarMenu>
+    </SidebarGroup>
+  );
+}
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const { isMobile } = useSidebar();
@@ -644,11 +780,46 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const isLoading = status === "loading";
 
+  // Search state
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
+  const { results: entityResults, isLoading: isEntitySearchLoading } =
+    useSidebarSearch(searchQuery);
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   // Filter navigation based on feature toggles
   const filteredNavMain = React.useMemo(
     () => filterNavByFeatures(data.navMain, features),
     [features]
   );
+
+  // Instant frontend filtering of nav items based on search query
+  const searchFilteredNav = React.useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return filteredNavMain;
+
+    return filteredNavMain
+      .map((section) => {
+        const sectionMatches = section.title.toLowerCase().includes(q);
+        if (sectionMatches) return section;
+        const matchingItems = section.items?.filter((item) => item.title.toLowerCase().includes(q));
+        if (matchingItems && matchingItems.length > 0) {
+          return { ...section, items: matchingItems };
+        }
+        return null;
+      })
+      .filter(Boolean) as typeof filteredNavMain;
+  }, [filteredNavMain, searchQuery]);
   const filteredAccessPoints = React.useMemo(
     () => filterAccessPointsByFeatures(data.navSecondaryAccessPoints, features),
     [features]
@@ -722,66 +893,120 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <OrganizationSwitcher />
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarMenu>
-            {!isFeaturesLoaded
-              ? Array.from({ length: 6 }).map((_, i) => (
-                  <SidebarMenuItem key={i}>
-                    <SidebarMenuSkeleton />
-                    <SidebarMenuSub>
-                      {Array.from({ length: 3 }).map((_, j) => (
-                        <SidebarMenuSkeleton key={j} />
-                      ))}
-                    </SidebarMenuSub>
-                  </SidebarMenuItem>
-                ))
-              : filteredNavMain.map((item) => (
-                  <Collapsible
-                    key={item.title}
-                    asChild
-                    defaultOpen={
-                      isMobile
-                        ? pathname.startsWith(item.url) ||
-                          item.items?.some((sub) => pathname.startsWith(sub.url))
-                        : true
-                    }
-                    className="group/collapsible"
+        <SidebarGroup className="pb-0 pt-1">
+          <SidebarGroupContent className="relative">
+            {!isFeaturesLoaded ? (
+              <Skeleton className="h-8 w-full rounded-md" />
+            ) : (
+              <>
+                <Label htmlFor="sidebar-search" className="sr-only">
+                  Search
+                </Label>
+                <SidebarInput
+                  ref={searchInputRef}
+                  id="sidebar-search"
+                  placeholder="Search..."
+                  className="pl-8 pr-8"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <Search className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 opacity-50 select-none" />
+                {searchQuery ? (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm opacity-50 hover:opacity-100"
                   >
-                    <SidebarMenuItem>
-                      <CollapsibleTrigger asChild>
-                        <SidebarMenuButton tooltip={item.title}>
-                          <span className="font-medium">{item.title}</span>
-                          <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                        </SidebarMenuButton>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <SidebarMenuSub>
-                          {item.items?.map((subItem) => (
-                            <SidebarMenuSubItem key={subItem.title}>
-                              <SidebarMenuSubButton asChild isActive={pathname === subItem.url}>
-                                <Link
-                                  href={subItem.url}
-                                  className="flex items-center justify-between w-full"
-                                >
-                                  <span>{subItem.title}</span>
-                                  {subItem.url === ACTION_ITEMS_URL ? (
-                                    <ActionItemsBadge />
-                                  ) : subItem.url === CHAT_URL ? (
-                                    <ChatUnreadBadge />
-                                  ) : (
-                                    <FeatureStatusIndicator url={subItem.url} />
-                                  )}
-                                </Link>
-                              </SidebarMenuSubButton>
-                            </SidebarMenuSubItem>
-                          ))}
-                        </SidebarMenuSub>
-                      </CollapsibleContent>
-                    </SidebarMenuItem>
-                  </Collapsible>
-                ))}
-          </SidebarMenu>
+                    <X className="size-4" />
+                    <span className="sr-only">Clear search</span>
+                  </button>
+                ) : (
+                  <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 hidden h-5 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline-flex">
+                    <span className="text-xs">⌘</span>K
+                  </kbd>
+                )}
+              </>
+            )}
+          </SidebarGroupContent>
         </SidebarGroup>
+        {(!isFeaturesLoaded || searchFilteredNav.length > 0) && (
+          <SidebarGroup>
+            <SidebarMenu>
+              {!isFeaturesLoaded
+                ? Array.from({ length: 6 }).map((_, i) => (
+                    <SidebarMenuItem key={i}>
+                      <SidebarMenuSkeleton />
+                      <SidebarMenuSub>
+                        {Array.from({ length: 3 }).map((_, j) => (
+                          <SidebarMenuSkeleton key={j} />
+                        ))}
+                      </SidebarMenuSub>
+                    </SidebarMenuItem>
+                  ))
+                : searchFilteredNav.map((item) => (
+                    <Collapsible
+                      key={item.title}
+                      asChild
+                      defaultOpen={
+                        searchQuery
+                          ? true
+                          : isMobile
+                            ? pathname.startsWith(item.url) ||
+                              item.items?.some((sub) => pathname.startsWith(sub.url))
+                            : true
+                      }
+                      className="group/collapsible"
+                    >
+                      <SidebarMenuItem>
+                        <CollapsibleTrigger asChild>
+                          <SidebarMenuButton tooltip={item.title}>
+                            <span className="font-medium">{item.title}</span>
+                            <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                          </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <SidebarMenuSub>
+                            {item.items?.map((subItem) => (
+                              <SidebarMenuSubItem key={subItem.title}>
+                                <SidebarMenuSubButton asChild isActive={pathname === subItem.url}>
+                                  <Link
+                                    href={subItem.url}
+                                    className="flex items-center justify-between w-full"
+                                  >
+                                    <span>{subItem.title}</span>
+                                    {subItem.url === ACTION_ITEMS_URL ? (
+                                      <ActionItemsBadge />
+                                    ) : subItem.url === CHAT_URL ? (
+                                      <ChatUnreadBadge />
+                                    ) : (
+                                      <FeatureStatusIndicator url={subItem.url} />
+                                    )}
+                                  </Link>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            ))}
+                          </SidebarMenuSub>
+                        </CollapsibleContent>
+                      </SidebarMenuItem>
+                    </Collapsible>
+                  ))}
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
+        <EntitySearchResults
+          results={entityResults}
+          isLoading={isEntitySearchLoading}
+          show={searchQuery.trim().length >= 2}
+        />
+        {searchQuery.trim() &&
+          isFeaturesLoaded &&
+          searchFilteredNav.length === 0 &&
+          !isEntitySearchLoading &&
+          !ENTITY_SECTIONS.some((s) => entityResults[s.key].length > 0) && (
+            <div className="px-4 py-6 text-center text-sm text-sidebar-foreground">
+              No results found
+            </div>
+          )}
         <NavSecondary items={navSecondary} isLoading={isNavSecondaryLoading} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
