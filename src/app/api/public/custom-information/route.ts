@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { isFeatureEnabled } from "@/lib/feature-resolver";
+import { checkApiRateLimit } from "@/lib/rate-limit";
 
 /**
  * GET /api/public/custom-information
@@ -10,6 +11,9 @@ import { isFeatureEnabled } from "@/lib/feature-resolver";
  *   programIds, competitionIds, membershipIds, passIds, eventIds
  */
 export async function GET(request: NextRequest) {
+  const rateLimited = await checkApiRateLimit(request, "public");
+  if (rateLimited) return rateLimited;
+
   try {
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get("organizationId");
