@@ -182,7 +182,7 @@ const result = await db.$transaction(async (tx) => {
 });
 ```
 
-**Never** trust `organizationId` from request bodies, query params, or headers. Always derive it from `session.user.organizationId`.
+**Never** trust `organizationId` from request bodies, query params, or headers in authenticated routes — always derive it from `session.user.organizationId`. **Exception:** public endpoints (`/api/public/`) serve users who may not be members of the target org (e.g., registering at a new club). These use `resolvePublicRequest()` from `src/lib/public-api.ts` to validate the client-provided org against the Host header subdomain.
 
 ### Data Fetching (Client Side)
 
@@ -569,7 +569,7 @@ There is currently no test suite configured. No Jest, Vitest, or Playwright setu
 Standard checklist from `src/app/api/README.md`:
 
 - [ ] Check `getAuthSession()` — return 401 if missing
-- [ ] Derive `organizationId` from `session.user.organizationId` only — never from request input
+- [ ] Derive `organizationId` from `session.user.organizationId` (authenticated routes) or `resolvePublicRequest` (`/api/public/` routes) — never raw from request input
 - [ ] Use `getScopedDb(organizationId)` for models in `TENANT_MODELS`
 - [ ] Filter relation-scoped models manually through the org chain
 - [ ] Inside `$transaction`, add a defensive org check before mutating

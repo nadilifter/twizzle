@@ -16,7 +16,7 @@ Read this before making changes. Cross-reference with `ARCHITECTURE.md` for deep
 
 ### 1. Never Trust Client-Provided `organizationId`
 
-Every API route must derive the organization from the authenticated session — never from query params, request body, or headers.
+Every **authenticated** API route must derive the organization from the session — never from query params, request body, or headers.
 
 ```typescript
 // CORRECT
@@ -25,6 +25,16 @@ const organizationId = session.user.organizationId;
 
 // WRONG — security vulnerability
 const { organizationId } = await request.json();
+```
+
+**Exception — public endpoints (`/api/public/`):** These serve users who may not be members of the target org (e.g., a parent registering at a new club). Use `resolvePublicRequest` from `src/lib/public-api.ts` to validate the client-provided `organizationId` against the Host header subdomain:
+
+```typescript
+import { resolvePublicRequest } from "@/lib/public-api";
+
+const orgResult = await resolvePublicRequest(request, body.organizationId);
+if (orgResult instanceof NextResponse) return orgResult;
+const { organizationId } = orgResult;
 ```
 
 ### 2. Always Use `getScopedDb` for Tenant-Scoped Models
@@ -174,6 +184,7 @@ Use TanStack React Table v8 (`@tanstack/react-table`). See `docs/data-table-migr
 | Custom React hooks           | `src/hooks/`                                     |
 | Shared UI components         | `src/components/`                                |
 | Type definitions             | `src/types/`                                     |
+| Public API org resolution    | `src/lib/public-api.ts`                          |
 | Zustand stores               | `src/store/`                                     |
 
 ---
@@ -258,7 +269,7 @@ Toggle between local and cloud storage with `USE_S3_STORAGE=false` (uses local f
 - **Don't use raw `db` client for tenant-scoped writes** — always use `getScopedDb` or include the org filter explicitly
 - **Don't use `new Date(dateString)` for date-only fields** — use `parseDateOnly()`
 - **Don't use `<input type="tel">`** — use `PhoneInput` component
-- **Don't trust `organizationId` from request bodies or query params** — always read from session
+- **Don't trust `organizationId` from request bodies or query params** — use `session.user.organizationId` for authenticated routes, or `resolvePublicRequest` for `/api/public/` routes
 - **Don't add `/sites/{slug}/` to client-side navigation hrefs** inside tenant site pages
 - **Don't mutate inside a transaction without first verifying org ownership** — `getScopedDb` doesn't propagate into `$transaction` callbacks
 - **Don't create new abstractions for one-off operations** — inline the logic
