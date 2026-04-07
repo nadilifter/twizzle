@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -12,11 +12,11 @@ import { toast } from "sonner";
 
 export default function EditAllProgramsCategoryPage() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [isSaving, setIsSaving] = React.useState(false);
-  const [imageUrl, setImageUrl] = React.useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     async function load() {
       try {
         const data = await api.get<{ imageUrl: string | null }>("/api/categories/all-programs");
@@ -30,7 +30,7 @@ export default function EditAllProgramsCategoryPage() {
     load();
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSaving(true);
     try {

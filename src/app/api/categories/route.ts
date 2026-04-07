@@ -6,7 +6,7 @@ import { z } from "zod";
 const createCategorySchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional().nullable(),
-  imageUrl: z.string().min(1).optional().nullable(),
+  imageUrl: z.string().min(1).url().optional().nullable(),
 });
 
 // GET /api/categories
@@ -30,37 +30,45 @@ export async function GET(request: NextRequest) {
       }),
     };
 
-    const [categories, totals, websiteConfig] = await Promise.all([
-      scopedDb.category.findMany({
-        where,
-        include: {
-          _count: {
-            select: {
-              programs: true,
-              events: true,
-              competitions: true,
+    const [categories, programCount, eventCount, competitionCount, websiteConfig] =
+      await Promise.all([
+        scopedDb.category.findMany({
+          where,
+          include: {
+            _count: {
+              select: {
+                programs: true,
+                events: true,
+                competitions: true,
+              },
             },
           },
-        },
-        orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
-      }),
-      Promise.all([scopedDb.program.count(), scopedDb.event.count(), scopedDb.competition.count()]),
-      db.websiteConfig.findUnique({
-        where: { organizationId: session.user.organizationId },
-        select: { allProgramsCategoryImageUrl: true },
-      }),
-    ]);
+          orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
+        }),
+        scopedDb.program.count(),
+        scopedDb.event.count(),
+        scopedDb.competition.count(),
+        db.websiteConfig.findUnique({
+          where: { organizationId: session.user.organizationId },
+          select: { allProgramsCategoryImageUrl: true },
+        }),
+      ]);
+
+    const totalItems = programCount + eventCount + competitionCount;
 
     return NextResponse.json({
       data: categories,
-      allPrograms: {
-        imageUrl: websiteConfig?.allProgramsCategoryImageUrl ?? null,
-        _count: {
-          programs: totals[0],
-          events: totals[1],
-          competitions: totals[2],
-        },
-      },
+      allPrograms:
+        totalItems > 0
+          ? {
+              imageUrl: websiteConfig?.allProgramsCategoryImageUrl ?? null,
+              _count: {
+                programs: programCount,
+                events: eventCount,
+                competitions: competitionCount,
+              },
+            }
+          : null,
     });
   } catch (error) {
     console.error("Error fetching categories:", error);

@@ -4,7 +4,7 @@ import { db } from "@/lib/db"; // tenant-isolation-ok: WebsiteConfig is scoped b
 import { z } from "zod";
 
 const updateSchema = z.object({
-  imageUrl: z.string().min(1).optional().nullable(),
+  imageUrl: z.string().min(1).url().optional().nullable(),
 });
 
 export async function GET() {
