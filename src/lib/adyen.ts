@@ -129,6 +129,19 @@ export function getAdyenEnvironmentName(): "TEST" | "LIVE" {
   return "TEST";
 }
 
+export const BANK_PAYMENT_METHODS = new Set([
+  "ach",
+  "paybybank_us",
+  "sepadirectdebit",
+  "ideal",
+  "banktransfer",
+]);
+
+export function resolvePaymentType(adyenMethod: string | undefined): "CARD" | "BANK" {
+  if (!adyenMethod) return "CARD";
+  return BANK_PAYMENT_METHODS.has(adyenMethod.toLowerCase()) ? "BANK" : "CARD";
+}
+
 export interface AdyenLineItem {
   id: string;
   description: string;
