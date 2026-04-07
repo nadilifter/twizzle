@@ -1,8 +1,7 @@
 name: Build and Deploy Dev Build [Dev]
 
 on:
-  push:
-    branches: [dev]
+  workflow_dispatch:
 
 concurrency:
   group: deploy-dev
