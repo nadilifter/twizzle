@@ -10,7 +10,11 @@ import { Loader2 } from "lucide-react";
 interface AdyenCheckoutProps {
   sessionId: string;
   sessionData: string;
-  onPaymentCompleted: (result: { resultCode: string; sessionData?: string }) => void;
+  onPaymentCompleted: (result: {
+    resultCode: string;
+    sessionData?: string;
+    paymentMethodType?: string;
+  }) => void;
   onError: (error: { name?: string; message?: string; resultCode?: string }) => void;
   countryCode?: string;
   componentType?: string;
@@ -69,8 +73,12 @@ export function AdyenCheckoutComponent({
             id: sessionId,
             sessionData,
           },
-          onPaymentCompleted: (result: any) => {
-            stableOnPaymentCompleted(result);
+          onPaymentCompleted: (result: any, component: any) => {
+            const paymentMethodType =
+              component?.data?.paymentMethod?.type ||
+              component?.state?.data?.paymentMethod?.type ||
+              undefined;
+            stableOnPaymentCompleted({ ...result, paymentMethodType });
           },
           onPaymentFailed: (result: any) => {
             stableOnError(result);

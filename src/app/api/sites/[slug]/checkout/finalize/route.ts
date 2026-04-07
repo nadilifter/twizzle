@@ -19,7 +19,7 @@ import { logger } from "@/lib/logger";
  */
 export async function POST(request: NextRequest, { params }: { params: { slug: string } }) {
   try {
-    const { invoiceId } = await request.json();
+    const { invoiceId, paymentMethodType } = await request.json();
 
     if (!invoiceId || typeof invoiceId !== "string") {
       return NextResponse.json({ error: "Missing invoiceId" }, { status: 400 });
@@ -80,7 +80,11 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
             invoiceId: inv.id,
             userId: invoice.userId || undefined,
             amount: paymentAmount,
-            method: "CARD",
+            method: ["ach", "paybybank_us", "sepadirectdebit", "ideal", "banktransfer"].includes(
+              (paymentMethodType || "").toLowerCase()
+            )
+              ? "BANK"
+              : "CARD",
             status: "COMPLETED",
             processedAt: new Date(),
           },
@@ -97,7 +101,7 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
             amount: paymentAmount,
             currency: "USD",
             status: "SETTLED",
-            method: "card",
+            method: paymentMethodType || "card",
             description: `Online payment – ${inv.reference}`,
             settledAt: new Date(),
             feeRate: finPlan ? Number(finPlan.transactionFee) : null,
