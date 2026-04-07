@@ -83,6 +83,19 @@ export async function GET(
       );
     }
 
+    // Check if expired by superseding re-invite (status set to EXPIRED but expiresAt still in future)
+    if (invitation.status === "EXPIRED") {
+      return NextResponse.json(
+        {
+          valid: false,
+          error:
+            "This invitation has expired. Please contact the administrator for a new invitation.",
+          errorCode: "EXPIRED",
+        },
+        { status: 400 }
+      );
+    }
+
     // Check if cancelled
     if (invitation.status === "CANCELLED") {
       return NextResponse.json(
@@ -176,8 +189,8 @@ export async function POST(
       );
     }
 
-    // Check if expired
-    if (invitation.expiresAt < new Date()) {
+    // Check if expired (by time or by superseding re-invite)
+    if (invitation.status === "EXPIRED" || invitation.expiresAt < new Date()) {
       return NextResponse.json(
         { success: false, error: "This invitation has expired" },
         { status: 400 }

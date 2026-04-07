@@ -3,6 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendTemplatedEmail } from "@/lib/email";
 import { getBaseUrl } from "@/lib/env-domains";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 import crypto from "crypto";
 
@@ -48,13 +49,12 @@ export async function POST(request: NextRequest) {
       select: { id: true, name: true, email: true },
     });
 
-    await db.$transaction(async (tx) => {
+    const invitation = await db.$transaction(async (tx) => {
       let userId: string;
 
       if (existingUser) {
         userId = existingUser.id;
 
-        // Ensure they have a membership to this org (skip if one already exists)
         const existingMembership = await tx.organizationMember.findFirst({
           where: {
             organizationId: session.user.organizationId,
@@ -94,7 +94,16 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      await tx.organizationInvitation.create({
+      await tx.organizationInvitation.updateMany({
+        where: {
+          email: validatedData.email,
+          organizationId: session.user.organizationId,
+          status: "PENDING",
+        },
+        data: { status: "EXPIRED" },
+      });
+
+      return tx.organizationInvitation.create({
         data: {
           email: validatedData.email,
           token: invitationToken,
@@ -106,18 +115,31 @@ export async function POST(request: NextRequest) {
       });
     });
 
-    if (existingUser) {
-      await sendTemplatedEmail("invitation-existing-user", [validatedData.email], {
-        name: existingUser.name,
-        inviterName: session.user.name || "A team member",
-        organizationName: organization.name,
-        joinUrl: inviteUrl,
+    try {
+      if (existingUser) {
+        await sendTemplatedEmail("invitation-existing-user", [validatedData.email], {
+          name: existingUser.name,
+          inviterName: session.user.name || "A team member",
+          organizationName: organization.name,
+          joinUrl: inviteUrl,
+        });
+      } else {
+        await sendTemplatedEmail("invitation", [validatedData.email], {
+          inviterName: session.user.name || "A team member",
+          organizationName: organization.name,
+          inviteUrl,
+        });
+      }
+
+      await db.organizationInvitation.update({
+        where: { id: invitation.id },
+        data: { emailSentAt: new Date() },
       });
-    } else {
-      await sendTemplatedEmail("invitation", [validatedData.email], {
-        inviterName: session.user.name || "A team member",
-        organizationName: organization.name,
-        inviteUrl,
+    } catch (emailError) {
+      logger.error("Failed to send guardian invitation email", {
+        email: validatedData.email,
+        invitationId: invitation.id,
+        error: emailError instanceof Error ? emailError.message : String(emailError),
       });
     }
 
