@@ -25,8 +25,8 @@ log_step() { echo -e "${BLUE}[STEP]${NC} $1"; }
 
 echo ""
 echo "========================================"
-echo "   Uplifter Staging Deployment"
-echo "   Target: upliftergymnastics.com"
+echo "   Uplifter Development Deployment"
+echo "   Target: upliftergymnastics-dev.com"
 echo "========================================"
 echo ""
 
@@ -36,7 +36,7 @@ if ! ssh -o ConnectTimeout=5 "$SSH_HOST" "echo 'connected'" > /dev/null 2>&1; th
     log_error "Cannot connect to $SSH_HOST"
     log_info "Make sure your SSH config is set up correctly:"
     log_info "  Host uplifter-development"
-    log_info "    HostName 54.92.161.196"
+    log_info "    HostName 32.193.75.48"
     log_info "    User ec2-user"
     log_info "    IdentityFile ~/.ssh/uplifter-staging.pem"
     exit 1
@@ -164,6 +164,6 @@ sudo docker ps --filter "name=uplifter" --format "table {{.Names}}\t{{.Status}}\
 ENDSSH
 
 echo ""
-log_info "Staging deployment complete!"
+log_info "Development deployment complete!"
 log_info "Site: https://upliftergymnastics-dev.com"
 echo ""

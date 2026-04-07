@@ -56,12 +56,12 @@ The platform routes by subdomain. A single Next.js deployment serves every porta
 
 **Environments:**
 
-| Env         | Base Domain              | Notes            |
-| ----------- | ------------------------ | ---------------- |
-| Production  | `uplifter.app`           | Live traffic     |
-| Staging     | `upliftergymnastics.com` | QA/UAT           |
-| Development | `uplifterdev.com`        | Team dev testing |
-| Local       | `*.localhost:3000`       | Local dev        |
+| Env         | Base Domain                  | Notes            |
+| ----------- | ---------------------------- | ---------------- |
+| Production  | `uplifter.app`               | Live traffic     |
+| Staging     | `upliftergymnastics.com`     | QA/UAT           |
+| Development | `upliftergymnastics-dev.com` | Team dev testing |
+| Local       | `*.localhost:3000`           | Local dev        |
 
 **Tenant site rewriting:** A visit to `gym-name.uplifter.app/checkout` is rewritten internally to `/sites/gym-name/checkout`. Client-side navigation inside tenant sites must use simple paths (`/checkout`, `/register`) — never include the `/sites/{slug}/` prefix in `Link` hrefs or `router.push` calls. The middleware inserts that prefix transparently.
 
