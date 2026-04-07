@@ -49,30 +49,17 @@ function _isInsideScopedQuery(): boolean {
 // when tenant-model queries are executed without organizationId. In production,
 // export the raw client with zero overhead.
 function _createDevWarningDb(client: PrismaClient) {
-  const WATCHED_ACTIONS = new Set([
-    "findMany",
-    "findFirst",
-    "count",
-    "update",
-    "updateMany",
-    "delete",
-    "deleteMany",
-  ]);
-
-  function warnIfUnscoped(model: string, action: string, args: any) {
+  function warnIfMissingOrgScope(model: string, action: string, hasOrgId: boolean) {
     if (
       !_isInsideScopedQuery() &&
-      WATCHED_ACTIONS.has(action) &&
       typeof _TENANT_SET !== "undefined" &&
-      _TENANT_SET.has(model)
+      _TENANT_SET.has(model) &&
+      !hasOrgId
     ) {
-      const where = args?.where;
-      if (!where?.organizationId) {
-        console.warn(
-          `\x1b[33m[TENANT WARNING]\x1b[0m ${action} on ${model} without organizationId. ` +
-            `Use getScopedDb() or add organizationId to the where clause.`
-        );
-      }
+      console.warn(
+        `\x1b[33m[TENANT WARNING]\x1b[0m ${action} on ${model} without organizationId. ` +
+          `Use getScopedDb() or add organizationId to the query.`
+      );
     }
   }
 
@@ -80,31 +67,51 @@ function _createDevWarningDb(client: PrismaClient) {
     query: {
       $allModels: {
         async findMany({ model, args, query }) {
-          warnIfUnscoped(model, "findMany", args);
+          warnIfMissingOrgScope(model, "findMany", !!args?.where?.organizationId);
           return query(args);
         },
         async findFirst({ model, args, query }) {
-          warnIfUnscoped(model, "findFirst", args);
+          warnIfMissingOrgScope(model, "findFirst", !!args?.where?.organizationId);
+          return query(args);
+        },
+        async findUnique({ model, args, query }) {
+          warnIfMissingOrgScope(model, "findUnique", !!args?.where?.organizationId);
           return query(args);
         },
         async count({ model, args, query }) {
-          warnIfUnscoped(model, "count", args);
+          warnIfMissingOrgScope(model, "count", !!args?.where?.organizationId);
+          return query(args);
+        },
+        async create({ model, args, query }) {
+          warnIfMissingOrgScope(model, "create", !!args?.data?.organizationId);
+          return query(args);
+        },
+        async createMany({ model, args, query }) {
+          const data = args?.data;
+          const hasOrgId = Array.isArray(data)
+            ? data.length > 0 && data.every((d: any) => d.organizationId)
+            : !!data?.organizationId;
+          warnIfMissingOrgScope(model, "createMany", hasOrgId);
           return query(args);
         },
         async update({ model, args, query }) {
-          warnIfUnscoped(model, "update", args);
+          warnIfMissingOrgScope(model, "update", !!args?.where?.organizationId);
           return query(args);
         },
         async updateMany({ model, args, query }) {
-          warnIfUnscoped(model, "updateMany", args);
+          warnIfMissingOrgScope(model, "updateMany", !!args?.where?.organizationId);
           return query(args);
         },
         async delete({ model, args, query }) {
-          warnIfUnscoped(model, "delete", args);
+          warnIfMissingOrgScope(model, "delete", !!args?.where?.organizationId);
           return query(args);
         },
         async deleteMany({ model, args, query }) {
-          warnIfUnscoped(model, "deleteMany", args);
+          warnIfMissingOrgScope(model, "deleteMany", !!args?.where?.organizationId);
+          return query(args);
+        },
+        async upsert({ model, args, query }) {
+          warnIfMissingOrgScope(model, "upsert", !!args?.create?.organizationId);
           return query(args);
         },
       },
