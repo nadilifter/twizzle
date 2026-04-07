@@ -103,6 +103,7 @@ interface CredentialSpec {
   envKeyApiKey: string;
   envKeyClientKey?: string;
   roles: string[];
+  requiresManualSetup?: boolean;
 }
 
 // Adyen silently strips parentheses from credential descriptions, so we avoid
@@ -127,6 +128,7 @@ const API_CREDENTIALS: CredentialSpec[] = [
     label: "Platform (Balance Platform)",
     descriptionPrefix: "Uplifter Platform",
     envKeyApiKey: "ADYEN_PLATFORM_API_KEY",
+    requiresManualSetup: true,
     roles: [
       "Balance Platform BCL role",
       "Balance Platform Manage Account Holders",
@@ -138,6 +140,7 @@ const API_CREDENTIALS: CredentialSpec[] = [
     label: "Legal Entity Management",
     descriptionPrefix: "Uplifter LEM",
     envKeyApiKey: "ADYEN_LEM_API_KEY",
+    requiresManualSetup: true,
     roles: ["Legal Entity Management API - All"],
   },
 ];
@@ -274,7 +277,7 @@ async function main() {
       console.log(`    Found existing: ${existing.id}`);
 
       if (!DRY_RUN) {
-        const keyResult = await mgmt.APICredentialsCompanyLevelApi.generateNewApiKey(
+        const keyResult = await mgmt.APIKeyCompanyLevelApi.generateNewApiKey(
           companyId,
           existing.id
         );
@@ -289,6 +292,18 @@ async function main() {
         if (spec.envKeyClientKey) generatedKeys[spec.envKeyClientKey] = "DRY_RUN_PLACEHOLDER";
         console.log(`    [dry-run] Would regenerate API key`);
       }
+    } else if (spec.requiresManualSetup) {
+      const existingEnvKey = process.env[spec.envKeyApiKey];
+      if (existingEnvKey) {
+        generatedKeys[spec.envKeyApiKey] = existingEnvKey;
+        console.log(`    Cannot auto-provision (requires Balance Platform / LEM roles).`);
+        console.log(`    Keeping existing ${spec.envKeyApiKey} from .env`);
+      } else {
+        console.log(`    SKIPPED — cannot auto-provision via Management API.`);
+        console.log(`    The bootstrap key lacks the required roles (${spec.roles.join(", ")}).`);
+        console.log(`    Create this credential manually in the Adyen Customer Area,`);
+        console.log(`    then set ${spec.envKeyApiKey} in your .env.`);
+      }
     } else {
       if (DRY_RUN) {
         console.log(`    [dry-run] Would create credential: ${credDescription}`);
@@ -296,14 +311,16 @@ async function main() {
         if (spec.envKeyClientKey) generatedKeys[spec.envKeyClientKey] = "DRY_RUN_PLACEHOLDER";
       } else {
         try {
+          const merchantAccount = process.env.ADYEN_MERCHANT_ACCOUNT;
           const created = await mgmt.APICredentialsCompanyLevelApi.createApiCredential(companyId, {
             description: credDescription,
             roles: spec.roles,
             allowedOrigins: [],
+            ...(merchantAccount ? { associatedMerchantAccounts: [merchantAccount] } : {}),
           });
           console.log(`    Created: ${created.id}`);
 
-          const keyResult = await mgmt.APICredentialsCompanyLevelApi.generateNewApiKey(
+          const keyResult = await mgmt.APIKeyCompanyLevelApi.generateNewApiKey(
             companyId,
             created.id
           );
@@ -316,6 +333,12 @@ async function main() {
           }
         } catch (error: any) {
           console.error(`    ERROR creating credential: ${error.message || error}`);
+          if (error.responseBody) {
+            console.error(`    Response body: ${error.responseBody}`);
+          }
+          if (error.apiError) {
+            console.error(`    API error: ${JSON.stringify(error.apiError, null, 2)}`);
+          }
           console.error(
             `    You may need to create this credential manually in the Customer Area.`
           );
