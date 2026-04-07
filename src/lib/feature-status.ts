@@ -37,9 +37,9 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     description: "User registration",
     apiRoutes: ["/api/auth"],
   },
-  "/dashboard/organization/users": {
+  "/dashboard/organization/staff": {
     status: "live",
-    description: "User management with full CRUD and permissions",
+    description: "Staff management with full CRUD and permissions",
     apiRoutes: ["/api/users"],
   },
 
@@ -239,10 +239,6 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
   "/dashboard/organization/schedules": {
     status: "live",
     description: "Schedule management uses sample data",
-  },
-  "/dashboard/organization/staff": {
-    status: "live",
-    description: "Staff management uses sample data",
   },
   "/dashboard/store/products": {
     status: "live",

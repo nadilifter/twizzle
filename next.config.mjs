@@ -206,6 +206,16 @@ const nextConfig = {
         destination: "/dashboard/website/competitions",
         permanent: true,
       },
+      {
+        source: "/dashboard/organization/users",
+        destination: "/dashboard/organization/staff",
+        permanent: true,
+      },
+      {
+        source: "/dashboard/organization/users/:id",
+        destination: "/dashboard/organization/staff/:id",
+        permanent: true,
+      },
     ];
   },
   async headers() {

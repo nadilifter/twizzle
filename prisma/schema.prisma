@@ -408,6 +408,7 @@ model OrganizationInvitation {
   invitedById    String
   expiresAt      DateTime
   acceptedAt     DateTime?
+  emailSentAt    DateTime?
   createdAt      DateTime                     @default(now())
   updatedAt      DateTime                     @updatedAt
 
