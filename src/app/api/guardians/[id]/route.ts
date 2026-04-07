@@ -21,6 +21,11 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
         phone: true,
         balance: true,
         status: true,
+        memberships: {
+          where: { organizationId, role: "PARENT" },
+          select: { status: true },
+          take: 1,
+        },
         contacts: {
           orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
         },
@@ -80,12 +85,18 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
       },
     });
 
-    if (!user || user.athleteGuardians.length === 0) {
+    const isParentMember = (user?.memberships?.length ?? 0) > 0;
+    const hasAthleteLinks = (user?.athleteGuardians?.length ?? 0) > 0;
+
+    if (!user || (!hasAthleteLinks && !isParentMember)) {
       return NextResponse.json({ error: "Guardian not found" }, { status: 404 });
     }
 
+    const { memberships, ...rest } = user;
+
     return NextResponse.json({
-      ...user,
+      ...rest,
+      memberStatus: memberships[0]?.status ?? null,
       athletes: user.athleteGuardians.map((ag) => {
         const { organizationAthletes, ...athleteRest } = ag.athlete;
         const orgAthlete = organizationAthletes[0];
