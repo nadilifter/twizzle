@@ -247,37 +247,42 @@ export function getScopedDb(organizationId: string) {
     return _scopedQueryStorage.run({ active: true }, fn);
   };
 
+  function injectWhereScope(args: any): void {
+    args.where = { ...(args.where || {}), organizationId };
+  }
+
+  async function verifyOwnership(model: string, args: any, action: string): Promise<void> {
+    const delegate = getModelDelegate(model);
+    const record = await scopedQuery(() =>
+      (_rawDb as any)[delegate].findFirst({
+        where: { ...(args.where || {}), organizationId },
+        select: { id: true },
+      })
+    );
+    if (!record) {
+      throw new TenantIsolationError(
+        `Cannot ${action} ${model}: Record not found or access denied`
+      );
+    }
+  }
+
   return _rawDb.$extends({
     query: {
       $allModels: {
         async findMany({ model, args, query }) {
-          if (TENANT_MODELS.includes(model as TenantModel)) {
-            (args as any).where = {
-              ...((args as any).where || {}),
-              organizationId,
-            };
-          }
+          if (_TENANT_SET.has(model)) injectWhereScope(args);
           return scopedQuery(() => query(args));
         },
         async findFirst({ model, args, query }) {
-          if (TENANT_MODELS.includes(model as TenantModel)) {
-            (args as any).where = {
-              ...((args as any).where || {}),
-              organizationId,
-            };
-          }
+          if (_TENANT_SET.has(model)) injectWhereScope(args);
           return scopedQuery(() => query(args));
         },
         async findUnique({ model, args, query }) {
-          if (TENANT_MODELS.includes(model as TenantModel)) {
+          if (_TENANT_SET.has(model)) {
             const delegate = getModelDelegate(model);
-
             return scopedQuery(() =>
               (_rawDb as any)[delegate].findFirst({
-                where: {
-                  ...((args as any).where || {}),
-                  organizationId,
-                },
+                where: { ...((args as any).where || {}), organizationId },
                 include: (args as any).include,
                 select: (args as any).select,
               })
@@ -286,126 +291,55 @@ export function getScopedDb(organizationId: string) {
           return scopedQuery(() => query(args));
         },
         async count({ model, args, query }) {
-          if (TENANT_MODELS.includes(model as TenantModel)) {
-            (args as any).where = {
-              ...((args as any).where || {}),
-              organizationId,
-            };
-          }
+          if (_TENANT_SET.has(model)) injectWhereScope(args);
           return scopedQuery(() => query(args));
         },
         async create({ model, args, query }) {
-          if (TENANT_MODELS.includes(model as TenantModel)) {
-            (args as any).data = {
-              ...((args as any).data || {}),
-              organizationId,
-            };
+          if (_TENANT_SET.has(model)) {
+            (args as any).data = { ...((args as any).data || {}), organizationId };
           }
           return scopedQuery(() => query(args));
         },
         async createMany({ model, args, query }) {
-          if (TENANT_MODELS.includes(model as TenantModel)) {
+          if (_TENANT_SET.has(model)) {
             const data = (args as any).data;
-            if (Array.isArray(data)) {
-              (args as any).data = data.map((item: any) => ({
-                ...item,
-                organizationId,
-              }));
-            } else {
-              (args as any).data = {
-                ...data,
-                organizationId,
-              };
-            }
+            (args as any).data = Array.isArray(data)
+              ? data.map((item: any) => ({ ...item, organizationId }))
+              : { ...data, organizationId };
           }
           return scopedQuery(() => query(args));
         },
         async update({ model, args, query }) {
-          if (TENANT_MODELS.includes(model as TenantModel)) {
-            const delegate = getModelDelegate(model);
-            const whereClause = (args as any).where || {};
-
-            const existingRecord = await scopedQuery(() =>
-              (_rawDb as any)[delegate].findFirst({
-                where: {
-                  ...whereClause,
-                  organizationId,
-                },
-                select: { id: true },
-              })
-            );
-
-            if (!existingRecord) {
-              throw new TenantIsolationError(
-                `Cannot update ${model}: Record not found or access denied`
-              );
-            }
-          }
+          if (_TENANT_SET.has(model)) await verifyOwnership(model, args, "update");
           return scopedQuery(() => query(args));
         },
         async updateMany({ model, args, query }) {
-          if (TENANT_MODELS.includes(model as TenantModel)) {
-            (args as any).where = {
-              ...((args as any).where || {}),
-              organizationId,
-            };
-          }
+          if (_TENANT_SET.has(model)) injectWhereScope(args);
           return scopedQuery(() => query(args));
         },
         async delete({ model, args, query }) {
-          if (TENANT_MODELS.includes(model as TenantModel)) {
-            const delegate = getModelDelegate(model);
-            const whereClause = (args as any).where || {};
-
-            const existingRecord = await scopedQuery(() =>
-              (_rawDb as any)[delegate].findFirst({
-                where: {
-                  ...whereClause,
-                  organizationId,
-                },
-                select: { id: true },
-              })
-            );
-
-            if (!existingRecord) {
-              throw new TenantIsolationError(
-                `Cannot delete ${model}: Record not found or access denied`
-              );
-            }
-          }
+          if (_TENANT_SET.has(model)) await verifyOwnership(model, args, "delete");
           return scopedQuery(() => query(args));
         },
         async deleteMany({ model, args, query }) {
-          if (TENANT_MODELS.includes(model as TenantModel)) {
-            (args as any).where = {
-              ...((args as any).where || {}),
-              organizationId,
-            };
-          }
+          if (_TENANT_SET.has(model)) injectWhereScope(args);
           return scopedQuery(() => query(args));
         },
         async upsert({ model, args, query }) {
-          if (TENANT_MODELS.includes(model as TenantModel)) {
+          if (_TENANT_SET.has(model)) {
             const delegate = getModelDelegate(model);
-            const whereClause = (args as any).where || {};
-
-            const existingRecord = await scopedQuery(() =>
+            const existing = await scopedQuery(() =>
               (_rawDb as any)[delegate].findFirst({
-                where: whereClause,
+                where: (args as any).where || {},
                 select: { id: true, organizationId: true },
               })
             );
-
-            if (existingRecord && (existingRecord as any).organizationId !== organizationId) {
+            if (existing && (existing as any).organizationId !== organizationId) {
               throw new TenantIsolationError(
                 `Cannot upsert ${model}: Record belongs to a different organization`
               );
             }
-
-            (args as any).create = {
-              ...((args as any).create || {}),
-              organizationId,
-            };
+            (args as any).create = { ...((args as any).create || {}), organizationId };
           }
           return scopedQuery(() => query(args));
         },
