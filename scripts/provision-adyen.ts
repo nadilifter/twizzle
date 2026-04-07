@@ -38,7 +38,7 @@ type Environment = "production" | "staging" | "development" | "local";
 const ADMIN_URLS: Record<Environment, string> = {
   production: "https://admin.uplifter.app",
   staging: "https://admin.upliftergymnastics.com",
-  development: "https://admin.uplifterdev.com",
+  development: "https://admin.upliftergymnastics-dev.com",
   local: process.env.WEBHOOK_TUNNEL_URL || "http://localhost:3000",
 };
 
