@@ -296,7 +296,6 @@ export async function createTokenizationSession(
       channel: "Web" as any,
       countryCode: "US",
       allowedPaymentMethods: getCheckoutAllowedPaymentMethods(),
-      enableRecurring: true,
       storePaymentMethodMode: storeMode as any,
       recurringProcessingModel: "Subscription" as any,
       shopperInteraction: "Ecommerce" as any,
