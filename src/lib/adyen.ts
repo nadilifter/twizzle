@@ -420,12 +420,14 @@ export async function chargeSubscription(
 }
 
 /**
- * Verify Adyen webhook HMAC signature
+ * Verify Adyen standard webhook HMAC signature.
  *
  * @param payload - The raw request body as a string
- * @param hmacSignature - The HMAC signature from the request headers
+ * @param hmacSignature - The HMAC signature, extracted from header or body via extractHmacSignature.
+ *   If provided, it is injected into the notification item so the library validates it regardless
+ *   of where it came from. The library otherwise reads from additionalData.hmacSignature.
  */
-export function verifyWebhookSignature(payload: string, hmacSignature: string): boolean {
+export function verifyWebhookSignature(payload: string, hmacSignature?: string): boolean {
   const hmacKey = process.env.ADYEN_WEBHOOK_HMAC_KEY;
   if (!hmacKey) {
     console.error("ADYEN_WEBHOOK_HMAC_KEY is not set - cannot verify webhook signature");
@@ -436,7 +438,6 @@ export function verifyWebhookSignature(payload: string, hmacSignature: string): 
     const { hmacValidator } = require("@adyen/api-library");
     const validator = new hmacValidator();
 
-    // Parse the notification item from the payload
     const notificationRequest = JSON.parse(payload);
     const notificationItem = notificationRequest.notificationItems?.[0]?.NotificationRequestItem;
 
@@ -445,11 +446,44 @@ export function verifyWebhookSignature(payload: string, hmacSignature: string): 
       return false;
     }
 
+    // If the signature was found outside of additionalData (e.g. a header), inject it so
+    // the library can validate it regardless of where Adyen chose to send it.
+    if (hmacSignature) {
+      notificationItem.additionalData = {
+        ...notificationItem.additionalData,
+        hmacSignature,
+      };
+    }
+
     return validator.validateHMAC(notificationItem, hmacKey);
   } catch (error) {
     console.error("Error verifying webhook signature:", safeErrorDetail(error));
     return false;
   }
+}
+
+/**
+ * Extract the HMAC signature from an Adyen webhook request.
+ *
+ * Adyen embeds the HMAC in different places depending on webhook type:
+ * - Standard payment webhooks: body.notificationItems[0].NotificationRequestItem.additionalData.hmacSignature
+ * - Balance Platform webhooks: body.HmacSignature (top-level)
+ * - Some configurations may send it as an HTTP header (hmacsignature / hmac-signature)
+ *
+ * Checks in order: header → BP body field → standard body field.
+ */
+export function extractHmacSignature(headers: Headers, parsedBody: any): string {
+  const fromHeader = headers.get("hmacsignature") || headers.get("hmac-signature") || "";
+  if (fromHeader) return fromHeader;
+
+  if (parsedBody?.HmacSignature) return parsedBody.HmacSignature;
+
+  const notificationItem = parsedBody?.notificationItems?.[0]?.NotificationRequestItem;
+  if (notificationItem?.additionalData?.hmacSignature) {
+    return notificationItem.additionalData.hmacSignature;
+  }
+
+  return "";
 }
 
 /**

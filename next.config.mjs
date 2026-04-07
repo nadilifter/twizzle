@@ -22,7 +22,7 @@ const ENV_CONFIG = {
     s3Bucket: "uplifter-gymnastics-assets",
   },
   development: {
-    baseDomain: "uplifterdev.com",
+    baseDomain: "upliftergymnastics-dev.com",
     useHttps: true,
     cdnDomain: null,
     s3Bucket: "uplifter-assets-dev",

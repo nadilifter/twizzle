@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { checkApiRateLimit } from "@/lib/rate-limit";
 
 const validateSchema = z.object({
   code: z.string().min(1, "Discount code is required").toUpperCase(),
@@ -12,6 +13,9 @@ const validateSchema = z.object({
  * Public endpoint to validate a discount code for site checkout.
  */
 export async function POST(request: NextRequest, { params }: { params: { slug: string } }) {
+  const rateLimited = await checkApiRateLimit(request, "discount-validate");
+  if (rateLimited) return rateLimited;
+
   try {
     const config = await db.websiteConfig.findUnique({
       where: { subdomain: params.slug },

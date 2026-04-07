@@ -16,7 +16,7 @@ if (!session) {
 const organizationId = session.user.organizationId;
 ```
 
-**Never** use an `organizationId` from the request body, query parameters, or form data.
+**Never** use an `organizationId` from the request body, query parameters, or form data in authenticated routes. For public endpoints, see Pattern 4 below.
 
 ### Pattern 1: Direct `organizationId` Models (use `getScopedDb`)
 
@@ -92,6 +92,38 @@ const result = await db.$transaction(async (tx) => {
 });
 ```
 
+### Pattern 4: Public Endpoints (`/api/public/`)
+
+Public endpoints serve users who may not be members of the target organization (e.g., a parent registering their child at a new club). `session.user.organizationId` would be wrong or empty in these cases. Use `resolvePublicRequest` to validate the client-provided `organizationId` against the Host header subdomain:
+
+```typescript
+import { resolvePublicRequest } from "@/lib/public-api";
+
+// For GET — org from query params
+const { searchParams } = new URL(request.url);
+const result = await resolvePublicRequest(request, searchParams.get("organizationId"));
+if (result instanceof NextResponse) return result;
+const { organizationId } = result;
+
+// For POST — org from body
+const body = await request.json();
+const result = await resolvePublicRequest(request, body.organizationId);
+if (result instanceof NextResponse) return result;
+const { organizationId } = result;
+```
+
+`resolvePublicRequest` also applies rate limiting. If the endpoint accesses athlete data, add a `verifyGuardian` check to prevent IDOR:
+
+```typescript
+async function verifyGuardian(athleteId: string, email: string): Promise<boolean> {
+  const guardian = await db.athleteGuardian.findFirst({
+    where: { athleteId, user: { email } },
+    select: { id: true },
+  });
+  return !!guardian;
+}
+```
+
 ### Anti-Pattern: Check-Then-Act
 
 **Wrong** — verifies ownership then mutates without the filter:
@@ -125,7 +157,7 @@ Before shipping a new route, verify:
 - [ ] All `findMany` / `findFirst` / `count` calls are org-scoped
 - [ ] Create operations set `organizationId` (auto if using `getScopedDb`)
 - [ ] Update/delete operations use `getScopedDb` or include org in the where clause
-- [ ] No client-provided `organizationId` is trusted
+- [ ] No client-provided `organizationId` is trusted (session for authenticated routes; `resolvePublicRequest` for `/api/public/`)
 - [ ] Related-model queries filter through the org relation chain
 - [ ] Transaction mutations include a defensive org check inside the callback
 - [ ] Date-only fields use `parseDateOnly()` (see `.cursor/rules/date-handling.mdc`)
