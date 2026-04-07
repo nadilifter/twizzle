@@ -96,10 +96,10 @@ export async function POST(request: NextRequest) {
         logger.debug("Unhandled recurring webhook event type", { eventCode: tokenData.eventCode });
     }
 
-    return NextResponse.json({ notificationResponse: "[accepted]" });
+    return NextResponse.json({ notificationResponse: "[accepted]" }, { status: 200 });
   } catch (error) {
     console.error("Webhook processing error:", error);
-    return NextResponse.json({ notificationResponse: "[accepted]" });
+    return NextResponse.json({ notificationResponse: "[accepted]" }, { status: 200 });
   }
 }
 

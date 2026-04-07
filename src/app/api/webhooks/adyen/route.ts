@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     if (!notificationItem) {
       console.error("Invalid webhook payload - no notification item");
-      return NextResponse.json({ notificationResponse: "[accepted]" });
+      return NextResponse.json({ notificationResponse: "[accepted]" }, { status: 200 });
     }
 
     const {
@@ -105,10 +105,10 @@ export async function POST(request: NextRequest) {
       await handleFailure(eventCode, notificationItem);
     }
 
-    return NextResponse.json({ notificationResponse: "[accepted]" });
+    return NextResponse.json({ notificationResponse: "[accepted]" }, { status: 200 });
   } catch (error) {
     console.error("Payment webhook processing error:", error);
-    return NextResponse.json({ notificationResponse: "[accepted]" });
+    return NextResponse.json({ notificationResponse: "[accepted]" }, { status: 200 });
   }
 }
 

@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     logger.info(
       "[BP-WEBHOOK] Standard notification format received — delegated to /api/webhooks/adyen"
     );
-    return NextResponse.json({ notificationResponse: "[accepted]" });
+    return NextResponse.json({ notificationResponse: "[accepted]" }, { status: 200 });
   }
 
   try {
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Always return accepted to prevent Adyen retries
-  return NextResponse.json({ notificationResponse: "[accepted]" });
+  return NextResponse.json({ notificationResponse: "[accepted]" }, { status: 200 });
 }
 
 // ---------------------------------------------------------------------------
