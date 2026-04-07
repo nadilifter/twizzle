@@ -36,7 +36,7 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getFeatureStatus } from "@/lib/feature-status";
 import { cn } from "@/lib/utils";
@@ -169,40 +169,36 @@ function FeatureStatusIndicator({ url }: { url: string }) {
   if (config.status === "live") return null;
   if (config.status === "demo") {
     return (
-      <TooltipProvider delayDuration={300}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="ml-auto">
-              <FlaskConical className="h-3 w-3 text-amber-500" />
-            </span>
-          </TooltipTrigger>
-          <TooltipContent side="right" className="max-w-[200px]">
-            <p className="font-medium text-xs">Beta</p>
-            <p className="text-xs opacity-80">
-              {config.description || "Using sample data for preview"}
-            </p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
-  }
-  // Partial: show only beta indicator
-  return (
-    <TooltipProvider delayDuration={300}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <span className="ml-auto">
+          <span className="ml-auto shrink-0">
             <FlaskConical className="h-3 w-3 text-amber-500" />
           </span>
         </TooltipTrigger>
         <TooltipContent side="right" className="max-w-[200px]">
           <p className="font-medium text-xs">Beta</p>
           <p className="text-xs opacity-80">
-            {config.description || "Some features use real data, others are in beta"}
+            {config.description || "Using sample data for preview"}
           </p>
         </TooltipContent>
       </Tooltip>
-    </TooltipProvider>
+    );
+  }
+  // Partial: show only beta indicator
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="ml-auto shrink-0">
+          <FlaskConical className="h-3 w-3 text-amber-500" />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="right" className="max-w-[200px]">
+        <p className="font-medium text-xs">Beta</p>
+        <p className="text-xs opacity-80">
+          {config.description || "Some features use real data, others are in beta"}
+        </p>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -521,7 +517,7 @@ const data = {
           url: "/dashboard/reports/membership-growth",
         },
         {
-          title: "Program Performance",
+          title: "Program Details",
           url: "/dashboard/reports/program-performance",
         },
         {
@@ -805,7 +801,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                   href={subItem.url}
                                   className="flex items-center justify-between w-full"
                                 >
-                                  <span>{subItem.title}</span>
+                                  <span className="truncate">{subItem.title}</span>
                                   {subItem.url === ACTION_ITEMS_URL ? (
                                     <ActionItemsBadge />
                                   ) : subItem.url === CHAT_URL ? (
