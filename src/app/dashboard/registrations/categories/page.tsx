@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -113,11 +113,11 @@ export default function CategoriesPage() {
     useCategories({ autoFetch: false });
   const { isFeatureEnabled } = useFeatures();
   const competitionsEnabled = isFeatureEnabled("competitions");
-  const [searchTerm, setSearchTerm] = React.useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const [isReorderDialogOpen, setIsReorderDialogOpen] = React.useState(false);
-  const [reorderCategories, setReorderCategories] = React.useState<Category[]>([]);
-  const [isSavingOrder, setIsSavingOrder] = React.useState(false);
+  const [isReorderDialogOpen, setIsReorderDialogOpen] = useState(false);
+  const [reorderCategories, setReorderCategories] = useState<Category[]>([]);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
 
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
@@ -125,8 +125,8 @@ export default function CategoriesPage() {
     useSensor(KeyboardSensor, {})
   );
 
-  const hasFetched = React.useRef(false);
-  React.useEffect(() => {
+  const hasFetched = useRef(false);
+  useEffect(() => {
     const params = { search: searchTerm };
     if (!hasFetched.current) {
       hasFetched.current = true;

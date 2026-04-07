@@ -59,7 +59,7 @@ export function CategoryTiles({
           href={category.id === "all" ? "/register" : `/register?category=${category.id}`}
           className="group relative flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all hover:shadow-lg hover:-translate-y-0.5"
         >
-          <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
+          <div className="relative aspect-video w-full overflow-hidden bg-muted">
             {category.imageUrl ? (
               <ProgressiveImage
                 src={category.imageUrl}

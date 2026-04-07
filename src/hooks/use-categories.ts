@@ -100,9 +100,7 @@ export function useCategories(options: UseCategoriesOptions = {}): UseCategories
     try {
       const response = await api.get<CategoriesListResponse>("/api/categories", queryParams);
       setCategories(response.data);
-      if (response.allPrograms) {
-        setAllPrograms(response.allPrograms);
-      }
+      setAllPrograms(response.allPrograms ?? null);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch categories";
       setError(message);

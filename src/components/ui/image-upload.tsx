@@ -18,7 +18,7 @@ const PREVIEW_CONFIG: Record<
   ImageUploadProps["type"],
   { container: string; objectFit: string; sizes: string }
 > = {
-  category: { container: "w-48 aspect-[16/10]", objectFit: "object-cover", sizes: "192px" },
+  category: { container: "w-48 aspect-video", objectFit: "object-cover", sizes: "192px" },
   program: { container: "w-48 aspect-video", objectFit: "object-cover", sizes: "192px" },
   hero: { container: "w-48 aspect-video", objectFit: "object-cover", sizes: "192px" },
   team: { container: "w-32 aspect-[3/4]", objectFit: "object-cover", sizes: "128px" },
