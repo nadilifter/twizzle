@@ -99,7 +99,7 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
             amount: paymentAmount,
             currency: "USD",
             status: "SETTLED",
-            method: paymentType,
+            method: paymentMethodType || "card",
             description: `Online payment – ${inv.reference}`,
             settledAt: new Date(),
             feeRate: finPlan ? Number(finPlan.transactionFee) : null,
