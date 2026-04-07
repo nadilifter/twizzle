@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthSession, hashPassword } from "@/lib/auth";
+import { hashPassword } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { passwordSchema } from "@/lib/password";
@@ -9,10 +9,10 @@ const acceptInvitationSchema = z
   .object({
     password: passwordSchema.optional(),
     confirmPassword: z.string().optional(),
+    acceptedTerms: z.boolean().optional(),
   })
   .refine(
     (data) => {
-      // If password is provided, confirmPassword must match
       if (data.password && data.confirmPassword) {
         return data.password === data.confirmPassword;
       }
@@ -89,6 +89,19 @@ export async function GET(
       );
     }
 
+    // Check if expired by superseding re-invite (status set to EXPIRED but expiresAt still in future)
+    if (invitation.status === "EXPIRED") {
+      return NextResponse.json(
+        {
+          valid: false,
+          error:
+            "This invitation has expired. Please contact the administrator for a new invitation.",
+          errorCode: "EXPIRED",
+        },
+        { status: 400 }
+      );
+    }
+
     // Check if cancelled
     if (invitation.status === "CANCELLED") {
       return NextResponse.json(
@@ -110,6 +123,7 @@ export async function GET(
         email: true,
         passwordHash: true,
         status: true,
+        termsAcceptedAt: true,
       },
     });
 
@@ -135,6 +149,7 @@ export async function GET(
         name: existingUser?.name || null,
         email: invitation.email,
         needsPassword,
+        hasAcceptedTerms: !!existingUser?.termsAcceptedAt,
       },
     });
   } catch (error) {
@@ -185,13 +200,15 @@ export async function POST(
       );
     }
 
-    // Check if expired
-    if (invitation.expiresAt < new Date()) {
+    // Check if expired (by time or by superseding re-invite)
+    if (invitation.status === "EXPIRED" || invitation.expiresAt < new Date()) {
       return NextResponse.json(
         { success: false, error: "This invitation has expired" },
         { status: 400 }
       );
     }
+
+    const validatedData = acceptInvitationSchema.parse(body);
 
     // Find the user
     const user = await db.user.findUnique({
@@ -200,6 +217,7 @@ export async function POST(
         id: true,
         passwordHash: true,
         status: true,
+        termsAcceptedAt: true,
       },
     });
 
@@ -208,11 +226,17 @@ export async function POST(
     }
 
     const needsPassword = !user.passwordHash || user.status === "INVITED";
+    const needsTermsAcceptance = !user.termsAcceptedAt;
+
+    if (needsTermsAcceptance && validatedData.acceptedTerms !== true) {
+      return NextResponse.json(
+        { success: false, error: "You must accept the terms and conditions" },
+        { status: 400 }
+      );
+    }
 
     // For new users (no password), require password in body
     if (needsPassword) {
-      const validatedData = acceptInvitationSchema.parse(body);
-
       if (!validatedData.password) {
         return NextResponse.json(
           { success: false, error: "Password is required" },
@@ -220,12 +244,9 @@ export async function POST(
         );
       }
 
-      // Hash the password
       const passwordHash = await hashPassword(validatedData.password);
 
-      // Accept invitation in transaction
       await db.$transaction(async (tx) => {
-        // Update invitation status
         await tx.organizationInvitation.update({
           where: { id: invitation.id },
           data: {
@@ -234,7 +255,6 @@ export async function POST(
           },
         });
 
-        // Update organization member status
         await tx.organizationMember.updateMany({
           where: {
             organizationId: invitation.organizationId,
@@ -246,12 +266,12 @@ export async function POST(
           },
         });
 
-        // Update user: set password and activate
         await tx.user.update({
           where: { id: user.id },
           data: {
             passwordHash,
             status: "ACTIVE",
+            ...(needsTermsAcceptance && { termsAcceptedAt: new Date() }),
           },
         });
       });
@@ -264,36 +284,9 @@ export async function POST(
         organizationName: invitation.organization.name,
       });
     } else {
-      // Existing user flow - verify they are authenticated
-      const session = await getAuthSession();
-
-      if (!session) {
-        // Return special code so frontend knows to redirect to login
-        return NextResponse.json(
-          {
-            success: false,
-            error: "Please log in to accept this invitation",
-            requiresAuth: true,
-            redirectUrl: `/login?callbackUrl=/accept-invitation?token=${token}`,
-          },
-          { status: 401 }
-        );
-      }
-
-      // Verify the logged-in user matches the invitation email
-      if (session.user.email !== invitation.email) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `This invitation was sent to ${invitation.email}. Please log in with that account.`,
-          },
-          { status: 403 }
-        );
-      }
-
-      // Accept invitation in transaction
+      // Existing user -- the token itself proves they have access to the
+      // invited email address, so no session/login is required.
       await db.$transaction(async (tx) => {
-        // Update invitation status
         await tx.organizationInvitation.update({
           where: { id: invitation.id },
           data: {
@@ -302,7 +295,6 @@ export async function POST(
           },
         });
 
-        // Update organization member status
         await tx.organizationMember.updateMany({
           where: {
             organizationId: invitation.organizationId,
@@ -314,14 +306,18 @@ export async function POST(
           },
         });
 
-        // User is now an active member of the organization
-        // (membership status already updated above)
+        if (needsTermsAcceptance) {
+          await tx.user.update({
+            where: { id: user.id },
+            data: { termsAcceptedAt: new Date() },
+          });
+        }
       });
 
       return NextResponse.json({
         success: true,
         message: `Welcome to ${invitation.organization.name}!`,
-        redirectUrl: "/dashboard",
+        email: invitation.email,
         organizationId: invitation.organizationId,
         organizationName: invitation.organization.name,
       });
