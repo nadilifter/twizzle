@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
+import { resolvePublicRequest } from "@/lib/public-api";
 import { calculateAge, isAgeEligible } from "@/lib/age-utils";
 
 async function verifyGuardian(athleteId: string, email: string): Promise<boolean> {
@@ -17,7 +18,7 @@ async function verifyGuardian(athleteId: string, email: string): Promise<boolean
  * Given an athlete and a list of membership instance IDs, returns which
  * memberships the athlete is eligible to purchase and why not for others.
  *
- * Body: { athleteId: string, membershipInstanceIds: string[] }
+ * Body: { athleteId: string, membershipInstanceIds: string[], organizationId: string }
  * Returns: { memberships: Array<{ id: string, eligible: boolean, reason?: string }> }
  */
 export async function POST(request: NextRequest) {
@@ -27,12 +28,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
-    const organizationId = session.user.organizationId;
-    if (!organizationId) {
-      return NextResponse.json({ error: "No active organization" }, { status: 403 });
-    }
-
-    const { athleteId, membershipInstanceIds } = await request.json();
+    const body = await request.json();
+    const { athleteId, membershipInstanceIds } = body;
 
     if (!athleteId || !membershipInstanceIds?.length) {
       return NextResponse.json(
@@ -40,6 +37,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const orgResult = await resolvePublicRequest(request, body.organizationId);
+    if (orgResult instanceof NextResponse) return orgResult;
+    const { organizationId } = orgResult;
 
     const hasAccess = await verifyGuardian(athleteId, session.user.email);
     if (!hasAccess) {

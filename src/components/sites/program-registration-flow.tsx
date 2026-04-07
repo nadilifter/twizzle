@@ -609,6 +609,7 @@ export function ProgramRegistrationFlow({
           body: JSON.stringify({
             athleteId: selectedAthlete.id,
             membershipInstanceIds,
+            organizationId: program.organizationId,
           }),
         }).then((r) => r.json()),
       ])
