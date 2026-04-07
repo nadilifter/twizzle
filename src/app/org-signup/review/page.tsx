@@ -62,7 +62,7 @@ export default function ReviewPage() {
     }
 
     setSignupData(data);
-  }, []);
+  }, [router]);
 
   const handleCreateOrganization = async () => {
     if (!signupData) return;
