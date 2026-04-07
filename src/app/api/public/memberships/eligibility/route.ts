@@ -3,13 +3,21 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { calculateAge, isAgeEligible } from "@/lib/age-utils";
 
+async function verifyGuardian(athleteId: string, email: string): Promise<boolean> {
+  const guardian = await db.athleteGuardian.findFirst({
+    where: { athleteId, user: { email } },
+    select: { id: true },
+  });
+  return !!guardian;
+}
+
 /**
  * POST /api/public/memberships/eligibility
  *
  * Given an athlete and a list of membership instance IDs, returns which
  * memberships the athlete is eligible to purchase and why not for others.
  *
- * Body: { athleteId: string, membershipInstanceIds: string[], organizationId: string }
+ * Body: { athleteId: string, membershipInstanceIds: string[] }
  * Returns: { memberships: Array<{ id: string, eligible: boolean, reason?: string }> }
  */
 export async function POST(request: NextRequest) {
@@ -19,13 +27,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
-    const { athleteId, membershipInstanceIds, organizationId } = await request.json();
+    const organizationId = session.user.organizationId;
+    if (!organizationId) {
+      return NextResponse.json({ error: "No active organization" }, { status: 403 });
+    }
 
-    if (!athleteId || !membershipInstanceIds?.length || !organizationId) {
+    const { athleteId, membershipInstanceIds } = await request.json();
+
+    if (!athleteId || !membershipInstanceIds?.length) {
       return NextResponse.json(
-        { error: "athleteId, membershipInstanceIds, and organizationId are required" },
+        { error: "athleteId and membershipInstanceIds are required" },
         { status: 400 }
       );
+    }
+
+    const hasAccess = await verifyGuardian(athleteId, session.user.email);
+    if (!hasAccess) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
     const athlete = await db.athlete.findUnique({
