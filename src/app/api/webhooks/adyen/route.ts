@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { verifyWebhookSignature } from "@/lib/adyen";
+import { verifyWebhookSignature, extractHmacSignature } from "@/lib/adyen";
 import { processInvoiceRegistrations, type InvoiceMetadata } from "@/lib/invoice-processing";
-import { sendTemplatedEmail } from "@/lib/email";
-import { getSubdomainUrl } from "@/lib/env-domains";
 import { logger } from "@/lib/logger";
 import { Prisma } from "@prisma/client";
 
@@ -32,9 +30,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
     }
 
-    const hmacSignature = request.headers.get("hmac-signature") || "";
+    const notificationRequest = JSON.parse(body);
+    const hmacSignature = extractHmacSignature(request.headers, notificationRequest);
     if (!hmacSignature) {
-      console.error("Missing webhook HMAC signature header");
+      console.error("Missing webhook HMAC signature");
       return NextResponse.json({ error: "Missing signature" }, { status: 401 });
     }
     const isValid = verifyWebhookSignature(body, hmacSignature);
@@ -43,7 +42,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
-    const notificationRequest = JSON.parse(body);
     const notificationItem = notificationRequest.notificationItems?.[0]?.NotificationRequestItem;
 
     if (!notificationItem) {
@@ -351,56 +349,6 @@ async function handleAuthorisation(
     where: { id: invoice.id },
     data: { registrationsProcessed: true },
   });
-
-  // Send receipt email
-  try {
-    const recipientEmail = invoice.user?.email;
-    const recipientName = invoice.user?.name?.split(" ")[0];
-
-    if (recipientEmail) {
-      const config = await db.websiteConfig.findFirst({
-        where: { organizationId: invoice.organizationId },
-        select: { subdomain: true },
-      });
-      const slug = config?.subdomain || "";
-      const receiptUrl = `${getSubdomainUrl(slug)}/receipt/${invoice.id}`;
-
-      const lineItemsHtml = invoice.lineItems
-        .map(
-          (li) =>
-            `<tr><td style="padding: 4px 0;">${li.description}</td><td style="padding: 4px 0; text-align: right;">$${Number(li.total).toFixed(2)}</td></tr>`
-        )
-        .join("");
-      const lineItemsText = invoice.lineItems
-        .map((li) => `${li.description} — $${Number(li.total).toFixed(2)}`)
-        .join("\n");
-
-      const invoiceTax = Number(invoice.tax);
-      const taxHtml =
-        invoiceTax > 0
-          ? `<tr><td style="padding: 4px 0;">Tax</td><td style="padding: 4px 0; text-align: right;">$${invoiceTax.toFixed(2)}</td></tr>`
-          : "";
-      const processingFeeHtml = "";
-      const taxText = invoiceTax > 0 ? `Tax: $${invoiceTax.toFixed(2)}` : "";
-      const processingFeeText = "";
-
-      sendTemplatedEmail("checkout-receipt", [recipientEmail], {
-        name: recipientName || "Customer",
-        reference: invoice.reference,
-        subtotal: `$${Number(invoice.subtotal).toFixed(2)}`,
-        total: `$${Number(invoice.total).toFixed(2)}`,
-        lineItemsHtml,
-        lineItemsText,
-        taxHtml,
-        processingFeeHtml,
-        taxText,
-        processingFeeText,
-        receiptUrl,
-      }).catch((err) => console.error("Failed to send receipt email:", err));
-    }
-  } catch (err) {
-    console.error("Error sending receipt email:", err);
-  }
 
   logger.info("Payment processed for invoice", { invoiceId, pspReference });
 }

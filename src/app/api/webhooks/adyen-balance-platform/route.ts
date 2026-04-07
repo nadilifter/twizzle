@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import crypto from "crypto";
+import { extractHmacSignature } from "@/lib/adyen";
 import { getTransferInstrumentLast4 } from "@/lib/adyen-platform";
 import { deriveOnboardingStatus, summarizeVerification } from "@/lib/adyen-onboarding-status";
 
@@ -17,20 +18,35 @@ function getBpHmacKeys(): string[] {
   ].filter(Boolean) as string[];
 }
 
-function verifyHmac(rawBody: string, signature: string): boolean {
+function verifyHmac(rawBody: string, parsedBody: any): boolean {
   const hmacKeys = getBpHmacKeys();
+  const isStandardNotification = !!parsedBody?.notificationItems;
+  const { hmacValidator } = require("@adyen/api-library");
+
   for (const hmacKey of hmacKeys) {
     try {
-      const expected = crypto
-        .createHmac("sha256", Buffer.from(hmacKey, "hex"))
-        .update(rawBody, "utf-8")
-        .digest("base64");
+      if (isStandardNotification) {
+        // Standard notification format: HMAC is computed over specific fields,
+        // not the raw body. Use Adyen's library which knows the exact signing spec.
+        const validator = new hmacValidator();
+        const notificationItem = parsedBody.notificationItems[0]?.NotificationRequestItem;
+        if (notificationItem && validator.validateHMAC(notificationItem, hmacKey)) {
+          return true;
+        }
+      } else {
+        // Balance Platform event format: HMAC is over the raw body string.
+        const signature = parsedBody?.HmacSignature ?? "";
+        const expected = crypto
+          .createHmac("sha256", Buffer.from(hmacKey, "hex"))
+          .update(rawBody, "utf-8")
+          .digest("base64");
 
-      if (
-        signature.length === expected.length &&
-        crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
-      ) {
-        return true;
+        if (
+          signature.length === expected.length &&
+          crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
+        ) {
+          return true;
+        }
       }
     } catch {
       continue;
@@ -46,9 +62,14 @@ function verifyHmac(rawBody: string, signature: string): boolean {
 export async function POST(request: NextRequest) {
   const body = await request.text();
 
-  // Adyen sends HMAC in the "Hmacsignature" header (no hyphen)
-  const hmacSignature =
-    request.headers.get("hmacsignature") || request.headers.get("hmac-signature") || "";
+  let parsedBody: any;
+  try {
+    parsedBody = JSON.parse(body);
+  } catch {
+    parsedBody = body;
+  }
+
+  const hmacSignature = extractHmacSignature(request.headers, parsedBody);
   const hmacKeys = getBpHmacKeys();
 
   if (hmacKeys.length === 0) {
@@ -57,17 +78,26 @@ export async function POST(request: NextRequest) {
   }
 
   if (!hmacSignature) {
-    logger.warn("[BP-WEBHOOK] Missing HMAC signature header");
+    logger.warn("[BP-WEBHOOK] Missing HMAC signature");
     return NextResponse.json({ error: "Missing signature" }, { status: 401 });
   }
 
-  if (!verifyHmac(body, hmacSignature)) {
+  if (!verifyHmac(body, parsedBody)) {
     logger.warn("[BP-WEBHOOK] HMAC verification failed");
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
+  // Standard payment notification format (notificationItems) is handled by
+  // /api/webhooks/adyen — acknowledge and skip to avoid double-processing.
+  if (parsedBody?.notificationItems) {
+    logger.info(
+      "[BP-WEBHOOK] Standard notification format received — delegated to /api/webhooks/adyen"
+    );
+    return NextResponse.json({ notificationResponse: "[accepted]" });
+  }
+
   try {
-    const event = JSON.parse(body);
+    const event = parsedBody;
     const eventType = event.type as string;
 
     logger.info("[BP-WEBHOOK] Event received", { type: eventType });
