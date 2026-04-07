@@ -201,7 +201,6 @@ export async function createPaymentSession(
       sessionRequest.recurringProcessingModel =
         tokenization.recurringProcessingModel ?? "CardOnFile";
       sessionRequest.shopperInteraction = "Ecommerce";
-      sessionRequest.enableRecurring = true;
     }
 
     const response = await checkoutApi.PaymentsApi.sessions(sessionRequest);
