@@ -10,7 +10,7 @@ function detectEnvironment(): string {
     if (hostname === "localhost" || hostname === "127.0.0.1") return "local";
     if (hostname.endsWith("uplifter.app")) return "production";
     if (hostname.endsWith("upliftergymnastics.com")) return "staging";
-    if (hostname.endsWith("uplifterdev.com")) return "development";
+    if (hostname.endsWith("upliftergymnastics-dev.com")) return "development";
   }
   return process.env.NEXT_PUBLIC_APP_ENVIRONMENT || process.env.NODE_ENV || "unknown";
 }

@@ -54,7 +54,7 @@ Some models don't have a direct `organizationId` field. Filter them through a re
 
 ## Rules
 
-1. **Always use `session.user.organizationId`** from the NextAuth session. NEVER trust a client-provided `organizationId` from request body, query params, or form data.
+1. **Always use `session.user.organizationId`** from the NextAuth session for authenticated routes. NEVER trust a client-provided `organizationId` from request body, query params, or form data. **Exception:** `/api/public/` routes must use `resolvePublicRequest` from `src/lib/public-api.ts` (see below).
 
 2. **Mutations must be scoped, not just reads.** Do NOT use a "check-then-act" pattern where you verify ownership with an org filter but then `update`/`delete` with only `where: { id }`. Either:
    - Use `getScopedDb` for the mutation (preferred outside transactions), or
@@ -68,6 +68,16 @@ Some models don't have a direct `organizationId` field. Filter them through a re
 
 6. **Validate client-provided foreign keys.** When the client sends IDs for related records (e.g., `facilityId`, `levelIds`, `waiverIds`), verify those records belong to the org before using them in a create or update.
 
+7. **Public endpoints (`/api/public/`) use `resolvePublicRequest`.** These endpoints serve users who may not be members of the target org (e.g., a parent registering at a new club), so `session.user.organizationId` would be wrong or empty. Use `resolvePublicRequest(request, body.organizationId)` from `src/lib/public-api.ts` — it validates the client-provided org against the Host header subdomain and includes rate limiting.
+
+```typescript
+import { resolvePublicRequest } from "@/lib/public-api";
+
+const orgResult = await resolvePublicRequest(request, body.organizationId);
+if (orgResult instanceof NextResponse) return orgResult;
+const { organizationId } = orgResult;
+```
+
 ## Common Mistakes
 
 ### Mistake 1: Trusting client-provided organizationId
@@ -76,8 +86,13 @@ Some models don't have a direct `organizationId` field. Filter them through a re
 // BAD - attacker can pass any org's ID
 const organizationId = body.organizationId || session.user.organizationId;
 
-// GOOD - always use session
+// GOOD (authenticated routes) - always use session
 const organizationId = session.user.organizationId;
+
+// GOOD (public routes) - validate via resolvePublicRequest
+const orgResult = await resolvePublicRequest(request, body.organizationId);
+if (orgResult instanceof NextResponse) return orgResult;
+const { organizationId } = orgResult;
 ```
 
 ### Mistake 2: Check-then-act pattern
@@ -136,7 +151,7 @@ await db.$transaction(async (tx) => {
 - [ ] All `findMany` / `findFirst` / `count` calls are org-scoped
 - [ ] Create operations set `organizationId` (auto if using `getScopedDb`)
 - [ ] Update/delete operations verify org ownership before mutating
-- [ ] No client-provided `organizationId` is trusted
+- [ ] No client-provided `organizationId` is trusted (authenticated routes use session; public routes use `resolvePublicRequest`)
 - [ ] Client-provided foreign keys are validated against the org
 - [ ] Related-model queries filter through the org relation chain
 - [ ] `pnpm lint:tenant` passes with no new violations

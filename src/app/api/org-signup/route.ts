@@ -280,7 +280,7 @@ export async function POST(request: NextRequest) {
           subdomain: validatedData.subdomain,
           primaryColor: validatedData.primaryColor || "#000000",
           secondaryColor: validatedData.secondaryColor || "#ffffff",
-          isPublished: true,
+          isPublished: false,
           heroHeadline: "Welcome to",
           heroSubheadline: "Your organization's home on Uplifter",
         },
