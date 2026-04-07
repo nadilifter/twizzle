@@ -7,7 +7,7 @@
  *   - ADYEN_ENVIRONMENT: "TEST" or "LIVE" (defaults to TEST in development, required in production)
  *   - ADYEN_WEBHOOK_HMAC_KEY: HMAC key for webhook signature verification
  *   - ADYEN_ALLOWED_PAYMENT_METHODS: Optional comma-separated Checkout payment method types
- *     (e.g. scheme,googlepay,applepay,paypal,ach). Defaults to card + wallets + PayPal + ACH.
+ *     (e.g. scheme,googlepay,applepay,ach). Defaults to card + wallets + ACH.
  */
 
 /**
@@ -154,7 +154,6 @@ export const DEFAULT_CHECKOUT_ALLOWED_PAYMENT_METHODS = [
   "scheme",
   "googlepay",
   "applepay",
-  "paypal",
   "ach",
 ] as const;
 
@@ -274,7 +273,7 @@ export interface StoredPaymentMethod {
  * @param shopperEmail - Optional shopper email
  * @param amount - Amount in dollars (use 0 for $0 authorization)
  * @param storeMode - With askForConsent, Adyen only stores card details (wallets/ACH need enabled).
- *                    Default "enabled" so PayPal, Apple Pay, Google Pay, ACH can appear for subscription tokenization.
+ *                    Default "enabled" so Apple Pay, Google Pay, ACH can appear for subscription tokenization.
  */
 export async function createTokenizationSession(
   shopperReference: string,

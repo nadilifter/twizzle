@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { AdyenCheckout, Dropin, Card, GooglePay, ApplePay, Ach, PayPal } from "@adyen/adyen-web";
+import { useTheme } from "next-themes";
+import { AdyenCheckout, Dropin, Card, GooglePay, ApplePay, Ach } from "@adyen/adyen-web";
 import type { CoreConfiguration } from "@adyen/adyen-web/auto";
 import "@adyen/adyen-web/styles/adyen.css";
 import { Loader2 } from "lucide-react";
@@ -25,6 +26,7 @@ export function AdyenCheckoutComponent({
   componentType = "dropin",
   adyenConfig,
 }: AdyenCheckoutProps) {
+  const { resolvedTheme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const mountedComponentRef = useRef<{ unmount(): void } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,6 +41,10 @@ export function AdyenCheckoutComponent({
   }, []);
 
   const stableOnError = useCallback((error: any) => {
+    const isLocal = process.env.NEXT_PUBLIC_APP_ENVIRONMENT === "local";
+    const isApplePaySDKError =
+      error?.message?.includes("ApplePaySDK") || error?.name?.includes("ApplePay");
+    if (isLocal && isApplePaySDKError) return;
     onErrorRef.current(error);
   }, []);
 
@@ -82,10 +88,28 @@ export function AdyenCheckoutComponent({
           mountedComponentRef.current = null;
         }
 
+        const isDarkMode = resolvedTheme === "dark";
+        const darkCardStyles = isDarkMode
+          ? {
+              styles: {
+                base: { color: "#ffffff", caretColor: "#ffffff" },
+                placeholder: { color: "rgba(255,255,255,0.4)" },
+                error: { color: "#f87171" },
+              },
+            }
+          : {};
+
         const ComponentClass = componentType === "card" ? Card : Dropin;
         const component = new ComponentClass(checkout, {
           ...(componentType !== "card" && {
-            paymentMethodComponents: [Card, GooglePay, ApplePay, PayPal, Ach],
+            paymentMethodComponents: [Card, GooglePay, ApplePay, Ach],
+          }),
+          ...darkCardStyles,
+          ...(componentType !== "card" && {
+            paymentMethodsConfiguration: {
+              card: darkCardStyles,
+              storedPaymentMethod: darkCardStyles,
+            },
           }),
         });
         component.mount(containerRef.current);
@@ -119,6 +143,7 @@ export function AdyenCheckoutComponent({
     countryCode,
     componentType,
     adyenConfig,
+    resolvedTheme,
     stableOnPaymentCompleted,
     stableOnError,
   ]);
