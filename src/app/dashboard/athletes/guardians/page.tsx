@@ -58,6 +58,7 @@ interface Guardian {
   phone: string | null;
   balance: number | string | null;
   status: string | null;
+  memberStatus: string | null;
   athletes: GuardianAthlete[];
 }
 
@@ -100,19 +101,19 @@ export default function GuardiansPage() {
     if (!inviteEmail) return;
     setIsInviting(true);
     try {
-      const res = await fetch("/api/users", {
+      const res = await fetch("/api/guardians/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: inviteName || inviteEmail,
           email: inviteEmail,
-          role: "PARENT",
         }),
       });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Failed to invite guardian");
       }
+      toast.success("Invitation sent");
       setDialogOpen(false);
       setInviteEmail("");
       setInviteName("");
@@ -183,6 +184,7 @@ export default function GuardiansPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Guardian Name</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Athletes</TableHead>
@@ -200,6 +202,18 @@ export default function GuardiansPage() {
                     >
                       {guardian.name || "—"}
                     </Link>
+                  </TableCell>
+                  <TableCell>
+                    {guardian.memberStatus === "INVITED" ? (
+                      <Badge variant="secondary">Invited</Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="text-green-600 border-green-200 bg-green-50"
+                      >
+                        Active
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -264,7 +278,7 @@ export default function GuardiansPage() {
               ))}
               {guardians.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={7} className="h-24 text-center">
                     No guardians found.
                   </TableCell>
                 </TableRow>
