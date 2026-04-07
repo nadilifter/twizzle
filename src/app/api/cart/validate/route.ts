@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db"; // tenant-isolation-ok: public cart validation endpoint with no session; organizationId passed from client for Product queries
+import { checkApiRateLimit } from "@/lib/rate-limit";
 
 interface ValidateItem {
   referenceId: string;
@@ -12,6 +13,9 @@ interface ValidateItem {
  * reference deleted entities.
  */
 export async function POST(request: NextRequest) {
+  const rateLimited = await checkApiRateLimit(request, "cart-validate");
+  if (rateLimited) return rateLimited;
+
   try {
     const { items, organizationId } = (await request.json()) as {
       items: ValidateItem[];

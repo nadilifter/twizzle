@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { checkApiRateLimit } from "@/lib/rate-limit";
 
 // GET /api/public/site-config?slug=xxx
 // Public endpoint - get organization ID and basic site config from slug
 export async function GET(request: NextRequest) {
+  const rateLimited = await checkApiRateLimit(request, "public");
+  if (rateLimited) return rateLimited;
+
   try {
     const { searchParams } = new URL(request.url);
     const slug = searchParams.get("slug");

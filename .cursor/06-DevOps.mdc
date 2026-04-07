@@ -1,61 +1,76 @@
 ---
 description: DevOps, containerization, infrastructure, and environment mandates
-globs: ["Dockerfile", "docker-compose.yml", ".github/**/*", "infrastructure/**/*", "charts/**/*", "gitops/**/*"]
+globs:
+  [
+    "Dockerfile",
+    "docker-compose.yml",
+    ".github/**/*",
+    "infrastructure/**/*",
+    "charts/**/*",
+    "gitops/**/*",
+  ]
 ---
+
 # 06-DevOps
 
 ## Environment Architecture
 
 The platform runs across four environments with distinct domains:
 
-| Environment   | Domain                    | Purpose                    |
-|---------------|---------------------------|----------------------------|
-| Production    | `uplifter.app`           | Live customer traffic      |
-| Staging       | `upliftergymnastics.com` | QA/UAT testing             |
-| Development   | `uplifterdev.com`        | Development testing        |
-| Local         | `*.localhost:3000`       | Local development          |
+| Environment | Domain                       | Purpose               |
+| ----------- | ---------------------------- | --------------------- |
+| Production  | `uplifter.app`               | Live customer traffic |
+| Staging     | `upliftergymnastics.com`     | QA/UAT testing        |
+| Development | `upliftergymnastics-dev.com` | Development testing   |
+| Local       | `*.localhost:3000`           | Local development     |
 
 ## Mandates
 
 ### Containerization
+
 - **Docker**: All services must be Dockerized with optimized multi-stage builds.
 - **docker-compose.yml**: Local development includes PostgreSQL, Redis, MinIO (S3), and MailHog.
 - **OS**: Assume a WSL/Linux environment for all development and deployment tasks.
 
 ### Infrastructure as Code
+
 - **Terraform**: All AWS infrastructure is defined in `infrastructure/` using reusable modules.
 - **Modules**: VPC, RDS, ElastiCache, S3, CloudFront, ALB, ECS, EKS are modularized.
 - **State**: Remote state in S3 with DynamoDB locking (configure per environment).
 
 ### Container Orchestration
+
 - **Phase 2 (Current)**: ECS Fargate with auto-scaling for quick deployment.
 - **Phase 3 (Target)**: EKS with ArgoCD GitOps for advanced orchestration.
 
 ### GitOps & CI/CD
+
 - **ArgoCD**: Declarative deployments from `gitops/` directory.
 - **Helm Charts**: Application deployment via `charts/uplifter/` with environment-specific values.
 - **GitHub Actions**: Build, test, push images to ECR, update ArgoCD manifests.
 
 ### Observability
+
 - **Groundcover**: eBPF-based observability for EKS (auto-instrumented).
 - **CloudWatch**: Logs and metrics for ECS/Fargate deployments.
 - **Container Insights**: Enabled on all ECS/EKS clusters.
 
 ## Key Files
 
-| Path | Purpose |
-|------|---------|
-| `docker-compose.yml` | Local development services |
-| `Dockerfile` | Production container build |
-| `Dockerfile.dev` | Development container build |
-| `infrastructure/` | Terraform modules and environments |
-| `charts/uplifter/` | Helm chart for Kubernetes |
-| `gitops/` | ArgoCD application definitions |
+| Path                 | Purpose                            |
+| -------------------- | ---------------------------------- |
+| `docker-compose.yml` | Local development services         |
+| `Dockerfile`         | Production container build         |
+| `Dockerfile.dev`     | Development container build        |
+| `infrastructure/`    | Terraform modules and environments |
+| `charts/uplifter/`   | Helm chart for Kubernetes          |
+| `gitops/`            | ArgoCD application definitions     |
 
 ## Environment Variable
 
 Set `APP_ENVIRONMENT` to control environment-specific behavior:
+
 - `production` - Live production
-- `staging` - QA/UAT environment  
+- `staging` - QA/UAT environment
 - `development` - Dev testing
 - `local` - Local development (default)

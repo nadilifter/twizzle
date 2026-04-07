@@ -408,6 +408,7 @@ model OrganizationInvitation {
   invitedById    String
   expiresAt      DateTime
   acceptedAt     DateTime?
+  emailSentAt    DateTime?
   createdAt      DateTime                     @default(now())
   updatedAt      DateTime                     @updatedAt
 
@@ -839,6 +840,7 @@ model CustomInfoResponse {
 
   @@unique([athleteId, organizationId, questionId])
   @@index([athleteId, organizationId])
+  @@index([organizationId])
   @@index([questionId])
 }
 
@@ -1008,6 +1010,7 @@ model Program {
   queueConfigs      RegistrationQueueConfig[]
   queueReservations QueueReservation[]
 
+  @@index([organizationId])
   @@index([facilityId])
   @@index([glCodeId])
   @@index([seasonId])
@@ -1124,6 +1127,7 @@ model MembershipGroup {
   levelRequirements  MembershipGroupLevelRequirement[]
   waiverRequirements MembershipGroupWaiverRequirement[]
 
+  @@index([organizationId])
   @@index([glCodeId])
   @@index([seasonId])
 }
@@ -1463,6 +1467,7 @@ model Event {
   staffAssignments  EventStaff[]
   registrationFiles RegistrationFile[]
 
+  @@index([organizationId])
   @@index([glCodeId])
   @@index([categoryId])
 }
@@ -1528,6 +1533,7 @@ model Invoice {
   payments     Payment[]
   order        Order?
 
+  @@index([organizationId])
   @@index([userId])
 }
 
@@ -1635,6 +1641,8 @@ model Discount {
   // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   lineItems    LineItem[]
+
+  @@index([organizationId])
 }
 
 enum DiscountType {
@@ -1727,6 +1735,8 @@ model LedgerEntry {
   // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   glCode       GLCode       @relation(fields: [glCodeId], references: [id])
+
+  @@index([organizationId])
 }
 
 enum LedgerEntryStatus {
@@ -1898,6 +1908,7 @@ model Skill {
   templateSkills   EvaluationTemplateSkill[]
   athleteProgress  AthleteSkillProgress[]
 
+  @@index([organizationId])
   @@index([levelId])
 }
 
@@ -1998,6 +2009,8 @@ model LessonPlan {
   program      Program      @relation(fields: [programId], references: [id])
   author       User         @relation(fields: [authorId], references: [id])
   rotations    Rotation[]
+
+  @@index([organizationId])
 }
 
 enum LessonPlanStatus {
@@ -2540,6 +2553,7 @@ model SmsNumberAssignment {
 
   @@unique([phone, organizationId])
   @@unique([phone, twilioNumber])
+  @@index([organizationId])
   @@index([twilioNumber, phone])
 }
 
@@ -4613,6 +4627,7 @@ model CompetitionTeam {
   entries CompetitionEntry[]
   results CompetitionResult[]
 
+  @@index([organizationId])
   @@index([competitionId])
   @@index([competitionCategoryId])
 }
