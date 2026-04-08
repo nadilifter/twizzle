@@ -950,7 +950,10 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
         fetch(`/api/sites/${params.slug}/checkout/finalize`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ invoiceId: checkoutInvoiceId }),
+          body: JSON.stringify({
+            invoiceId: checkoutInvoiceId,
+            paymentMethodType: result.paymentMethodType,
+          }),
         }).catch(() => {});
         completeRegistration().catch(() => {});
         router.push(`/receipt/${checkoutInvoiceId}`);

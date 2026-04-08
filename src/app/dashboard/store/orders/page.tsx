@@ -40,7 +40,6 @@ import {
   Landmark,
   FileText,
   Wallet,
-  BadgeDollarSign,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -91,19 +90,7 @@ const paymentMethodConfig: Record<
 const transactionMethodLabels: Record<string, { label: string; icon: React.ElementType }> = {
   applepay: { label: "Apple Pay", icon: Wallet },
   googlepay: { label: "Google Pay", icon: Wallet },
-  paypal: { label: "PayPal", icon: Wallet },
-  cashapp: { label: "Cash App Pay", icon: Wallet },
-  klarna: { label: "Klarna", icon: BadgeDollarSign },
-  klarna_account: { label: "Klarna", icon: BadgeDollarSign },
-  klarna_paynow: { label: "Klarna", icon: BadgeDollarSign },
-  affirm: { label: "Affirm", icon: BadgeDollarSign },
-  afterpay_default: { label: "Afterpay", icon: BadgeDollarSign },
-  afterpaytouch: { label: "Afterpay", icon: BadgeDollarSign },
-  clearpay: { label: "Clearpay", icon: BadgeDollarSign },
-  amazonpay: { label: "Amazon Pay", icon: Wallet },
   ach: { label: "ACH", icon: Landmark },
-  paybybank_us: { label: "Pay by Bank", icon: Landmark },
-  venmo: { label: "Venmo", icon: Wallet },
 };
 
 function getPaymentLabel(payment: {
