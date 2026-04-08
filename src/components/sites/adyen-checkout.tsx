@@ -1,21 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import {
-  AdyenCheckout,
-  Dropin,
-  Card,
-  GooglePay,
-  ApplePay,
-  Ach,
-  PayPal,
-  CashAppPay,
-  Klarna,
-  Affirm,
-  AfterPay,
-  AmazonPay,
-  PayByBankUS,
-} from "@adyen/adyen-web";
+import { useTheme } from "next-themes";
+import { AdyenCheckout, Dropin, Card, GooglePay, ApplePay, Ach } from "@adyen/adyen-web";
 import type { CoreConfiguration } from "@adyen/adyen-web/auto";
 import "@adyen/adyen-web/styles/adyen.css";
 import { Loader2 } from "lucide-react";
@@ -23,7 +10,11 @@ import { Loader2 } from "lucide-react";
 interface AdyenCheckoutProps {
   sessionId: string;
   sessionData: string;
-  onPaymentCompleted: (result: { resultCode: string; sessionData?: string }) => void;
+  onPaymentCompleted: (result: {
+    resultCode: string;
+    sessionData?: string;
+    paymentMethodType?: string;
+  }) => void;
   onError: (error: { name?: string; message?: string; resultCode?: string }) => void;
   countryCode?: string;
   componentType?: string;
@@ -39,6 +30,7 @@ export function AdyenCheckoutComponent({
   componentType = "dropin",
   adyenConfig,
 }: AdyenCheckoutProps) {
+  const { resolvedTheme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const mountedComponentRef = useRef<{ unmount(): void } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -53,6 +45,10 @@ export function AdyenCheckoutComponent({
   }, []);
 
   const stableOnError = useCallback((error: any) => {
+    const isLocal = process.env.NEXT_PUBLIC_APP_ENVIRONMENT === "local";
+    const isApplePaySDKError =
+      error?.message?.includes("ApplePaySDK") || error?.name?.includes("ApplePay");
+    if (isLocal && isApplePaySDKError) return;
     onErrorRef.current(error);
   }, []);
 
@@ -77,8 +73,12 @@ export function AdyenCheckoutComponent({
             id: sessionId,
             sessionData,
           },
-          onPaymentCompleted: (result: any) => {
-            stableOnPaymentCompleted(result);
+          onPaymentCompleted: (result: any, component: any) => {
+            const paymentMethodType =
+              component?.data?.paymentMethod?.type ||
+              component?.state?.data?.paymentMethod?.type ||
+              undefined;
+            stableOnPaymentCompleted({ ...result, paymentMethodType });
           },
           onPaymentFailed: (result: any) => {
             stableOnError(result);
@@ -96,22 +96,28 @@ export function AdyenCheckoutComponent({
           mountedComponentRef.current = null;
         }
 
+        const isDarkMode = resolvedTheme === "dark";
+        const darkCardStyles = isDarkMode
+          ? {
+              styles: {
+                base: { color: "#ffffff", caretColor: "#ffffff" },
+                placeholder: { color: "rgba(255,255,255,0.4)" },
+                error: { color: "#f87171" },
+              },
+            }
+          : {};
+
         const ComponentClass = componentType === "card" ? Card : Dropin;
         const component = new ComponentClass(checkout, {
           ...(componentType !== "card" && {
-            paymentMethodComponents: [
-              Card,
-              GooglePay,
-              ApplePay,
-              PayPal,
-              CashAppPay,
-              Ach,
-              Klarna,
-              Affirm,
-              AfterPay,
-              AmazonPay,
-              PayByBankUS,
-            ],
+            paymentMethodComponents: [Card, GooglePay, ApplePay, Ach],
+          }),
+          ...darkCardStyles,
+          ...(componentType !== "card" && {
+            paymentMethodsConfiguration: {
+              card: darkCardStyles,
+              storedPaymentMethod: darkCardStyles,
+            },
           }),
         });
         component.mount(containerRef.current);
@@ -145,6 +151,7 @@ export function AdyenCheckoutComponent({
     countryCode,
     componentType,
     adyenConfig,
+    resolvedTheme,
     stableOnPaymentCompleted,
     stableOnError,
   ]);

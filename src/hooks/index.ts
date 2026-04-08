@@ -10,3 +10,4 @@ export {
 } from "./use-staff";
 export { useShifts, useScheduleTemplates } from "./use-shifts";
 export { useDebounce } from "./use-debounce";
+export { useSidebarSearch } from "./use-sidebar-search";
