@@ -23,7 +23,7 @@ export async function getActionItems(organizationId: string): Promise<ActionItem
       id: "invite-team",
       title: "Invite team members",
       description: "Add coaches, staff, and other administrators",
-      url: "/dashboard/organization/users",
+      url: "/dashboard/organization/staff",
       isComplete: memberCount > 1,
       icon: "Users",
     },

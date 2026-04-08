@@ -1,75 +1,166 @@
-name: Deploy — Development
+name: Build and Deploy Dev Build [Dev]
 
 on:
   push:
-    branches: [dev_disabled_until_cluster is up]
+    branches: [dev]
+  workflow_dispatch:
 
 concurrency:
   group: deploy-dev
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  build-and-push:
-    name: Build & Push (dev)
+  deploy:
+    name: Deploy to Development EC2
     runs-on: ubuntu-latest
     environment: development
     permissions:
       id-token: write
       contents: read
-    outputs:
-      image_tag: ${{ steps.meta.outputs.image_tag }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: us-east-1
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Set image metadata
-        id: meta
+      - name: Deploy to EC2 via SSM
+        env:
+          INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
         run: |
-          SHORT_SHA="${GITHUB_SHA::8}"
-          echo "image_tag=dev-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
-          echo "ecr_image=${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}" >> "$GITHUB_OUTPUT"
+          cat > /tmp/ssm-params.json << EOF
+          {
+            "commands": [
+              "set -e",
+              "export HOME=/root",
+              "git config --global --add safe.directory /home/ec2-user/uplifter",
+              "cd /home/ec2-user/uplifter || { echo 'Project directory not found'; exit 1; }",
+              "echo '=== Checking out latest dev branch'",
+              "git fetch origin",
+              "git checkout origin/dev",
+              "echo '=== Loading environment variables ==='",
+              "set -a",
+              "source /home/ec2-user/.env.uplifter",
+              "set +a",
+              "echo '=== Building Docker image ==='",
+              "DOCKER_BUILDKIT=1 docker build --build-arg APP_ENVIRONMENT=development --build-arg NEXT_PUBLIC_APP_ENVIRONMENT=development --build-arg NEXT_PUBLIC_ADYEN_CLIENT_KEY=\"\${NEXT_PUBLIC_ADYEN_CLIENT_KEY}\" --build-arg NEXT_PUBLIC_ADYEN_ENVIRONMENT=\"\${NEXT_PUBLIC_ADYEN_ENVIRONMENT}\" --build-arg NEXT_PUBLIC_SENTRY_DSN=\"\${NEXT_PUBLIC_SENTRY_DSN}\" -t uplifter:new .",
+              "echo '=== Ensuring PostgreSQL is running ==='",
+              "docker compose -f docker-compose.staging.yml up -d postgres 2>&1",
+              "echo '=== Waiting for PostgreSQL to be healthy ==='",
+              "RETRIES=30; COUNT=0; while [ \$COUNT -lt \$RETRIES ]; do if docker compose -f docker-compose.staging.yml exec -T postgres pg_isready -U uplifter -d uplifter > /dev/null 2>&1; then echo 'PostgreSQL is ready'; break; fi; COUNT=\$((COUNT + 1)); sleep 2; done; if [ \$COUNT -eq \$RETRIES ]; then echo 'PostgreSQL failed to become healthy'; exit 1; fi",
+              "echo '=== Running database migrations ==='",
+              "docker run --rm --network uplifter-network -e DATABASE_URL=\"postgresql://uplifter:\${POSTGRES_PASSWORD}@uplifter-postgres:5432/uplifter\" uplifter:new prisma migrate deploy 2>&1",
+              "echo '=== Swapping to new image ==='",
+              "docker tag uplifter:new uplifter:latest 2>&1",
+              "echo '=== Restarting application ==='",
+              "docker compose -f docker-compose.staging.yml up -d app cron 2>&1",
+              "echo '=== Cleaning up old images ==='",
+              "docker image prune -f > /dev/null 2>&1 || true",
+              "echo '=== Container status ==='",
+              "docker ps --filter 'name=uplifter' --format 'table {{.Names}}\\t{{.Status}}\\t{{.Ports}}'"
+            ],
+            "executionTimeout": ["1800"]
+          }
+          EOF
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-id "${INSTANCE_ID}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters file:///tmp/ssm-params.json \
+            --timeout-seconds 1800 \
+            --query "Command.CommandId" \
+            --output text)
 
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ steps.meta.outputs.ecr_image }}:${{ steps.meta.outputs.image_tag }}
-            ${{ steps.meta.outputs.ecr_image }}:dev-latest
-          build-args: |
-            APP_ENVIRONMENT=development
-            NEXT_PUBLIC_APP_ENVIRONMENT=development
-            NEXT_PUBLIC_ADYEN_CLIENT_KEY=${{ secrets.NEXT_PUBLIC_ADYEN_CLIENT_KEY }}
-            NEXT_PUBLIC_ADYEN_ENVIRONMENT=${{ vars.NEXT_PUBLIC_ADYEN_ENVIRONMENT }}
-            NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
-            NEXT_PUBLIC_SENTRY_RELEASE=${{ github.sha }}
-            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
-          cache-from: type=gha,scope=dev
-          cache-to: type=gha,scope=dev,mode=max
+          echo "SSM Command ID: ${COMMAND_ID}"
+          echo "Waiting for deployment to complete..."
 
+          while true; do
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "${COMMAND_ID}" \
+              --instance-id "${INSTANCE_ID}" \
+              --query "Status" \
+              --output text 2>/dev/null || echo "Pending")
+
+            if [ "${STATUS}" = "Success" ]; then
+              echo "=== Deployment Output ==="
+              aws ssm get-command-invocation \
+                --command-id "${COMMAND_ID}" \
+                --instance-id "${INSTANCE_ID}" \
+                --query "StandardOutputContent" \
+                --output text
+              echo "=== Build Output ==="
+              aws ssm get-command-invocation \
+                --command-id "${COMMAND_ID}" \
+                --instance-id "${INSTANCE_ID}" \
+                --query "StandardErrorContent" \
+                --output text
+              break
+            elif [ "${STATUS}" = "Failed" ] || [ "${STATUS}" = "TimedOut" ] || [ "${STATUS}" = "Cancelled" ]; then
+              echo "=== Deployment Output ==="
+              aws ssm get-command-invocation \
+                --command-id "${COMMAND_ID}" \
+                --instance-id "${INSTANCE_ID}" \
+                --query "StandardOutputContent" \
+                --output text
+              echo "=== Error Output ==="
+              aws ssm get-command-invocation \
+                --command-id "${COMMAND_ID}" \
+                --instance-id "${INSTANCE_ID}" \
+                --query "StandardErrorContent" \
+                --output text
+              exit 1
+            fi
+
+            echo "Status: ${STATUS} — waiting..."
+            sleep 10
+          done
+
+  smoke-test:
+    name: Development Smoke Test
+    runs-on: ubuntu-latest
+    needs: deploy
+
+    steps:
+      - name: Wait for application to stabilize
+        run: sleep 20
+
+      - name: Health check
+        run: |
+          for i in 1 2 3; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 15 \
+              https://upliftergymnastics-dev.com/api/health || echo "000")
+            echo "Attempt $i — HTTP $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "Health check passed"
+              exit 0
+            fi
+            [ $i -lt 3 ] && sleep 30
+          done
+          echo "Health check failed after 3 attempts"
+          exit 1
+
+  summarize:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [deploy, smoke-test]
+    if: always()
+
+    steps:
       - name: Post deployment summary
         run: |
-          echo "### Development Build" >> "$GITHUB_STEP_SUMMARY"
+          SMOKE_STATUS="${{ needs.smoke-test.result }}"
+          if [ "$SMOKE_STATUS" = "success" ]; then
+            STATUS_LABEL="✅ Healthy"
+          else
+            STATUS_LABEL="❌ Failed"
+          fi
+
+          echo "### Development Deployment" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
           echo "| --- | --- |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Image Tag | \`${{ steps.meta.outputs.image_tag }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Commit | \`${{ github.sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Branch | \`${{ github.ref_name }}\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "ArgoCD Image Updater will detect \`dev-*\` tags and sync to the \`development\` namespace automatically."
+          echo "| Triggered By | @${{ github.actor }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Health | ${STATUS_LABEL} |" >> "$GITHUB_STEP_SUMMARY"

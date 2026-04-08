@@ -59,11 +59,11 @@ Or preferably, IAM role ARN for assumed role access.
 
 ### Required Information
 
-| Environment | Domain                   | Status                        |
-| ----------- | ------------------------ | ----------------------------- |
-| Production  | `uplifter.app`           | ☐ Owned? ☐ DNS managed where? |
-| Staging     | `upliftergymnastics.com` | ☐ Owned? ☐ DNS managed where? |
-| Development | `uplifterdev.com`        | ☐ Owned? ☐ DNS managed where? |
+| Environment | Domain                       | Status                        |
+| ----------- | ---------------------------- | ----------------------------- |
+| Production  | `uplifter.app`               | ☐ Owned? ☐ DNS managed where? |
+| Staging     | `upliftergymnastics.com`     | ☐ Owned? ☐ DNS managed where? |
+| Development | `upliftergymnastics-dev.com` | ☐ Owned? ☐ DNS managed where? |
 
 ### Decisions Needed
 
@@ -85,11 +85,11 @@ For each domain, provide:
 
 ### Route 53 Information Needed (if using)
 
-| Domain                 | Route 53 Hosted Zone ID |
-| ---------------------- | ----------------------- |
-| uplifter.app           | (will be created)       |
-| upliftergymnastics.com | (will be created)       |
-| uplifterdev.com        | (will be created)       |
+| Domain                     | Route 53 Hosted Zone ID |
+| -------------------------- | ----------------------- |
+| uplifter.app               | (will be created)       |
+| upliftergymnastics.com     | (will be created)       |
+| upliftergymnastics-dev.com | (will be created)       |
 
 ---
 
@@ -101,13 +101,13 @@ AWS Certificate Manager (ACM) will be used for SSL certificates. Certificates ar
 
 ### Certificates Needed
 
-| Domain                     | Certificate Type | Region                 |
-| -------------------------- | ---------------- | ---------------------- |
-| `*.uplifter.app`           | Wildcard         | us-east-1 (CloudFront) |
-| `uplifter.app`             | Root             | us-east-1 (CloudFront) |
-| `*.uplifter.app`           | Wildcard         | Primary region (ALB)   |
-| `*.upliftergymnastics.com` | Wildcard         | us-east-1 + Primary    |
-| `*.uplifterdev.com`        | Wildcard         | us-east-1 + Primary    |
+| Domain                         | Certificate Type | Region                 |
+| ------------------------------ | ---------------- | ---------------------- |
+| `*.uplifter.app`               | Wildcard         | us-east-1 (CloudFront) |
+| `uplifter.app`                 | Root             | us-east-1 (CloudFront) |
+| `*.uplifter.app`               | Wildcard         | Primary region (ALB)   |
+| `*.upliftergymnastics.com`     | Wildcard         | us-east-1 + Primary    |
+| `*.upliftergymnastics-dev.com` | Wildcard         | us-east-1 + Primary    |
 
 ### Decisions Needed
 
@@ -187,14 +187,14 @@ AWS Certificate Manager (ACM) will be used for SSL certificates. Certificates ar
 
 #### Test Environment (for Staging/Dev/Local)
 
-| Item                  | Value                                                     |
-| --------------------- | --------------------------------------------------------- |
-| Test Merchant Account |                                                           |
-| Test API Key          |                                                           |
-| Test Client Key       |                                                           |
-| Test Webhook HMAC Key |                                                           |
-| Webhook URL (Staging) | `https://admin.upliftergymnastics.com/api/webhooks/adyen` |
-| Webhook URL (Dev)     | `https://admin.uplifterdev.com/api/webhooks/adyen`        |
+| Item                  | Value                                                         |
+| --------------------- | ------------------------------------------------------------- |
+| Test Merchant Account |                                                               |
+| Test API Key          |                                                               |
+| Test Client Key       |                                                               |
+| Test Webhook HMAC Key |                                                               |
+| Webhook URL (Staging) | `https://admin.upliftergymnastics.com/api/webhooks/adyen`     |
+| Webhook URL (Dev)     | `https://admin.upliftergymnastics-dev.com/api/webhooks/adyen` |
 
 ### Actions Required in Adyen Customer Area
 
@@ -225,11 +225,11 @@ AWS Certificate Manager (ACM) will be used for SSL certificates. Certificates ar
 
 ### Webhook URLs to Configure in Twilio
 
-| Environment | Webhook URL                                               |
-| ----------- | --------------------------------------------------------- |
-| Production  | `https://admin.uplifter.app/api/twilio/webhook`           |
-| Staging     | `https://admin.upliftergymnastics.com/api/twilio/webhook` |
-| Development | `https://admin.uplifterdev.com/api/twilio/webhook`        |
+| Environment | Webhook URL                                                   |
+| ----------- | ------------------------------------------------------------- |
+| Production  | `https://admin.uplifter.app/api/twilio/webhook`               |
+| Staging     | `https://admin.upliftergymnastics.com/api/twilio/webhook`     |
+| Development | `https://admin.upliftergymnastics-dev.com/api/twilio/webhook` |
 
 ---
 
@@ -237,17 +237,17 @@ AWS Certificate Manager (ACM) will be used for SSL certificates. Certificates ar
 
 ### Required Information
 
-| Item           | Production                | Staging                          | Development               |
-| -------------- | ------------------------- | -------------------------------- | ------------------------- |
-| From Email     | `noreply@uplifterinc.com` | `noreply@upliftergymnastics.com` | `noreply@uplifterdev.com` |
-| Reply-To Email |                           |                                  |                           |
+| Item           | Production                | Staging                          | Development                          |
+| -------------- | ------------------------- | -------------------------------- | ------------------------------------ |
+| From Email     | `noreply@uplifterinc.com` | `noreply@upliftergymnastics.com` | `noreply@upliftergymnastics-dev.com` |
+| Reply-To Email |                           |                                  |                                      |
 
 ### Actions Required
 
 1. [ ] **Verify Domains in SES**:
    - [ ] `uplifterinc.com`
    - [ ] `upliftergymnastics.com`
-   - [ ] `uplifterdev.com`
+   - [ ] `upliftergymnastics-dev.com`
 
 2. [ ] **Request Production Access** (for uplifterinc.com):
    - SES starts in sandbox mode (can only send to verified emails)
@@ -294,11 +294,11 @@ You need **4 separate OAuth 2.0 Client IDs** (one per environment) because each 
 
 #### Development OAuth App
 
-| Item          | Value                                                    |
-| ------------- | -------------------------------------------------------- |
-| Client ID     |                                                          |
-| Client Secret |                                                          |
-| Redirect URI  | `https://login.uplifterdev.com/api/auth/callback/google` |
+| Item          | Value                                                               |
+| ------------- | ------------------------------------------------------------------- |
+| Client ID     |                                                                     |
+| Client Secret |                                                                     |
+| Redirect URI  | `https://login.upliftergymnastics-dev.com/api/auth/callback/google` |
 
 #### Local OAuth App
 

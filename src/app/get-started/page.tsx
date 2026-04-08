@@ -263,9 +263,12 @@ export default function SignupPage() {
       }
 
       toast.success("Organization created successfully!");
-      router.push(
-        `/org-signup/success?subdomain=${formData.subdomain}&orgName=${encodeURIComponent(formData.orgName)}`
-      );
+      const successParams = new URLSearchParams({
+        subdomain: formData.subdomain,
+        orgName: formData.orgName,
+        orgId: data.organizationId,
+      });
+      router.push(`/org-signup/success?${successParams.toString()}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Something went wrong");
       setIsLoading(false);

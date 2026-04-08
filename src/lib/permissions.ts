@@ -263,23 +263,27 @@ export const PERMISSION_GROUPS = [
     ],
   },
   {
-    category: "Users",
+    category: "Staff",
     items: [
       {
         id: PERMISSIONS.USERS_VIEW,
-        label: "View Users",
-        description: "View users in the organization",
+        label: "View Staff",
+        description: "View staff in the organization",
       },
-      { id: PERMISSIONS.USERS_CREATE, label: "Create Users", description: "Invite new users" },
+      {
+        id: PERMISSIONS.USERS_CREATE,
+        label: "Create Staff",
+        description: "Invite new staff members",
+      },
       {
         id: PERMISSIONS.USERS_EDIT,
-        label: "Edit Users",
-        description: "Modify user roles and permissions",
+        label: "Edit Staff",
+        description: "Modify staff roles and permissions",
       },
       {
         id: PERMISSIONS.USERS_DELETE,
-        label: "Delete Users",
-        description: "Remove users from organization",
+        label: "Delete Staff",
+        description: "Remove staff from organization",
       },
     ],
   },

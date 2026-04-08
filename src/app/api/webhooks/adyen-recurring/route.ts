@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { verifyWebhookSignature, parseRecurringTokenWebhook } from "@/lib/adyen";
+import {
+  verifyWebhookSignature,
+  extractHmacSignature,
+  parseRecurringTokenWebhook,
+} from "@/lib/adyen";
 import { logger } from "@/lib/logger";
 
 /**
@@ -26,9 +30,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
     }
 
-    const hmacSignature = request.headers.get("hmac-signature") || "";
+    const notificationRequest = JSON.parse(body);
+    const hmacSignature = extractHmacSignature(request.headers, notificationRequest);
     if (!hmacSignature) {
-      console.error("Missing webhook HMAC signature header");
+      console.error("Missing webhook HMAC signature");
       return NextResponse.json({ error: "Missing signature" }, { status: 401 });
     }
     const isValid = verifyWebhookSignature(body, hmacSignature);
@@ -91,10 +96,10 @@ export async function POST(request: NextRequest) {
         logger.debug("Unhandled recurring webhook event type", { eventCode: tokenData.eventCode });
     }
 
-    return NextResponse.json({ notificationResponse: "[accepted]" });
+    return NextResponse.json({ notificationResponse: "[accepted]" }, { status: 200 });
   } catch (error) {
     console.error("Webhook processing error:", error);
-    return NextResponse.json({ notificationResponse: "[accepted]" });
+    return NextResponse.json({ notificationResponse: "[accepted]" }, { status: 200 });
   }
 }
 

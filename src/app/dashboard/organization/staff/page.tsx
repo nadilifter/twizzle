@@ -1,20 +1,31 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import {
-  Plus,
-  Search,
-  Mail,
-  Phone,
-  MoreHorizontal,
-  Filter,
-  Loader2,
-  AlertCircle,
-} from "lucide-react";
+import * as React from "react";
+import { format } from "date-fns";
+import { useRouter } from "next/navigation";
+import { MoreHorizontal, Plus, Search, Shield, Mail, Check, Loader2 } from "lucide-react";
+
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { PhoneInput } from "@/components/ui/phone-input";
-import { formatPhoneNumberIntl } from "react-phone-number-input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -23,27 +34,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -51,498 +43,669 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useStaff } from "@/hooks/use-staff";
-import { api } from "@/lib/api-client";
-import type {
-  MemberWithUser,
-  EmploymentType,
-  Certification,
-  CreateMemberPayload,
-  UpdateMemberPayload,
-} from "@/types/staff";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
+import { useFeatures } from "@/components/feature-context";
+import { PERMISSION_GROUPS, PERMISSION_FEATURE_MAP, ROLE_PERMISSIONS } from "@/lib/permissions";
+import type { FeatureKey } from "@/lib/feature-toggles";
 
-// Common certifications
-const CERTIFICATIONS = [
-  { id: "usag-safety", name: "USAG Safety Certification" },
-  { id: "cpr-first-aid", name: "CPR / First Aid" },
-  { id: "safesport", name: "SafeSport Trained" },
-  { id: "background-check", name: "Background Check Cleared" },
+// --- Roles ---
+type RoleId = "admin" | "coach" | "volunteer" | "accountant" | "custom";
+
+interface RoleDefinition {
+  id: RoleId;
+  name: string;
+  description: string;
+}
+
+const ROLES: RoleDefinition[] = [
+  {
+    id: "admin",
+    name: "Admin",
+    description: "Full access to all settings, staff management, and financials.",
+  },
+  {
+    id: "coach",
+    name: "Coach",
+    description: "Can manage athletes, training plans, and view events.",
+  },
+  {
+    id: "accountant",
+    name: "Accountant",
+    description: "Access to financial overview, transactions, and reports.",
+  },
+  {
+    id: "volunteer",
+    name: "Volunteer",
+    description: "Limited access to view event schedules and attendance.",
+  },
 ];
-
-const EMPLOYMENT_TYPE_LABELS: Record<EmploymentType, string> = {
-  FULL_TIME: "Full-time",
-  PART_TIME: "Part-time",
-  CONTRACTOR: "Contractor",
-  VOLUNTEER: "Volunteer",
-};
 
 interface User {
   id: string;
+  memberId: string;
   name: string;
   email: string;
-  role: string;
-  status: string;
+  avatar?: string;
+  role: RoleId;
+  permissions: string[];
+  status: "active" | "invited";
+  joinedDate: string;
+  lastActive: string;
+  title?: string | null;
+  employmentType?: string | null;
 }
 
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+/**
+ * Checks whether an individual permission is available based on feature flags.
+ * Permissions not in PERMISSION_FEATURE_MAP are always available.
+ */
+function isPermissionAvailable(
+  permissionId: string,
+  isFeatureEnabled: (key: FeatureKey) => boolean
+): boolean {
+  const requiredFeature =
+    PERMISSION_FEATURE_MAP[permissionId as keyof typeof PERMISSION_FEATURE_MAP];
+  if (!requiredFeature) return true;
+  return isFeatureEnabled(requiredFeature);
 }
 
 export default function StaffPage() {
-  const {
-    staff,
-    isLoading,
-    isCreating,
-    isUpdating,
-    isDeleting,
-    error,
-    fetchStaff,
-    createStaff,
-    updateStaff,
-    deleteStaff,
-    clearError,
-  } = useStaff();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<MemberWithUser | null>(null);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [staffToDelete, setStaffToDelete] = useState<MemberWithUser | null>(null);
+  const router = useRouter();
+  const { isFeatureEnabled } = useFeatures();
+  const [users, setUsers] = React.useState<User[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [roleFilter, setRoleFilter] = React.useState<string>("all");
 
-  // Available users (users in org without staff profiles)
-  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
+  // Dialog State
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = React.useState(false);
+  const [editingUser, setEditingUser] = React.useState<User | null>(null);
+  const [viewingUser, setViewingUser] = React.useState<User | null>(null);
+  const [isSaving, setIsSaving] = React.useState(false);
 
-  // Form state
-  const [formUserId, setFormUserId] = useState("");
-  const [formTitle, setFormTitle] = useState("");
-  const [formEmploymentType, setFormEmploymentType] = useState<EmploymentType>("FULL_TIME");
-  const [formPhone, setFormPhone] = useState("");
-  const [formHourlyRate, setFormHourlyRate] = useState("");
-  const [formCertifications, setFormCertifications] = useState<string[]>([]);
+  // Form State
+  const [selectedRole, setSelectedRole] = React.useState<RoleId>("volunteer");
+  const [selectedPermissions, setSelectedPermissions] = React.useState<string[]>([]);
 
-  // Fetch available users when sheet opens
-  useEffect(() => {
-    if (sheetOpen && !editingStaff) {
-      fetchAvailableUsers();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sheetOpen, editingStaff]);
+  // Fetch users on mount
+  React.useEffect(() => {
+    fetchUsers();
+  }, []);
 
-  const fetchAvailableUsers = async () => {
-    setLoadingUsers(true);
+  const fetchUsers = async () => {
     try {
-      const users = await api.get<User[]>("/api/users");
-      // Filter out users who already have staff profiles
-      const staffUserIds = new Set(staff.map((s) => s.userId));
-      setAvailableUsers(users.filter((u) => !staffUserIds.has(u.id)));
-    } catch (err) {
-      console.error("Failed to fetch users:", err);
+      setIsLoading(true);
+      const response = await fetch("/api/users");
+      if (!response.ok) throw new Error("Failed to fetch users");
+      const data = await response.json();
+      setUsers(data);
+    } catch (error) {
+      toast.error("Failed to load staff. Please try again.");
     } finally {
-      setLoadingUsers(false);
+      setIsLoading(false);
     }
   };
 
-  const filteredStaff = staff.filter(
-    (person) =>
-      person.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (person.title?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
-      person.user.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const resetForm = () => {
-    setFormUserId("");
-    setFormTitle("");
-    setFormEmploymentType("FULL_TIME");
-    setFormPhone("");
-    setFormHourlyRate("");
-    setFormCertifications([]);
-    setEditingStaff(null);
-  };
-
-  const openEditSheet = (staffMember: MemberWithUser) => {
-    setEditingStaff(staffMember);
-    setFormTitle(staffMember.title || "");
-    setFormEmploymentType(staffMember.employmentType);
-    setFormPhone(staffMember.phone || "");
-    setFormHourlyRate(staffMember.hourlyRate?.toString() || "");
-    setFormCertifications(staffMember.certifications?.map((c: Certification) => c.name) || []);
-    setSheetOpen(true);
-  };
-
-  const handleSubmit = async () => {
-    if (editingStaff) {
-      // Update existing staff
-      const data: UpdateMemberPayload = {
-        title: formTitle || null,
-        employmentType: formEmploymentType,
-        phone: formPhone || null,
-        hourlyRate: formHourlyRate ? parseFloat(formHourlyRate) : null,
-        certifications: formCertifications.map((name) => ({ name, verified: true })),
-      };
-      const result = await updateStaff(editingStaff.id, data);
-      if (result) {
-        setSheetOpen(false);
-        resetForm();
-      }
-    } else {
-      // Create new staff
-      if (!formUserId) return;
-      const data: CreateMemberPayload = {
-        userId: formUserId,
-        title: formTitle || null,
-        employmentType: formEmploymentType,
-        phone: formPhone || null,
-        hourlyRate: formHourlyRate ? parseFloat(formHourlyRate) : null,
-        certifications: formCertifications.map((name) => ({ name, verified: true })),
-      };
-      const result = await createStaff(data);
-      if (result) {
-        setSheetOpen(false);
-        resetForm();
-      }
+  // Update permissions when role changes, filtering by enabled features
+  const handleRoleChange = (roleId: RoleId) => {
+    setSelectedRole(roleId);
+    if (roleId !== "custom") {
+      const roleKey = roleId.toUpperCase();
+      const permissions = (ROLE_PERMISSIONS[roleKey] || []).filter((p) =>
+        isPermissionAvailable(p, isFeatureEnabled)
+      );
+      setSelectedPermissions([...permissions]);
     }
   };
 
-  const handleDelete = async () => {
-    if (!staffToDelete) return;
-    const success = await deleteStaff(staffToDelete.id);
-    if (success) {
-      setDeleteConfirmOpen(false);
-      setStaffToDelete(null);
-    }
-  };
-
-  const toggleCertification = (certName: string) => {
-    setFormCertifications((prev) =>
-      prev.includes(certName) ? prev.filter((c) => c !== certName) : [...prev, certName]
+  const togglePermission = (permId: string) => {
+    setSelectedPermissions((prev) =>
+      prev.includes(permId) ? prev.filter((p) => p !== permId) : [...prev, permId]
     );
+  };
+
+  // Computed
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch =
+      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesRole = roleFilter === "all" || user.role === roleFilter;
+    return matchesSearch && matchesRole;
+  });
+
+  const handleViewUser = (user: User) => {
+    if (user.memberId) {
+      router.push(`/dashboard/organization/staff/${user.memberId}`);
+    } else {
+      setViewingUser(user);
+      setIsDetailsOpen(true);
+    }
+  };
+
+  const handleEditUser = (user: User) => {
+    setEditingUser(user);
+    setSelectedRole(user.role);
+    setSelectedPermissions([...user.permissions]);
+    setIsDialogOpen(true);
+  };
+
+  const handleAddUser = () => {
+    setEditingUser(null);
+    setSelectedRole("volunteer");
+    const roleKey = "VOLUNTEER";
+    const permissions = ROLE_PERMISSIONS[roleKey] || [];
+    setSelectedPermissions([...permissions]);
+    setIsDialogOpen(true);
+  };
+
+  const handleSaveUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+
+    const formData = new FormData(e.target as HTMLFormElement);
+    const name = formData.get("name") as string;
+    const email = formData.get("email") as string;
+
+    try {
+      if (editingUser) {
+        // Update existing user
+        const response = await fetch(`/api/users/${editingUser.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name,
+            email,
+            role: selectedRole.toUpperCase(),
+            permissions: selectedPermissions,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Failed to update staff member");
+        }
+
+        const updatedUser = await response.json();
+        setUsers(users.map((u) => (u.id === editingUser.id ? updatedUser : u)));
+
+        toast.success(`${name}'s profile has been updated.`);
+      } else {
+        // Create new user
+        const response = await fetch("/api/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name,
+            email,
+            role: selectedRole.toUpperCase(),
+            permissions: selectedPermissions,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Failed to create staff member");
+        }
+
+        const newUser = await response.json();
+        setUsers([newUser, ...users]);
+
+        toast.success(`An invitation has been sent to ${email}.`);
+      }
+
+      setIsDialogOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Something went wrong");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleRemoveUser = async (user: User) => {
+    if (!confirm(`Are you sure you want to remove ${user.name}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/users/${user.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to remove staff member");
+      }
+
+      setUsers(users.filter((u) => u.id !== user.id));
+
+      toast.success(`${user.name} has been removed from the organization.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to remove staff member");
+    }
+  };
+
+  const handleSendPasswordReset = async (user: User) => {
+    try {
+      const response = await fetch(`/api/users/${user.id}/send-password-reset`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to send password reset email");
+      }
+
+      toast.success(`Password reset email sent to ${user.email}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to send password reset email");
+    }
   };
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Staff Directory</h1>
-          <p className="text-muted-foreground">
-            Manage your coaches, administrators, and support staff.
-          </p>
-        </div>
-        <Sheet
-          open={sheetOpen}
-          onOpenChange={(open) => {
-            setSheetOpen(open);
-            if (!open) resetForm();
-          }}
-        >
-          <SheetTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Staff
-            </Button>
-          </SheetTrigger>
-          <SheetContent>
-            <SheetHeader>
-              <SheetTitle>{editingStaff ? "Edit Staff Member" : "Add New Staff Member"}</SheetTitle>
-              <SheetDescription>
-                {editingStaff
-                  ? "Update staff profile details."
-                  : "Create a staff profile for an existing user."}
-              </SheetDescription>
-            </SheetHeader>
-            <div className="grid gap-4 py-4">
-              {!editingStaff && (
-                <div className="grid gap-2">
-                  <Label htmlFor="user">Select User</Label>
-                  {loadingUsers ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Loading users...
-                    </div>
-                  ) : availableUsers.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      All users already have staff profiles.
-                    </p>
-                  ) : (
-                    <Select value={formUserId} onValueChange={setFormUserId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a user" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableUsers.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.name} ({user.email})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-              )}
-              <div className="grid gap-2">
-                <Label htmlFor="title">Job Title</Label>
-                <Input
-                  id="title"
-                  placeholder="e.g. Head Coach, Front Desk"
-                  value={formTitle}
-                  onChange={(e) => setFormTitle(e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="employmentType">Employment Type</Label>
-                <Select
-                  value={formEmploymentType}
-                  onValueChange={(v) => setFormEmploymentType(v as EmploymentType)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="FULL_TIME">Full-time</SelectItem>
-                    <SelectItem value="PART_TIME">Part-time</SelectItem>
-                    <SelectItem value="CONTRACTOR">Contractor</SelectItem>
-                    <SelectItem value="VOLUNTEER">Volunteer</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="phone">Phone</Label>
-                <PhoneInput
-                  id="phone"
-                  defaultCountry="US"
-                  value={formPhone}
-                  onChange={(value) => setFormPhone(value || "")}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="hourlyRate">Hourly Rate ($)</Label>
-                <Input
-                  id="hourlyRate"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={formHourlyRate}
-                  onChange={(e) => setFormHourlyRate(e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>Certifications</Label>
-                <div className="flex flex-col gap-2">
-                  {CERTIFICATIONS.map((cert) => (
-                    <div key={cert.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={cert.id}
-                        checked={formCertifications.includes(cert.name)}
-                        onCheckedChange={() => toggleCertification(cert.name)}
-                      />
-                      <Label htmlFor={cert.id}>{cert.name}</Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <SheetFooter>
-              <Button
-                onClick={handleSubmit}
-                disabled={(!editingStaff && !formUserId) || isCreating || isUpdating}
-              >
-                {(isCreating || isUpdating) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editingStaff ? "Save Changes" : "Create Staff Profile"}
-              </Button>
-            </SheetFooter>
-          </SheetContent>
-        </Sheet>
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-bold tracking-tight">Staff Management</h1>
+        <p className="text-muted-foreground">
+          Manage your staff and configure granular access permissions.
+        </p>
       </div>
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-          <Button variant="ghost" size="sm" onClick={clearError} className="ml-auto">
-            Dismiss
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <div className="flex flex-col gap-1">
+            <CardTitle>Staff</CardTitle>
+            <CardDescription>
+              View and manage staff who have access to the platform.
+            </CardDescription>
+          </div>
+          <Button onClick={handleAddUser}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Staff Member
           </Button>
-        </Alert>
-      )}
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col md:flex-row gap-4 mb-6 justify-between items-end">
+            <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+              <div className="relative w-full md:w-64">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search staff..."
+                  className="pl-8"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-full md:w-[180px]">
+                  <SelectValue placeholder="Filter by Role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  {ROLES.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search by name, title, or email..."
-            className="pl-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <Button variant="outline" size="icon">
-          <Filter className="h-4 w-4" />
-        </Button>
-      </div>
-
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[250px]">Name</TableHead>
-              <TableHead>Title</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="hidden md:table-cell">Contact</TableHead>
-              <TableHead className="hidden lg:table-cell">Certifications</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                  <p className="text-muted-foreground mt-2">Loading staff...</p>
-                </TableCell>
-              </TableRow>
-            ) : filteredStaff.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
-                  <p className="text-muted-foreground">
-                    {searchQuery ? "No staff found matching your search." : "No staff members yet."}
-                  </p>
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredStaff.map((person) => {
-                const certifications = (person.certifications as Certification[]) || [];
-                return (
-                  <TableRow key={person.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarImage
-                            src={person.user.avatar || undefined}
-                            alt={person.user.name}
-                          />
-                          <AvatarFallback>{getInitials(person.user.name)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col">
-                          <span>{person.user.name}</span>
-                          <span className="text-xs text-muted-foreground md:hidden">
-                            {person.title || "Staff"}
-                          </span>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">{person.title || "—"}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={person.employmentType === "FULL_TIME" ? "default" : "secondary"}
-                      >
-                        {EMPLOYMENT_TYPE_LABELS[person.employmentType]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <div className="flex flex-col text-sm">
-                        <div className="flex items-center gap-1">
-                          <Mail className="h-3 w-3 text-muted-foreground" />
-                          {person.user.email}
-                        </div>
-                        {person.phone && (
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <Phone className="h-3 w-3" />
-                            {formatPhoneNumberIntl(person.phone) || person.phone}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      <div className="flex flex-wrap gap-1">
-                        {certifications.length > 0 ? (
-                          certifications.map((cert) => (
-                            <Badge
-                              key={cert.name}
-                              variant="outline"
-                              className="text-xs font-normal"
-                            >
-                              {cert.name}
-                            </Badge>
-                          ))
-                        ) : (
-                          <span className="text-muted-foreground text-sm">—</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => openEditSheet(person)}>
-                            Edit Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>Manage Schedule</DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-red-600"
-                            onClick={() => {
-                              setStaffToDelete(person);
-                              setDeleteConfirmOpen(true);
-                            }}
-                          >
-                            Remove Staff Profile
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Staff Member</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead className="hidden md:table-cell">Title</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="hidden lg:table-cell">Joined</TableHead>
+                  <TableHead className="hidden lg:table-cell">Last Active</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                ) : filteredUsers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center">
+                      No staff found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell>
+                        <div
+                          className="flex items-center gap-3 cursor-pointer hover:bg-muted/50 p-1 rounded-md transition-colors"
+                          onClick={() => handleViewUser(user)}
+                        >
+                          <Avatar className="h-9 w-9">
+                            <AvatarImage src={user.avatar} alt={user.name} />
+                            <AvatarFallback>
+                              {user.name
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col">
+                            <span className="font-medium text-sm hover:underline decoration-dotted underline-offset-4">
+                              {user.name}
+                            </span>
+                            <span className="text-muted-foreground text-xs">{user.email}</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="rounded-sm font-normal capitalize">
+                          {ROLES.find((r) => r.id === user.role)?.name || user.role}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                        {user.title || "—"}
+                      </TableCell>
+                      <TableCell>
+                        {user.status === "active" ? (
+                          <Badge
+                            variant="outline"
+                            className="bg-green-50 text-green-700 border-green-200"
+                          >
+                            Active
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="bg-yellow-50 text-yellow-700 border-yellow-200"
+                          >
+                            Invited
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell
+                        className="hidden lg:table-cell text-sm text-muted-foreground"
+                        suppressHydrationWarning
+                      >
+                        {format(new Date(user.joinedDate), "MMM d, yyyy")}
+                      </TableCell>
+                      <TableCell
+                        className="hidden lg:table-cell text-sm text-muted-foreground"
+                        suppressHydrationWarning
+                      >
+                        {format(new Date(user.lastActive), "MMM d, h:mm a")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => handleViewUser(user)}>
+                              Edit Staff Member
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                              Edit Permissions
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleSendPasswordReset(user)}>
+                              Send Password Reset
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => handleRemoveUser(user)}
+                            >
+                              Remove Staff Member
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove Staff Profile?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will remove the staff profile for {staffToDelete?.user.name}. The user account
-              will remain but they will no longer have a staff profile. This action cannot be
-              undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700"
-              disabled={isDeleting}
-            >
-              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Remove
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* User Details Dialog */}
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
+            <DialogTitle>Staff Details</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="flex-1 px-6 min-h-0">
+            <div className="pr-4">
+              {viewingUser && (
+                <div className="flex flex-col gap-6 pb-6">
+                  <div className="flex flex-col items-center gap-4 p-6 bg-muted/30 rounded-lg">
+                    <Avatar className="h-24 w-24 border-4 border-background shadow-sm">
+                      <AvatarImage src={viewingUser.avatar} alt={viewingUser.name} />
+                      <AvatarFallback className="text-2xl">
+                        {viewingUser.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="text-center space-y-1">
+                      <h3 className="text-xl font-semibold">{viewingUser.name}</h3>
+                      <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                        <Mail className="h-3.5 w-3.5" />
+                        <span className="text-sm">{viewingUser.email}</span>
+                      </div>
+                      <div className="pt-2">
+                        <Badge variant="secondary" className="mr-2 capitalize">
+                          {ROLES.find((r) => r.id === viewingUser.role)?.name || viewingUser.role}
+                        </Badge>
+                        {viewingUser.status === "active" ? (
+                          <Badge
+                            variant="outline"
+                            className="bg-green-50 text-green-700 border-green-200"
+                          >
+                            Active Account
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="bg-yellow-50 text-yellow-700 border-yellow-200"
+                          >
+                            Invitation Pending
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
+                      <Shield className="h-4 w-4" />
+                      Access & Permissions
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {PERMISSION_GROUPS.map((group) => {
+                        const userHasInGroup = group.items.filter(
+                          (i) =>
+                            viewingUser.permissions.includes(i.id) ||
+                            viewingUser.permissions.includes("*")
+                        );
+                        if (userHasInGroup.length === 0) return null;
+                        return (
+                          <div key={group.category} className="rounded-lg border p-4 space-y-3">
+                            <h5 className="font-medium text-sm border-b pb-2">{group.category}</h5>
+                            <div className="space-y-2">
+                              {userHasInGroup.map((perm) => (
+                                <div key={perm.id} className="flex items-start gap-2 text-sm">
+                                  <Check className="h-4 w-4 text-green-500 mt-0.5" />
+                                  <span className="text-muted-foreground">{perm.label}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {viewingUser.permissions.length === 0 && (
+                      <div className="text-center py-8 text-muted-foreground">
+                        No specific permissions assigned.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+          <div className="px-6 pb-6 pt-4 border-t flex-shrink-0">
+            {viewingUser && (
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => {
+                    setIsDetailsOpen(false);
+                    handleEditUser(viewingUser);
+                  }}
+                >
+                  Edit Profile
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add/Edit Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[700px] h-[90vh] max-h-[90vh] flex flex-col p-0 overflow-hidden">
+          <form onSubmit={handleSaveUser} className="flex flex-col h-full min-h-0 overflow-hidden">
+            <DialogHeader className="p-6 pb-2 flex-shrink-0">
+              <DialogTitle>
+                {editingUser ? "Edit Staff Member" : "Add New Staff Member"}
+              </DialogTitle>
+              <DialogDescription>
+                Configure staff member details and granular permissions.
+              </DialogDescription>
+            </DialogHeader>
+
+            <ScrollArea className="flex-1 px-6 min-h-0">
+              <div className="pr-4">
+                <div className="grid gap-6 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Full Name</Label>
+                      <Input id="name" name="name" defaultValue={editingUser?.name} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email Address</Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        defaultValue={editingUser?.email}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <Label className="text-base">Role Template</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Select a role to pre-fill permissions
+                        </p>
+                      </div>
+                      <Select
+                        value={selectedRole}
+                        onValueChange={(val) => handleRoleChange(val as RoleId)}
+                      >
+                        <SelectTrigger className="w-[200px]">
+                          <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ROLES.map((role) => (
+                            <SelectItem key={role.id} value={role.id}>
+                              {role.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-4">
+                      <Label className="text-base">Granular Permissions</Label>
+                      {PERMISSION_GROUPS.map((group) => {
+                        const availableItems = group.items.filter((perm) =>
+                          isPermissionAvailable(perm.id, isFeatureEnabled)
+                        );
+                        if (availableItems.length === 0) return null;
+                        return (
+                          <div key={group.category} className="space-y-3">
+                            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                              {group.category}
+                            </h4>
+                            <div className="grid grid-cols-1 gap-2">
+                              {availableItems.map((perm) => {
+                                const isChecked =
+                                  selectedPermissions.includes(perm.id) ||
+                                  selectedPermissions.includes("*");
+                                return (
+                                  <div
+                                    key={perm.id}
+                                    className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"
+                                  >
+                                    <div className="space-y-0.5">
+                                      <Label
+                                        htmlFor={`perm-${perm.id}`}
+                                        className="text-base font-medium cursor-pointer"
+                                      >
+                                        {perm.label}
+                                      </Label>
+                                      <p className="text-sm text-muted-foreground">
+                                        {perm.description}
+                                      </p>
+                                    </div>
+                                    <Switch
+                                      id={`perm-${perm.id}`}
+                                      checked={isChecked}
+                                      onCheckedChange={() => togglePermission(perm.id)}
+                                      disabled={selectedPermissions.includes("*")}
+                                    />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ScrollArea>
+
+            <DialogFooter className="p-6 pt-2 border-t flex-shrink-0 bg-background">
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {editingUser ? "Save Changes" : "Invite Staff Member"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

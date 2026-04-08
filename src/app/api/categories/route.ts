@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { getScopedDb } from "@/lib/db";
+import { db, getScopedDb } from "@/lib/db";
 import { z } from "zod";
 
 const createCategorySchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional().nullable(),
-  imageUrl: z.string().min(1).optional().nullable(),
+  imageUrl: z.string().min(1).url().optional().nullable(),
 });
 
 // GET /api/categories
@@ -30,21 +30,46 @@ export async function GET(request: NextRequest) {
       }),
     };
 
-    const categories = await scopedDb.category.findMany({
-      where,
-      include: {
-        _count: {
-          select: {
-            programs: true,
-            events: true,
-            competitions: true,
+    const [categories, programCount, eventCount, competitionCount, websiteConfig] =
+      await Promise.all([
+        scopedDb.category.findMany({
+          where,
+          include: {
+            _count: {
+              select: {
+                programs: true,
+                events: true,
+                competitions: true,
+              },
+            },
           },
-        },
-      },
-      orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
-    });
+          orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
+        }),
+        scopedDb.program.count(),
+        scopedDb.event.count(),
+        scopedDb.competition.count(),
+        db.websiteConfig.findUnique({
+          where: { organizationId: session.user.organizationId },
+          select: { allProgramsCategoryImageUrl: true },
+        }),
+      ]);
 
-    return NextResponse.json({ data: categories });
+    const totalItems = programCount + eventCount + competitionCount;
+
+    return NextResponse.json({
+      data: categories,
+      allPrograms:
+        totalItems > 0
+          ? {
+              imageUrl: websiteConfig?.allProgramsCategoryImageUrl ?? null,
+              _count: {
+                programs: programCount,
+                events: eventCount,
+                competitions: competitionCount,
+              },
+            }
+          : null,
+    });
   } catch (error) {
     console.error("Error fetching categories:", error);
     return NextResponse.json({ error: "Failed to fetch categories" }, { status: 500 });

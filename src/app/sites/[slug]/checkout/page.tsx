@@ -944,18 +944,18 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
       } catch {
         // ignore
       }
+      setIsRedirectingToReceipt(true);
       clearCart();
-      await completeRegistration();
       if (checkoutInvoiceId) {
-        try {
-          await fetch(`/api/sites/${params.slug}/checkout/finalize`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ invoiceId: checkoutInvoiceId }),
-          });
-        } catch {
-          // Adyen webhook will handle it if reachable
-        }
+        fetch(`/api/sites/${params.slug}/checkout/finalize`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            invoiceId: checkoutInvoiceId,
+            paymentMethodType: result.paymentMethodType,
+          }),
+        }).catch(() => {});
+        completeRegistration().catch(() => {});
         router.push(`/receipt/${checkoutInvoiceId}`);
       }
     } else {
