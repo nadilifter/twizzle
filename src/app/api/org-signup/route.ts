@@ -2,108 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { hashPassword, getAuthSession } from "@/lib/auth";
 import { z } from "zod";
-import { passwordSchema } from "@/lib/password";
 import { isSubdomainReserved } from "@/lib/reserved-domains";
 import { containsProfanity } from "@/lib/profanity";
 import { registerAllowedOrigin } from "@/lib/adyen-platform";
 import { createDefaultGLCodes } from "@/lib/gl-code-defaults";
 import { getDefaultTaxRate } from "@/lib/tax-utils";
 import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
-import { isValidPhoneNumber } from "libphonenumber-js";
 import { geocodeAddress } from "@/lib/geocode";
-
-const MAX_NAME_LENGTH = 255;
-const HEX_COLOR_REGEX = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
-
-function isValidPostalCode(value: string, country: string): boolean {
-  const trimmed = value.trim().replace(/\s/g, "");
-  if (!trimmed) return false;
-  if (country === "US") return /^\d{5}(-\d{4})?$/.test(trimmed);
-  if (country === "CA") return /^[A-Za-z]\d[A-Za-z]\d[A-Za-z]\d$/.test(trimmed);
-  return false;
-}
-
-const signupSchema = z
-  .object({
-    // Existing account mode
-    useExistingAccount: z.boolean().optional(),
-
-    // User account (required only when creating a new account)
-    name: z
-      .string()
-      .max(MAX_NAME_LENGTH, `Name must be ${MAX_NAME_LENGTH} characters or less`)
-      .optional(),
-    email: z.string().email("Invalid email address").optional(),
-    password: passwordSchema.optional(),
-
-    // Organization
-    orgName: z.string().min(1, "Organization name is required"),
-    orgEmail: z.string().email("Invalid organization email"),
-    phone: z
-      .string()
-      .min(1, "Phone is required")
-      .refine(isValidPhoneNumber, "Please enter a valid phone number"),
-    street: z.string().min(1, "Street address is required"),
-    city: z.string().min(1, "City is required"),
-    stateProvince: z.string().min(1, "State / Province is required"),
-    postalCode: z.string().min(1, "Postal code is required"),
-    country: z.enum(["US", "CA"], { message: "Country must be United States or Canada" }),
-
-    // Website
-    subdomain: z
-      .string()
-      .min(3, "Subdomain must be at least 3 characters")
-      .max(63, "Subdomain must be at most 63 characters")
-      .regex(/^[a-z0-9-]+$/, "Subdomain can only contain lowercase letters, numbers, and hyphens")
-      .refine(
-        (s) => !s.startsWith("-") && !s.endsWith("-"),
-        "Subdomain cannot start or end with a hyphen"
-      ),
-
-    // Branding (optional)
-    primaryColor: z
-      .string()
-      .regex(HEX_COLOR_REGEX, "Primary color must be a valid hex (e.g. #000000)")
-      .optional(),
-    secondaryColor: z
-      .string()
-      .regex(HEX_COLOR_REGEX, "Secondary color must be a valid hex (e.g. #ffffff)")
-      .optional(),
-
-    // Plan
-    planId: z.string().min(1, "Please select a plan"),
-
-    // Sports (optional)
-    sportIds: z.array(z.string()).optional(),
-
-    // Adyen (optional - for paid plans)
-    adyenShopperReference: z.string().optional(),
-  })
-  .refine((data) => isValidPostalCode(data.postalCode, data.country), {
-    message: "Postal code must be a valid US ZIP or Canadian postal code",
-    path: ["postalCode"],
-  })
-  .superRefine((data, ctx) => {
-    if (!data.useExistingAccount) {
-      if (!data.name || data.name.trim().length === 0) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Name is required", path: ["name"] });
-      }
-      if (!data.email) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Email is required",
-          path: ["email"],
-        });
-      }
-      if (!data.password) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Password is required",
-          path: ["password"],
-        });
-      }
-    }
-  });
+import { getStoredPaymentMethods, isAdyenConfigured } from "@/lib/adyen";
+import { signupSchema } from "./signup-schema";
 
 export async function POST(request: NextRequest) {
   const rateLimitResponse = await checkApiRateLimit(request, "org-signup", RATE_LIMITS.sensitive);
@@ -215,6 +122,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    /** Populated for paid plans after Adyen confirms stored payment methods exist (same ref as tokenization). */
+    let paidPlanStoredMethods: Awaited<ReturnType<typeof getStoredPaymentMethods>> = [];
+
+    if (!isFreePlan) {
+      if (!isAdyenConfigured()) {
+        return NextResponse.json(
+          {
+            error:
+              "Payment processing is not configured. Please contact support or add Adyen credentials to your environment.",
+          },
+          { status: 503 }
+        );
+      }
+
+      const ref = validatedData.adyenShopperReference!;
+      let methods = await getStoredPaymentMethods(ref);
+      if (methods.length === 0) {
+        await new Promise((r) => setTimeout(r, 2000));
+        methods = await getStoredPaymentMethods(ref);
+      }
+      if (methods.length === 0) {
+        await new Promise((r) => setTimeout(r, 2000));
+        methods = await getStoredPaymentMethods(ref);
+      }
+      if (methods.length === 0) {
+        return NextResponse.json(
+          { error: "No valid payment method found. Please try again." },
+          { status: 400 }
+        );
+      }
+      paidPlanStoredMethods = methods;
+    }
+
     const now = new Date();
     const trialEndsAt = isFreePlan ? null : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
@@ -286,8 +226,8 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // 5. Create the subscription
-      const adyenShopperRef = validatedData.adyenShopperReference ? `org-${organization.id}` : null;
+      // 5. Create the subscription (Adyen shopper ref must match tokenization — do not substitute org-${id})
+      const adyenShopperRef = isFreePlan ? null : (validatedData.adyenShopperReference ?? null);
 
       await tx.organizationSubscription.create({
         data: {
@@ -341,18 +281,16 @@ export async function POST(request: NextRequest) {
       return { organization, userId: resolvedUserId };
     });
 
-    // If a payment method was collected during signup, link it to the new org.
-    // Two strategies: (1) claim any DB rows the webhook already created under
-    // the temporary shopper reference, or (2) fetch directly from Adyen if the
-    // webhook hasn't fired yet (race condition: webhook typically arrives before
-    // the org exists and silently no-ops).
-    if (validatedData.adyenShopperReference) {
-      const permanentRef = `org-${result.organization.id}`;
+    // Link payment methods to the new org. Shopper reference must stay the same as Adyen's
+    // tokenization ref (signup-...). (1) Claim DB rows the webhook created before the org existed,
+    // or (2) create rows from preflight Adyen data (already verified server-side).
+    if (!isFreePlan && validatedData.adyenShopperReference) {
+      const shopperRef = validatedData.adyenShopperReference;
       let methodLinked = false;
 
       try {
         const orphanedMethods = await db.organizationPaymentMethod.findMany({
-          where: { shopperReference: validatedData.adyenShopperReference },
+          where: { shopperReference: shopperRef },
         });
 
         for (const method of orphanedMethods) {
@@ -360,7 +298,6 @@ export async function POST(request: NextRequest) {
             where: { id: method.id },
             data: {
               organizationId: result.organization.id,
-              shopperReference: permanentRef,
             },
           });
         }
@@ -376,35 +313,22 @@ export async function POST(request: NextRequest) {
         console.error("Failed to claim orphaned payment methods:", err);
       }
 
-      // Fallback: query Adyen directly using the temp shopper reference.
-      // This covers the common case where the webhook arrived before the org
-      // existed and couldn't create a DB row.
       if (!methodLinked) {
         try {
-          const { getStoredPaymentMethods } = await import("@/lib/adyen");
-
-          let adyenMethods = await getStoredPaymentMethods(validatedData.adyenShopperReference);
-
-          // Retry once after a short delay — tokenization may still be processing
-          if (adyenMethods.length === 0) {
-            await new Promise((resolve) => setTimeout(resolve, 2000));
-            adyenMethods = await getStoredPaymentMethods(validatedData.adyenShopperReference);
-          }
-
-          for (const method of adyenMethods) {
+          for (const method of paidPlanStoredMethods) {
             try {
               await db.organizationPaymentMethod.create({
                 data: {
                   organizationId: result.organization.id,
                   storedPaymentMethodId: method.id,
-                  shopperReference: permanentRef,
+                  shopperReference: shopperRef,
                   type: method.type,
                   brand: method.brand,
                   lastFour: method.lastFour || "****",
                   expiryMonth: method.expiryMonth,
                   expiryYear: method.expiryYear,
                   holderName: method.holderName,
-                  isDefault: adyenMethods.indexOf(method) === 0,
+                  isDefault: paidPlanStoredMethods.indexOf(method) === 0,
                   isActive: true,
                 },
               });
@@ -413,10 +337,10 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          if (adyenMethods.length > 0) {
+          if (paidPlanStoredMethods.length > 0) {
             await db.organizationSubscription.updateMany({
               where: { organizationId: result.organization.id },
-              data: { adyenRecurringDetailRef: adyenMethods[0].id },
+              data: { adyenRecurringDetailRef: paidPlanStoredMethods[0].id },
             });
           }
         } catch (err) {
