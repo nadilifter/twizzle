@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { verifyWebhookSignature, extractHmacSignature } from "@/lib/adyen";
+import { verifyWebhookSignature, extractHmacSignature, resolvePaymentType } from "@/lib/adyen";
 import { processInvoiceRegistrations, type InvoiceMetadata } from "@/lib/invoice-processing";
 import { logger } from "@/lib/logger";
 import { Prisma } from "@prisma/client";
@@ -110,19 +110,6 @@ export async function POST(request: NextRequest) {
     console.error("Payment webhook processing error:", error);
     return NextResponse.json({ notificationResponse: "[accepted]" }, { status: 200 });
   }
-}
-
-const BANK_PAYMENT_METHODS = new Set([
-  "ach",
-  "paybybank_us",
-  "sepadirectdebit",
-  "ideal",
-  "banktransfer",
-]);
-
-function resolvePaymentType(adyenMethod: string | undefined): "CARD" | "BANK" {
-  if (!adyenMethod) return "CARD";
-  return BANK_PAYMENT_METHODS.has(adyenMethod.toLowerCase()) ? "BANK" : "CARD";
 }
 
 async function handleAuthorisation(

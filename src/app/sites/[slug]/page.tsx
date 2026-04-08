@@ -313,6 +313,7 @@ export default async function SitePage({ params }: { params: { slug: string } })
               categories={siteCategories}
               hasUncategorizedPrograms={hasUncategorizedPrograms}
               primaryColor={primaryColor}
+              allProgramsImageUrl={config.allProgramsCategoryImageUrl}
             />
           ) : (
             <FilterableProgramList

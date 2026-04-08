@@ -18,8 +18,18 @@ export interface Category {
   };
 }
 
+export interface AllProgramsMeta {
+  imageUrl: string | null;
+  _count: {
+    programs: number;
+    events: number;
+    competitions: number;
+  };
+}
+
 interface CategoriesListResponse {
   data: Category[];
+  allPrograms?: AllProgramsMeta;
 }
 
 interface CategoriesQueryParams {
@@ -45,6 +55,7 @@ interface UseCategoriesOptions {
 
 interface UseCategoriesReturn {
   categories: Category[];
+  allPrograms: AllProgramsMeta | null;
   isLoading: boolean;
   isCreating: boolean;
   isUpdating: boolean;
@@ -62,6 +73,7 @@ export function useCategories(options: UseCategoriesOptions = {}): UseCategories
   const { autoFetch = true, initialParams = {} } = options;
 
   const [categories, setCategories] = useState<Category[]>([]);
+  const [allPrograms, setAllPrograms] = useState<AllProgramsMeta | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -88,6 +100,7 @@ export function useCategories(options: UseCategoriesOptions = {}): UseCategories
     try {
       const response = await api.get<CategoriesListResponse>("/api/categories", queryParams);
       setCategories(response.data);
+      setAllPrograms(response.allPrograms ?? null);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch categories";
       setError(message);
@@ -174,6 +187,7 @@ export function useCategories(options: UseCategoriesOptions = {}): UseCategories
 
   return {
     categories,
+    allPrograms,
     isLoading,
     isCreating,
     isUpdating,
