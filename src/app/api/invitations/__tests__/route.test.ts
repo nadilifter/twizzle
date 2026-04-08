@@ -23,7 +23,13 @@ beforeEach(() => {
 });
 
 function makeRequest(url: string, init?: { method?: string; body?: string }) {
-  return new NextRequest(new URL(url, "http://localhost:3000"), init as never);
+  const headers = new Headers();
+  if (init?.body) headers.set("content-type", "application/json");
+  return new NextRequest(new URL(url, "http://localhost:3000"), {
+    method: init?.method,
+    body: init?.body,
+    headers,
+  });
 }
 
 function makeParams(token: string) {
@@ -213,8 +219,8 @@ describe("POST /api/invitations/[token]", () => {
     );
     const json = await res.json();
 
+    expect(json).toMatchObject({ requiresAuth: true });
     expect(res.status).toBe(401);
-    expect(json.requiresAuth).toBe(true);
   });
 
   it("returns 403 when logged-in user email does not match invitation", async () => {
@@ -247,8 +253,8 @@ describe("POST /api/invitations/[token]", () => {
     );
     const json = await res.json();
 
+    expect(json).toMatchObject({ error: expect.stringContaining("invited@example.com") });
     expect(res.status).toBe(403);
-    expect(json.error).toContain("invited@example.com");
   });
 
   it("accepts invitation for new user with password", async () => {
@@ -287,9 +293,8 @@ describe("POST /api/invitations/[token]", () => {
     );
     const json = await res.json();
 
+    expect(json).toMatchObject({ success: true, organizationId: "org-1" });
     expect(res.status).toBe(200);
-    expect(json.success).toBe(true);
-    expect(json.organizationId).toBe("org-1");
 
     expect(db.organizationInvitation.update).toHaveBeenCalledWith(
       expect.objectContaining({
