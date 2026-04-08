@@ -25,9 +25,18 @@
 
 import { execSync } from "child_process";
 import * as fs from "fs";
+import * as path from "path";
 
-const { loadEnvConfig } = require("@next/env");
-loadEnvConfig(process.cwd());
+// Load env files with raw dotenv (no dotenv-expand) so API keys containing
+// `$` are preserved. @next/env chains dotenv-expand which silently corrupts
+// `$VAR` sequences even inside single-quoted values.
+const dotenv = require("dotenv");
+for (const envFile of [".env.local", ".env"]) {
+  const filePath = path.resolve(process.cwd(), envFile);
+  if (fs.existsSync(filePath)) {
+    dotenv.config({ path: filePath });
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Environment resolution
@@ -293,6 +302,7 @@ async function main() {
         console.log(`    [dry-run] Would regenerate API key`);
       }
     } else if (spec.requiresManualSetup) {
+      // process.env is loaded via raw dotenv (no expand), so $ signs are preserved
       const existingEnvKey = process.env[spec.envKeyApiKey];
       if (existingEnvKey) {
         generatedKeys[spec.envKeyApiKey] = existingEnvKey;
@@ -346,6 +356,55 @@ async function main() {
       }
     }
     console.log();
+  }
+
+  // Step 2b: Register allowed origins on the checkout credential
+  const ALLOWED_ORIGINS: Record<Environment, string[]> = {
+    local: ["http://localhost:3000", "http://*.uplifter.localhost:3000"],
+    development: ["https://*.upliftergymnastics-dev.com"],
+    staging: ["https://*.upliftergymnastics.com"],
+    production: ["https://*.uplifter.app"],
+  };
+
+  const checkoutSpec = API_CREDENTIALS.find((s) => s.envKeyClientKey);
+  if (checkoutSpec) {
+    const checkoutDesc = buildCredentialDescription(checkoutSpec.descriptionPrefix, envSuffix);
+    const checkoutCred = findExistingCredential(existingCredsList, checkoutDesc);
+
+    if (checkoutCred) {
+      const desiredOrigins = ALLOWED_ORIGINS[targetEnv] || [];
+      if (desiredOrigins.length > 0 && !DRY_RUN) {
+        console.log("  Registering allowed origins on checkout credential...");
+        try {
+          const originsResponse = await mgmt.AllowedOriginsCompanyLevelApi.listAllowedOrigins(
+            companyId,
+            checkoutCred.id
+          );
+          const originsList: any[] = originsResponse.data ?? [];
+          const existingDomains = new Set(originsList.map((o: any) => o.domain));
+          for (const origin of desiredOrigins) {
+            if (existingDomains.has(origin)) {
+              console.log(`    Already registered: ${origin}`);
+            } else {
+              await mgmt.AllowedOriginsCompanyLevelApi.createAllowedOrigin(
+                companyId,
+                checkoutCred.id,
+                { domain: origin }
+              );
+              console.log(`    Added: ${origin}`);
+            }
+          }
+        } catch (err: any) {
+          console.error(`    WARNING: Failed to register allowed origins: ${err.message || err}`);
+        }
+      } else if (desiredOrigins.length > 0 && DRY_RUN) {
+        console.log("  [dry-run] Would register allowed origins:");
+        for (const origin of desiredOrigins) {
+          console.log(`    ${origin}`);
+        }
+      }
+      console.log();
+    }
   }
 
   // Step 3: Create webhooks and generate HMAC keys
@@ -422,11 +481,16 @@ async function main() {
     "ADYEN_BP_NEGBAL_WEBHOOK_HMAC_KEY",
   ];
 
-  // Wrap values in single quotes if they contain shell-sensitive characters.
-  // This prevents the common mistake of backslash-escaping $ signs when
-  // pasting into .env files — single quotes make dotenv treat content literally.
+  // Wrap values in single quotes if they contain shell-sensitive characters,
+  // and escape `$` as `\$` so dotenv-expand (used by @next/env) treats them
+  // as literal dollar signs instead of variable references.
   const needsQuoting = /[$\\;{}^()!&|<> ]/;
-  const quoteIfNeeded = (val: string) => (needsQuoting.test(val) ? `'${val}'` : val);
+  const quoteIfNeeded = (val: string) => {
+    if (!needsQuoting.test(val)) return val;
+    // Normalize: strip existing \$ escapes, then re-escape all $ as \$
+    const normalized = val.replace(/\\\$/g, "$");
+    return `'${normalized.replace(/\$/g, "\\$")}'`;
+  };
 
   for (const key of keyOrder) {
     if (generatedKeys[key]) {
@@ -494,13 +558,14 @@ async function main() {
   console.log(`  Webhooks: ${webhookConfigs.length}`);
   console.log();
   console.log("  Next steps:");
-  console.log("    1. Copy the generated values into your .env (keep single quotes as-is,");
-  console.log("       do NOT backslash-escape $ signs — single quotes handle that)");
+  console.log("    1. Copy the generated values into your .env / .env.local as-is.");
+  console.log("       The script escapes $ as \\$ inside single quotes so that");
+  console.log("       dotenv-expand (used by @next/env) preserves them literally.");
   console.log("    2. Also set these manually (not auto-provisioned):");
   console.log("       ADYEN_BALANCE_PLATFORM=UplifterLLC");
   console.log("       ADYEN_PLATFORM_MERCHANT_ACCOUNT=<your merchant account>");
   console.log("       ADYEN_LIABLE_BALANCE_ACCOUNT_ID=<your liable balance account>");
-  console.log("    3. Deploy to pick up the new environment variables");
+  console.log("    3. Restart your dev server to pick up the new environment variables");
   console.log("    4. Test webhooks from the Adyen Customer Area");
   console.log();
 }

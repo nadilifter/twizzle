@@ -279,28 +279,28 @@ The `--dev-tag` is required for local environments — use your first name or a 
 
 **After running the script:**
 
-1. Copy the output `.env` fragment into your `.env`, replacing the Adyen key lines
-2. Keep single quotes as-is in the output — do NOT backslash-escape `$` signs (dotenv treats single-quoted values literally, so `\$` becomes a literal backslash + dollar, which corrupts the key and causes 401 errors)
+1. Copy the output `.env` fragment into your `.env` / `.env.local`, replacing the Adyen key lines. The script automatically escapes `$` as `\$` inside single quotes so that `dotenv-expand` (used by `@next/env`) preserves them as literal characters.
+2. If pasting keys manually (not from the script), wrap in single quotes and escape every `$` as `\$` — e.g. `ADYEN_API_KEY='AQE...\$A*.\$]5'`
 3. Manually set these (not auto-provisioned):
    - `ADYEN_BALANCE_PLATFORM=UplifterLLC`
    - `ADYEN_PLATFORM_MERCHANT_ACCOUNT=KirraCapital_Leapfrog_TEST`
    - `ADYEN_LIABLE_BALANCE_ACCOUNT_ID=BA32957223227M5KTBSHJFVFL`
 
-**Critical `.env` quoting rule:** Adyen API keys contain `$`, `;`, `^`, and other shell-sensitive characters. Always wrap them in single quotes in `.env` files. Never backslash-escape `$` inside single quotes — dotenv preserves backslashes literally, which makes the key invalid.
+**Critical `.env` quoting rule:** Adyen API keys contain `$`, `;`, `^`, and other shell-sensitive characters. Always wrap them in single quotes **and** escape `$` as `\$`. Next.js uses `@next/env` which chains `dotenv` → `dotenv-expand`. Single quotes alone do **not** prevent `dotenv-expand` from interpreting `$VAR` as a variable reference (expanded to empty string). The `\$` escape is what tells `dotenv-expand` to keep the literal `$`.
 
 ```bash
-# CORRECT — single quotes, no escaping
-ADYEN_API_KEY='AQE...PU8=-i1iXhz{^)R;;$A*.$]5'
-
-# WRONG — backslash-escaped dollar signs corrupt the key
+# CORRECT — single quotes with \$ escaping
 ADYEN_API_KEY='AQE...PU8=-i1iXhz{^)R;;\$A*.\$]5'
+
+# WRONG — unescaped $ gets silently expanded to empty by dotenv-expand
+ADYEN_API_KEY='AQE...PU8=-i1iXhz{^)R;;$A*.$]5'
 ```
 
 ### Adyen MCP Server (AI Agents)
 
 When an AI agent needs to troubleshoot or manage Adyen configuration (list credentials, test API keys, inspect webhooks, create payment sessions), it **must** have access to the `adyen-mcp-server` MCP. Without it, the agent cannot interact with the Adyen Management or Checkout APIs directly.
 
-The MCP server reads `ADYEN_API_KEY` and `ADYEN_MERCHANT_ACCOUNT` from the environment. If these are missing or invalid (e.g., corrupted by `\$` escaping), all MCP calls will return 401.
+The MCP server reads `ADYEN_API_KEY` and `ADYEN_MERCHANT_ACCOUNT` from the environment. If these are missing or invalid (e.g., corrupted by unescaped `$` in `.env` values), all MCP calls will return 401.
 
 Key MCP tools for Adyen troubleshooting:
 
@@ -326,7 +326,7 @@ Key MCP tools for Adyen troubleshooting:
 - **Don't mutate inside a transaction without first verifying org ownership** — `getScopedDb` doesn't propagate into `$transaction` callbacks
 - **Don't create new abstractions for one-off operations** — inline the logic
 - **Don't add error handling for impossible states** — only validate at system boundaries
-- **Don't backslash-escape `$` in single-quoted `.env` values** — dotenv preserves `\` literally, corrupting Adyen API keys and causing 401 errors
+- **Don't leave `$` unescaped in `.env` values** — use `\$` inside single quotes so `dotenv-expand` (used by `@next/env`) preserves the literal character; unescaped `$` is silently expanded to empty, corrupting API keys
 
 ---
 
