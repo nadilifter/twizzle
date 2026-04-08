@@ -9,7 +9,11 @@ import { createDefaultGLCodes } from "@/lib/gl-code-defaults";
 import { getDefaultTaxRate } from "@/lib/tax-utils";
 import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { geocodeAddress } from "@/lib/geocode";
-import { getStoredPaymentMethods, isAdyenConfigured } from "@/lib/adyen";
+import {
+  getStoredPaymentMethodsWithRetry,
+  isAdyenConfigured,
+  type StoredPaymentMethod,
+} from "@/lib/adyen";
 import { signupSchema } from "./signup-schema";
 
 export async function POST(request: NextRequest) {
@@ -123,7 +127,7 @@ export async function POST(request: NextRequest) {
     }
 
     /** Populated for paid plans after Adyen confirms stored payment methods exist (same ref as tokenization). */
-    let paidPlanStoredMethods: Awaited<ReturnType<typeof getStoredPaymentMethods>> = [];
+    let paidPlanStoredMethods: StoredPaymentMethod[] = [];
 
     if (!isFreePlan) {
       if (!isAdyenConfigured()) {
@@ -137,15 +141,7 @@ export async function POST(request: NextRequest) {
       }
 
       const ref = validatedData.adyenShopperReference!;
-      let methods = await getStoredPaymentMethods(ref);
-      if (methods.length === 0) {
-        await new Promise((r) => setTimeout(r, 2000));
-        methods = await getStoredPaymentMethods(ref);
-      }
-      if (methods.length === 0) {
-        await new Promise((r) => setTimeout(r, 2000));
-        methods = await getStoredPaymentMethods(ref);
-      }
+      const methods = await getStoredPaymentMethodsWithRetry(ref);
       if (methods.length === 0) {
         return NextResponse.json(
           { error: "No valid payment method found. Please try again." },

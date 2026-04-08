@@ -361,6 +361,35 @@ export async function getStoredPaymentMethods(
   }
 }
 
+export interface GetStoredPaymentMethodsRetryOptions {
+  /** Total fetch attempts (default 3). */
+  maxAttempts?: number;
+  /** Delay in ms before each retry after an empty result (default 2000). */
+  delayMs?: number;
+}
+
+/**
+ * Polls GET /paymentMethods (stored methods) until methods exist or attempts are exhausted.
+ * Useful when tokenization may not be visible immediately after Checkout completes.
+ */
+export async function getStoredPaymentMethodsWithRetry(
+  shopperReference: string,
+  options?: GetStoredPaymentMethodsRetryOptions
+): Promise<StoredPaymentMethod[]> {
+  const maxAttempts = options?.maxAttempts ?? 3;
+  const delayMs = options?.delayMs ?? 2000;
+
+  let methods: StoredPaymentMethod[] = [];
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    methods = await getStoredPaymentMethods(shopperReference);
+    if (methods.length > 0) break;
+    if (attempt < maxAttempts - 1) {
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+  return methods;
+}
+
 /**
  * Disable (delete) a stored payment method
  *
