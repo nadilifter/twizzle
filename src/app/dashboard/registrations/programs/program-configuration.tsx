@@ -1925,7 +1925,10 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                   ) : waivers.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                       No active waivers found.{" "}
-                      <a href="/dashboard/athletes/waivers/new" className="text-primary underline">
+                      <a
+                        href="/dashboard/athletes/waivers?create=true"
+                        className="text-primary underline"
+                      >
                         Create a waiver
                       </a>{" "}
                       first.

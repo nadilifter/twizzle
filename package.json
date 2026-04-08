@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "NODE_OPTIONS='--max-old-space-size=4096' next dev",
+    "dev": "concurrently -n next,tsc -c blue,yellow \"NODE_OPTIONS='--max-old-space-size=4096' next dev\" \"tsc --noEmit --watch --preserveWatchOutput\"",
+    "dev:debug": "NODE_OPTIONS='--max-old-space-size=4096 --inspect' next dev",
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
@@ -136,6 +137,7 @@
     "@types/react-dom": "^18",
     "@types/sns-validator": "^0.3.3",
     "@types/uuid": "^11.0.0",
+    "concurrently": "^9.2.1",
     "dotenv": "^17.3.1",
     "eslint": "^8.57.1",
     "eslint-config-next": "14.2.3",

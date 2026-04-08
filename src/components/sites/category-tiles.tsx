@@ -20,14 +20,23 @@ interface CategoryTilesProps {
   categories: CategoryTile[];
   hasUncategorizedPrograms: boolean;
   primaryColor: string;
+  allProgramsImageUrl?: string | null;
 }
 
 export function CategoryTiles({
   categories,
   hasUncategorizedPrograms,
   primaryColor,
+  allProgramsImageUrl,
 }: CategoryTilesProps) {
-  const tiles = [
+  const tiles: CategoryTile[] = [
+    {
+      id: "all",
+      name: "All Programs",
+      description: "Browse all available programs",
+      imageUrl: allProgramsImageUrl ?? null,
+      _count: { programs: 0, events: 0, competitions: 0 },
+    },
     ...categories,
     ...(hasUncategorizedPrograms
       ? [
@@ -35,7 +44,7 @@ export function CategoryTiles({
             id: "other",
             name: "Other Programs",
             description: "Browse additional programs",
-            imageUrl: null,
+            imageUrl: null as string | null,
             _count: { programs: 0, events: 0, competitions: 0 },
           },
         ]
@@ -47,10 +56,10 @@ export function CategoryTiles({
       {tiles.map((category) => (
         <Link
           key={category.id}
-          href={`/register?category=${category.id}`}
+          href={category.id === "all" ? "/register" : `/register?category=${category.id}`}
           className="group relative flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all hover:shadow-lg hover:-translate-y-0.5"
         >
-          <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
+          <div className="relative aspect-video w-full overflow-hidden bg-muted">
             {category.imageUrl ? (
               <ProgressiveImage
                 src={category.imageUrl}

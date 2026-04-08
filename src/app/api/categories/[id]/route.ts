@@ -6,7 +6,7 @@ import { z } from "zod";
 const updateCategorySchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional().nullable(),
-  imageUrl: z.string().url().optional().nullable(),
+  imageUrl: z.string().min(1).url().optional().nullable(),
 });
 
 // GET /api/categories/[id]
