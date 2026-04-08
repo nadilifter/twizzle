@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { toast } from "sonner";
 import { getBaseDomainSuffix } from "@/lib/client-domains";
+import { formatPhoneNumberIntl } from "react-phone-number-input";
 
 interface SignupData {
   useExistingAccount?: boolean;
@@ -174,7 +175,9 @@ export default function ReviewPage() {
                 <Separator />
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Phone</span>
-                  <span className="font-medium">{signupData.phone}</span>
+                  <span className="font-medium">
+                    {formatPhoneNumberIntl(signupData.phone) || signupData.phone}
+                  </span>
                 </div>
               </>
             )}

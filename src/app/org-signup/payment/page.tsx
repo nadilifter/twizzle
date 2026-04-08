@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CreditCard, Loader2, Shield } from "lucide-react";
+import { ArrowLeft, Check, CreditCard, Loader2, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +43,7 @@ export default function PaymentPage() {
   const [shopperReference, setShopperReference] = useState<string | null>(null);
   const [isCreatingSession, setIsCreatingSession] = useState(true);
   const [sessionError, setSessionError] = useState<string | null>(null);
+  const [cardSaved, setCardSaved] = useState(false);
 
   const trialEndDate = new Date();
   trialEndDate.setDate(trialEndDate.getDate() + 30);
@@ -133,7 +134,7 @@ export default function PaymentPage() {
         cardBrand: result.additionalData?.paymentMethod ?? null,
       })
     );
-    router.push("/org-signup/review");
+    setCardSaved(true);
   };
 
   const handlePaymentError = (error: any) => {
@@ -200,7 +201,7 @@ export default function PaymentPage() {
           </CardContent>
         </Card>
 
-        {/* Payment Form */}
+        {/* Payment Form / Card Saved */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
@@ -212,7 +213,26 @@ export default function PaymentPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {isCreatingSession ? (
+            {cardSaved ? (
+              <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-950/50">
+                  <Check className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <p className="font-medium">Payment method saved</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    You won&apos;t be charged until your trial ends on {formattedTrialEnd}.
+                  </p>
+                </div>
+                <Button
+                  className="mt-2 w-full"
+                  size="lg"
+                  onClick={() => router.push("/org-signup/review")}
+                >
+                  Continue to Review
+                </Button>
+              </div>
+            ) : isCreatingSession ? (
               <div className="flex flex-col items-center justify-center py-8 gap-3">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">Loading payment form...</p>
@@ -235,9 +255,11 @@ export default function PaymentPage() {
           </CardContent>
         </Card>
 
-        <Button asChild variant="outline" className="w-full">
-          <Link href="/org-signup">Back to Signup</Link>
-        </Button>
+        {!cardSaved && (
+          <Button asChild variant="outline" className="w-full">
+            <Link href="/org-signup">Back to Signup</Link>
+          </Button>
+        )}
       </div>
     </div>
   );
