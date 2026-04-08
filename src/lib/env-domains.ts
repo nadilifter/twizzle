@@ -44,13 +44,13 @@ export const ENV_CONFIG: Record<Environment, EnvironmentConfig> = {
     corsOrigins: ["https://upliftergymnastics.com", "https://*.upliftergymnastics.com"],
   },
   development: {
-    baseDomain: "uplifterdev.com",
-    cookieDomain: ".uplifterdev.com",
+    baseDomain: "upliftergymnastics-dev.com",
+    cookieDomain: ".upliftergymnastics-dev.com",
     s3Bucket: "uplifter-assets-dev",
     s3DocumentsBucket: "uplifter-documents-dev",
     cdnUrl: null,
     useHttps: true,
-    corsOrigins: ["https://uplifterdev.com", "https://*.uplifterdev.com"],
+    corsOrigins: ["https://upliftergymnastics-dev.com", "https://*.upliftergymnastics-dev.com"],
   },
   local: {
     baseDomain: "uplifter.localhost:3000",

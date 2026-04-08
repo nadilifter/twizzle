@@ -26,8 +26,8 @@ jobs:
             test
             perf
           requireScope: false
-          subjectPattern: ^US-\d+ .+$
+          subjectPattern: ^(US|USC|PD)-\d+ .+$
           subjectPatternError: |
             PR title must include a ticket number after the type.
-            Expected: "type: US-### description"
+            Expected: "type: US-### description" or "type: USC-### description" or "type: PD-### description"
             Example:  "feat: US-42 add billing page"

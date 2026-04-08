@@ -6,6 +6,8 @@
  *   - ADYEN_MERCHANT_ACCOUNT: Your Adyen merchant account name
  *   - ADYEN_ENVIRONMENT: "TEST" or "LIVE" (defaults to TEST in development, required in production)
  *   - ADYEN_WEBHOOK_HMAC_KEY: HMAC key for webhook signature verification
+ *   - ADYEN_ALLOWED_PAYMENT_METHODS: Optional comma-separated Checkout payment method types
+ *     (e.g. scheme,googlepay,applepay,ach). Defaults to card + wallets + ACH.
  */
 
 /**
@@ -127,6 +129,19 @@ export function getAdyenEnvironmentName(): "TEST" | "LIVE" {
   return "TEST";
 }
 
+export const BANK_PAYMENT_METHODS = new Set([
+  "ach",
+  "paybybank_us",
+  "sepadirectdebit",
+  "ideal",
+  "banktransfer",
+]);
+
+export function resolvePaymentType(adyenMethod: string | undefined): "CARD" | "BANK" {
+  if (!adyenMethod) return "CARD";
+  return BANK_PAYMENT_METHODS.has(adyenMethod.toLowerCase()) ? "BANK" : "CARD";
+}
+
 export interface AdyenLineItem {
   id: string;
   description: string;
@@ -145,6 +160,29 @@ export interface TokenizationOptions {
   shopperReference: string;
   storePaymentMethodMode?: "askForConsent" | "enabled" | "disabled";
   recurringProcessingModel?: "CardOnFile" | "Subscription" | "UnscheduledCardOnFile";
+}
+
+/** Default payment method types for Checkout POST /sessions (must match Adyen PM type strings). */
+export const DEFAULT_CHECKOUT_ALLOWED_PAYMENT_METHODS = [
+  "scheme",
+  "googlepay",
+  "applepay",
+  "ach",
+] as const;
+
+/**
+ * Payment methods to expose in Drop-in for sessions created by this app.
+ * Override with env ADYEN_ALLOWED_PAYMENT_METHODS (comma-separated).
+ */
+export function getCheckoutAllowedPaymentMethods(): string[] {
+  const raw = process.env.ADYEN_ALLOWED_PAYMENT_METHODS?.trim();
+  if (!raw) {
+    return [...DEFAULT_CHECKOUT_ALLOWED_PAYMENT_METHODS];
+  }
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 export async function createPaymentSession(
@@ -166,6 +204,7 @@ export async function createPaymentSession(
       lineItems,
       channel: "Web",
       countryCode: "US",
+      allowedPaymentMethods: getCheckoutAllowedPaymentMethods(),
     };
 
     if (tokenization) {
@@ -245,15 +284,15 @@ export interface StoredPaymentMethod {
  * @param returnUrl - URL to redirect after payment/tokenization
  * @param shopperEmail - Optional shopper email
  * @param amount - Amount in dollars (use 0 for $0 authorization)
- * @param storeMode - "askForConsent" shows a save-card checkbox (default),
- *                    "enabled" always stores the card without asking
+ * @param storeMode - With askForConsent, Adyen only stores card details (wallets/ACH need enabled).
+ *                    Default "enabled" so Apple Pay, Google Pay, ACH can appear for subscription tokenization.
  */
 export async function createTokenizationSession(
   shopperReference: string,
   returnUrl: string,
   shopperEmail?: string,
   amount: number = 0,
-  storeMode: "askForConsent" | "enabled" = "askForConsent"
+  storeMode: "askForConsent" | "enabled" = "enabled"
 ) {
   try {
     const response = await checkoutApi.PaymentsApi.sessions({
@@ -268,7 +307,7 @@ export async function createTokenizationSession(
       shopperEmail,
       channel: "Web" as any,
       countryCode: "US",
-      storePaymentMethod: true,
+      allowedPaymentMethods: getCheckoutAllowedPaymentMethods(),
       storePaymentMethodMode: storeMode as any,
       recurringProcessingModel: "Subscription" as any,
       shopperInteraction: "Ecommerce" as any,
@@ -392,12 +431,14 @@ export async function chargeSubscription(
 }
 
 /**
- * Verify Adyen webhook HMAC signature
+ * Verify Adyen standard webhook HMAC signature.
  *
  * @param payload - The raw request body as a string
- * @param hmacSignature - The HMAC signature from the request headers
+ * @param hmacSignature - The HMAC signature, extracted from header or body via extractHmacSignature.
+ *   If provided, it is injected into the notification item so the library validates it regardless
+ *   of where it came from. The library otherwise reads from additionalData.hmacSignature.
  */
-export function verifyWebhookSignature(payload: string, hmacSignature: string): boolean {
+export function verifyWebhookSignature(payload: string, hmacSignature?: string): boolean {
   const hmacKey = process.env.ADYEN_WEBHOOK_HMAC_KEY;
   if (!hmacKey) {
     console.error("ADYEN_WEBHOOK_HMAC_KEY is not set - cannot verify webhook signature");
@@ -408,7 +449,6 @@ export function verifyWebhookSignature(payload: string, hmacSignature: string): 
     const { hmacValidator } = require("@adyen/api-library");
     const validator = new hmacValidator();
 
-    // Parse the notification item from the payload
     const notificationRequest = JSON.parse(payload);
     const notificationItem = notificationRequest.notificationItems?.[0]?.NotificationRequestItem;
 
@@ -417,11 +457,44 @@ export function verifyWebhookSignature(payload: string, hmacSignature: string): 
       return false;
     }
 
+    // If the signature was found outside of additionalData (e.g. a header), inject it so
+    // the library can validate it regardless of where Adyen chose to send it.
+    if (hmacSignature) {
+      notificationItem.additionalData = {
+        ...notificationItem.additionalData,
+        hmacSignature,
+      };
+    }
+
     return validator.validateHMAC(notificationItem, hmacKey);
   } catch (error) {
     console.error("Error verifying webhook signature:", safeErrorDetail(error));
     return false;
   }
+}
+
+/**
+ * Extract the HMAC signature from an Adyen webhook request.
+ *
+ * Adyen embeds the HMAC in different places depending on webhook type:
+ * - Standard payment webhooks: body.notificationItems[0].NotificationRequestItem.additionalData.hmacSignature
+ * - Balance Platform webhooks: body.HmacSignature (top-level)
+ * - Some configurations may send it as an HTTP header (hmacsignature / hmac-signature)
+ *
+ * Checks in order: header → BP body field → standard body field.
+ */
+export function extractHmacSignature(headers: Headers, parsedBody: any): string {
+  const fromHeader = headers.get("hmacsignature") || headers.get("hmac-signature") || "";
+  if (fromHeader) return fromHeader;
+
+  if (parsedBody?.HmacSignature) return parsedBody.HmacSignature;
+
+  const notificationItem = parsedBody?.notificationItems?.[0]?.NotificationRequestItem;
+  if (notificationItem?.additionalData?.hmacSignature) {
+    return notificationItem.additionalData.hmacSignature;
+  }
+
+  return "";
 }
 
 /**

@@ -5,6 +5,7 @@ import { processInvoiceRegistrations, type InvoiceMetadata } from "@/lib/invoice
 import { sendTemplatedEmail } from "@/lib/email";
 import { getSubdomainUrl } from "@/lib/env-domains";
 import { logger } from "@/lib/logger";
+import { resolvePaymentType } from "@/lib/adyen";
 
 /**
  * POST /api/sites/[slug]/checkout/finalize
@@ -19,7 +20,7 @@ import { logger } from "@/lib/logger";
  */
 export async function POST(request: NextRequest, { params }: { params: { slug: string } }) {
   try {
-    const { invoiceId } = await request.json();
+    const { invoiceId, paymentMethodType } = await request.json();
 
     if (!invoiceId || typeof invoiceId !== "string") {
       return NextResponse.json({ error: "Missing invoiceId" }, { status: 400 });
@@ -74,13 +75,14 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
         if (!inv) return;
 
         const paymentAmount = Number(inv.total);
+        const paymentType = resolvePaymentType(paymentMethodType);
 
         const payment = await tx.payment.create({
           data: {
             invoiceId: inv.id,
             userId: invoice.userId || undefined,
             amount: paymentAmount,
-            method: "CARD",
+            method: paymentType,
             status: "COMPLETED",
             processedAt: new Date(),
           },
@@ -97,7 +99,7 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
             amount: paymentAmount,
             currency: "USD",
             status: "SETTLED",
-            method: "card",
+            method: paymentMethodType || "card",
             description: `Online payment – ${inv.reference}`,
             settledAt: new Date(),
             feeRate: finPlan ? Number(finPlan.transactionFee) : null,

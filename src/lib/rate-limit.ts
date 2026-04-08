@@ -228,11 +228,12 @@ export async function checkAuthRateLimit(
 export async function checkApiRateLimit(
   request: Request,
   prefix: string = "api",
-  customConfig?: RateLimitConfig
+  customConfig?: RateLimitConfig,
+  { failClosed = false }: { failClosed?: boolean } = {}
 ): Promise<Response | null> {
   const ip = getClientIp(request);
   const config = customConfig || RATE_LIMITS.api;
-  const result = await checkRateLimit(ip, prefix, config);
+  const result = await checkRateLimit(ip, prefix, config, { failClosed });
 
   if (!result.success) {
     return new Response(

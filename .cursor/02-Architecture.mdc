@@ -2,11 +2,13 @@
 description: Architectural principles and separation of concerns
 globs: ["**/*"]
 ---
+
 # 02-Architecture
 
 ## Mandates
 
 ### Code Structure
+
 - **Monorepo**: Use a Monorepo for code-sharing between the core SaaS app and white-label/customer sites.
 - **Core Principle**: Enforce strict separation of concerns (frontend/backend).
 - **Logic Placement**: Keep all business logic and external API calls in Server Components or dedicated API Routes/Server Actions.
@@ -16,7 +18,7 @@ globs: ["**/*"]
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    DNS (Route 53)                           │
-│  uplifter.app │ upliftergymnastics.com │ uplifterdev.com │
+│  uplifter.app │ upliftergymnastics.com │ upliftergymnastics-dev.com │
 └────────────────────────────┬────────────────────────────────┘
                              │
 ┌────────────────────────────▼────────────────────────────────┐
@@ -42,12 +44,14 @@ globs: ["**/*"]
 ```
 
 ### Multi-Tenant Data Model
+
 - **Single Database**: Each environment has one database with row-level tenant isolation.
 - **Organization ID**: All tenant data includes `organizationId` foreign key.
 - **Scoped Queries**: Use `getScopedDb()` for automatic tenant filtering.
 - **Superadmin**: Bypasses tenant scoping for cross-organization queries.
 
 ### Environment-Aware Configuration
+
 - **Domain Resolution**: `src/lib/env-domains.ts` provides `getEnvConfig()` for environment detection.
 - **Middleware**: Dynamically routes based on subdomain and environment.
 - **Services**: External services (Adyen, Twilio, SES) switch TEST/LIVE mode per environment.
@@ -56,11 +60,11 @@ globs: ["**/*"]
 
 The middleware in `src/middleware.ts` **internally** rewrites tenant subdomain requests by prepending `/sites/{subdomain}` to the path. This is invisible to the browser. Client-side navigation must NEVER include the `/sites/{slug}` prefix — doing so causes the middleware to double-prefix the path, resulting in a 404.
 
-| Context | URL Pattern | Example |
-|---------|-------------|---------|
-| Client-side navigation (`Link`, `router.push`) | Simple path, no prefix | `<Link href="/checkout">`, `router.push("/register")` |
-| API fetch calls from tenant pages | `/api/sites/{slug}/...` (API routes skip middleware rewriting) | `fetch(\`/api/sites/${params.slug}/checkout/session\`)` |
-| Public API routes | `/api/public/...` | `fetch("/api/public/waivers/check")` |
-| Server components | Use `params.slug` for data fetching only | `db.websiteConfig.findUnique({ where: { subdomain: params.slug } })` |
+| Context                                        | URL Pattern                                                    | Example                                                              |
+| ---------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Client-side navigation (`Link`, `router.push`) | Simple path, no prefix                                         | `<Link href="/checkout">`, `router.push("/register")`                |
+| API fetch calls from tenant pages              | `/api/sites/{slug}/...` (API routes skip middleware rewriting) | `fetch(\`/api/sites/${params.slug}/checkout/session\`)`              |
+| Public API routes                              | `/api/public/...`                                              | `fetch("/api/public/waivers/check")`                                 |
+| Server components                              | Use `params.slug` for data fetching only                       | `db.websiteConfig.findUnique({ where: { subdomain: params.slug } })` |
 
 See `WEBSITE_BUILDER_README.md` for full examples and explanation.

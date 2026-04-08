@@ -22,7 +22,7 @@ const ENV_CONFIG = {
     s3Bucket: "uplifter-gymnastics-assets",
   },
   development: {
-    baseDomain: "uplifterdev.com",
+    baseDomain: "upliftergymnastics-dev.com",
     useHttps: true,
     cdnDomain: null,
     s3Bucket: "uplifter-assets-dev",
@@ -206,6 +206,16 @@ const nextConfig = {
         destination: "/dashboard/website/competitions",
         permanent: true,
       },
+      {
+        source: "/dashboard/organization/users",
+        destination: "/dashboard/organization/staff",
+        permanent: true,
+      },
+      {
+        source: "/dashboard/organization/users/:id",
+        destination: "/dashboard/organization/staff/:id",
+        permanent: true,
+      },
     ];
   },
   async headers() {
@@ -242,12 +252,12 @@ const nextConfig = {
         key: "Content-Security-Policy",
         value: [
           "default-src 'self'",
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://pay.google.com https://*.adyen.com https://static.zdassets.com https://*.zendesk.com https://*.zopim.com",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://pay.google.com https://*.adyen.com https://applepay.apple.com https://static.zdassets.com https://*.zendesk.com https://*.zopim.com",
           "style-src 'self' 'unsafe-inline'",
           getImgSrcCsp(),
           "font-src 'self' data:",
           getConnectSrcCsp(),
-          "frame-src 'self' https://*.adyen.com https://pay.google.com https://*.zendesk.com",
+          "frame-src 'self' https://*.adyen.com https://pay.google.com https://applepay.apple.com https://*.zendesk.com",
           "frame-ancestors 'none'",
           "worker-src 'self' blob:",
           getFormActionCsp(),

@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { isFeatureEnabled } from "@/lib/feature-resolver";
 import { resolvePublicRequest } from "@/lib/public-api";
+import { checkApiRateLimit } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
+  const rateLimited = await checkApiRateLimit(request, "public");
+  if (rateLimited) return rateLimited;
+
   try {
     const { searchParams } = new URL(request.url);
     const result = await resolvePublicRequest(request, searchParams.get("organizationId"));

@@ -1,6 +1,6 @@
 # Inbound Email Setup for Chat Replies
 
-**Domain:** `chat.uplifterinc.com` (production) / `chat.uplifterdev.com` (staging)
+**Domain:** `chat.uplifterinc.com` (production) / `chat.upliftergymnastics-dev.com` (staging)
 
 ## 1. DNS — MX record
 
