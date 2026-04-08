@@ -4,7 +4,6 @@ import { db } from "@/lib/db";
 import { GET, POST } from "../[token]/route";
 
 vi.mock("@/lib/auth", () => ({
-  getAuthSession: vi.fn(),
   hashPassword: vi.fn(() => Promise.resolve("hashed-pw")),
 }));
 
@@ -15,8 +14,6 @@ vi.mock("@/lib/rate-limit", () => ({
     sensitive: { max: 10, window: 300 },
   },
 }));
-
-import { getAuthSession } from "@/lib/auth";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -191,7 +188,7 @@ describe("POST /api/invitations/[token]", () => {
     expect(json.error).toContain("expired");
   });
 
-  it("returns 401 for existing user not logged in", async () => {
+  it("returns 400 when terms not accepted", async () => {
     vi.mocked(db.organizationInvitation.findUnique).mockResolvedValueOnce({
       id: "inv-1",
       token: "valid",
@@ -206,9 +203,8 @@ describe("POST /api/invitations/[token]", () => {
       id: "user-1",
       passwordHash: "existing-hash",
       status: "ACTIVE",
+      termsAcceptedAt: null,
     } as never);
-
-    vi.mocked(getAuthSession).mockResolvedValueOnce(null);
 
     const res = await POST(
       makeRequest("/api/invitations/valid", {
@@ -219,16 +215,16 @@ describe("POST /api/invitations/[token]", () => {
     );
     const json = await res.json();
 
-    expect(json).toMatchObject({ requiresAuth: true });
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(400);
+    expect(json.error).toContain("terms");
   });
 
-  it("returns 403 when logged-in user email does not match invitation", async () => {
+  it("accepts invitation for existing user with accepted terms", async () => {
     vi.mocked(db.organizationInvitation.findUnique).mockResolvedValueOnce({
       id: "inv-1",
       token: "valid",
       status: "PENDING",
-      email: "invited@example.com",
+      email: "user@example.com",
       expiresAt: new Date(Date.now() + 86400000),
       organizationId: "org-1",
       organization: { id: "org-1", name: "Acme" },
@@ -238,11 +234,14 @@ describe("POST /api/invitations/[token]", () => {
       id: "user-1",
       passwordHash: "existing-hash",
       status: "ACTIVE",
+      termsAcceptedAt: new Date(),
     } as never);
 
-    vi.mocked(getAuthSession).mockResolvedValueOnce({
-      user: { email: "wrong@example.com", id: "user-1" },
-    } as never);
+    vi.mocked(db.$transaction).mockImplementation(async (fn) => {
+      await (fn as CallableFunction)(db);
+    });
+    vi.mocked(db.organizationInvitation.update).mockResolvedValueOnce({} as never);
+    vi.mocked(db.organizationMember.updateMany).mockResolvedValueOnce({} as never);
 
     const res = await POST(
       makeRequest("/api/invitations/valid", {
@@ -253,11 +252,16 @@ describe("POST /api/invitations/[token]", () => {
     );
     const json = await res.json();
 
-    expect(json).toMatchObject({ error: expect.stringContaining("invited@example.com") });
-    expect(res.status).toBe(403);
+    expect(json).toMatchObject({ success: true, organizationId: "org-1" });
+    expect(res.status).toBe(200);
+    expect(db.organizationInvitation.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: "ACCEPTED" }),
+      })
+    );
   });
 
-  it("accepts invitation for new user with password", async () => {
+  it("accepts invitation for new user with password and terms", async () => {
     vi.mocked(db.organizationInvitation.findUnique).mockResolvedValueOnce({
       id: "inv-1",
       token: "valid",
@@ -272,6 +276,7 @@ describe("POST /api/invitations/[token]", () => {
       id: "user-1",
       passwordHash: null,
       status: "INVITED",
+      termsAcceptedAt: null,
     } as never);
 
     vi.mocked(db.$transaction).mockImplementation(async (fn) => {
@@ -287,6 +292,7 @@ describe("POST /api/invitations/[token]", () => {
         body: JSON.stringify({
           password: "StrongPass1!",
           confirmPassword: "StrongPass1!",
+          acceptedTerms: true,
         }),
       }),
       makeParams("valid")
@@ -295,7 +301,6 @@ describe("POST /api/invitations/[token]", () => {
 
     expect(json).toMatchObject({ success: true, organizationId: "org-1" });
     expect(res.status).toBe(200);
-
     expect(db.organizationInvitation.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ status: "ACCEPTED" }),
