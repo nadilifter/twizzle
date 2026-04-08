@@ -124,8 +124,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       });
     }
 
+    const missingCoords = existingFacility.latitude == null || existingFacility.longitude == null;
     let geoUpdate: { latitude: number | null; longitude: number | null } | undefined;
-    if (hasAddressChanged(validatedData, existingFacility)) {
+    if (hasAddressChanged(validatedData, existingFacility) || missingCoords) {
       const coords = await geocodeAddress({
         street: validatedData.street ?? existingFacility.street,
         city: validatedData.city ?? existingFacility.city,

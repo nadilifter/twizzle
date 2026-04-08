@@ -52,4 +52,4 @@ spec:
     - name: environment
       value: development
     - name: domain
-      value: uplifterdev.com
+      value: upliftergymnastics-dev.com

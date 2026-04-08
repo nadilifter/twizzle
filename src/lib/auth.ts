@@ -509,6 +509,36 @@ export const authOptions: NextAuthOptions = {
           }
         }
 
+        // Local dev only: recover from stale token.id caused by DB resets.
+        // In production user IDs are permanent so this path never triggers.
+        if (getCurrentEnvironment() === "local" && !user && !account && token.email && token.id) {
+          const idExists = await db.user.findUnique({
+            where: { id: token.id as string },
+            select: { id: true },
+          });
+          if (!idExists) {
+            logger.warn("JWT callback: stale token.id, recovering by email", {
+              email: token.email,
+              staleId: token.id,
+            });
+            const userByEmail = await db.user.findUnique({
+              where: { email: token.email as string },
+              select: { id: true },
+            });
+            if (userByEmail) {
+              const authUser = await buildAuthorizedUser(userByEmail.id);
+              if (authUser) {
+                token.id = authUser.id;
+                token.role = authUser.role;
+                token.isSuperAdmin = authUser.isSuperAdmin;
+                token.permissions = authUser.permissions;
+                token.organizationId = authUser.organizationId;
+                token.organizationName = authUser.organizationName;
+              }
+            }
+          }
+        }
+
         // Handle session updates (e.g., switching organizations or impersonation)
         if (trigger === "update" && session) {
           logger.info("JWT callback: Session update", { session });

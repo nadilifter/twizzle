@@ -45,7 +45,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { MultiLocationMap } from "@/components/location-map";
+import { LocationMap } from "@/components/location-map";
 import type { FacilityListItem } from "@/types/facilities";
 
 function getStatusBadgeVariant(status: string) {
@@ -171,8 +171,6 @@ export default function FacilitiesPage() {
     );
   }
 
-  const mappable = facilities.filter((f) => f.latitude != null && f.longitude != null);
-
   return (
     <div className="flex flex-col gap-6 p-6">
       <DashboardPageHeader
@@ -185,87 +183,90 @@ export default function FacilitiesPage() {
         }
       />
 
-      {mappable.length > 0 && (
-        <Card>
-          <CardContent className="p-0 overflow-hidden rounded-lg">
-            <MultiLocationMap
-              className="h-64 min-h-0 rounded-lg"
-              locations={mappable.map((f) => ({
-                latitude: f.latitude!,
-                longitude: f.longitude!,
-                label: f.name,
-                sublabel: [f.city, f.stateProvince].filter(Boolean).join(", "),
-              }))}
-            />
-          </CardContent>
-        </Card>
-      )}
-
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {facilities.map((facility) => (
-          <Link key={facility.id} href={`/dashboard/organization/facilities/${facility.id}`}>
-            <Card className="cursor-pointer transition-colors hover:bg-accent/50 h-full">
-              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                <div className="flex items-center gap-2">
-                  <Building className="h-4 w-4 text-muted-foreground" />
-                  <CardTitle className="text-sm font-medium line-clamp-1">
-                    {facility.name}
-                  </CardTitle>
-                </div>
-                <div className="flex items-center gap-1">
-                  {facility.isDefault && (
-                    <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                  )}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(e) => e.preventDefault()}>
-                      <Button
-                        variant="ghost"
-                        className="h-8 w-8 p-0"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        className="text-red-600"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setFacilityToDelete(facility);
-                          setDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                  {facility.city && facility.stateProvince && (
-                    <>
-                      <MapPin className="h-3 w-3" />
-                      <span>
-                        {facility.city},{" "}
-                        {getRegionsForCountry(facility.country || "").find(
-                          (r) => r.code === facility.stateProvince
-                        )?.name ?? facility.stateProvince}
-                      </span>
-                    </>
+        {facilities.map((facility) => {
+          const hasCoords = facility.latitude != null && facility.longitude != null;
+          return (
+            <Link key={facility.id} href={`/dashboard/organization/facilities/${facility.id}`}>
+              <Card className="cursor-pointer transition-colors hover:bg-accent/50 h-full overflow-hidden">
+                <div className="relative h-64 bg-muted">
+                  {hasCoords ? (
+                    <LocationMap
+                      latitude={facility.latitude!}
+                      longitude={facility.longitude!}
+                      zoom={14}
+                      className="h-64 min-h-0 pointer-events-none"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-muted-foreground/30">
+                      <MapPin className="h-8 w-8" />
+                    </div>
                   )}
                 </div>
-                <div className="flex items-center justify-between text-xs">
-                  <Badge variant={getStatusBadgeVariant(facility.status)}>{facility.status}</Badge>
-                  <span className="text-muted-foreground">
-                    {facility._count.spaces} spaces &bull; {facility._count.equipment} equipment
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
+                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 pt-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Building className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <CardTitle className="text-sm font-medium line-clamp-1">
+                      {facility.name}
+                    </CardTitle>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {facility.isDefault && (
+                      <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.preventDefault()}>
+                        <Button
+                          variant="ghost"
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          className="text-red-600"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setFacilityToDelete(facility);
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                    {facility.city && facility.stateProvince && (
+                      <>
+                        <MapPin className="h-3 w-3" />
+                        <span>
+                          {facility.city},{" "}
+                          {getRegionsForCountry(facility.country || "").find(
+                            (r) => r.code === facility.stateProvince
+                          )?.name ?? facility.stateProvince}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <Badge variant={getStatusBadgeVariant(facility.status)}>
+                      {facility.status}
+                    </Badge>
+                    <span className="text-muted-foreground">
+                      {facility._count.spaces} spaces &bull; {facility._count.equipment} equipment
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          );
+        })}
 
         {facilities.length === 0 && (
           <Card className="col-span-full">
