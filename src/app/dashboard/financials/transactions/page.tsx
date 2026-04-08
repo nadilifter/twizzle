@@ -56,6 +56,21 @@ const statusVariants: Record<string, "default" | "secondary" | "destructive" | "
   ERROR: "destructive",
 };
 
+const methodLabels: Record<string, string> = {
+  ach: "ACH",
+  scheme: "Card",
+  card: "Card",
+  visa: "Visa",
+  mc: "Mastercard",
+  amex: "Amex",
+  discover: "Discover",
+  diners: "Diners",
+  jcb: "JCB",
+  googlepay: "Google Pay",
+  applepay: "Apple Pay",
+  paypal: "PayPal",
+};
+
 const statusLabels: Record<string, string> = {
   AUTHORISED: "Authorised",
   CAPTURED: "Captured",
@@ -215,7 +230,9 @@ export default function TransactionsPage() {
                     <TableCell className="font-mono text-xs text-muted-foreground">
                       {trx.pspReference}
                     </TableCell>
-                    <TableCell className="capitalize">{trx.method || "—"}</TableCell>
+                    <TableCell>
+                      {trx.method ? (methodLabels[trx.method.toLowerCase()] ?? trx.method) : "—"}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={statusVariants[trx.status] || "outline"}>
                         {statusLabels[trx.status] || trx.status}

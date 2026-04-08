@@ -231,7 +231,8 @@ export async function middleware(req: NextRequest) {
     // Redirects for moved pages (sidebar refactor)
     const adminRedirects: Record<string, string> = {
       "/settings/billing": "/usage/billing",
-      "/settings/users": "/organization/users",
+      "/settings/users": "/organization/staff",
+      "/organization/users": "/organization/staff",
       "/communication/sms": "/usage/sms",
     };
     const redirectTarget = adminRedirects[path];

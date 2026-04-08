@@ -215,6 +215,65 @@
   height: 0;
 }
 
+/* Adyen Web Components — dark mode overrides */
+.dark .adyen-checkout__payment-method,
+.dark .adyen-checkout__dropin {
+  --adyen-sdk-color-background-primary: hsl(0 0% 9%);
+  --adyen-sdk-color-background-secondary: hsl(0 0% 14.9%);
+  --adyen-sdk-color-background-tertiary: hsl(0 0% 14.9%);
+  --adyen-sdk-color-background-primary-hover: hsl(0 0% 14.9%);
+  --adyen-sdk-color-label-primary: hsl(0 0% 98%);
+  --adyen-sdk-color-label-secondary: hsl(0 0% 63.9%);
+  --adyen-sdk-color-label-tertiary: hsl(0 0% 45.1%);
+  --adyen-sdk-color-outline-primary: hsl(0 0% 14.9%);
+  --adyen-sdk-color-outline-secondary: hsl(0 0% 14.9%);
+  --adyen-sdk-color-separator-primary: hsl(0 0% 14.9%);
+  --adyen-sdk-color-background-inverse-primary: hsl(0 0% 98%);
+}
+
+/* Adyen checkbox — dark mode */
+.dark .adyen-checkout__checkbox__label {
+  color: hsl(0 0% 98%);
+}
+
+.dark .adyen-checkout__checkbox__input + .adyen-checkout__checkbox__label:after {
+  background-color: hsl(0 0% 9%);
+  border-color: hsl(0 0% 40%);
+}
+
+.dark .adyen-checkout__checkbox__input:checked + .adyen-checkout__checkbox__label:after {
+  background-color: hsl(240 81% 63%);
+  border-color: hsl(240 81% 63%);
+}
+
+.dark .adyen-checkout__checkbox__input:hover:not(:focus) + .adyen-checkout__checkbox__label:after {
+  border-color: hsl(0 0% 60%);
+}
+
+/* Stored card CVC iframe can't be styled externally — give it a light background so dark text is readable */
+.dark .adyen-checkout__card__form--oneClick .adyen-checkout__input-wrapper {
+  background-color: #ffffff !important;
+}
+
+/* Swap hardcoded dark SVG arrow to white in dark mode */
+.dark .adyen-checkout__dropdown__button:after {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='17' fill='none' viewBox='0 0 16 17'%3E%3Cpath fill='%23ffffff' fill-rule='evenodd' d='M4.47 6.47a.75.75 0 0 1 1.06 0L8 8.94l2.47-2.47a.75.75 0 0 1 1.06 1.06l-3 3a.75.75 0 0 1-1.06 0l-3-3a.75.75 0 0 1 0-1.06' clip-rule='evenodd'/%3E%3C%2Fsvg%3E");
+}
+
+/* Force native <select> options to be readable in dark mode */
+.dark .adyen-checkout__input[type="select"],
+.dark select.adyen-checkout__input,
+.dark .adyen-checkout__select__input {
+  color-scheme: dark;
+  color: hsl(0 0% 98%);
+  background-color: hsl(0 0% 9%);
+}
+
+.dark .adyen-checkout__select__input option {
+  color: hsl(0 0% 98%);
+  background-color: hsl(0 0% 9%);
+}
+
 @theme inline {
   @keyframes shine {
     0% {

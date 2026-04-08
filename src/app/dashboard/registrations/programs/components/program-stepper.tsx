@@ -2542,7 +2542,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                       <p className="text-sm text-muted-foreground">
                         No active waivers found.{" "}
                         <a
-                          href="/dashboard/athletes/waivers/new"
+                          href="/dashboard/athletes/waivers?create=true"
                           className="text-primary underline"
                         >
                           Create a waiver

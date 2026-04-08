@@ -179,7 +179,7 @@ export function PaymentMethodsCard({
   const isCardType = (method: PaymentMethod) => method.type === "scheme" || method.type === "card";
 
   const isWalletType = (method: PaymentMethod) =>
-    ["googlepay", "applepay", "paywithgoogle", "paypal"].includes(method.type);
+    ["googlepay", "applepay", "paywithgoogle"].includes(method.type);
 
   const isBankType = (method: PaymentMethod) =>
     ["ach", "sepadirectdebit", "directdebit_GB", "bankTransfer"].includes(method.type);
@@ -193,7 +193,6 @@ export function PaymentMethodsCard({
   const getMethodLabel = (method: PaymentMethod): string => {
     if (method.type === "googlepay" || method.type === "paywithgoogle") return "Google Pay";
     if (method.type === "applepay") return "Apple Pay";
-    if (method.type === "paypal") return "PayPal";
     if (method.type === "ach") return "Bank Account (ACH)";
     if (method.type === "sepadirectdebit") return "Bank Account (SEPA)";
     if (method.type === "directdebit_GB") return "Bank Account (Direct Debit)";
