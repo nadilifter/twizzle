@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently -n next,tsc -c blue,yellow \"NODE_OPTIONS='--max-old-space-size=4096' next dev\" \"tsc --noEmit --watch --pretty\"",
+    "dev": "concurrently -n next,tsc -c blue,yellow \"NODE_OPTIONS='--max-old-space-size=4096' next dev\" \"tsc --noEmit --watch --preserveWatchOutput\"",
     "dev:debug": "NODE_OPTIONS='--max-old-space-size=4096 --inspect' next dev",
     "build": "prisma generate && next build",
     "start": "next start",
