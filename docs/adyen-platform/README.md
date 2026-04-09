@@ -86,7 +86,7 @@ flowchart TD
 New variables (added in Phase 0):
 
 - `ADYEN_BALANCE_PLATFORM` = `UplifterLLC` -- balance platform ID
-- `ADYEN_PLATFORM_MERCHANT_ACCOUNT` = `KirraCapital_Leapfrog_TEST` -- platform merchant account
+- `ADYEN_PLATFORM_MERCHANT_ACCOUNT` -- platform merchant account (per-environment; see [manual setup guide](manual-credential-setup.md#merchant-accounts-per-environment))
 - `ADYEN_ONBOARDING_THEME_ID` (optional) -- hosted onboarding theme; omit to use Adyen default
 - `ADYEN_BP_CONFIG_WEBHOOK_HMAC_KEY` -- Configuration webhook HMAC
 - `ADYEN_BP_TRANSFER_WEBHOOK_HMAC_KEY` -- Transfer webhook HMAC
@@ -97,7 +97,7 @@ New variables (added in Phase 0):
 Existing variables (unchanged):
 
 - `ADYEN_API_KEY` -- Company-scoped checkout/payments key (`ws_396907@Company.KirraCapital`)
-- `ADYEN_MERCHANT_ACCOUNT` = `KirraCapital_Leapfrog_TEST`
+- `ADYEN_MERCHANT_ACCOUNT` -- per-environment (`_LOCAL_TEST` for local, `_DEV_TEST` for dev, `_TEST` for staging)
 - `ADYEN_ENVIRONMENT` = `TEST`
 - `NEXT_PUBLIC_ADYEN_CLIENT_KEY` = `test_EB5HMWNJJNGENK2OMNZK6LMU6IPHBN4O`
 - `ADYEN_WEBHOOK_HMAC_KEY` (existing payment webhook HMAC)
@@ -105,7 +105,7 @@ Existing variables (unchanged):
 ## Adyen Account Structure
 
 - **Company account**: `KirraCapital` (legal entity: Kirra Capital, US)
-- **Merchant account**: `KirraCapital_Leapfrog_TEST`
+- **Merchant accounts**: `KirraCapital_Leapfrog_LOCAL_TEST` (local), `KirraCapital_Leapfrog_DEV_TEST` (dev), `KirraCapital_Leapfrog_TEST` (staging), TBD (production)
 - **Balance platform**: `UplifterLLC`
 
 **API credentials** (triple-key setup):
@@ -159,51 +159,25 @@ When testing the Adyen hosted onboarding flow in the `TEST` environment, use the
 | Bank account number | `123456789`                                       |
 | Document uploads    | Any valid image/PDF (Adyen auto-approves in TEST) |
 
-## Staging / Production Provisioning
+## Credential & Webhook Setup
 
-### Automated provisioning (recommended)
+### Manual setup (required)
 
-The `scripts/provision-adyen.ts` script automates API credential creation, webhook setup, and HMAC key generation for any environment:
+The automated provisioning script (`scripts/provision-adyen.ts`) is **non-functional** — the Adyen Management API rejects or silently mishandles most of its calls. Set up credentials and webhooks manually instead.
 
-```bash
-# Preview what will be created
-npx tsx scripts/provision-adyen.ts --env staging --dry-run
+See **[Manual Credential Setup](manual-credential-setup.md)** for a full step-by-step walkthrough covering:
 
-# Create credentials and webhooks, output .env fragment
-npx tsx scripts/provision-adyen.ts --env staging --output .env.adyen
+1. Creating the 3 API credentials (Checkout, Platform, LEM)
+2. Registering allowed origins for the Drop-in SDK
+3. Creating 4 webhook subscriptions (1 standard payment + 3 balance platform)
+4. Generating HMAC keys
+5. Configuring `.env` with correct quoting
 
-# Create and deploy directly to remote host via SSH
-npx tsx scripts/provision-adyen.ts --env staging --deploy-ssh uplifter-staging
-
-# Production
-npx tsx scripts/provision-adyen.ts --env production --output .env.adyen
-```
-
-The script:
-
-1. Discovers the Company ID from the Management API using your local `ADYEN_API_KEY`
-2. Creates or finds 3 API credentials (checkout, platform, LEM) and generates API keys
-3. Creates 4 webhook subscriptions (1 standard payment + 3 balance platform) pointing to the environment's admin URL
-4. Generates HMAC keys for each webhook
-5. Outputs all keys as a `.env` fragment (optionally writes to file or deploys via SSH)
-
-After running, redeploy to pick up the new environment variables:
+For staging/production, follow the same guide using the appropriate URLs and Customer Area environment (test vs. live). After updating env vars on the server, redeploy:
 
 ```bash
 ./scripts/deploy-staging.sh
 ```
-
-> **Legacy**: The older `scripts/provision-adyen-staging.ts` is kept for backward compatibility but `provision-adyen.ts` is the preferred replacement.
-
-### Manual alternative
-
-If the script is not available or you need to create webhooks manually:
-
-1. Go to [Adyen Customer Area](https://ca-test.adyen.com) → Developers → Webhooks
-2. Create a standard webhook pointing to `https://admin.upliftergymnastics.com/api/webhooks/adyen`
-3. Go to Balance Platforms → UplifterLLC → Webhooks
-4. Create three subscriptions (Configuration, Transfer, Negative Balance) pointing to `https://admin.upliftergymnastics.com/api/webhooks/adyen-balance-platform`
-5. Generate HMAC keys for each and manually update `~/.env.uplifter` on the EC2 instance
 
 ## Coexistence Strategy
 
