@@ -10,6 +10,8 @@
  *     (e.g. scheme,googlepay,applepay,ach). Defaults to card + wallets + ACH.
  */
 
+import { pollUntil, retryOnThrow } from "@/lib/async-utils";
+
 /**
  * Extract only safe-to-log fields from an error to prevent leaking
  * Adyen response bodies (which may contain card data) into logs.
@@ -359,6 +361,39 @@ export async function getStoredPaymentMethods(
     console.error("Error getting stored payment methods:", safeErrorDetail(error));
     throw error;
   }
+}
+
+export interface GetStoredPaymentMethodsRetryOptions {
+  /** Total fetch attempts (default 3). */
+  maxAttempts?: number;
+  /** Delay in ms before each retry after an empty result (default 2000). */
+  delayMs?: number;
+}
+
+/**
+ * Polls GET /paymentMethods (stored methods) until methods exist or attempts are exhausted.
+ * Useful when tokenization may not be visible immediately after Checkout completes.
+ *
+ * Each poll attempt uses a short retry-on-throw (e.g. transient network) before treating
+ * the attempt as failed and waiting for the next poll.
+ */
+export async function getStoredPaymentMethodsWithRetry(
+  shopperReference: string,
+  options?: GetStoredPaymentMethodsRetryOptions
+): Promise<StoredPaymentMethod[]> {
+  const fetchWithNetworkRetry = (ref: string) =>
+    retryOnThrow(() => getStoredPaymentMethods(ref), {
+      maxAttempts: 2,
+      delayMs: 500,
+    });
+
+  return pollUntil(
+    fetchWithNetworkRetry,
+    [shopperReference],
+    options?.maxAttempts ?? 3,
+    options?.delayMs ?? 2000,
+    true /* retryIfEmpty: stored methods can lag right after tokenization */
+  );
 }
 
 /**
