@@ -262,31 +262,19 @@ A single `User` can belong to multiple `Organization` records via `OrganizationM
 
 Toggle between local and cloud storage with `USE_S3_STORAGE=false` (uses local filesystem) vs `USE_S3_STORAGE=true`.
 
-### Adyen Local Setup (Provisioning Script)
+### Adyen Local Setup
 
-Each developer gets their own isolated Adyen API credentials via:
+API credentials are **shared** — get the three API keys (`ADYEN_API_KEY`, `ADYEN_PLATFORM_API_KEY`, `ADYEN_LEM_API_KEY`) from a teammate. Do not create per-developer credentials.
+
+Webhooks are **per-developer**. Use the provisioning script to create them:
 
 ```bash
-pnpm dlx tsx scripts/provision-adyen.ts --env local --dev-tag <your-name>
+pnpm dlx tsx scripts/provision-adyen.ts --dev-tag <your-name>
 ```
 
-The `--dev-tag` is required for local environments — use your first name or a short handle. The script creates 3 API credentials and 4 webhooks scoped to that tag (e.g., `"Uplifter Checkout - local-name"`). Re-running with the same tag rotates the existing keys instead of creating duplicates.
+This creates 4 webhook subscriptions pointing to your `WEBHOOK_TUNNEL_URL` (ngrok) and outputs the HMAC keys. The standard payment webhook is scoped to `KirraCapital_Leapfrog_LOCAL_TEST` so it only fires for local transactions. If the script fails, create webhooks manually in the [Adyen Test Customer Area](https://ca-test.adyen.com) following `docs/adyen-platform/manual-credential-setup.md`.
 
-**Prerequisites:**
-
-- `ADYEN_API_KEY` must already be set in the local `.env` (the shared team key from the `leapfrog_test_payments` credential). This key bootstraps the Management API calls that create the developer's own credentials.
-- `WEBHOOK_TUNNEL_URL` should be set if using ngrok for local webhook testing.
-
-**After running the script:**
-
-1. Copy the output `.env` fragment into your `.env`, replacing the Adyen key lines
-2. Keep single quotes as-is in the output — do NOT backslash-escape `$` signs (dotenv treats single-quoted values literally, so `\$` becomes a literal backslash + dollar, which corrupts the key and causes 401 errors)
-3. Manually set these (not auto-provisioned):
-   - `ADYEN_BALANCE_PLATFORM=UplifterLLC`
-   - `ADYEN_PLATFORM_MERCHANT_ACCOUNT=KirraCapital_Leapfrog_TEST`
-   - `ADYEN_LIABLE_BALANCE_ACCOUNT_ID=BA32957223227M5KTBSHJFVFL`
-
-**Critical `.env` quoting rule:** Adyen API keys contain `$`, `;`, `^`, and other shell-sensitive characters. Always wrap them in single quotes in `.env` files. Never backslash-escape `$` inside single quotes — dotenv preserves backslashes literally, which makes the key invalid.
+**Critical `.env` quoting rule:** Adyen API keys contain `$`, `;`, `^`, and other shell-sensitive characters. Always wrap them in single quotes in `.env` files. Never backslash-escape `$` inside single quotes — `dotenv` treats single-quoted values as fully literal, so `\$` becomes a literal backslash + dollar, which corrupts the key and causes 401 errors.
 
 ```bash
 # CORRECT — single quotes, no escaping
@@ -296,11 +284,13 @@ ADYEN_API_KEY='AQE...PU8=-i1iXhz{^)R;;$A*.$]5'
 ADYEN_API_KEY='AQE...PU8=-i1iXhz{^)R;;\$A*.\$]5'
 ```
 
+**Important:** Do not use `.env.local` for Adyen keys — Next.js loads `.env.local` with higher priority than `.env`, and changes to `.env` will be silently ignored. Use a single `.env` file.
+
 ### Adyen MCP Server (AI Agents)
 
 When an AI agent needs to troubleshoot or manage Adyen configuration (list credentials, test API keys, inspect webhooks, create payment sessions), it **must** have access to the `adyen-mcp-server` MCP. Without it, the agent cannot interact with the Adyen Management or Checkout APIs directly.
 
-The MCP server reads `ADYEN_API_KEY` and `ADYEN_MERCHANT_ACCOUNT` from the environment. If these are missing or invalid (e.g., corrupted by `\$` escaping), all MCP calls will return 401.
+The MCP server reads `ADYEN_API_KEY` and `ADYEN_MERCHANT_ACCOUNT` from the environment. If these are missing or invalid (e.g., corrupted by unescaped `$` in `.env` values), all MCP calls will return 401.
 
 Key MCP tools for Adyen troubleshooting:
 
@@ -326,7 +316,8 @@ Key MCP tools for Adyen troubleshooting:
 - **Don't mutate inside a transaction without first verifying org ownership** — `getScopedDb` doesn't propagate into `$transaction` callbacks
 - **Don't create new abstractions for one-off operations** — inline the logic
 - **Don't add error handling for impossible states** — only validate at system boundaries
-- **Don't backslash-escape `$` in single-quoted `.env` values** — dotenv preserves `\` literally, corrupting Adyen API keys and causing 401 errors
+- **Don't backslash-escape `$` in single-quoted `.env` values** — dotenv preserves `\` literally, corrupting Adyen API keys and causing 401 errors. Use raw `$` inside single quotes.
+- **Don't use `.env.local` for Adyen keys** — Next.js loads `.env.local` with higher priority than `.env`, so changes to `.env` are silently ignored if both files set the same variable
 
 ---
 
