@@ -5,14 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, CreditCard, Loader2, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -49,9 +42,8 @@ export default function PaymentPage() {
   );
   const [shopperReference, setShopperReference] = useState<string | null>(null);
   const [isCreatingSession, setIsCreatingSession] = useState(true);
-  const [isCreatingOrg, setIsCreatingOrg] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
-  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [cardSaved, setCardSaved] = useState(false);
 
   const trialEndDate = new Date();
   trialEndDate.setDate(trialEndDate.getDate() + 30);
@@ -116,7 +108,7 @@ export default function PaymentPage() {
     }
   };
 
-  const handlePaymentCompleted = async (result: any) => {
+  const handlePaymentCompleted = (result: any) => {
     if (
       result.resultCode !== "Authorised" &&
       result.resultCode !== "Pending" &&
@@ -126,44 +118,23 @@ export default function PaymentPage() {
       return;
     }
 
-    setShowConfirmation(true);
-  };
-
-  const handleConfirmStartTrial = async () => {
-    if (!signupData) return;
-
-    setIsCreatingOrg(true);
+    const existing = sessionStorage.getItem("org-signup-data");
+    let existingData = {};
     try {
-      const { confirmPassword, planName, planPrice, ...formFields } = signupData;
-
-      const response = await fetch("/api/org-signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formFields,
-          adyenShopperReference: shopperReference,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to create organization");
-      }
-
-      sessionStorage.removeItem("org-signup-data");
-      const successParams = new URLSearchParams({
-        subdomain: signupData.subdomain,
-        orgName: signupData.orgName,
-        orgId: data.organizationId,
-        planPrice: String(signupData.planPrice),
-      });
-      router.push(`/org-signup/success?${successParams.toString()}`);
-    } catch (error: any) {
-      console.error("Failed to create organization:", error);
-      toast.error(error.message || "Organization creation failed. Please contact support.");
-      setIsCreatingOrg(false);
+      existingData = existing ? JSON.parse(existing) : {};
+    } catch (e: unknown) {
+      console.error(e);
     }
+    sessionStorage.setItem(
+      "org-signup-data",
+      JSON.stringify({
+        ...existingData,
+        adyenShopperReference: shopperReference,
+        cardLastFour: result.additionalData?.cardSummary ?? null,
+        cardBrand: result.additionalData?.paymentMethod ?? null,
+      })
+    );
+    setCardSaved(true);
   };
 
   const handlePaymentError = (error: any) => {
@@ -230,106 +201,61 @@ export default function PaymentPage() {
           </CardContent>
         </Card>
 
-        {showConfirmation ? (
-          /* Confirmation Step */
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 dark:bg-green-950/50">
-                  <Check className="h-4 w-4 text-green-600" />
+        {/* Payment Form / Card Saved */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-muted-foreground" />
+              <CardTitle className="text-lg">Payment Method</CardTitle>
+            </div>
+            <CardDescription>
+              Add a payment method for billing after your free trial. You will not be charged today.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {cardSaved ? (
+              <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-950/50">
+                  <Check className="h-6 w-6 text-green-600" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Confirm Your Trial</CardTitle>
-                  <CardDescription>
-                    Your payment method has been saved. Review and confirm to start.
-                  </CardDescription>
+                  <p className="font-medium">Payment method saved</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    You won&apos;t be charged until your trial ends on {formattedTrialEnd}.
+                  </p>
                 </div>
+                <Button
+                  className="mt-2 w-full"
+                  size="lg"
+                  onClick={() => router.push("/org-signup/review")}
+                >
+                  Continue to Review
+                </Button>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-lg border p-4 space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Organization</span>
-                  <span className="font-medium">{signupData.orgName}</span>
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Plan</span>
-                  <span className="font-medium">{signupData.planName}</span>
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Due today</span>
-                  <span className="font-semibold text-green-600">$0.00</span>
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">After trial ({formattedTrialEnd})</span>
-                  <span className="font-medium">${monthlyPrice.toFixed(2)}/mo</span>
-                </div>
+            ) : isCreatingSession ? (
+              <div className="flex flex-col items-center justify-center py-8 gap-3">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Loading payment form...</p>
               </div>
-            </CardContent>
-            <CardFooter className="flex flex-col gap-3">
-              <Button
-                onClick={handleConfirmStartTrial}
-                disabled={isCreatingOrg}
-                className="w-full"
-                size="lg"
-              >
-                {isCreatingOrg ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating your organization...
-                  </>
-                ) : (
-                  "Start Free Trial"
-                )}
-              </Button>
-              <p className="text-xs text-center text-muted-foreground">
-                By confirming, you agree to be billed ${monthlyPrice.toFixed(2)}/month after your
-                30-day trial.
-              </p>
-            </CardFooter>
-          </Card>
-        ) : (
-          /* Payment Form */
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-muted-foreground" />
-                <CardTitle className="text-lg">Payment Method</CardTitle>
+            ) : sessionError ? (
+              <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
+                <p className="text-sm text-destructive">{sessionError}</p>
+                <Button variant="outline" onClick={() => createSession(signupData)}>
+                  Try Again
+                </Button>
               </div>
-              <CardDescription>
-                Add a payment method for billing after your free trial. You will not be charged
-                today.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isCreatingSession ? (
-                <div className="flex flex-col items-center justify-center py-8 gap-3">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">Loading payment form...</p>
-                </div>
-              ) : sessionError ? (
-                <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
-                  <p className="text-sm text-destructive">{sessionError}</p>
-                  <Button variant="outline" onClick={() => createSession(signupData)}>
-                    Try Again
-                  </Button>
-                </div>
-              ) : paymentSession ? (
-                <AdyenCheckoutComponent
-                  sessionId={paymentSession.id}
-                  sessionData={paymentSession.sessionData}
-                  onPaymentCompleted={handlePaymentCompleted}
-                  onError={handlePaymentError}
-                />
-              ) : null}
-            </CardContent>
-          </Card>
-        )}
+            ) : paymentSession ? (
+              <AdyenCheckoutComponent
+                sessionId={paymentSession.id}
+                sessionData={paymentSession.sessionData}
+                onPaymentCompleted={handlePaymentCompleted}
+                onError={handlePaymentError}
+              />
+            ) : null}
+          </CardContent>
+        </Card>
 
-        {!showConfirmation && (
+        {!cardSaved && (
           <Button asChild variant="outline" className="w-full">
             <Link href="/org-signup">Back to Signup</Link>
           </Button>
