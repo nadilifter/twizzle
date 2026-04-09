@@ -164,6 +164,22 @@ export interface TokenizationOptions {
   recurringProcessingModel?: "CardOnFile" | "Subscription" | "UnscheduledCardOnFile";
 }
 
+export interface AdyenBillingAddress {
+  street: string;
+  city: string;
+  stateOrProvince: string;
+  postalCode: string;
+  country: string;
+}
+
+export interface AdyenBillingAddress {
+  street: string;
+  city: string;
+  stateOrProvince: string;
+  postalCode: string;
+  country: string;
+}
+
 /** Default payment method types for Checkout POST /sessions (must match Adyen PM type strings). */
 export const DEFAULT_CHECKOUT_ALLOWED_PAYMENT_METHODS = [
   "scheme",
@@ -278,6 +294,12 @@ export interface StoredPaymentMethod {
   name?: string; // Display name from Adyen
 }
 
+function splitStreetAddress(raw: string): { houseNumberOrName?: string; street: string } {
+  const match = raw.trim().match(/^(\d+\S*)\s+(.+)$/);
+  if (match) return { houseNumberOrName: match[1], street: match[2] };
+  return { street: raw.trim() };
+}
+
 /**
  * Create a session for tokenizing a payment method (storing card for recurring payments)
  * Used during organization signup for paid plans
@@ -288,15 +310,18 @@ export interface StoredPaymentMethod {
  * @param amount - Amount in dollars (use 0 for $0 authorization)
  * @param storeMode - With askForConsent, Adyen only stores card details (wallets/ACH need enabled).
  *                    Default "enabled" so Apple Pay, Google Pay, ACH can appear for subscription tokenization.
+ * @param billingAddress - Optional billing address to include with the session
  */
 export async function createTokenizationSession(
   shopperReference: string,
   returnUrl: string,
   shopperEmail?: string,
   amount: number = 0,
-  storeMode: "askForConsent" | "enabled" = "enabled"
+  storeMode: "askForConsent" | "enabled" = "enabled",
+  billingAddress?: AdyenBillingAddress
 ) {
   try {
+    const splitStreet = billingAddress ? splitStreetAddress(billingAddress.street) : null;
     const response = await checkoutApi.PaymentsApi.sessions({
       amount: {
         currency: "USD",
@@ -313,6 +338,18 @@ export async function createTokenizationSession(
       storePaymentMethodMode: storeMode as any,
       recurringProcessingModel: "Subscription" as any,
       shopperInteraction: "Ecommerce" as any,
+      ...(splitStreet && {
+        billingAddress: {
+          street: splitStreet.street,
+          ...(splitStreet.houseNumberOrName && {
+            houseNumberOrName: splitStreet.houseNumberOrName,
+          }),
+          city: billingAddress!.city,
+          stateOrProvince: billingAddress!.stateOrProvince,
+          postalCode: billingAddress!.postalCode,
+          country: billingAddress!.country,
+        },
+      }),
     });
     return response;
   } catch (error) {

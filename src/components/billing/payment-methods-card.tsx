@@ -44,6 +44,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { AdyenCheckoutComponent } from "@/components/sites/adyen-checkout";
+import { getMethodLabel } from "@/lib/payment-utils";
 
 interface PaymentMethod {
   id: string;
@@ -188,17 +189,6 @@ export function PaymentMethodsCard({
     if (isWalletType(method)) return <Smartphone className="h-6 w-6" />;
     if (isBankType(method)) return <Landmark className="h-6 w-6" />;
     return <CreditCard className="h-6 w-6" />;
-  };
-
-  const getMethodLabel = (method: PaymentMethod): string => {
-    if (method.type === "googlepay" || method.type === "paywithgoogle") return "Google Pay";
-    if (method.type === "applepay") return "Apple Pay";
-    if (method.type === "ach") return "Bank Account (ACH)";
-    if (method.type === "sepadirectdebit") return "Bank Account (SEPA)";
-    if (method.type === "directdebit_GB") return "Bank Account (Direct Debit)";
-    if (method.brand) return method.brand;
-    if (method.type === "scheme") return "Card";
-    return method.type;
   };
 
   const getMethodIdentifier = (method: PaymentMethod): string => {
