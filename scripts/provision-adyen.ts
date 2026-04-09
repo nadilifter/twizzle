@@ -6,10 +6,9 @@
  * across all environments and must be obtained from a teammate — this
  * script does NOT create or rotate API keys.
  *
- * The standard payment webhook is scoped to the local merchant account
- * (KirraCapital_Leapfrog_LOCAL_TEST) so it only fires for local transactions.
- * Balance platform webhooks cannot be merchant-scoped and will receive
- * events from all environments (see docs/adyen-platform/manual-credential-setup.md).
+ * Uses the merchant-level Management API (`/v3/merchants/{id}/webhooks`)
+ * because the company-level endpoint (`/v3/companies/{id}/webhooks`)
+ * returns 422 for all operations on our account.
  *
  * Prerequisites:
  *   - ADYEN_API_KEY must be set in your .env (the shared checkout credential)
@@ -92,7 +91,6 @@ interface WebhookSpec {
   urlPath: string;
   envKey: string;
   description: string;
-  isStandard: boolean;
 }
 
 function getWebhookSpecs(devTag: string): WebhookSpec[] {
@@ -102,28 +100,24 @@ function getWebhookSpecs(devTag: string): WebhookSpec[] {
       urlPath: "/api/webhooks/adyen",
       envKey: "ADYEN_WEBHOOK_HMAC_KEY",
       description: `Standard payment events - local-${devTag}`,
-      isStandard: true,
     },
     {
       label: "Balance Platform - Configuration",
       urlPath: "/api/webhooks/adyen-balance-platform",
       envKey: "ADYEN_BP_CONFIG_WEBHOOK_HMAC_KEY",
       description: `Configuration webhook - local-${devTag}`,
-      isStandard: false,
     },
     {
       label: "Balance Platform - Transfers",
       urlPath: "/api/webhooks/adyen-balance-platform",
       envKey: "ADYEN_BP_TRANSFER_WEBHOOK_HMAC_KEY",
       description: `Transfer webhook - local-${devTag}`,
-      isStandard: false,
     },
     {
       label: "Balance Platform - Negative Balance",
       urlPath: "/api/webhooks/adyen-balance-platform",
       envKey: "ADYEN_BP_NEGBAL_WEBHOOK_HMAC_KEY",
       description: `Negative Balance Compensation Warning - local-${devTag}`,
-      isStandard: false,
     },
   ];
 }
@@ -169,22 +163,23 @@ async function main() {
   const client = new Client({ apiKey: ADYEN_API_KEY, environment: "TEST" });
   const mgmt = new ManagementAPI(client);
 
-  // Step 1: Discover Company ID
-  console.log("[Step 1/3] Discovering Company ID...");
-  const companiesResponse = await mgmt.AccountCompanyLevelApi.listCompanyAccounts();
-  const companies = companiesResponse.data || [];
-  if (companies.length === 0) {
-    console.error("ERROR: No company accounts found for this API key.");
+  // Step 1: Verify merchant account exists
+  console.log("[Step 1/3] Verifying merchant account...");
+  try {
+    const merchant = await mgmt.AccountMerchantLevelApi.getMerchantAccount(LOCAL_MERCHANT_ACCOUNT);
+    console.log(`  Found: ${merchant.id} (${merchant.name || ""})\n`);
+  } catch {
+    console.error(`ERROR: Merchant account ${LOCAL_MERCHANT_ACCOUNT} not found or not accessible.`);
+    console.error("       Check that your ADYEN_API_KEY has access to this account.");
     process.exit(1);
   }
-  const companyId = companies[0].id;
-  console.log(`  Found company: ${companyId} (${companies[0].name || ""})\n`);
 
-  // Step 2: Create or reuse webhooks
+  // Step 2: Create or reuse webhooks (merchant-level API)
   console.log("[Step 2/3] Setting up webhooks...\n");
 
   const webhookSpecs = getWebhookSpecs(devTag);
-  const existingWebhooks = await mgmt.WebhooksCompanyLevelApi.listAllWebhooks(companyId, 1, 100);
+  const existingWebhooks =
+    await mgmt.WebhooksMerchantLevelApi.listAllWebhooks(LOCAL_MERCHANT_ACCOUNT);
   const existingList: any[] = (existingWebhooks.data || []).filter((wh: any) => wh.active);
 
   const generatedKeys: Record<string, string> = {};
@@ -202,7 +197,10 @@ async function main() {
     if (existing) {
       console.log(`    Reusing existing webhook: ${existing.id}`);
       if (!DRY_RUN) {
-        const hmac = await mgmt.WebhooksCompanyLevelApi.generateHmacKey(companyId, existing.id);
+        const hmac = await mgmt.WebhooksMerchantLevelApi.generateHmacKey(
+          LOCAL_MERCHANT_ACCOUNT,
+          existing.id
+        );
         generatedKeys[spec.envKey] = hmac.hmacKey;
         console.log(`    HMAC regenerated: ${hmac.hmacKey.substring(0, 12)}...`);
       } else {
@@ -215,30 +213,19 @@ async function main() {
         generatedKeys[spec.envKey] = "DRY_RUN_PLACEHOLDER";
       } else {
         try {
-          const webhookConfig: any = {
+          const webhook = await mgmt.WebhooksMerchantLevelApi.setUpWebhook(LOCAL_MERCHANT_ACCOUNT, {
             type: "standard",
             url: fullUrl,
             active: true,
             communicationFormat: "json",
             description: spec.description,
-          };
-
-          if (spec.isStandard) {
-            webhookConfig.filterMerchantAccountType = "includeAccounts";
-            webhookConfig.filterMerchantAccounts = [LOCAL_MERCHANT_ACCOUNT];
-          } else {
-            webhookConfig.filterMerchantAccountType = "allAccounts";
-            webhookConfig.filterMerchantAccounts = [];
-          }
-
-          const webhook = await mgmt.WebhooksCompanyLevelApi.setUpWebhook(companyId, webhookConfig);
+          });
           console.log(`    Created: ${webhook.id}`);
 
-          if (spec.isStandard) {
-            console.log(`    Scoped to: ${LOCAL_MERCHANT_ACCOUNT}`);
-          }
-
-          const hmac = await mgmt.WebhooksCompanyLevelApi.generateHmacKey(companyId, webhook.id);
+          const hmac = await mgmt.WebhooksMerchantLevelApi.generateHmacKey(
+            LOCAL_MERCHANT_ACCOUNT,
+            webhook.id
+          );
           generatedKeys[spec.envKey] = hmac.hmacKey;
           console.log(`    HMAC: ${hmac.hmacKey.substring(0, 12)}...`);
         } catch (error: any) {
@@ -287,7 +274,7 @@ async function main() {
   console.log("  Done!");
   console.log("===========================================");
   console.log(`  Webhooks created: ${webhookSpecs.length}`);
-  console.log(`  Standard payment webhook scoped to: ${LOCAL_MERCHANT_ACCOUNT}`);
+  console.log(`  All scoped to merchant: ${LOCAL_MERCHANT_ACCOUNT}`);
   console.log();
   console.log("  Next steps:");
   console.log("    1. Copy the HMAC keys above into your .env");
