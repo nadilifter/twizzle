@@ -246,7 +246,7 @@ Paste all values into your `.env` or `.env.local`. API keys come from the shared
 
 ```bash
 # Adyen Checkout / Payments (shared credential — get key from team)
-ADYEN_API_KEY='<paste key — raw $ is fine inside single quotes>'
+ADYEN_API_KEY='<paste key — escape $ as \$ inside single quotes>'
 ADYEN_ENVIRONMENT=TEST
 ADYEN_MERCHANT_ACCOUNT=KirraCapital_Leapfrog_LOCAL_TEST   # use your environment's merchant account
 NEXT_PUBLIC_ADYEN_CLIENT_KEY='<paste client key>'
@@ -276,17 +276,17 @@ WEBHOOK_TUNNEL_URL=https://xxxx.ngrok-free.app
 Adyen API keys contain `$`, `;`, `^`, and other shell-sensitive characters. Follow these rules:
 
 1. **Always wrap values in single quotes.**
-2. **Do NOT escape `$` as `\$`** — `dotenv` treats single-quoted values as fully literal, so `\$` becomes a literal backslash + dollar, which corrupts the key and causes 401 errors. Use raw `$`.
+2. **Escape every `$` as `\$`** — Next.js uses `@next/env` which chains `dotenv` → `dotenv-expand`. The `dotenv` parser preserves `\$` literally inside single quotes, then `dotenv-expand` recognizes `\$` as an escaped dollar and outputs `$`. Without the backslash, `dotenv-expand` treats `$VAR` as a variable reference and silently expands it to empty, corrupting the key.
 
 ```bash
-# CORRECT — single quotes, no escaping
-ADYEN_API_KEY='AQE...PU8=-i1iXhz{^)R;;$A*.$]5'
-
-# WRONG — backslash-escaped $ adds literal backslash, corrupts the key
+# CORRECT — single quotes with \$ escaping
 ADYEN_API_KEY='AQE...PU8=-i1iXhz{^)R;;\$A*.\$]5'
+
+# WRONG — unescaped $ gets silently expanded to empty by dotenv-expand
+ADYEN_API_KEY='AQE...PU8=-i1iXhz{^)R;;$A*.$]5'
 ```
 
-**Important:** Use `.env` only — do not put Adyen keys in `.env.local`. Next.js loads `.env.local` with higher priority, so changes to `.env` are silently ignored if both files define the same variable.
+**Important:** Do not put Adyen keys in `.env.local`. Next.js loads `.env.local` with higher priority, so changes to `.env` are silently ignored if both files define the same variable.
 
 ---
 
@@ -334,14 +334,14 @@ This means:
 
 ## Troubleshooting
 
-| Symptom                                    | Cause                                                                                                 | Fix                                                                              |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| 401 Unauthorized on all API calls          | API key corrupted by `\$` in `.env` (backslash preserved literally) or `.env.local` overriding `.env` | Use single quotes with raw `$` (no backslash). Delete `.env.local` if it exists. |
-| CORS error on checkout page                | Origin not registered on Checkout credential                                                          | Add origin in Customer Area > API credential > Allowed origins                   |
-| Webhook test fails                         | URL not publicly reachable                                                                            | Ensure ngrok is running and URL is correct                                       |
-| Webhooks stop arriving after ngrok restart | Free ngrok URL changed                                                                                | Update webhook URLs in Customer Area, or use a paid stable subdomain             |
-| "No merchant account" error                | `ADYEN_MERCHANT_ACCOUNT` not set                                                                      | Add `ADYEN_MERCHANT_ACCOUNT=KirraCapital_Leapfrog_TEST` to `.env`                |
-| Balance Platform API returns 403           | Using Checkout credential instead of Platform credential                                              | Use `ADYEN_PLATFORM_API_KEY` for Configuration/Transfers API calls               |
+| Symptom                                    | Cause                                                                                                                 | Fix                                                                             |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| 401 Unauthorized on all API calls          | API key corrupted by unescaped `$` in `.env` (expanded to empty by `dotenv-expand`) or `.env.local` overriding `.env` | Wrap in single quotes and escape `$` as `\$`. Delete `.env.local` if it exists. |
+| CORS error on checkout page                | Origin not registered on Checkout credential                                                                          | Add origin in Customer Area > API credential > Allowed origins                  |
+| Webhook test fails                         | URL not publicly reachable                                                                                            | Ensure ngrok is running and URL is correct                                      |
+| Webhooks stop arriving after ngrok restart | Free ngrok URL changed                                                                                                | Update webhook URLs in Customer Area, or use a paid stable subdomain            |
+| "No merchant account" error                | `ADYEN_MERCHANT_ACCOUNT` not set                                                                                      | Add `ADYEN_MERCHANT_ACCOUNT=KirraCapital_Leapfrog_TEST` to `.env`               |
+| Balance Platform API returns 403           | Using Checkout credential instead of Platform credential                                                              | Use `ADYEN_PLATFORM_API_KEY` for Configuration/Transfers API calls              |
 
 ---
 
