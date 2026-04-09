@@ -15,6 +15,7 @@ const featureTogglesSchema = z
     store: z.boolean(),
     liveSupport: z.boolean(),
     customInformation: z.boolean(),
+    reports: z.boolean(),
   })
   .optional();
 

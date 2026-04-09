@@ -22,6 +22,7 @@ export const FEATURE_KEYS = [
   "liveSupport",
   "customInformation",
   "analytics",
+  "reports",
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
@@ -44,6 +45,7 @@ export const DEFAULT_FEATURE_TOGGLES: FeatureToggles = {
   liveSupport: false,
   customInformation: false,
   analytics: false,
+  reports: false,
 };
 
 /** Human-readable labels for each feature */
@@ -63,6 +65,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   liveSupport: "Live Support",
   customInformation: "Custom Information",
   analytics: "Analytics",
+  reports: "Reports",
 };
 
 /** Descriptions shown to admins */
@@ -84,6 +87,8 @@ export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
   customInformation: "Collect custom information from athletes during registration",
   analytics:
     "Organization-wide analytics dashboard with athlete demographics, enrollment trends, and program insights",
+  reports:
+    "Business reports including revenue, enrollment, retention, attendance, and financial summaries",
 };
 
 /**
@@ -198,6 +203,9 @@ export const FEATURE_SIDEBAR_MAP: Record<
       },
     ],
   },
+  reports: {
+    sectionTitle: "Reports",
+  },
 };
 
 /**
@@ -220,6 +228,7 @@ export const FEATURE_API_ROUTES: Record<FeatureKey, string[]> = {
   liveSupport: [],
   customInformation: ["/api/organization/custom-information"],
   analytics: ["/api/analytics"],
+  reports: ["/api/reports"],
 };
 
 /**

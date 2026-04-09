@@ -357,6 +357,10 @@ When asked to create a PR, use `gh pr create`. Use this description structure:
 ## What does this PR do?
 <one or two sentences>
 
+## Requires DB Migration?
+- [ ] Yes
+- [ ] No
+
 ## Type of change
 <feat / fix / refactor / chore / docs>
 

@@ -583,6 +583,8 @@ export default function SignupPage() {
         })()
       : formData;
 
+    setIsLoading(true);
+
     if (isPaidPlan) {
       const signupData = {
         ...submitData,
@@ -595,32 +597,14 @@ export default function SignupPage() {
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const response = await fetch("/api/org-signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(submitData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to create organization");
-      }
-
-      toast.success("Organization created successfully!");
-      const successParams = new URLSearchParams({
-        subdomain: formData.subdomain,
-        orgName: formData.orgName,
-        orgId: data.organizationId,
-        ...(chosenPlan ? { planPrice: String(chosenPlan.monthlyPrice) } : {}),
-      });
-      router.push(`/org-signup/success?${successParams.toString()}`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Something went wrong");
-      setIsLoading(false);
-    }
+    const signupData = {
+      ...submitData,
+      planName: chosenPlan?.name ?? "Free",
+      planPrice: chosenPlan ? chosenPlan.monthlyPrice : "0",
+      ...(useExistingAccount ? { email: session?.user?.email ?? "" } : {}),
+    };
+    sessionStorage.setItem("org-signup-data", JSON.stringify(signupData));
+    router.push("/org-signup/review");
   };
 
   const formatCurrency = (amount: string | number) => {
@@ -1231,7 +1215,7 @@ export default function SignupPage() {
                           </TooltipContent>
                         </Tooltip>
                       </div>
-                      <div className="relative flex w-full items-center">
+                      <div className="flex w-full">
                         <Input
                           id="subdomain"
                           name="subdomain"
@@ -1247,22 +1231,18 @@ export default function SignupPage() {
                             subdomainStatus === "taken" ? "border-destructive" : ""
                           )}
                         />
-                        <span className="inline-flex items-center px-3 h-9 border border-l-0 rounded-r-md bg-muted text-muted-foreground text-sm whitespace-nowrap">
+                        <span className="inline-flex items-center gap-2 px-3 h-9 border border-l-0 rounded-r-md bg-muted text-muted-foreground text-sm whitespace-nowrap">
                           {getBaseDomainSuffix()}
+                          {subdomainStatus === "checking" && (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          )}
+                          {subdomainStatus === "available" && (
+                            <Check className="h-4 w-4 text-green-500" />
+                          )}
+                          {subdomainStatus === "taken" && (
+                            <X className="h-4 w-4 text-destructive" />
+                          )}
                         </span>
-                        {subdomainStatus !== "idle" && (
-                          <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                            {subdomainStatus === "checking" && (
-                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                            )}
-                            {subdomainStatus === "available" && (
-                              <Check className="h-4 w-4 text-green-500" />
-                            )}
-                            {subdomainStatus === "taken" && (
-                              <X className="h-4 w-4 text-destructive" />
-                            )}
-                          </div>
-                        )}
                       </div>
                       {errors.subdomain && (
                         <p className="text-sm text-destructive">{errors.subdomain}</p>
@@ -1615,6 +1595,7 @@ export default function SignupPage() {
                             onClick={handlePlanContinue}
                             disabled={
                               isLoading ||
+                              !selectedPlan ||
                               subdomainStatus === "checking" ||
                               orgNameStatus === "checking"
                             }
@@ -1623,9 +1604,7 @@ export default function SignupPage() {
                             {isLoading ? (
                               <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                {isPaidPlan
-                                  ? "Proceeding to Payment..."
-                                  : "Creating Organization..."}
+                                {isPaidPlan ? "Proceeding to Payment..." : "Continuing..."}
                               </>
                             ) : isPaidPlan ? (
                               <>
@@ -1633,13 +1612,17 @@ export default function SignupPage() {
                                 Continue to Payment
                               </>
                             ) : (
-                              "Create Organization"
+                              "Review Organization"
                             )}
                           </Button>
                         );
                       })()
                     ) : (
-                      <Button type="button" onClick={handleNext}>
+                      <Button
+                        type="button"
+                        onClick={handleNext}
+                        disabled={currentStepId === "website" && subdomainStatus !== "available"}
+                      >
                         Next
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
