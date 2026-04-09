@@ -21,12 +21,12 @@ Before any development can begin, the Kirra Adyen balance platform must be fully
 
 **Values obtained**:
 
-| Variable                          | Value                        | Notes                                              |
-| --------------------------------- | ---------------------------- | -------------------------------------------------- |
-| Company Account                   | `KirraCapital`               | Legal entity: Kirra Capital, US                    |
-| `ADYEN_BALANCE_PLATFORM`          | `UplifterLLC`                | Balance platform ID                                |
-| `ADYEN_PLATFORM_MERCHANT_ACCOUNT` | `KirraCapital_Leapfrog_TEST` | Merchant account under KirraCapital                |
-| Liable balance account ID         | `BA32957223227M5KTBSHJFVFL`  | Platform's own balance account for collecting fees |
+| Variable                          | Value                        | Notes                                                                                                                                                        |
+| --------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Company Account                   | `KirraCapital`               | Legal entity: Kirra Capital, US                                                                                                                              |
+| `ADYEN_BALANCE_PLATFORM`          | `UplifterLLC`                | Balance platform ID                                                                                                                                          |
+| `ADYEN_PLATFORM_MERCHANT_ACCOUNT` | `KirraCapital_Leapfrog_TEST` | Staging merchant account (legacy name). See [manual setup guide](manual-credential-setup.md#merchant-accounts-per-environment) for per-environment accounts. |
+| Liable balance account ID         | `BA32957223227M5KTBSHJFVFL`  | Platform's own balance account for collecting fees                                                                                                           |
 
 ---
 

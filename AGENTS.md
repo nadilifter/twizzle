@@ -262,39 +262,29 @@ A single `User` can belong to multiple `Organization` records via `OrganizationM
 
 Toggle between local and cloud storage with `USE_S3_STORAGE=false` (uses local filesystem) vs `USE_S3_STORAGE=true`.
 
-### Adyen Local Setup (Provisioning Script)
+### Adyen Local Setup
 
-Each developer gets their own isolated Adyen API credentials via:
+API credentials are **shared** — get the three API keys (`ADYEN_API_KEY`, `ADYEN_PLATFORM_API_KEY`, `ADYEN_LEM_API_KEY`) from a teammate. Do not create per-developer credentials.
+
+Webhooks are **per-developer**. Use the provisioning script to create them:
 
 ```bash
-pnpm dlx tsx scripts/provision-adyen.ts --env local --dev-tag <your-name>
+pnpm dlx tsx scripts/provision-adyen.ts --dev-tag <your-name>
 ```
 
-The `--dev-tag` is required for local environments — use your first name or a short handle. The script creates 3 API credentials and 4 webhooks scoped to that tag (e.g., `"Uplifter Checkout - local-name"`). Re-running with the same tag rotates the existing keys instead of creating duplicates.
+This creates 4 webhook subscriptions pointing to your `WEBHOOK_TUNNEL_URL` (ngrok) and outputs the HMAC keys. The standard payment webhook is scoped to `KirraCapital_Leapfrog_LOCAL_TEST` so it only fires for local transactions. If the script fails, create webhooks manually in the [Adyen Test Customer Area](https://ca-test.adyen.com) following `docs/adyen-platform/manual-credential-setup.md`.
 
-**Prerequisites:**
-
-- `ADYEN_API_KEY` must already be set in the local `.env` (the shared team key from the `leapfrog_test_payments` credential). This key bootstraps the Management API calls that create the developer's own credentials.
-- `WEBHOOK_TUNNEL_URL` should be set if using ngrok for local webhook testing.
-
-**After running the script:**
-
-1. Copy the output `.env` fragment into your `.env` / `.env.local`, replacing the Adyen key lines. The script automatically escapes `$` as `\$` inside single quotes so that `dotenv-expand` (used by `@next/env`) preserves them as literal characters.
-2. If pasting keys manually (not from the script), wrap in single quotes and escape every `$` as `\$` — e.g. `ADYEN_API_KEY='AQE...\$A*.\$]5'`
-3. Manually set these (not auto-provisioned):
-   - `ADYEN_BALANCE_PLATFORM=UplifterLLC`
-   - `ADYEN_PLATFORM_MERCHANT_ACCOUNT=KirraCapital_Leapfrog_TEST`
-   - `ADYEN_LIABLE_BALANCE_ACCOUNT_ID=BA32957223227M5KTBSHJFVFL`
-
-**Critical `.env` quoting rule:** Adyen API keys contain `$`, `;`, `^`, and other shell-sensitive characters. Always wrap them in single quotes **and** escape `$` as `\$`. Next.js uses `@next/env` which chains `dotenv` → `dotenv-expand`. Single quotes alone do **not** prevent `dotenv-expand` from interpreting `$VAR` as a variable reference (expanded to empty string). The `\$` escape is what tells `dotenv-expand` to keep the literal `$`.
+**Critical `.env` quoting rule:** Adyen API keys contain `$`, `;`, `^`, and other shell-sensitive characters. Always wrap them in single quotes in `.env` files. Never backslash-escape `$` inside single quotes — `dotenv` treats single-quoted values as fully literal, so `\$` becomes a literal backslash + dollar, which corrupts the key and causes 401 errors.
 
 ```bash
-# CORRECT — single quotes with \$ escaping
-ADYEN_API_KEY='AQE...PU8=-i1iXhz{^)R;;\$A*.\$]5'
-
-# WRONG — unescaped $ gets silently expanded to empty by dotenv-expand
+# CORRECT — single quotes, no escaping
 ADYEN_API_KEY='AQE...PU8=-i1iXhz{^)R;;$A*.$]5'
+
+# WRONG — backslash-escaped dollar signs corrupt the key
+ADYEN_API_KEY='AQE...PU8=-i1iXhz{^)R;;\$A*.\$]5'
 ```
+
+**Important:** Do not use `.env.local` for Adyen keys — Next.js loads `.env.local` with higher priority than `.env`, and changes to `.env` will be silently ignored. Use a single `.env` file.
 
 ### Adyen MCP Server (AI Agents)
 
@@ -326,7 +316,8 @@ Key MCP tools for Adyen troubleshooting:
 - **Don't mutate inside a transaction without first verifying org ownership** — `getScopedDb` doesn't propagate into `$transaction` callbacks
 - **Don't create new abstractions for one-off operations** — inline the logic
 - **Don't add error handling for impossible states** — only validate at system boundaries
-- **Don't leave `$` unescaped in `.env` values** — use `\$` inside single quotes so `dotenv-expand` (used by `@next/env`) preserves the literal character; unescaped `$` is silently expanded to empty, corrupting API keys
+- **Don't backslash-escape `$` in single-quoted `.env` values** — dotenv preserves `\` literally, corrupting Adyen API keys and causing 401 errors. Use raw `$` inside single quotes.
+- **Don't use `.env.local` for Adyen keys** — Next.js loads `.env.local` with higher priority than `.env`, so changes to `.env` are silently ignored if both files set the same variable
 
 ---
 
