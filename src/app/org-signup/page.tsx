@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { useDebounce } from "@/hooks/use-debounce";
 import { useSession } from "next-auth/react";
 import {
   Loader2,
@@ -176,14 +177,12 @@ export default function SignupPage() {
     "idle" | "checking" | "available" | "taken"
   >("idle");
   const [orgNameReason, setOrgNameReason] = React.useState<string>("");
-  const orgNameCheckTimeout = React.useRef<NodeJS.Timeout | null>(null);
 
   // Subdomain availability check
   const [subdomainStatus, setSubdomainStatus] = React.useState<
     "idle" | "checking" | "available" | "taken"
   >("idle");
   const [subdomainReason, setSubdomainReason] = React.useState<string>("");
-  const subdomainCheckTimeout = React.useRef<NodeJS.Timeout | null>(null);
 
   // Form state
   const [formData, setFormData] = React.useState({
@@ -287,21 +286,12 @@ export default function SignupPage() {
     }
   }, []);
 
-  // Debounced org name check
   const handleOrgNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { value } = e.target;
     setFormData((prev) => ({ ...prev, orgName: value }));
     if (errors.orgName) {
       setErrors((prev) => ({ ...prev, orgName: "" }));
     }
-
-    if (orgNameCheckTimeout.current) {
-      clearTimeout(orgNameCheckTimeout.current);
-    }
-
-    orgNameCheckTimeout.current = setTimeout(() => {
-      checkOrgName(value);
-    }, 500);
   };
 
   // Check subdomain availability
@@ -326,7 +316,9 @@ export default function SignupPage() {
     }
   }, []);
 
-  // Debounced subdomain check
+  useDebounce(formData.orgName, 200, checkOrgName);
+  useDebounce(formData.subdomain, 200, checkSubdomain);
+
   const handleSubdomainChange = (value: string) => {
     const withDashes = value.replace(/\s/g, "-");
     const normalized = withDashes.toLowerCase().replace(/[^a-z0-9-]/g, "");
@@ -334,14 +326,6 @@ export default function SignupPage() {
     if (errors.subdomain) {
       setErrors((prev) => ({ ...prev, subdomain: "" }));
     }
-
-    if (subdomainCheckTimeout.current) {
-      clearTimeout(subdomainCheckTimeout.current);
-    }
-
-    subdomainCheckTimeout.current = setTimeout(() => {
-      checkSubdomain(normalized);
-    }, 500);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -625,6 +609,28 @@ export default function SignupPage() {
 
   const currentStepId = stepper.state.current.data.id;
   const currentIndex = stepper.state.all.findIndex((s) => s.id === currentStepId);
+
+  const isNextDisabled =
+    (currentStepId === "account" &&
+      !useExistingAccount &&
+      (emailVerification !== "verified" ||
+        !formData.password.trim() ||
+        !formData.confirmPassword.trim())) ||
+    (currentStepId === "organization" &&
+      (!formData.orgName.trim() ||
+        orgNameStatus === "taken" ||
+        orgNameStatus === "checking" ||
+        !formData.orgEmail.trim() ||
+        !formData.phone.trim() ||
+        !formData.country.trim() ||
+        !formData.street.trim() ||
+        !formData.city.trim() ||
+        !formData.stateProvince.trim() ||
+        ((formData.country === "US" || formData.country === "CA") &&
+          formData.postalCode.length < 5))) ||
+    (currentStepId === "website" &&
+      (!formData.subdomain.trim() || subdomainStatus !== "available")) ||
+    (currentStepId === "plan" && !selectedPlan);
 
   return (
     <TooltipProvider>
@@ -1244,18 +1250,18 @@ export default function SignupPage() {
                           )}
                         </span>
                       </div>
-                      {errors.subdomain && (
-                        <p className="text-sm text-destructive">{errors.subdomain}</p>
-                      )}
-                      {subdomainStatus === "available" && (
-                        <p className="text-sm text-green-600">This subdomain is available!</p>
-                      )}
-                      {subdomainStatus === "taken" && (
-                        <p className="text-sm text-destructive">
-                          {subdomainReason ||
-                            "This subdomain is already taken. Please choose another."}
-                        </p>
-                      )}
+                      <p className="text-sm min-h-[1.25rem]">
+                        {errors.subdomain ? (
+                          <span className="text-destructive">{errors.subdomain}</span>
+                        ) : subdomainStatus === "available" ? (
+                          <span className="text-green-600">This subdomain is available!</span>
+                        ) : subdomainStatus === "taken" ? (
+                          <span className="text-destructive">
+                            {subdomainReason ||
+                              "This subdomain is already taken. Please choose another."}
+                          </span>
+                        ) : null}
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
@@ -1618,11 +1624,7 @@ export default function SignupPage() {
                         );
                       })()
                     ) : (
-                      <Button
-                        type="button"
-                        onClick={handleNext}
-                        disabled={currentStepId === "website" && subdomainStatus !== "available"}
-                      >
+                      <Button type="button" onClick={handleNext} disabled={isNextDisabled}>
                         Next
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>

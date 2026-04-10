@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { toast } from "sonner";
 import { getBaseDomainSuffix } from "@/lib/client-domains";
+import { formatCardBrand } from "@/lib/payment-utils";
 import { formatPhoneNumberIntl } from "react-phone-number-input";
 
 interface SignupData {
@@ -253,7 +254,7 @@ export default function ReviewPage() {
                   <span className="text-muted-foreground">Payment method</span>
                   {signupData.cardLastFour ? (
                     <span className="font-medium capitalize">
-                      {signupData.cardBrand ? `${signupData.cardBrand} ` : ""}
+                      {signupData.cardBrand ? `${formatCardBrand(signupData.cardBrand)} ` : ""}
                       &bull;&bull;&bull;&bull; {signupData.cardLastFour}
                     </span>
                   ) : (
