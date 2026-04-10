@@ -172,14 +172,6 @@ export interface AdyenBillingAddress {
   country: string;
 }
 
-export interface AdyenBillingAddress {
-  street: string;
-  city: string;
-  stateOrProvince: string;
-  postalCode: string;
-  country: string;
-}
-
 /** Default payment method types for Checkout POST /sessions (must match Adyen PM type strings). */
 export const DEFAULT_CHECKOUT_ALLOWED_PAYMENT_METHODS = [
   "scheme",
