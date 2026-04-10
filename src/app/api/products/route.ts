@@ -24,7 +24,7 @@ const createProductSchema = z.object({
   isActive: z.boolean().default(true),
   glCodeId: z.string().optional().nullable(),
   typeName: z.string().optional().nullable(),
-  variants: z.array(variantSchema).optional(),
+  variants: z.array(variantSchema).optional().nullable(),
 });
 
 // GET /api/products - List products
