@@ -1,0 +1,7 @@
+if [ "${SKIP_LINT:-}" = "1" ]; then
+  echo "SKIP_LINT=1, skipping lint check."
+  exit 0
+fi
+
+echo "Running full lint check before push..."
+pnpm run lint
