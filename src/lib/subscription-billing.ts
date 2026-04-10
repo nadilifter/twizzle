@@ -24,8 +24,10 @@ function isPaymentMethodExpired(pm: {
   if (!pm.expiryMonth || !pm.expiryYear) return false;
 
   const month = parseInt(pm.expiryMonth, 10);
-  const year = parseInt(pm.expiryYear, 10);
-  if (isNaN(month) || isNaN(year)) return false;
+  const rawYear = parseInt(pm.expiryYear, 10);
+  if (isNaN(month) || isNaN(rawYear)) return false;
+  // Normalize 2-digit years (e.g. "30" -> 2030) stored by the Adyen webhook handler
+  const year = rawYear < 100 ? 2000 + rawYear : rawYear;
 
   // Card is valid through the last day of the expiry month.
   // Date(year, month, 0) gives the last day of that month, but we compare
@@ -43,7 +45,7 @@ function isPaymentMethodExpired(pm: {
  *
  * Idempotent: skips orgs that already have an invoice for this period.
  */
-export async function generateMonthlyInvoices(): Promise<{
+export async function generateMonthlyInvoices(options?: { organizationId?: string }): Promise<{
   generated: number;
   skipped: number;
   errors: string[];
@@ -60,6 +62,7 @@ export async function generateMonthlyInvoices(): Promise<{
     where: {
       status: { in: ["ACTIVE", "TRIALING"] },
       organization: { isActive: true },
+      ...(options?.organizationId ? { organizationId: options.organizationId } : {}),
     },
     include: {
       plan: true,
@@ -80,6 +83,12 @@ export async function generateMonthlyInvoices(): Promise<{
       const amount = sub.billingCycle === "YEARLY" ? Number(price) / 12 : Number(price);
 
       if (amount <= 0) {
+        skipped++;
+        continue;
+      }
+
+      // Don't bill if trial hasn't ended yet
+      if (sub.trialEndsAt && sub.trialEndsAt > now) {
         skipped++;
         continue;
       }

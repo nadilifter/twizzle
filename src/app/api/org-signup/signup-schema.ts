@@ -65,6 +65,8 @@ export const signupSchema = z
       .max(256)
       .refine((s) => s.startsWith("signup-"), "Invalid payment session reference")
       .optional(),
+
+    runCronAfterCreation: z.boolean().optional(),
   })
   .refine((data) => isValidPostalCode(data.postalCode, data.country), {
     message: "Postal code must be a valid US ZIP or Canadian postal code",

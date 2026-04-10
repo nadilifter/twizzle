@@ -15,6 +15,7 @@ import {
   type StoredPaymentMethod,
 } from "@/lib/adyen";
 import { signupSchema } from "./signup-schema";
+import { getCurrentEnvironment } from "@/lib/env-domains";
 
 export async function POST(request: NextRequest) {
   const rateLimitResponse = await checkApiRateLimit(request, "org-signup", RATE_LIMITS.sensitive);
@@ -152,7 +153,14 @@ export async function POST(request: NextRequest) {
     }
 
     const now = new Date();
-    const trialEndsAt = isFreePlan ? null : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const env = getCurrentEnvironment();
+    const testMode =
+      validatedData.runCronAfterCreation && (env === "local" || env === "development");
+    const trialEndsAt = isFreePlan
+      ? null
+      : testMode
+        ? new Date(now.getTime() - 86400000) // yesterday — trial already expired for local testing
+        : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
     const facilityCoords = await geocodeAddress({
       street: validatedData.street,

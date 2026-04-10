@@ -9,7 +9,9 @@ import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { toast } from "sonner";
 import { getBaseDomainSuffix } from "@/lib/client-domains";
+import { formatCardBrand } from "@/lib/payment-utils";
 import { formatPhoneNumberIntl } from "react-phone-number-input";
+import { DevTrialBillingTester } from "./dev-trial-billing-tester";
 
 interface SignupData {
   useExistingAccount?: boolean;
@@ -37,10 +39,18 @@ interface SignupData {
   cardBrand?: string | null;
 }
 
+const isDevEnv =
+  process.env.NEXT_PUBLIC_APP_ENVIRONMENT === "local" ||
+  process.env.NEXT_PUBLIC_APP_ENVIRONMENT === "development";
+
 export default function ReviewPage() {
   const router = useRouter();
   const [signupData, setSignupData] = useState<SignupData | null>(null);
   const [isCreatingOrg, setIsCreatingOrg] = useState(false);
+  const [runCronAfterCreation, setRunCronAfterCreation] = useState(false);
+  const [pendingCron, setPendingCron] = useState<{ orgId: string; successUrl: string } | null>(
+    null
+  );
 
   useEffect(() => {
     const raw = sessionStorage.getItem("org-signup-data");
@@ -76,7 +86,7 @@ export default function ReviewPage() {
       const response = await fetch("/api/org-signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formFields),
+        body: JSON.stringify({ ...formFields, runCronAfterCreation }),
       });
 
       const data = await response.json();
@@ -92,7 +102,15 @@ export default function ReviewPage() {
         orgId: data.organizationId,
         planPrice: String(signupData.planPrice),
       });
-      router.push(`/org-signup/success?${successParams.toString()}`);
+      const successUrl = `/org-signup/success?${successParams.toString()}`;
+
+      if (runCronAfterCreation) {
+        setIsCreatingOrg(false);
+        setPendingCron({ orgId: data.organizationId, successUrl });
+        return;
+      }
+
+      router.push(successUrl);
     } catch (error: any) {
       toast.error(error.message || "Organization creation failed. Please contact support.");
       setIsCreatingOrg(false);
@@ -253,7 +271,7 @@ export default function ReviewPage() {
                   <span className="text-muted-foreground">Payment method</span>
                   {signupData.cardLastFour ? (
                     <span className="font-medium capitalize">
-                      {signupData.cardBrand ? `${signupData.cardBrand} ` : ""}
+                      {signupData.cardBrand ? `${formatCardBrand(signupData.cardBrand)} ` : ""}
                       &bull;&bull;&bull;&bull; {signupData.cardLastFour}
                     </span>
                   ) : (
@@ -266,9 +284,17 @@ export default function ReviewPage() {
         </Card>
       </div>
 
+      {isDevEnv && isPaidPlan && (
+        <DevTrialBillingTester
+          runCronAfterCreation={runCronAfterCreation}
+          onToggle={setRunCronAfterCreation}
+          pendingCron={pendingCron}
+        />
+      )}
+
       <Button
         onClick={handleCreateOrganization}
-        disabled={isCreatingOrg}
+        disabled={isCreatingOrg || !!pendingCron}
         className="w-full"
         size="lg"
       >
