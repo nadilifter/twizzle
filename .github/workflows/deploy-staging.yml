@@ -44,7 +44,7 @@ jobs:
               "git fetch --tags origin",
               "git checkout tags/${DEPLOY_TAG}",
               "echo '=== Fetching secrets from AWS Secrets Manager ==='",
-              "eval \$(aws secretsmanager get-secret-value --region us-east-1 --secret-id uplifter/staging --output json | jq -r '.SecretString | fromjson | to_entries[] | \"export \\\\(.key)=\\\\(.value)\"')",
+              "eval \$(aws secretsmanager get-secret-value --region us-east-1 --secret-id uplifter/staging --query SecretString --output json | jq -r 'fromjson | to_entries[] | \"export \\\\(.key)=\\\\(.value)\"')",
               "echo '=== Pre-build disk cleanup ==='",
               "docker system prune -af 2>&1 || true",
               "echo '=== Building Docker image ==='",
