@@ -45,6 +45,8 @@ jobs:
               "git checkout tags/${DEPLOY_TAG}",
               "echo '=== Fetching secrets from AWS Secrets Manager ==='",
               "eval $(aws secretsmanager get-secret-value --region us-east-1 --secret-id uplifter/staging --query SecretString --output text | jq -r 'to_entries[] | \"export \\(.key)=\\(.value)\"')",
+              "echo '=== Pre-build disk cleanup ==='",
+              "docker system prune -af 2>&1 || true",
               "echo '=== Building Docker image ==='",
               "DOCKER_BUILDKIT=1 docker build --build-arg APP_ENVIRONMENT=staging --build-arg NEXT_PUBLIC_APP_ENVIRONMENT=staging --build-arg NEXT_PUBLIC_APP_VERSION=\"${DEPLOY_TAG}\" --build-arg NEXT_PUBLIC_ADYEN_CLIENT_KEY=\"\${NEXT_PUBLIC_ADYEN_CLIENT_KEY}\" --build-arg NEXT_PUBLIC_ADYEN_ENVIRONMENT=\"\${NEXT_PUBLIC_ADYEN_ENVIRONMENT}\" --build-arg NEXT_PUBLIC_SENTRY_DSN=\"\${NEXT_PUBLIC_SENTRY_DSN}\" -t uplifter:new .",
               "echo '=== Ensuring PostgreSQL is running ==='",
@@ -58,7 +60,8 @@ jobs:
               "echo '=== Restarting application ==='",
               "docker compose -f docker-compose.staging.yml up -d app cron 2>&1",
               "echo '=== Cleaning up old images ==='",
-              "docker image prune -f > /dev/null 2>&1 || true",
+              "docker image prune -f 2>&1 || true",
+              "docker builder prune -f 2>&1 || true",
               "echo '=== Container status ==='",
               "docker ps --filter 'name=uplifter' --format 'table {{.Names}}\\t{{.Status}}\\t{{.Ports}}'"
             ],
