@@ -16,7 +16,7 @@ import {
   Check,
   Globe,
   Palette,
-  Image,
+  Image as ImageIcon,
   LayoutGrid,
   Info,
 } from "lucide-react";
@@ -483,7 +483,7 @@ export default function WebsitePage() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Image className="h-5 w-5 text-primary" />
+            <ImageIcon className="h-5 w-5 text-primary" />
             <CardTitle>Hero Section</CardTitle>
           </div>
           <CardDescription>Customize the main banner on your home page.</CardDescription>

@@ -5,3 +5,6 @@ fi
 
 echo "Running full lint check before push..."
 pnpm run lint
+
+echo "Running type check before push..."
+pnpm typecheck

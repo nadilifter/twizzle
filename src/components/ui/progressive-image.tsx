@@ -21,6 +21,7 @@ export function ProgressiveImage({
   onLoad,
   sizes,
   style,
+  alt,
   ...props
 }: ImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -29,6 +30,7 @@ export function ProgressiveImage({
     <>
       <Image
         {...props}
+        alt={alt}
         sizes="32px"
         quality={1}
         className={cn(className, "blur-md")}
@@ -37,6 +39,7 @@ export function ProgressiveImage({
       />
       <Image
         {...props}
+        alt={alt}
         sizes={sizes}
         quality={quality}
         className={className}
