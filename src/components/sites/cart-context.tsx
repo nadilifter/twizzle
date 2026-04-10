@@ -37,11 +37,15 @@ function getCartKey(userId: string | undefined, organizationId?: string): string
   return `uplifter-cart-guest${orgSuffix}`;
 }
 
+interface AddItemOptions {
+  silent?: boolean;
+}
+
 interface CartContextType {
   items: CartItem[];
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
-  addItem: (item: Omit<CartItem, "id">) => void;
+  addItem: (item: Omit<CartItem, "id">, options?: AddItemOptions) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
@@ -166,12 +170,12 @@ export function CartProvider({ children, organizationId }: CartProviderProps) {
     localStorage.setItem(cartKey, JSON.stringify(items));
   }, [items, isInitialized, organizationId]);
 
-  const addItem = (item: Omit<CartItem, "id">) => {
+  const addItem = (item: Omit<CartItem, "id">, options?: AddItemOptions) => {
     const registration = isRegistrationType(item.type);
     const normalizedItem = registration ? { ...item, quantity: 1 } : item;
+    const silent = options?.silent ?? false;
 
     setItems((prev) => {
-      // Check if item already exists with same referenceId, athleteId, and details
       const existingItemIndex = prev.findIndex(
         (i) =>
           i.referenceId === normalizedItem.referenceId &&
@@ -181,20 +185,19 @@ export function CartProvider({ children, organizationId }: CartProviderProps) {
 
       if (existingItemIndex > -1) {
         if (registration) {
-          toast.info("This is already in your cart");
+          if (!silent) toast.info("This is already in your cart");
           return prev;
         }
-        // Only increment quantity for products
         const newItems = [...prev];
         newItems[existingItemIndex].quantity += normalizedItem.quantity;
-        toast.success("Item quantity updated in cart");
+        if (!silent) toast.success("Item quantity updated in cart");
         return newItems;
       }
 
-      toast.success("Item added to cart");
+      if (!silent) toast.success("Item added to cart");
       return [...prev, { ...normalizedItem, id: Math.random().toString(36).substring(2, 9) }];
     });
-    setIsOpen(true);
+    if (!silent) setIsOpen(true);
   };
 
   const removeItem = (id: string) => {

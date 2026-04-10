@@ -340,6 +340,15 @@ chore: US-7 remove defunct quick link from superadmin sidebar
 
 ## Pull Requests
 
+**Title format:** `type: USC-### description` — ticket number goes in the subject, not as the type.
+
+```
+feat: USC-229 add local free trial billing test flow
+fix: USC-118 resolve timezone shift on date-only fields
+```
+
+The CI `pr-title` check enforces this with `amannn/action-semantic-pull-request`. Valid types: `feat`, `fix`, `refactor`, `chore`, `style`, `docs`, `test`, `perf`. Ticket prefixes: `US-`, `USC-`, `PD-`.
+
 When asked to create a PR, use `gh pr create`. Use this description structure:
 
 ```

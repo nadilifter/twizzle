@@ -54,7 +54,7 @@ export default async function BillingPage() {
   }
 
   // Fetch organization with subscription and payment methods
-  const [organization, availablePlans, totalCollected] = await Promise.all([
+  const [organization, availablePlans, totalCollected, subscriptionInvoices] = await Promise.all([
     db.organization.findUnique({
       where: { id: session.user.organizationId },
       include: {
@@ -91,6 +91,21 @@ export default async function BillingPage() {
         status: "PAID",
       },
       _sum: { total: true },
+    }),
+    db.subscriptionInvoice.findMany({
+      where: { organizationId: session.user.organizationId },
+      orderBy: { periodStart: "desc" },
+      select: {
+        id: true,
+        reference: true,
+        amount: true,
+        currency: true,
+        status: true,
+        periodStart: true,
+        periodEnd: true,
+        paidAt: true,
+        failedAt: true,
+      },
     }),
   ]);
 
@@ -636,16 +651,72 @@ export default async function BillingPage() {
             <CardTitle>Billing History</CardTitle>
             <CardDescription>Your platform subscription invoices</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4">
-            <div className="flex items-center justify-center py-8 text-muted-foreground">
-              <div className="text-center">
-                <Download className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                <p className="font-medium">No invoices yet</p>
-                <p className="text-sm">
-                  Billing history will appear here once subscription billing begins.
-                </p>
+          <CardContent>
+            {subscriptionInvoices.length === 0 ? (
+              <div className="flex items-center justify-center py-8 text-muted-foreground">
+                <div className="text-center">
+                  <Download className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <p className="font-medium">No invoices yet</p>
+                  <p className="text-sm">
+                    Billing history will appear here once subscription billing begins.
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Reference</TableHead>
+                    <TableHead>Period</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {subscriptionInvoices.map((invoice) => (
+                    <TableRow key={invoice.id}>
+                      <TableCell className="font-mono text-sm">{invoice.reference}</TableCell>
+                      <TableCell className="text-sm">
+                        {invoice.periodStart.toLocaleDateString("en-US", {
+                          month: "long",
+                          year: "numeric",
+                        })}
+                      </TableCell>
+                      <TableCell>{formatCurrency(Number(invoice.amount))}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            invoice.status === "PAID"
+                              ? "default"
+                              : invoice.status === "FAILED"
+                                ? "destructive"
+                                : "secondary"
+                          }
+                        >
+                          {invoice.status.charAt(0) + invoice.status.slice(1).toLowerCase()}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {invoice.paidAt
+                          ? invoice.paidAt.toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })
+                          : invoice.failedAt
+                            ? invoice.failedAt.toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })
+                            : "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>

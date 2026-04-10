@@ -17,6 +17,14 @@ const sessionSchema = z.object({
   email: z.string().email("Valid email required"),
   // Return URL after payment/tokenization
   returnUrl: z.string().url("Valid return URL required"),
+  // Billing address to associate with the payment method
+  billingAddress: z.object({
+    street: z.string().min(1),
+    city: z.string().min(1),
+    stateOrProvince: z.string().min(1),
+    postalCode: z.string().min(1),
+    country: z.string().min(1),
+  }),
 });
 
 export async function POST(request: NextRequest) {
@@ -33,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { signupReference, email, returnUrl } = sessionSchema.parse(body);
+    const { signupReference, email, returnUrl, billingAddress } = sessionSchema.parse(body);
 
     // Create a temporary shopper reference for the signup
     // This will be updated to use the actual org ID after signup
@@ -47,7 +55,8 @@ export async function POST(request: NextRequest) {
       returnUrl,
       email,
       0,
-      "enabled"
+      "enabled",
+      billingAddress
     );
 
     return NextResponse.json({

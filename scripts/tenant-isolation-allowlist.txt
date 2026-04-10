@@ -274,6 +274,9 @@ src/app/api/athletes/chat/conversations/[id]/route.ts
 src/app/api/athletes/chat/conversations/[id]/messages/route.ts
 src/app/api/athletes/chat/unread-count/route.ts
 
+# --- Dev-only testing endpoints (404 in production/staging) ---
+src/app/api/dev/trigger-trial-billing/route.ts
+
 # --- Subscription billing (platform-level models, system/superadmin managed) ---
 src/app/api/cron/recurring-billing/route.ts
 src/app/api/cron/subscription-billing/route.ts
