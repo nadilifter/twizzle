@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { OrganizationAddressForm } from "@/components/organization-address-form";
 import {
   Card,
@@ -54,20 +54,25 @@ type OrganizationDetails = {
   taxEnabled: boolean;
 };
 
+const NON_TERMINAL_STATUSES = ["PENDING_HOSTED", "IN_PROGRESS", "IN_REVIEW", "AWAITING_DATA"];
+
 export default function OnboardingPage() {
   const [account, setAccount] = useState<OnboardingAccount | null>(null);
   const [organization, setOrganization] = useState<OrganizationDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [secondsAgo, setSecondsAgo] = useState<number | null>(null);
 
-  const fetchStatus = useCallback(async () => {
+  const fetchStatus = async () => {
     try {
       const res = await fetch("/api/organization/adyen-onboarding");
       const data = await res.json();
       if (res.ok) {
         setAccount(data.account);
         setOrganization(data.organization);
+        setLastUpdated(new Date());
       } else {
         setError(data.error);
       }
@@ -76,11 +81,34 @@ export default function OnboardingPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
-
+  };
   useEffect(() => {
     fetchStatus();
-  }, [fetchStatus]);
+  }, []);
+
+  // Background polling for non-terminal statuses
+  const accountStatus = account?.onboardingStatus;
+  useEffect(() => {
+    if (!accountStatus || !NON_TERMINAL_STATUSES.includes(accountStatus)) return;
+
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") fetchStatus();
+    }, 120000); // poll every 2 minutes
+
+    return () => clearInterval(interval);
+  }, [accountStatus]);
+
+  // Keep "X seconds ago" counter in sync; stop when status is terminal
+  useEffect(() => {
+    if (!lastUpdated || !accountStatus || !NON_TERMINAL_STATUSES.includes(accountStatus)) {
+      setSecondsAgo(null);
+      return;
+    }
+    const update = () => setSecondsAgo(Math.floor((Date.now() - lastUpdated.getTime()) / 1000));
+    update();
+    const timer = setInterval(update, 1000);
+    return () => clearInterval(timer);
+  }, [lastUpdated, accountStatus]);
 
   const handleInitiate = async () => {
     setActionLoading(true);
@@ -174,10 +202,22 @@ export default function OnboardingPage() {
           </p>
         </div>
         {account && (
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
-            <RefreshCwIcon className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-3">
+            {lastUpdated && secondsAgo !== null && (
+              <span className="text-xs text-muted-foreground">
+                Updated{" "}
+                {secondsAgo === 0
+                  ? "just now"
+                  : secondsAgo < 60
+                    ? `${secondsAgo}s ago`
+                    : `${Math.floor(secondsAgo / 60)}m ${secondsAgo % 60}s ago`}
+              </span>
+            )}
+            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
+              <RefreshCwIcon className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
         )}
       </div>
 
