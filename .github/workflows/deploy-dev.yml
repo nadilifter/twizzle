@@ -2,7 +2,7 @@ name: Build and Deploy Dev Build [Dev]
 
 on:
   push:
-    branches: [dev]
+    branches: [dev, fix/USC-234-leaky-secrets]
   workflow_dispatch:
 
 concurrency:
@@ -40,7 +40,7 @@ jobs:
               "git fetch origin",
               "git checkout origin/dev",
               "echo '=== Fetching secrets from AWS Secrets Manager ==='",
-              "eval \$(aws secretsmanager get-secret-value --region us-east-1 --secret-id uplifter/development --query SecretString --output json | jq -r 'fromjson | to_entries[] | \"export \\\\(.key)=\\\\(.value)\"')",
+              "eval \"\$(aws secretsmanager get-secret-value --region us-east-1 --secret-id uplifter/development --query SecretString --output text | grep '^[A-Za-z_][A-Za-z0-9_]*=' | sed 's/^/export /')\"",
               "echo '=== Pre-build disk cleanup ==='",
               "docker system prune -af 2>&1 || true",
               "echo '=== Building Docker image ==='",
