@@ -2,7 +2,7 @@ name: Build and Deploy Dev Build [Dev]
 
 on:
   push:
-    branches: [dev, fix/USC-234-leaky-secrets]
+    branches: [dev]
   workflow_dispatch:
 
 concurrency:
