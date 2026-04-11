@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   CheckCircle2Icon,
   AlertCircleIcon,
@@ -54,16 +55,26 @@ type OrganizationDetails = {
   taxEnabled: boolean;
 };
 
+type PlanDetails = {
+  transactionFee: string | number;
+  perTransactionFee: string | number;
+};
 const NON_TERMINAL_STATUSES = ["PENDING_HOSTED", "IN_PROGRESS", "IN_REVIEW", "AWAITING_DATA"];
 
 export default function OnboardingPage() {
   const [account, setAccount] = useState<OnboardingAccount | null>(null);
   const [organization, setOrganization] = useState<OrganizationDetails | null>(null);
+  const [plan, setPlan] = useState<PlanDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [secondsAgo, setSecondsAgo] = useState<number | null>(null);
+
+  // Gate checkbox state
+  const [legalNameConfirmed, setLegalNameConfirmed] = useState(false);
+  const [feeAcknowledged, setFeeAcknowledged] = useState(false);
+  const [agreementAccepted, setAgreementAccepted] = useState(false);
 
   const fetchStatus = async () => {
     try {
@@ -72,6 +83,7 @@ export default function OnboardingPage() {
       if (res.ok) {
         setAccount(data.account);
         setOrganization(data.organization);
+        setPlan(data.plan);
         setLastUpdated(new Date());
       } else {
         setError(data.error);
@@ -116,6 +128,12 @@ export default function OnboardingPage() {
     try {
       const res = await fetch("/api/organization/adyen-onboarding", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          legalNameConfirmed,
+          platformAgreementAccepted: agreementAccepted,
+          platformFeeAcknowledged: feeAcknowledged,
+        }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -230,13 +248,41 @@ export default function OnboardingPage() {
       )}
 
       {!account && organization && (
-        <OrganizationAddressCard
-          organization={organization}
-          onUpdate={(org) => setOrganization(org)}
-        />
+        <>
+          <OrganizationAddressCard
+            organization={organization}
+            onUpdate={(org) => setOrganization(org)}
+          />
+          <LegalNameConfirmationGate
+            orgName={organization.name}
+            checked={legalNameConfirmed}
+            onChange={setLegalNameConfirmed}
+          />
+          <FeeDisclosureGate plan={plan} checked={feeAcknowledged} onChange={setFeeAcknowledged} />
+          <PlatformAgreementGate checked={agreementAccepted} onChange={setAgreementAccepted} />
+        </>
       )}
 
-      {!account && <NotStartedState onInitiate={handleInitiate} loading={actionLoading} />}
+      {!account &&
+        (() => {
+          const addressComplete = Boolean(
+            organization?.street &&
+            organization?.city &&
+            organization?.stateProvince &&
+            organization?.postalCode &&
+            organization?.country &&
+            organization?.phone
+          );
+          const allGatesPass =
+            addressComplete && legalNameConfirmed && feeAcknowledged && agreementAccepted;
+          return (
+            <NotStartedState
+              onInitiate={handleInitiate}
+              loading={actionLoading}
+              disabled={!allGatesPass}
+            />
+          );
+        })()}
       {account?.onboardingStatus === "PENDING_HOSTED" && (
         <PendingHostedState account={account} onGetLink={handleGetLink} loading={actionLoading} />
       )}
@@ -357,7 +403,15 @@ function OrganizationAddressCard({
   );
 }
 
-function NotStartedState({ onInitiate, loading }: { onInitiate: () => void; loading: boolean }) {
+function NotStartedState({
+  onInitiate,
+  loading,
+  disabled,
+}: {
+  onInitiate: () => void;
+  loading: boolean;
+  disabled: boolean;
+}) {
   return (
     <Card>
       <CardHeader>
@@ -398,11 +452,16 @@ function NotStartedState({ onInitiate, loading }: { onInitiate: () => void; load
           ))}
         </div>
       </CardContent>
-      <CardFooter>
-        <Button onClick={onInitiate} disabled={loading}>
+      <CardFooter className="flex flex-col items-start gap-3">
+        <Button onClick={onInitiate} disabled={loading || disabled}>
           {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
           Begin Verification
         </Button>
+        {disabled && (
+          <p className="text-sm text-muted-foreground">
+            Complete all required confirmations above before proceeding.
+          </p>
+        )}
       </CardFooter>
     </Card>
   );
@@ -723,6 +782,167 @@ function HelpCard() {
         <Button variant="link" className="px-0 mt-2">
           Contact Support &rarr;
         </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+// --- Pre-onboarding gate components ---
+
+function LegalNameConfirmationGate({
+  orgName,
+  checked,
+  onChange,
+}: {
+  orgName: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Confirm Legal Business Name</CardTitle>
+        <CardDescription>
+          The name below will be submitted to Adyen as your registered legal business name. It must
+          match your official business registration exactly.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="rounded-lg border bg-muted/50 px-4 py-3">
+          <p className="text-sm text-muted-foreground">Legal name to be submitted</p>
+          <p className="mt-1 font-semibold">{orgName}</p>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          If this name is incorrect, update it in{" "}
+          <a href="/dashboard/settings/organization" className="underline underline-offset-4">
+            Organization Settings
+          </a>{" "}
+          before proceeding.
+        </p>
+        <div className="flex items-start gap-3">
+          <Checkbox
+            id="legal-name-confirm"
+            checked={checked}
+            onCheckedChange={(val) => onChange(Boolean(val))}
+          />
+          <label htmlFor="legal-name-confirm" className="text-sm leading-snug cursor-pointer">
+            I confirm that <span className="font-medium">{orgName}</span> is our registered legal
+            business name.
+          </label>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function FeeDisclosureGate({
+  plan,
+  checked,
+  onChange,
+}: {
+  plan: PlanDetails | null;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  if (plan && (plan.transactionFee == null || plan.perTransactionFee == null)) {
+    return (
+      <Card>
+        <CardContent className="py-6">
+          <p className="text-sm text-destructive">
+            Unable to display fee information. Please contact support.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const transactionFeePercent = plan ? `${(Number(plan.transactionFee) * 100).toFixed(2)}%` : "—";
+  const perTransactionFlat = plan ? `$${Number(plan.perTransactionFee).toFixed(2)}` : "—";
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Platform Fee Disclosure</CardTitle>
+        <CardDescription>
+          {/* Placeholder — final copy pending product/legal review (USC-206) */}
+          Review the platform fees that apply to your plan before proceeding with verification.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Placeholder body copy — to be replaced with product/legal-approved text (USC-206) */}
+        <p className="text-sm text-muted-foreground">
+          [Fee disclosure copy — pending product/legal review]
+        </p>
+        <div className="rounded-lg border overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-muted/50">
+                <th className="px-4 py-2 text-left font-medium">Fee type</th>
+                <th className="px-4 py-2 text-right font-medium">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b">
+                <td className="px-4 py-3">Transaction fee (% of payout)</td>
+                <td className="px-4 py-3 text-right font-mono">{transactionFeePercent}</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3">Per-transaction flat fee</td>
+                <td className="px-4 py-3 text-right font-mono">{perTransactionFlat}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div className="flex items-start gap-3">
+          <Checkbox
+            id="fee-acknowledge"
+            checked={checked}
+            onCheckedChange={(val) => onChange(Boolean(val))}
+          />
+          <label htmlFor="fee-acknowledge" className="text-sm leading-snug cursor-pointer">
+            I understand that the fees shown above will be deducted from each payout.
+          </label>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PlatformAgreementGate({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Platform Agreement</CardTitle>
+        <CardDescription>
+          Review and accept the Uplifter Marketplace Agreement before initiating verification.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-start gap-3">
+          <Checkbox
+            id="platform-agreement"
+            checked={checked}
+            onCheckedChange={(val) => onChange(Boolean(val))}
+          />
+          <label htmlFor="platform-agreement" className="text-sm leading-snug cursor-pointer">
+            I agree to the{" "}
+            <a
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-4"
+            >
+              Uplifter Marketplace Agreement
+            </a>
+            .
+          </label>
+        </div>
       </CardContent>
     </Card>
   );

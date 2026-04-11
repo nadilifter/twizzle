@@ -430,6 +430,13 @@ async function main() {
   console.log(`  ✓ Created: ${orgDemo.name}`);
   console.log(`  ✓ Created: ${orgUplifter.name}`);
 
+  // Clear any existing Adyen onboarding data so re-seeding always starts
+  // clean and the full KYC initiation flow can be tested from scratch.
+  await prisma.adyenPlatformAccount.deleteMany({
+    where: { organizationId: { in: [ORG1_ID, ORG2_ID, ORG_DEMO_ID] } },
+  });
+  console.log("  ✓ Cleared Adyen platform account data for all seed orgs");
+
   // ============================================
   // ORGANIZATION SUBSCRIPTIONS
   // ============================================

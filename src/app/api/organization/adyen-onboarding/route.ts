@@ -67,11 +67,36 @@ export async function GET() {
         phone: true,
         taxRate: true,
         taxEnabled: true,
+        subscription: {
+          select: {
+            plan: {
+              select: {
+                transactionFee: true,
+                perTransactionFee: true,
+              },
+            },
+          },
+        },
       },
     });
 
+    const activePlan = org?.subscription?.plan ?? null;
+
+    if (!activePlan) {
+      return NextResponse.json(
+        { error: "No active plan found for this organization." },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json({
       organization: org,
+      plan: activePlan
+        ? {
+            transactionFee: activePlan.transactionFee,
+            perTransactionFee: activePlan.perTransactionFee,
+          }
+        : null,
       account: account
         ? {
             onboardingStatus: account.onboardingStatus,
@@ -179,12 +204,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Read optional override from request body
+    // Read gate confirmations and optional overrides from request body
     let body: any = {};
     try {
       body = await request.json();
     } catch {
       // No body is fine
+    }
+
+    const { legalNameConfirmed, platformAgreementAccepted, platformFeeAcknowledged } = body;
+
+    if (!legalNameConfirmed) {
+      return NextResponse.json(
+        { error: "Legal name must be confirmed before initiating onboarding." },
+        { status: 400 }
+      );
+    }
+
+    if (!platformAgreementAccepted) {
+      return NextResponse.json(
+        { error: "Platform agreement must be accepted before initiating onboarding." },
+        { status: 400 }
+      );
+    }
+
+    if (!platformFeeAcknowledged) {
+      return NextResponse.json(
+        { error: "Platform fee must be acknowledged before initiating onboarding." },
+        { status: 400 }
+      );
     }
 
     // Step 1: Create Legal Entity
@@ -231,6 +279,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Save to database
+    const now = new Date();
     const account = await db.adyenPlatformAccount.create({
       data: {
         organizationId: org.id,
@@ -239,6 +288,9 @@ export async function POST(request: NextRequest) {
         accountHolderId: accountHolder.id,
         balanceAccountId: balanceAccount.id,
         onboardingStatus: "PENDING_HOSTED",
+        legalNameConfirmedAt: now,
+        platformAgreementAcceptedAt: now,
+        platformFeeAcknowledgedAt: now,
       },
     });
 

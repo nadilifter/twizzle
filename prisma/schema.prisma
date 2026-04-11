@@ -3464,6 +3464,11 @@ model AdyenPlatformAccount {
   verificationStatus String?
   capabilities       Json?
 
+  // Pre-onboarding gate acceptance timestamps
+  legalNameConfirmedAt         DateTime?
+  platformFeeAcknowledgedAt    DateTime?
+  platformAgreementAcceptedAt  DateTime?
+
   // Sweep
   sweepId              String?
   transferInstrumentId String?
