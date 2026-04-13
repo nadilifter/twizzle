@@ -164,6 +164,8 @@ APP_ENVIRONMENT=production
 
 We use [Prisma Migrate](https://www.prisma.io/docs/orm/prisma-migrate) for all database schema changes. Every change to `prisma/schema.prisma` **must** have a corresponding migration under `prisma/migrations/`.
 
+Before touching the schema, skim [docs/ERD.md](docs/ERD.md) (domain-grouped ERD, every model) and [docs/data-structure.md](docs/data-structure.md) (overview, patterns, enums). Keep them current when you add or change models.
+
 ### Workflow
 
 1. Edit `prisma/schema.prisma`
