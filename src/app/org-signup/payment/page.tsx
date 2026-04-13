@@ -32,7 +32,6 @@ interface SignupData {
   subdomain: string;
   primaryColor?: string;
   secondaryColor?: string;
-  sportIds?: string[];
   planId: string;
   planName: string;
   planPrice: string | number;

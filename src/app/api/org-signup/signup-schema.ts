@@ -57,8 +57,6 @@ export const signupSchema = z
 
     planId: z.string().min(1, "Please select a plan"),
 
-    sportIds: z.array(z.string()).optional(),
-
     adyenShopperReference: z
       .string()
       .min(3, "Shopper reference must be at least 3 characters")

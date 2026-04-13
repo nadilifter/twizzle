@@ -265,21 +265,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // 7. Associate selected sports (if any)
-      if (validatedData.sportIds && validatedData.sportIds.length > 0) {
-        await Promise.all(
-          validatedData.sportIds.map((sportId) =>
-            tx.organizationSport.create({
-              data: {
-                organizationId: organization.id,
-                sportId,
-              },
-            })
-          )
-        );
-      }
-
-      // 8. Create default GL codes for the organization
+      // 7. Create default GL codes for the organization
       await createDefaultGLCodes(organization.id, tx);
 
       return { organization, userId: resolvedUserId };

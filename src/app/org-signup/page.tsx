@@ -23,7 +23,6 @@ import {
   Mail,
   HardDrive,
   Tag,
-  Trophy,
   ArrowRight,
   ArrowLeft,
   ShieldCheck,
@@ -56,7 +55,6 @@ import {
 import { StateProvinceCombobox } from "@/components/ui/state-province-combobox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { getBaseDomainSuffix, getClientSubdomainUrl } from "@/lib/client-domains";
 import { PlansComparisonDialog } from "./plans-comparison-dialog";
@@ -69,14 +67,6 @@ import {
   StepperTitle,
   getStepStatus,
 } from "@/components/ui/stepper";
-
-interface Sport {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  icon: string | null;
-}
 
 interface SubscriptionPlan {
   id: string;
@@ -124,9 +114,6 @@ export default function SignupPage() {
   const [plans, setPlans] = React.useState<SubscriptionPlan[]>([]);
   const [plansLoading, setPlansLoading] = React.useState(true);
   const [selectedPlan, setSelectedPlan] = React.useState<string | null>(null);
-  const [sports, setSports] = React.useState<Sport[]>([]);
-  const [sportsLoading, setSportsLoading] = React.useState(true);
-
   const useExistingAccount = signupMode === "existingAccount";
   const restoredFromSession = React.useRef(false);
 
@@ -209,9 +196,6 @@ export default function SignupPage() {
     primaryColor: "#000000",
     secondaryColor: "#ffffff",
 
-    // Sports (optional)
-    sportIds: [] as string[],
-
     // Plan
     planId: "",
   });
@@ -244,23 +228,6 @@ export default function SignupPage() {
       }
     }
     fetchPlans();
-  }, []);
-
-  // Fetch sports on mount
-  React.useEffect(() => {
-    async function fetchSports() {
-      try {
-        const response = await fetch("/api/sports");
-        if (!response.ok) throw new Error("Failed to fetch sports");
-        const data = await response.json();
-        setSports(data);
-      } catch (error) {
-        console.error("Failed to load sports:", error);
-      } finally {
-        setSportsLoading(false);
-      }
-    }
-    fetchSports();
   }, []);
 
   // Check organization name availability
@@ -951,7 +918,7 @@ export default function SignupPage() {
               </>
             )}
 
-            {/* Step 2: Organization Details + Sports */}
+            {/* Step 2: Organization Details */}
             {currentStepId === "organization" && (
               <>
                 <Card>
@@ -1127,68 +1094,6 @@ export default function SignupPage() {
                         <p className="text-sm text-destructive">{errors.postalCode}</p>
                       )}
                     </div>
-                  </CardContent>
-                </Card>
-
-                {/* Sports (Optional) */}
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center gap-2">
-                      <Trophy className="h-5 w-5 text-primary" />
-                      <CardTitle>Sports Offered</CardTitle>
-                      <Badge variant="secondary" className="ml-2">
-                        Optional
-                      </Badge>
-                    </div>
-                    <CardDescription>
-                      Select the sports your organization offers. You can update this later in your
-                      dashboard.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {sportsLoading ? (
-                      <div className="flex items-center justify-center py-4">
-                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                      </div>
-                    ) : sports.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No sports available yet.</p>
-                    ) : (
-                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {sports.map((sport) => {
-                          const isSelected = formData.sportIds.includes(sport.id);
-                          return (
-                            <label
-                              key={sport.id}
-                              className={cn(
-                                "flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
-                                isSelected ? "border-primary bg-primary/5" : "hover:bg-muted/50"
-                              )}
-                            >
-                              <Checkbox
-                                checked={isSelected}
-                                onCheckedChange={(checked) => {
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    sportIds: checked
-                                      ? [...prev.sportIds, sport.id]
-                                      : prev.sportIds.filter((id) => id !== sport.id),
-                                  }));
-                                }}
-                                className="mt-0.5"
-                              />
-                              <div className="flex-1 space-y-0.5">
-                                <span className="font-medium text-sm">{sport.name}</span>
-                                {sport.description && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {sport.description}
-                                  </p>
-                                )}
-                              </div>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
               </>
