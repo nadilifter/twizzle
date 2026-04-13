@@ -311,6 +311,29 @@ export default function SignupPage() {
     }
   };
 
+  const handlePhoneBlur = () => {
+    if (!formData.phone) {
+      setErrors((prev) => ({ ...prev, phone: "Phone is required" }));
+    } else if (!isValidPhoneNumber(formData.phone)) {
+      setErrors((prev) => ({ ...prev, phone: "Please enter a valid phone number" }));
+    }
+  };
+
+  const handlePostalCodeBlur = () => {
+    if (formData.country !== "US" && formData.country !== "CA") return;
+    if (!formData.postalCode.trim()) {
+      setErrors((prev) => ({ ...prev, postalCode: "Postal code is required" }));
+    } else if (!isValidPostalCode(formData.postalCode, formData.country)) {
+      setErrors((prev) => ({
+        ...prev,
+        postalCode:
+          formData.country === "US"
+            ? "Enter a valid US ZIP code (e.g. 12345 or 12345-6789)"
+            : "Enter a valid Canadian postal code (e.g. A1A 1A1)",
+      }));
+    }
+  };
+
   const handleSendVerificationCode = async () => {
     const newErrors: Record<string, string> = {};
     if (!formData.name.trim()) {
@@ -999,6 +1022,7 @@ export default function SignupPage() {
                             setErrors((prev) => ({ ...prev, phone: "" }));
                           }
                         }}
+                        onBlur={handlePhoneBlur}
                         className={errors.phone ? "[&>input]:border-destructive" : ""}
                       />
                       {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
@@ -1088,6 +1112,7 @@ export default function SignupPage() {
                         placeholder={formData.country === "CA" ? "A1A 1A1" : "10001"}
                         value={formData.postalCode}
                         onChange={handleInputChange}
+                        onBlur={handlePostalCodeBlur}
                         className={errors.postalCode ? "border-destructive" : ""}
                       />
                       {errors.postalCode && (
