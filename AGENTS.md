@@ -227,6 +227,15 @@ Full checklist: `src/app/api/README.md`
 2. Run `pnpm prisma migrate dev --name <descriptive-name>`
 3. If the model has a direct `organizationId` column, add it to `TENANT_MODELS` in `src/lib/db.ts`
 4. Add TypeScript types to `src/types/` if needed
+5. Update the ERD docs — add the model to the relevant section in `docs/ERD.md` (domain-grouped Mermaid ERDs with field-level annotations) and, if the new model belongs to a new top-level domain, the overview in `docs/data-structure.md`
+
+### Understanding the Data Model
+
+Before writing schema-heavy code, read:
+
+- `docs/ERD.md` — domain-grouped ERD covering every model with field-level meaning (what each column represents, not just its type)
+- `docs/data-structure.md` — high-level entity map, design patterns (polymorphic billing, cross-org athletes, etc.), cross-domain flows, enum reference
+- `prisma/schema.prisma` — source of truth (but ~5,100 lines; the docs above are faster to scan)
 
 ### New Cron Job
 

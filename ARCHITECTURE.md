@@ -225,6 +225,8 @@ Sessions carry `organizationId` (the currently active org), `role`, and `memberI
 
 ## Database Schema
 
+> **Full ERD:** [docs/ERD.md](docs/ERD.md) has a domain-grouped Mermaid ERD of every model with field-level annotations. [docs/data-structure.md](docs/data-structure.md) has the high-level overview, design-pattern notes, cross-domain flows, and enum reference.
+
 ### Entity Groups
 
 The schema has ~5,100 lines and 80+ models organized into these domains:

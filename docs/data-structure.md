@@ -1,765 +1,358 @@
-# Uplifter Data Structure
+# Uplifter Data Structure — Overview
 
-## Entity Relationship Overview
+A high-level map of the platform's core entities and cross-domain flows. For attribute-level detail on every model, see **[ERD.md](./ERD.md)**. For architecture context, see **[ARCHITECTURE.md](../ARCHITECTURE.md)**.
+
+## Top-level Entity Map
+
+Core relationships across all major domains. Details per domain are in [ERD.md](./ERD.md).
 
 ```mermaid
 erDiagram
-    Organization ||--o{ OrganizationMember : has
-    Organization ||--o{ Program : offers
-    Organization ||--o{ Event : hosts
-    Organization ||--o{ Athlete : manages
-    Organization ||--o{ Family : serves
-    Organization ||--o{ Invoice : issues
-    Organization ||--o{ Product : sells
-    Organization ||--o{ Discount : creates
-    Organization ||--|| WebsiteConfig : configures
-    Organization ||--o| OrganizationSubscription : subscribes
-    Organization ||--o{ Facility : owns
-    Organization ||--o{ Equipment : manages
-    Organization ||--o{ StaffProfile : employs
-    Organization ||--o{ Shift : schedules
-    Organization ||--o{ ScheduleTemplate : defines
-    Organization ||--o| MedicalFormConfig : configures
-    Organization ||--o{ CustomMedicalQuestion : defines
+    Organization ||--o{ OrganizationMember : "has staff/parents"
+    Organization ||--o{ Program : "offers"
+    Organization ||--o{ Event : "hosts"
+    Organization ||--o{ Competition : "hosts"
+    Organization ||--o{ Season : "organizes into seasons"
+    Organization ||--o{ Facility : "operates"
+    Organization ||--o{ MembershipGroup : "sells"
+    Organization ||--o{ Pass : "sells"
+    Organization ||--o{ Product : "sells"
+    Organization ||--o{ Invoice : "bills"
+    Organization ||--o{ Waiver : "publishes"
+    Organization ||--o| WebsiteConfig : "marketing site"
+    Organization ||--o| OrganizationSubscription : "platform plan"
+    Organization ||--o| AdyenPlatformAccount : "merchant onboarding"
+    Organization ||--o{ OrganizationAthlete : "rosters"
 
-    Athlete ||--o| AthleteMedicalInfo : has
-    AthleteMedicalInfo ||--o{ CustomMedicalResponse : contains
-    CustomMedicalQuestion ||--o{ CustomMedicalResponse : answered_by
+    User ||--o{ OrganizationMember : "joins orgs"
+    User ||--o{ AthleteGuardian : "guardian of"
+    User ||--o| Athlete : "self-athlete (adult)"
+    User ||--o{ Invoice : "billed (guardian)"
+    User ||--o{ PaymentMethod : "stored cards"
 
-    User ||--o{ OrganizationMember : joins
-    User ||--o{ Session : has
-    User ||--o{ Account : links
-    User ||--o{ FacilityAssignment : assigned_to
-    User ||--o| StaffProfile : has_profile
+    Athlete ||--o{ AthleteGuardian : "has guardians"
+    Athlete ||--o{ OrganizationAthlete : "visible to orgs"
+    Athlete ||--o| AthleteMedicalInfo : "medical record (cross-org)"
+    Athlete ||--o{ Enrollment : "enrolled"
+    Athlete ||--o{ AthleteMembership : "memberships"
+    Athlete ||--o{ AthletePass : "passes"
+    Athlete ||--o{ CompetitionEntry : "competes"
+    Athlete ||--o{ Evaluation : "evaluated"
+    Athlete ||--o{ WaiverAcceptance : "signs waivers"
 
-    StaffProfile ||--o{ Shift : works
-    StaffProfile ||--o{ StaffAvailability : available
-    StaffProfile ||--o{ EventStaff : assigned_to
+    Program ||--o{ ProgramInstance : "rrule sessions"
+    Program ||--o{ Enrollment : "enrolled athletes"
+    ProgramInstance ||--o{ InstanceRegistration : "per-session signup"
+    ProgramInstance ||--o{ InstanceAttendance : "attendance"
 
-    Family ||--o{ AthleteGuardian : guardians
-    Athlete ||--o{ AthleteGuardian : has
+    MembershipGroup ||--o{ MembershipInstance : "periods (e.g. FY25)"
+    MembershipInstance ||--o{ AthleteMembership : "holders"
 
-    Family ||--o{ Invoice : receives
-    Family ||--o{ Payment : makes
-    Family ||--o{ Enrollment : manages
+    Invoice ||--o{ LineItem : "line items"
+    Invoice ||--o{ Payment : "payments"
+    Payment ||--o| Transaction : "Adyen PSP"
+    Organization ||--o{ Payout : "Adyen settlement"
+    Payout ||--o{ Transaction : "batched"
 
-    Athlete ||--o{ Enrollment : enrolls
-    Athlete ||--o{ Attendance : attends
-    Athlete ||--o{ AthleteMembership : holds
-
-    Program ||--o{ Event : schedules
-    Program ||--o{ Enrollment : accepts
-    Event ||--o{ Attendance : tracks
-    Event }o--o| Facility : hosted_at
-    Event ||--o{ EventStaff : staffed_by
-
-    Facility ||--o{ Space : contains
-    Facility ||--o{ Equipment : houses
-    Facility ||--o{ FacilityAssignment : staffed_by
-    Facility ||--o{ Shift : location_for
-    Space ||--o{ Equipment : optionally_contains
-
-    ScheduleTemplate ||--o{ ScheduleTemplateEntry : contains
-
-    Invoice ||--o{ LineItem : contains
-    Invoice ||--o{ Payment : settles
-
-    MembershipGroup ||--o{ MembershipInstance : versions
-    MembershipInstance ||--o{ AthleteMembership : assigns
-
-    Transaction }o--|| Payment : records
-    Organization ||--o{ Transaction : processes
-    Organization ||--o{ Payout : receives
+    Facility ||--o{ Space : "rooms/zones"
+    Facility ||--o{ Equipment : "houses"
 ```
 
-## Core Domain Models
+**Tenancy note.** Every table except a small shared set carries `organizationId` and is automatically scoped by [`getScopedDb()`](../src/lib/db.ts). The intentional exceptions — shared across tenants — are `User`, `Athlete`, `AthleteMedicalInfo`, `AthleteGuardian`, and the global `Sport`/`SportEvent`/`SportAgeCategory`/`ReservedDomain` catalogs. See [ARCHITECTURE.md §Tenant Isolation](../ARCHITECTURE.md#tenant-isolation-getscopeddb).
 
-### Multi-Tenancy Layer
+## Domain Index
 
-```mermaid
-classDiagram
-    class Organization {
-        +String id
-        +String name
-        +String slug
-        +String email
-        +String phone
-        +String street
-        +String city
-        +String country
-        +DateTime createdAt
-    }
+Each domain has a dedicated section in [ERD.md](./ERD.md) with field-level definitions:
 
-    class OrganizationMember {
-        +String id
-        +String organizationId
-        +String userId
-        +Role role
-        +MemberStatus status
-        +DateTime joinedAt
-    }
+| Domain                         | ERD section                                             | Key entities                                                                                          |
+| ------------------------------ | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Orgs, Users, Auth              | [§1](./ERD.md#1-foundation)                             | `Organization`, `User`, `OrganizationMember`, `Session`, `Account`, `OrganizationInvitation`          |
+| Athletes & Guardians           | [§2](./ERD.md#2-athletes--guardians)                    | `Athlete`, `AthleteGuardian`, `OrganizationAthlete`, `GuardianClaimRequest`                           |
+| Medical & Custom Info          | [§3](./ERD.md#3-medical--custom-information)            | `AthleteMedicalInfo`, `MedicalFormConfig`, `CustomMedicalQuestion`, `CustomInfoQuestion`              |
+| Programs & Scheduling          | [§4](./ERD.md#4-programs-instances-seasons-enrollments) | `Program`, `ProgramInstance`, `Season`, `Enrollment`, `InstanceRegistration`                          |
+| Events & Attendance            | [§5](./ERD.md#5-events--attendance)                     | `Event`, `Attendance`                                                                                 |
+| Memberships & Passes           | [§6](./ERD.md#6-memberships--passes)                    | `MembershipGroup`, `MembershipInstance`, `AthleteMembership`, `Pass`, `AthletePass`                   |
+| Evaluations & Skills           | [§7](./ERD.md#7-evaluations-skills-achievements)        | `Skill`, `Level`, `EvaluationTemplate`, `Evaluation`, `Achievement`, `LessonPlan`                     |
+| Competitions & Sports          | [§8](./ERD.md#8-competitions--sports)                   | `Sport`, `SportEvent`, `Competition`, `CompetitionCategory`, `CompetitionEntry`, `CompetitionResult`  |
+| Financial                      | [§9](./ERD.md#9-financial-invoices-payments-ledger)     | `Invoice`, `LineItem`, `Payment`, `Transaction`, `Payout`, `RecurringCharge`, `GLCode`, `LedgerEntry` |
+| Waivers                        | [§10](./ERD.md#10-waivers--signatures)                  | `Waiver`, `WaiverPage`, `WaiverSignature`, `WaiverAcceptance`                                         |
+| Facilities                     | [§11](./ERD.md#11-facilities-spaces-equipment)          | `Facility`, `Space`, `Equipment`, `FacilityAssignment`                                                |
+| Staff & Scheduling             | [§12](./ERD.md#12-staff--scheduling)                    | `Shift`, `ScheduleTemplate`, `MemberAvailability`, `EventStaff`, `ProgramStaff`, `Certification`      |
+| Communications                 | [§13](./ERD.md#13-communications)                       | `Message`, `EmailMessage`, `SmsCampaign`, `EmailCampaign`, `Conversation`, `Announcement`             |
+| Notifications                  | [§14](./ERD.md#14-notifications)                        | `NotificationRule`, `NotificationTemplate`, `NotificationLog`                                         |
+| Products & POS                 | [§15](./ERD.md#15-products--pos)                        | `Product`, `ProductVariant`, `StockMovement`, `Order`                                                 |
+| Registration Queue             | [§16](./ERD.md#16-registration-queue)                   | `RegistrationQueueConfig`, `QueueEntry`, `QueueReservation`                                           |
+| Platform Subscription          | [§17](./ERD.md#17-platform-subscription)                | `SubscriptionPlan`, `OrganizationSubscription`, `SubscriptionInvoice`, `AdyenPlatformAccount`         |
+| Accounting Integrations        | [§18](./ERD.md#18-accounting-integrations)              | `AccountingConnection`, `AccountingSyncQueue`, `AccountingSyncLog`                                    |
+| Feedback                       | [§19](./ERD.md#19-feedback--feature-requests)           | `FeatureRequest`, `FeatureVote`, `FeatureComment`                                                     |
+| Misc (Media, Categories, etc.) | [§20](./ERD.md#20-misc--cross-cutting)                  | `Media`, `RegistrationFile`, `Category`, `OrganizationHoliday`, `WebsiteConfig`                       |
 
-    class User {
-        +String id
-        +String email
-        +String name
-        +String passwordHash
-        +Role role
-        +Boolean isSuperAdmin
-        +DateTime lastActiveAt
-    }
+## Key Design Patterns
 
-    class OrganizationSubscription {
-        +String id
-        +String organizationId
-        +String planId
-        +SubscriptionStatus status
-        +BillingCycle billingCycle
-        +DateTime currentPeriodEnd
-    }
+**Cross-org athletes.** `Athlete` has no `organizationId`. Athletes are surfaced to an org via `OrganizationAthlete` (which holds the org-specific `level`, `status`, and `customId`). `AthleteMedicalInfo` is shared across orgs for athlete safety — see [ARCHITECTURE.md §Shared Medical Data](../ARCHITECTURE.md#shared-medical-data).
 
-    class SubscriptionPlan {
-        +String id
-        +String name
-        +Decimal monthlyPrice
-        +Int maxAthletes
-        +Int maxUsers
-        +Json features
-    }
+**Guardians, not Families.** The platform does not have a `Family` entity. A parent is a `User` with `role = PARENT`. Parent ↔ Athlete linkage lives in `AthleteGuardian`; multi-family scenarios use `GuardianClaimRequest` for the approval workflow. Billing flows directly to the guardian `User` (invoices/payments/recurring charges all FK to `User`, not a family).
 
-    Organization "1" --> "*" OrganizationMember
-    User "1" --> "*" OrganizationMember
-    Organization "1" --> "0..1" OrganizationSubscription
-    SubscriptionPlan "1" --> "*" OrganizationSubscription
-```
+**Users span orgs.** A single `User` may hold memberships in many organizations via `OrganizationMember`, each with its own role and per-org profile fields (employment type, title, hourly rate, emergency contact). There is no separate `StaffProfile` — those fields are inlined on `OrganizationMember`.
 
-### Athletes & Families
+**Polymorphic billing.** `LineItem` points to any of `Program`, `Event`, `Athlete`, `MembershipInstance`, `Pass`, `Competition`, `CompetitionCategory`, `Product`, or `ProductVariant` via nullable FKs. The line-item description is the canonical label; the FK set tells you the entitlement being purchased.
 
-```mermaid
-classDiagram
-    class Family {
-        +String id
-        +String name
-        +String primaryContact
-        +String email
-        +String phone
-        +Decimal balance
-        +String organizationId
-    }
+**Program recurrence.** A `Program` carries an RFC 5545 `rrule`. Concrete sessions are materialized as `ProgramInstance` rows. Registration happens either at program level (`Enrollment`, default) or per-session (`InstanceRegistration`, when `registrationType = PER_INSTANCE`).
 
-    class Athlete {
-        +String id
-        +String name
-        +String email
-        +String level
-        +String group
-        +AthleteStatus status
-        +DateTime birthDate
-        +String organizationId
-        +Json medicalDetails
-    }
+**Soft-delete via status.** No hard deletes across the schema — `status` enums carry values like `ARCHIVED`, `CANCELLED`, `INACTIVE`. Inspect model-specific status enums in [ERD.md](./ERD.md).
 
-    class AthleteGuardian {
-        +String id
-        +String athleteId
-        +String familyId
-        +String relationship
-        +Boolean isPrimary
-    }
+**Campaign → Message fanout.** `SmsCampaign` and `EmailCampaign` target audiences via `targetType` + filter fields, and expand into individual `Message` / `EmailMessage` rows linked via `campaignId`.
 
-    class Enrollment {
-        +String id
-        +String athleteId
-        +String programId
-        +String familyId
-        +DateTime startDate
-        +EnrollmentStatus status
-    }
+---
 
-    Family "1" --> "*" AthleteGuardian
-    Athlete "1" --> "*" AthleteGuardian
-    Athlete "1" --> "*" Enrollment
-    Family "1" --> "*" Enrollment
-```
+## Cross-Domain Data Flows
 
-### Medical Information
-
-Organizations can configure which medical information to collect from athletes. The system supports both standard medical fields (allergies, conditions, medications, emergency contact) and custom questions defined by the organization.
-
-```mermaid
-classDiagram
-    class MedicalFormConfig {
-        +String id
-        +String organizationId
-        +Boolean collectAllergies
-        +Boolean collectMedications
-        +Boolean collectConditions
-        +Boolean collectEmergencyContact
-        +Boolean collectDietaryRestrictions
-        +Boolean collectInsuranceInfo
-        +Boolean requireDuringRegistration
-    }
-
-    class CustomMedicalQuestion {
-        +String id
-        +String organizationId
-        +String questionText
-        +MedicalQuestionType questionType
-        +Json options
-        +Boolean required
-        +Int displayOrder
-        +Boolean isActive
-    }
-
-    class AthleteMedicalInfo {
-        +String id
-        +String athleteId
-        +String[] allergies
-        +String[] medications
-        +String[] conditions
-        +String[] dietaryRestrictions
-        +String insuranceProvider
-        +String insurancePolicyNumber
-        +String emergencyContactName
-        +String emergencyContactPhone
-        +String emergencyContactRelation
-        +String additionalNotes
-        +String lastUpdatedBy
-    }
-
-    class CustomMedicalResponse {
-        +String id
-        +String medicalInfoId
-        +String questionId
-        +String response
-    }
-
-    Organization "1" --> "0..1" MedicalFormConfig
-    Organization "1" --> "*" CustomMedicalQuestion
-    Athlete "1" --> "0..1" AthleteMedicalInfo
-    AthleteMedicalInfo "1" --> "*" CustomMedicalResponse
-    CustomMedicalQuestion "1" --> "*" CustomMedicalResponse
-```
-
-**MedicalQuestionType enum values:**
-
-- `TEXT` - Free-form text response
-- `YES_NO` - Yes/No radio buttons
-- `MULTIPLE_CHOICE` - Single selection from options
-- `CHECKBOX` - Multiple selections from options
-
-### Programs & Memberships
-
-```mermaid
-classDiagram
-    class Program {
-        +String id
-        +String name
-        +String description
-        +ProgramStatus status
-        +String organizationId
-    }
-
-    class MembershipGroup {
-        +String id
-        +String name
-        +String description
-        +String[] programTypes
-        +Boolean allowAutoRenew
-    }
-
-    class MembershipInstance {
-        +String id
-        +String membershipGroupId
-        +String name
-        +Decimal price
-        +BillingInterval billingInterval
-        +DateTime startDate
-        +DateTime endDate
-        +MembershipStatus status
-    }
-
-    class AthleteMembership {
-        +String id
-        +String athleteId
-        +String membershipInstanceId
-        +DateTime startDate
-        +DateTime endDate
-        +MembershipStatus status
-        +Boolean autoRenew
-    }
-
-    MembershipGroup "1" --> "*" MembershipInstance
-    MembershipInstance "1" --> "*" AthleteMembership
-```
-
-### Events & Attendance
-
-```mermaid
-classDiagram
-    class Event {
-        +String id
-        +String title
-        +DateTime date
-        +String startTime
-        +String endTime
-        +EventType type
-        +Int capacity
-        +Json location
-        +String programId
-        +String coachId
-    }
-
-    class Attendance {
-        +String id
-        +String athleteId
-        +String eventId
-        +AttendanceStatus status
-        +DateTime checkedIn
-        +String notes
-    }
-
-    class EventType {
-        <<enumeration>>
-        CLASS
-        CLINIC
-        PARTY
-        TRYOUT
-        MEETING
-        OTHER
-    }
-
-    class AttendanceStatus {
-        <<enumeration>>
-        REGISTERED
-        PRESENT
-        ABSENT
-        LATE
-        EXCUSED
-    }
-
-    Event "1" --> "*" Attendance
-    Event --> EventType
-    Attendance --> AttendanceStatus
-```
-
-### Facilities & Equipment
-
-```mermaid
-classDiagram
-    class Facility {
-        +String id
-        +String organizationId
-        +String name
-        +String street
-        +String city
-        +String stateProvince
-        +FacilityStatus status
-        +Boolean isDefault
-        +Int squareFootage
-        +Int maxCapacity
-    }
-
-    class Space {
-        +String id
-        +String facilityId
-        +String name
-        +Int capacity
-        +SpaceStatus status
-    }
-
-    class Equipment {
-        +String id
-        +String organizationId
-        +String facilityId
-        +String spaceId
-        +String name
-        +EquipmentCondition condition
-        +EquipmentStatus status
-        +DateTime lastInspectionDate
-    }
-
-    class FacilityAssignment {
-        +String id
-        +String facilityId
-        +String userId
-        +Boolean isPrimary
-    }
-
-    class FacilityStatus {
-        <<enumeration>>
-        ACTIVE
-        INACTIVE
-        MAINTENANCE
-    }
-
-    class SpaceStatus {
-        <<enumeration>>
-        OPEN
-        CLOSED
-        MAINTENANCE
-    }
-
-    class EquipmentCondition {
-        <<enumeration>>
-        EXCELLENT
-        GOOD
-        FAIR
-        POOR
-        UNSAFE
-    }
-
-    class EquipmentStatus {
-        <<enumeration>>
-        ACTIVE
-        RETIRED
-        MAINTENANCE
-    }
-
-    Facility "1" --> "*" Space
-    Facility "1" --> "*" Equipment
-    Facility "1" --> "*" FacilityAssignment
-    Space "1" --> "*" Equipment
-    Facility --> FacilityStatus
-    Space --> SpaceStatus
-    Equipment --> EquipmentCondition
-    Equipment --> EquipmentStatus
-```
-
-### Financial System
-
-```mermaid
-classDiagram
-    class Invoice {
-        +String id
-        +String reference
-        +String familyId
-        +InvoiceStatus status
-        +DateTime dueDate
-        +Decimal subtotal
-        +Decimal tax
-        +Decimal total
-    }
-
-    class LineItem {
-        +String id
-        +String invoiceId
-        +String description
-        +Int quantity
-        +Decimal unitPrice
-        +Decimal total
-        +String programId
-        +String athleteId
-    }
-
-    class Payment {
-        +String id
-        +String invoiceId
-        +String familyId
-        +Decimal amount
-        +PaymentType method
-        +PaymentStatus status
-    }
-
-    class Transaction {
-        +String id
-        +String pspReference
-        +TransactionType type
-        +Decimal amount
-        +TransactionStatus status
-        +DateTime settledAt
-    }
-
-    class Payout {
-        +String id
-        +String reference
-        +Decimal amount
-        +Decimal fees
-        +Decimal net
-        +PayoutStatus status
-        +DateTime paidAt
-    }
-
-    class Discount {
-        +String id
-        +String name
-        +String code
-        +DiscountType type
-        +Decimal amount
-        +DateTime validFrom
-        +DateTime validTo
-    }
-
-    Invoice "1" --> "*" LineItem
-    Invoice "1" --> "*" Payment
-    Payment "0..1" --> "0..1" Transaction
-    LineItem "*" --> "0..1" Discount
-```
-
-### Ledger & Accounting
-
-```mermaid
-classDiagram
-    class GLCode {
-        +String id
-        +String code
-        +String description
-        +GLCodeType type
-        +GLCodeStatus status
-    }
-
-    class LedgerEntry {
-        +String id
-        +DateTime date
-        +String description
-        +String glCodeId
-        +String reference
-        +Decimal debit
-        +Decimal credit
-        +LedgerEntryStatus status
-    }
-
-    class GLCodeType {
-        <<enumeration>>
-        REVENUE
-        EXPENSE
-        LIABILITY
-        ASSET
-        EQUITY
-    }
-
-    GLCode "1" --> "*" LedgerEntry
-    GLCode --> GLCodeType
-```
-
-### Website & CMS
-
-```mermaid
-classDiagram
-    class WebsiteConfig {
-        +String id
-        +String organizationId
-        +String primaryColor
-        +String secondaryColor
-        +String logo
-        +String favicon
-        +String heroImage
-        +String heroHeadline
-        +String heroSubheadline
-        +String heroText
-        +Boolean showCalendar
-        +Boolean showRegistration
-        +String subdomain
-        +String domain
-        +Boolean isPublished
-    }
-
-    class Organization {
-        +String id
-        +String name
-        +String slug
-    }
-
-    Organization "1" --> "0..1" WebsiteConfig
-```
-
-### POS & Products
-
-```mermaid
-classDiagram
-    class Product {
-        +String id
-        +String name
-        +String description
-        +String sku
-        +String category
-        +Decimal price
-        +String imageUrl
-        +Int maxInventory
-        +Int currentInventory
-        +Boolean isActive
-    }
-
-    class StockMovement {
-        +String id
-        +String productId
-        +StockMovementType type
-        +Int quantity
-        +Int previousQty
-        +Int newQty
-        +String referenceId
-    }
-
-    class StockMovementType {
-        <<enumeration>>
-        SALE
-        RESTOCK
-        ADJUSTMENT
-        RETURN
-    }
-
-    Product "1" --> "*" StockMovement
-    StockMovement --> StockMovementType
-```
-
-### Staff & Scheduling
-
-```mermaid
-classDiagram
-    class StaffProfile {
-        +String id
-        +String userId
-        +String organizationId
-        +EmploymentType employmentType
-        +String title
-        +Decimal hourlyRate
-        +DateTime hireDate
-        +Json certifications
-        +String phone
-        +Json emergencyContact
-    }
-
-    class Shift {
-        +String id
-        +String organizationId
-        +String staffProfileId
-        +String facilityId
-        +DateTime date
-        +String startTime
-        +String endTime
-        +String shiftType
-        +String notes
-        +ShiftStatus status
-    }
-
-    class ScheduleTemplate {
-        +String id
-        +String organizationId
-        +String name
-        +Boolean isActive
-    }
-
-    class ScheduleTemplateEntry {
-        +String id
-        +String templateId
-        +Int dayOfWeek
-        +String startTime
-        +String endTime
-        +String shiftType
-        +String staffProfileId
-        +String facilityId
-    }
-
-    class StaffAvailability {
-        +String id
-        +String staffProfileId
-        +Int dayOfWeek
-        +String startTime
-        +String endTime
-        +Boolean isAvailable
-    }
-
-    class EventStaff {
-        +String id
-        +String eventId
-        +String staffProfileId
-        +EventStaffRole role
-        +String notes
-    }
-
-    class EmploymentType {
-        <<enumeration>>
-        FULL_TIME
-        PART_TIME
-        CONTRACTOR
-        VOLUNTEER
-    }
-
-    class ShiftStatus {
-        <<enumeration>>
-        SCHEDULED
-        CONFIRMED
-        IN_PROGRESS
-        COMPLETED
-        CANCELLED
-        NO_SHOW
-    }
-
-    class EventStaffRole {
-        <<enumeration>>
-        LEAD
-        ASSISTANT
-        VOLUNTEER
-        OBSERVER
-    }
-
-    StaffProfile --> EmploymentType
-    StaffProfile "1" --> "*" Shift
-    StaffProfile "1" --> "*" StaffAvailability
-    StaffProfile "1" --> "*" EventStaff
-    Shift --> ShiftStatus
-    ScheduleTemplate "1" --> "*" ScheduleTemplateEntry
-    EventStaff --> EventStaffRole
-```
-
-**Key Relationships:**
-
-- **StaffProfile ↔ User**: One-to-one relationship extending User with staff-specific data (employment type, certifications, hourly rate)
-- **StaffProfile → Shift**: Staff members can be assigned to multiple shifts
-- **StaffProfile → StaffAvailability**: Each staff member has weekly availability (one entry per day)
-- **StaffProfile → EventStaff**: Staff can be assigned to multiple events with specific roles
-- **ScheduleTemplate → ScheduleTemplateEntry**: Templates contain reusable weekly shift patterns
-- **Shift → Facility**: Shifts can optionally be assigned to a specific facility
-
-## Data Flow
+### Registration
 
 ```mermaid
 flowchart TD
-    subgraph Registration["Registration Flow"]
-        R1[Parent visits site] --> R2[Selects program]
-        R2 --> R3[Creates family account]
-        R3 --> R4[Adds athlete]
-        R4 --> R5[Enrolls in program]
-        R5 --> R6[Invoice generated]
-        R6 --> R7[Payment processed]
-    end
-
-    subgraph Attendance["Attendance Flow"]
-        A1[Event scheduled] --> A2[Athletes enrolled]
-        A2 --> A3[Coach takes attendance]
-        A3 --> A4[Status recorded]
-        A4 --> A5[Metrics calculated]
-    end
-
-    subgraph Financial["Financial Flow"]
-        F1[Service provided] --> F2[Line item created]
-        F2 --> F3[Invoice sent]
-        F3 --> F4[Payment received]
-        F4 --> F5[Transaction recorded]
-        F5 --> F6[Ledger entry posted]
-        F6 --> F7[Payout scheduled]
-    end
+    R1[Parent visits org site] --> R2[Selects program/event/competition]
+    R2 --> R3{Already a user?}
+    R3 -->|No| R4[Creates User account]
+    R3 -->|Yes| R5[Login]
+    R4 --> R6[Adds Athlete + links via AthleteGuardian]
+    R5 --> R6
+    R6 --> R7[Fills medical/custom info + signs required waivers]
+    R7 --> R8[Selects program - Enrollment]
+    R8 --> R9[Invoice with LineItems created]
+    R9 --> R10[Adyen session processes payment]
+    R10 --> R11[Webhook creates Transaction + Payment]
+    R11 --> R12[Invoice marked PAID, registration activated]
 ```
+
+Queue flow (`RegistrationQueueConfig` + `QueueEntry`) sits between step R2 and R8 when enabled.
+
+### Payment / Settlement
+
+```mermaid
+flowchart TD
+    F1[Service provided or renewal due] --> F2[LineItems created with GLCode]
+    F2 --> F3[Invoice generated — subtotal + tax + processingFee]
+    F3 --> F4[Adyen Sessions API creates payment session]
+    F4 --> F5[Customer pays via Adyen web component]
+    F5 --> F6[Adyen webhook → /api/webhooks/adyen]
+    F6 --> F7[Transaction + Payment records written]
+    F7 --> F8[Invoice status → PAID]
+    F8 --> F9[LedgerEntry posted against GLCode]
+    F8 --> F10[AccountingSyncQueue entry — QBO/Xero]
+    F9 --> F11[Adyen Balance Platform batches Payout]
+    F11 --> F12[Payout settles to org bank]
+```
+
+### Recurring Billing
+
+```mermaid
+flowchart TD
+    RB1[Athlete purchases membership/pass/recurring enrollment] --> RB2[RecurringCharge created — status ACTIVE]
+    RB2 --> RB3[Daily cron: recurring-billing 8am]
+    RB3 --> RB4{nextChargeDate <= today?}
+    RB4 -->|No| RB5[Skip]
+    RB4 -->|Yes| RB6[Tokenized charge via PaymentMethod.adyenTokenId]
+    RB6 --> RB7{Success?}
+    RB7 -->|Yes| RB8[Create Invoice + Payment, advance nextChargeDate]
+    RB7 -->|No| RB9[Increment failureCount, dunning cron retries]
+    RB9 --> RB10{Retries exhausted?}
+    RB10 -->|Yes| RB11[RecurringCharge status FAILED, entitlement suspended]
+```
+
+### Notification Rules
+
+```mermaid
+flowchart TD
+    N1[Domain event: membership expiring / program starting / payment due / birthday / etc.] --> N2[process-notifications cron every 5 min]
+    N2 --> N3[NotificationRule resolves triggerType + timingOffset]
+    N3 --> N4[NotificationRecipientConfig resolves guardians/members/staff]
+    N4 --> N5{NotificationDeduplication hit?}
+    N5 -->|Yes| N6[Skip — already sent]
+    N5 -->|No| N7[Render NotificationTemplate with placeholders]
+    N7 --> N8[actionType → EMAIL / SMS / ANNOUNCEMENT]
+    N8 --> N9[Write EmailMessage / Message / Announcement row]
+    N9 --> N10[NotificationLog entry + NotificationDeduplication key]
+```
+
+---
 
 ## Enum Reference
 
-| Enum               | Values                                                            |
-| ------------------ | ----------------------------------------------------------------- |
-| Role               | ADMIN, COACH, VOLUNTEER, ACCOUNTANT, CUSTOM, PARENT, STAFF        |
-| AthleteStatus      | ACTIVE, INACTIVE, TRIAL, GRADUATED                                |
-| ProgramStatus      | ACTIVE, INACTIVE, ARCHIVED                                        |
-| EventType          | CLASS, CLINIC, PARTY, TRYOUT, MEETING, OTHER                      |
-| AttendanceStatus   | REGISTERED, PRESENT, ABSENT, LATE, EXCUSED                        |
-| InvoiceStatus      | DRAFT, SENT, PAID, OVERDUE, CANCELLED, PARTIAL                    |
-| PaymentStatus      | PENDING, COMPLETED, FAILED, REFUNDED                              |
-| TransactionStatus  | AUTHORISED, CAPTURED, SETTLED, REFUSED, CANCELLED, ERROR, PENDING |
-| MembershipStatus   | ACTIVE, EXPIRED, CANCELLED, ARCHIVED                              |
-| BillingInterval    | MONTHLY, YEARLY, SESSION                                          |
-| SubscriptionStatus | ACTIVE, TRIALING, PAST_DUE, CANCELLED, PAUSED                     |
-| FacilityStatus     | ACTIVE, INACTIVE, MAINTENANCE                                     |
-| SpaceStatus        | OPEN, CLOSED, MAINTENANCE                                         |
-| EquipmentCondition | EXCELLENT, GOOD, FAIR, POOR, UNSAFE                               |
-| EquipmentStatus    | ACTIVE, RETIRED, MAINTENANCE                                      |
-| EmploymentType     | FULL_TIME, PART_TIME, CONTRACTOR, VOLUNTEER                       |
-| ShiftStatus        | SCHEDULED, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED, NO_SHOW  |
-| EventStaffRole     | LEAD, ASSISTANT, VOLUNTEER, OBSERVER                              |
+Frequently-looked-up enum values. The [Prisma schema](../prisma/schema.prisma) is the source of truth.
+
+### Users & Access
+
+| Enum                           | Values                                                                      |
+| ------------------------------ | --------------------------------------------------------------------------- |
+| `Role`                         | `ADMIN`, `COACH`, `VOLUNTEER`, `ACCOUNTANT`, `CUSTOM`, `PARENT`             |
+| `UserStatus`                   | `ACTIVE`, `INVITED`, `INACTIVE`                                             |
+| `MemberStatus`                 | `ACTIVE`, `INVITED`, `INACTIVE`                                             |
+| `EmploymentType`               | `FULL_TIME`, `PART_TIME`, `CONTRACTOR`, `VOLUNTEER`                         |
+| `OrganizationInvitationStatus` | `PENDING`, `ACCEPTED`, `EXPIRED`, `CANCELLED`                               |
+| `VerificationCodeType`         | `MFA_CHALLENGE`, `EMAIL_LOGIN`, `SIGNUP_VERIFICATION`, `PHONE_VERIFICATION` |
+
+### Athletes
+
+| Enum                | Values                                         |
+| ------------------- | ---------------------------------------------- |
+| `AthleteStatus`     | `ACTIVE`, `INACTIVE`, `TRIAL`, `GRADUATED`     |
+| `GenderDeclaration` | `MALE`, `FEMALE`, `OTHER`, `PREFER_NOT_TO_SAY` |
+| `ClaimStatus`       | `PENDING`, `APPROVED`, `DENIED`                |
+
+### Programs / Events / Attendance
+
+| Enum                 | Values                                                     |
+| -------------------- | ---------------------------------------------------------- |
+| `ProgramStatus`      | `ACTIVE`, `INACTIVE`, `ARCHIVED`                           |
+| `RegistrationType`   | `ALL_INSTANCES`, `PER_INSTANCE`                            |
+| `PricingModel`       | `FLAT_RATE`, `PER_SESSION`                                 |
+| `BillingInterval`    | `ONE_TIME`, `MONTHLY`, `YEARLY`, `SESSION`                 |
+| `InstanceStatus`     | `SCHEDULED`, `CANCELLED`, `COMPLETED`                      |
+| `RegistrationStatus` | `REGISTERED`, `WAITLISTED`, `CANCELLED`                    |
+| `EnrollmentStatus`   | `ACTIVE`, `WAITLISTED`, `PAUSED`, `CANCELLED`, `COMPLETED` |
+| `EventType`          | `CLASS`, `CLINIC`, `PARTY`, `TRYOUT`, `MEETING`, `OTHER`   |
+| `AttendanceStatus`   | `REGISTERED`, `PRESENT`, `ABSENT`, `LATE`, `EXCUSED`       |
+| `SeasonStatus`       | `DRAFT`, `ACTIVE`, `CLOSED`, `EXPIRED`, `CANCELLED`        |
+| `SpaceCapacityMode`  | `MINIMUM`, `SUM`                                           |
+
+### Memberships & Passes
+
+| Enum                       | Values                                                |
+| -------------------------- | ----------------------------------------------------- |
+| `MembershipStatus`         | `ACTIVE`, `EXPIRED`, `CANCELLED`, `ARCHIVED`          |
+| `MembershipInstanceStatus` | `DRAFT`, `ACTIVE`, `EXPIRED`, `CANCELLED`, `ARCHIVED` |
+| `BulkDiscountType`         | `FAMILY_SIBLING`, `MULTI_SESSION`                     |
+| `PassStatus`               | `ACTIVE`, `EXPIRED`, `CANCELLED`, `ARCHIVED`          |
+| `PassLimitPeriod`          | `WEEKLY`, `MONTHLY`                                   |
+
+### Financial
+
+| Enum                | Values                                                                          |
+| ------------------- | ------------------------------------------------------------------------------- |
+| `InvoiceStatus`     | `DRAFT`, `SENT`, `PAID`, `OVERDUE`, `CANCELLED`, `PARTIAL`                      |
+| `PaymentType`       | `CARD`, `BANK`, `CASH`, `CHECK`                                                 |
+| `PaymentStatus`     | `PENDING`, `COMPLETED`, `FAILED`, `REFUNDED`                                    |
+| `PaymentMethodType` | `CARD`, `BANK`                                                                  |
+| `TransactionType`   | `PAYMENT`, `REFUND`, `CHARGEBACK`, `CAPTURE`, `CANCEL`                          |
+| `TransactionStatus` | `AUTHORISED`, `CAPTURED`, `SETTLED`, `REFUSED`, `CANCELLED`, `ERROR`, `PENDING` |
+| `PayoutStatus`      | `PENDING`, `SCHEDULED`, `PAID`, `FAILED`                                        |
+| `FeePayer`          | `CUSTOMER`, `ORGANIZATION`                                                      |
+| `RecurringStatus`   | `ACTIVE`, `PAUSED`, `CANCELLED`, `FAILED`                                       |
+| `DiscountType`      | `PERCENTAGE`, `FIXED_AMOUNT`                                                    |
+| `DiscountStatus`    | `ACTIVE`, `EXPIRED`, `SCHEDULED`, `DRAFT`                                       |
+| `UserScope`         | `ALL`, `NEW_USERS`, `MEMBERS`, `VIP`                                            |
+| `ProductScope`      | `ALL`, `MERCHANDISE`, `EVENTS`, `MEMBERSHIP`                                    |
+| `GLCodeType`        | `REVENUE`, `EXPENSE`, `LIABILITY`, `ASSET`, `EQUITY`                            |
+| `GLCodeStatus`      | `ACTIVE`, `INACTIVE`                                                            |
+| `GLCodeEntityType`  | `PROGRAM`, `EVENT`, `COMPETITION`, `MEMBERSHIP`, `PASS`, `PRODUCT`              |
+| `LedgerEntryStatus` | `POSTED`, `PENDING`                                                             |
+
+### Evaluations
+
+| Enum                            | Values                                                                 |
+| ------------------------------- | ---------------------------------------------------------------------- |
+| `EvaluationStatus`              | `PENDING`, `IN_PROGRESS`, `PASS`, `RETRY`, `EXCELLENT`, `SATISFACTORY` |
+| `SkillAttemptStatus`            | `NOT_ATTEMPTED`, `ATTEMPTED`, `SUCCEEDED`                              |
+| `ScoringType`                   | `PASS_FAIL`, `POINT_SCALE`                                             |
+| `CompletionType`                | `PERCENTAGE`, `COUNT`, `ALL`                                           |
+| `LessonPlanStatus`              | `ACTIVE`, `DRAFT`, `ARCHIVED`                                          |
+| `CertificationEvaluationMethod` | `PASS_FAIL`, `POINT_SCALE`                                             |
+
+### Competitions
+
+| Enum                     | Values                                                                                                    |
+| ------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `CompetitionStatus`      | `DRAFT`, `PUBLISHED`, `REGISTRATION_OPEN`, `REGISTRATION_CLOSED`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED` |
+| `CompetitionPricingMode` | `FREE`, `PER_COMPETITION`, `PER_EVENT`, `TIERED`, `PER_CATEGORY`                                          |
+| `EntryStatus`            | `PENDING_SEED`, `PENDING_REVIEW`, `APPROVED`, `REJECTED`, `WITHDRAWN`, `SCRATCHED`                        |
+| `ResultType`             | `TIME`, `DISTANCE`, `HEIGHT`, `SCORE`, `PLACEMENT`                                                        |
+| `SortDirection`          | `ASC`, `DESC`                                                                                             |
+| `SubmissionMode`         | `NONE`, `VERIFIED_RESULT`, `MANUAL_ENTRY`                                                                 |
+| `SubmissionStatus`       | `PENDING`, `APPROVED`, `REJECTED`                                                                         |
+| `CategoryTemplateType`   | `COMBINATION`, `INDIVIDUAL`                                                                               |
+| `CategoryAxis`           | `ROW`, `COLUMN`                                                                                           |
+
+### Medical / Custom Info
+
+| Enum                     | Values                                                                                                                                               |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MedicalQuestionType`    | `TEXT`, `YES_NO`, `MULTIPLE_CHOICE`, `CHECKBOX`                                                                                                      |
+| `CustomInfoQuestionType` | `VALUE`, `BOOLEAN`, `SIGNATURE`, `SHORT_TEXT`, `LONG_TEXT`, `IMAGE`                                                                                  |
+| `CustomInfoScopeType`    | `ALL_PROGRAMS`, `ALL_EVENTS`, `ALL_COMPETITIONS`, `ALL_MEMBERSHIPS`, `ALL_PASSES`, `PROGRAM`, `EVENT`, `COMPETITION`, `MEMBERSHIP`, `PASS`, `SEASON` |
+
+### Facilities
+
+| Enum                 | Values                                        |
+| -------------------- | --------------------------------------------- |
+| `FacilityStatus`     | `ACTIVE`, `INACTIVE`, `MAINTENANCE`           |
+| `SpaceStatus`        | `OPEN`, `CLOSED`, `MAINTENANCE`               |
+| `EquipmentCondition` | `EXCELLENT`, `GOOD`, `FAIR`, `POOR`, `UNSAFE` |
+| `EquipmentStatus`    | `ACTIVE`, `RETIRED`, `MAINTENANCE`            |
+
+### Staff & Scheduling
+
+| Enum               | Values                                                                       |
+| ------------------ | ---------------------------------------------------------------------------- |
+| `ShiftStatus`      | `SCHEDULED`, `CONFIRMED`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`, `NO_SHOW` |
+| `EventStaffRole`   | `LEAD`, `ASSISTANT`, `VOLUNTEER`, `OBSERVER`                                 |
+| `ProgramStaffRole` | `LEAD_COACH`, `ASSISTANT_COACH`, `SUBSTITUTE`, `VOLUNTEER`                   |
+
+### Communications
+
+| Enum                                        | Values                                                                                                                                                              |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MessageChannel`                            | `WEB`, `SMS`, `EMAIL`                                                                                                                                               |
+| `MessageStatus`                             | `QUEUED`, `SENDING`, `SENT`, `DELIVERED`, `UNDELIVERED`, `FAILED`                                                                                                   |
+| `MessageDirection`                          | `OUTBOUND`, `INBOUND`                                                                                                                                               |
+| `MessageClassification`                     | `GENERAL`, `REMINDER`, `ALERT`, `BILLING`, `EVENT`, `NEWS`                                                                                                          |
+| `ConversationChannel`                       | `WEB_ONLY`, `WEB_SMS`, `WEB_EMAIL`                                                                                                                                  |
+| `ConversationStatus`                        | `OPEN`, `CLOSED`, `ARCHIVED`                                                                                                                                        |
+| `SmsTargetType` / `EmailTargetType`         | `ALL_USERS`, `ALL_MEMBERS`, `ALL_PROGRAM_REGISTRANTS`, `PROGRAM_ANY_INSTANCE`, `PROGRAM_SPECIFIC_INSTANCE`, `MEMBERSHIP_HOLDERS`, `SPECIFIC_USERS`, `ALL_GUARDIANS` |
+| `SmsCampaignStatus` / `EmailCampaignStatus` | `DRAFT`, `SCHEDULED`, `SENDING`, `COMPLETED`, `FAILED`, `CANCELLED`                                                                                                 |
+| `EmailStatus`                               | `QUEUED`, `SENDING`, `SENT`, `DELIVERED`, `OPENED`, `CLICKED`, `BOUNCED`, `COMPLAINED`, `FAILED`                                                                    |
+| `EmailClassification`                       | `GENERAL`, `PROGRAM_UPDATE`, `EVENT_UPDATE`, `MEMBERSHIP`, `BILLING`, `NEWSLETTER`                                                                                  |
+| `AnnouncementScope`                         | `ALL`, `PROGRAM`, `EVENT`, `GUARDIAN`                                                                                                                               |
+| `AnnouncementStatus`                        | `DRAFT`, `PUBLISHED`, `ARCHIVED`                                                                                                                                    |
+| `AnnouncementPriority`                      | `LOW`, `NORMAL`, `HIGH`, `URGENT`                                                                                                                                   |
+
+### Notifications
+
+| Enum                          | Values                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NotificationTriggerType`     | `MEMBERSHIP_EXPIRY`, `MEMBERSHIP_EXPIRED`, `PAYMENT_DUE`, `PAYMENT_OVERDUE`, `PAYMENT_RECEIVED`, `PROGRAM_REMINDER`, `PROGRAM_ENROLLMENT`, `PROGRAM_CANCELLATION`, `EVENT_REMINDER`, `EVENT_REGISTRATION_OPEN`, `EVENT_REGISTRATION_CLOSE`, `ATTENDANCE_MISSED`, `SKILL_ACHIEVED`, `EVALUATION_DUE`, `EVALUATION_COMPLETED`, `BIRTHDAY`, `WAITLIST_OPENING`, `RECURRING_CHARGE_UPCOMING`, `RECURRING_CHARGE_SUCCEEDED`, `RECURRING_CHARGE_FAILED`, `RECURRING_CHARGE_SUSPENDED`, `CUSTOM` |
+| `NotificationActionType`      | `ANNOUNCEMENT`, `EMAIL`, `SMS`                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `NotificationRecipientType`   | `GUARDIANS`, `MEMBERSHIP_HOLDERS`, `INTERNAL_USERS`, `CUSTOM`                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `NotificationTimingDirection` | `BEFORE`, `AFTER`, `AT`                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `NotificationTimingUnit`      | `MINUTES`, `HOURS`, `DAYS`, `WEEKS`, `MONTHS`                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `NotificationLogStatus`       | `PENDING`, `SENT`, `DELIVERED`, `FAILED`, `SKIPPED`                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+
+### Products / POS / Queue / Misc
+
+| Enum                     | Values                                                     |
+| ------------------------ | ---------------------------------------------------------- |
+| `StockMovementType`      | `SALE`, `RESTOCK`, `ADJUSTMENT`, `RETURN`                  |
+| `OrderSource`            | `POS`, `ONLINE`                                            |
+| `OrderFulfillmentStatus` | `PENDING`, `FULFILLED`, `CANCELLED`                        |
+| `QueueActivationType`    | `ALWAYS`, `THRESHOLD`, `SCHEDULED`                         |
+| `QueueEntryStatus`       | `WAITING`, `ADMITTED`, `COMPLETED`, `EXPIRED`, `ABANDONED` |
+| `ReservationStatus`      | `ACTIVE`, `COMPLETED`, `EXPIRED`                           |
+| `MediaType`              | `IMAGE`, `VIDEO`                                           |
+| `WaiverStatus`           | `DRAFT`, `ACTIVE`, `ARCHIVED`                              |
+| `HolidayType`            | `NATIONAL`, `CUSTOM`                                       |
+| `FeatureStatus`          | `SUBMITTED`, `PLANNED`, `IN_PROGRESS`, `DONE`, `CLOSED`    |
+| `ReservedDomainType`     | `EXACT`, `PREFIX`                                          |
+
+### Platform Subscription / Adyen / Accounting
+
+| Enum                        | Values                                                                                    |
+| --------------------------- | ----------------------------------------------------------------------------------------- |
+| `SubscriptionStatus`        | `ACTIVE`, `TRIALING`, `PAST_DUE`, `CANCELLED`, `PAUSED`                                   |
+| `BillingCycle`              | `MONTHLY`, `YEARLY`                                                                       |
+| `SubscriptionInvoiceStatus` | `PENDING`, `PROCESSING`, `PAID`, `FAILED`, `VOID`                                         |
+| `AdyenOnboardingStatus`     | `PENDING_HOSTED`, `IN_PROGRESS`, `AWAITING_DATA`, `IN_REVIEW`, `VERIFIED`, `REJECTED`     |
+| `AccountingProvider`        | `QBO`, `XERO`                                                                             |
+| `AccountingEntityType`      | `ACCOUNT`, `CUSTOMER`, `ITEM`, `INVOICE`, `PAYMENT`, `REFUND`, `JOURNAL_ENTRY`, `DEPOSIT` |
+| `AccountingSyncAction`      | `CREATE`, `UPDATE`                                                                        |
+| `AccountingSyncStatus`      | `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`                                            |
+| `AccountingMappingType`     | `GL_CODE`, `BANK_ACCOUNT`, `PROCESSING_FEES`, `REFUNDS`, `UNDEPOSITED_FUNDS`              |
