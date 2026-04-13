@@ -405,3 +405,26 @@ export async function createStore(data: {
     throw error;
   }
 }
+
+export async function getStoreByReference(
+  merchantId: string,
+  reference: string
+): Promise<{ id: string; reference: string; [key: string]: any } | null> {
+  try {
+    const response = await getManagementApi().AccountStoreLevelApi.listStoresByMerchantId(
+      merchantId,
+      undefined,
+      undefined,
+      reference
+    );
+    return response.data?.[0] ?? null;
+  } catch (error: any) {
+    console.error("adyen-platform: getStoreByReference failed", {
+      merchantId,
+      reference,
+      status: error.statusCode,
+      body: error.responseBody,
+    });
+    throw error;
+  }
+}

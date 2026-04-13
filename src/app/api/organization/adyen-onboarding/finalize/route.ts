@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { createStore, createSweep } from "@/lib/adyen-platform";
+import { createStore, getStoreByReference, createSweep } from "@/lib/adyen-platform";
 
 /**
  * POST /api/organization/adyen-onboarding/finalize
@@ -87,20 +87,36 @@ export async function POST() {
         .substring(0, 22)
         .trim();
 
-      const store = await createStore({
-        merchantId: process.env.ADYEN_PLATFORM_MERCHANT_ACCOUNT || "",
-        description: org.name,
-        shopperStatement: sanitizedName || "ClubRegistration",
-        reference: `store-${org.slug}`,
-        address: {
-          country: org.country || "US",
-          line1: org.street || "",
-          city: org.city || "",
-          stateOrProvince: org.stateProvince || "",
-          postalCode: org.postalCode || "",
-        },
-        phoneNumber: formattedPhone,
-      });
+      const merchantId = process.env.ADYEN_PLATFORM_MERCHANT_ACCOUNT || "";
+      const storeReference = `store-${org.slug}`;
+      let store: { id: string; reference: string; [key: string]: any };
+
+      try {
+        store = await createStore({
+          merchantId,
+          description: org.name,
+          shopperStatement: sanitizedName || "ClubRegistration",
+          reference: storeReference,
+          address: {
+            country: org.country || "US",
+            line1: org.street || "",
+            city: org.city || "",
+            stateOrProvince: org.stateProvince || "",
+            postalCode: org.postalCode || "",
+          },
+          phoneNumber: formattedPhone,
+        });
+      } catch (error: any) {
+        // Store already exists in Adyen (e.g. after a local DB seed) — recover
+        // by fetching the existing store via its deterministic reference.
+        if (error.statusCode === 400 && error.responseBody?.includes("Store already exists")) {
+          const existing = await getStoreByReference(merchantId, storeReference);
+          if (!existing) throw error;
+          store = existing;
+        } else {
+          throw error;
+        }
+      }
 
       updates.storeId = store.id;
       updates.storeReference = store.reference;
