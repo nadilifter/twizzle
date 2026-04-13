@@ -10,10 +10,10 @@ All commits MUST follow [Conventional Commits](https://www.conventionalcommits.o
 ## Format
 
 ```
-type: US-### lowercase imperative description
+type: PREFIX-### lowercase imperative description
 ```
 
-Every commit message **must** include a ticket number (`US-` followed by digits) immediately after the colon.
+Every commit message **must** include a ticket number immediately after the colon. Valid prefixes: `US-`, `USC-`, `DEV-`, `LF-` (each followed by digits).
 
 ## Allowed Types
 
@@ -30,7 +30,7 @@ Every commit message **must** include a ticket number (`US-` followed by digits)
 
 ## Rules
 
-- **Ticket number required**: every subject must start with `US-` followed by digits — `feat: US-42 add billing page`
+- **Ticket number required**: every subject must start with a valid prefix (`US-`, `USC-`, `DEV-`, or `LF-`) followed by digits — `feat: US-42 add billing page`
 - **No scope**: write `feat: US-42 add billing page`, NOT `feat(billing): US-42 add page`
 - **Lowercase** after the ticket number — no capitalized first word
 - **Imperative mood** — write "add", "fix", "remove", not "added", "fixes", "removed"
@@ -41,8 +41,8 @@ Every commit message **must** include a ticket number (`US-` followed by digits)
 
 ```
 feat: US-42 add organization deactivation/reactivation for superadmins
-fix: US-118 resolve all non-Adyen TypeScript errors across the project
-refactor: US-95 migrate ledger tables to reusable DataTable components
-chore: US-7 remove defunct User Signup quick link from superadmin sidebar
+fix: USC-118 resolve all non-Adyen TypeScript errors across the project
+refactor: DEV-95 migrate ledger tables to reusable DataTable components
+chore: LF-7 remove defunct User Signup quick link from superadmin sidebar
 style: US-203 move Directory to top of Athletes section in admin sidebar
 ```

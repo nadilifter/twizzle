@@ -330,21 +330,22 @@ Key MCP tools for Adyen troubleshooting:
 
 ## Commits
 
-Follow Conventional Commits. Format: `type: US-### lowercase imperative description`
+Follow Conventional Commits. Format: `type: PREFIX-### lowercase imperative description`
 
-Every commit must include a ticket number (`US-` followed by digits) immediately after the colon.
+Every commit must include a ticket number immediately after the colon. Valid prefixes: `US-`, `USC-`, `DEV-`, `LF-` (each followed by digits).
 
 **Types:** `feat`, `fix`, `refactor`, `chore`, `style`, `docs`, `test`, `perf`
 
 - Ticket number required — `feat: US-42 add billing page` not `feat: add billing page`
+- Valid prefixes: `US-`, `USC-`, `DEV-`, `LF-`
 - No scope — `feat: US-42 add billing page` not `feat(billing): US-42 add page`
 - Lowercase after the ticket number, imperative mood, single line, concise
 
 ```
 feat: US-42 add organization deactivation for superadmins
-fix: US-118 resolve timezone shift on date-only fields
-refactor: US-95 migrate ledger tables to reusable DataTable components
-chore: US-7 remove defunct quick link from superadmin sidebar
+fix: USC-118 resolve timezone shift on date-only fields
+refactor: DEV-95 migrate ledger tables to reusable DataTable components
+chore: LF-7 remove defunct quick link from superadmin sidebar
 ```
 
 ## Pull Requests
@@ -387,9 +388,9 @@ Always `pnpm`. Never `npm` or `npx`.
 
 ## Commits
 
-Follow Conventional Commits. Format: `type: US-### lowercase imperative description`
+Follow Conventional Commits. Format: `type: PREFIX-### lowercase imperative description`
 
-Every commit must include a ticket number (`US-` followed by digits) immediately after the colon.
+Every commit must include a ticket number immediately after the colon. Valid prefixes: `US-`, `USC-`, `DEV-`, `LF-` (each followed by digits).
 
 | Type       | When to use                                  |
 | ---------- | -------------------------------------------- |
@@ -403,6 +404,7 @@ Every commit must include a ticket number (`US-` followed by digits) immediately
 | `perf`     | Performance improvement                      |
 
 - Ticket number required — `feat: US-42 add billing page` not `feat: add billing page`
+- Valid prefixes: `US-`, `USC-`, `DEV-`, `LF-`
 - No scope — `feat: US-42 add billing page` not `feat(billing): US-42 add page`
 - Lowercase after the ticket number, no capital first word
 - Imperative mood — "add", "fix", "remove" not "added", "fixes", "removed"
@@ -414,8 +416,8 @@ Every commit must include a ticket number (`US-` followed by digits) immediately
 
 ```
 feat: US-42 add organization deactivation/reactivation for superadmins
-fix: US-118 resolve all non-Adyen TypeScript errors across the project
-refactor: US-95 migrate ledger tables to reusable DataTable components
-chore: US-7 remove defunct User Signup quick link from superadmin sidebar
+fix: USC-118 resolve all non-Adyen TypeScript errors across the project
+refactor: DEV-95 migrate ledger tables to reusable DataTable components
+chore: LF-7 remove defunct User Signup quick link from superadmin sidebar
 style: US-203 move Directory to top of Athletes section in admin sidebar
 ```

@@ -1,9 +1,21 @@
-/**
- * Conventional Commits only (e.g. `feat: add checkout`, `fix: handle null user`).
- * No custom ticket prefix — keep the subject imperative and lowercase after the type.
- */
+const VALID_TICKET_PREFIXES = ["US", "USC", "DEV", "LF"];
+const ticketPattern = new RegExp(`^(${VALID_TICKET_PREFIXES.join("|")})-\\d+\\s`);
+
 module.exports = {
   extends: ["@commitlint/config-conventional"],
+  plugins: [
+    {
+      rules: {
+        "ticket-prefix": ({ subject }) => {
+          if (!subject) return [false, "subject must not be empty"];
+          return [
+            ticketPattern.test(subject),
+            `subject must start with a ticket number (${VALID_TICKET_PREFIXES.map((p) => `${p}-###`).join(", ")})`,
+          ];
+        },
+      },
+    },
+  ],
   rules: {
     "type-enum": [
       2,
@@ -16,5 +28,6 @@ module.exports = {
     "scope-empty": [2, "always"],
     "header-max-length": [2, "always", 100],
     "body-leading-blank": [1, "always"],
+    "ticket-prefix": [2, "always"],
   },
 };
