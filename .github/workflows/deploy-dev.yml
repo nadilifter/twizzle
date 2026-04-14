@@ -2,7 +2,7 @@ name: Build and Deploy Dev Build [Dev]
 
 on:
   push:
-    branches: [dev, feat/USC-270-remove-dev-latest-image-tagging]
+    branches: [dev]
   workflow_dispatch:
 
 concurrency:
