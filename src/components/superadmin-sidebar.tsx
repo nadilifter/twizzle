@@ -8,6 +8,7 @@ import {
   Building2,
   CreditCard,
   DollarSign,
+  Gift,
   Globe,
   Layers,
   LayoutDashboard,
@@ -189,6 +190,11 @@ const navItems = [
     title: "Feedback",
     url: "/superadmin/feedback",
     icon: MessageSquare,
+  },
+  {
+    title: "Referrals",
+    url: "/superadmin/referrals",
+    icon: Gift,
   },
   {
     title: "Usage",

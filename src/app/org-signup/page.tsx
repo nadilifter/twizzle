@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useSession } from "next-auth/react";
 import {
@@ -107,7 +107,9 @@ const { useStepper } = defineStepper(
 
 export default function SignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, status: sessionStatus } = useSession();
+  const referralCode = searchParams?.get("ref") ?? undefined;
   const stepper = useStepper();
   const [signupMode, setSignupMode] = React.useState<SignupMode | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
@@ -550,12 +552,14 @@ export default function SignupPage() {
     const chosenPlan = plans.find((p) => p.id === selectedPlan);
     const isPaidPlan = chosenPlan && Number(chosenPlan.monthlyPrice) > 0;
 
-    const submitData = useExistingAccount
+    const baseSubmitData = useExistingAccount
       ? (() => {
           const { email, password, confirmPassword, name, ...orgFields } = formData;
           return { ...orgFields, useExistingAccount: true as const };
         })()
       : formData;
+
+    const submitData = { ...baseSubmitData, ...(referralCode ? { referralCode } : {}) };
 
     setIsLoading(true);
 

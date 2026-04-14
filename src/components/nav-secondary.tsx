@@ -15,6 +15,7 @@ import {
 export function NavSecondary({
   items,
   isLoading,
+  children,
   ...props
 }: {
   items: {
@@ -24,6 +25,7 @@ export function NavSecondary({
     external?: boolean;
   }[];
   isLoading?: boolean;
+  children?: React.ReactNode;
 } & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
   return (
     <SidebarGroup {...props}>
@@ -51,6 +53,7 @@ export function NavSecondary({
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+          {children}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>

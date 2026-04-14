@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { generateReferralCode } from "@/lib/referral";
 import { hashPassword, getAuthSession } from "@/lib/auth";
 import { z } from "zod";
 import { isSubdomainReserved } from "@/lib/reserved-domains";
@@ -170,6 +171,21 @@ export async function POST(request: NextRequest) {
       country: validatedData.country,
     });
 
+    // Pre-generate a collision-free referral code before the transaction so a
+    // unique-constraint violation doesn't roll back the entire signup.
+    let newReferralCode: string | null = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const candidate = generateReferralCode();
+      const existing = await db.organization.findFirst({
+        where: { referralCode: candidate },
+        select: { id: true },
+      });
+      if (!existing) {
+        newReferralCode = candidate;
+        break;
+      }
+    }
+
     const result = await db.$transaction(async (tx) => {
       // 1. Create the organization
       const defaultTaxRate = getDefaultTaxRate(validatedData.stateProvince, validatedData.country);
@@ -186,6 +202,7 @@ export async function POST(request: NextRequest) {
           country: validatedData.country || null,
           taxRate: defaultTaxRate,
           taxEnabled: defaultTaxRate > 0,
+          referralCode: newReferralCode,
         },
       });
 
@@ -267,6 +284,22 @@ export async function POST(request: NextRequest) {
 
       // 7. Create default GL codes for the organization
       await createDefaultGLCodes(organization.id, tx);
+
+      // 9. Process referral if a code was provided
+      if (validatedData.referralCode) {
+        const referrer = await tx.organization.findFirst({
+          where: { referralCode: validatedData.referralCode },
+          select: { id: true },
+        });
+        if (referrer && referrer.id !== organization.id) {
+          await tx.referral.create({
+            data: {
+              referrerOrganizationId: referrer.id,
+              referredOrganizationId: organization.id,
+            },
+          });
+        }
+      }
 
       return { organization, userId: resolvedUserId };
     });

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { passwordSchema } from "@/lib/password";
 import { isValidPhoneNumber } from "libphonenumber-js";
+import { REFERRAL_CODE_PATTERN } from "@/lib/referral";
 
 const MAX_NAME_LENGTH = 255;
 const HEX_COLOR_REGEX = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
@@ -65,6 +66,8 @@ export const signupSchema = z
       .optional(),
 
     runCronAfterCreation: z.boolean().optional(),
+
+    referralCode: z.string().regex(REFERRAL_CODE_PATTERN).optional(),
   })
   .refine((data) => isValidPostalCode(data.postalCode, data.country), {
     message: "Postal code must be a valid US ZIP or Canadian postal code",

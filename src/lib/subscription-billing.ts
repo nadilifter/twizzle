@@ -108,6 +108,58 @@ export async function generateMonthlyInvoices(options?: { organizationId?: strin
       const monthStr = String(month).padStart(2, "0");
       const reference = `SUB-INV-${year}-${monthStr}-${sub.organization.slug}`;
 
+      // Check for unused referral credits before creating the invoice.
+      // Uses raw SQL because Prisma can't compare two columns in a where clause.
+      const [referralCredit] = await db.$queryRaw<
+        Array<{
+          id: string;
+          creditMonths: number;
+          creditMonthsUsed: number;
+          referredOrgName: string;
+        }>
+      >(Prisma.sql`
+        SELECT r."id", r."creditMonths", r."creditMonthsUsed", o."name" AS "referredOrgName"
+        FROM "Referral" r
+        JOIN "Organization" o ON o."id" = r."referredOrganizationId"
+        WHERE r."referrerOrganizationId" = ${sub.organizationId}
+          AND r."creditMonthsUsed" < r."creditMonths"
+        ORDER BY r."createdAt" ASC
+        LIMIT 1
+      `);
+
+      if (referralCredit) {
+        await db.$transaction(async (tx) => {
+          await tx.subscriptionInvoice.create({
+            data: {
+              organizationId: sub.organizationId,
+              planId: sub.planId,
+              reference,
+              periodStart,
+              periodEnd,
+              amount: 0,
+              currency: "USD",
+              status: "PAID",
+              paidAt: new Date(),
+              notes: `Referral credit applied (referred: ${referralCredit.referredOrgName})`,
+            },
+          });
+
+          await tx.referral.update({
+            where: { id: referralCredit.id },
+            data: { creditMonthsUsed: { increment: 1 } },
+          });
+        });
+
+        logger.info("Referral credit applied to subscription invoice", {
+          organizationId: sub.organizationId,
+          referralId: referralCredit.id,
+          reference,
+        });
+
+        generated++;
+        continue;
+      }
+
       await db.subscriptionInvoice.create({
         data: {
           organizationId: sub.organizationId,

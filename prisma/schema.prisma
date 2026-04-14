@@ -176,6 +176,11 @@ model Organization {
 
   // Organization Holidays
   holidays OrganizationHoliday[]
+
+  // Referral Program
+  referralCode  String?    @unique
+  referralsMade     Referral[] @relation("ReferralsMade")
+  referralsReceived Referral[] @relation("ReferralsReceived")
 }
 
 model OrganizationMember {
@@ -5125,6 +5130,21 @@ model OrganizationHoliday {
   @@unique([organizationId, date, name])
   @@index([organizationId, year])
   @@index([organizationId, date])
+}
+
+model Referral {
+  id                     String   @id @default(cuid())
+  referrerOrganizationId String
+  referredOrganizationId String
+  creditMonths           Int      @default(1)
+  creditMonthsUsed       Int      @default(0)
+  createdAt              DateTime @default(now())
+
+  referrerOrganization Organization @relation("ReferralsMade", fields: [referrerOrganizationId], references: [id])
+  referredOrganization Organization @relation("ReferralsReceived", fields: [referredOrganizationId], references: [id])
+
+  @@index([referrerOrganizationId])
+  @@index([referredOrganizationId])
 }
 
 model CacheVersion {

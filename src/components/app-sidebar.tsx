@@ -21,6 +21,7 @@ import { useSession } from "next-auth/react";
 
 import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
+import { ReferAndSaveDialog } from "@/components/refer-and-save-dialog";
 import { OrganizationSwitcher } from "@/components/organization-switcher";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -1045,7 +1046,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               No results found
             </div>
           )}
-        <NavSecondary items={navSecondary} isLoading={isNavSecondaryLoading} className="mt-auto" />
+        <NavSecondary items={navSecondary} isLoading={isNavSecondaryLoading} className="mt-auto">
+          <SidebarMenuItem>
+            <ReferAndSaveDialog />
+          </SidebarMenuItem>
+        </NavSecondary>
       </SidebarContent>
       <SidebarFooter>
         {isLoading || !user ? (

@@ -51,6 +51,7 @@ describe("generateMonthlyInvoices", () => {
     ] as never);
 
     vi.mocked(db.subscriptionInvoice.findFirst).mockResolvedValueOnce(null);
+    vi.mocked(db.$queryRaw).mockResolvedValueOnce([]);
     vi.mocked(db.subscriptionInvoice.create).mockResolvedValueOnce({} as never);
 
     const result = await generateMonthlyInvoices();
@@ -111,6 +112,57 @@ describe("generateMonthlyInvoices", () => {
     expect(result.skipped).toBe(1);
   });
 
+  it("applies referral credit as a $0 PAID invoice and increments usage", async () => {
+    vi.mocked(db.organizationSubscription.findMany).mockResolvedValueOnce([
+      {
+        id: "sub-1",
+        organizationId: "org-1",
+        planId: "plan-1",
+        billingCycle: "MONTHLY",
+        plan: { monthlyPrice: 49.99, yearlyPrice: 499.99 },
+        organization: { id: "org-1", slug: "acme" },
+      },
+    ] as never);
+
+    vi.mocked(db.subscriptionInvoice.findFirst).mockResolvedValueOnce(null);
+    vi.mocked(db.$queryRaw).mockResolvedValueOnce([
+      {
+        id: "ref-1",
+        creditMonths: 3,
+        creditMonthsUsed: 1,
+        referredOrgName: "Referred Gym",
+      },
+    ]);
+    vi.mocked(db.$transaction).mockImplementation(async (fn) => {
+      await (fn as CallableFunction)(db);
+    });
+    vi.mocked(db.subscriptionInvoice.create).mockResolvedValueOnce({} as never);
+    vi.mocked(db.referral.update).mockResolvedValueOnce({} as never);
+
+    const result = await generateMonthlyInvoices();
+
+    expect(result.generated).toBe(1);
+    expect(result.skipped).toBe(0);
+    expect(result.errors).toHaveLength(0);
+    expect(db.subscriptionInvoice.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          organizationId: "org-1",
+          amount: 0,
+          status: "PAID",
+          currency: "USD",
+          notes: expect.stringContaining("Referred Gym"),
+        }),
+      })
+    );
+    expect(db.referral.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "ref-1" },
+        data: { creditMonthsUsed: { increment: 1 } },
+      })
+    );
+  });
+
   it("divides yearly price by 12 for yearly billing cycle", async () => {
     vi.mocked(db.organizationSubscription.findMany).mockResolvedValueOnce([
       {
@@ -124,6 +176,7 @@ describe("generateMonthlyInvoices", () => {
     ] as never);
 
     vi.mocked(db.subscriptionInvoice.findFirst).mockResolvedValueOnce(null);
+    vi.mocked(db.$queryRaw).mockResolvedValueOnce([]);
     vi.mocked(db.subscriptionInvoice.create).mockResolvedValueOnce({} as never);
 
     await generateMonthlyInvoices();
