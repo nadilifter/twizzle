@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
     });
 
     const isSubscriptionPayment = merchantReference?.startsWith("SUB-INV-");
+    const isTokenizationSession = merchantReference?.startsWith("token-");
 
     if (eventCode === "AUTHORISATION" && isSubscriptionPayment) {
       await handleSubscriptionAuthorisation(
@@ -76,6 +77,11 @@ export async function POST(request: NextRequest) {
         pspReference,
         success === "true" || success === true
       );
+    } else if (eventCode === "AUTHORISATION" && isTokenizationSession) {
+      logger.info("Adyen webhook: skipping tokenization session authorisation", {
+        merchantReference,
+        pspReference,
+      });
     } else if (eventCode === "AUTHORISATION" && (success === "true" || success === true)) {
       await handleAuthorisation(
         merchantReference,
