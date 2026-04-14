@@ -952,11 +952,10 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             invoiceId: checkoutInvoiceId,
-            paymentMethodType: result.paymentMethodType,
           }),
         }).catch(() => {});
         completeRegistration().catch(() => {});
-        router.push(`/receipt/${checkoutInvoiceId}`);
+        router.push(`/receipt/${checkoutInvoiceId}?rc=${encodeURIComponent(result.resultCode)}`);
       }
     } else {
       setPaymentError(`Payment was not successful (${result.resultCode}). Please try again.`);

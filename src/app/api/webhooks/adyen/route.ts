@@ -4,6 +4,9 @@ import { verifyWebhookSignature, extractHmacSignature, resolvePaymentType } from
 import { processInvoiceRegistrations, type InvoiceMetadata } from "@/lib/invoice-processing";
 import { logger } from "@/lib/logger";
 import { Prisma } from "@prisma/client";
+import { sendCheckoutReceiptEmail, sendPaymentFailedEmail } from "@/lib/email";
+import { getSubdomainUrl } from "@/lib/env-domains";
+import * as Sentry from "@sentry/nextjs";
 
 function isPrismaUniqueConstraintError(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
@@ -108,7 +111,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ notificationResponse: "[accepted]" }, { status: 200 });
   } catch (error) {
     console.error("Payment webhook processing error:", error);
-    return NextResponse.json({ notificationResponse: "[accepted]" }, { status: 200 });
+    Sentry.captureException(error);
+    // Return 500 so Adyen retries — processing is idempotent so retries are safe.
+    return NextResponse.json({ error: "Processing failed" }, { status: 500 });
   }
 }
 
@@ -117,7 +122,7 @@ async function handleAuthorisation(
   pspReference: string,
   amount: { value: number; currency: string },
   paymentMethodType: string | undefined,
-  request: NextRequest
+  _request: NextRequest
 ) {
   if (!invoiceId) {
     console.error("No merchantReference (invoiceId) in AUTHORISATION notification");
@@ -156,7 +161,7 @@ async function handleAuthorisation(
     }
 
     if (existingTransaction) {
-      if (!inv.registrationsProcessed) {
+      if (!inv.postPaymentProcessed) {
         logger.info("Transaction exists but registrations not yet processed, retrying", {
           pspReference,
         });
@@ -334,8 +339,22 @@ async function handleAuthorisation(
 
   await db.invoice.update({
     where: { id: invoice.id },
-    data: { registrationsProcessed: true },
+    data: { postPaymentProcessed: true },
   });
+
+  // Send receipt email
+  try {
+    const siteConfig = await db.websiteConfig.findFirst({
+      where: { organizationId: invoice.organizationId },
+      select: { subdomain: true },
+    });
+    const receiptUrl = siteConfig?.subdomain
+      ? `${getSubdomainUrl(siteConfig.subdomain)}/receipt/${invoice.id}`
+      : null;
+    await sendCheckoutReceiptEmail(invoice, receiptUrl);
+  } catch (err) {
+    console.error("Webhook: failed to send receipt email:", err);
+  }
 
   logger.info("Payment processed for invoice", { invoiceId, pspReference });
 }
@@ -344,12 +363,17 @@ async function handleFailedAuthorisation(invoiceId: string) {
   if (!invoiceId) return;
 
   try {
-    await db.$transaction(async (tx) => {
+    const inv = await db.$transaction(async (tx) => {
       const inv = await tx.invoice.findUnique({
         where: { id: invoiceId },
-        select: { id: true, status: true },
+        select: {
+          id: true,
+          status: true,
+          reference: true,
+          user: { select: { email: true, name: true } },
+        },
       });
-      if (!inv || inv.status !== "DRAFT") return;
+      if (!inv || inv.status !== "DRAFT") return null;
 
       await tx.invoice.update({
         where: { id: inv.id },
@@ -359,8 +383,16 @@ async function handleFailedAuthorisation(invoiceId: string) {
         where: { invoiceId: inv.id, fulfillmentStatus: "PENDING" },
         data: { fulfillmentStatus: "CANCELLED" },
       });
+
+      return inv;
     });
-    logger.info("Cancelled DRAFT invoice and PENDING order after failed auth", { invoiceId });
+
+    if (inv) {
+      logger.info("Cancelled DRAFT invoice and PENDING order after failed auth", { invoiceId });
+      sendPaymentFailedEmail(inv).catch((err) =>
+        console.error("Failed to send payment failed email:", err)
+      );
+    }
   } catch (err) {
     console.error(`Failed to cancel invoice/order after failed auth: ${invoiceId}`, err);
   }

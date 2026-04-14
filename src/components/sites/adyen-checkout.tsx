@@ -13,7 +13,7 @@ interface AdyenCheckoutProps {
   onPaymentCompleted: (result: {
     resultCode: string;
     sessionData?: string;
-    paymentMethodType?: string;
+    sessionResult?: string;
   }) => void;
   onError: (error: { name?: string; message?: string; resultCode?: string }) => void;
   countryCode?: string;
@@ -73,12 +73,8 @@ export function AdyenCheckoutComponent({
             id: sessionId,
             sessionData,
           },
-          onPaymentCompleted: (result: any, component: any) => {
-            const paymentMethodType =
-              component?.data?.paymentMethod?.type ||
-              component?.state?.data?.paymentMethod?.type ||
-              undefined;
-            stableOnPaymentCompleted({ ...result, paymentMethodType });
+          onPaymentCompleted: (result: any) => {
+            stableOnPaymentCompleted(result);
           },
           onPaymentFailed: (result: any) => {
             stableOnError(result);

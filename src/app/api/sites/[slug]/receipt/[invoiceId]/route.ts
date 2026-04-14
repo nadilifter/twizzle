@@ -36,6 +36,7 @@ export async function GET(
     id: invoice.id,
     reference: invoice.reference,
     status: invoice.status,
+    postPaymentProcessed: invoice.postPaymentProcessed,
     subtotal: Number(invoice.subtotal),
     tax: Number(invoice.tax),
     total: Number(invoice.total),

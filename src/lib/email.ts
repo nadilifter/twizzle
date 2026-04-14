@@ -275,6 +275,7 @@ export type EmailTemplate =
   | "registration-confirmation"
   | "payment-confirmation"
   | "checkout-receipt"
+  | "payment-failed"
   | "announcement"
   | "feedback-roadmap"
   | "mfa-code"
@@ -632,6 +633,32 @@ function renderTemplate(
         View your receipt: {{receiptUrl}}
 
         Thank you!
+      `,
+    },
+    "payment-failed": {
+      subject: "Payment failed for order {{reference}}",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #dc2626;">Payment Failed</h1>
+          <p>Hello {{name}},</p>
+          <p>Unfortunately, your payment for order <strong>{{reference}}</strong> could not be processed.</p>
+          <p>This can happen due to insufficient funds, a bank hold, or the transfer being declined.</p>
+          <p>Please contact us or try again with a different payment method.</p>
+          <p>Thank you for your patience.</p>
+        </div>
+      `,
+      text: `
+        Payment Failed
+
+        Hello {{name}},
+
+        Unfortunately, your payment for order {{reference}} could not be processed.
+
+        This can happen due to insufficient funds, a bank hold, or the transfer being declined.
+
+        Please contact us or try again with a different payment method.
+
+        Thank you for your patience.
       `,
     },
     announcement: {
@@ -1137,4 +1164,75 @@ export async function checkEmailService(): Promise<{
     status: "ok",
     message: `SES configured (${config.mode} mode)`,
   };
+}
+
+/**
+ * Send a payment failed email for a cancelled invoice.
+ */
+export async function sendPaymentFailedEmail(invoice: {
+  reference: string;
+  user?: { email?: string | null; name?: string | null } | null;
+}): Promise<void> {
+  const recipientEmail = invoice.user?.email;
+  if (!recipientEmail) return;
+
+  const recipientName = invoice.user?.name?.split(" ")[0] || "Customer";
+
+  await sendTemplatedEmail("payment-failed", [recipientEmail], {
+    name: recipientName,
+    reference: invoice.reference,
+  });
+}
+
+/**
+ * Send a checkout receipt email for a paid invoice.
+ * Accepts the minimal invoice shape needed to build the email — both the
+ * webhook and any other callers should use this instead of inlining the logic.
+ */
+export async function sendCheckoutReceiptEmail(
+  invoice: {
+    id: string;
+    reference: string;
+    subtotal: number | { toString(): string };
+    tax: number | { toString(): string };
+    total: number | { toString(): string };
+    lineItems: { description: string; total: number | { toString(): string } }[];
+    user?: { email?: string | null; name?: string | null } | null;
+  },
+  receiptUrl: string | null
+): Promise<void> {
+  const recipientEmail = invoice.user?.email;
+  if (!recipientEmail) return;
+
+  const recipientName = invoice.user?.name?.split(" ")[0] || "Customer";
+  const invoiceTax = Number(invoice.tax);
+
+  const lineItemsHtml = invoice.lineItems
+    .map(
+      (li) =>
+        `<tr><td style="padding: 4px 0;">${li.description}</td><td style="padding: 4px 0; text-align: right;">$${Number(li.total).toFixed(2)}</td></tr>`
+    )
+    .join("");
+  const lineItemsText = invoice.lineItems
+    .map((li) => `${li.description} — $${Number(li.total).toFixed(2)}`)
+    .join("\n");
+  const taxHtml =
+    invoiceTax > 0
+      ? `<tr><td style="padding: 4px 0;">Tax</td><td style="padding: 4px 0; text-align: right;">$${invoiceTax.toFixed(2)}</td></tr>`
+      : "";
+  const taxText = invoiceTax > 0 ? `Tax: $${invoiceTax.toFixed(2)}` : "";
+
+  await sendTemplatedEmail("checkout-receipt", [recipientEmail], {
+    name: recipientName,
+    reference: invoice.reference,
+    subtotal: `$${Number(invoice.subtotal).toFixed(2)}`,
+    total: `$${Number(invoice.total).toFixed(2)}`,
+    lineItemsHtml,
+    lineItemsText,
+    taxHtml,
+    processingFeeHtml: "",
+    taxText,
+    processingFeeText: "",
+    receiptUrl: receiptUrl ?? "",
+  });
 }

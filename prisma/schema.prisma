@@ -1527,7 +1527,7 @@ model Invoice {
   total          Decimal       @db.Decimal(10, 2)
   notes                    String?
   organizationId           String
-  registrationsProcessed   Boolean  @default(false)
+  postPaymentProcessed     Boolean  @default(false)
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
 
