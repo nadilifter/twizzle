@@ -236,8 +236,16 @@ export default function StorePage() {
             label: v.label,
             price: v.price ? parseFloat(v.price) : null,
             imageUrl: v.imageUrl || null,
-            maxInventory: v.isUnlimited ? null : parseInt(v.maxInventory) || null,
-            currentInventory: v.isUnlimited ? null : parseInt(v.currentInventory) || null,
+            maxInventory: v.isUnlimited
+              ? null
+              : v.maxInventory.trim() !== ""
+                ? parseInt(v.maxInventory)
+                : null,
+            currentInventory: v.isUnlimited
+              ? null
+              : v.currentInventory.trim() !== ""
+                ? parseInt(v.currentInventory)
+                : null,
             sortOrder: i,
           }))
         : undefined;
@@ -915,7 +923,8 @@ export default function StorePage() {
                           onChange={(e) =>
                             setFormData({
                               ...formData,
-                              maxInventory: parseInt(e.target.value) || null,
+                              maxInventory:
+                                e.target.value.trim() !== "" ? parseInt(e.target.value) : null,
                             })
                           }
                         />
@@ -931,7 +940,8 @@ export default function StorePage() {
                           onChange={(e) =>
                             setFormData({
                               ...formData,
-                              currentInventory: parseInt(e.target.value) || null,
+                              currentInventory:
+                                e.target.value.trim() !== "" ? parseInt(e.target.value) : null,
                             })
                           }
                         />

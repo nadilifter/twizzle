@@ -10,6 +10,7 @@ import { ArrowLeft, ShoppingCart, Package, Minus, Plus, Check, AlertTriangle } f
 import { useCart } from "@/components/sites/cart-context";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
+import { formatPrice } from "@/lib/stock-utils";
 
 type ProductVariant = {
   id: string;
@@ -38,16 +39,6 @@ interface StoreProductDetailProps {
   primaryColor: string;
 }
 
-function formatPrice(price: number): string {
-  if (price === 0) return "FREE";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(price);
-}
-
 export function StoreProductDetail({ product, primaryColor }: StoreProductDetailProps) {
   const [selectedVariantId, setSelectedVariantId] = React.useState<string>("");
   const [quantity, setQuantity] = React.useState(1);
@@ -58,6 +49,14 @@ export function StoreProductDetail({ product, primaryColor }: StoreProductDetail
   const selectedVariant = hasVariants
     ? product.variants.find((v) => v.id === selectedVariantId)
     : undefined;
+
+  const variantPricesVary = React.useMemo(() => {
+    if (!hasVariants || product.variants.length <= 1) return false;
+    const resolvedPrices = product.variants.map((v) =>
+      v.price !== null && v.price !== undefined ? Number(v.price) : Number(product.price)
+    );
+    return resolvedPrices.some((p) => p !== resolvedPrices[0]);
+  }, [hasVariants, product.variants, product.price]);
 
   const allImages = React.useMemo(() => {
     const images: { url: string; label: string }[] = [];
@@ -335,11 +334,13 @@ export function StoreProductDetail({ product, primaryColor }: StoreProductDetail
                           )}
                         </div>
                       </div>
-                      <span
-                        className={`font-semibold ${variantOutOfStock ? "text-muted-foreground" : ""}`}
-                      >
-                        {formatPrice(variantPrice)}
-                      </span>
+                      {variantPricesVary && (
+                        <span
+                          className={`font-semibold ${variantOutOfStock ? "text-muted-foreground" : ""}`}
+                        >
+                          {formatPrice(variantPrice)}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -433,46 +434,6 @@ export function StoreProductDetail({ product, primaryColor }: StoreProductDetail
                   ? `Select ${product.typeName || "Type"}`
                   : `Add to Cart — ${formatPrice(effectivePrice * quantity)}`}
               </Button>
-            </div>
-          )}
-
-          {/* All variants price range summary */}
-          {hasVariants && product.variants.length > 1 && (
-            <div className="mt-6 rounded-lg bg-muted/30 p-4">
-              <p className="text-sm font-medium mb-2">Price Range by {product.typeName}</p>
-              <div className="grid gap-1.5">
-                {product.variants.map((variant) => {
-                  const vPrice =
-                    variant.price !== null && variant.price !== undefined
-                      ? Number(variant.price)
-                      : Number(product.price);
-                  const vOutOfStock =
-                    variant.currentInventory !== null && variant.currentInventory <= 0;
-                  const vLowStock =
-                    variant.currentInventory !== null &&
-                    variant.currentInventory > 0 &&
-                    variant.currentInventory <= 5;
-                  return (
-                    <div
-                      key={variant.id}
-                      className={`flex items-center justify-between text-sm ${vOutOfStock ? "text-muted-foreground line-through" : ""}`}
-                    >
-                      <span>{variant.label}</span>
-                      <div className="flex items-center gap-2">
-                        {vOutOfStock && (
-                          <span className="text-xs text-destructive">Out of stock</span>
-                        )}
-                        {vLowStock && (
-                          <span className="text-xs text-amber-600">
-                            Only {variant.currentInventory} left
-                          </span>
-                        )}
-                        <span className="font-medium">{formatPrice(vPrice)}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
             </div>
           )}
         </div>

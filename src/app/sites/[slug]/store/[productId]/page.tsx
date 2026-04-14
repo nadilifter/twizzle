@@ -16,38 +16,34 @@ const getCachedSiteConfig = unstable_cache(
   { revalidate: 30 }
 );
 
-const getCachedProduct = unstable_cache(
-  async (productId: string, organizationId: string) => {
-    return db.product.findFirst({
-      where: { id: productId, organizationId, isActive: true },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        category: true,
-        price: true,
-        imageUrl: true,
-        currentInventory: true,
-        maxInventory: true,
-        typeName: true,
-        variants: {
-          where: { isActive: true },
-          select: {
-            id: true,
-            label: true,
-            price: true,
-            imageUrl: true,
-            currentInventory: true,
-            maxInventory: true,
-          },
-          orderBy: { sortOrder: "asc" },
+async function getProduct(productId: string, organizationId: string) {
+  return db.product.findFirst({
+    where: { id: productId, organizationId, isActive: true },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      category: true,
+      price: true,
+      imageUrl: true,
+      currentInventory: true,
+      maxInventory: true,
+      typeName: true,
+      variants: {
+        where: { isActive: true },
+        select: {
+          id: true,
+          label: true,
+          price: true,
+          imageUrl: true,
+          currentInventory: true,
+          maxInventory: true,
         },
+        orderBy: { sortOrder: "asc" },
       },
-    });
-  },
-  ["site-product-detail"],
-  { revalidate: 30 }
-);
+    },
+  });
+}
 
 export async function generateMetadata({
   params,
@@ -61,7 +57,7 @@ export async function generateMetadata({
   const storeEnabled = await isFeatureEnabled(config.organizationId, "store");
   if (!storeEnabled) return {};
 
-  const product = await getCachedProduct(productId, config.organizationId);
+  const product = await getProduct(productId, config.organizationId);
   if (!product) return {};
 
   return {
@@ -88,7 +84,7 @@ export default async function ProductDetailPage({
   const storeEnabled = await isFeatureEnabled(config.organizationId, "store");
   if (!storeEnabled) return notFound();
 
-  const product = await getCachedProduct(productId, config.organizationId);
+  const product = await getProduct(productId, config.organizationId);
 
   if (!product) return notFound();
 

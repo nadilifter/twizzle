@@ -10,6 +10,7 @@ import { Search, ShoppingBag, ShoppingCart, Package, Loader2, SearchX, X } from 
 import Link from "next/link";
 import { useCart } from "@/components/sites/cart-context";
 import { toast } from "sonner";
+import { getStockStatus, formatPrice } from "@/lib/stock-utils";
 
 type ProductVariant = {
   id: string;
@@ -36,16 +37,6 @@ type Product = {
 interface StoreProductListProps {
   organizationId: string;
   primaryColor?: string;
-}
-
-function formatPrice(price: number): string {
-  if (price === 0) return "FREE";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(price);
 }
 
 export function StoreProductList({ organizationId }: StoreProductListProps) {
@@ -151,59 +142,6 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
     toast.success(`${product.name}${variant ? ` (${variant.label})` : ""} added to cart`);
   };
 
-  const getStockStatus = (product: Product) => {
-    const hasVariants = product.typeName && product.variants.length > 0;
-
-    if (hasVariants) {
-      const variantId = selectedVariants[product.id];
-      if (!variantId) {
-        const allOutOfStock = product.variants.every(
-          (v) => v.currentInventory !== null && v.currentInventory <= 0
-        );
-        if (allOutOfStock) {
-          return { label: "Out of Stock", variant: "destructive" as const };
-        }
-        return null;
-      }
-      const variant = product.variants.find((v) => v.id === variantId);
-      if (!variant) return null;
-      if (variant.maxInventory === null && variant.currentInventory === null) return null;
-      if (variant.currentInventory === 0) {
-        return { label: "Out of Stock", variant: "destructive" as const };
-      }
-      if (variant.currentInventory !== null && variant.currentInventory <= 5) {
-        return { label: `Only ${variant.currentInventory} left!`, variant: "destructive" as const };
-      }
-      return null;
-    }
-
-    if (product.maxInventory === null && product.currentInventory === null) {
-      return null;
-    }
-    if (product.currentInventory === 0) {
-      return { label: "Out of Stock", variant: "destructive" as const };
-    }
-    if (product.currentInventory !== null && product.currentInventory <= 5) {
-      return { label: `Only ${product.currentInventory} left!`, variant: "destructive" as const };
-    }
-    return null;
-  };
-
-  const isOutOfStock = (product: Product) => {
-    const hasVariants = product.typeName && product.variants.length > 0;
-    if (hasVariants) {
-      const variantId = selectedVariants[product.id];
-      if (!variantId) {
-        return product.variants.every(
-          (v) => v.currentInventory !== null && v.currentInventory <= 0
-        );
-      }
-      const variant = product.variants.find((v) => v.id === variantId);
-      return variant?.currentInventory !== null && (variant?.currentInventory ?? 0) <= 0;
-    }
-    return product.currentInventory !== null && product.currentInventory <= 0;
-  };
-
   const hasActiveFilters = selectedCategory !== "All" || searchQuery !== "";
 
   const clearFilters = () => {
@@ -282,8 +220,10 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
       {filteredProducts.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filteredProducts.map((product) => {
-            const stockStatus = getStockStatus(product);
-            const outOfStock = isOutOfStock(product);
+            const { outOfStock, badge: stockBadge } = getStockStatus(
+              product,
+              selectedVariants[product.id]
+            );
             const hasVariants = product.typeName && product.variants.length > 0;
             const currentVariantId = selectedVariants[product.id];
             const effectivePrice = getEffectivePrice(product, currentVariantId);
@@ -334,12 +274,12 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
                       </h3>
                     </Link>
                     <div className="flex items-center gap-1">
-                      {stockStatus && (
+                      {stockBadge && (
                         <Badge
-                          variant={stockStatus.variant}
+                          variant={stockBadge.variant}
                           className="shrink-0 text-[10px] px-1.5 py-0"
                         >
-                          {stockStatus.label}
+                          {stockBadge.label}
                         </Badge>
                       )}
                     </div>

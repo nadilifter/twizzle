@@ -23,6 +23,7 @@ import Image from "next/image";
 import { toast } from "sonner";
 import { verifyOrganizationMembership } from "@/app/actions/organization";
 import { getClientSubdomainUrl } from "@/lib/client-domains";
+import { getStockStatus } from "@/lib/stock-utils";
 
 type ProductVariant = {
   id: string;
@@ -194,40 +195,6 @@ function POSPageContent() {
     setVariantPickerProduct(null);
   };
 
-  // Get stock status for display
-  const getStockStatus = (product: Product) => {
-    const hasVariants = product.typeName && product.variants?.length > 0;
-    if (hasVariants) {
-      const allOutOfStock = product.variants.every(
-        (v) => v.currentInventory !== null && v.currentInventory <= 0
-      );
-      if (allOutOfStock) return { label: "Out of Stock", variant: "destructive" as const };
-      const totalLeft = product.variants.reduce((sum, v) => sum + (v.currentInventory ?? 0), 0);
-      const anyTracked = product.variants.some((v) => v.currentInventory !== null);
-      if (anyTracked && totalLeft <= 5)
-        return { label: `${totalLeft} left`, variant: "secondary" as const };
-      return null;
-    }
-    if (product.maxInventory === null && product.currentInventory === null) {
-      return null;
-    }
-    if (product.currentInventory === 0) {
-      return { label: "Out of Stock", variant: "destructive" as const };
-    }
-    if (product.currentInventory !== null && product.currentInventory <= 5) {
-      return { label: `${product.currentInventory} left`, variant: "secondary" as const };
-    }
-    return null;
-  };
-
-  const isProductOutOfStock = (product: Product) => {
-    const hasVariants = product.typeName && product.variants?.length > 0;
-    if (hasVariants) {
-      return product.variants.every((v) => v.currentInventory !== null && v.currentInventory <= 0);
-    }
-    return product.currentInventory !== null && product.currentInventory <= 0;
-  };
-
   const tax = Math.round(subtotal * taxRate * 100) / 100;
   const total = Math.round((subtotal + tax) * 100) / 100;
 
@@ -297,8 +264,7 @@ function POSPageContent() {
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3">
                 {filteredProducts.map((product) => {
-                  const stockStatus = getStockStatus(product);
-                  const outOfStock = isProductOutOfStock(product);
+                  const { outOfStock, badge: stockBadge } = getStockStatus(product);
                   const hasVariants = product.typeName && product.variants?.length > 0;
 
                   return (
@@ -311,12 +277,12 @@ function POSPageContent() {
                         onClick={() => handleAddToCart(product)}
                         disabled={outOfStock}
                       >
-                        {stockStatus && (
+                        {stockBadge && (
                           <Badge
-                            variant={stockStatus.variant}
+                            variant={stockBadge.variant}
                             className="absolute top-1.5 right-1.5 text-[10px]"
                           >
-                            {stockStatus.label}
+                            {stockBadge.label}
                           </Badge>
                         )}
                         {hasVariants && (

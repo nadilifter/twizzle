@@ -266,7 +266,7 @@ export async function POST(request: NextRequest) {
           if (variant.currentInventory === null) continue;
 
           const previousQty = variant.currentInventory;
-          const newQty = previousQty - item.quantity;
+          const newQty = Math.max(previousQty - item.quantity, 0);
 
           await tx.productVariant.update({
             where: { id: variantId },
@@ -290,7 +290,7 @@ export async function POST(request: NextRequest) {
           if (product.currentInventory === null) continue;
 
           const previousQty = product.currentInventory;
-          const newQty = previousQty - item.quantity;
+          const newQty = Math.max(previousQty - item.quantity, 0);
 
           await tx.product.update({
             where: { id: product.id },
