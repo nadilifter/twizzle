@@ -88,11 +88,9 @@ jobs:
             --build-arg NEXT_PUBLIC_ADYEN_ENVIRONMENT="${NEXT_PUBLIC_ADYEN_ENVIRONMENT}" \
             --build-arg NEXT_PUBLIC_SENTRY_DSN="${NEXT_PUBLIC_SENTRY_DSN}" \
             -t "${IMAGE_URI}" \
-            -t "${REPOSITORY}:staging-latest" \
             .
 
           docker push "${IMAGE_URI}"
-          docker push "${REPOSITORY}:staging-latest"
 
           echo "image=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
 
