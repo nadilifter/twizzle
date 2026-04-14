@@ -40,6 +40,7 @@ import { RetentionTab } from "./retention-tab";
 import { RevenueTab } from "./revenue-tab";
 import { EngagementTab } from "./engagement-tab";
 import { ProgramsTab } from "./programs-tab";
+import { WebsiteTab } from "./website-tab";
 
 interface AnalyticsData {
   kpis: {
@@ -233,6 +234,7 @@ export default function AnalyticsPage() {
             <TabsTrigger value="revenue">Revenue</TabsTrigger>
             <TabsTrigger value="engagement">Engagement</TabsTrigger>
             <TabsTrigger value="programs">Programs</TabsTrigger>
+            <TabsTrigger value="website">Website</TabsTrigger>
           </ResponsiveTabsList>
 
           <TabsContent value="overview" className="space-y-6 mt-6">
@@ -695,6 +697,10 @@ export default function AnalyticsPage() {
 
           <TabsContent value="programs" className="space-y-6 mt-6">
             <ProgramsTab />
+          </TabsContent>
+
+          <TabsContent value="website" className="space-y-6 mt-6">
+            <WebsiteTab />
           </TabsContent>
         </Tabs>
       </div>

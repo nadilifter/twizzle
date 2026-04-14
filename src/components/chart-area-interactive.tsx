@@ -36,13 +36,11 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-// Helper to format date as YYYY-MM-DD
-function formatDate(date: Date): string {
+export function formatDate(date: Date): string {
   return date.toISOString().split("T")[0];
 }
 
-// Get date range for a time period
-function getDateRange(days: number): { startDate: string; endDate: string } {
+export function getDateRange(days: number): { startDate: string; endDate: string } {
   const end = new Date();
   const start = new Date();
   start.setDate(start.getDate() - (days - 1));
