@@ -14,6 +14,23 @@
       "database": "leapfrog",
       "username": "postgres",
       "password": "postgres"
+    },
+    {
+      "ssh": "Enabled",
+      "previewLimit": 50,
+      "server": "172.27.0.2",
+      "port": 5432,
+      "askForPassword": true,
+      "sshOptions": {
+        "port": 22,
+        "host": "32.193.75.48",
+        "username": "ec2-user",
+        "privateKeyPath": "/Users/drewwilliams/.ssh/uplifter-staging.pem"
+      },
+      "name": "uplifter (dev)",
+      "driver": "PostgreSQL",
+      "database": "uplifter",
+      "username": "uplifter"
     }
   ]
 }

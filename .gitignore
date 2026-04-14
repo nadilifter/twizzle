@@ -56,7 +56,6 @@ next-env.d.ts
 .env
 package-lock.json
 
-/.vscode/
 
 # linear
 .linear.toml

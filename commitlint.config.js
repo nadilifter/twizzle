@@ -28,6 +28,6 @@ module.exports = {
     "scope-empty": [2, "always"],
     "header-max-length": [2, "always", 100],
     "body-leading-blank": [1, "always"],
-    "ticket-prefix": [2, "always"],
+    "ticket-prefix": [0],
   },
 };
