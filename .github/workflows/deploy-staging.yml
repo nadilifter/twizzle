@@ -13,13 +13,96 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Deploy to Staging EC2
+  build-and-push:
+    name: Build and Push Staging Image to ECR
     runs-on: ubuntu-latest
     environment: staging
     permissions:
       id-token: write
       contents: read
+    outputs:
+      image: ${{ steps.build.outputs.image }}
+      registry: ${{ steps.login-ecr.outputs.registry }}
+
+    steps:
+      - name: Checkout tag ${{ github.event.inputs.deploy_tag }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.deploy_tag }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Fetch build-time secrets from AWS Secrets Manager
+        run: |
+          SECRET_VAL=$(aws secretsmanager get-secret-value \
+            --region us-east-1 \
+            --secret-id uplifter/staging \
+            --query SecretString \
+            --output text 2>/dev/null) || {
+            echo "ERROR: Failed to retrieve secrets from AWS Secrets Manager"
+            exit 1
+          }
+
+          parse_secret() {
+            printf '%s' "$SECRET_VAL" | sed 's/^[[:space:]]*//' | grep "^${1}=" | head -1 | cut -d= -f2- || true
+          }
+
+          NEXT_PUBLIC_ADYEN_CLIENT_KEY=$(parse_secret "NEXT_PUBLIC_ADYEN_CLIENT_KEY")
+          NEXT_PUBLIC_ADYEN_ENVIRONMENT=$(parse_secret "NEXT_PUBLIC_ADYEN_ENVIRONMENT")
+          NEXT_PUBLIC_SENTRY_DSN=$(parse_secret "NEXT_PUBLIC_SENTRY_DSN")
+
+          [ -n "$NEXT_PUBLIC_ADYEN_CLIENT_KEY" ] || { echo "ERROR: NEXT_PUBLIC_ADYEN_CLIENT_KEY not found in secrets"; exit 1; }
+          [ -n "$NEXT_PUBLIC_ADYEN_ENVIRONMENT" ] || { echo "ERROR: NEXT_PUBLIC_ADYEN_ENVIRONMENT not found in secrets"; exit 1; }
+          [ -n "$NEXT_PUBLIC_SENTRY_DSN" ] || { echo "ERROR: NEXT_PUBLIC_SENTRY_DSN not found in secrets"; exit 1; }
+
+          echo "::add-mask::$NEXT_PUBLIC_ADYEN_CLIENT_KEY"
+          echo "::add-mask::$NEXT_PUBLIC_SENTRY_DSN"
+
+          {
+            echo "NEXT_PUBLIC_ADYEN_CLIENT_KEY=$NEXT_PUBLIC_ADYEN_CLIENT_KEY"
+            echo "NEXT_PUBLIC_ADYEN_ENVIRONMENT=$NEXT_PUBLIC_ADYEN_ENVIRONMENT"
+            echo "NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN"
+          } >> "$GITHUB_ENV"
+
+      - name: Build and push Docker image
+        id: build
+        env:
+          REPOSITORY: 985539764072.dkr.ecr.us-east-1.amazonaws.com/us-clubs/application
+          IMAGE_TAG: ${{ github.event.inputs.deploy_tag }}
+        run: |
+          IMAGE_URI="${REPOSITORY}:${IMAGE_TAG}"
+
+          DOCKER_BUILDKIT=1 docker build \
+            --build-arg APP_ENVIRONMENT=staging \
+            --build-arg NEXT_PUBLIC_APP_ENVIRONMENT=staging \
+            --build-arg NEXT_PUBLIC_APP_VERSION="${IMAGE_TAG}" \
+            --build-arg NEXT_PUBLIC_ADYEN_CLIENT_KEY="${NEXT_PUBLIC_ADYEN_CLIENT_KEY}" \
+            --build-arg NEXT_PUBLIC_ADYEN_ENVIRONMENT="${NEXT_PUBLIC_ADYEN_ENVIRONMENT}" \
+            --build-arg NEXT_PUBLIC_SENTRY_DSN="${NEXT_PUBLIC_SENTRY_DSN}" \
+            -t "${IMAGE_URI}" \
+            -t "${REPOSITORY}:staging-latest" \
+            .
+
+          docker push "${IMAGE_URI}"
+          docker push "${REPOSITORY}:staging-latest"
+
+          echo "image=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Deploy to Staging EC2
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: staging
+    permissions:
+      id-token: write
 
     steps:
       - name: Configure AWS credentials
@@ -32,6 +115,8 @@ jobs:
         env:
           INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
           DEPLOY_TAG: ${{ github.event.inputs.deploy_tag }}
+          IMAGE_URI: ${{ needs.build-and-push.outputs.image }}
+          REGISTRY: ${{ needs.build-and-push.outputs.registry }}
         run: |
           cat > /tmp/ssm-params.json << EOF
           {
@@ -43,29 +128,28 @@ jobs:
               "echo '=== Checking out tag ${DEPLOY_TAG} ==='",
               "git fetch --tags origin",
               "git checkout tags/${DEPLOY_TAG}",
-              "echo '=== Fetching secrets from AWS Secrets Manager ==='",
+              "echo '=== Logging into ECR ==='",
+              "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${REGISTRY}",
+              "echo '=== Pulling pre-built image from ECR ==='",
+              "docker pull ${IMAGE_URI} || { echo 'ERROR: Failed to pull image from ECR'; exit 1; }",
+              "echo '=== Tagging image as uplifter:latest ==='",
+              "docker tag ${IMAGE_URI} uplifter:latest",
+              "echo '=== Fetching runtime secrets from AWS Secrets Manager ==='",
               "SECRET_VAL=\$(aws secretsmanager get-secret-value --region us-east-1 --secret-id uplifter/staging --query SecretString --output text 2>/dev/null) || { echo 'ERROR: Failed to retrieve secrets from AWS Secrets Manager'; exit 1; }",
               "EXPORTS=\$(printf '%s' \"\$SECRET_VAL\" | sed 's/^[[:space:]]*//' | grep '^[A-Za-z_][A-Za-z0-9_]*=' | sed 's/^/export /') || { echo 'ERROR: Failed to parse secrets from AWS Secrets Manager'; exit 1; }",
               "[ -n \"\$EXPORTS\" ] || { echo 'ERROR: No secrets were parsed from AWS Secrets Manager'; exit 1; }",
               "eval \"\$EXPORTS\"",
               "unset SECRET_VAL EXPORTS",
-              "echo '=== Pre-build disk cleanup ==='",
-              "docker system prune -af 2>&1 || true",
-              "echo '=== Building Docker image ==='",
-              "DOCKER_BUILDKIT=1 docker build --build-arg APP_ENVIRONMENT=staging --build-arg NEXT_PUBLIC_APP_ENVIRONMENT=staging --build-arg NEXT_PUBLIC_APP_VERSION=\"${DEPLOY_TAG}\" --build-arg NEXT_PUBLIC_ADYEN_CLIENT_KEY=\"\${NEXT_PUBLIC_ADYEN_CLIENT_KEY}\" --build-arg NEXT_PUBLIC_ADYEN_ENVIRONMENT=\"\${NEXT_PUBLIC_ADYEN_ENVIRONMENT}\" --build-arg NEXT_PUBLIC_SENTRY_DSN=\"\${NEXT_PUBLIC_SENTRY_DSN}\" -t uplifter:new .",
               "echo '=== Ensuring PostgreSQL is running ==='",
               "docker compose -f docker-compose.staging.yml up -d postgres 2>&1",
               "echo '=== Waiting for PostgreSQL to be healthy ==='",
               "RETRIES=30; COUNT=0; while [ \$COUNT -lt \$RETRIES ]; do if docker compose -f docker-compose.staging.yml exec -T postgres pg_isready -U uplifter -d uplifter > /dev/null 2>&1; then echo 'PostgreSQL is ready'; break; fi; COUNT=\$((COUNT + 1)); sleep 2; done; if [ \$COUNT -eq \$RETRIES ]; then echo 'PostgreSQL failed to become healthy'; exit 1; fi",
               "echo '=== Running database migrations ==='",
-              "docker run --rm --network uplifter-network -e DATABASE_URL=\"postgresql://uplifter:\${POSTGRES_PASSWORD}@uplifter-postgres:5432/uplifter\" uplifter:new prisma migrate deploy 2>&1",
-              "echo '=== Swapping to new image ==='",
-              "docker tag uplifter:new uplifter:latest 2>&1",
+              "docker run --rm --network uplifter-network -e DATABASE_URL=\"postgresql://uplifter:\${POSTGRES_PASSWORD}@uplifter-postgres:5432/uplifter\" uplifter:latest prisma migrate deploy 2>&1",
               "echo '=== Restarting application ==='",
               "docker compose -f docker-compose.staging.yml up -d app cron 2>&1",
               "echo '=== Cleaning up old images ==='",
               "docker image prune -f 2>&1 || true",
-              "docker builder prune -f 2>&1 || true",
               "echo '=== Container status ==='",
               "docker ps --filter 'name=uplifter' --format 'table {{.Names}}\\t{{.Status}}\\t{{.Ports}}'"
             ],
@@ -153,7 +237,7 @@ jobs:
   summarize:
     name: Deployment Summary
     runs-on: ubuntu-latest
-    needs: [deploy, smoke-test]
+    needs: [build-and-push, deploy, smoke-test]
     if: always()
 
     steps:
@@ -172,5 +256,6 @@ jobs:
           echo "| --- | --- |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Version | \`${{ github.event.inputs.deploy_tag }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Commit | \`${{ github.sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Image | \`${{ needs.build-and-push.outputs.image }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Triggered By | @${{ github.actor }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Health | ${STATUS_LABEL} |" >> "$GITHUB_STEP_SUMMARY"
