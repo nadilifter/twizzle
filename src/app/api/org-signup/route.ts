@@ -17,6 +17,7 @@ import {
 } from "@/lib/adyen";
 import { signupSchema } from "./signup-schema";
 import { getCurrentEnvironment } from "@/lib/env-domains";
+import { FREE_TRIAL_DAYS } from "@/lib/billing-config";
 
 export async function POST(request: NextRequest) {
   const rateLimitResponse = await checkApiRateLimit(request, "org-signup", RATE_LIMITS.sensitive);
@@ -161,7 +162,7 @@ export async function POST(request: NextRequest) {
       ? null
       : testMode
         ? new Date(now.getTime() - 86400000) // yesterday — trial already expired for local testing
-        : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        : new Date(now.getTime() + FREE_TRIAL_DAYS * 24 * 60 * 60 * 1000);
 
     const facilityCoords = await geocodeAddress({
       street: validatedData.street,
@@ -259,6 +260,7 @@ export async function POST(request: NextRequest) {
           currentPeriodStart: now,
           currentPeriodEnd: trialEndsAt ?? now,
           trialEndsAt: trialEndsAt,
+          nextBillingDate: isFreePlan ? null : (trialEndsAt ?? now),
           adyenShopperReference: adyenShopperRef,
         },
       });

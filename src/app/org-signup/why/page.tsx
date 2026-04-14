@@ -19,6 +19,7 @@ import { ShootingStars } from "@/components/ui/shooting-stars";
 import { StarsBackground } from "@/components/ui/stars-background";
 import { WavyBackground } from "@/components/ui/wavy-background";
 import WorldMap from "@/components/ui/world-map";
+import { FREE_TRIAL_DAYS } from "@/lib/billing-config";
 
 const features = [
   {
@@ -275,7 +276,8 @@ export default function WhyPage() {
             transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
             className="text-lg text-slate-300 mb-10"
           >
-            Join the next generation of gymnastics management. Start your 30-day free trial today.
+            Join the next generation of gymnastics management. Start your {FREE_TRIAL_DAYS}-day free
+            trial today.
           </motion.p>
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}

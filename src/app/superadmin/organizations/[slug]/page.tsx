@@ -43,7 +43,8 @@ import { DeactivationDialog } from "./deactivation-dialog";
 import { ReactivationDialog } from "./reactivation-dialog";
 import { AdyenPlatformCard } from "./adyen-platform-card";
 import { WebsitePublishToggle } from "./website-publish-toggle";
-import { getSubdomainUrl } from "@/lib/env-domains";
+import { getSubdomainUrl, getCurrentEnvironment } from "@/lib/env-domains";
+import { TestBillingButton } from "./test-billing-button";
 
 function getMarketingSiteUrl(
   slug: string,
@@ -90,6 +91,8 @@ interface Props {
 
 export default async function OrganizationDetailPage({ params }: Props) {
   const { slug } = await params;
+  const env = getCurrentEnvironment();
+  const isDevEnv = env === "local" || env === "development";
 
   const organization = await db.organization.findUnique({
     where: { slug },
@@ -341,6 +344,8 @@ export default async function OrganizationDetailPage({ params }: Props) {
             : null
         }
       />
+
+      <TestBillingButton orgId={organization.id} isDevEnv={isDevEnv} />
 
       {/* Feature Overrides */}
       <FeatureOverrides organizationId={organization.id} organizationName={organization.name} />

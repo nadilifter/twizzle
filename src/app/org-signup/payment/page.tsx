@@ -14,6 +14,7 @@ import { StateProvinceCombobox } from "@/components/ui/state-province-combobox";
 import Link from "next/link";
 import { toast } from "sonner";
 import { AdyenCheckoutComponent } from "@/components/sites/adyen-checkout";
+import { FREE_TRIAL_DAYS } from "@/lib/billing-config";
 
 interface SignupData {
   useExistingAccount?: boolean;
@@ -282,7 +283,7 @@ export default function PaymentPage() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Plan Summary</CardTitle>
-              <Badge variant="secondary">30-day free trial</Badge>
+              <Badge variant="secondary">{FREE_TRIAL_DAYS}-day free trial</Badge>
             </div>
             <CardDescription>
               Setting up <span className="font-medium text-foreground">{signupData.orgName}</span>
@@ -306,8 +307,8 @@ export default function PaymentPage() {
                 You won&apos;t be charged today
               </div>
               <p className="text-xs text-muted-foreground">
-                Your 30-day free trial starts when you confirm. After your trial ends on{" "}
-                <span className="font-medium text-foreground">{formattedTrialEnd}</span>,
+                Your {FREE_TRIAL_DAYS}-day free trial starts when you confirm. After your trial ends
+                on <span className="font-medium text-foreground">{formattedTrialEnd}</span>,
                 you&apos;ll be billed ${monthlyPrice.toFixed(2)}/month. Cancel anytime from your
                 dashboard.
               </p>

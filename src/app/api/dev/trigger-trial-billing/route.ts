@@ -2,17 +2,28 @@
  * Dev-only: Trigger Trial Billing
  *
  * Replicates the core logic of /api/cron/subscription-billing scoped to a single org.
- * Used to test the free trial → billing flow locally without waiting for the monthly cron.
+ * Used to test the free trial → billing flow locally without waiting for the daily cron.
  *
- * Triggered automatically from the org signup review page (dev/local only) after org creation.
+ * Triggered automatically from the org signup review page (dev/local only) after org creation,
+ * and manually from the superadmin org detail page via the "Test Billing Run" button.
+ *
  * Returns 404 in staging and production.
  *
  * If the cron's orchestration logic changes, update this endpoint to match it.
+ *
+ * Body params:
+ *   organizationId: string  — required
+ *   fastForward?: boolean   — if true, fast-forwards trialEndsAt and nextBillingDate to the past
+ *                             before running (use for orgs not created via the dev signup flow)
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentEnvironment } from "@/lib/env-domains";
-import { generateMonthlyInvoices, processInvoicePayment } from "@/lib/subscription-billing";
+import {
+  transitionExpiredTrials,
+  generateDueInvoices,
+  processInvoicePayment,
+} from "@/lib/subscription-billing";
 import { db } from "@/lib/db"; // tenant-isolation-ok: dev-only endpoint (404 in production/staging), operates on a specific org by ID for local billing test automation
 
 export const dynamic = "force-dynamic";
@@ -24,25 +35,41 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { organizationId } = body;
+  const { organizationId, fastForward = false } = body;
 
   if (!organizationId) {
     return NextResponse.json({ error: "organizationId is required" }, { status: 400 });
   }
 
   const subscription = await db.organizationSubscription.findFirst({
-    where: { organizationId, status: "TRIALING" },
+    where: { organizationId, status: { in: ["TRIALING", "ACTIVE"] } },
     include: { plan: true },
   });
 
   if (!subscription) {
     return NextResponse.json(
-      { error: "No TRIALING subscription found for this organization" },
+      { error: "No TRIALING or ACTIVE subscription found for this organization" },
       { status: 404 }
     );
   }
 
-  console.log("[dev/trigger-trial-billing] Starting billing test for org:", organizationId);
+  console.log("[dev/trigger-trial-billing] Starting billing test for org:", organizationId, {
+    fastForward,
+  });
+
+  // Fast-forward: set trialEndsAt and nextBillingDate to the past so the cron picks it up.
+  // Used by the superadmin "Test Billing Run" button on orgs not created via the dev signup flow.
+  if (fastForward && subscription.status === "TRIALING") {
+    const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+    await db.organizationSubscription.update({
+      where: { id: subscription.id },
+      data: {
+        trialEndsAt: oneMinuteAgo,
+        nextBillingDate: oneMinuteAgo,
+      },
+    });
+    console.log("[dev/trigger-trial-billing] Fast-forwarded trial dates to the past.");
+  }
 
   const paymentMethods = await db.organizationPaymentMethod.findMany({
     where: { organizationId, isActive: true },
@@ -69,11 +96,15 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Generate invoice scoped to this org only
-    const invoiceResult = await generateMonthlyInvoices({ organizationId });
+    // 1. Transition expired trials to ACTIVE
+    const trialResult = await transitionExpiredTrials({ organizationId });
+    console.log("[dev/trigger-trial-billing] Trial transition result:", trialResult);
+
+    // 2. Generate invoice scoped to this org only
+    const invoiceResult = await generateDueInvoices({ organizationId });
     console.log("[dev/trigger-trial-billing] Invoice generation result:", invoiceResult);
 
-    // Find the pending invoice for this org
+    // 3. Find the pending invoice for this org
     const pendingInvoice = await db.subscriptionInvoice.findFirst({
       where: { organizationId, status: "PENDING" },
       orderBy: { createdAt: "desc" },
@@ -87,9 +118,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
+          trialResult,
           invoiceResult,
           error:
-            "No pending invoice found after generation — it may have been skipped (already exists for this period or trial has not ended yet)",
+            "No pending invoice found after generation — it may have been skipped (already exists for this period, nextBillingDate is in the future, or trial has not ended yet)",
         },
         { status: 400 }
       );
@@ -103,7 +135,7 @@ export async function POST(request: NextRequest) {
     );
     await processInvoicePayment(pendingInvoice.id);
 
-    // Fetch the final state of the invoice + all payment attempts
+    // 4. Fetch the final state of the invoice + all payment attempts
     const finalInvoice = await db.subscriptionInvoice.findUnique({
       where: { id: pendingInvoice.id },
       include: {
@@ -165,6 +197,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: paid,
+      trialResult,
       invoice: {
         id: finalInvoice?.id,
         reference: finalInvoice?.reference,

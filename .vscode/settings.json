@@ -4,5 +4,16 @@
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit"
   },
-  "typescript.tsdk": "node_modules/typescript/lib"
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "sqltools.connections": [
+    {
+      "name": "leapfrog (local)",
+      "driver": "PostgreSQL",
+      "host": "localhost",
+      "port": 5434,
+      "database": "leapfrog",
+      "username": "postgres",
+      "password": "postgres"
+    }
+  ]
 }

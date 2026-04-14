@@ -3375,7 +3375,8 @@ model OrganizationSubscription {
   lockedAt     DateTime?
 
   // Trial
-  trialEndsAt DateTime?
+  trialEndsAt     DateTime?
+  nextBillingDate DateTime? // When the next invoice should be generated; advanced +1 month after each billing cycle
 
   // Cancellation
   cancelAtPeriodEnd Boolean   @default(false)

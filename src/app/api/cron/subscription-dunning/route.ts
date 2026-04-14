@@ -18,7 +18,7 @@ export const maxDuration = 300;
  * 3. Send warning emails to orgs approaching deactivation (30d, 7d, 1d)
  * 4. Deactivate orgs that have passed their grace period
  *
- * Schedule: Daily at noon UTC ("0 12 * * *")
+ * Schedule: Daily at 7pm UTC ("0 19 * * *")
  *
  * Trigger methods:
  * - Local: curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/subscription-dunning

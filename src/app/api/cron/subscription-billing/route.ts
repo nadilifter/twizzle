@@ -1,7 +1,12 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { generateMonthlyInvoices, processInvoicePayment } from "@/lib/subscription-billing";
+import {
+  transitionExpiredTrials,
+  generateDueInvoices,
+  processInvoicePayment,
+} from "@/lib/subscription-billing";
 import { db } from "@/lib/db";
+import * as Sentry from "@sentry/nextjs";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -11,7 +16,7 @@ export const maxDuration = 300;
  *
  * Generates invoices for all active paid subscriptions and processes payments.
  *
- * Schedule: 1st of each month at noon UTC ("0 12 1 * *")
+ * Schedule: Daily at 9am UTC ("0 9 * * *")
  *
  * Trigger methods:
  * - Local: curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/subscription-billing
@@ -51,7 +56,8 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const invoiceResult = await generateMonthlyInvoices();
+    const trialResult = await transitionExpiredTrials();
+    const invoiceResult = await generateDueInvoices();
 
     const pendingInvoices = await db.subscriptionInvoice.findMany({
       where: { status: "PENDING" },
@@ -78,18 +84,53 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const allErrors = [...trialResult.errors, ...invoiceResult.errors, ...paymentErrors];
+
+    const totalPaymentsAttempted = paid + failed;
+    const errorRate = totalPaymentsAttempted > 0 ? failed / totalPaymentsAttempted : 0;
+    const errorRatePct = Math.round(errorRate * 100);
+
+    const summary = {
+      trialsTransitioned: trialResult.transitioned,
+      invoicesGenerated: invoiceResult.generated,
+      invoicesSkipped: invoiceResult.skipped,
+      paymentsPaid: paid,
+      paymentsFailed: failed,
+      errorRatePct,
+    };
+
+    // Always log a daily summary to Sentry so we have a record of every run.
+    Sentry.captureMessage("Subscription billing cron completed", {
+      level: allErrors.length > 0 ? "warning" : "info",
+      extra: {
+        summary,
+        errors: allErrors,
+        timestamp: new Date().toISOString(),
+      },
+    });
+
+    // If payment failures exceed 0% of invoices attempted, fire a critical alert. To start, will just always fire if any fail
+    if (totalPaymentsAttempted > 0 && errorRate > 0) {
+      Sentry.captureMessage(
+        `CRITICAL: Subscription billing failure rate is ${errorRatePct}% — immediate action required`,
+        {
+          level: "fatal",
+          extra: {
+            summary,
+            errors: allErrors,
+            message:
+              "At least 1 of the subscription payments failed this billing run. " +
+              "Check Adyen, payment methods, and invoice logs immediately.",
+            timestamp: new Date().toISOString(),
+          },
+        }
+      );
+    }
+
     return NextResponse.json({
       success: true,
-      summary: {
-        invoicesGenerated: invoiceResult.generated,
-        invoicesSkipped: invoiceResult.skipped,
-        paymentsPaid: paid,
-        paymentsFailed: failed,
-      },
-      errors:
-        invoiceResult.errors.length > 0 || paymentErrors.length > 0
-          ? [...invoiceResult.errors, ...paymentErrors]
-          : undefined,
+      summary,
+      errors: allErrors.length > 0 ? allErrors : undefined,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {

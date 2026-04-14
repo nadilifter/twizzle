@@ -106,6 +106,9 @@ export async function POST(request: NextRequest) {
         lockedBy: validatedData.isLocked ? session.user.id : null,
         lockedAt: validatedData.isLocked ? now : null,
         trialEndsAt: validatedData.trialEndsAt ? new Date(validatedData.trialEndsAt) : null,
+        nextBillingDate: validatedData.trialEndsAt
+          ? new Date(validatedData.trialEndsAt)
+          : periodEnd,
       },
       include: {
         organization: {

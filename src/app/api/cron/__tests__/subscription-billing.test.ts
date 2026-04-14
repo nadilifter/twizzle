@@ -7,6 +7,8 @@ vi.hoisted(() => {
 });
 
 vi.mock("@/lib/subscription-billing", () => ({
+  transitionExpiredTrials: vi.fn(),
+  generateDueInvoices: vi.fn(),
   generateMonthlyInvoices: vi.fn(),
   processInvoicePayment: vi.fn(),
 }));
@@ -20,7 +22,11 @@ vi.mock("@/lib/rate-limit", () => ({
 }));
 
 import { GET, POST } from "../subscription-billing/route";
-import { generateMonthlyInvoices, processInvoicePayment } from "@/lib/subscription-billing";
+import {
+  transitionExpiredTrials,
+  generateDueInvoices,
+  processInvoicePayment,
+} from "@/lib/subscription-billing";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -57,11 +63,13 @@ describe("GET /api/cron/subscription-billing", () => {
 
     expect(res.status).toBe(200);
     expect(json.dryRun).toBe(true);
-    expect(generateMonthlyInvoices).not.toHaveBeenCalled();
+    expect(generateDueInvoices).not.toHaveBeenCalled();
+    expect(transitionExpiredTrials).not.toHaveBeenCalled();
   });
 
   it("generates invoices and processes payments", async () => {
-    vi.mocked(generateMonthlyInvoices).mockResolvedValueOnce({
+    vi.mocked(transitionExpiredTrials).mockResolvedValueOnce({ transitioned: 1, errors: [] });
+    vi.mocked(generateDueInvoices).mockResolvedValueOnce({
       generated: 5,
       skipped: 2,
       errors: [],
@@ -83,6 +91,7 @@ describe("GET /api/cron/subscription-billing", () => {
 
     expect(res.status).toBe(200);
     expect(json.success).toBe(true);
+    expect(json.summary.trialsTransitioned).toBe(1);
     expect(json.summary.invoicesGenerated).toBe(5);
     expect(json.summary.invoicesSkipped).toBe(2);
     expect(json.summary.paymentsPaid).toBe(1);
@@ -90,7 +99,8 @@ describe("GET /api/cron/subscription-billing", () => {
   });
 
   it("POST delegates to GET", async () => {
-    vi.mocked(generateMonthlyInvoices).mockResolvedValueOnce({
+    vi.mocked(transitionExpiredTrials).mockResolvedValueOnce({ transitioned: 0, errors: [] });
+    vi.mocked(generateDueInvoices).mockResolvedValueOnce({
       generated: 0,
       skipped: 0,
       errors: [],

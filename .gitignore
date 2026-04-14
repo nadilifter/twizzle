@@ -63,3 +63,6 @@ package-lock.json
 
 # plans
 /plans
+
+#ignore local db sessions
+*.session.sql

@@ -10,6 +10,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { getBaseDomainSuffix } from "@/lib/client-domains";
 import { formatCardBrand } from "@/lib/payment-utils";
+import { FREE_TRIAL_DAYS } from "@/lib/billing-config";
 import { formatPhoneNumberIntl } from "react-phone-number-input";
 import { DevTrialBillingTester } from "./dev-trial-billing-tester";
 
@@ -260,9 +261,9 @@ export default function ReviewPage() {
                     You won&apos;t be charged today
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Your 30-day free trial starts when you confirm. After your trial ends on{" "}
-                    <span className="font-medium text-foreground">{formattedTrialEnd}</span>,
-                    you&apos;ll be billed ${monthlyPrice.toFixed(2)}/month.
+                    Your {FREE_TRIAL_DAYS}-day free trial starts when you confirm. After your trial
+                    ends on <span className="font-medium text-foreground">{formattedTrialEnd}</span>
+                    , you&apos;ll be billed ${monthlyPrice.toFixed(2)}/month.
                   </p>
                 </div>
                 <Separator />
@@ -310,7 +311,7 @@ export default function ReviewPage() {
       {isPaidPlan && (
         <p className="text-xs text-center text-muted-foreground mt-3">
           By creating your organization, you agree to be billed ${monthlyPrice.toFixed(2)}/month
-          after your 30-day trial ends on {formattedTrialEnd}.
+          after your {FREE_TRIAL_DAYS}-day trial ends on {formattedTrialEnd}.
         </p>
       )}
     </div>

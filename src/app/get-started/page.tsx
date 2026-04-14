@@ -42,6 +42,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getBaseDomainSuffix } from "@/lib/client-domains";
+import { FREE_TRIAL_DAYS } from "@/lib/billing-config";
 
 interface SubscriptionPlan {
   id: string;
@@ -289,7 +290,8 @@ export default function SignupPage() {
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-2">Create Your Organization</h1>
           <p className="text-muted-foreground">
-            Get started with Uplifter in just a few minutes. All plans include a 30-day free trial.
+            Get started with Uplifter in just a few minutes. All plans include a {FREE_TRIAL_DAYS}
+            -day free trial.
           </p>
         </div>
 
@@ -568,7 +570,7 @@ export default function SignupPage() {
                   <CardTitle>Choose Your Plan</CardTitle>
                 </div>
                 <CardDescription>
-                  All plans include a 30-day free trial. No credit card required.
+                  All plans include a {FREE_TRIAL_DAYS}-day free trial. No credit card required.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -630,7 +632,7 @@ export default function SignupPage() {
                         </div>
 
                         <Badge variant="secondary" className="mb-3">
-                          Free for 30 days
+                          Free for {FREE_TRIAL_DAYS} days
                         </Badge>
 
                         {/* Limits grid */}

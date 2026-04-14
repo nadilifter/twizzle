@@ -4,6 +4,8 @@ import { sendTemplatedEmail } from "@/lib/email";
 import { logger } from "@/lib/logger";
 import { registerAllowedOrigin, removeAllowedOrigin } from "@/lib/adyen-platform";
 import { Prisma } from "@prisma/client";
+import { GRACE_PERIOD_DAYS } from "@/lib/billing-config";
+import * as Sentry from "@sentry/nextjs";
 
 /**
  * Build a noon-UTC Date for a given year/month/day.
@@ -11,6 +13,38 @@ import { Prisma } from "@prisma/client";
  */
 function noonUTC(year: number, month: number, day: number): Date {
   return new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
+}
+
+/**
+ * Return a new Date advanced by exactly one calendar month (UTC).
+ */
+function addOneMonth(date: Date): Date {
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth();
+  const day = date.getUTCDate();
+
+  // Get last day of next month
+  const lastDayNextMonth = new Date(Date.UTC(year, month + 2, 0)).getUTCDate();
+
+  // Clamp the day
+  const newDay = Math.min(day, lastDayNextMonth);
+
+  return new Date(Date.UTC(year, month + 1, newDay));
+}
+
+/**
+ * Return a new Date advanced by exactly one calendar year (UTC).
+ */
+function addOneYear(date: Date): Date {
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth();
+  const day = date.getUTCDate();
+
+  // Get last day of same month next year (handles Feb 29 → Feb 28)
+  const lastDayOfMonth = new Date(Date.UTC(year + 1, month + 1, 0)).getUTCDate();
+  const newDay = Math.min(day, lastDayOfMonth);
+
+  return new Date(Date.UTC(year + 1, month, newDay));
 }
 
 /**
@@ -40,27 +74,69 @@ function isPaymentMethodExpired(pm: {
 }
 
 /**
- * Generate subscription invoices for the current month.
- * Should be called on the 1st of each month at noon UTC.
- *
- * Idempotent: skips orgs that already have an invoice for this period.
+ * Transition TRIALING subscriptions whose trial has ended to ACTIVE.
+ * Must be called before generateDueInvoices so expired trials are picked up
+ * in the same cron run.
  */
-export async function generateMonthlyInvoices(options?: { organizationId?: string }): Promise<{
+export async function transitionExpiredTrials(options?: { organizationId?: string }): Promise<{
+  transitioned: number;
+  errors: string[];
+}> {
+  const now = new Date();
+
+  const expiredTrials = await db.organizationSubscription.findMany({
+    where: {
+      status: "TRIALING",
+      trialEndsAt: { lte: now },
+      organization: { isActive: true },
+      ...(options?.organizationId ? { organizationId: options.organizationId } : {}),
+    },
+    select: { id: true, organizationId: true },
+  });
+
+  let transitioned = 0;
+  const errors: string[] = [];
+
+  for (const sub of expiredTrials) {
+    try {
+      await db.organizationSubscription.update({
+        where: { id: sub.id },
+        data: { status: "ACTIVE" },
+      });
+      transitioned++;
+      logger.info("Trial expired — transitioned subscription to ACTIVE", {
+        subscriptionId: sub.id,
+        organizationId: sub.organizationId,
+      });
+    } catch (err) {
+      const msg = `Failed to transition trial for sub ${sub.id}: ${err instanceof Error ? err.message : String(err)}`;
+      logger.error(msg);
+      errors.push(msg);
+    }
+  }
+
+  return { transitioned, errors };
+}
+
+/**
+ * Generate invoices for all subscriptions whose nextBillingDate is due.
+ * Runs daily; each subscription is billed on its own anniversary date rather
+ * than on the 1st of the calendar month.
+ *
+ * Idempotent: skips orgs that already have an invoice for this periodStart.
+ * Atomically advances nextBillingDate by +1 month (MONTHLY) or +1 year (YEARLY) on each invoice created.
+ */
+export async function generateDueInvoices(options?: { organizationId?: string }): Promise<{
   generated: number;
   skipped: number;
   errors: string[];
 }> {
   const now = new Date();
-  const year = now.getUTCFullYear();
-  const month = now.getUTCMonth() + 1; // 1-indexed
-
-  const periodStart = noonUTC(year, month, 1);
-  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  const periodEnd = noonUTC(year, month, lastDay);
 
   const subscriptions = await db.organizationSubscription.findMany({
     where: {
-      status: { in: ["ACTIVE", "TRIALING"] },
+      status: "ACTIVE",
+      nextBillingDate: { lte: now, not: null },
       organization: { isActive: true },
       ...(options?.organizationId ? { organizationId: options.organizationId } : {}),
     },
@@ -76,28 +152,45 @@ export async function generateMonthlyInvoices(options?: { organizationId?: strin
 
   for (const sub of subscriptions) {
     try {
-      const price =
-        sub.billingCycle === "YEARLY"
-          ? (sub.plan.yearlyPrice ?? sub.plan.monthlyPrice)
-          : sub.plan.monthlyPrice;
-      const amount = sub.billingCycle === "YEARLY" ? Number(price) / 12 : Number(price);
+      const price = sub.billingCycle === "YEARLY" ? sub.plan.yearlyPrice : sub.plan.monthlyPrice;
+
+      if (price == null) {
+        const priceField = sub.billingCycle === "YEARLY" ? "yearlyPrice" : "monthlyPrice";
+        const msg = `Subscription ${sub.id} (org ${sub.organizationId}) has ${sub.billingCycle} billingCycle but plan ${sub.planId} has no ${priceField} — skipping`;
+        logger.error(msg);
+        Sentry.captureMessage(
+          `${sub.billingCycle} subscription missing ${priceField} — invoice skipped`,
+          {
+            level: "error",
+            extra: {
+              subscriptionId: sub.id,
+              organizationId: sub.organizationId,
+              planId: sub.planId,
+            },
+          }
+        );
+        errors.push(msg);
+        continue;
+      }
+
+      const amount = Number(price);
 
       if (amount <= 0) {
+        logger.warn("Subscription invoice skipped: amount is zero or negative", {
+          subscriptionId: sub.id,
+          organizationId: sub.organizationId,
+          planId: sub.planId,
+          billingCycle: sub.billingCycle,
+          amount,
+        });
         skipped++;
         continue;
       }
 
-      // Don't bill if trial hasn't ended yet
-      if (sub.trialEndsAt && sub.trialEndsAt > now) {
-        skipped++;
-        continue;
-      }
+      const periodStart = sub.nextBillingDate!;
 
       const existing = await db.subscriptionInvoice.findFirst({
-        where: {
-          organizationId: sub.organizationId,
-          periodStart,
-        },
+        where: { organizationId: sub.organizationId, periodStart },
       });
 
       if (existing) {
@@ -105,8 +198,16 @@ export async function generateMonthlyInvoices(options?: { organizationId?: strin
         continue;
       }
 
+      const nextBillingDate =
+        sub.billingCycle === "YEARLY" ? addOneYear(periodStart) : addOneMonth(periodStart);
+      const periodEnd = nextBillingDate;
+
+      const year = periodStart.getUTCFullYear();
+      const month = periodStart.getUTCMonth() + 1;
       const monthStr = String(month).padStart(2, "0");
-      const reference = `SUB-INV-${year}-${monthStr}-${sub.organization.slug}`;
+      const day = String(periodStart.getUTCDate()).padStart(2, "0");
+      const cycle = sub.billingCycle.toLowerCase();
+      const reference = `SUB-INV-${year}-${monthStr}-${day}-${cycle}-${sub.organization.slug}`;
 
       // Check for unused referral credits before creating the invoice.
       // Uses raw SQL because Prisma can't compare two columns in a where clause.
@@ -148,6 +249,11 @@ export async function generateMonthlyInvoices(options?: { organizationId?: strin
             where: { id: referralCredit.id },
             data: { creditMonthsUsed: { increment: 1 } },
           });
+
+          await tx.organizationSubscription.update({
+            where: { id: sub.id },
+            data: { nextBillingDate },
+          });
         });
 
         logger.info("Referral credit applied to subscription invoice", {
@@ -160,18 +266,24 @@ export async function generateMonthlyInvoices(options?: { organizationId?: strin
         continue;
       }
 
-      await db.subscriptionInvoice.create({
-        data: {
-          organizationId: sub.organizationId,
-          planId: sub.planId,
-          reference,
-          periodStart,
-          periodEnd,
-          amount,
-          currency: "USD",
-          status: "PENDING",
-        },
-      });
+      await db.$transaction([
+        db.subscriptionInvoice.create({
+          data: {
+            organizationId: sub.organizationId,
+            planId: sub.planId,
+            reference,
+            periodStart,
+            periodEnd,
+            amount,
+            currency: "USD",
+            status: "PENDING",
+          },
+        }),
+        db.organizationSubscription.update({
+          where: { id: sub.id },
+          data: { nextBillingDate },
+        }),
+      ]);
 
       generated++;
     } catch (err) {
@@ -182,6 +294,11 @@ export async function generateMonthlyInvoices(options?: { organizationId?: strin
   }
 
   return { generated, skipped, errors };
+}
+
+/** @deprecated Use generateDueInvoices instead. */
+export async function generateMonthlyInvoices(options?: { organizationId?: string }) {
+  return generateDueInvoices(options);
 }
 
 /**
@@ -363,7 +480,7 @@ async function handleAllPaymentsFailed(invoiceId: string, organizationId: string
   const deactivationDate = noonUTC(
     now.getUTCFullYear(),
     now.getUTCMonth() + 1,
-    now.getUTCDate() + 30
+    now.getUTCDate() + GRACE_PERIOD_DAYS
   );
 
   await db.organization.update({
@@ -581,7 +698,7 @@ export async function deactivateExpiredOrgs(): Promise<{
             deactivatedAt: new Date(),
             deactivatedBy: "system",
             deactivationReason: "Non-payment",
-            deactivationNotes: "Automatically deactivated after 30-day grace period expired",
+            deactivationNotes: `Automatically deactivated after ${GRACE_PERIOD_DAYS}-day grace period expired`,
           },
         });
 
@@ -597,8 +714,7 @@ export async function deactivateExpiredOrgs(): Promise<{
             organizationId: org.id,
             action: "DEACTIVATED",
             reason: "Non-payment",
-            notes:
-              "Automatic deactivation: all payment methods failed and 30-day grace period expired",
+            notes: `Automatic deactivation: all payment methods failed and ${GRACE_PERIOD_DAYS}-day grace period expired`,
           },
         });
       });
@@ -633,33 +749,93 @@ export async function recoverAndRetryStaleInvoices(): Promise<{
   recovered: number;
   retried: number;
   retriedPaid: number;
+  criticallyStuck: number;
   errors: string[];
 }> {
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const errors: string[] = [];
 
-  // 1. Reset PROCESSING invoices that have been stuck for over an hour
+  // 1. Invoices stuck in PROCESSING for >24h — Adyen's idempotency window has expired.
+  //    Retrying with the same reference could result in a double-charge.
+  //    Do NOT retry — alert and leave for manual review.
+  const criticallyStuck = await db.subscriptionInvoice.findMany({
+    where: {
+      status: "PROCESSING",
+      updatedAt: { lt: twentyFourHoursAgo },
+    },
+    select: { id: true, reference: true, organizationId: true },
+  });
+
+  for (const inv of criticallyStuck) {
+    logger.error("Invoice stuck in PROCESSING >24h — manual review required", {
+      invoiceId: inv.id,
+      reference: inv.reference,
+    });
+    Sentry.captureMessage(
+      `CRITICAL: Invoice ${inv.reference} stuck in PROCESSING >24h — do not retry`,
+      {
+        level: "fatal",
+        extra: {
+          invoiceId: inv.id,
+          reference: inv.reference,
+          organizationId: inv.organizationId,
+          message:
+            "Adyen's 24h idempotency window has expired. Retrying could double-charge the customer. " +
+            "Manually verify in Adyen whether this payment was processed before taking any action.",
+        },
+      }
+    );
+  }
+
+  // 2. Invoices stuck in PROCESSING for <24h — Adyen idempotency is still active.
+  //    Before resetting to PENDING, check if a SUCCESS payment attempt already exists.
+  //    If it does, Adyen charged successfully but the invoice update failed — mark PAID
+  //    directly without retrying to prevent a double-charge.
+  //    If no SUCCESS attempt exists, reset to PENDING and retry normally.
   const stuckProcessing = await db.subscriptionInvoice.findMany({
     where: {
       status: "PROCESSING",
-      updatedAt: { lt: oneHourAgo },
+      updatedAt: { lt: new Date(), gte: twentyFourHoursAgo },
     },
-    select: { id: true, reference: true },
+    select: { id: true, reference: true, organizationId: true },
   });
 
   for (const inv of stuckProcessing) {
     try {
-      await db.subscriptionInvoice.update({
-        where: { id: inv.id },
-        data: { status: "PENDING" },
+      const successAttempt = await db.subscriptionPaymentAttempt.findFirst({
+        where: { subscriptionInvoiceId: inv.id, status: "SUCCESS" },
+        select: { id: true, pspReference: true },
       });
-      logger.warn("Reset stuck PROCESSING invoice to PENDING", {
-        invoiceId: inv.id,
-        reference: inv.reference,
-      });
+
+      if (successAttempt) {
+        // Adyen already charged — finish what the payment flow started.
+        await db.subscriptionInvoice.update({
+          where: { id: inv.id },
+          data: { status: "PAID", paidAt: new Date() },
+        });
+        await clearGracePeriod(inv.organizationId);
+        logger.warn(
+          "Recovered stuck PROCESSING invoice: SUCCESS attempt found, marked PAID without retry",
+          {
+            invoiceId: inv.id,
+            reference: inv.reference,
+            pspReference: successAttempt.pspReference,
+          }
+        );
+      } else {
+        // No successful charge on record — safe to reset to PENDING for retry.
+        await db.subscriptionInvoice.update({
+          where: { id: inv.id },
+          data: { status: "PENDING" },
+        });
+        logger.warn("Reset stuck PROCESSING invoice to PENDING for retry", {
+          invoiceId: inv.id,
+          reference: inv.reference,
+        });
+      }
     } catch (err) {
       errors.push(
-        `Failed to reset stuck invoice ${inv.id}: ${err instanceof Error ? err.message : String(err)}`
+        `Failed to recover stuck invoice ${inv.id}: ${err instanceof Error ? err.message : String(err)}`
       );
     }
   }
@@ -688,6 +864,7 @@ export async function recoverAndRetryStaleInvoices(): Promise<{
     retried: pendingInvoices.length,
     retriedPaid,
     errors,
+    criticallyStuck: criticallyStuck.length,
   };
 }
 

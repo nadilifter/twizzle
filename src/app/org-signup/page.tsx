@@ -57,6 +57,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getBaseDomainSuffix, getClientSubdomainUrl } from "@/lib/client-domains";
+import { FREE_TRIAL_DAYS } from "@/lib/billing-config";
 import { PlansComparisonDialog } from "./plans-comparison-dialog";
 import {
   defineStepper,
@@ -1308,7 +1309,7 @@ export default function SignupPage() {
                   </div>
                   <CardDescription>
                     {plans.find((p) => p.id === selectedPlan && Number(p.monthlyPrice) > 0)
-                      ? "All paid plans include a 30-day free trial. Credit card required."
+                      ? `All paid plans include a ${FREE_TRIAL_DAYS}-day free trial. Credit card required.`
                       : "No credit card required. Get started instantly."}
                   </CardDescription>
                 </CardHeader>
@@ -1377,7 +1378,7 @@ export default function SignupPage() {
 
                             {Number(plan.monthlyPrice) > 0 && (
                               <Badge variant="secondary" className="mb-3">
-                                Free for 30 days
+                                Free for {FREE_TRIAL_DAYS} days
                               </Badge>
                             )}
 

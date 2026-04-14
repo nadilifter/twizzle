@@ -45,6 +45,7 @@ describe("generateMonthlyInvoices", () => {
         organizationId: "org-1",
         planId: "plan-1",
         billingCycle: "MONTHLY",
+        nextBillingDate: new Date(Date.now() - 1000),
         plan: { monthlyPrice: 49.99, yearlyPrice: 499.99 },
         organization: { id: "org-1", slug: "acme" },
       },
@@ -53,6 +54,10 @@ describe("generateMonthlyInvoices", () => {
     vi.mocked(db.subscriptionInvoice.findFirst).mockResolvedValueOnce(null);
     vi.mocked(db.$queryRaw).mockResolvedValueOnce([]);
     vi.mocked(db.subscriptionInvoice.create).mockResolvedValueOnce({} as never);
+    vi.mocked(db.organizationSubscription.update).mockResolvedValueOnce({} as never);
+    vi.mocked(db.$transaction).mockImplementationOnce((ops: Promise<unknown>[]) =>
+      Promise.all(ops)
+    );
 
     const result = await generateMonthlyInvoices();
 
@@ -119,6 +124,7 @@ describe("generateMonthlyInvoices", () => {
         organizationId: "org-1",
         planId: "plan-1",
         billingCycle: "MONTHLY",
+        nextBillingDate: new Date(Date.now() - 1000),
         plan: { monthlyPrice: 49.99, yearlyPrice: 499.99 },
         organization: { id: "org-1", slug: "acme" },
       },
@@ -138,6 +144,7 @@ describe("generateMonthlyInvoices", () => {
     });
     vi.mocked(db.subscriptionInvoice.create).mockResolvedValueOnce({} as never);
     vi.mocked(db.referral.update).mockResolvedValueOnce({} as never);
+    vi.mocked(db.organizationSubscription.update).mockResolvedValueOnce({} as never);
 
     const result = await generateMonthlyInvoices();
 
@@ -163,13 +170,14 @@ describe("generateMonthlyInvoices", () => {
     );
   });
 
-  it("divides yearly price by 12 for yearly billing cycle", async () => {
+  it("charges full yearly price for YEARLY billing cycle", async () => {
     vi.mocked(db.organizationSubscription.findMany).mockResolvedValueOnce([
       {
         id: "sub-1",
         organizationId: "org-1",
         planId: "plan-1",
         billingCycle: "YEARLY",
+        nextBillingDate: new Date(Date.now() - 1000),
         plan: { monthlyPrice: 49.99, yearlyPrice: 480 },
         organization: { id: "org-1", slug: "acme" },
       },
@@ -178,12 +186,16 @@ describe("generateMonthlyInvoices", () => {
     vi.mocked(db.subscriptionInvoice.findFirst).mockResolvedValueOnce(null);
     vi.mocked(db.$queryRaw).mockResolvedValueOnce([]);
     vi.mocked(db.subscriptionInvoice.create).mockResolvedValueOnce({} as never);
+    vi.mocked(db.organizationSubscription.update).mockResolvedValueOnce({} as never);
+    vi.mocked(db.$transaction).mockImplementationOnce((ops: Promise<unknown>[]) =>
+      Promise.all(ops)
+    );
 
     await generateMonthlyInvoices();
 
     expect(db.subscriptionInvoice.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ amount: 40 }),
+        data: expect.objectContaining({ amount: 480 }),
       })
     );
   });
@@ -441,9 +453,11 @@ describe("deactivateExpiredOrgs", () => {
       },
     ] as never);
 
-    vi.mocked(db.$transaction).mockImplementation(async (fn) => {
-      await (fn as CallableFunction)(db);
-    });
+    vi.mocked(db.$transaction).mockImplementation(
+      async (fn: (tx: typeof db) => Promise<unknown>) => {
+        await (fn as CallableFunction)(db);
+      }
+    );
     vi.mocked(db.organization.update).mockResolvedValue({} as never);
     vi.mocked(db.organizationSubscription.update).mockResolvedValue({} as never);
     vi.mocked(db.organizationStatusLog.create).mockResolvedValue({} as never);
@@ -471,14 +485,24 @@ describe("deactivateExpiredOrgs", () => {
 
 describe("recoverAndRetryStaleInvoices", () => {
   it("resets stuck PROCESSING invoices to PENDING", async () => {
+    // criticallyStuck (>24h) — none
     vi.mocked(db.subscriptionInvoice.findMany)
-      .mockResolvedValueOnce([{ id: "stuck-1", reference: "ref-1" }] as never)
+      .mockResolvedValueOnce([] as never)
+      // stuckProcessing (<24h) — one stuck invoice
+      .mockResolvedValueOnce([
+        { id: "stuck-1", reference: "ref-1", organizationId: "org-1" },
+      ] as never)
+      // pendingInvoices for retry — none
       .mockResolvedValueOnce([] as never);
+
+    // No SUCCESS attempt found — should reset to PENDING
+    vi.mocked(db.subscriptionPaymentAttempt.findFirst).mockResolvedValueOnce(null);
     vi.mocked(db.subscriptionInvoice.update).mockResolvedValueOnce({} as never);
 
     const result = await recoverAndRetryStaleInvoices();
 
     expect(result.recovered).toBe(1);
+    expect(result.criticallyStuck).toBe(0);
     expect(db.subscriptionInvoice.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: "stuck-1" },

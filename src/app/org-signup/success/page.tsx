@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getBaseDomainFromHostname } from "@/lib/client-domains";
 import { MARKETING_DOCS_URL, MARKETING_CONTACT_URL } from "@/lib/env-domains";
+import { FREE_TRIAL_DAYS } from "@/lib/billing-config";
 
 function SuccessContent() {
   const searchParams = useSearchParams();
@@ -78,7 +79,9 @@ function SuccessContent() {
         created.
       </p>
       <p className="text-sm text-muted-foreground mb-8">
-        {isFreePlan ? "Your free plan is active." : "Your 30-day free trial has started."}
+        {isFreePlan
+          ? "Your free plan is active."
+          : `Your ${FREE_TRIAL_DAYS}-day free trial has started.`}
       </p>
 
       {/* Next Steps */}
