@@ -2,15 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
-import {
-  CheckCircle2,
-  ArrowRight,
-  ChevronRight,
-  Users,
-  Calendar,
-  Globe,
-  CreditCard,
-} from "lucide-react";
+import { CheckCircle2, ArrowRight, ChevronRight, Users, Calendar, CreditCard } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,10 +24,6 @@ function SuccessContent() {
 
   const { baseDomain, protocol } = getBaseDomainFromHostname();
   const adminBase = `${protocol}://admin.${baseDomain}`;
-  const adminUrl = orgId
-    ? `${adminBase}/dashboard/switch-org?orgId=${encodeURIComponent(orgId)}&orgName=${encodeURIComponent(orgName)}`
-    : adminBase;
-
   const actionItemsUrl = orgId
     ? `${adminBase}/dashboard/switch-org?orgId=${encodeURIComponent(orgId)}&orgName=${encodeURIComponent(orgName)}&redirect=/dashboard/action-items`
     : `${adminBase}/dashboard/action-items`;
@@ -52,19 +40,15 @@ function SuccessContent() {
       icon: Users,
       title: "Invite team members",
       description: "Add coaches, staff, and other administrators",
-      url: `${adminUrl}/organization/staff`,
+      url: orgId
+        ? `${adminBase}/dashboard/switch-org?orgId=${encodeURIComponent(orgId)}&orgName=${encodeURIComponent(orgName)}&redirect=/dashboard/organization/staff`
+        : `${adminBase}/dashboard/organization/staff`,
     },
     {
       icon: Calendar,
-      title: "Create events and programs",
-      description: "Set up your schedule and registration options",
-      url: `${adminBase}/events`,
-    },
-    {
-      icon: Globe,
-      title: "Customize your website",
-      description: "Update your public site with content and branding",
-      url: `${adminBase}/organization/website`,
+      title: "Create programs",
+      description: "Manage your registration programs and enrollment options",
+      url: `${adminBase}/dashboard/registrations/programs`,
     },
   ];
 
@@ -101,6 +85,8 @@ function SuccessContent() {
               <li key={index}>
                 <a
                   href={step.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className={`flex items-center gap-3 rounded-lg p-3 -mx-3 transition-colors group ${"highlight" in step && step.highlight ? "bg-yellow-50 dark:bg-yellow-900/10 hover:bg-yellow-100/70 dark:hover:bg-yellow-900/20" : "hover:bg-muted/50"}`}
                 >
                   <div
@@ -126,7 +112,7 @@ function SuccessContent() {
       <div className="flex justify-center">
         <Button size="lg" asChild>
           <a href={actionItemsUrl}>
-            Complete Action Items
+            Go To Dashboard
             <ArrowRight className="ml-2 h-4 w-4" />
           </a>
         </Button>
