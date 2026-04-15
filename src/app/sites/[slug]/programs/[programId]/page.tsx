@@ -1,52 +1,37 @@
 import { unstable_cache } from "next/cache";
-import { db } from "@/lib/db";
+import { getScopedDb } from "@/lib/db";
 import { getCacheVersion } from "@/lib/cache-version";
 import { notFound } from "next/navigation";
-import { format } from "date-fns";
-import Link from "next/link";
-import { sanitizeHtml } from "@/lib/sanitize";
+import { ProgramProfile, type ProgramProfileData } from "@/components/sites/program-profile";
 import {
-  ArrowLeft,
-  Calendar,
-  CalendarClock,
-  Clock,
-  MapPin,
-  Repeat,
-  Users,
-  UserCheck,
-  DollarSign,
-  ClipboardList,
-  Ban,
-  ListEnd,
-  Hourglass,
-  CircleCheck,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ProgramRegistrationFlow } from "@/components/sites/program-registration-flow";
-import type { FileRequirementConfig } from "@/types/file-requirements";
-import { formatRRuleDays } from "@/lib/rrule-utils";
-import { getHeroContrastStyles } from "@/lib/color-utils";
-import { getRegistrationStatus } from "@/lib/registration-utils";
+  getCachedSiteConfig,
+  getEnrollmentCounts,
+  getInstanceRegistrationCounts,
+  resolveRegistrationAccess,
+  serializeInstances,
+} from "./shared";
 
-const getCachedProgramConfig = unstable_cache(
-  async (subdomain: string) => {
-    return db.websiteConfig.findUnique({
-      where: { subdomain },
-      select: { organizationId: true, primaryColor: true },
-    });
-  },
-  ["site-config-program"],
-  { revalidate: 30 }
-);
-
+/**
+ * Profile-specific program query: includes full facility (lat/lng for map),
+ * all staff roles (up to 10), waiver titles, but NOT passes or gender
+ * restrictions on membership groups (those are only needed by the register page).
+ */
 const getCachedProgramDetail = unstable_cache(
   async (programId: string, organizationId: string, _version: number) => {
-    const program = await db.program.findFirst({
-      where: { id: programId, organizationId, status: "ACTIVE" },
+    const scopedDb = getScopedDb(organizationId);
+    const program = await scopedDb.program.findFirst({
+      where: { id: programId, status: "ACTIVE" },
       include: {
         facility: {
-          select: { id: true, name: true, city: true, stateProvince: true },
+          select: {
+            id: true,
+            name: true,
+            city: true,
+            stateProvince: true,
+            street: true,
+            latitude: true,
+            longitude: true,
+          },
         },
         bulkDiscounts: true,
         levelRequirements: {
@@ -55,7 +40,7 @@ const getCachedProgramDetail = unstable_cache(
           },
         },
         staffAssignments: {
-          where: { role: { in: ["LEAD_COACH", "ASSISTANT_COACH"] } },
+          where: { role: { in: ["LEAD_COACH", "ASSISTANT_COACH", "SUBSTITUTE", "VOLUNTEER"] } },
           include: {
             member: {
               include: {
@@ -64,30 +49,19 @@ const getCachedProgramDetail = unstable_cache(
             },
           },
           orderBy: [{ isPrimary: "desc" }, { role: "asc" }],
-          take: 5,
+          take: 10,
         },
         requiredMemberships: {
           include: {
             group: {
-              select: { id: true, name: true, hasGenderRestriction: true, allowedGenders: true },
+              select: { id: true, name: true },
             },
           },
         },
-        requiredPasses: {
-          where: { status: "ACTIVE" },
-          select: {
-            id: true,
-            name: true,
-            price: true,
-            billingInterval: true,
-            sessionLimit: true,
-            limitPeriod: true,
-            hasGenderRestriction: true,
-            allowedGenders: true,
-          },
-        },
         waiverRequirements: {
-          select: { id: true, waiverId: true },
+          include: {
+            waiver: { select: { id: true, title: true } },
+          },
         },
         category: {
           select: { id: true, name: true },
@@ -96,29 +70,17 @@ const getCachedProgramDetail = unstable_cache(
           where: { date: { gte: new Date() }, status: "SCHEDULED" },
           include: {
             facility: { select: { id: true, name: true, city: true } },
-            _count: { select: { registrations: true } },
           },
           orderBy: { date: "asc" },
-          take: 50,
+          take: 100,
         },
         _count: {
-          select: {
-            instances: true,
-            enrollments: { where: { status: { not: "WAITLISTED" } } },
-          },
+          select: { instances: true },
         },
       },
     });
 
-    if (!program) return null;
-
-    const waitlistedCount = program.waitlistEnabled
-      ? await db.enrollment.count({
-          where: { programId: program.id, status: "WAITLISTED" },
-        })
-      : 0;
-
-    return { program, waitlistedCount };
+    return program;
   },
   ["site-program-detail"],
   { revalidate: 3600 }
@@ -135,393 +97,111 @@ export default async function ProgramDetailPage({
   const programId = params.programId;
   const earlyAccessCode = searchParams.code || null;
 
-  const config = await getCachedProgramConfig(subdomain);
-
+  const config = await getCachedSiteConfig(subdomain);
   if (!config) return notFound();
 
   const programsVersion = await getCacheVersion(config.organizationId, "programs");
-  const result = await getCachedProgramDetail(programId, config.organizationId, programsVersion);
+  const program = await getCachedProgramDetail(programId, config.organizationId, programsVersion);
+  if (!program) return notFound();
 
-  if (!result) return notFound();
-
-  const { program, waitlistedCount } = result;
-
-  const isPerInstance = program.registrationType === "PER_INSTANCE";
   const primaryColor = config.primaryColor || "#000000";
+  const [{ enrolled, waitlistedCount }, instanceCounts] = await Promise.all([
+    getEnrollmentCounts(program.id, program.waitlistEnabled),
+    getInstanceRegistrationCounts(program.instances.map((i) => i.id)),
+  ]);
+  const { registrationStatus, hasValidEarlyAccess, canRegister } = resolveRegistrationAccess(
+    program,
+    earlyAccessCode
+  );
 
-  const totalCapacity = program.capacity || 0;
-  const enrolled = program._count.enrollments || 0;
-  const spotsAvailable = totalCapacity > 0 ? Math.max(0, totalCapacity - enrolled) : null;
-  const isFull = program.hasCapacityRestriction && spotsAvailable === 0;
-  const waitlistHasRoom =
-    program.waitlistEnabled &&
-    (program.waitlistCapacity == null || waitlistedCount < program.waitlistCapacity);
-  const canJoinWaitlist = isFull && waitlistHasRoom;
-
-  const registrationStatus = getRegistrationStatus(program);
-
-  const hasValidEarlyAccess =
-    earlyAccessCode !== null &&
-    program.earlyAccessCode !== null &&
-    earlyAccessCode === program.earlyAccessCode;
-  const canRegister = registrationStatus === "open" || hasValidEarlyAccess;
-
-  const hasAge = program.hasAgeRestriction && (program.minAge !== null || program.maxAge !== null);
-  const ageLabel = hasAge
-    ? program.minAge && program.maxAge
-      ? `Ages ${program.minAge}–${program.maxAge}`
-      : program.minAge
-        ? `Ages ${program.minAge}+`
-        : `Up to age ${program.maxAge}`
-    : null;
-
-  const GENDER_LABELS: Record<string, string> = {
-    MALE: "Male",
-    FEMALE: "Female",
-    OTHER: "Other",
-    PREFER_NOT_TO_SAY: "Prefer Not to Say",
-  };
-
-  const genderLabel =
-    program.hasGenderRestriction && program.allowedGenders.length > 0
-      ? program.allowedGenders.map((g) => GENDER_LABELS[g] || g).join(", ")
-      : null;
-
-  const daysLabel = program.rrule ? formatRRuleDays(program.rrule) : null;
-
-  const locationLabel = program.facility
-    ? `${program.facility.name}${program.facility.city ? `, ${program.facility.city}` : ""}`
-    : null;
-
-  const isRecurringProgram =
-    program.billingInterval !== "ONE_TIME" &&
-    program.billingInterval !== "SESSION" &&
-    program.recurringPrice;
-  const priceDisplay = isRecurringProgram
-    ? `$${Number(program.recurringPrice).toFixed(2)}`
-    : program.basePrice || program.perSessionPrice
-      ? `$${Number(program.basePrice || program.perSessionPrice).toFixed(2)}`
-      : "FREE";
-  const pricePeriod = isRecurringProgram
-    ? program.billingInterval === "MONTHLY"
-      ? " / month"
-      : " / year"
-    : program.pricingModel === "PER_SESSION"
-      ? " / session"
-      : "";
-
-  const serializedProgramForFlow = {
+  const profileData: ProgramProfileData = {
     id: program.id,
     name: program.name,
     description: program.description,
+    registrationType: program.registrationType,
     pricingModel: program.pricingModel,
     basePrice: program.basePrice ? Number(program.basePrice) : null,
     perSessionPrice: program.perSessionPrice ? Number(program.perSessionPrice) : null,
     billingInterval: program.billingInterval,
     recurringPrice: program.recurringPrice ? Number(program.recurringPrice) : null,
-    registrationType: program.registrationType,
+    startDate: program.startDate ? new Date(program.startDate).toISOString() : null,
+    endDate: program.endDate ? new Date(program.endDate).toISOString() : null,
+    rrule: program.rrule,
+    startTime: program.startTime,
+    duration: program.duration,
+    capacity: program.capacity,
+    hasCapacityRestriction: program.hasCapacityRestriction,
     hasAgeRestriction: program.hasAgeRestriction,
     minAge: program.minAge,
     maxAge: program.maxAge,
     hasGenderRestriction: program.hasGenderRestriction,
     allowedGenders: program.allowedGenders,
-    hasWaiverRestriction: program.hasWaiverRestriction,
-    hasMedicalRequirement: program.hasMedicalRequirement,
-    hasFileRequirement: program.hasFileRequirement,
-    fileRequirementConfig: program.fileRequirementConfig as FileRequirementConfig | null,
-    hasMembershipRestriction: program.hasMembershipRestriction,
-    organizationId: config.organizationId,
-    capacity: program.capacity,
-    hasCapacityRestriction: program.hasCapacityRestriction,
+    showCoachOnSite: program.showCoachOnSite,
     waitlistEnabled: program.waitlistEnabled,
     waitlistCapacity: program.waitlistCapacity,
-    enrolled,
-    waitlistedCount,
+    registrationStartDate: program.registrationStartDate
+      ? new Date(program.registrationStartDate).toISOString()
+      : null,
+    imageUrl: program.imageUrl,
+    facility: program.facility,
+    staffAssignments: program.staffAssignments.map((sa) => ({
+      id: sa.id,
+      role: sa.role,
+      isPrimary: sa.isPrimary,
+      member: {
+        id: sa.member.id,
+        user: {
+          id: sa.member.user.id,
+          name: sa.member.user.name,
+          avatar: sa.member.user.avatar,
+        },
+      },
+    })),
+    levelRequirements: program.levelRequirements.map((lr) => ({
+      id: lr.id,
+      level: { id: lr.level.id, name: lr.level.name, color: lr.level.color },
+    })),
+    bulkDiscounts: program.bulkDiscounts.map((d) => ({
+      id: d.id,
+      type: d.type as "FAMILY_SIBLING" | "MULTI_SESSION",
+      minQuantity: d.minQuantity,
+      discountType: d.discountType as "PERCENTAGE" | "FIXED_AMOUNT",
+      discountValue: Number(d.discountValue),
+    })),
     requiredMemberships: program.requiredMemberships.map((m) => ({
       id: m.id,
       name: m.name,
       price: Number(m.price),
       billingInterval: m.billingInterval,
-      group: {
-        id: m.group.id,
-        name: m.group.name,
-        hasGenderRestriction: m.group.hasGenderRestriction,
-        allowedGenders: m.group.allowedGenders,
-      },
+      group: { id: m.group.id, name: m.group.name },
     })),
-    hasPassRestriction: program.hasPassRestriction,
-    requiredPasses: (program.requiredPasses || []).map((p) => ({
-      id: p.id,
-      name: p.name,
-      price: Number(p.price),
-      billingInterval: p.billingInterval,
-      sessionLimit: p.sessionLimit,
-      limitPeriod: p.limitPeriod,
-      hasGenderRestriction: p.hasGenderRestriction,
-      allowedGenders: p.allowedGenders,
-    })),
-    waiverRequirements: program.waiverRequirements,
-    registrationOpen: program.registrationOpen,
-    registrationStartDate: program.registrationStartDate
-      ? new Date(program.registrationStartDate).toISOString()
-      : null,
-    registrationStartTime: program.registrationStartTime,
-    registrationEndDate: program.registrationEndDate
-      ? new Date(program.registrationEndDate).toISOString()
-      : null,
-    registrationEndTime: program.registrationEndTime,
+    category: program.category,
+    instanceCount: program._count.instances,
+    enrolled,
+    waitlistedCount,
+    waiverNames: program.waiverRequirements.map((wr) => wr.waiver.title),
+    hasMedicalRequirement: program.hasMedicalRequirement,
+    hasFileRequirement: program.hasFileRequirement,
   };
 
-  const serializedInstances = program.instances.map((i) => ({
-    id: i.id,
-    date: new Date(i.date).toISOString(),
-    startTime: i.startTime,
-    endTime: i.endTime,
-    capacity: i.capacity || program.capacity || undefined,
-    registrationCount: i._count.registrations,
-    facility: i.facility ? { name: i.facility.name, city: i.facility.city } : undefined,
-  }));
-
-  const hero = getHeroContrastStyles(primaryColor);
+  const serializedInstances = serializeInstances(
+    program.instances,
+    program.capacity,
+    instanceCounts
+  );
 
   return (
-    <div className="min-h-screen">
-      {/* Hero Section */}
-      <section
-        className={`relative py-12 md:py-16 ${hero.text}`}
-        style={{
-          background: `linear-gradient(to bottom right, ${primaryColor}, ${primaryColor}e6, ${primaryColor}cc)`,
-        }}
-      >
-        <div className="mx-auto w-full max-w-4xl px-4 md:px-8">
-          <Link
-            href="/calendar"
-            className={`inline-flex items-center gap-2 text-sm ${hero.textSubtle} ${hero.hoverText} mb-6 transition-colors`}
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Calendar
-          </Link>
-
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <div className="flex items-center gap-3">
-              <ClipboardList className="h-8 w-8" />
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{program.name}</h1>
-                {program.category && (
-                  <Link href={`/register?category=${program.category.id}`}>
-                    <Badge variant="secondary" className="mt-1">
-                      {program.category.name}
-                    </Badge>
-                  </Link>
-                )}
-              </div>
-            </div>
-            {registrationStatus === "closed" ? (
-              <Badge
-                variant="outline"
-                className="shrink-0 text-sm px-3 py-1.5 gap-1.5 bg-gray-500 text-white border-gray-500 shadow-lg"
-              >
-                <Ban className="h-4 w-4" />
-                Registration Closed
-              </Badge>
-            ) : registrationStatus === "scheduled" && !hasValidEarlyAccess ? (
-              <Badge
-                variant="outline"
-                className="shrink-0 text-sm px-3 py-1.5 gap-1.5 bg-blue-500 text-white border-blue-500 shadow-lg"
-              >
-                <Hourglass className="h-4 w-4" />
-                {program.registrationStartDate
-                  ? `Opens ${format(new Date(program.registrationStartDate), "MMM d")}`
-                  : "Coming Soon"}
-              </Badge>
-            ) : isFull ? (
-              canJoinWaitlist ? (
-                <Badge
-                  variant="outline"
-                  className="shrink-0 text-sm px-3 py-1.5 gap-1.5 bg-amber-500 text-white border-amber-500 shadow-lg"
-                >
-                  <ListEnd className="h-4 w-4" />
-                  Waitlist Only
-                </Badge>
-              ) : isPerInstance ? (
-                <Badge
-                  variant="outline"
-                  className="shrink-0 text-sm px-3 py-1.5 gap-1.5 bg-blue-500 text-white border-blue-500 shadow-lg"
-                >
-                  <Hourglass className="h-4 w-4" />
-                  Pending
-                </Badge>
-              ) : (
-                <Badge
-                  variant="destructive"
-                  className="shrink-0 text-sm px-3 py-1.5 gap-1.5 shadow-lg"
-                >
-                  <Ban className="h-4 w-4" />
-                  Sold Out
-                </Badge>
-              )
-            ) : (
-              <Badge
-                variant="outline"
-                className="shrink-0 text-sm px-3 py-1.5 gap-1.5 bg-emerald-500 text-white border-emerald-500 shadow-lg"
-              >
-                <CircleCheck className="h-4 w-4" />
-                Registration Open
-              </Badge>
-            )}
-          </div>
-
-          {program.description && (
-            <div
-              className={`${hero.textMuted} leading-relaxed max-w-2xl mb-6 ${hero.prose}`}
-              dangerouslySetInnerHTML={{ __html: sanitizeHtml(program.description) }}
-            />
-          )}
-
-          <div className={`flex flex-wrap gap-x-6 gap-y-2 ${hero.textMuted}`}>
-            {program.startDate && (
-              <div className="flex items-center gap-1.5">
-                <Calendar className="h-4 w-4" />
-                <span>
-                  {program.endDate
-                    ? `${format(new Date(program.startDate), "MMM d")} – ${format(new Date(program.endDate), "MMM d, yyyy")}`
-                    : format(new Date(program.startDate), "EEEE, MMMM d, yyyy")}
-                </span>
-              </div>
-            )}
-
-            {daysLabel && (
-              <div className="flex items-center gap-1.5">
-                <CalendarClock className="h-4 w-4" />
-                <span>{daysLabel}</span>
-              </div>
-            )}
-
-            {program.startTime && (
-              <div className="flex items-center gap-1.5">
-                <Clock className="h-4 w-4" />
-                <span>
-                  {program.startTime}
-                  {program.duration ? ` (${program.duration} min)` : ""}
-                </span>
-              </div>
-            )}
-
-            {locationLabel && (
-              <div className="flex items-center gap-1.5">
-                <MapPin className="h-4 w-4" />
-                <span>{locationLabel}</span>
-              </div>
-            )}
-
-            {program._count.instances > 0 && (
-              <div className="flex items-center gap-1.5">
-                <Repeat className="h-4 w-4" />
-                <span>
-                  {program._count.instances} sessions
-                  {isPerInstance ? " (drop-in)" : ""}
-                </span>
-              </div>
-            )}
-
-            {totalCapacity > 0 && spotsAvailable !== null && (
-              <div className="flex items-center gap-1.5">
-                <Users className="h-4 w-4" />
-                <span>
-                  {spotsAvailable > 0
-                    ? `${spotsAvailable} spot${spotsAvailable !== 1 ? "s" : ""} left`
-                    : canJoinWaitlist
-                      ? "Full — Waitlist available"
-                      : isPerInstance
-                        ? "Program full — drop-in sessions may be available"
-                        : "Sold out"}
-                </span>
-              </div>
-            )}
-
-            {ageLabel && (
-              <div className="flex items-center gap-1.5">
-                <UserCheck className="h-4 w-4" />
-                <span>{ageLabel}</span>
-              </div>
-            )}
-
-            {genderLabel && (
-              <div className="flex items-center gap-1.5">
-                <UserCheck className="h-4 w-4" />
-                <span>{genderLabel}</span>
-              </div>
-            )}
-
-            <div className="flex items-center gap-1.5">
-              <DollarSign className="h-4 w-4" />
-              <span>
-                {priceDisplay}
-                {pricePeriod}
-              </span>
-            </div>
-          </div>
-
-          {/* Coaches in hero */}
-          {program.staffAssignments.length > 0 && (
-            <div
-              className={`flex items-center gap-3 mt-6 pt-4 border-t ${hero.isLight ? "border-black/20" : "border-white/20"}`}
-            >
-              <div className="flex -space-x-2">
-                {program.staffAssignments.slice(0, 4).map((sa) => (
-                  <Avatar
-                    key={sa.id}
-                    className={`h-8 w-8 border-2 ${hero.isLight ? "border-black/20" : "border-white/30"}`}
-                  >
-                    <AvatarImage src={sa.member.user.avatar || ""} />
-                    <AvatarFallback
-                      className={`text-xs ${hero.isLight ? "bg-black/10 text-gray-900" : "bg-white/20 text-white"}`}
-                    >
-                      {sa.member.user.name?.charAt(0) || "?"}
-                    </AvatarFallback>
-                  </Avatar>
-                ))}
-              </div>
-              <span className={`text-sm ${hero.textSubtle}`}>
-                {program.staffAssignments
-                  .slice(0, 2)
-                  .map((sa) => sa.member.user.name)
-                  .join(", ")}
-                {program.staffAssignments.length > 2 &&
-                  ` +${program.staffAssignments.length - 2} more`}
-              </span>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Registration Flow — full width, just like competition page */}
-      <section className="mx-auto w-full max-w-4xl px-4 py-12 md:px-8">
-        {canRegister ? (
-          <ProgramRegistrationFlow
-            program={serializedProgramForFlow}
-            instances={serializedInstances}
-            slug={subdomain}
-            primaryColor={primaryColor}
-            earlyAccessCode={earlyAccessCode}
-          />
-        ) : registrationStatus === "closed" ? (
-          <div className="rounded-lg border bg-muted/30 p-8 text-center">
-            <Ban className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Registration Closed</h3>
-            <p className="text-muted-foreground">Registration for this program has closed.</p>
-          </div>
-        ) : (
-          <div className="rounded-lg border bg-muted/30 p-8 text-center">
-            <Hourglass className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Registration Not Yet Open</h3>
-            <p className="text-muted-foreground">
-              {program.registrationStartDate
-                ? `Registration opens on ${format(new Date(program.registrationStartDate), "MMMM d, yyyy")}${program.registrationStartTime ? ` at ${program.registrationStartTime}` : ""}.`
-                : "Registration will open soon."}
-            </p>
-          </div>
-        )}
+    <div className="min-h-screen bg-background">
+      <section className="mx-auto w-full max-w-6xl px-4 md:px-8 py-12">
+        <ProgramProfile
+          program={profileData}
+          instances={serializedInstances}
+          registrationStatus={registrationStatus}
+          canRegister={canRegister}
+          hasValidEarlyAccess={hasValidEarlyAccess}
+          earlyAccessCode={earlyAccessCode}
+          primaryColor={primaryColor}
+        />
       </section>
     </div>
   );

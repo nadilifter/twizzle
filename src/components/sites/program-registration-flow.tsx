@@ -175,6 +175,7 @@ interface ProgramRegistrationFlowProps {
   slug: string;
   primaryColor?: string;
   earlyAccessCode?: string | null;
+  preSelectedInstanceIds?: string[];
 }
 
 // ---------- Stepper definition ----------
@@ -217,6 +218,7 @@ export function ProgramRegistrationFlow({
   instances,
   slug,
   earlyAccessCode,
+  preSelectedInstanceIds,
 }: ProgramRegistrationFlowProps) {
   const { data: session, status } = useSession();
   const { addItem, setIsOpen, items: cartItems } = useCart();
@@ -257,7 +259,9 @@ export function ProgramRegistrationFlow({
   });
 
   const [selectedAthlete, setSelectedAthlete] = useState<AthleteOption | null>(null);
-  const [selectedInstanceIds, setSelectedInstanceIds] = useState<Set<string>>(new Set());
+  const [selectedInstanceIds, setSelectedInstanceIds] = useState<Set<string>>(
+    () => new Set(preSelectedInstanceIds ?? [])
+  );
   const [selectedMembership, setSelectedMembership] = useState<RequiredMembership | null>(null);
   const [athleteHasMembership, setAthleteHasMembership] = useState(false);
   const [isCheckingMembership, setIsCheckingMembership] = useState(false);
@@ -308,9 +312,11 @@ export function ProgramRegistrationFlow({
 
   const needsMembershipPurchase = needsMembership && !athleteHasMembership;
 
+  const hasPreSelectedInstances = preSelectedInstanceIds && preSelectedInstanceIds.length > 0;
+
   const visibleStepIds = useMemo(() => {
     const ids = ["athlete"];
-    if (isPerInstance) ids.push("sessions");
+    if (isPerInstance && !hasPreSelectedInstances) ids.push("sessions");
     if (needsMembershipPurchase) ids.push("membership");
     if (needsPass) ids.push("pass");
     if (needsWaivers) ids.push("waivers");
@@ -321,6 +327,7 @@ export function ProgramRegistrationFlow({
     return ids;
   }, [
     isPerInstance,
+    hasPreSelectedInstances,
     needsMembershipPurchase,
     needsPass,
     needsWaivers,
