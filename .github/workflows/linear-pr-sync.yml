@@ -87,14 +87,19 @@ jobs:
             const identifier = `${match[1].toUpperCase()}-${match[2]}`;
             console.log(`Resolved Linear identifier: ${identifier}`);
 
-            // Look up the Linear issue
+            // Look up the Linear issue — IssueFilter has no identifier field,
+            // so split into team key + number and filter by both.
+            const [teamKey, issueNumber] = [match[1].toUpperCase(), parseInt(match[2], 10)];
             const issueData = await gql(
-              `query FindIssue($identifier: String!) {
-                issues(filter: { identifier: { eq: $identifier } }) {
+              `query FindIssue($teamKey: String!, $number: Float!) {
+                issues(filter: {
+                  team: { key: { eq: $teamKey } }
+                  number: { eq: $number }
+                }) {
                   nodes { id identifier title description }
                 }
               }`,
-              { identifier },
+              { teamKey, number: issueNumber },
             );
 
             const issue = issueData.issues?.nodes?.[0];
