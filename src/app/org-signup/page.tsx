@@ -1489,21 +1489,28 @@ export default function SignupPage() {
               return (
                 <div className="flex items-center justify-between">
                   <div>
-                    {!stepper.state.isFirst && (
+                    {(isAccountStep &&
+                      session &&
+                      (signupMode === "newAccount" || signupMode === "existingAccount")) ||
+                    !stepper.state.isFirst ? (
                       <Button
                         type="button"
                         variant="outline"
                         onClick={() => {
-                          if (currentStepId === "plan") {
-                            sessionStorage.removeItem("org-signup-data");
+                          if (isAccountStep && session) {
+                            setSignupMode("choosing");
+                          } else {
+                            if (currentStepId === "plan") {
+                              sessionStorage.removeItem("org-signup-data");
+                            }
+                            stepper.navigation.prev();
                           }
-                          stepper.navigation.prev();
                         }}
                       >
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back
                       </Button>
-                    )}
+                    ) : null}
                   </div>
 
                   <div>

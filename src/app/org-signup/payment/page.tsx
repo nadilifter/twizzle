@@ -274,7 +274,7 @@ export default function PaymentPage() {
         className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6"
       >
         <ArrowLeft className="h-4 w-4 mr-1" />
-        Back to signup
+        Back
       </Link>
 
       <div className="grid gap-6">
