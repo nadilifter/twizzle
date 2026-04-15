@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -45,7 +44,6 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getFeatureStatus } from "@/lib/feature-status";
-import { cn } from "@/lib/utils";
 import { getOrganizationWebsiteSubdomain } from "@/app/actions/organization";
 import { useFeatures } from "@/components/feature-context";
 import {
@@ -104,7 +102,7 @@ function ChatUnreadBadge() {
 let navSecondaryCache: { key: string; items: NavSecondaryItem[] } | null = null;
 let actionItemsCache: { count: number; fetchedAt: number } | null = null;
 
-const ACTION_ITEMS_URL = "/dashboard/action-items";
+const DASHBOARD_URL = "/dashboard";
 const ACTION_ITEMS_CACHE_MS = 60_000;
 
 function ActionItemsBadge() {
@@ -217,10 +215,6 @@ const data = {
       title: "Dashboard",
       url: "/dashboard",
       items: [
-        {
-          title: "Action Items",
-          url: "/dashboard/action-items",
-        },
         {
           title: "Dashboard",
           url: "/dashboard",
@@ -1012,8 +1006,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                     href={subItem.url}
                                     className="flex items-center justify-between w-full"
                                   >
-                                    <span className="truncate">{subItem.title}</span>
-                                    {subItem.url === ACTION_ITEMS_URL ? (
+                                    <span>{subItem.title}</span>
+                                    {subItem.url === DASHBOARD_URL ? (
                                       <ActionItemsBadge />
                                     ) : subItem.url === CHAT_URL ? (
                                       <ChatUnreadBadge />
