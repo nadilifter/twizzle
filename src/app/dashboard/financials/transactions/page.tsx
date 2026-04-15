@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { SearchIcon, DownloadIcon, FilterIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { getMethodLabel } from "@/lib/payment-utils";
 
 interface Transaction {
   id: string;
@@ -54,21 +55,6 @@ const statusVariants: Record<string, "default" | "secondary" | "destructive" | "
   REFUSED: "destructive",
   CANCELLED: "destructive",
   ERROR: "destructive",
-};
-
-const methodLabels: Record<string, string> = {
-  ach: "ACH",
-  scheme: "Card",
-  card: "Card",
-  visa: "Visa",
-  mc: "Mastercard",
-  amex: "Amex",
-  discover: "Discover",
-  diners: "Diners",
-  jcb: "JCB",
-  googlepay: "Google Pay",
-  applepay: "Apple Pay",
-  paypal: "PayPal",
 };
 
 const statusLabels: Record<string, string> = {
@@ -231,7 +217,9 @@ export default function TransactionsPage() {
                       {trx.pspReference}
                     </TableCell>
                     <TableCell>
-                      {trx.method ? (methodLabels[trx.method.toLowerCase()] ?? trx.method) : "—"}
+                      {trx.method
+                        ? getMethodLabel({ type: trx.method.toLowerCase(), brand: null })
+                        : "—"}
                     </TableCell>
                     <TableCell>
                       <Badge variant={statusVariants[trx.status] || "outline"}>

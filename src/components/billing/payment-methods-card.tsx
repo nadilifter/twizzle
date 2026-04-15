@@ -210,17 +210,21 @@ export function PaymentMethodsCard({
   const hasExpiry = (method: PaymentMethod) =>
     isCardType(method) && method.expiryMonth && method.expiryYear;
 
+  const parseExpiryDate = (method: PaymentMethod): Date => {
+    const year = parseInt(method.expiryYear!);
+    const fullYear = year < 100 ? 2000 + year : year;
+    return new Date(fullYear, parseInt(method.expiryMonth!), 0);
+  };
+
   const isExpired = (method: PaymentMethod): boolean => {
     if (!hasExpiry(method)) return false;
-    const now = new Date();
-    const expiryDate = new Date(parseInt(method.expiryYear!), parseInt(method.expiryMonth!), 0);
-    return now > expiryDate;
+    return new Date() > parseExpiryDate(method);
   };
 
   const isExpiringSoon = (method: PaymentMethod): boolean => {
     if (!hasExpiry(method)) return false;
     const now = new Date();
-    const expiryDate = new Date(parseInt(method.expiryYear!), parseInt(method.expiryMonth!), 0);
+    const expiryDate = parseExpiryDate(method);
     const twoMonthsFromNow = new Date();
     twoMonthsFromNow.setMonth(twoMonthsFromNow.getMonth() + 2);
     return now <= expiryDate && expiryDate <= twoMonthsFromNow;
@@ -276,12 +280,6 @@ export function PaymentMethodsCard({
                           <span>
                             Expires {method.expiryMonth}/{method.expiryYear!.slice(-2)}
                           </span>
-                        )}
-                        {method.holderName && (
-                          <>
-                            {hasExpiry(method) && <span>•</span>}
-                            <span>{method.holderName}</span>
-                          </>
                         )}
                       </div>
                       {expired && (

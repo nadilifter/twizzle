@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { PAYMENT_METHOD_LABELS } from "@/lib/payment-utils";
 
 interface OrderLineItem {
   id: string;
@@ -88,9 +89,9 @@ const paymentMethodConfig: Record<
 };
 
 const transactionMethodLabels: Record<string, { label: string; icon: React.ElementType }> = {
-  applepay: { label: "Apple Pay", icon: Wallet },
-  googlepay: { label: "Google Pay", icon: Wallet },
-  ach: { label: "ACH", icon: Landmark },
+  applepay: { label: PAYMENT_METHOD_LABELS.applepay, icon: Wallet },
+  googlepay: { label: PAYMENT_METHOD_LABELS.googlepay, icon: Wallet },
+  ach: { label: PAYMENT_METHOD_LABELS.ach, icon: Landmark },
 };
 
 function getPaymentLabel(payment: {
