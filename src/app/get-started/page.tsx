@@ -43,6 +43,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getBaseDomainSuffix } from "@/lib/client-domains";
 import { FREE_TRIAL_DAYS } from "@/lib/billing-config";
+import { SmsConsentCheckbox } from "@/components/sms-consent-checkbox";
 
 interface SubscriptionPlan {
   id: string;
@@ -106,6 +107,9 @@ export default function SignupPage() {
 
   // Validation errors
   const [errors, setErrors] = React.useState<Record<string, string>>({});
+
+  // Standalone SMS consent (Twilio TFV 30475 — must not gate submission)
+  const [smsConsent, setSmsConsent] = React.useState(false);
 
   // Fetch plans on mount
   React.useEffect(() => {
@@ -254,7 +258,7 @@ export default function SignupPage() {
       const response = await fetch("/api/org-signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, smsConsent }),
       });
 
       const data = await response.json();
@@ -710,6 +714,16 @@ export default function SignupPage() {
                 {errors.planId && <p className="text-sm text-destructive mt-2">{errors.planId}</p>}
               </CardContent>
             </Card>
+
+            {/* Standalone SMS opt-in (Twilio TFV 30475) — separate from the
+                terms acknowledgement below; does NOT gate submission. */}
+            <div className="max-w-2xl mx-auto w-full">
+              <SmsConsentCheckbox
+                checked={smsConsent}
+                onChange={setSmsConsent}
+                disabled={isLoading}
+              />
+            </div>
 
             {/* Submit Button */}
             <div className="flex justify-center">

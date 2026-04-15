@@ -13,6 +13,7 @@ import { Loader2, ChevronLeft, AlertCircle, CheckCircle2 } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 import { validatePassword, PASSWORD_PLACEHOLDER, PASSWORD_MIN_LENGTH } from "@/lib/password";
+import { SmsConsentCheckbox } from "@/components/sms-consent-checkbox";
 
 interface InvitationData {
   valid: boolean;
@@ -50,6 +51,7 @@ function AcceptInvitationContent() {
   const [success, setSuccess] = useState(false);
   const [autoLoginFailed, setAutoLoginFailed] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [smsConsent, setSmsConsent] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -99,7 +101,7 @@ function AcceptInvitationContent() {
       const response = await fetch(`/api/invitations/${token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password, confirmPassword, acceptedTerms }),
+        body: JSON.stringify({ password, confirmPassword, acceptedTerms, smsConsent }),
       });
 
       const data = await response.json();
@@ -138,7 +140,10 @@ function AcceptInvitationContent() {
       const response = await fetch(`/api/invitations/${token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ acceptedTerms: acceptedTerms || undefined }),
+        body: JSON.stringify({
+          acceptedTerms: acceptedTerms || undefined,
+          smsConsent,
+        }),
       });
 
       const data = await response.json();
@@ -357,6 +362,13 @@ function AcceptInvitationContent() {
               </label>
             </div>
 
+            <SmsConsentCheckbox
+              checked={smsConsent}
+              onChange={setSmsConsent}
+              disabled={isSubmitting}
+              idSuffix="invite-new"
+            />
+
             {error && (
               <div className="rounded-md bg-destructive/15 px-3 py-2 text-sm text-destructive">
                 {error}
@@ -435,6 +447,13 @@ function AcceptInvitationContent() {
             </label>
           </div>
         )}
+
+        <SmsConsentCheckbox
+          checked={smsConsent}
+          onChange={setSmsConsent}
+          disabled={isSubmitting}
+          idSuffix="invite-existing"
+        />
 
         {error && (
           <div className="rounded-md bg-destructive/15 px-3 py-2 text-sm text-destructive">

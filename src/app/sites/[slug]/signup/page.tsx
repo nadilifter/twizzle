@@ -7,6 +7,7 @@ import { signIn } from "next-auth/react";
 import { Loader2, CheckCircle2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { validatePassword, PASSWORD_PLACEHOLDER, PASSWORD_MIN_LENGTH } from "@/lib/password";
+import { SmsConsentCheckbox } from "@/components/sms-consent-checkbox";
 
 type SignupStep = "email" | "verify" | "details";
 
@@ -29,6 +30,7 @@ export default function MarketingSiteSignupPage() {
   const [verificationCode, setVerificationCode] = useState("");
   const [verificationToken, setVerificationToken] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [smsConsent, setSmsConsent] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -218,6 +220,7 @@ export default function MarketingSiteSignupPage() {
           ...formData,
           verificationToken,
           acceptedTerms,
+          smsConsent,
         }),
       });
 
@@ -570,6 +573,17 @@ export default function MarketingSiteSignupPage() {
               </a>
             </label>
           </div>
+
+          {/*
+            Standalone SMS consent checkbox. Twilio TFV (30475) requires this
+            be visually and structurally separate from the Terms checkbox above
+            and not gate form submission. Do NOT bundle into the same <label>.
+          */}
+          <SmsConsentCheckbox
+            checked={smsConsent}
+            onChange={setSmsConsent}
+            disabled={isSubmitting}
+          />
 
           {error && (
             <div className="rounded-md bg-destructive/15 px-3 py-2 text-sm text-destructive">

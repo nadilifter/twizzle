@@ -14,6 +14,7 @@ import { formatCardBrand } from "@/lib/payment-utils";
 import { FREE_TRIAL_DAYS } from "@/lib/billing-config";
 import { formatPhoneNumberIntl } from "react-phone-number-input";
 import { DevTrialBillingTester } from "./dev-trial-billing-tester";
+import { SmsConsentCheckbox } from "@/components/sms-consent-checkbox";
 
 interface SignupData {
   useExistingAccount?: boolean;
@@ -47,6 +48,8 @@ export default function ReviewPage() {
   const [signupData, setSignupData] = useState<SignupData | null>(null);
   const [isCreatingOrg, setIsCreatingOrg] = useState(false);
   const [runCronAfterCreation, setRunCronAfterCreation] = useState(false);
+  // Standalone SMS opt-in (Twilio TFV 30475 — must not gate submission)
+  const [smsConsent, setSmsConsent] = useState(false);
   const [pendingCron, setPendingCron] = useState<{ orgId: string; successUrl: string } | null>(
     null
   );
@@ -95,6 +98,11 @@ export default function ReviewPage() {
           ...formFields,
           ...(password ? { password } : {}),
           runCronAfterCreation,
+          // Don't send consent on the existing-account path — the backend
+          // ignores it there, but sending it invites silent regressions if
+          // the backend suppression is ever refactored. Existing users opt
+          // in via /athletes/account.
+          ...(formFields.useExistingAccount ? {} : { smsConsent }),
         }),
       });
 
@@ -301,6 +309,14 @@ export default function ReviewPage() {
           pendingCron={pendingCron}
         />
       )}
+
+      <div className="mb-4">
+        <SmsConsentCheckbox
+          checked={smsConsent}
+          onChange={setSmsConsent}
+          disabled={isCreatingOrg || !!pendingCron}
+        />
+      </div>
 
       <Button
         onClick={handleCreateOrganization}

@@ -8,7 +8,7 @@ import { containsProfanity } from "@/lib/profanity";
 import { registerAllowedOrigin } from "@/lib/adyen-platform";
 import { createDefaultGLCodes } from "@/lib/gl-code-defaults";
 import { getDefaultTaxRate } from "@/lib/tax-utils";
-import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { checkApiRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit";
 import { geocodeAddress } from "@/lib/geocode";
 import {
   getStoredPaymentMethodsWithRetry,
@@ -18,6 +18,7 @@ import {
 import { signupSchema } from "./signup-schema";
 import { getCurrentEnvironment } from "@/lib/env-domains";
 import { FREE_TRIAL_DAYS } from "@/lib/billing-config";
+import { buildSmsConsentGrant } from "@/lib/sms-consent";
 
 export async function POST(request: NextRequest) {
   const rateLimitResponse = await checkApiRateLimit(request, "org-signup", RATE_LIMITS.sensitive);
@@ -213,6 +214,13 @@ export async function POST(request: NextRequest) {
         resolvedUserId = userId;
       } else {
         const passwordHash = await hashPassword(validatedData.password!);
+        // SMS consent is only captured when creating a new account here.
+        // Existing users opt in via /api/account/sms-consent (account settings)
+        // so we don't silently mutate their consent state from this endpoint.
+        const ip = getClientIp(request);
+        const smsConsentData = validatedData.smsConsent
+          ? buildSmsConsentGrant("SIGNUP_ORG", ip === "unknown" ? null : ip)
+          : null;
         const user = await tx.user.create({
           data: {
             email: validatedData.email!,
@@ -220,6 +228,7 @@ export async function POST(request: NextRequest) {
             passwordHash,
             role: "ADMIN",
             status: "ACTIVE",
+            ...(smsConsentData ?? {}),
           },
         });
         resolvedUserId = user.id;

@@ -68,6 +68,10 @@ export const signupSchema = z
     runCronAfterCreation: z.boolean().optional(),
 
     referralCode: z.string().regex(REFERRAL_CODE_PATTERN).optional(),
+
+    // Optional SMS opt-in. Only honored when creating a new account
+    // (`useExistingAccount=false`); existing users opt in via account settings.
+    smsConsent: z.boolean().optional(),
   })
   .refine((data) => isValidPostalCode(data.postalCode, data.country), {
     message: "Postal code must be a valid US ZIP or Canadian postal code",

@@ -4,6 +4,8 @@ import { hashPassword, isUplifterEmail } from "@/lib/auth";
 import { verifyVerifiedToken } from "@/lib/mfa";
 import { z } from "zod";
 import { passwordSchema } from "@/lib/password";
+import { checkApiRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit";
+import { buildSmsConsentGrant } from "@/lib/sms-consent";
 
 const signupSchema = z
   .object({
@@ -15,6 +17,10 @@ const signupSchema = z
     acceptedTerms: z.literal(true, {
       message: "You must accept the terms and conditions",
     }),
+    // Optional SMS opt-in. Per Twilio TFV (30475) consent must NOT be a
+    // condition of service, so this is `boolean().optional()` and signup
+    // succeeds whether or not it is true.
+    smsConsent: z.boolean().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
@@ -31,6 +37,11 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  const rateLimited = await checkApiRateLimit(request, "site-signup", RATE_LIMITS.sensitive, {
+    failClosed: true,
+  });
+  if (rateLimited) return rateLimited;
+
   try {
     const { slug } = await params;
     const body = await request.json();
@@ -93,6 +104,13 @@ export async function POST(
     // Hash password
     const passwordHash = await hashPassword(validatedData.password);
 
+    // Capture SMS consent if the user opted in. Source SIGNUP_SITE so the
+    // /api/account/sms-consent ACCOUNT_SETTINGS source remains distinct.
+    const ip = getClientIp(request);
+    const smsConsentData = validatedData.smsConsent
+      ? buildSmsConsentGrant("SIGNUP_SITE", ip === "unknown" ? null : ip)
+      : null;
+
     // Create user and organization member in transaction
     const user = await db.$transaction(async (tx) => {
       // Create user with PARENT role
@@ -104,6 +122,7 @@ export async function POST(
           role: "PARENT",
           status: "ACTIVE",
           termsAcceptedAt: new Date(),
+          ...(smsConsentData ?? {}),
         },
       });
 

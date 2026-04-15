@@ -44,3 +44,24 @@ describe("signupSchema adyenShopperReference", () => {
     ).toThrow();
   });
 });
+
+describe("signupSchema smsConsent", () => {
+  it("is optional — schema parses without it", () => {
+    const parsed = signupSchema.parse(base);
+    expect(parsed.smsConsent).toBeUndefined();
+  });
+
+  it("accepts true", () => {
+    const parsed = signupSchema.parse({ ...base, smsConsent: true });
+    expect(parsed.smsConsent).toBe(true);
+  });
+
+  it("accepts false (explicit decline)", () => {
+    const parsed = signupSchema.parse({ ...base, smsConsent: false });
+    expect(parsed.smsConsent).toBe(false);
+  });
+
+  it("rejects non-boolean values", () => {
+    expect(() => signupSchema.parse({ ...base, smsConsent: "yes" })).toThrow();
+  });
+});

@@ -9,6 +9,7 @@ vi.mock("@/lib/auth", () => ({
 
 vi.mock("@/lib/rate-limit", () => ({
   checkApiRateLimit: vi.fn(() => Promise.resolve(undefined)),
+  getClientIp: vi.fn(() => "203.0.113.7"),
   RATE_LIMITS: {
     api: { max: 60, window: 60 },
     sensitive: { max: 10, window: 300 },
@@ -312,6 +313,230 @@ describe("POST /api/invitations/[token]", () => {
           passwordHash: "hashed-pw",
           status: "ACTIVE",
         }),
+      })
+    );
+    // Without smsConsent in the body, no consent fields should be written.
+    expect(db.user.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ smsConsentAt: expect.anything() }),
+      })
+    );
+  });
+
+  it("persists SMS consent for new user when smsConsent=true", async () => {
+    vi.mocked(db.organizationInvitation.findUnique).mockResolvedValueOnce({
+      id: "inv-1",
+      token: "valid",
+      status: "PENDING",
+      email: "new@example.com",
+      expiresAt: new Date(Date.now() + 86400000),
+      organizationId: "org-1",
+      organization: { id: "org-1", name: "Acme" },
+    } as never);
+
+    vi.mocked(db.user.findUnique).mockResolvedValueOnce({
+      id: "user-1",
+      passwordHash: null,
+      status: "INVITED",
+      termsAcceptedAt: null,
+    } as never);
+
+    vi.mocked(db.$transaction).mockImplementation(async (fn) => {
+      await (fn as CallableFunction)(db);
+    });
+    vi.mocked(db.organizationInvitation.update).mockResolvedValueOnce({} as never);
+    vi.mocked(db.organizationMember.updateMany).mockResolvedValueOnce({} as never);
+    vi.mocked(db.user.update).mockResolvedValueOnce({} as never);
+
+    const res = await POST(
+      makeRequest("/api/invitations/valid", {
+        method: "POST",
+        body: JSON.stringify({
+          password: "StrongPass1!",
+          confirmPassword: "StrongPass1!",
+          acceptedTerms: true,
+          smsConsent: true,
+        }),
+      }),
+      makeParams("valid")
+    );
+
+    expect(res.status).toBe(200);
+    expect(db.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          smsConsentAt: expect.any(Date),
+          smsConsentSource: "INVITATION",
+          smsConsentVersion: expect.any(String),
+          smsOptOut: false,
+        }),
+      })
+    );
+  });
+
+  it("persists SMS consent for existing user when smsConsent=true", async () => {
+    vi.mocked(db.organizationInvitation.findUnique).mockResolvedValueOnce({
+      id: "inv-1",
+      token: "valid",
+      status: "PENDING",
+      email: "existing@example.com",
+      expiresAt: new Date(Date.now() + 86400000),
+      organizationId: "org-1",
+      organization: { id: "org-1", name: "Acme" },
+    } as never);
+
+    vi.mocked(db.user.findUnique).mockResolvedValueOnce({
+      id: "user-1",
+      passwordHash: "existing-hash",
+      status: "ACTIVE",
+      termsAcceptedAt: new Date(),
+    } as never);
+
+    vi.mocked(db.$transaction).mockImplementation(async (fn) => {
+      await (fn as CallableFunction)(db);
+    });
+    vi.mocked(db.organizationInvitation.update).mockResolvedValueOnce({} as never);
+    vi.mocked(db.organizationMember.updateMany).mockResolvedValueOnce({} as never);
+    vi.mocked(db.user.update).mockResolvedValueOnce({} as never);
+
+    const res = await POST(
+      makeRequest("/api/invitations/valid", {
+        method: "POST",
+        body: JSON.stringify({ smsConsent: true }),
+      }),
+      makeParams("valid")
+    );
+
+    expect(res.status).toBe(200);
+    expect(db.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          smsConsentAt: expect.any(Date),
+          smsConsentSource: "INVITATION",
+          smsOptOut: false,
+        }),
+      })
+    );
+  });
+
+  it("does not write to user when existing user has terms and no smsConsent", async () => {
+    vi.mocked(db.organizationInvitation.findUnique).mockResolvedValueOnce({
+      id: "inv-1",
+      token: "valid",
+      status: "PENDING",
+      email: "existing@example.com",
+      expiresAt: new Date(Date.now() + 86400000),
+      organizationId: "org-1",
+      organization: { id: "org-1", name: "Acme" },
+    } as never);
+
+    vi.mocked(db.user.findUnique).mockResolvedValueOnce({
+      id: "user-1",
+      passwordHash: "existing-hash",
+      status: "ACTIVE",
+      termsAcceptedAt: new Date(),
+    } as never);
+
+    vi.mocked(db.$transaction).mockImplementation(async (fn) => {
+      await (fn as CallableFunction)(db);
+    });
+    vi.mocked(db.organizationInvitation.update).mockResolvedValueOnce({} as never);
+    vi.mocked(db.organizationMember.updateMany).mockResolvedValueOnce({} as never);
+
+    const res = await POST(
+      makeRequest("/api/invitations/valid", {
+        method: "POST",
+        body: JSON.stringify({}),
+      }),
+      makeParams("valid")
+    );
+
+    expect(res.status).toBe(200);
+    expect(db.user.update).not.toHaveBeenCalled();
+  });
+
+  it("does not overwrite prior consent when existing user re-accepts with smsConsent=true", async () => {
+    vi.mocked(db.organizationInvitation.findUnique).mockResolvedValueOnce({
+      id: "inv-1",
+      token: "valid",
+      status: "PENDING",
+      email: "existing@example.com",
+      expiresAt: new Date(Date.now() + 86400000),
+      organizationId: "org-1",
+      organization: { id: "org-1", name: "Acme" },
+    } as never);
+
+    vi.mocked(db.user.findUnique).mockResolvedValueOnce({
+      id: "user-1",
+      passwordHash: "existing-hash",
+      status: "ACTIVE",
+      termsAcceptedAt: new Date(),
+      // User already consented earlier (e.g. via ACCOUNT_SETTINGS).
+      smsConsentAt: new Date("2026-01-01"),
+    } as never);
+
+    vi.mocked(db.$transaction).mockImplementation(async (fn) => {
+      await (fn as CallableFunction)(db);
+    });
+    vi.mocked(db.organizationInvitation.update).mockResolvedValueOnce({} as never);
+    vi.mocked(db.organizationMember.updateMany).mockResolvedValueOnce({} as never);
+
+    const res = await POST(
+      makeRequest("/api/invitations/valid", {
+        method: "POST",
+        body: JSON.stringify({ smsConsent: true }),
+      }),
+      makeParams("valid")
+    );
+
+    expect(res.status).toBe(200);
+    // The route should neither call user.update with consent fields nor
+    // silently downgrade smsConsentSource to "INVITATION".
+    expect(db.user.update).not.toHaveBeenCalled();
+  });
+
+  it("writes no consent fields when smsConsent=false is explicit (new user)", async () => {
+    vi.mocked(db.organizationInvitation.findUnique).mockResolvedValueOnce({
+      id: "inv-1",
+      token: "valid",
+      status: "PENDING",
+      email: "new@example.com",
+      expiresAt: new Date(Date.now() + 86400000),
+      organizationId: "org-1",
+      organization: { id: "org-1", name: "Acme" },
+    } as never);
+
+    vi.mocked(db.user.findUnique).mockResolvedValueOnce({
+      id: "user-1",
+      passwordHash: null,
+      status: "INVITED",
+      termsAcceptedAt: null,
+    } as never);
+
+    vi.mocked(db.$transaction).mockImplementation(async (fn) => {
+      await (fn as CallableFunction)(db);
+    });
+    vi.mocked(db.organizationInvitation.update).mockResolvedValueOnce({} as never);
+    vi.mocked(db.organizationMember.updateMany).mockResolvedValueOnce({} as never);
+    vi.mocked(db.user.update).mockResolvedValueOnce({} as never);
+
+    const res = await POST(
+      makeRequest("/api/invitations/valid", {
+        method: "POST",
+        body: JSON.stringify({
+          password: "StrongPass1!",
+          confirmPassword: "StrongPass1!",
+          acceptedTerms: true,
+          smsConsent: false,
+        }),
+      }),
+      makeParams("valid")
+    );
+
+    expect(res.status).toBe(200);
+    expect(db.user.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ smsConsentAt: expect.anything() }),
       })
     );
   });

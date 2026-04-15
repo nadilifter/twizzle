@@ -3,13 +3,16 @@ import { hashPassword } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { passwordSchema } from "@/lib/password";
-import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { checkApiRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit";
+import { buildSmsConsentGrant } from "@/lib/sms-consent";
 
 const acceptInvitationSchema = z
   .object({
     password: passwordSchema.optional(),
     confirmPassword: z.string().optional(),
     acceptedTerms: z.boolean().optional(),
+    // Optional SMS opt-in — never required to accept the invitation.
+    smsConsent: z.boolean().optional(),
   })
   .refine(
     (data) => {
@@ -218,6 +221,7 @@ export async function POST(
         passwordHash: true,
         status: true,
         termsAcceptedAt: true,
+        smsConsentAt: true,
       },
     });
 
@@ -245,6 +249,16 @@ export async function POST(
       }
 
       const passwordHash = await hashPassword(validatedData.password);
+      const ip = getClientIp(request);
+      // Only grant consent from this surface if the user has none on record.
+      // An existing consent (even one that was later revoked and is now null)
+      // shouldn't be silently overwritten to source=INVITATION from this path;
+      // users who've already consented via a stronger source (e.g.
+      // ACCOUNT_SETTINGS) or who have revoked keep that state.
+      const smsConsentData =
+        validatedData.smsConsent && !user.smsConsentAt
+          ? buildSmsConsentGrant("INVITATION", ip === "unknown" ? null : ip)
+          : null;
 
       await db.$transaction(async (tx) => {
         await tx.organizationInvitation.update({
@@ -272,6 +286,7 @@ export async function POST(
             passwordHash,
             status: "ACTIVE",
             ...(needsTermsAcceptance && { termsAcceptedAt: new Date() }),
+            ...(smsConsentData ?? {}),
           },
         });
       });
@@ -286,6 +301,15 @@ export async function POST(
     } else {
       // Existing user -- the token itself proves they have access to the
       // invited email address, so no session/login is required.
+      const ip = getClientIp(request);
+      // Only grant consent here if the user has none on record; don't
+      // overwrite a stronger prior consent (e.g. ACCOUNT_SETTINGS) with a
+      // weaker INVITATION-sourced record.
+      const smsConsentData =
+        validatedData.smsConsent && !user.smsConsentAt
+          ? buildSmsConsentGrant("INVITATION", ip === "unknown" ? null : ip)
+          : null;
+
       await db.$transaction(async (tx) => {
         await tx.organizationInvitation.update({
           where: { id: invitation.id },
@@ -306,10 +330,14 @@ export async function POST(
           },
         });
 
-        if (needsTermsAcceptance) {
+        const userUpdate = {
+          ...(needsTermsAcceptance && { termsAcceptedAt: new Date() }),
+          ...(smsConsentData ?? {}),
+        };
+        if (Object.keys(userUpdate).length > 0) {
           await tx.user.update({
             where: { id: user.id },
-            data: { termsAcceptedAt: new Date() },
+            data: userUpdate,
           });
         }
       });
