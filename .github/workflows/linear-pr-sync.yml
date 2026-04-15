@@ -1,0 +1,161 @@
+# When a PR is merged into dev, append the PR description to the linked Linear issue.
+# Requires repository secret: LINEAR_API_KEY
+name: Linear — sync PR description on merge
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [dev]
+
+concurrency:
+  group: linear-pr-sync-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  sync-pr-description:
+    name: Append PR description to Linear issue
+    runs-on: ubuntu-latest
+    if: >
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository
+
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Sync PR description to Linear
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          node <<'SCRIPT'
+          const fs = require("fs");
+
+          const API_URL = "https://api.linear.app/graphql";
+
+          const apiKey = process.env.LINEAR_API_KEY;
+          const prTitle = process.env.PR_TITLE || "";
+          const prBody = process.env.PR_BODY || "";
+          const prUrl = process.env.PR_URL || "";
+          const prNumber = process.env.PR_NUMBER || "";
+          const headBranch = process.env.HEAD_BRANCH || "";
+
+          function summary(line) {
+            const p = process.env.GITHUB_STEP_SUMMARY;
+            if (p) fs.appendFileSync(p, `${line}\n`);
+          }
+
+          async function gql(query, variables) {
+            const res = await fetch(API_URL, {
+              method: "POST",
+              headers: {
+                Authorization: apiKey,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ query, variables }),
+            });
+            const body = await res.json();
+            if (!res.ok) {
+              throw new Error(`Linear HTTP ${res.status}: ${JSON.stringify(body)}`);
+            }
+            if (body.errors?.length) {
+              throw new Error(body.errors.map((e) => e.message).join("; "));
+            }
+            return body.data;
+          }
+
+          async function main() {
+            if (!apiKey) {
+              console.error("Missing LINEAR_API_KEY");
+              process.exit(1);
+            }
+
+            // Extract Linear identifier from branch name, e.g. usc-222-... → USC-222
+            const match = headBranch.match(/\b(usc|us|dev|lf)-(\d+)\b/i);
+            if (!match) {
+              console.log(`Branch "${headBranch}" does not match a Linear identifier pattern — skipping.`);
+              process.exit(0);
+            }
+            const identifier = `${match[1].toUpperCase()}-${match[2]}`;
+            console.log(`Resolved Linear identifier: ${identifier}`);
+
+            // Look up the Linear issue
+            const issueData = await gql(
+              `query FindIssue($identifier: String!) {
+                issues(filter: { identifier: { eq: $identifier } }) {
+                  nodes { id identifier title description }
+                }
+              }`,
+              { identifier },
+            );
+
+            const issue = issueData.issues?.nodes?.[0];
+            if (!issue) {
+              console.log(`No Linear issue found for identifier "${identifier}" — skipping.`);
+              process.exit(0);
+            }
+            console.log(`Found Linear issue: ${issue.identifier} — ${issue.title}`);
+
+            // Build the PR sync block, keyed by PR number for multi-PR coexistence
+            const startMarker = `<!-- github-pr-sync-start-${prNumber} -->`;
+            const endMarker = `<!-- github-pr-sync-end-${prNumber} -->`;
+            const bodyContent = prBody.trim() || "_No description provided._";
+            const syncBlock = [
+              startMarker,
+              "",
+              "---",
+              "",
+              `**GitHub PR #${prNumber} — [${prTitle}](${prUrl})**`,
+              "",
+              bodyContent,
+              "",
+              endMarker,
+            ].join("\n");
+
+            // Strip this PR's existing block (idempotency for re-runs), leave other PR blocks intact
+            let existingDescription = issue.description || "";
+            const blockRegex = new RegExp(
+              `\\n*<!-- github-pr-sync-start-${prNumber} -->[\\s\\S]*?<!-- github-pr-sync-end-${prNumber} -->`,
+              "g",
+            );
+            const stripped = existingDescription.replace(blockRegex, "").trimEnd();
+
+            const newDescription = stripped ? `${stripped}\n\n${syncBlock}` : syncBlock;
+
+            // Update the Linear issue
+            const result = await gql(
+              `mutation UpdateIssue($id: String!, $description: String!) {
+                issueUpdate(id: $id, input: { description: $description }) {
+                  success
+                  issue { identifier title }
+                }
+              }`,
+              { id: issue.id, description: newDescription },
+            );
+
+            if (!result.issueUpdate?.success) {
+              console.error(`Failed to update Linear issue ${issue.identifier}`);
+              process.exit(1);
+            }
+
+            console.log(`Updated ${issue.identifier}: ${issue.title}`);
+
+            summary("### Linear PR Sync");
+            summary("");
+            summary(`Appended PR description to **[${issue.identifier}](https://linear.app/issue/${issue.identifier})** — ${issue.title}`);
+            summary(`- PR: [#${prNumber} ${prTitle}](${prUrl})`);
+          }
+
+          main().catch((err) => {
+            console.error(err);
+            process.exit(1);
+          });
+          SCRIPT
