@@ -235,6 +235,7 @@ model User {
   name         String
   passwordHash String?
   avatar       String?
+  avatarCrop   Json?
   phone         String?
   phoneVerified Boolean    @default(false)
   role         Role       @default(COACH)
@@ -482,9 +483,10 @@ model Athlete {
   firstName String             @default("")
   lastName  String             @default("")
   email     String?
-  avatar    String?
-  birthDate DateTime?
-  gender    GenderDeclaration?
+  avatar     String?
+  avatarCrop Json?
+  birthDate  DateTime?
+  gender     GenderDeclaration?
 
   medicalDetails Json? // { allergies: [], conditions: [], emergencyContact: {} }
 

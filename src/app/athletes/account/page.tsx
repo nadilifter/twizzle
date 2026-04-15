@@ -37,6 +37,7 @@ interface UserProfile {
   phone: string | null;
   phoneVerified: boolean;
   avatar: string | null;
+  avatarCrop: { x: number; y: number; width: number; height: number } | null;
   createdAt: string;
 }
 
@@ -231,10 +232,12 @@ export default function AccountPage() {
           <div className="flex items-center gap-4">
             <AvatarUpload
               currentAvatar={profile.avatar}
+              currentAvatarCrop={profile.avatarCrop}
               name={profile.name}
               uploadUrl="/api/avatar"
-              onAvatarChange={(url) => {
-                setProfile((prev) => (prev ? { ...prev, avatar: url } : prev));
+              deleteUrl="/api/avatar"
+              onAvatarChange={(url, crop) => {
+                setProfile((prev) => (prev ? { ...prev, avatar: url, avatarCrop: crop } : prev));
                 updateSession({ avatar: url });
               }}
               size="lg"

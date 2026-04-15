@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
       lastName: true,
       name: true,
       avatar: true,
+      avatarCrop: true,
       birthDate: true,
       gender: true,
       allowGuardianClaims: true,

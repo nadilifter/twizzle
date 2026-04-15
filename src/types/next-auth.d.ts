@@ -14,6 +14,7 @@ declare module "next-auth" {
       viewingAsUserId?: string;
       viewingAsUserName?: string;
       viewingAsUserEmail?: string;
+      avatarCrop?: { x: number; y: number; width: number; height: number } | null;
     } & DefaultSession["user"];
   }
 
@@ -23,6 +24,7 @@ declare module "next-auth" {
     organizationName: string;
     permissions: string[];
     isSuperAdmin: boolean;
+    avatarCrop?: { x: number; y: number; width: number; height: number } | null;
   }
 }
 
@@ -35,6 +37,7 @@ declare module "next-auth/jwt" {
     permissions: string[];
     isSuperAdmin: boolean;
     avatar?: string | null;
+    avatarCrop?: { x: number; y: number; width: number; height: number } | null;
     // Impersonation fields (superadmin "view as user" feature)
     viewingAsUserId?: string;
     viewingAsUserName?: string;

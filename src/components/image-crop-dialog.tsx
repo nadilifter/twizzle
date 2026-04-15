@@ -12,13 +12,18 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Loader2 } from "lucide-react";
+import { Loader2, RotateCcw } from "lucide-react";
+
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 3;
 
 interface ImageCropDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   imageSrc: string;
-  onCropComplete: (blob: Blob) => void;
+  onCropComplete?: (blob: Blob) => void;
+  onCropSelect?: (croppedArea: Area) => void;
+  initialCroppedAreaPercentages?: Area;
   aspect?: number;
   cropShape?: "rect" | "round";
   title?: string;
@@ -54,17 +59,24 @@ async function getCroppedImg(
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
-  ctx.drawImage(
-    image,
-    pixelCrop.x,
-    pixelCrop.y,
-    pixelCrop.width,
-    pixelCrop.height,
-    0,
-    0,
-    canvas.width,
-    canvas.height
-  );
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const sx = Math.max(0, pixelCrop.x);
+  const sy = Math.max(0, pixelCrop.y);
+  const sx2 = Math.min(image.naturalWidth, pixelCrop.x + pixelCrop.width);
+  const sy2 = Math.min(image.naturalHeight, pixelCrop.y + pixelCrop.height);
+  const sw = sx2 - sx;
+  const sh = sy2 - sy;
+
+  const scaleX = canvas.width / pixelCrop.width;
+  const scaleY = canvas.height / pixelCrop.height;
+  const dx = (sx - pixelCrop.x) * scaleX;
+  const dy = (sy - pixelCrop.y) * scaleY;
+  const dw = sw * scaleX;
+  const dh = sh * scaleY;
+
+  ctx.drawImage(image, sx, sy, sw, sh, dx, dy, dw, dh);
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(
@@ -83,6 +95,8 @@ export function ImageCropDialog({
   onOpenChange,
   imageSrc,
   onCropComplete,
+  onCropSelect,
+  initialCroppedAreaPercentages,
   aspect = 3 / 4,
   cropShape = "rect",
   title = "Crop Image",
@@ -91,15 +105,21 @@ export function ImageCropDialog({
 }: ImageCropDialogProps) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
+  const [croppedArea, setCroppedArea] = useState<Area | null>(null);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
-    setCroppedAreaPixels(croppedAreaPixels);
+  const handleCropComplete = useCallback((area: Area, areaPixels: Area) => {
+    setCroppedArea(area);
+    setCroppedAreaPixels(areaPixels);
   }, []);
 
   const handleSave = async () => {
-    if (!croppedAreaPixels) return;
+    if (onCropSelect && croppedArea) {
+      onCropSelect(croppedArea);
+      return;
+    }
+    if (!onCropComplete || !croppedAreaPixels) return;
     setIsSaving(true);
     try {
       const blob = await getCroppedImg(
@@ -119,6 +139,7 @@ export function ImageCropDialog({
   const handleClose = () => {
     setCrop({ x: 0, y: 0 });
     setZoom(1);
+    setCroppedArea(null);
     setCroppedAreaPixels(null);
     onOpenChange(false);
   };
@@ -140,30 +161,50 @@ export function ImageCropDialog({
             image={imageSrc}
             crop={crop}
             zoom={zoom}
+            minZoom={MIN_ZOOM}
+            maxZoom={MAX_ZOOM}
             aspect={aspect}
             cropShape={cropShape}
             showGrid={cropShape === "rect"}
+            initialCroppedAreaPercentages={initialCroppedAreaPercentages}
             onCropChange={setCrop}
             onCropComplete={handleCropComplete}
             onZoomChange={setZoom}
           />
         </div>
         <div className="flex items-center gap-3 px-1">
-          <span className="text-xs text-muted-foreground shrink-0">Zoom</span>
+          <span id="zoom-slider-label" className="text-xs text-muted-foreground shrink-0">
+            Zoom
+          </span>
           <Slider
             value={[zoom]}
-            min={1}
-            max={3}
+            min={MIN_ZOOM}
+            max={MAX_ZOOM}
             step={0.1}
             onValueChange={([value]) => setZoom(value)}
             className="flex-1"
+            aria-labelledby="zoom-slider-label"
           />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0"
+            title="Reset crop"
+            aria-label="Reset crop"
+            onClick={() => {
+              setCrop({ x: 0, y: 0 });
+              setZoom(1);
+            }}
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+          </Button>
         </div>
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={handleClose} disabled={isSaving}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={isSaving || !croppedAreaPixels}>
+          <Button onClick={handleSave} disabled={isSaving || (!croppedArea && !croppedAreaPixels)}>
             {isSaving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

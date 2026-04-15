@@ -309,9 +309,11 @@ export default function AthleteProfilePage() {
         <div className="flex items-start gap-4">
           <AvatarUpload
             currentAvatar={athlete.avatar ?? undefined}
+            currentAvatarCrop={(athlete as any).avatarCrop ?? undefined}
             name={athlete.name}
             uploadUrl={`/api/athletes/${athlete.id}/avatar`}
-            onAvatarChange={(url) => fetchAthlete()}
+            deleteUrl={`/api/athletes/${athlete.id}/avatar`}
+            onAvatarChange={() => fetchAthlete()}
             size="sm"
           />
           <div className="flex flex-col gap-1 min-w-0">

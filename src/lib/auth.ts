@@ -217,6 +217,7 @@ async function buildAuthorizedUser(userId: string, targetOrgId?: string | null) 
     email: user.email,
     name: user.name,
     image: user.avatar,
+    avatarCrop: user.avatarCrop as { x: number; y: number; width: number; height: number } | null,
     role,
     organizationId: organizationId || "",
     organizationName: organizationName || "",
@@ -505,6 +506,7 @@ export const authOptions: NextAuthOptions = {
               token.organizationId = authUser.organizationId;
               token.organizationName = authUser.organizationName;
               token.avatar = dbUser.avatar || null;
+              token.avatarCrop = authUser.avatarCrop || null;
             }
           }
         }
@@ -555,6 +557,7 @@ export const authOptions: NextAuthOptions = {
               token.permissions = authUser.permissions;
               token.role = authUser.role;
               token.avatar = authUser.image || token.avatar || null;
+              token.avatarCrop = authUser.avatarCrop || null;
             }
           }
 
@@ -568,6 +571,9 @@ export const authOptions: NextAuthOptions = {
           // Handle avatar update
           if (session.avatar !== undefined) {
             token.avatar = session.avatar;
+          }
+          if (session.avatarCrop !== undefined) {
+            token.avatarCrop = session.avatarCrop;
           }
         }
 
@@ -591,6 +597,8 @@ export const authOptions: NextAuthOptions = {
           session.user.viewingAsUserName = token.viewingAsUserName as string | undefined;
           session.user.viewingAsUserEmail = token.viewingAsUserEmail as string | undefined;
           session.user.image = (token.avatar as string) || null;
+          session.user.avatarCrop =
+            (token.avatarCrop as { x: number; y: number; width: number; height: number }) || null;
         }
         return session;
       } catch (error) {

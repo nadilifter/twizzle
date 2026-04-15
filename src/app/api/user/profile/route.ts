@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
         phone: true,
         phoneVerified: true,
         avatar: true,
+        avatarCrop: true,
         createdAt: true,
       },
     });
@@ -89,6 +90,7 @@ export async function PATCH(request: NextRequest) {
         phone: true,
         phoneVerified: true,
         avatar: true,
+        avatarCrop: true,
         createdAt: true,
       },
     });

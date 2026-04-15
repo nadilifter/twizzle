@@ -291,10 +291,14 @@ export default function AthleteDetailPage() {
           <div className="flex items-start gap-4">
             <AvatarUpload
               currentAvatar={athlete.avatar}
+              currentAvatarCrop={athlete.avatarCrop}
               name={displayName}
               uploadUrl={`/api/athletes/${athleteId}/avatar`}
-              onAvatarChange={(url) =>
-                setAthlete((prev: any) => (prev ? { ...prev, avatar: url } : prev))
+              deleteUrl={`/api/athletes/${athleteId}/avatar`}
+              onAvatarChange={(url, crop) =>
+                setAthlete((prev: any) =>
+                  prev ? { ...prev, avatar: url, avatarCrop: crop } : prev
+                )
               }
               size="sm"
             />

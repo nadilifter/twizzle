@@ -226,6 +226,7 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
         name: session.user.name || "User",
         email: session.user.email || "",
         avatar: session.user.image || null,
+        avatarCrop: session.user.avatarCrop || null,
       }
     : null;
 

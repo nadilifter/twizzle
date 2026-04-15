@@ -1,4 +1,5 @@
 import { db } from "@/lib/db"; // tenant-isolation-ok: User/Athlete are not tenant models; sync is user-scoped
+import { Prisma } from "@prisma/client";
 
 /**
  * Split a full name into firstName and lastName.
@@ -20,7 +21,7 @@ export async function syncUserToSelfAthlete(userId: string): Promise<void> {
   try {
     const user = await db.user.findUnique({
       where: { id: userId },
-      select: { name: true, email: true, avatar: true },
+      select: { name: true, email: true, avatar: true, avatarCrop: true },
     });
     if (!user) return;
 
@@ -40,6 +41,7 @@ export async function syncUserToSelfAthlete(userId: string): Promise<void> {
         name: user.name,
         email: user.email,
         avatar: user.avatar,
+        avatarCrop: (user.avatarCrop as Prisma.InputJsonValue) ?? Prisma.DbNull,
       },
     });
   } catch (error) {

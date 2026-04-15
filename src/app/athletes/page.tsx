@@ -17,6 +17,7 @@ interface AthleteWithGuardians {
   lastName: string;
   name: string;
   avatar: string | null;
+  avatarCrop?: { x: number; y: number; width: number; height: number } | null;
   birthDate: string | null;
   gender: string | null;
   status: string;
@@ -173,7 +174,11 @@ export default function AthletesPage() {
                   <CardContent className="p-4">
                     <div className="flex items-start gap-4">
                       <Avatar className="w-12 h-12">
-                        <AvatarImage src={athlete.avatar || undefined} alt={displayName} />
+                        <AvatarImage
+                          src={athlete.avatar || undefined}
+                          alt={displayName}
+                          crop={athlete.avatarCrop ?? undefined}
+                        />
                         <AvatarFallback className="text-sm font-bold bg-primary/10 text-primary">
                           {initials}
                         </AvatarFallback>

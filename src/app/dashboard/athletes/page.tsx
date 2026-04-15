@@ -246,7 +246,11 @@ export default function AthletesPage() {
         cell: ({ row }) => (
           <div className="flex items-center gap-3">
             <Avatar>
-              <AvatarImage src={row.original.avatar ?? undefined} alt={row.original.name} />
+              <AvatarImage
+                src={row.original.avatar ?? undefined}
+                alt={row.original.name}
+                crop={(row.original as any).avatarCrop ?? undefined}
+              />
               <AvatarFallback>
                 {row.original.name
                   .split(" ")
