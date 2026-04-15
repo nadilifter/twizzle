@@ -31,6 +31,7 @@ import {
 import { toast } from "sonner";
 import { REGEXP_ONLY_DIGITS_AND_CHARS } from "input-otp";
 import { validatePassword, PASSWORD_MESSAGES, PASSWORD_MIN_LENGTH } from "@/lib/password";
+import { setPendingPassword } from "@/lib/pending-password";
 
 import { COUNTRIES, isValidPostalCode } from "@/lib/location-data";
 import { Button } from "@/components/ui/button";
@@ -562,7 +563,11 @@ export default function SignupPage() {
           const { email, password, confirmPassword, name, ...orgFields } = formData;
           return { ...orgFields, useExistingAccount: true as const };
         })()
-      : formData;
+      : (() => {
+          const { password, confirmPassword, ...rest } = formData;
+          setPendingPassword(password);
+          return rest;
+        })();
 
     const submitData = { ...baseSubmitData, ...(referralCode ? { referralCode } : {}) };
 

@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { toast } from "sonner";
 import { getBaseDomainSuffix } from "@/lib/client-domains";
+import { getPendingPassword, clearPendingPassword } from "@/lib/pending-password";
 import { formatCardBrand } from "@/lib/payment-utils";
 import { FREE_TRIAL_DAYS } from "@/lib/billing-config";
 import { formatPhoneNumberIntl } from "react-phone-number-input";
@@ -17,8 +18,6 @@ import { DevTrialBillingTester } from "./dev-trial-billing-tester";
 interface SignupData {
   useExistingAccount?: boolean;
   email?: string;
-  password?: string;
-  confirmPassword?: string;
   name?: string;
   orgName: string;
   orgEmail: string;
@@ -80,13 +79,23 @@ export default function ReviewPage() {
 
     setIsCreatingOrg(true);
     try {
-      const { confirmPassword, planName, planPrice, cardLastFour, cardBrand, ...formFields } =
-        signupData;
+      const { planName, planPrice, cardLastFour, cardBrand, ...formFields } = signupData;
+
+      const password = getPendingPassword();
+      if (!signupData.useExistingAccount && !password) {
+        toast.error("Session expired. Please restart the signup process.");
+        router.replace("/org-signup");
+        return;
+      }
 
       const response = await fetch("/api/org-signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formFields, runCronAfterCreation }),
+        body: JSON.stringify({
+          ...formFields,
+          ...(password ? { password } : {}),
+          runCronAfterCreation,
+        }),
       });
 
       const data = await response.json();
@@ -96,6 +105,7 @@ export default function ReviewPage() {
       }
 
       sessionStorage.removeItem("org-signup-data");
+      clearPendingPassword();
       const successParams = new URLSearchParams({
         subdomain: signupData.subdomain,
         orgName: signupData.orgName,

@@ -19,8 +19,6 @@ import { FREE_TRIAL_DAYS } from "@/lib/billing-config";
 interface SignupData {
   useExistingAccount?: boolean;
   email?: string;
-  password?: string;
-  confirmPassword?: string;
   name?: string;
   orgName: string;
   orgEmail: string;
