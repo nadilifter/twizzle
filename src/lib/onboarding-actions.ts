@@ -37,6 +37,14 @@ export async function getActionItems(organizationId: string): Promise<ActionItem
 
   const items: ActionItem[] = [
     {
+      id: "setup-payments",
+      title: "Set up payments",
+      description: "Payment processing must be set up before this site can go live",
+      url: "/dashboard/financials/onboarding",
+      isComplete: adyenAccount?.onboardingStatus === "VERIFIED",
+      icon: "CreditCard",
+    },
+    {
       id: "invite-team",
       title: "Invite team members",
       description: "Add coaches, staff, and other administrators",
@@ -95,14 +103,6 @@ export async function getActionItems(organizationId: string): Promise<ActionItem
       url: "/dashboard/website",
       isComplete: !!websiteConfig?.isPublished,
       icon: "Globe",
-    },
-    {
-      id: "setup-payments",
-      title: "Set up payments",
-      description: "Complete Adyen verification to accept payments and receive payouts",
-      url: "/dashboard/financials/onboarding",
-      isComplete: adyenAccount?.onboardingStatus === "VERIFIED",
-      icon: "CreditCard",
     },
   ];
 

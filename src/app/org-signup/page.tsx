@@ -170,7 +170,7 @@ export default function SignupPage() {
 
   // Subdomain availability check
   const [subdomainStatus, setSubdomainStatus] = React.useState<
-    "idle" | "checking" | "available" | "taken"
+    "idle" | "checking" | "available" | "taken" | "invalid"
   >("idle");
   const [subdomainReason, setSubdomainReason] = React.useState<string>("");
 
@@ -266,10 +266,14 @@ export default function SignupPage() {
 
   // Check subdomain availability
   const checkSubdomain = React.useCallback(async (subdomain: string) => {
-    if (!subdomain || subdomain.length < 3) {
+    if (!subdomain) {
       setSubdomainStatus("idle");
       setSubdomainReason("");
       return;
+    }
+
+    if (subdomain.length < 3) {
+      setSubdomainStatus("invalid");
     }
 
     setSubdomainStatus("checking");
@@ -286,8 +290,8 @@ export default function SignupPage() {
     }
   }, []);
 
-  useDebounce(formData.orgName, 200, checkOrgName);
-  useDebounce(formData.subdomain, 200, checkSubdomain);
+  useDebounce(formData.orgName, 300, checkOrgName);
+  useDebounce(formData.subdomain, 300, checkSubdomain);
 
   const handleSubdomainChange = (value: string) => {
     const withDashes = value.replace(/\s/g, "-");
@@ -494,7 +498,7 @@ export default function SignupPage() {
 
     if (!formData.subdomain.trim()) {
       newErrors.subdomain = "Subdomain is required";
-    } else if (formData.subdomain.length < 3) {
+    } else if (subdomainStatus === "invalid") {
       newErrors.subdomain = "Subdomain must be at least 3 characters";
     } else if (subdomainStatus === "taken") {
       newErrors.subdomain = subdomainReason || "This subdomain is already taken";

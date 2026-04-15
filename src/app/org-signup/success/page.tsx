@@ -36,7 +36,18 @@ function SuccessContent() {
     ? `${adminBase}/dashboard/switch-org?orgId=${encodeURIComponent(orgId)}&orgName=${encodeURIComponent(orgName)}`
     : adminBase;
 
+  const actionItemsUrl = orgId
+    ? `${adminBase}/dashboard/switch-org?orgId=${encodeURIComponent(orgId)}&orgName=${encodeURIComponent(orgName)}&redirect=/dashboard/action-items`
+    : `${adminBase}/dashboard/action-items`;
+
   const nextSteps = [
+    {
+      icon: CreditCard,
+      title: "Set up payments",
+      description: "Payment processing must be set up before this site can go live",
+      url: `${adminBase}/financials/onboarding`,
+      highlight: true,
+    },
     {
       icon: Users,
       title: "Invite team members",
@@ -54,12 +65,6 @@ function SuccessContent() {
       title: "Customize your website",
       description: "Update your public site with content and branding",
       url: `${adminBase}/organization/website`,
-    },
-    {
-      icon: CreditCard,
-      title: "Set up payments",
-      description: "Complete Adyen verification to accept payments and receive payouts",
-      url: `${adminBase}/financials/onboarding`,
     },
   ];
 
@@ -96,10 +101,14 @@ function SuccessContent() {
               <li key={index}>
                 <a
                   href={step.url}
-                  className="flex items-center gap-3 rounded-lg p-3 -mx-3 transition-colors hover:bg-muted/50 group"
+                  className={`flex items-center gap-3 rounded-lg p-3 -mx-3 transition-colors group ${"highlight" in step && step.highlight ? "bg-yellow-50 dark:bg-yellow-900/10 hover:bg-yellow-100/70 dark:hover:bg-yellow-900/20" : "hover:bg-muted/50"}`}
                 >
-                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <step.icon className="h-4 w-4 text-primary" />
+                  <div
+                    className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${"highlight" in step && step.highlight ? "bg-yellow-200/60 dark:bg-yellow-800/40" : "bg-primary/10"}`}
+                  >
+                    <step.icon
+                      className={`h-4 w-4 ${"highlight" in step && step.highlight ? "text-yellow-700 dark:text-yellow-400" : "text-primary"}`}
+                    />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium group-hover:underline">{step.title}</p>
@@ -116,8 +125,8 @@ function SuccessContent() {
       {/* CTA Button */}
       <div className="flex justify-center">
         <Button size="lg" asChild>
-          <a href={adminUrl}>
-            Go to Dashboard
+          <a href={actionItemsUrl}>
+            Complete Action Items
             <ArrowRight className="ml-2 h-4 w-4" />
           </a>
         </Button>
