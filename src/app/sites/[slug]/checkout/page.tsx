@@ -621,6 +621,13 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
       toast.error("Please enter a valid phone number");
       return;
     }
+    if (
+      selectedAddressId === "new" &&
+      (!formData.address || !formData.city || !formData.postalCode)
+    ) {
+      toast.error("Please enter your billing address (street, city, and postal code)");
+      return;
+    }
 
     setIsProcessing(true);
 

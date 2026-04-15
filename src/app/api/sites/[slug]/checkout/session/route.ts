@@ -47,29 +47,56 @@ const cartItemSchema = z.object({
     .optional(),
 });
 
-const checkoutBodySchema = z.object({
-  items: z.array(cartItemSchema).min(1).max(100),
-  userDetails: z.object({
-    firstName: z.string().min(1).max(255),
-    lastName: z.string().min(1).max(255),
-    email: z.string().email().max(320),
-    phone: z
-      .string()
-      .max(30)
-      .refine((val) => !val || isValidPhoneNumber(val), "Please enter a valid phone number")
-      .optional()
-      .default(""),
-    address: z.string().max(500).optional().default(""),
-    city: z.string().max(255).optional().default(""),
-    stateProvince: z.string().max(255).optional().default(""),
-    postalCode: z.string().max(20).optional().default(""),
-  }),
-  contactId: z.string().optional(),
-  billingAddressId: z.string().optional(),
-  editingContact: z.boolean().optional(),
-  editingAddress: z.boolean().optional(),
-  discountCode: z.string().max(100).optional(),
-});
+const checkoutBodySchema = z
+  .object({
+    items: z.array(cartItemSchema).min(1).max(100),
+    userDetails: z.object({
+      firstName: z.string().min(1).max(255),
+      lastName: z.string().min(1).max(255),
+      email: z.string().email().max(320),
+      phone: z
+        .string()
+        .max(30)
+        .refine((val) => !val || isValidPhoneNumber(val), "Please enter a valid phone number")
+        .optional()
+        .default(""),
+      address: z.string().max(500).optional().default(""),
+      city: z.string().max(255).optional().default(""),
+      stateProvince: z.string().max(255).optional().default(""),
+      postalCode: z.string().max(20).optional().default(""),
+    }),
+    contactId: z.string().optional(),
+    billingAddressId: z.string().optional(),
+    editingContact: z.boolean().optional(),
+    editingAddress: z.boolean().optional(),
+    discountCode: z.string().max(100).optional(),
+  })
+  .superRefine((data, ctx) => {
+    const needsAddressFromForm = !data.billingAddressId || data.editingAddress;
+    if (needsAddressFromForm) {
+      if (!data.userDetails.address) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Street address is required",
+          path: ["userDetails", "address"],
+        });
+      }
+      if (!data.userDetails.city) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "City is required",
+          path: ["userDetails", "city"],
+        });
+      }
+      if (!data.userDetails.postalCode) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Postal code is required",
+          path: ["userDetails", "postalCode"],
+        });
+      }
+    }
+  });
 
 interface CartItem {
   referenceId: string;
