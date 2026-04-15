@@ -57,18 +57,19 @@ export async function POST(request: NextRequest) {
     fastForward,
   });
 
-  // Fast-forward: set trialEndsAt and nextBillingDate to the past so the cron picks it up.
-  // Used by the superadmin "Test Billing Run" button on orgs not created via the dev signup flow.
-  if (fastForward && subscription.status === "TRIALING") {
+  // Fast-forward: move nextBillingDate to the past so generateDueInvoices picks it up.
+  // Also moves trialEndsAt to the past for TRIALING subs so transitionExpiredTrials fires.
+  // generateDueInvoices will advance nextBillingDate by +1 month/year when it creates the invoice.
+  if (fastForward) {
     const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
     await db.organizationSubscription.update({
       where: { id: subscription.id },
       data: {
-        trialEndsAt: oneMinuteAgo,
         nextBillingDate: oneMinuteAgo,
+        ...(subscription.status === "TRIALING" ? { trialEndsAt: oneMinuteAgo } : {}),
       },
     });
-    console.log("[dev/trigger-trial-billing] Fast-forwarded trial dates to the past.");
+    console.log("[dev/trigger-trial-billing] Fast-forwarded billing dates to the past.");
   }
 
   const paymentMethods = await db.organizationPaymentMethod.findMany({
