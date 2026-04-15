@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
         avatar: true,
         avatarCrop: true,
         createdAt: true,
+        smsConsentAt: true,
       },
     });
 

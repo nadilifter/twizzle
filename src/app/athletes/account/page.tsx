@@ -28,7 +28,9 @@ import {
   RotateCw,
   ArrowLeft,
   Smartphone,
+  MessageSquare,
 } from "lucide-react";
+import { SmsConsentCheckbox } from "@/components/sms-consent-checkbox";
 
 interface UserProfile {
   id: string;
@@ -39,6 +41,7 @@ interface UserProfile {
   avatar: string | null;
   avatarCrop: { x: number; y: number; width: number; height: number } | null;
   createdAt: string;
+  smsConsentAt: string | null;
 }
 
 type PhoneVerificationState = "idle" | "sending" | "sent" | "verifying" | "verified";
@@ -53,6 +56,7 @@ export default function AccountPage() {
 
   const [phoneVerification, setPhoneVerification] = useState<PhoneVerificationState>("idle");
   const [verificationCode, setVerificationCode] = useState("");
+  const [smsConsentUpdating, setSmsConsentUpdating] = useState(false);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -435,6 +439,87 @@ export default function AccountPage() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* SMS Consent Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            SMS Notifications
+          </CardTitle>
+          <CardDescription>
+            {profile.smsConsentAt
+              ? `SMS messaging enabled since ${new Date(profile.smsConsentAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.`
+              : "You are not currently opted in to receive SMS messages."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {profile.smsConsentAt ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                You are receiving transactional and conversational SMS messages from Uplifter and
+                your organizations. You can opt out at any time by clicking below or by replying
+                STOP to any message.
+              </p>
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  setSmsConsentUpdating(true);
+                  try {
+                    const res = await fetch("/api/account/sms-consent", { method: "DELETE" });
+                    if (res.ok) {
+                      setProfile((prev) => (prev ? { ...prev, smsConsentAt: null } : prev));
+                      toast.success("SMS notifications disabled");
+                    } else {
+                      toast.error("Failed to update SMS preferences");
+                    }
+                  } catch {
+                    toast.error("Failed to update SMS preferences");
+                  } finally {
+                    setSmsConsentUpdating(false);
+                  }
+                }}
+                disabled={smsConsentUpdating}
+              >
+                {smsConsentUpdating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  "Turn Off SMS Notifications"
+                )}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <SmsConsentCheckbox
+                checked={false}
+                onChange={async (checked) => {
+                  if (!checked) return;
+                  setSmsConsentUpdating(true);
+                  try {
+                    const res = await fetch("/api/account/sms-consent", { method: "POST" });
+                    if (res.ok) {
+                      setProfile((prev) =>
+                        prev ? { ...prev, smsConsentAt: new Date().toISOString() } : prev
+                      );
+                      toast.success("SMS notifications enabled");
+                    } else {
+                      toast.error("Failed to update SMS preferences");
+                    }
+                  } catch {
+                    toast.error("Failed to update SMS preferences");
+                  } finally {
+                    setSmsConsentUpdating(false);
+                  }
+                }}
+                disabled={smsConsentUpdating}
+              />
             </div>
           )}
         </CardContent>
