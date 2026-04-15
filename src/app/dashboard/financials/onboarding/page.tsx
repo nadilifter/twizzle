@@ -37,6 +37,7 @@ type OnboardingAccount = {
   capabilities: Record<string, any> | null;
   hasStore: boolean;
   hasSweep: boolean;
+  payoutSchedule: string | null;
   legalEntityId: string | null;
   accountHolderId: string | null;
   balanceAccountId: string | null;
@@ -143,6 +144,7 @@ export default function OnboardingPage() {
           capabilities: null,
           hasStore: false,
           hasSweep: false,
+          payoutSchedule: null,
           legalEntityId: data.account.legalEntityId,
           accountHolderId: data.account.accountHolderId,
           balanceAccountId: data.account.balanceAccountId,
@@ -619,7 +621,9 @@ function VerifiedState({
           {account.hasSweep && (
             <div>
               <span className="text-muted-foreground">Payouts</span>
-              <p className="font-mono text-green-600">Daily sweep active</p>
+              <p className="font-mono text-green-600 capitalize">
+                {account.payoutSchedule ?? "daily"} sweep active
+              </p>
             </div>
           )}
         </CardContent>

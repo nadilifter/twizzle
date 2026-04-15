@@ -125,6 +125,7 @@ src/app/api/organization/website/check-subdomain/route.ts
 src/app/api/organization/adyen-onboarding/route.ts
 src/app/api/organization/adyen-onboarding/finalize/route.ts
 src/app/api/organization/adyen-onboarding/link/route.ts
+src/app/api/organization/adyen-onboarding/sweep/route.ts
 src/app/api/organization/medical-config/route.ts
 src/app/api/organization/sports/route.ts
 src/app/api/organization/website/route.ts

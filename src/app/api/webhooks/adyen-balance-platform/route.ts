@@ -183,12 +183,19 @@ async function handleAccountHolderUpdated(data: any) {
   const onboardingStatus = deriveOnboardingStatus(accountHolder);
   const verificationStatus = summarizeVerification(accountHolder);
 
+  const holderStatus = accountHolder.status as string | undefined;
+  const accountStatus =
+    holderStatus === "Suspended" || holderStatus === "Closed" || holderStatus === "Inactive"
+      ? "INACTIVE"
+      : "ACTIVE";
+
   await db.adyenPlatformAccount.update({
     where: { id: account.id },
     data: {
       capabilities,
       onboardingStatus,
       verificationStatus,
+      accountStatus,
     },
   });
 

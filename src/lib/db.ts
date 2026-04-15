@@ -137,8 +137,8 @@ export const db = (process.env.NODE_ENV !== "production"
   : _rawDb) as unknown as PrismaClient;
 
 // Models that have a direct organizationId field and should be auto-scoped.
-// Platform-level models (OrganizationSubscription, OrganizationFeatureOverride,
-// OrganizationPaymentMethod, AdyenPlatformAccount, OrganizationStatusLog,
+// Platform-level models (AdyenPlatformAccount, OrganizationSubscription, OrganizationFeatureOverride,
+// OrganizationPaymentMethod, OrganizationStatusLog,
 // SubscriptionInvoice, SubscriptionPaymentAttempt) are intentionally excluded
 // -- they are managed by superadmins and system cron jobs.
 // SmsNumberAssignment is excluded because the number pool service requires

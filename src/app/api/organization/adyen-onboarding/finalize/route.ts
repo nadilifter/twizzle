@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { createStore, getStoreByReference, createSweep } from "@/lib/adyen-platform";
+import {
+  createStore,
+  getStoreByReference,
+  createSweep,
+  getLegalEntity,
+} from "@/lib/adyen-platform";
 
 /**
  * POST /api/organization/adyen-onboarding/finalize
@@ -19,8 +24,9 @@ export async function POST() {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    const orgId = session.user.organizationId;
     const account = await db.adyenPlatformAccount.findUnique({
-      where: { organizationId: session.user.organizationId },
+      where: { organizationId: orgId, accountStatus: "ACTIVE" },
     });
 
     if (!account) {
@@ -35,7 +41,7 @@ export async function POST() {
     }
 
     const org = await db.organization.findUnique({
-      where: { id: session.user.organizationId },
+      where: { id: orgId },
       select: {
         name: true,
         slug: true,
@@ -122,14 +128,15 @@ export async function POST() {
       updates.storeReference = store.reference;
     }
 
-    // Create Sweep -- need the transfer instrument from the account holder
-    if (!account.sweepId && account.balanceAccountId && account.accountHolderId) {
+    // Create Sweep -- need the transfer instrument from the legal entity
+    if (!account.sweepId && account.balanceAccountId && account.legalEntityId) {
       try {
-        const transferInstrumentId = await findTransferInstrumentId(account.accountHolderId);
+        const transferInstrumentId = await findTransferInstrumentId(account.legalEntityId);
 
         if (transferInstrumentId) {
           const sweep = await createSweep(account.balanceAccountId, {
             counterparty: { transferInstrumentId },
+            category: "bank",
             type: "push",
             schedule: { type: "daily" },
             priorities: ["regular"],
@@ -138,6 +145,7 @@ export async function POST() {
 
           updates.sweepId = sweep.id;
           updates.transferInstrumentId = transferInstrumentId;
+          updates.payoutSchedule = "daily";
         } else {
           console.warn(
             "No transfer instrument found -- sweep creation skipped. Bank details may not be provided yet."
@@ -150,7 +158,7 @@ export async function POST() {
 
     if (Object.keys(updates).length > 0) {
       await db.adyenPlatformAccount.update({
-        where: { id: account.id },
+        where: { organizationId: orgId, id: account.id, accountStatus: "ACTIVE" },
         data: updates,
       });
     }
@@ -168,35 +176,15 @@ export async function POST() {
 }
 
 /**
- * Discover the transfer instrument ID from the account holder's balance account.
- * Transfer instruments are created during hosted onboarding when the user provides bank details.
+ * Discover the transfer instrument ID from the legal entity.
+ * Bank accounts added during hosted onboarding are stored as transfer instruments
+ * on the legal entity, not as payment instruments on the balance account.
  */
-async function findTransferInstrumentId(accountHolderId: string): Promise<string | null> {
+async function findTransferInstrumentId(legalEntityId: string): Promise<string | null> {
   try {
-    const { BalancePlatformAPI, Client } = require("@adyen/api-library");
-    const client = new Client({
-      apiKey: process.env.ADYEN_PLATFORM_API_KEY,
-      environment: process.env.ADYEN_ENVIRONMENT?.toUpperCase() === "LIVE" ? "LIVE" : "TEST",
-    });
-    const configApi = new BalancePlatformAPI(client);
-
-    // Get all balance accounts for this account holder
-    const balanceAccounts =
-      await configApi.AccountHoldersApi.getAllBalanceAccountsOfAccountHolder(accountHolderId);
-
-    // Check each balance account for linked payment instruments
-    for (const ba of balanceAccounts.balanceAccounts || []) {
-      const instruments =
-        await configApi.BalanceAccountsApi.getPaymentInstrumentsLinkedToBalanceAccount(ba.id);
-
-      for (const pi of instruments.paymentInstruments || []) {
-        if (pi.type === "bankAccount" && pi.id) {
-          return pi.id;
-        }
-      }
-    }
-
-    return null;
+    const entity = await getLegalEntity(legalEntityId);
+    const instruments: Array<{ id: string }> = entity.transferInstruments || [];
+    return instruments[0]?.id ?? null;
   } catch (error) {
     console.error("Failed to find transfer instrument:", error);
     return null;

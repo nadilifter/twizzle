@@ -3493,7 +3493,8 @@ model AdyenPlatformAccount {
   storeReference   String?
 
   // Onboarding
-  onboardingStatus   AdyenOnboardingStatus @default(PENDING_HOSTED)
+  onboardingStatus   AdyenOnboardingStatus  @default(PENDING_HOSTED)
+  accountStatus      AdyenAccountStatus     @default(ACTIVE)
   verificationStatus String?
   capabilities       Json?
 
@@ -3505,6 +3506,7 @@ model AdyenPlatformAccount {
   // Sweep
   sweepId              String?
   transferInstrumentId String?
+  payoutSchedule       String  @default("daily")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3522,6 +3524,11 @@ enum AdyenOnboardingStatus {
   IN_REVIEW
   VERIFIED
   REJECTED
+}
+
+enum AdyenAccountStatus {
+  ACTIVE
+  INACTIVE
 }
 
 // ============================================

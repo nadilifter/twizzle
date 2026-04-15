@@ -250,6 +250,7 @@ export async function createSweep(
   balanceAccountId: string,
   data: {
     counterparty: { transferInstrumentId: string };
+    category: "bank";
     type: "push";
     schedule: { type: string };
     priorities: string[];
@@ -261,6 +262,26 @@ export async function createSweep(
   } catch (error: any) {
     console.error("adyen-platform: createSweep failed", {
       balanceAccountId,
+      status: error.statusCode,
+      body: error.responseBody,
+    });
+    throw error;
+  }
+}
+
+export async function updateSweep(
+  balanceAccountId: string,
+  sweepId: string,
+  schedule: { type: "daily" | "weekly" | "monthly" }
+): Promise<{ id: string; [key: string]: any }> {
+  try {
+    return await getConfigApi().BalanceAccountsApi.updateSweep(balanceAccountId, sweepId, {
+      schedule,
+    });
+  } catch (error: any) {
+    console.error("adyen-platform: updateSweep failed", {
+      balanceAccountId,
+      sweepId,
       status: error.statusCode,
       body: error.responseBody,
     });

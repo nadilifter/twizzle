@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -87,6 +87,50 @@ export default function PayoutsPage() {
     unsettledCount: 0,
   });
 
+  const [payoutSchedule, setPayoutSchedule] = React.useState<string>("daily");
+  const [hasSweep, setHasSweep] = React.useState(false);
+  const [isVerified, setIsVerified] = React.useState(false);
+  const [scheduleLoading, setScheduleLoading] = React.useState(false);
+
+  useEffect(() => {
+    async function fetchSchedule() {
+      try {
+        const res = await fetch("/api/organization/adyen-onboarding");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.account) {
+          setPayoutSchedule(data.account.payoutSchedule ?? "daily");
+          setHasSweep(!!data.account.hasSweep);
+          setIsVerified(data.account.onboardingStatus === "VERIFIED");
+        }
+      } catch {
+        // best-effort; don't block the page
+      }
+    }
+    fetchSchedule();
+  }, []);
+
+  const handleScheduleChange = async (value: string) => {
+    setScheduleLoading(true);
+    try {
+      const res = await fetch("/api/organization/adyen-onboarding/sweep", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ schedule: value }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to update payout schedule");
+      }
+      setPayoutSchedule(value);
+      toast.success(`Payout schedule updated to ${value}`);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update payout schedule");
+    } finally {
+      setScheduleLoading(false);
+    }
+  };
+
   const fetchPayouts = React.useCallback(async () => {
     try {
       setLoading(true);
@@ -114,7 +158,7 @@ export default function PayoutsPage() {
     }
   }, [page, statusFilter, startDate, endDate]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchPayouts();
   }, [fetchPayouts]);
 
@@ -161,7 +205,7 @@ export default function PayoutsPage() {
         <p className="text-muted-foreground">Track settlements transferred to your bank account.</p>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <InfoIcon className="h-3 w-3" />
-          Payouts are processed daily via automated sweeps.
+          Payouts are processed {payoutSchedule} via automated sweeps.
         </div>
       </div>
 
@@ -203,6 +247,38 @@ export default function PayoutsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Payout Schedule</CardTitle>
+          <CardDescription>
+            Choose how often funds are swept from your balance account to your bank.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-3">
+            <Select
+              value={payoutSchedule}
+              onValueChange={handleScheduleChange}
+              disabled={!hasSweep || !isVerified || scheduleLoading}
+            >
+              <SelectTrigger className="w-[160px]">
+                {scheduleLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <SelectValue />}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="daily">Daily</SelectItem>
+                <SelectItem value="weekly">Weekly</SelectItem>
+                <SelectItem value="monthly">Monthly</SelectItem>
+              </SelectContent>
+            </Select>
+            {(!hasSweep || !isVerified) && (
+              <p className="text-xs text-muted-foreground">
+                Available after onboarding is verified and a bank account is linked.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

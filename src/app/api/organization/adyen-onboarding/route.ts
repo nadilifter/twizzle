@@ -22,9 +22,9 @@ export async function GET() {
     if (!session?.user?.organizationId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
+    const orgId = session.user.organizationId;
     let account = await db.adyenPlatformAccount.findUnique({
-      where: { organizationId: session.user.organizationId },
+      where: { organizationId: orgId, accountStatus: "ACTIVE" },
     });
 
     // Live-sync: if the account exists and isn't already terminal, reconcile
@@ -45,7 +45,7 @@ export async function GET() {
           JSON.stringify(capabilities) !== JSON.stringify(account.capabilities)
         ) {
           account = await db.adyenPlatformAccount.update({
-            where: { id: account.id },
+            where: { organizationId: orgId, id: account.id },
             data: { onboardingStatus, verificationStatus, capabilities },
           });
         }
@@ -104,6 +104,7 @@ export async function GET() {
             capabilities: account.capabilities,
             hasStore: !!account.storeId,
             hasSweep: !!account.sweepId,
+            payoutSchedule: account.payoutSchedule,
             legalEntityId: account.legalEntityId,
             accountHolderId: account.accountHolderId,
             balanceAccountId: account.balanceAccountId,
@@ -141,7 +142,7 @@ export async function POST(request: NextRequest) {
 
     // Check if already onboarded
     const existing = await db.adyenPlatformAccount.findUnique({
-      where: { organizationId: orgId },
+      where: { organizationId: orgId, accountStatus: "ACTIVE" },
     });
     if (existing) {
       return NextResponse.json({

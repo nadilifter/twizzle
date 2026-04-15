@@ -22,7 +22,7 @@ export async function POST() {
     }
 
     const account = await db.adyenPlatformAccount.findUnique({
-      where: { organizationId: session.user.organizationId },
+      where: { organizationId: session.user.organizationId, accountStatus: "ACTIVE" },
     });
 
     if (!account) {
