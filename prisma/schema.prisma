@@ -249,6 +249,19 @@ model User {
   smsOptOut   Boolean   @default(false)
   smsOptOutAt DateTime?
 
+  // SMS Consent (TCPA / Twilio toll-free verification compliance)
+  // Explicit, unchecked-by-default opt-in captured at signup or in account settings.
+  // Sends are gated on `smsConsentAt != null && smsOptOut == false` — the absence of
+  // a timestamp is treated as no consent. STOP replies clear both fields.
+  smsConsentAt            DateTime?
+  smsConsentSource        SmsConsentSource?
+  smsConsentIp            String?
+  smsConsentVersion       String?
+  // Source of the most recent revocation. Distinguishes a user-initiated opt-out
+  // through the UI from an inbound STOP keyword, which the Phase 5 webhook will
+  // need to record separately for audit and analytics.
+  smsConsentRevokeSource  SmsConsentRevokeSource?
+
   // Email Preferences
   emailOptOut   Boolean   @default(false)
   emailOptOutAt DateTime?
@@ -445,6 +458,18 @@ enum UserStatus {
   ACTIVE
   INVITED
   INACTIVE
+}
+
+enum SmsConsentSource {
+  SIGNUP_SITE       // /sites/[slug]/signup
+  SIGNUP_ORG        // /org-signup, /get-started
+  INVITATION        // /accept-invitation
+  ACCOUNT_SETTINGS  // /athletes/account, /dashboard settings
+}
+
+enum SmsConsentRevokeSource {
+  ACCOUNT_SETTINGS  // user toggled off the account-settings consent card
+  INBOUND_STOP      // inbound STOP/UNSUBSCRIBE keyword (Phase 5)
 }
 
 // ============================================

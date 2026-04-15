@@ -195,6 +195,7 @@ src/app/api/sites/[slug]/receipt/[invoiceId]/route.ts
 
 # --- User-scoped routes (no org data, personal to user) ---
 src/app/api/avatar/route.ts
+src/app/api/account/sms-consent/route.ts
 src/app/api/user/profile/route.ts
 src/app/api/user/phone/send-code/route.ts
 src/app/api/user/phone/verify/route.ts
