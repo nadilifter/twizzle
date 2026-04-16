@@ -818,7 +818,7 @@ function LegalNameConfirmationGate({
         </div>
         <p className="text-sm text-muted-foreground">
           If this name is incorrect, update it in{" "}
-          <a href="/dashboard/settings/organization" className="underline underline-offset-4">
+          <a href="/dashboard/organization/overview" className="underline underline-offset-4">
             Organization Settings
           </a>{" "}
           before proceeding.
