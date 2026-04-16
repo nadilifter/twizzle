@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   CheckCircle2,
@@ -22,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { ActionItemsResponse } from "@/types/onboarding";
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -34,22 +34,45 @@ const ICON_MAP: Record<string, LucideIcon> = {
   FileCheck,
 };
 
-const DISMISSED_KEY = "action-items-dismissed";
+export function ActionItemsPanelSkeleton() {
+  return (
+    <Card className="flex w-full flex-col">
+      <div className="px-6 pt-6 pb-3">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-5 w-36" />
+          <Skeleton className="h-4 w-16 rounded-full" />
+        </div>
+        <div className="flex items-center gap-2 pt-2">
+          <Skeleton className="h-1.5 w-full rounded-full" />
+          <Skeleton className="h-3 w-8" />
+        </div>
+      </div>
+      <div className="flex flex-1 flex-col gap-2 px-4 pb-4 pt-0">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <div
+            key={i}
+            className="flex w-full flex-1 items-center gap-3 rounded-lg border bg-card p-3"
+          >
+            <Skeleton className="h-9 w-9 shrink-0 rounded-md" />
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <Skeleton className="h-3.5 w-28" />
+              <Skeleton className="h-3 w-44" />
+            </div>
+            <Skeleton className="h-4 w-4 shrink-0 rounded" />
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
 
-export function ActionItemsPanel({ data }: { data: ActionItemsResponse }) {
-  const [dismissed, setDismissed] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    if (data.allComplete && localStorage.getItem(DISMISSED_KEY) === "true") {
-      setDismissed(true);
-    }
-    setHydrated(true);
-  }, [data.allComplete]);
-
-  if (!hydrated) return null;
-  if (dismissed) return null;
-
+export function ActionItemsPanel({
+  data,
+  onDismiss,
+}: {
+  data: ActionItemsResponse;
+  onDismiss: () => void;
+}) {
   const incompleteCount = data.totalCount - data.completedCount;
   const progressPercent = Math.round((data.completedCount / data.totalCount) * 100);
 
@@ -59,15 +82,7 @@ export function ActionItemsPanel({ data }: { data: ActionItemsResponse }) {
         <CardContent className="flex items-center gap-3 py-4 px-4">
           <PartyPopper className="h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
           <p className="flex-1 text-sm font-medium">All set! Setup complete.</p>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 shrink-0"
-            onClick={() => {
-              localStorage.setItem(DISMISSED_KEY, "true");
-              setDismissed(true);
-            }}
-          >
+          <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={onDismiss}>
             <X className="h-3.5 w-3.5" />
           </Button>
         </CardContent>
@@ -83,13 +98,13 @@ export function ActionItemsPanel({ data }: { data: ActionItemsResponse }) {
             <Rocket className="h-4 w-4 sm:h-5 sm:w-5" />
             Getting Started
           </CardTitle>
-          <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+          <Badge variant="destructive" className="text-xs px-1.5 py-0">
             {incompleteCount} remaining
           </Badge>
         </div>
         <div className="flex items-center gap-2 pt-1">
           <Progress value={progressPercent} className="h-1.5" />
-          <span className="text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">
+          <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
             {data.completedCount}/{data.totalCount}
           </span>
         </div>
