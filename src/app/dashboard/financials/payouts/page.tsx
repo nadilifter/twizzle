@@ -56,6 +56,8 @@ interface PayoutStats {
   pendingCount: number;
   paidYTD: number;
   nextPayout: Payout | null;
+  liveBalance: { available: number; currency: string } | null;
+  isVerified: boolean;
   unsettledAmount: number;
   unsettledCount: number;
 }
@@ -83,6 +85,8 @@ export default function PayoutsPage() {
     pendingCount: 0,
     paidYTD: 0,
     nextPayout: null,
+    liveBalance: null,
+    isVerified: false,
     unsettledAmount: 0,
     unsettledCount: 0,
   });
@@ -215,12 +219,20 @@ export default function PayoutsPage() {
             <CardTitle className="text-sm font-medium opacity-80">Next Estimated Payout</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">${Number(stats.unsettledAmount).toFixed(2)}</div>
-            <p className="text-xs opacity-80 mt-1">
-              {stats.nextPayout?.scheduledAt
-                ? `Scheduled for ${format(new Date(stats.nextPayout.scheduledAt), "EEEE, MMM d")}`
-                : `From ${stats.unsettledCount} pending transaction${stats.unsettledCount !== 1 ? "s" : ""}`}
-            </p>
+            {!stats.isVerified ? (
+              <p className="text-sm opacity-80">Complete your onboarding to view your balance.</p>
+            ) : (
+              <>
+                <div className="text-3xl font-bold">
+                  ${Number(stats.liveBalance?.available ?? stats.unsettledAmount).toFixed(2)}
+                </div>
+                <p className="text-xs opacity-80 mt-1">
+                  {stats.liveBalance
+                    ? "Live balance from Adyen"
+                    : "Estimated from local transactions"}
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -228,9 +240,9 @@ export default function PayoutsPage() {
             <CardTitle className="text-sm font-medium">Pending Balance</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">${Number(stats.pendingAmount).toFixed(2)}</div>
+            <div className="text-3xl font-bold">${Number(stats.unsettledAmount).toFixed(2)}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {stats.pendingCount} scheduled payout{stats.pendingCount !== 1 ? "s" : ""}
+              {stats.unsettledCount} unsettled transaction{stats.unsettledCount !== 1 ? "s" : ""}
             </p>
           </CardContent>
         </Card>

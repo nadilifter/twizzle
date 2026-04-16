@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
+import { getBalanceAccountBalance } from "@/lib/adyen-platform";
 import { z } from "zod";
 
 const createPayoutSchema = z.object({
@@ -97,15 +98,37 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    const unsettledTransactions = await db.transaction.aggregate({
-      where: {
-        organizationId,
-        status: { in: ["AUTHORISED", "CAPTURED"] },
-        type: "PAYMENT",
-      },
-      _sum: { amount: true },
-      _count: true,
-    });
+    const [unsettledTransactions, adyenPlatformAccount] = await Promise.all([
+      db.transaction.aggregate({
+        where: {
+          organizationId,
+          status: { in: ["AUTHORISED", "CAPTURED"] },
+          type: "PAYMENT",
+        },
+        _sum: { amount: true },
+        _count: true,
+      }),
+      db.adyenPlatformAccount.findUnique({
+        where: { organizationId, accountStatus: "ACTIVE" },
+        select: { balanceAccountId: true, onboardingStatus: true },
+      }),
+    ]);
+
+    const isVerified = adyenPlatformAccount?.onboardingStatus === "VERIFIED";
+    const liveBalance =
+      isVerified && adyenPlatformAccount?.balanceAccountId
+        ? await getBalanceAccountBalance(adyenPlatformAccount.balanceAccountId)
+        : null;
+
+    if (isVerified && adyenPlatformAccount?.balanceAccountId && !liveBalance) {
+      console.warn(
+        "payouts: failed to fetch live Adyen balance, falling back to unsettled estimate",
+        {
+          organizationId,
+          balanceAccountId: adyenPlatformAccount.balanceAccountId,
+        }
+      );
+    }
 
     return NextResponse.json({
       data: payouts,
@@ -117,6 +140,8 @@ export async function GET(request: NextRequest) {
         pendingCount: pendingStats._count || 0,
         paidYTD: paidYTD._sum.net || 0,
         nextPayout: nextPayout,
+        liveBalance,
+        isVerified,
         unsettledAmount: unsettledTransactions._sum.amount || 0,
         unsettledCount: unsettledTransactions._count || 0,
       },

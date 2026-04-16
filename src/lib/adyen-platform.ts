@@ -8,6 +8,9 @@
  * Follows the same lazy-initialization pattern as src/lib/adyen.ts.
  */
 
+import type { BalanceAccount } from "@adyen/api-library/lib/src/typings/balancePlatform/balanceAccount";
+import type { Balance } from "@adyen/api-library/lib/src/typings/balancePlatform/balance";
+
 let _lemClient: any = null;
 let _platformClient: any = null;
 let _lemApi: any = null;
@@ -227,6 +230,23 @@ export async function getAccountHolder(
   }
 }
 
+export async function getBalanceAccountBalance(
+  balanceAccountId: string
+): Promise<Pick<Balance, "available" | "currency"> | null> {
+  try {
+    const result: BalanceAccount =
+      await getConfigApi().BalanceAccountsApi.getBalanceAccount(balanceAccountId);
+    const balance = result.balances?.find((b: Balance) => b.currency === "USD");
+    return balance ? { available: balance.available / 100, currency: balance.currency } : null;
+  } catch (error: any) {
+    console.error("adyen-platform: getBalanceAccountBalance failed", {
+      balanceAccountId,
+      error,
+    });
+    return null;
+  }
+}
+
 export async function createBalanceAccount(data: {
   accountHolderId: string;
   description?: string;
@@ -234,6 +254,7 @@ export async function createBalanceAccount(data: {
   try {
     return await getConfigApi().BalanceAccountsApi.createBalanceAccount({
       ...data,
+      defaultCurrencyCode: "USD",
       description: data.description || `Balance account for ${data.accountHolderId}`,
     });
   } catch (error: any) {
