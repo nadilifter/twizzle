@@ -1,11 +1,11 @@
-# When dev is merged into main, move Linear issues from "Ready for Staging" → "In Staging QA".
+# When staging deploys successfully, move Linear issues from "Ready for Staging" → "In Staging QA".
 # Requires repository secrets: LINEAR_API_KEY, LINEAR_TEAM_ID
 name: Linear — dev merged to main
 
 on:
-  pull_request:
-    types: [closed]
-    branches: [main]
+  workflow_run:
+    workflows: ["Deploy Pre-Release [Staging]"]
+    types: [completed]
 
 concurrency:
   group: linear-dev-to-main
@@ -15,10 +15,7 @@ jobs:
   transition-linear-issues:
     name: Move Linear issues to In Staging QA
     runs-on: ubuntu-latest
-    if: >
-      github.event.pull_request.merged == true &&
-      github.event.pull_request.head.ref == 'dev' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event.workflow_run.conclusion == 'success'
 
     permissions:
       contents: read

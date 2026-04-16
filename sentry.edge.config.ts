@@ -9,6 +9,7 @@ Sentry.init({
   tracesSampleRate: process.env.APP_ENVIRONMENT === "production" ? 0.1 : 1.0,
 
   environment: process.env.APP_ENVIRONMENT || process.env.NODE_ENV,
+  release: process.env.NEXT_PUBLIC_APP_VERSION,
 
   integrations: [Sentry.captureConsoleIntegration({ levels: ["error"] })],
 });
