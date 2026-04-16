@@ -2,7 +2,7 @@ import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { MapPin, Clock, Phone, Mail, Building2 } from "lucide-react";
-import { LocationMap, MultiLocationMap } from "@/components/location-map";
+import { LocationMap } from "@/components/location-map";
 import { getHeroContrastStyles } from "@/lib/color-utils";
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -141,8 +141,6 @@ export default async function FacilitiesPage({ params }: { params: { slug: strin
   const hero = getHeroContrastStyles(primaryColor);
   const facilities = await getCachedFacilities(config.organizationId);
 
-  const geoFacilities = facilities.filter((f) => f.latitude != null && f.longitude != null);
-
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -165,29 +163,8 @@ export default async function FacilitiesPage({ params }: { params: { slug: strin
         </div>
       </section>
 
-      {/* Multi-Location Overview Map */}
-      {geoFacilities.length >= 2 && (
-        <section className="mx-auto w-full max-w-6xl px-4 md:px-8 -mt-8 relative z-10">
-          <div className="rounded-xl overflow-hidden border border-border shadow-lg bg-card">
-            <MultiLocationMap
-              locations={geoFacilities.map((f) => ({
-                latitude: f.latitude!,
-                longitude: f.longitude!,
-                label: f.name,
-                sublabel: [f.city, f.stateProvince].filter(Boolean).join(", "),
-              }))}
-              className="h-72 md:h-96 min-h-0"
-            />
-          </div>
-        </section>
-      )}
-
       {/* Facility Sections */}
-      <section
-        className={`mx-auto w-full max-w-6xl px-4 md:px-8 ${
-          geoFacilities.length >= 2 ? "pt-12" : "pt-16"
-        } pb-16`}
-      >
+      <section className="mx-auto w-full max-w-6xl px-4 md:px-8 pt-16 pb-16">
         {facilities.length > 0 ? (
           <div className="space-y-16">
             {facilities.map((facility, index) => {
