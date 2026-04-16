@@ -470,12 +470,12 @@ export function ProgramProfile({
             </div>
           )}
 
-          {/* Before you register */}
+          {/* Registration requirements */}
           {(program.waiverNames.length > 0 ||
             program.hasMedicalRequirement ||
             program.hasFileRequirement) && (
             <div>
-              <h2 className="text-lg font-semibold mb-3">Before You Register</h2>
+              <h2 className="text-lg font-semibold mb-3">Registration Requirements</h2>
               <div className="rounded-xl border bg-card shadow-sm divide-y">
                 {program.waiverNames.map((name) => (
                   <div key={name} className="flex items-center gap-3 px-4 py-3">
@@ -488,13 +488,13 @@ export function ProgramProfile({
                 {program.hasMedicalRequirement && (
                   <div className="flex items-center gap-3 px-4 py-3">
                     <Heart className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span className="text-sm">Medical information required</span>
+                    <span className="text-sm">Provide medical information</span>
                   </div>
                 )}
                 {program.hasFileRequirement && (
                   <div className="flex items-center gap-3 px-4 py-3">
                     <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span className="text-sm">Document upload required</span>
+                    <span className="text-sm">Upload required documents</span>
                   </div>
                 )}
               </div>
