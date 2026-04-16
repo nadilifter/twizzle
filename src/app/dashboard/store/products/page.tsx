@@ -66,7 +66,9 @@ import {
   RefreshCw,
   Loader2,
   Trash2,
+  Filter,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { GLCodeSelector } from "@/components/gl-code-selector";
 import { ImageUpload } from "@/components/ui/image-upload";
@@ -130,9 +132,9 @@ const defaultVariant: VariantFormData = {
   label: "",
   price: "",
   imageUrl: "",
-  maxInventory: "10",
-  currentInventory: "10",
-  isUnlimited: false,
+  maxInventory: "",
+  currentInventory: "",
+  isUnlimited: true,
 };
 
 const defaultFormData: ProductFormData = {
@@ -159,7 +161,9 @@ export default function StorePage() {
   const [categories, setCategories] = React.useState<string[]>(defaultCategories);
   const [isLoading, setIsLoading] = React.useState(true);
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([
+    { id: "isActive", value: [true] },
+  ]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
 
@@ -542,6 +546,9 @@ export default function StorePage() {
       accessorKey: "category",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Category" />,
       cell: ({ row }) => <Badge variant="outline">{row.getValue("category")}</Badge>,
+      filterFn: (row, id, value) => {
+        return value.includes(row.getValue(id));
+      },
     },
     {
       accessorKey: "price",
@@ -586,6 +593,9 @@ export default function StorePage() {
           {row.getValue("isActive") ? "Active" : "Inactive"}
         </Badge>
       ),
+      filterFn: (row, id, value) => {
+        return value.includes(row.getValue(id));
+      },
     },
     {
       id: "actions",
@@ -644,6 +654,19 @@ export default function StorePage() {
       pagination: { pageSize: 20 },
     },
   });
+
+  const handleFilterChange = (columnId: string, value: string | boolean, checked: boolean) => {
+    const column = table.getColumn(columnId);
+    const filterValue = (column?.getFilterValue() as (string | boolean)[]) || [];
+
+    if (checked) {
+      column?.setFilterValue([...filterValue, value]);
+    } else {
+      column?.setFilterValue(filterValue.filter((v) => v !== value));
+    }
+  };
+
+  const isFiltered = table.getState().columnFilters.length > 0;
 
   // Get restock variant info
   const restockVariant = restockingProduct?.variants.find((v) => v.id === restockVariantId);
@@ -1079,24 +1102,86 @@ export default function StorePage() {
             className="pl-8"
           />
         </div>
-        <Select
-          value={(table.getColumn("category")?.getFilterValue() as string) ?? "all"}
-          onValueChange={(value) =>
-            table.getColumn("category")?.setFilterValue(value === "all" ? "" : value)
-          }
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="All Categories" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {categories.map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {cat}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="border-dashed">
+              <Filter className="mr-2 h-4 w-4" />
+              Filter
+              {isFiltered && (
+                <Badge variant="secondary" className="ml-2 rounded-sm px-1 font-normal">
+                  {table.getState().columnFilters.length}
+                </Badge>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[200px] p-0" align="end">
+            <div className="p-4 pb-0">
+              <h4 className="font-medium leading-none">Filters</h4>
+            </div>
+            <div className="p-4 pt-2 space-y-4">
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-muted-foreground">Category</h4>
+                <div className="grid gap-2">
+                  {categories.map((cat) => (
+                    <div key={cat} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`cat-${cat}`}
+                        checked={(
+                          table.getColumn("category")?.getFilterValue() as string[]
+                        )?.includes(cat)}
+                        onCheckedChange={(checked) =>
+                          handleFilterChange("category", cat, !!checked)
+                        }
+                      />
+                      <label
+                        htmlFor={`cat-${cat}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        {cat}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-muted-foreground">Status</h4>
+                <div className="grid gap-2">
+                  {[
+                    { value: true, label: "Active" },
+                    { value: false, label: "Inactive" },
+                  ].map((status) => (
+                    <div key={String(status.value)} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`status-${status.label}`}
+                        checked={(
+                          table.getColumn("isActive")?.getFilterValue() as boolean[]
+                        )?.includes(status.value)}
+                        onCheckedChange={(checked) =>
+                          handleFilterChange("isActive", status.value, !!checked)
+                        }
+                      />
+                      <label
+                        htmlFor={`status-${status.label}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        {status.label}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {isFiltered && (
+                <Button
+                  variant="ghost"
+                  className="w-full justify-center text-center"
+                  onClick={() => table.resetColumnFilters()}
+                >
+                  Clear filters
+                </Button>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
         <DataTableViewOptions table={table} />
       </div>
 
