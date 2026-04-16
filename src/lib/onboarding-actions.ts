@@ -8,7 +8,6 @@ export async function getActionItems(organizationId: string): Promise<ActionItem
   const [
     programCount,
     memberCount,
-    eventCount,
     seasonCount,
     categoryCount,
     levelCount,
@@ -19,7 +18,6 @@ export async function getActionItems(organizationId: string): Promise<ActionItem
   ] = await Promise.all([
     scopedDb.program.count(),
     scopedDb.organizationMember.count(),
-    scopedDb.event.count(),
     scopedDb.season.count(),
     scopedDb.category.count(),
     scopedDb.level.count(),
@@ -89,11 +87,11 @@ export async function getActionItems(organizationId: string): Promise<ActionItem
       icon: "FileCheck",
     },
     {
-      id: "create-events",
-      title: "Create events and programs",
+      id: "create-programs",
+      title: "Create a program",
       description: "Set up your schedule and registration options",
-      url: "/dashboard/events",
-      isComplete: eventCount > 0 || programCount > 0,
+      url: "/dashboard/registrations/programs",
+      isComplete: programCount > 0,
       icon: "Calendar",
     },
     {

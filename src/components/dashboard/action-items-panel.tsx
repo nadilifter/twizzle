@@ -76,14 +76,14 @@ export function ActionItemsPanel({ data }: { data: ActionItemsResponse }) {
   }
 
   return (
-    <Card>
+    <Card className="flex w-full flex-col">
       <CardHeader className="px-6 pt-6 pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-semibold">
             <Rocket className="h-4 w-4 sm:h-5 sm:w-5" />
             Getting Started
           </CardTitle>
-          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+          <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
             {incompleteCount} remaining
           </Badge>
         </div>
@@ -94,26 +94,37 @@ export function ActionItemsPanel({ data }: { data: ActionItemsResponse }) {
           </span>
         </div>
       </CardHeader>
-      <CardContent className="px-2 pb-3 pt-0">
-        <ul className="space-y-0.5">
+      <CardContent className="flex flex-1 flex-col px-4 pb-4 pt-0">
+        <ul className="flex flex-1 flex-col gap-2">
           {data.items.map((item) => (
-            <li key={item.id}>
+            <li key={item.id} className="flex flex-1">
               <Link
                 href={item.url}
-                className={`group flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent ${
-                  item.isComplete ? "opacity-50" : ""
-                }`}
+                className="flex w-full flex-1 items-center gap-3 rounded-lg border bg-card p-3 text-sm transition-colors hover:bg-accent"
               >
-                {item.isComplete ? (
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
-                ) : (
-                  (() => {
-                    const Icon = ICON_MAP[item.icon] ?? Calendar;
-                    return <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />;
-                  })()
-                )}
-                <span className="flex-1 truncate">{item.title}</span>
-                <ArrowRight className="h-3 w-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                <div
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${
+                    item.isComplete ? "bg-green-100 dark:bg-green-900/40" : "bg-muted"
+                  }`}
+                >
+                  {item.isComplete ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  ) : (
+                    (() => {
+                      const Icon = ICON_MAP[item.icon] ?? Calendar;
+                      return <Icon className="h-4 w-4 text-muted-foreground" />;
+                    })()
+                  )}
+                </div>
+                <div className={`min-w-0 flex-1 ${item.isComplete ? "opacity-50" : ""}`}>
+                  <div className="font-medium leading-tight">{item.title}</div>
+                  <div className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
+                    {item.description}
+                  </div>
+                </div>
+                <ArrowRight
+                  className={`h-4 w-4 shrink-0 text-muted-foreground ${item.isComplete ? "opacity-50" : ""}`}
+                />
               </Link>
             </li>
           ))}
