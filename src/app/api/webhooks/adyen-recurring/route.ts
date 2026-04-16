@@ -6,6 +6,7 @@ import {
   parseRecurringTokenWebhook,
 } from "@/lib/adyen";
 import { logger } from "@/lib/logger";
+import { saveUserPaymentMethodFromToken } from "@/lib/payment-method-sync";
 
 /**
  * POST /api/webhooks/adyen-recurring
@@ -331,52 +332,7 @@ async function handleUserTokenCreated(tokenData: {
     holderName?: string;
   };
 }) {
-  const userId = tokenData.shopperReference.replace("user-", "");
-
-  const user = await db.user.findUnique({
-    where: { id: userId },
-    select: { id: true },
-  });
-
-  if (!user) {
-    logger.info("User not found for token creation", { userId });
-    return;
-  }
-
-  const existingMethod = await db.paymentMethod.findUnique({
-    where: { adyenTokenId: tokenData.storedPaymentMethodId },
-  });
-
-  if (existingMethod) {
-    logger.debug("User payment method already exists", {
-      adyenTokenId: tokenData.storedPaymentMethodId,
-    });
-    return;
-  }
-
-  const existingCount = await db.paymentMethod.count({
-    where: { userId },
-  });
-
-  const expiry =
-    tokenData.paymentMethod?.expiryMonth && tokenData.paymentMethod?.expiryYear
-      ? `${tokenData.paymentMethod.expiryMonth}/${tokenData.paymentMethod.expiryYear.slice(-2)}`
-      : null;
-
-  await db.paymentMethod.create({
-    data: {
-      userId,
-      type: "CARD",
-      last4: tokenData.paymentMethod?.lastFour || "****",
-      brand: tokenData.paymentMethod?.brand,
-      expiry,
-      isDefault: existingCount === 0,
-      adyenTokenId: tokenData.storedPaymentMethodId!,
-      shopperReference: tokenData.shopperReference,
-    },
-  });
-
-  logger.info("Created payment method for user", { userId });
+  await saveUserPaymentMethodFromToken(tokenData);
 }
 
 async function handleUserTokenUpdated(tokenData: {

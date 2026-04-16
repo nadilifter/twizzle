@@ -1,5 +1,63 @@
 import { db } from "@/lib/db";
 import { isAdyenConfigured, getStoredPaymentMethods } from "@/lib/adyen";
+import { logger } from "@/lib/logger";
+
+/**
+ * Persist a stored payment method token for an authenticated user.
+ * Called from both the standard AUTHORISATION webhook (checkout) and the
+ * recurring RECURRING_CONTRACT webhook (explicit "add card" flow).
+ * Idempotent — safe to call multiple times for the same token.
+ */
+export async function saveUserPaymentMethodFromToken(tokenData: {
+  shopperReference: string;
+  storedPaymentMethodId?: string;
+  paymentMethod?: {
+    type?: string;
+    brand?: string;
+    lastFour?: string;
+    expiryMonth?: string;
+    expiryYear?: string;
+    holderName?: string;
+  };
+}): Promise<void> {
+  if (!tokenData.storedPaymentMethodId) return;
+
+  const userId = tokenData.shopperReference.replace("user-", "");
+
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { id: true },
+  });
+
+  if (!user) {
+    logger.info("User not found for token creation", { userId });
+    return;
+  }
+
+  const existingCount = await db.paymentMethod.count({ where: { userId } });
+
+  const expiry =
+    tokenData.paymentMethod?.expiryMonth && tokenData.paymentMethod?.expiryYear
+      ? `${tokenData.paymentMethod.expiryMonth}/${tokenData.paymentMethod.expiryYear.slice(-2)}`
+      : null;
+
+  await db.paymentMethod.upsert({
+    where: { adyenTokenId: tokenData.storedPaymentMethodId },
+    create: {
+      userId,
+      type: tokenData.paymentMethod?.type === "ach" ? "BANK" : "CARD",
+      last4: tokenData.paymentMethod?.lastFour || "****",
+      brand: tokenData.paymentMethod?.brand,
+      expiry,
+      isDefault: existingCount === 0,
+      adyenTokenId: tokenData.storedPaymentMethodId,
+      shopperReference: tokenData.shopperReference,
+    },
+    update: {},
+  });
+
+  logger.info("Saved payment method for user", { userId });
+}
 
 /**
  * Reconcile local OrganizationPaymentMethod records with Adyen's

@@ -4,6 +4,7 @@ import { verifyWebhookSignature, extractHmacSignature, resolvePaymentType } from
 import { processInvoiceRegistrations, type InvoiceMetadata } from "@/lib/invoice-processing";
 import { logger } from "@/lib/logger";
 import { Prisma } from "@prisma/client";
+import { saveUserPaymentMethodFromToken } from "@/lib/payment-method-sync";
 import { sendCheckoutReceiptEmail, sendPaymentFailedEmail } from "@/lib/email";
 import { getSubdomainUrl } from "@/lib/env-domains";
 import * as Sentry from "@sentry/nextjs";
@@ -59,6 +60,7 @@ export async function POST(request: NextRequest) {
       success,
       amount,
       paymentMethod: paymentMethodType,
+      additionalData,
     } = notificationItem;
 
     logger.info("Adyen payment webhook received", {
@@ -88,6 +90,7 @@ export async function POST(request: NextRequest) {
         pspReference,
         amount,
         paymentMethodType,
+        additionalData,
         request
       );
     } else if (eventCode === "AUTHORISATION" && success !== "true" && success !== true) {
@@ -128,6 +131,7 @@ async function handleAuthorisation(
   pspReference: string,
   amount: { value: number; currency: string },
   paymentMethodType: string | undefined,
+  additionalData: Record<string, string> | undefined,
   _request: NextRequest
 ) {
   if (!invoiceId) {
@@ -223,6 +227,38 @@ async function handleAuthorisation(
   });
 
   if (!invoice) return;
+
+  // Persist stored payment method token if Adyen included one in this authorisation
+  const recurringDetailRef = additionalData?.["recurring.recurringDetailReference"];
+  const shopperRef = additionalData?.["recurring.shopperReference"];
+  if (recurringDetailRef && shopperRef?.startsWith("user-")) {
+    try {
+      await saveUserPaymentMethodFromToken({
+        shopperReference: shopperRef,
+        storedPaymentMethodId: recurringDetailRef,
+        paymentMethod: {
+          type: paymentMethodType,
+          brand:
+            additionalData.cardPaymentMethod ||
+            (paymentMethodType !== "scheme" ? paymentMethodType : undefined),
+          lastFour:
+            additionalData.cardSummary ||
+            additionalData.bankAccountNumber?.slice(-4) ||
+            additionalData.iban?.slice(-4),
+          expiryMonth: additionalData.expiryDate?.split("/")[0],
+          expiryYear: additionalData.expiryDate?.split("/")[1]
+            ? `20${additionalData.expiryDate.split("/")[1]}`
+            : undefined,
+          holderName: additionalData.cardHolderName,
+        },
+      });
+    } catch (err) {
+      console.error("Failed to save payment method token:", err, {
+        shopperRef,
+        recurringDetailRef,
+      });
+    }
+  }
 
   if (invoice.notes) {
     try {
