@@ -65,3 +65,6 @@ package-lock.json
 
 #ignore local db sessions
 *.session.sql
+
+# personal VS Code / Cursor debug config
+.vscode/launch.json
