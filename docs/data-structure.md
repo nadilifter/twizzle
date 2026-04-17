@@ -85,7 +85,7 @@ Each domain has a dedicated section in [ERD.md](./ERD.md) with field-level defin
 | Platform Subscription          | [§17](./ERD.md#17-platform-subscription)                | `SubscriptionPlan`, `OrganizationSubscription`, `SubscriptionInvoice`, `AdyenPlatformAccount`         |
 | Accounting Integrations        | [§18](./ERD.md#18-accounting-integrations)              | `AccountingConnection`, `AccountingSyncQueue`, `AccountingSyncLog`                                    |
 | Feedback                       | [§19](./ERD.md#19-feedback--feature-requests)           | `FeatureRequest`, `FeatureVote`, `FeatureComment`                                                     |
-| Misc (Media, Categories, etc.) | [§20](./ERD.md#20-misc--cross-cutting)                  | `Media`, `RegistrationFile`, `Category`, `OrganizationHoliday`, `WebsiteConfig`                       |
+| Misc (Media, Categories, etc.) | [§20](./ERD.md#20-misc--cross-cutting)                  | `Media`, `RegistrationFile`, `Category`, `OrganizationHoliday`, `Referral`, `WebsiteConfig`           |
 
 ## Key Design Patterns
 
@@ -102,6 +102,10 @@ Each domain has a dedicated section in [ERD.md](./ERD.md) with field-level defin
 **Soft-delete via status.** No hard deletes across the schema — `status` enums carry values like `ARCHIVED`, `CANCELLED`, `INACTIVE`. Inspect model-specific status enums in [ERD.md](./ERD.md).
 
 **Campaign → Message fanout.** `SmsCampaign` and `EmailCampaign` target audiences via `targetType` + filter fields, and expand into individual `Message` / `EmailMessage` rows linked via `campaignId`.
+
+**SMS consent (TCPA).** Consent is tracked on `User` via `smsConsentAt`, `smsConsentSource`, `smsConsentIp`, `smsConsentVersion`, and (on revocation) `smsConsentRevokeSource`, alongside the pre-existing `smsOptOut` flag. A null `smsConsentAt` represents _no consent_ — the schema documents this invariant. Use `buildSmsConsentGrant(source, ip)` and `buildSmsConsentRevoke(source)` from `src/lib/sms-consent.ts` to mutate these fields together (revoke additionally sets `smsOptOut = true`). All outbound SMS goes through `sendSingleSms` in `src/lib/sms-service.ts`, which enforces the `smsOptOut` gate and writes the `Message` audit row; direct `twilio.messages.create()` calls bypass the gate and the audit trail.
+
+**Referral credits.** `Organization.referralCode` is a shareable unique identifier. When another org signs up using that code, a `Referral` row records the relationship and the credit-month balance. Credits are drawn down against the referrer's `SubscriptionInvoice`s via `creditMonthsUsed` until exhausted — there is no direct FK from `SubscriptionInvoice` to `Referral`, the reconciliation happens in the `subscription-billing` cron.
 
 ---
 
@@ -191,6 +195,8 @@ Frequently-looked-up enum values. The [Prisma schema](../prisma/schema.prisma) i
 | `EmploymentType`               | `FULL_TIME`, `PART_TIME`, `CONTRACTOR`, `VOLUNTEER`                         |
 | `OrganizationInvitationStatus` | `PENDING`, `ACCEPTED`, `EXPIRED`, `CANCELLED`                               |
 | `VerificationCodeType`         | `MFA_CHALLENGE`, `EMAIL_LOGIN`, `SIGNUP_VERIFICATION`, `PHONE_VERIFICATION` |
+| `SmsConsentSource`             | `SIGNUP_SITE`, `SIGNUP_ORG`, `INVITATION`, `ACCOUNT_SETTINGS`               |
+| `SmsConsentRevokeSource`       | `ACCOUNT_SETTINGS`, `INBOUND_STOP`                                          |
 
 ### Athletes
 
@@ -351,6 +357,7 @@ Frequently-looked-up enum values. The [Prisma schema](../prisma/schema.prisma) i
 | `BillingCycle`              | `MONTHLY`, `YEARLY`                                                                       |
 | `SubscriptionInvoiceStatus` | `PENDING`, `PROCESSING`, `PAID`, `FAILED`, `VOID`                                         |
 | `AdyenOnboardingStatus`     | `PENDING_HOSTED`, `IN_PROGRESS`, `AWAITING_DATA`, `IN_REVIEW`, `VERIFIED`, `REJECTED`     |
+| `AdyenAccountStatus`        | `ACTIVE`, `INACTIVE` (admin-controlled kill switch on the balance platform account)       |
 | `AccountingProvider`        | `QBO`, `XERO`                                                                             |
 | `AccountingEntityType`      | `ACCOUNT`, `CUSTOMER`, `ITEM`, `INVOICE`, `PAYMENT`, `REFUND`, `JOURNAL_ENTRY`, `DEPOSIT` |
 | `AccountingSyncAction`      | `CREATE`, `UPDATE`                                                                        |

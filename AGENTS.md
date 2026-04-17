@@ -96,6 +96,24 @@ const result = await db.$transaction(async (tx) => {
 
 `AthleteMedicalInfo` is intentionally shared across organizations. Do not add `organizationId` filters when querying it. Medical records follow the athlete, not the org.
 
+### 6. Always Route Outbound SMS Through `sendSingleSms` (TCPA)
+
+Never call `twilio.messages.create()` directly. Route every outbound SMS through `sendSingleSms` in `src/lib/sms-service.ts` — it enforces the `User.smsOptOut` gate, applies usage limits, resolves the pool number, and writes the `Message` audit row. Direct Twilio calls bypass all of that and create a compliance risk.
+
+```typescript
+import { sendSingleSms } from "@/lib/sms-service";
+
+await sendSingleSms({
+  organizationId,
+  to: user.phone,
+  userId: user.id,
+  body: "Your class is tomorrow at 9am",
+  classification: "REMINDER",
+});
+```
+
+Consent writes go through the helpers in `src/lib/sms-consent.ts`. Use `buildSmsConsentGrant(source, ip)` when a user opts in (sets `smsConsentAt`, `smsConsentSource`, `smsConsentIp`, `smsConsentVersion`, and clears any prior opt-out) and `buildSmsConsentRevoke(source)` for UI opt-out or inbound `STOP` (clears the consent fields, sets `smsOptOut = true`, records `smsConsentRevokeSource`). Don't hand-roll these updates — bump `SMS_CONSENT_VERSION` instead when the disclosure copy changes materially so existing users are forced to re-affirm.
+
 ---
 
 ## Standard Patterns
@@ -235,7 +253,7 @@ Before writing schema-heavy code, read:
 
 - `docs/ERD.md` — domain-grouped ERD covering every model with field-level meaning (what each column represents, not just its type)
 - `docs/data-structure.md` — high-level entity map, design patterns (polymorphic billing, cross-org athletes, etc.), cross-domain flows, enum reference
-- `prisma/schema.prisma` — source of truth (but ~5,100 lines; the docs above are faster to scan)
+- `prisma/schema.prisma` — source of truth (but ~5,200 lines; the docs above are faster to scan)
 
 ### New Cron Job
 
@@ -318,6 +336,8 @@ Key MCP tools for Adyen troubleshooting:
 - **Don't use raw `db` client for tenant-scoped writes** — always use `getScopedDb` or include the org filter explicitly
 - **Don't use `new Date(dateString)` for date-only fields** — use `parseDateOnly()`
 - **Don't use `<input type="tel">`** — use `PhoneInput` component
+- **Don't call `twilio.messages.create()` directly** — route outbound SMS through `sendSingleSms` so the opt-out gate, usage limits, and `Message` audit trail are applied
+- **Don't hand-write SMS consent fields** — use `buildSmsConsentGrant` / `buildSmsConsentRevoke` from `src/lib/sms-consent.ts` so `smsConsentAt`, `smsConsentSource`, `smsConsentVersion`, `smsOptOut`, and `smsConsentRevokeSource` stay in sync
 - **Don't trust `organizationId` from request bodies or query params** — use `session.user.organizationId` for authenticated routes, or `resolvePublicRequest` for `/api/public/` routes
 - **Don't add `/sites/{slug}/` to client-side navigation hrefs** inside tenant site pages
 - **Don't mutate inside a transaction without first verifying org ownership** — `getScopedDb` doesn't propagate into `$transaction` callbacks

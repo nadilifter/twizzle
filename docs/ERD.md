@@ -1,13 +1,19 @@
 # Uplifter — Entity Relationship Diagram
 
-A domain-grouped ERD of the Uplifter platform's PostgreSQL schema (Prisma, ~80 models, ~5,100 lines). Source of truth: [prisma/schema.prisma](../prisma/schema.prisma). Higher-level narrative lives in [ARCHITECTURE.md](../ARCHITECTURE.md#database-schema).
+A domain-grouped ERD of the Uplifter platform's PostgreSQL schema (Prisma, ~150 models, ~5,200 lines). Source of truth: [prisma/schema.prisma](../prisma/schema.prisma). Higher-level narrative lives in [ARCHITECTURE.md](../ARCHITECTURE.md#database-schema).
 
 ## Legend
 
 - `PK` — primary key
-- `FK` — foreign key
+- `FK` — foreign key (`FK_UK` = foreign key that is also unique, i.e. a 1:1 relation)
 - `UK` — unique (standalone or composite)
-- Cardinality (Mermaid): `||--o{` = one-to-many, `||--||` = one-to-one, `}o--o{` = many-to-many, `}o--o|` = optional relation.
+- `enum_array` / `string_array` — Postgres array columns (Prisma `Type[]`)
+- Cardinality (Mermaid crow's-foot):
+  - `||--o{` — one-to-many (parent ↔ many children)
+  - `||--||` — one-to-one (required both sides)
+  - `||--o|` — one to zero-or-one (optional child)
+  - `}o--o{` — many-to-many
+  - `}o--o|` — many to zero-or-one (optional parent / nullable FK)
 - Every model rooted at `Organization` is tenant-scoped (see [getScopedDb](../src/lib/db.ts)). Shared-across-tenants models (`User`, `Athlete`, `AthleteMedicalInfo`) are called out inline.
 
 ---
@@ -33,7 +39,7 @@ A domain-grouped ERD of the Uplifter platform's PostgreSQL schema (Prisma, ~80 m
 17. [Platform Subscription (SaaS Billing)](#17-platform-subscription)
 18. [Accounting Integrations (QBO / Xero)](#18-accounting-integrations)
 19. [Feedback & Feature Requests](#19-feedback--feature-requests)
-20. [Media, Registration Files, Categories, Holidays, Certifications, Cache](#20-misc--cross-cutting)
+20. [Media, Registration Files, Categories, Holidays, Referrals, Cache](#20-misc--cross-cutting)
 
 ---
 
@@ -46,6 +52,7 @@ erDiagram
     Organization ||--o{ OrganizationMember : "has members"
     Organization ||--o{ OrganizationInvitation : "sends"
     Organization ||--o{ OrganizationStatusLog : "lifecycle log"
+    Organization ||--o{ Referral : "refers / is referred"
     User ||--o{ OrganizationMember : "belongs to"
     User ||--o{ Session : "active sessions"
     User ||--o{ Account : "OAuth links"
@@ -73,6 +80,7 @@ erDiagram
         decimal taxRate "e.g. 0.0600 = 6%"
         boolean taxEnabled
         enum taxPaidBy "CUSTOMER | ORGANIZATION"
+        string referralCode UK "Unique code for Referral Program (nullable)"
         datetime createdAt
         datetime updatedAt
     }
@@ -83,6 +91,7 @@ erDiagram
         string name
         string passwordHash "bcrypt (null for OAuth-only)"
         string avatar
+        json avatarCrop "Crop metadata {x,y,zoom,aspect}"
         string phone
         boolean phoneVerified
         enum role "ADMIN | COACH | VOLUNTEER | ACCOUNTANT | CUSTOM | PARENT (default)"
@@ -90,6 +99,11 @@ erDiagram
         boolean isSuperAdmin "Platform-level superadmin"
         boolean smsOptOut
         datetime smsOptOutAt
+        datetime smsConsentAt "TCPA opt-in timestamp; null = no consent"
+        enum smsConsentSource "SIGNUP_SITE | SIGNUP_ORG | INVITATION | ACCOUNT_SETTINGS"
+        string smsConsentIp "IP captured at consent"
+        string smsConsentVersion "Consent text/policy version"
+        enum smsConsentRevokeSource "ACCOUNT_SETTINGS | INBOUND_STOP"
         boolean emailOptOut
         datetime emailOptOutAt
         datetime termsAcceptedAt
@@ -168,6 +182,11 @@ erDiagram
 - `EmailVerificationCode(id, email, code, token UK, type [MFA_CHALLENGE | EMAIL_LOGIN | SIGNUP_VERIFICATION | PHONE_VERIFICATION], expiresAt, usedAt)` — OTP for MFA + passwordless login.
 - `ReservedDomain(id, pattern UK, type [EXACT | PREFIX], reason, createdBy)` — org-slug denylist.
 
+**SMS consent (TCPA / Twilio toll-free verification compliance):** Sends are gated on `User.smsConsentAt != null && smsOptOut == false`. Absence of `smsConsentAt` is treated as _no consent_. Inbound `STOP` clears consent and sets `smsConsentRevokeSource = INBOUND_STOP`.
+
+- `SmsConsentSource` — where opt-in was captured: `SIGNUP_SITE` (/sites/[slug]/signup), `SIGNUP_ORG` (/org-signup, /get-started), `INVITATION` (/accept-invitation), `ACCOUNT_SETTINGS`.
+- `SmsConsentRevokeSource` — how opt-out happened: `ACCOUNT_SETTINGS` (user toggle) or `INBOUND_STOP` (Twilio webhook).
+
 ---
 
 ## 2. Athletes & Guardians
@@ -193,6 +212,7 @@ erDiagram
         string lastName
         string email "Athlete's own email (adults / teens)"
         string avatar
+        json avatarCrop "Crop metadata {x,y,zoom,aspect}"
         datetime birthDate "For age gating"
         enum gender "MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY"
         json medicalDetails "Legacy blob — prefer AthleteMedicalInfo"
@@ -1214,7 +1234,7 @@ erDiagram
         decimal total
         string notes
         string organizationId FK
-        boolean registrationsProcessed "Registrations activated on payment"
+        boolean postPaymentProcessed "Post-payment side effects (registrations, credits, etc.) applied"
     }
 
     LineItem {
@@ -2087,7 +2107,7 @@ erDiagram
 
 ## 17. Platform Subscription
 
-Uplifter's own SaaS billing (superadmin charging orgs for the platform). Distinct from customer-facing billing.
+Uplifter's own SaaS billing (superadmin charging orgs for the platform). Distinct from customer-facing billing. `AdyenPlatformAccount` represents an org's Adyen merchant onboarding state (Adyen for Platforms); `accountStatus` is an admin kill-switch independent of `onboardingStatus`, and `payoutSchedule` controls how often Adyen sweeps settled funds to the org's bank.
 
 ```mermaid
 erDiagram
@@ -2145,6 +2165,7 @@ erDiagram
         string lockedBy "Superadmin"
         datetime lockedAt
         datetime trialEndsAt
+        datetime nextBillingDate "When next platform invoice is generated; advanced +1 period after each cycle"
         boolean cancelAtPeriodEnd
         datetime cancelledAt
     }
@@ -2182,6 +2203,7 @@ erDiagram
         string storeId
         string storeReference
         enum onboardingStatus "PENDING_HOSTED | IN_PROGRESS | AWAITING_DATA | IN_REVIEW | VERIFIED | REJECTED"
+        enum accountStatus "ACTIVE | INACTIVE (admin-controlled kill switch)"
         string verificationStatus
         json capabilities "Enabled Adyen capabilities"
         datetime legalNameConfirmedAt "Pre-onboarding gate"
@@ -2189,6 +2211,7 @@ erDiagram
         datetime platformAgreementAcceptedAt
         string sweepId "Adyen sweep config"
         string transferInstrumentId
+        string payoutSchedule "daily | weekly | monthly (default daily)"
     }
 
     SubscriptionInvoice {
@@ -2473,6 +2496,25 @@ erDiagram
         string stateCode
         string announcementId FK "Auto-created closure"
         datetime reminderEmailSentAt
+    }
+```
+
+### Referral Program
+
+Orgs earn free platform-subscription months by referring other orgs. `Organization.referralCode` is the shareable unique code; `Referral` is the credit ledger — each row is one referral relationship with a running balance of how many credit months have been applied against the referrer's `SubscriptionInvoice`s.
+
+```mermaid
+erDiagram
+    Organization ||--o{ Referral : "ReferralsMade (referrer)"
+    Organization ||--o{ Referral : "ReferralsReceived (referred)"
+
+    Referral {
+        string id PK
+        string referrerOrganizationId FK "Org that shared the code"
+        string referredOrganizationId FK "Org that signed up via code"
+        int creditMonths "Total months awarded (default 1)"
+        int creditMonthsUsed "Months already applied to invoices"
+        datetime createdAt
     }
 ```
 

@@ -88,7 +88,7 @@ clubs/
 │   ├── store/                  # Zustand stores (calendar, lesson plan)
 │   └── middleware.ts           # Subdomain routing + session handling
 ├── prisma/
-│   ├── schema.prisma           # 5,100+ line database schema
+│   ├── schema.prisma           # 5,200+ line database schema
 │   ├── migrations/             # ~120 migration files
 │   ├── seed.ts                 # Production seed data
 │   └── seed-dev.ts             # Development seed data
@@ -229,7 +229,7 @@ Sessions carry `organizationId` (the currently active org), `role`, and `memberI
 
 ### Entity Groups
 
-The schema has ~5,100 lines and 80+ models organized into these domains:
+The schema has ~5,200 lines and 150+ models organized into these domains:
 
 #### Foundation
 
@@ -307,7 +307,7 @@ The schema has ~5,100 lines and 80+ models organized into these domains:
 - **Conversation** — per-user threaded chat (SMS or web)
 - **Announcement** — org-scoped announcements with read receipts
 - **SystemAnnouncement** — platform-wide superadmin announcements
-- **NotificationRule** — trigger-based automated notifications (18+ trigger types)
+- **NotificationRule** — trigger-based automated notifications (22 trigger types)
 - **NotificationTemplate** — message template per rule
 - **NotificationLog** — audit trail of sent notifications
 - **NotificationDeduplication** — prevents duplicate rule firings
@@ -336,10 +336,12 @@ The schema has ~5,100 lines and 80+ models organized into these domains:
 #### Platform Subscription
 
 - **SubscriptionPlan** — SaaS tier definition with feature flags and limits
-- **OrganizationSubscription** — active plan with Adyen recurring detail
+- **OrganizationSubscription** — active plan with Adyen recurring detail and `nextBillingDate` cursor
 - **OrganizationFeatureOverride** — per-org feature toggle overrides
 - **SubscriptionInvoice** — monthly platform billing invoice
 - **SubscriptionPaymentAttempt** — payment attempt record
+- **AdyenPlatformAccount** — balance-platform account holder with `onboardingStatus` (KYC), admin-controlled `accountStatus` (ACTIVE/INACTIVE kill switch), and `payoutSchedule`
+- **Referral** — org-to-org referral record; credits months of free subscription to the referring org
 
 #### Accounting Integrations
 
@@ -361,6 +363,10 @@ The schema has ~5,100 lines and 80+ models organized into these domains:
 **Audit trails:** `OrganizationStatusLog` for org lifecycle events, `NotificationLog` for all sent notifications, `AccountingSyncLog` for integration syncs.
 
 **Feature gating:** `SubscriptionPlan.featureToggles` (JSON) sets defaults; `OrganizationFeatureOverride.featureToggles` (JSON) lets admins override per org. Resolved at runtime via `src/lib/feature-toggles.ts`.
+
+**SMS consent (TCPA):** Consent state lives on `User` across five fields — `smsConsentAt`, `smsConsentSource`, `smsConsentIp`, `smsConsentVersion`, `smsConsentRevokeSource` — plus the pre-existing `smsOptOut` / `smsOptOutAt`. Granting and revoking go through `buildSmsConsentGrant` / `buildSmsConsentRevoke` in `src/lib/sms-consent.ts` so the fields stay in sync (revoke clears all consent fields and sets `smsOptOut = true`). Outbound sends go through `sendSingleSms` in `src/lib/sms-service.ts`, which enforces the `smsOptOut` gate and writes a `Message` audit row. Direct `twilio.messages.create()` calls bypass all of this.
+
+**Referral credits:** `Organization.referralCode` is a shareable code; when a new org signs up with it, a `Referral` row tracks `creditMonths` awarded to the referrer. Credits are drawn down against subsequent `SubscriptionInvoice`s by the `subscription-billing` cron until `creditMonthsUsed == creditMonths`.
 
 ---
 
@@ -411,7 +417,7 @@ Dunning (failed payment recovery) is handled by the `subscription-dunning` cron 
 | **Notifications** | Automated trigger-based messages | `NotificationRule`, `NotificationLog` |
 | **Conversations** | Direct 1:1 chat (SMS or web)     | `Conversation`, `Message`             |
 
-### Notification Triggers (18+)
+### Notification Triggers (22)
 
 `NotificationRule` supports: `MEMBERSHIP_EXPIRY`, `MEMBERSHIP_EXPIRED`, `PAYMENT_DUE`, `PAYMENT_OVERDUE`, `PAYMENT_RECEIVED`, `PROGRAM_REMINDER`, `PROGRAM_ENROLLMENT`, `PROGRAM_CANCELLATION`, `EVENT_REMINDER`, `EVENT_REGISTRATION_OPEN/CLOSE`, `ATTENDANCE_MISSED`, `SKILL_ACHIEVED`, `EVALUATION_DUE`, `EVALUATION_COMPLETED`, `BIRTHDAY`, `WAITLIST_OPENING`, `RECURRING_CHARGE_*`, and `CUSTOM`.
 
