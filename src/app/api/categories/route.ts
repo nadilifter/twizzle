@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
 import { z } from "zod";
+import { imageUrlSchema } from "@/lib/schemas";
 
 const createCategorySchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional().nullable(),
-  imageUrl: z.string().min(1).url().optional().nullable(),
+  imageUrl: imageUrlSchema.optional().nullable(),
 });
 
 // GET /api/categories

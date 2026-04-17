@@ -5,6 +5,7 @@ import { bumpCacheVersion } from "@/lib/cache-version";
 import { parseDateOnly } from "@/lib/date-utils";
 import { checkMemberCertifications } from "@/lib/services/certification-check";
 import { z } from "zod";
+import { imageUrlSchema } from "@/lib/schemas";
 import { generateInstanceDates, calculateEndTime } from "@/lib/program-instance-utils";
 import { getEnabledHolidayDates, filterOutHolidayDates } from "@/lib/holiday-utils";
 
@@ -30,7 +31,7 @@ const updateProgramSchema = z.object({
   facilityId: z.string().optional().nullable(),
   capacity: z.number().int().min(1).optional().nullable(),
   showCoachOnSite: z.boolean().optional(),
-  imageUrl: z.string().url().optional().nullable(),
+  imageUrl: imageUrlSchema.optional().nullable(),
   // Age restrictions
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),

@@ -178,6 +178,35 @@ formatPhoneNumberIntl(phone) || phone;
 <input type="tel" />
 ```
 
+### Image URL Validation
+
+Use the shared `imageUrlSchema` from `src/lib/schemas.ts` for any `imageUrl` field in Zod schemas. It accepts both absolute URLs (`https://cdn.example.com/...`) and relative paths (`/uploads/...`) so local dev works without S3/MinIO.
+
+```typescript
+import { imageUrlSchema } from "@/lib/schemas";
+
+const schema = z.object({
+  imageUrl: imageUrlSchema.optional().nullable(),
+});
+```
+
+Don't use `z.string().url()` for image URLs — it rejects the relative paths returned by the local filesystem upload fallback.
+
+### Image Uploads
+
+Use the `ImageUpload` component from `src/components/ui/image-upload.tsx`. It handles file selection, upload to `/api/upload`, and returns the URL via `onChange`. Supported types: `logo`, `favicon`, `hero`, `program`, `product`, `team`, `category`.
+
+```tsx
+<ImageUpload
+  label="Program Image"
+  value={formData.imageUrl}
+  onChange={(url) => setFormData((prev) => ({ ...prev, imageUrl: url }))}
+  type="program"
+/>
+```
+
+`ImageUpload` works safely inside `Sheet` and `Dialog` overlays — the base components prevent focus-outside dismissal so native file pickers don't close the overlay. If you build a custom file input inside a Radix overlay, this is already handled at the `SheetContent`/`DialogContent` level via `onFocusOutside`.
+
 ### Data Tables
 
 Use TanStack React Table v8 (`@tanstack/react-table`). See `docs/data-table-migration.md` for the standard column/table setup used throughout the app.
@@ -197,6 +226,8 @@ Use TanStack React Table v8 (`@tanstack/react-table`). See `docs/data-table-migr
 | Payment processing           | `src/lib/adyen.ts`, `src/lib/adyen-platform.ts`  |
 | Adyen provisioning scripts   | `scripts/provision-adyen.ts`                     |
 | File storage                 | `src/lib/storage.ts`                             |
+| Shared Zod schemas           | `src/lib/schemas.ts`                             |
+| Image upload component       | `src/components/ui/image-upload.tsx`             |
 | Feature flags                | `src/lib/feature-toggles.ts`                     |
 | Accounting integrations      | `src/lib/qbo.ts`, `src/lib/xero.ts`              |
 | Prisma schema                | `prisma/schema.prisma`                           |
@@ -341,6 +372,7 @@ Key MCP tools for Adyen troubleshooting:
 - **Don't trust `organizationId` from request bodies or query params** — use `session.user.organizationId` for authenticated routes, or `resolvePublicRequest` for `/api/public/` routes
 - **Don't add `/sites/{slug}/` to client-side navigation hrefs** inside tenant site pages
 - **Don't mutate inside a transaction without first verifying org ownership** — `getScopedDb` doesn't propagate into `$transaction` callbacks
+- **Don't use `z.string().url()` for `imageUrl` fields** — use `imageUrlSchema` from `src/lib/schemas.ts` which also accepts relative paths for local dev
 - **Don't create new abstractions for one-off operations** — inline the logic
 - **Don't add error handling for impossible states** — only validate at system boundaries
 - **Don't leave `$` unescaped in `.env` values** — use `\$` inside single quotes so `dotenv-expand` (used by `@next/env`) preserves the literal character; unescaped `$` is silently expanded to empty, corrupting API keys

@@ -3,6 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { checkFeatureGate } from "@/lib/feature-resolver";
 import { z } from "zod";
+import { imageUrlSchema } from "@/lib/schemas";
 
 const createSkillSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -13,7 +14,7 @@ const createSkillSchema = z.object({
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
   videoUrl: z.string().url().optional().nullable(),
-  imageUrl: z.string().url().optional().nullable(),
+  imageUrl: imageUrlSchema.optional().nullable(),
 });
 
 // GET /api/skills

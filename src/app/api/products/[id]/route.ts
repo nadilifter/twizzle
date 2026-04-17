@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { getScopedDb, db } from "@/lib/db";
 import { z } from "zod";
+import { imageUrlSchema } from "@/lib/schemas";
 
 const variantSchema = z.object({
   id: z.string().optional(), // present = update, absent = create
   label: z.string().min(1, "Variant label is required"),
   price: z.number().min(0).optional().nullable(),
-  imageUrl: z.string().optional().nullable(),
+  imageUrl: imageUrlSchema.optional().nullable(),
   maxInventory: z.number().int().positive().optional().nullable(),
   currentInventory: z.number().int().min(0).optional().nullable(),
   sortOrder: z.number().int().min(0).optional(),
@@ -20,7 +21,7 @@ const updateProductSchema = z.object({
   sku: z.string().optional().nullable(),
   category: z.string().optional(),
   price: z.number().min(0, "Price must be positive").optional(),
-  imageUrl: z.string().optional().nullable(),
+  imageUrl: imageUrlSchema.optional().nullable(),
   maxInventory: z.number().int().positive().optional().nullable(),
   currentInventory: z.number().int().min(0).optional().nullable(),
   isActive: z.boolean().optional(),

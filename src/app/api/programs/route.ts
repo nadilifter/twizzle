@@ -8,6 +8,7 @@ import {
   type CertCheckFailure,
 } from "@/lib/services/certification-check";
 import { z } from "zod";
+import { imageUrlSchema } from "@/lib/schemas";
 import { generateInstanceDates, calculateEndTime } from "@/lib/program-instance-utils";
 import { getEnabledHolidayDates, filterOutHolidayDates } from "@/lib/holiday-utils";
 
@@ -43,7 +44,7 @@ const createProgramSchema = z.object({
   facilityId: z.string().optional().nullable(),
   capacity: z.number().int().min(1).optional().nullable(),
   showCoachOnSite: z.boolean().default(true),
-  imageUrl: z.string().url().optional().nullable(),
+  imageUrl: imageUrlSchema.optional().nullable(),
   // Age restrictions
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),

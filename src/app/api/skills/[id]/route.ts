@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
 import { z } from "zod";
+import { imageUrlSchema } from "@/lib/schemas";
 
 const updateSkillSchema = z.object({
   name: z.string().min(1).optional(),
@@ -12,7 +13,7 @@ const updateSkillSchema = z.object({
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
   videoUrl: z.string().url().optional().nullable(),
-  imageUrl: z.string().url().optional().nullable(),
+  imageUrl: imageUrlSchema.optional().nullable(),
 });
 
 // GET /api/skills/[id]

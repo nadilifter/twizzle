@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db"; // tenant-isolation-ok: WebsiteConfig is scoped by unique organizationId from session
 import { z } from "zod";
+import { imageUrlSchema } from "@/lib/schemas";
 
 const updateSchema = z.object({
-  imageUrl: z.string().min(1).url().optional().nullable(),
+  imageUrl: imageUrlSchema.optional().nullable(),
 });
 
 export async function GET() {
