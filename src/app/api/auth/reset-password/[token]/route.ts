@@ -70,9 +70,15 @@ export async function GET(
     const email = resetToken.email;
     const maskedEmail = maskEmail(email);
 
+    const user = await db.user.findUnique({
+      where: { email },
+      select: { passwordHash: true },
+    });
+
     return NextResponse.json({
       valid: true,
       email: maskedEmail,
+      hasPassword: !!user?.passwordHash,
     });
   } catch (error) {
     console.error("Error validating reset token:", error);
@@ -140,11 +146,20 @@ export async function POST(
     // Hash the new password
     const passwordHash = await hashPassword(validatedData.password);
 
-    // Update user password and mark token as used in a transaction
+    // Update user password and mark token as used in a transaction.
+    // Always activate the user — covers first-time account creation (INVITED)
+    // as well as standard password resets.
+    // Also activates any INVITED OrganizationMember records (no-op if none exist).
     await db.$transaction([
       db.user.update({
         where: { id: user.id },
-        data: { passwordHash },
+        data: { passwordHash, status: "ACTIVE" },
+      }),
+      // tenant-isolation-ok: intentionally activates all INVITED memberships across
+      // orgs — when a user creates their password they become active everywhere invited.
+      db.organizationMember.updateMany({
+        where: { userId: user.id, status: "INVITED" },
+        data: { status: "ACTIVE" },
       }),
       db.passwordResetToken.update({
         where: { id: resetToken.id },
@@ -154,6 +169,7 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
+      email: resetToken.email,
       message:
         "Your password has been reset successfully. You can now log in with your new password.",
     });

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getAuthSession } from "@/lib/auth";
+import { getSubdomainUrl } from "@/lib/env-domains";
 
 // tenant-isolation-ok: public receipt page uses subdomain to scope by org
 export async function GET(
@@ -24,13 +26,20 @@ export async function GET(
     },
     include: {
       lineItems: true,
-      user: { select: { name: true } },
+      user: { select: { name: true, email: true, passwordHash: true, status: true } },
     },
   });
 
   if (!invoice) {
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
   }
+
+  const sessionUserId = (await getAuthSession())?.user?.id ?? null;
+  const promptLogin =
+    !!invoice.user &&
+    !!invoice.user.passwordHash &&
+    invoice.user.status === "ACTIVE" &&
+    sessionUserId !== invoice.userId;
 
   return NextResponse.json({
     id: invoice.id,
@@ -47,5 +56,10 @@ export async function GET(
       quantity: item.quantity,
       total: Number(item.total),
     })),
+    promptLogin,
+    loginUrl: promptLogin
+      ? `${getSubdomainUrl("login")}/login?email=${encodeURIComponent(invoice.user!.email)}`
+      : null,
+    loginEmail: promptLogin ? (invoice.user?.email ?? null) : null,
   });
 }

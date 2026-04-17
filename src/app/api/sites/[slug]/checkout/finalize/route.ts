@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { getAuthSession } from "@/lib/auth";
+import { sendCheckoutSetupEmailIfNeeded } from "@/lib/checkout-user-provisioning";
 
 /**
  * POST /api/sites/[slug]/checkout/finalize
@@ -33,6 +34,15 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
 
     if (!invoice) {
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+    }
+    //
+    if (invoice.userId) {
+      sendCheckoutSetupEmailIfNeeded(invoice.userId).catch((err) =>
+        logger.error("Finalize: failed to send account setup email", {
+          err,
+          userId: invoice.userId,
+        })
+      );
     }
 
     // Ownership check: authenticated users must own this invoice.

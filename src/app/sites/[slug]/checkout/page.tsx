@@ -1050,7 +1050,6 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
       </div>
     );
   }
-
   return (
     <div className="mx-auto w-full max-w-6xl px-4 md:px-8 py-12">
       <button
@@ -1618,6 +1617,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                         sessionData={paymentSession.sessionData}
                         onPaymentCompleted={handlePaymentCompleted}
                         onError={handlePaymentError}
+                        showSavePaymentMethod={!!session}
                       />
                     </CardContent>
                   </Card>

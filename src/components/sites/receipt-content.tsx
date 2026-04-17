@@ -24,6 +24,9 @@ interface ReceiptData {
   total: number;
   userName: string | null;
   lineItems: ReceiptLineItem[];
+  promptLogin: boolean;
+  loginUrl: string | null;
+  loginEmail: string | null;
 }
 
 const MAX_ATTEMPTS = 15;
@@ -242,6 +245,30 @@ export function ReceiptContent({
             </Button>
           </CardFooter>
         </Card>
+
+        {receipt.promptLogin && receipt.loginUrl && (
+          <div className="mt-4 rounded-lg border bg-muted/40 p-4 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium mb-1">You have an account</p>
+              <p className="text-sm text-muted-foreground">
+                {receipt.loginEmail ? (
+                  <>
+                    Your email{" "}
+                    <span className="font-medium text-foreground">{receipt.loginEmail}</span> is
+                    linked to an account — log in to view your purchase history.
+                  </>
+                ) : (
+                  "Your email is linked to an account — log in to view your purchase history."
+                )}
+              </p>
+            </div>
+            <div className="shrink-0">
+              <Button asChild size="sm" className="bg-[#5655ED] hover:bg-[#4544cc] text-white">
+                <a href={receipt.loginUrl}>Log In</a>
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

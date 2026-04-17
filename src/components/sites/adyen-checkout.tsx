@@ -14,11 +14,13 @@ interface AdyenCheckoutProps {
     resultCode: string;
     sessionData?: string;
     sessionResult?: string;
+    paymentMethodType?: string;
   }) => void;
   onError: (error: { name?: string; message?: string; resultCode?: string }) => void;
   countryCode?: string;
   componentType?: string;
   adyenConfig?: Partial<CoreConfiguration>;
+  showSavePaymentMethod?: boolean;
 }
 
 export function AdyenCheckoutComponent({
@@ -29,6 +31,7 @@ export function AdyenCheckoutComponent({
   countryCode = "US",
   componentType = "dropin",
   adyenConfig,
+  showSavePaymentMethod = true,
 }: AdyenCheckoutProps) {
   const { resolvedTheme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -111,7 +114,7 @@ export function AdyenCheckoutComponent({
           ...darkCardStyles,
           ...(componentType !== "card" && {
             paymentMethodsConfiguration: {
-              card: darkCardStyles,
+              card: { ...darkCardStyles, enableStoreDetails: showSavePaymentMethod },
               storedPaymentMethod: darkCardStyles,
             },
           }),
@@ -150,6 +153,7 @@ export function AdyenCheckoutComponent({
     resolvedTheme,
     stableOnPaymentCompleted,
     stableOnError,
+    showSavePaymentMethod,
   ]);
 
   return (

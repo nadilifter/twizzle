@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,17 +12,18 @@ import { ChevronLeft, Loader2, CheckCircle2, XCircle, Eye, EyeOff } from "lucide
 import { UplifterLogo } from "@/components/uplifter-logo";
 import { toast } from "sonner";
 import { Suspense } from "react";
+import { signOut } from "next-auth/react";
 import { validatePassword, PASSWORD_PLACEHOLDER } from "@/lib/password";
 
 function ResetPasswordContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const token = searchParams.get("token");
 
   const [isValidating, setIsValidating] = useState(true);
   const [isValid, setIsValid] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [maskedEmail, setMaskedEmail] = useState<string | null>(null);
+  const [hasPassword, setHasPassword] = useState(true);
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -30,6 +31,7 @@ function ResetPasswordContent() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [successEmail, setSuccessEmail] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
   // Validate token on mount
@@ -51,6 +53,7 @@ function ResetPasswordContent() {
         } else {
           setIsValid(true);
           setMaskedEmail(data.email);
+          setHasPassword(data.hasPassword ?? true);
         }
       } catch {
         setTokenError("An error occurred validating your reset link. Please try again.");
@@ -102,7 +105,8 @@ function ResetPasswordContent() {
       }
 
       setIsSuccess(true);
-      toast.success("Password reset successfully!");
+      setSuccessEmail(data.email ?? null);
+      toast.success(copy.toast);
     } catch {
       setFormError("An error occurred. Please try again.");
       toast.error("An error occurred. Please try again.");
@@ -110,6 +114,28 @@ function ResetPasswordContent() {
       setIsSubmitting(false);
     }
   };
+
+  const copy = hasPassword
+    ? {
+        title: "Reset Password",
+        subtitle: "Enter your new password below",
+        emailLine: "Resetting password for",
+        submit: "Reset Password",
+        submitting: "Resetting...",
+        successTitle: "Password Reset!",
+        successBody: "Your password has been successfully changed.",
+        toast: "Password reset successfully!",
+      }
+    : {
+        title: "Create Your Password",
+        subtitle: "Set a password to access your account",
+        emailLine: "Setting up account for",
+        submit: "Create Password",
+        submitting: "Creating...",
+        successTitle: "Password Created!",
+        successBody: "Your password has been set. You can now log in to your account.",
+        toast: "Password created successfully!",
+      };
 
   // Loading state
   if (isValidating) {
@@ -170,14 +196,21 @@ function ResetPasswordContent() {
           <div className="flex items-center justify-center w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 mb-4">
             <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
           </div>
-          <h1 className="text-2xl font-bold">Password Reset!</h1>
-          <p className="text-sm text-muted-foreground">
-            Your password has been successfully changed.
-          </p>
+          <h1 className="text-2xl font-bold">{copy.successTitle}</h1>
+          <p className="text-sm text-muted-foreground">{copy.successBody}</p>
         </CardHeader>
 
         <CardContent className="grid gap-4">
-          <Button className="w-full" onClick={() => router.push("/login")}>
+          <Button
+            className="w-full"
+            onClick={() =>
+              signOut({
+                callbackUrl: successEmail
+                  ? `/login?email=${encodeURIComponent(successEmail)}`
+                  : "/login",
+              })
+            }
+          >
             Continue to Login
           </Button>
         </CardContent>
@@ -191,10 +224,12 @@ function ResetPasswordContent() {
       <ShineBorder shineColor={["#5655ED", "#A07CFE"]} className="text-center" />
       <CardHeader className="items-center pb-2">
         <UplifterLogo width={180} height={36} className="h-9 mb-2" />
-        <h1 className="text-2xl font-bold">Reset Password</h1>
-        <p className="text-sm text-muted-foreground">Enter your new password below</p>
+        <h1 className="text-2xl font-bold">{copy.title}</h1>
+        <p className="text-sm text-muted-foreground">{copy.subtitle}</p>
         {maskedEmail && (
-          <p className="text-xs text-muted-foreground mt-1">Resetting password for {maskedEmail}</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {copy.emailLine} {maskedEmail}
+          </p>
         )}
       </CardHeader>
 
@@ -257,10 +292,10 @@ function ResetPasswordContent() {
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Resetting...
+                {copy.submitting}
               </>
             ) : (
-              "Reset Password"
+              copy.submit
             )}
           </Button>
         </form>

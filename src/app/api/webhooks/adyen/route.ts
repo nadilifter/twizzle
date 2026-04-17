@@ -140,10 +140,12 @@ async function handleAuthorisation(
   }
 
   const invoice = await db.$transaction(async (tx) => {
+    // tenant-isolation-ok: lookup by globally-unique pspReference to discover organizationId
     const existingTransaction = await tx.transaction.findUnique({
       where: { pspReference },
     });
 
+    // tenant-isolation-ok: lookup by invoiceId (embedded in merchantReference) to discover org
     const inv = await tx.invoice.findUnique({
       where: { id: invoiceId },
       include: {
@@ -464,6 +466,7 @@ async function handleRefund(notificationItem: any) {
   }
 
   // Check if a PENDING refund transaction exists (created by our refund API)
+  // tenant-isolation-ok: lookup by globally-unique pspReference to discover organizationId
   const existing = await db.transaction.findUnique({
     where: { pspReference },
   });
@@ -484,6 +487,7 @@ async function handleRefund(notificationItem: any) {
   // Wrap in a transaction so the refund record + invoice status update are atomic.
   try {
     await db.$transaction(async (tx) => {
+      // tenant-isolation-ok: lookup by globally-unique pspReference to discover organizationId
       const originalTx = await tx.transaction.findUnique({
         where: { pspReference: originalReference },
         include: { payment: { include: { invoice: true } } },
@@ -538,6 +542,7 @@ async function handleChargeback(notificationItem: any) {
 
   try {
     await db.$transaction(async (tx) => {
+      // tenant-isolation-ok: lookup by globally-unique pspReference to discover organizationId
       const existing = await tx.transaction.findUnique({
         where: { pspReference },
       });
@@ -547,7 +552,8 @@ async function handleChargeback(notificationItem: any) {
       }
 
       const originalTx = originalReference
-        ? await tx.transaction.findUnique({ where: { pspReference: originalReference } })
+        ? // tenant-isolation-ok: lookup by globally-unique pspReference to discover organizationId
+          await tx.transaction.findUnique({ where: { pspReference: originalReference } })
         : null;
 
       const organizationId = originalTx?.organizationId;
@@ -594,6 +600,7 @@ async function handleFailure(eventCode: string, notificationItem: any) {
   });
 
   if (originalReference) {
+    // tenant-isolation-ok: lookup by globally-unique pspReference to discover organizationId
     const tx = await db.transaction.findUnique({
       where: { pspReference: originalReference },
     });

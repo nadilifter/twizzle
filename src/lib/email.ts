@@ -287,7 +287,8 @@ export type EmailTemplate =
   | "subscription-deactivation-warning"
   | "subscription-deactivated"
   | "holiday-reminder"
-  | "payment-method-expiring";
+  | "payment-method-expiring"
+  | "checkout-account-setup";
 
 /**
  * Wrap email body content in a branded Uplifter layout.
@@ -1121,6 +1122,49 @@ The {{cardBrand}} card ending in {{cardLast4}} on file for {{organizationName}} 
 Please update your payment method before it expires to ensure uninterrupted service. You can do this from the Billing section of your dashboard.
 
 You are receiving this email because you are an administrator of {{organizationName}}.`,
+    },
+    "checkout-account-setup": {
+      subject: "Your Uplifter account is ready",
+      html: wrapInBrandedLayout({
+        preheaderText:
+          "Thanks for your purchase — set up your password to access your account and purchase history.",
+        bodyHtml: `
+              <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #1f2937;">Your account is ready</h1>
+              <p style="margin: 0 0 20px; color: #6b7280; font-size: 14px;">Welcome to Uplifter</p>
+              <p style="margin: 0 0 16px;">Hi {{name}},</p>
+              <p style="margin: 0 0 16px;">Thanks for your purchase! We've created an Uplifter account for you so you can access your purchase history and manage your profile.</p>
+              <p style="margin: 0 0 24px;">Click the button below to set your password and get started:</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 24px;">
+                <tr>
+                  <td style="border-radius: 6px; background-color: #2563eb;">
+                    <a href="{{setupUrl}}" style="display: inline-block; padding: 12px 24px; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 6px;">Set Up Your Account</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 16px; color: #6b7280; font-size: 14px;">This link will expire in {{expiresIn}}.</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr><td style="border-top: 1px solid #e5e7eb; padding: 0; height: 1px; font-size: 0; line-height: 0;">&nbsp;</td></tr>
+              </table>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding: 20px 0 0;">
+                    <p style="margin: 0; font-size: 12px; color: #6b7280;">If you didn't make a purchase or weren't expecting this email, you can safely ignore it.</p>
+                  </td>
+                </tr>
+              </table>
+        `,
+      }),
+      text: `Your Uplifter account is ready
+
+Hi {{name}},
+
+Thanks for your purchase! We've created an Uplifter account for you so you can access your purchase history and manage your profile.
+
+Set up your password here: {{setupUrl}}
+
+This link will expire in {{expiresIn}}.
+
+If you didn't make a purchase or weren't expecting this email, you can safely ignore it.`,
     },
   };
 

@@ -7,6 +7,7 @@ import { subDays } from "date-fns";
 import { processInvoiceRegistrations } from "@/lib/invoice-processing";
 import { sendTemplatedEmail } from "@/lib/email";
 import { getAuthSession } from "@/lib/auth";
+import { resolveOrProvisionCheckoutUser } from "@/lib/checkout-user-provisioning";
 import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { getRegistrationStatus } from "@/lib/registration-utils";
 import { z } from "zod";
@@ -196,7 +197,27 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
     const organizationId = config.organizationId;
 
     // Resolve auth session once (avoids repeated DB lookups across validation steps)
-    const authUserId = (await getAuthSession())?.user?.id || null;
+    let authUserId = (await getAuthSession())?.user?.id || null;
+
+    // Used to decide whether to pass shopper tokenization options to Adyen.
+    const hasAuthSession = !!authUserId;
+
+    // For guest checkouts, resolve or provision a user account by email.
+    // This links the invoice, contact, address, and Adyen tokenization to a real user.
+    if (!authUserId) {
+      try {
+        const { userId } = await resolveOrProvisionCheckoutUser({
+          email: body.userDetails.email,
+          firstName: body.userDetails.firstName,
+          lastName: body.userDetails.lastName,
+          organizationId,
+        });
+        authUserId = userId;
+      } catch (err) {
+        console.error("checkout/session: failed to resolve/provision user:", err, body.email);
+        // Continue as anonymous guest — no regression in checkout flow
+      }
+    }
 
     // 2. Server-side waiver verification (per-athlete)
     const programItems = items.filter((item: CartItem) => item.type === "program");
@@ -2081,7 +2102,7 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
       returnUrl,
       resolvedContact.email,
       adyenLineItems,
-      authUserId
+      hasAuthSession
         ? {
             shopperReference: `user-${authUserId}`,
             storePaymentMethodMode: hasRecurringItems ? "enabled" : "askForConsent",
