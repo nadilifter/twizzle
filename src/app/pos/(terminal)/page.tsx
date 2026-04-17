@@ -271,7 +271,7 @@ function POSPageContent() {
                     <div key={product.id} className="relative">
                       <Button
                         variant="outline"
-                        className={`w-full h-auto min-h-[120px] md:min-h-[140px] flex flex-col gap-1.5 md:gap-2 whitespace-normal p-2 md:p-3 hover:border-primary hover:bg-accent/50 relative transition-colors touch-manipulation ${
+                        className={`w-full aspect-square flex flex-col items-center justify-center gap-1.5 md:gap-2 whitespace-normal p-2 md:p-3 hover:border-primary hover:bg-accent/50 relative transition-colors touch-manipulation overflow-hidden ${
                           outOfStock ? "opacity-50 cursor-not-allowed" : ""
                         }`}
                         onClick={() => handleAddToCart(product)}
@@ -299,7 +299,7 @@ function POSPageContent() {
                             alt={product.name}
                             width={48}
                             height={48}
-                            className="rounded-lg object-cover"
+                            className="rounded-lg object-cover max-w-12 max-h-12 shrink-0"
                           />
                         ) : (
                           <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
