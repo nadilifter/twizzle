@@ -5,16 +5,20 @@ export async function linkTransactionsToPayout(payoutId: string, organizationId:
   try {
     const payout = await db.payout.findUnique({
       where: { id: payoutId },
-      select: { createdAt: true },
+      select: { paidAt: true },
     });
     if (!payout) return;
+
+    // Use paidAt (actual transfer date) so synced payouts don't over-link
+    // transactions settled after the transfer went out
+    const cutoff = payout.paidAt ?? new Date();
 
     const result = await db.transaction.updateMany({
       where: {
         organizationId,
         status: "SETTLED",
         payoutId: null,
-        settledAt: { lte: payout.createdAt },
+        settledAt: { lte: cutoff },
       },
       data: { payoutId },
     });

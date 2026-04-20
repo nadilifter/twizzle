@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Loader2 } from "lucide-react";
+import { TrendingUp, TrendingDown, Loader2, Percent } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, XAxis, Pie, PieChart, Cell, Label } from "recharts";
 import {
   ChartConfig,
@@ -35,6 +35,16 @@ interface FinancialOverview {
     pending: number;
     pendingCount: number;
     nextScheduled: string | null;
+    netThisMonth: number;
+    netYTD: number;
+  };
+  summary: {
+    grossThisMonth: number;
+    feesThisMonth: number;
+    netThisMonth: number;
+    grossYTD: number;
+    feesYTD: number;
+    netYTD: number;
   };
   subscriptions: {
     active: number;
@@ -51,6 +61,9 @@ interface FinancialOverview {
   adyenStatus: {
     status: string;
     verificationComplete: boolean;
+  };
+  fees: {
+    thisMonth: number;
   };
 }
 
@@ -101,16 +114,7 @@ export default function FinancialsPage() {
   }
 
   // Prepare chart data
-  const revenueData = data?.revenue.byMonth.length
-    ? data.revenue.byMonth
-    : [
-        { month: "Jun", revenue: 0 },
-        { month: "Jul", revenue: 0 },
-        { month: "Aug", revenue: 0 },
-        { month: "Sep", revenue: 0 },
-        { month: "Oct", revenue: 0 },
-        { month: "Nov", revenue: 0 },
-      ];
+  const revenueData = data?.revenue.byMonth ?? [];
 
   const breakdownData =
     data?.revenue.breakdown.map((item) => ({
@@ -122,6 +126,8 @@ export default function FinancialsPage() {
   const totalRevenue = data?.revenue.current || 0;
   const revenueChange = parseFloat(data?.revenue.changePercent || "0");
   const isPositiveChange = revenueChange >= 0;
+
+  const feesThisMonth = data?.fees.thisMonth ?? 0;
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -196,7 +202,15 @@ export default function FinancialsPage() {
               })}
             </div>
             <p className="text-xs text-muted-foreground">
-              {data?.payouts.nextScheduled || `${data?.payouts.pendingCount || 0} pending`}
+              {data?.payouts.pendingCount || 0} pending
+            </p>
+            <p className="text-xs text-muted-foreground">
+              $
+              {(data?.payouts.netThisMonth || 0).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}{" "}
+              net paid this month
             </p>
           </CardContent>
         </Card>
@@ -218,10 +232,10 @@ export default function FinancialsPage() {
           </CardHeader>
           <CardContent>
             <div
-              className={`text-2xl font-bold ${data?.adyenStatus.status === "active" ? "text-green-600" : "text-yellow-600"} flex items-center gap-2`}
+              className={`text-2xl font-bold ${data?.adyenStatus.verificationComplete ? "text-green-600" : "text-yellow-600"} flex items-center gap-2`}
             >
-              {data?.adyenStatus.status === "active" ? "Active" : "Pending"}
-              {data?.adyenStatus.status === "active" && (
+              {data?.adyenStatus.verificationComplete ? "Active" : "Pending"}
+              {data?.adyenStatus.verificationComplete && (
                 <span className="relative flex h-3 w-3">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
@@ -256,6 +270,22 @@ export default function FinancialsPage() {
           <CardContent>
             <div className="text-2xl font-bold">{data?.subscriptions.active || 0}</div>
             <p className="text-xs text-muted-foreground">Recurring charges</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Platform Fees Deducted</CardTitle>
+            <Percent className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              $
+              {feesThisMonth.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground">Deducted from payouts this month</p>
           </CardContent>
         </Card>
       </div>
@@ -358,6 +388,84 @@ export default function FinancialsPage() {
           </CardFooter>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Payout Summary</CardTitle>
+          <CardDescription>
+            Earnings, fees, and net payouts for the current month and year to date.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-muted-foreground">
+                <th className="text-left font-medium pb-3 w-1/2"></th>
+                <th className="text-right font-medium pb-3">This Month</th>
+                <th className="text-right font-medium pb-3">YTD</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="py-2 text-muted-foreground">Gross Earnings</td>
+                <td className="py-2 text-right">
+                  $
+                  {(data?.summary.grossThisMonth || 0).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </td>
+                <td className="py-2 text-right">
+                  $
+                  {(data?.summary.grossYTD || 0).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </td>
+              </tr>
+              <tr>
+                <td className="py-2 text-muted-foreground">Platform Fees</td>
+                <td className="py-2 text-right text-muted-foreground">
+                  −$
+                  {(data?.summary.feesThisMonth || 0).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </td>
+                <td className="py-2 text-right text-muted-foreground">
+                  −$
+                  {(data?.summary.feesYTD || 0).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </td>
+              </tr>
+              <tr className="border-t">
+                <td className="pt-3 pb-1 font-medium">Net Paid Out</td>
+                <td className="pt-3 pb-1 text-right font-medium">
+                  $
+                  {(data?.summary.netThisMonth || 0).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </td>
+                <td className="pt-3 pb-1 text-right font-medium">
+                  $
+                  {(data?.summary.netYTD || 0).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </CardContent>
+        <CardFooter>
+          <p className="text-xs text-muted-foreground">
+            Net reflects settled payouts; gross reflects collected payments.
+          </p>
+        </CardFooter>
+      </Card>
     </div>
   );
 }

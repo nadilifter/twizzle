@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     const [payouts, total] = await Promise.all([
       scopedDb.payout.findMany({
         where,
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ paidAt: "desc" }, { createdAt: "desc" }],
         take: limit,
         skip: offset,
       }),

@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
     const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    const yearStart = new Date(now.getFullYear(), 0, 1);
 
     // Execute queries with proper error handling
     const [
@@ -34,6 +35,9 @@ export async function GET(request: NextRequest) {
       chargebacksThisMonth,
       platformAccount,
       nextScheduledPayout,
+      payoutsThisMonth,
+      payoutsYTD,
+      revenueYTD,
     ] = await Promise.all([
       // Revenue this month (from completed payments)
       db.payment.aggregate({
@@ -153,6 +157,28 @@ export async function GET(request: NextRequest) {
           estimatedArrivalTime: true,
         },
       }),
+
+      // Fees + net from paid payouts this month
+      db.payout.aggregate({
+        where: { organizationId, status: "PAID", paidAt: { gte: currentMonth } },
+        _sum: { fees: true, net: true },
+      }),
+
+      // Fees + net from paid payouts YTD
+      db.payout.aggregate({
+        where: { organizationId, status: "PAID", paidAt: { gte: yearStart } },
+        _sum: { fees: true, net: true },
+      }),
+
+      // Gross revenue YTD
+      db.payment.aggregate({
+        where: {
+          invoice: { organizationId },
+          status: "COMPLETED",
+          processedAt: { gte: yearStart },
+        },
+        _sum: { amount: true },
+      }),
     ]);
 
     // Get revenue by month using Prisma instead of raw SQL
@@ -181,10 +207,12 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Convert to array and sort by date
-    const monthlyRevenue = Array.from(monthlyRevenueMap.entries())
-      .map(([month, revenue]) => ({ month: month.split(" ")[0], revenue }))
-      .slice(-6); // Last 6 months
+    // Build a full 6-month series so the chart always shows all months
+    const monthlyRevenue = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
+      const key = d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+      return { month: key.split(" ")[0], revenue: monthlyRevenueMap.get(key) ?? 0 };
+    });
 
     // Get revenue breakdown by category using Prisma
     const lineItemsForBreakdown = await db.lineItem.findMany({
@@ -252,6 +280,8 @@ export async function GET(request: NextRequest) {
               estimatedArrivalTime: nextScheduledPayout.estimatedArrivalTime,
             }
           : null,
+        netThisMonth: Number(payoutsThisMonth._sum.net ?? 0),
+        netYTD: Number(payoutsYTD._sum.net ?? 0),
       },
       subscriptions: {
         active: activeSubscriptions,
@@ -281,6 +311,17 @@ export async function GET(request: NextRequest) {
         status: platformAccount?.onboardingStatus || "not_onboarded",
         verificationComplete: platformAccount?.onboardingStatus === "VERIFIED",
         hasBalanceAccount: !!platformAccount?.balanceAccountId,
+      },
+      fees: {
+        thisMonth: Number(payoutsThisMonth._sum.fees ?? 0),
+      },
+      summary: {
+        grossThisMonth: currentRevenue,
+        feesThisMonth: Number(payoutsThisMonth._sum.fees ?? 0),
+        netThisMonth: Number(payoutsThisMonth._sum.net ?? 0),
+        grossYTD: Number(revenueYTD._sum.amount ?? 0),
+        feesYTD: Number(payoutsYTD._sum.fees ?? 0),
+        netYTD: Number(payoutsYTD._sum.net ?? 0),
       },
     });
   } catch (error) {
