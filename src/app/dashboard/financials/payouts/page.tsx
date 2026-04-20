@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -28,6 +29,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   InfoIcon,
+  RefreshCwIcon,
   Calendar as CalendarIcon,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -44,6 +46,7 @@ interface Payout {
   net: number;
   currency: string;
   status: "PENDING" | "SCHEDULED" | "PAID" | "FAILED";
+  payoutType: "MANUAL" | "SWEEP";
   bankAccount: string | null;
   scheduledAt: string | null;
   paidAt: string | null;
@@ -63,6 +66,11 @@ interface PayoutStats {
 }
 
 const PAGE_SIZE = 20;
+const SYNC_THROTTLE_MS = 30 * 60 * 1000;
+
+function getSyncThrottleKey(organizationId: string) {
+  return `payout-sync-last:${organizationId}`;
+}
 
 const statusColors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   PENDING: "outline",
@@ -73,6 +81,8 @@ const statusColors: Record<string, "default" | "secondary" | "destructive" | "ou
 
 export default function PayoutsPage() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const orgId = session?.user?.organizationId ?? null;
   const [payouts, setPayouts] = React.useState<Payout[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [total, setTotal] = React.useState(0);
@@ -95,24 +105,9 @@ export default function PayoutsPage() {
   const [hasSweep, setHasSweep] = React.useState(false);
   const [isVerified, setIsVerified] = React.useState(false);
   const [scheduleLoading, setScheduleLoading] = React.useState(false);
-
-  useEffect(() => {
-    async function fetchSchedule() {
-      try {
-        const res = await fetch("/api/organization/adyen-onboarding");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.account) {
-          setPayoutSchedule(data.account.payoutSchedule ?? "daily");
-          setHasSweep(!!data.account.hasSweep);
-          setIsVerified(data.account.onboardingStatus === "VERIFIED");
-        }
-      } catch {
-        // best-effort; don't block the page
-      }
-    }
-    fetchSchedule();
-  }, []);
+  const [syncLoading, setSyncLoading] = React.useState(false);
+  const skipFilterFetch = React.useRef(true);
+  const hasInitialized = React.useRef(false);
 
   const handleScheduleChange = async (value: string) => {
     setScheduleLoading(true);
@@ -163,19 +158,83 @@ export default function PayoutsPage() {
   }, [page, statusFilter, startDate, endDate]);
 
   useEffect(() => {
+    async function init() {
+      let verified = false;
+      try {
+        const res = await fetch("/api/organization/adyen-onboarding");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.account) {
+            setPayoutSchedule(data.account.payoutSchedule ?? "daily");
+            setHasSweep(!!data.account.hasSweep);
+            verified = data.account.onboardingStatus === "VERIFIED";
+            setIsVerified(verified);
+          }
+        }
+      } catch {
+        // best-effort
+      }
+
+      if (verified && orgId) {
+        try {
+          const throttleKey = getSyncThrottleKey(orgId);
+          const lastSync = localStorage.getItem(throttleKey);
+          const withinWindow = lastSync && Date.now() - Number(lastSync) < SYNC_THROTTLE_MS;
+
+          if (!withinWindow) {
+            const syncRes = await fetch("/api/payouts/sync", { method: "POST" });
+            if (syncRes.ok) {
+              localStorage.setItem(throttleKey, String(Date.now()));
+            }
+          }
+        } catch {
+          // best-effort; don't block payouts load
+        }
+      }
+
+      fetchPayouts();
+    }
+    if (hasInitialized.current || !orgId) return;
+    hasInitialized.current = true;
+    init();
+  }, [orgId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-fetch when filters or page change; skip the mount fire (handled by init above)
+  useEffect(() => {
+    if (skipFilterFetch.current) {
+      skipFilterFetch.current = false;
+      return;
+    }
     fetchPayouts();
   }, [fetchPayouts]);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
+  const handleManualSync = async () => {
+    setSyncLoading(true);
+    try {
+      const res = await fetch("/api/payouts/sync?force=true", { method: "POST" });
+      if (res.ok && orgId) {
+        localStorage.setItem(getSyncThrottleKey(orgId), String(Date.now()));
+      }
+      await fetchPayouts();
+      toast.success("Payouts synced");
+    } catch {
+      toast.error("Failed to sync payouts");
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
   const handleExport = () => {
-    const headers = ["Date", "Batch ID", "Bank Account", "Status", "Gross", "Fees", "Net"];
+    const headers = ["Date", "Batch ID", "Bank Account", "Type", "Status", "Gross", "Fees", "Net"];
     const rows = payouts.map((po) => [
       po.paidAt
         ? format(new Date(po.paidAt), "yyyy-MM-dd")
         : format(new Date(po.createdAt), "yyyy-MM-dd"),
       po.reference,
       po.bankAccount || "",
+      po.payoutType === "SWEEP" ? "Scheduled" : "Manual",
       po.status,
       `$${Number(po.amount).toFixed(2)}`,
       `-$${Number(po.fees).toFixed(2)}`,
@@ -296,15 +355,32 @@ export default function PayoutsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Settlement History</CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExport}
-              disabled={payouts.length === 0}
-            >
-              <DownloadIcon className="mr-2 h-4 w-4" />
-              Download Report
-            </Button>
+            <div className="flex items-center gap-2">
+              {isVerified && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleManualSync}
+                  disabled={syncLoading}
+                >
+                  {syncLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCwIcon className="mr-2 h-4 w-4" />
+                  )}
+                  Sync
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExport}
+                disabled={payouts.length === 0}
+              >
+                <DownloadIcon className="mr-2 h-4 w-4" />
+                Download Report
+              </Button>
+            </div>
           </div>
           <CardDescription>Detailed breakdown of batches paid out to your account.</CardDescription>
 
@@ -413,6 +489,7 @@ export default function PayoutsPage() {
                     <TableHead>Date</TableHead>
                     <TableHead>Batch ID</TableHead>
                     <TableHead>Bank Account</TableHead>
+                    <TableHead>Type</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Gross Amount</TableHead>
                     <TableHead className="text-right">Fees</TableHead>
@@ -439,6 +516,11 @@ export default function PayoutsPage() {
                           <LandmarkIcon className="h-3 w-3 text-muted-foreground" />
                           {po.bankAccount ? `****${po.bankAccount}` : "\u2014"}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={po.payoutType === "SWEEP" ? "secondary" : "outline"}>
+                          {po.payoutType === "SWEEP" ? "Scheduled" : "Manual"}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant={statusColors[po.status] || "outline"}>{po.status}</Badge>

@@ -108,6 +108,7 @@ export async function GET() {
             legalEntityId: account.legalEntityId,
             accountHolderId: account.accountHolderId,
             balanceAccountId: account.balanceAccountId,
+            transferInstrumentId: account.transferInstrumentId ?? null,
           }
         : null,
     });

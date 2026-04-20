@@ -3,7 +3,11 @@ import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import crypto from "crypto";
 import { extractHmacSignature } from "@/lib/adyen";
-import { getTransferInstrumentLast4 } from "@/lib/adyen-platform";
+import {
+  getTransferInstrumentLast4,
+  getBalanceAccountSweepDescription,
+} from "@/lib/adyen-platform";
+import { linkTransactionsToPayout } from "@/lib/payout-utils";
 import { deriveOnboardingStatus, summarizeVerification } from "@/lib/adyen-onboarding-status";
 
 // ---------------------------------------------------------------------------
@@ -259,18 +263,25 @@ async function handleTransferEvent(data: any, eventType: string) {
 }
 
 async function handleBankTransfer(transfer: any) {
-  const balanceAccountId = transfer?.counterparty?.balanceAccountId || transfer?.balanceAccount?.id;
+  const balanceAccountId =
+    transfer?.balanceAccountId ||
+    transfer?.balanceAccount?.id ||
+    transfer?.counterparty?.balanceAccountId;
 
   if (!balanceAccountId) {
-    logger.info("[BP-WEBHOOK] Bank transfer without balance account ID", {
-      transferId: transfer?.id,
-    });
+    logger.warn(
+      "[BP-WEBHOOK] Bank transfer: could not extract balanceAccountId — payout not created",
+      {
+        transferId: transfer?.id,
+        transferKeys: Object.keys(transfer || {}),
+      }
+    );
     return;
   }
 
   const account = await db.adyenPlatformAccount.findFirst({
     where: { balanceAccountId },
-    select: { organizationId: true },
+    select: { organizationId: true, sweepId: true },
   });
 
   if (!account) {
@@ -284,15 +295,24 @@ async function handleBankTransfer(transfer: any) {
   const amount = transfer.amount?.value ? Number(transfer.amount.value) / 100 : 0;
   const currency = transfer.amount?.currency || "USD";
   const status = transfer.status?.statusCode || transfer.status;
+  const sweepDescription = account.sweepId
+    ? await getBalanceAccountSweepDescription(balanceAccountId, account.sweepId)
+    : null;
+  const payoutType =
+    sweepDescription && transfer.description === sweepDescription ? "SWEEP" : "MANUAL";
 
-  const payoutStatus =
-    status === "booked"
-      ? "PAID"
-      : status === "pendingApproval" || status === "authorised"
-        ? "SCHEDULED"
-        : status === "failed" || status === "refused" || status === "returned"
-          ? "FAILED"
-          : "PENDING";
+  const TRANSFER_STATUS_MAP: Record<string, "PAID" | "SCHEDULED" | "FAILED" | "PENDING"> = {
+    booked: "PAID",
+    pendingApproval: "SCHEDULED",
+    authorised: "SCHEDULED",
+    failed: "FAILED",
+    refused: "FAILED",
+    returned: "FAILED",
+    internallyDeclined: "FAILED",
+    validationFailed: "FAILED",
+  };
+  const payoutStatus: "PAID" | "SCHEDULED" | "FAILED" | "PENDING" =
+    TRANSFER_STATUS_MAP[status ?? ""] ?? "PENDING";
 
   const estimatedArrivalTime =
     transfer?.tracking?.estimatedArrivalTime || extractEstimatedArrival(transfer?.events);
@@ -336,6 +356,7 @@ async function handleBankTransfer(transfer: any) {
         net: amount,
         currency,
         status: payoutStatus as any,
+        payoutType: payoutType as any,
         bankAccount,
         ...(payoutStatus === "PAID" ? { paidAt: new Date() } : {}),
         ...(payoutStatus === "SCHEDULED" ? { scheduledAt: new Date() } : {}),
@@ -371,115 +392,6 @@ function extractEstimatedArrival(events: any[] | undefined): string | null {
     }
   }
   return null;
-}
-
-/**
- * Link unsettled transactions (SETTLED status, no payoutId) to this payout.
- * Uses the payout's createdAt as a cutoff -- any transaction settled before
- * the payout was created belongs to it.
- */
-async function linkTransactionsToPayout(payoutId: string, organizationId: string) {
-  try {
-    const payout = await db.payout.findUnique({
-      where: { id: payoutId },
-      select: { createdAt: true },
-    });
-    if (!payout) return;
-
-    const result = await db.transaction.updateMany({
-      where: {
-        organizationId,
-        status: "SETTLED",
-        payoutId: null,
-        settledAt: { lte: payout.createdAt },
-      },
-      data: { payoutId },
-    });
-
-    if (result.count > 0) {
-      logger.info("[BP-WEBHOOK] Linked transactions to payout", {
-        payoutId,
-        transactionCount: result.count,
-      });
-
-      // Calculate platform fees for linked transactions
-      await calculatePayoutFees(payoutId, organizationId);
-    }
-  } catch (error) {
-    logger.error("[BP-WEBHOOK] Failed to link transactions to payout", {
-      payoutId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-}
-
-async function calculatePayoutFees(payoutId: string, organizationId: string) {
-  try {
-    const [transactions, org] = await Promise.all([
-      db.transaction.findMany({
-        where: { payoutId, organizationId, status: "SETTLED" },
-        select: { amount: true, feeRate: true, feeFixed: true },
-      }),
-      db.organization.findUnique({
-        where: { id: organizationId },
-        select: {
-          subscription: {
-            select: {
-              plan: {
-                select: {
-                  transactionFee: true,
-                  perTransactionFee: true,
-                },
-              },
-            },
-          },
-        },
-      }),
-    ]);
-
-    const plan = org?.subscription?.plan;
-    if (!plan || transactions.length === 0) return;
-
-    // Fallback rates for transactions created before fee snapshot was added
-    const fallbackRate = Number(plan.transactionFee);
-    const fallbackFixed = Number(plan.perTransactionFee);
-
-    let totalFeesMinor = 0;
-    for (const txn of transactions) {
-      const amount = Number(txn.amount);
-      const rate = txn.feeRate != null ? Number(txn.feeRate) : fallbackRate;
-      const fixed = txn.feeFixed != null ? Number(txn.feeFixed) : fallbackFixed;
-      const txnFee = Math.round((amount * rate + fixed) * 100);
-      totalFeesMinor += txnFee;
-    }
-    const totalFees = totalFeesMinor / 100;
-
-    const payoutRecord = await db.payout.findUnique({
-      where: { id: payoutId },
-      select: { amount: true },
-    });
-    if (!payoutRecord) return;
-
-    const payoutAmount = Number(payoutRecord.amount);
-    const net = Math.round((payoutAmount - totalFees) * 100) / 100;
-
-    await db.payout.update({
-      where: { id: payoutId },
-      data: { fees: totalFees, net },
-    });
-
-    logger.info("[BP-WEBHOOK] Calculated platform fees for payout", {
-      payoutId,
-      fees: totalFees,
-      net,
-      transactionCount: transactions.length,
-    });
-  } catch (error) {
-    logger.error("[BP-WEBHOOK] Failed to calculate payout fees", {
-      payoutId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
 }
 
 // ---------------------------------------------------------------------------

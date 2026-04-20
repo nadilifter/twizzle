@@ -1843,6 +1843,7 @@ model Payout {
   net            Decimal      @db.Decimal(10, 2)
   currency       String       @default("USD")
   status         PayoutStatus
+  payoutType     PayoutType   @default(MANUAL)
   bankAccount    String? // Last 4 digits
   scheduledAt    DateTime?
   paidAt         DateTime?
@@ -1861,6 +1862,11 @@ enum PayoutStatus {
   SCHEDULED
   PAID
   FAILED
+}
+
+enum PayoutType {
+  MANUAL
+  SWEEP
 }
 
 // ============================================
@@ -3508,7 +3514,10 @@ model AdyenPlatformAccount {
   // Sweep
   sweepId              String?
   transferInstrumentId String?
-  payoutSchedule       String  @default("daily")
+  payoutSchedule       String    @default("daily")
+
+  // Sync
+  lastPayoutSyncAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

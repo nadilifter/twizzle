@@ -41,6 +41,7 @@ type OnboardingAccount = {
   legalEntityId: string | null;
   accountHolderId: string | null;
   balanceAccountId: string | null;
+  transferInstrumentId?: string | null;
 };
 
 type OrganizationDetails = {
@@ -624,6 +625,12 @@ function VerifiedState({
               <p className="font-mono text-green-600 capitalize">
                 {account.payoutSchedule ?? "daily"} sweep active
               </p>
+            </div>
+          )}
+          {account.transferInstrumentId && (
+            <div>
+              <span className="text-muted-foreground">Linked Bank Account</span>
+              <p className="font-mono">{account.transferInstrumentId}</p>
             </div>
           )}
         </CardContent>

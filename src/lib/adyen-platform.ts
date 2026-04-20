@@ -311,6 +311,71 @@ export async function updateSweep(
 }
 
 // ---------------------------------------------------------------------------
+// Transfers API (list transfers by balance account)
+// ---------------------------------------------------------------------------
+
+let _transfersApi: any = null;
+
+function getTransfersApi() {
+  if (_transfersApi) return _transfersApi;
+  const { TransfersAPI } = require("@adyen/api-library");
+  _transfersApi = new TransfersAPI(getPlatformClient());
+  return _transfersApi;
+}
+
+export async function getBalanceAccountSweepDescription(
+  balanceAccountId: string,
+  sweepId: string
+): Promise<string | null> {
+  try {
+    const sweep = await getConfigApi().BalanceAccountsApi.getSweep(balanceAccountId, sweepId);
+    return sweep?.description ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function listBalanceAccountTransfers(
+  balanceAccountId: string,
+  opts?: { createdSince?: Date; createdUntil?: Date }
+): Promise<any[]> {
+  try {
+    const createdSince = opts?.createdSince ?? new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
+    const createdUntil = opts?.createdUntil ?? new Date();
+    const allTransfers: any[] = [];
+    let cursor: string | undefined;
+
+    do {
+      const response = await getTransfersApi().TransfersApi.getAllTransfers(
+        createdSince,
+        createdUntil,
+        undefined, // balancePlatform
+        undefined, // accountHolderId
+        balanceAccountId,
+        undefined, // paymentInstrumentId
+        undefined, // reference
+        "bank", // category
+        "asc",
+        cursor,
+        100 // max per page
+      );
+      allTransfers.push(...(response.data ?? []));
+      const nextHref = response._links?.next?.href;
+      cursor = nextHref ? (new URL(nextHref).searchParams.get("cursor") ?? undefined) : undefined;
+    } while (cursor);
+
+    return allTransfers;
+  } catch (error: any) {
+    console.error("adyen-platform: listBalanceAccountTransfers failed", {
+      balanceAccountId,
+      status: error.statusCode,
+      body: error.responseBody,
+    });
+    throw error;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Transfer Instruments (bank account lookup)
 // ---------------------------------------------------------------------------
 
@@ -324,7 +389,8 @@ export async function getTransferInstrumentLast4(
   try {
     const response =
       await getLemApi().TransferInstrumentsApi.getTransferInstrument(transferInstrumentId);
-    const accountNumber = response?.bankAccount?.accountNumber || response?.bankAccount?.iban || "";
+    const identification = response?.bankAccount?.accountIdentification;
+    const accountNumber = identification?.accountNumber || identification?.iban || "";
     if (accountNumber.length >= 4) {
       return accountNumber.slice(-4);
     }
