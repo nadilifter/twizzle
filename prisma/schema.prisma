@@ -465,7 +465,7 @@ enum UserStatus {
 
 enum SmsConsentSource {
   SIGNUP_SITE       // /sites/[slug]/signup
-  SIGNUP_ORG        // /org-signup, /get-started
+  SIGNUP_ORG        // /org-signup
   INVITATION        // /accept-invitation
   ACCOUNT_SETTINGS  // /athletes/account, /dashboard settings
 }

@@ -140,6 +140,15 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Legacy org-signup path removed (USC-372). The canonical entry point is the
+  // startup subdomain (startup.{baseDomain}). Issue a permanent redirect from
+  // any host so outstanding bookmarks land on the surviving flow.
+  if (path === "/get-started" || path === "/get-started/") {
+    const protocol = config.useHttps ? "https:" : "http:";
+    const startupUrl = `${protocol}//startup.${config.baseDomain}/`;
+    return NextResponse.redirect(startupUrl, 308);
+  }
+
   // 2. Portal Routing
 
   // Helper to get the login host based on environment

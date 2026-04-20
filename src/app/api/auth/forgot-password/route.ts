@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     // Get the login subdomain URL for the reset link
     const loginUrl = getSubdomainUrl("login");
-    const signupUrl = `${loginUrl.replace("login.", "")}/org-signup`;
+    const signupUrl = getSubdomainUrl("startup");
 
     if (user) {
       // User exists - generate a reset token

@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
         expiresIn: `${CODE_EXPIRY_MINUTES} minutes`,
       });
     } else {
-      const signupUrl = `${loginUrl.replace("login.", "")}/org-signup`;
+      const signupUrl = getSubdomainUrl("startup");
       await sendTemplatedEmail("no-account-login", [email], {
         email,
         signupUrl,

@@ -184,7 +184,7 @@ erDiagram
 
 **SMS consent (TCPA / Twilio toll-free verification compliance):** Sends are gated on `User.smsConsentAt != null && smsOptOut == false`. Absence of `smsConsentAt` is treated as _no consent_. Inbound `STOP` clears consent and sets `smsConsentRevokeSource = INBOUND_STOP`.
 
-- `SmsConsentSource` — where opt-in was captured: `SIGNUP_SITE` (/sites/[slug]/signup), `SIGNUP_ORG` (/org-signup, /get-started), `INVITATION` (/accept-invitation), `ACCOUNT_SETTINGS`.
+- `SmsConsentSource` — where opt-in was captured: `SIGNUP_SITE` (/sites/[slug]/signup), `SIGNUP_ORG` (/org-signup), `INVITATION` (/accept-invitation), `ACCOUNT_SETTINGS`.
 - `SmsConsentRevokeSource` — how opt-out happened: `ACCOUNT_SETTINGS` (user toggle) or `INBOUND_STOP` (Twilio webhook).
 
 ---

@@ -1,0 +1,9 @@
+-- USC-372: documentation-only change.
+--
+-- The companion diff in prisma/schema.prisma removes the now-obsolete
+-- reference to the `/get-started` path from the `SmsConsentSource.SIGNUP_ORG`
+-- enum comment (the legacy route has been deleted). Enum values and all
+-- DDL are unchanged, so this migration intentionally contains no statements.
+--
+-- Present solely to satisfy `scripts/check-schema-drift.sh`, which pairs any
+-- `schema.prisma` diff with a new migration file.
