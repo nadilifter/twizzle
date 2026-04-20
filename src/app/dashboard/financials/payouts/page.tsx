@@ -29,9 +29,11 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   InfoIcon,
+  AlertCircleIcon,
   RefreshCwIcon,
   Calendar as CalendarIcon,
 } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
@@ -104,7 +106,27 @@ export default function PayoutsPage() {
   const [payoutSchedule, setPayoutSchedule] = React.useState<string>("daily");
   const [hasSweep, setHasSweep] = React.useState(false);
   const [isVerified, setIsVerified] = React.useState(false);
+  const [wasVerified, setWasVerified] = React.useState(false);
   const [scheduleLoading, setScheduleLoading] = React.useState(false);
+
+  useEffect(() => {
+    async function fetchSchedule() {
+      try {
+        const res = await fetch("/api/organization/adyen-onboarding");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.account) {
+          setPayoutSchedule(data.account.payoutSchedule ?? "daily");
+          setHasSweep(!!data.account.hasSweep);
+          setIsVerified(data.account.onboardingStatus === "VERIFIED");
+          setWasVerified(!!data.account.verifiedAt);
+        }
+      } catch {
+        // best-effort; don't block the page
+      }
+    }
+    fetchSchedule();
+  }, []);
   const [syncLoading, setSyncLoading] = React.useState(false);
   const skipFilterFetch = React.useRef(true);
   const hasInitialized = React.useRef(false);
@@ -271,6 +293,20 @@ export default function PayoutsPage() {
           Payouts are processed {payoutSchedule} via automated sweeps.
         </div>
       </div>
+
+      {wasVerified && !isVerified && (
+        <Alert className="bg-amber-50 border-amber-200 text-amber-800">
+          <AlertCircleIcon className="h-4 w-4 text-amber-600" />
+          <AlertTitle>Payouts Paused — Verification Required</AlertTitle>
+          <AlertDescription>
+            Your account verification requires attention. Payouts are paused until your account is
+            re-verified.{" "}
+            <a href="/dashboard/financials/onboarding" className="underline font-medium">
+              Go to onboarding →
+            </a>
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card className="bg-primary text-primary-foreground">

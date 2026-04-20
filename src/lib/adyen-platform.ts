@@ -310,6 +310,28 @@ export async function updateSweep(
   }
 }
 
+export async function setSweepStatus(
+  balanceAccountId: string,
+  sweepId: string,
+  status: "active" | "inactive"
+): Promise<void> {
+  try {
+    const existing = await getConfigApi().BalanceAccountsApi.getSweep(balanceAccountId, sweepId);
+    await getConfigApi().BalanceAccountsApi.updateSweep(balanceAccountId, sweepId, {
+      ...existing,
+      status: status as any,
+    });
+  } catch (error: any) {
+    console.error("adyen-platform: setSweepStatus failed", {
+      balanceAccountId,
+      sweepId,
+      status: error.statusCode,
+      body: error.responseBody,
+    });
+    throw error;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Transfers API (list transfers by balance account)
 // ---------------------------------------------------------------------------

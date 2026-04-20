@@ -3506,6 +3506,13 @@ model AdyenPlatformAccount {
   verificationStatus String?
   capabilities       Json?
 
+  // Verification milestone — set once when status first reaches VERIFIED, never cleared on regression
+  verifiedAt       DateTime?
+  // Set each time a regression occurs; used to determine whether the system caused a website unpublish
+  regressionAt     DateTime?
+  // Verification errors from Adyen at the time of last regression; cleared on re-verification
+  regressionErrors Json?
+
   // Pre-onboarding gate acceptance timestamps
   legalNameConfirmedAt         DateTime?
   platformFeeAcknowledgedAt    DateTime?

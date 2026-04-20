@@ -7,9 +7,12 @@ import {
   createAccountHolder,
   createBalanceAccount,
   getAccountHolder,
+  getLegalEntity,
+  createSweep,
   isPlatformConfigured,
 } from "@/lib/adyen-platform";
 import { deriveOnboardingStatus, summarizeVerification } from "@/lib/adyen-onboarding-status";
+import { handleVerificationRecovery } from "@/lib/adyen-onboarding-recovery";
 import { getSubdomainUrl } from "@/lib/env-domains";
 
 /**
@@ -29,7 +32,11 @@ export async function GET() {
 
     // Live-sync: if the account exists and isn't already terminal, reconcile
     // with Adyen's API so the status is accurate even without webhooks.
+    const skipLiveSync =
+      process.env.NODE_ENV !== "production" && process.env.SKIP_ADYEN_LIVE_SYNC === "true";
+
     if (
+      !skipLiveSync &&
       account?.accountHolderId &&
       account.onboardingStatus !== "VERIFIED" &&
       isPlatformConfigured()
@@ -40,17 +47,79 @@ export async function GET() {
         const verificationStatus = summarizeVerification(liveHolder);
         const capabilities = liveHolder.capabilities || {};
 
+        const isRecovery = onboardingStatus === "VERIFIED" && !!account.verifiedAt;
+
         if (
           onboardingStatus !== account.onboardingStatus ||
           JSON.stringify(capabilities) !== JSON.stringify(account.capabilities)
         ) {
+          const syncUpdate: Record<string, any> = {
+            onboardingStatus,
+            verificationStatus,
+            capabilities,
+          };
+          if (onboardingStatus === "VERIFIED" && !account.verifiedAt) {
+            syncUpdate.verifiedAt = new Date();
+          }
           account = await db.adyenPlatformAccount.update({
             where: { organizationId: orgId, id: account.id },
-            data: { onboardingStatus, verificationStatus, capabilities },
+            data: syncUpdate,
           });
+        }
+
+        if (isRecovery) {
+          await handleVerificationRecovery(account);
         }
       } catch {
         // Best-effort: if Adyen API is unreachable, fall back to stored status
+      }
+    }
+
+    // Live-sync sweep: if VERIFIED but sweep missing, check Adyen for a transfer instrument
+    // and auto-create the sweep. Covers the case where a bank account was added via hosted
+    // onboarding after the initial finalize call.
+    if (
+      !skipLiveSync &&
+      account?.onboardingStatus === "VERIFIED" &&
+      !account.sweepId &&
+      account.balanceAccountId &&
+      account.legalEntityId &&
+      isPlatformConfigured()
+    ) {
+      try {
+        const entity = await getLegalEntity(account.legalEntityId);
+        const instruments: Array<{ id: string }> = entity.transferInstruments || [];
+        const transferInstrumentId = instruments[0]?.id ?? null;
+
+        if (transferInstrumentId) {
+          try {
+            const sweep = await createSweep(account.balanceAccountId, {
+              counterparty: { transferInstrumentId },
+              category: "bank",
+              type: "push",
+              schedule: { type: "daily" },
+              priorities: ["regular"],
+              currency: "USD",
+            });
+            account = await db.adyenPlatformAccount.update({
+              where: { organizationId: orgId, id: account.id },
+              data: { sweepId: sweep.id, transferInstrumentId, payoutSchedule: "daily" },
+            });
+          } catch (sweepError: any) {
+            // 422 means sweep already exists in Adyen but DB wasn't updated — recover the ID
+            const existingSweepId = sweepError.apiError?.detail?.match(
+              /already exists: \(([^)]+)\)/
+            )?.[1];
+            if (sweepError.statusCode === 422 && existingSweepId) {
+              account = await db.adyenPlatformAccount.update({
+                where: { organizationId: orgId, id: account.id },
+                data: { sweepId: existingSweepId, transferInstrumentId, payoutSchedule: "daily" },
+              });
+            }
+          }
+        }
+      } catch {
+        // Best-effort: if Adyen API is unreachable, fall back to stored state
       }
     }
 
@@ -108,6 +177,7 @@ export async function GET() {
             legalEntityId: account.legalEntityId,
             accountHolderId: account.accountHolderId,
             balanceAccountId: account.balanceAccountId,
+            verifiedAt: account.verifiedAt?.toISOString() ?? null,
             transferInstrumentId: account.transferInstrumentId ?? null,
           }
         : null,

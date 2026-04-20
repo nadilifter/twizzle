@@ -129,11 +129,12 @@ export async function POST() {
     }
 
     // Create Sweep -- need the transfer instrument from the legal entity
+    let transferInstrumentId: string | null = null;
     if (!account.sweepId && account.balanceAccountId && account.legalEntityId) {
-      try {
-        const transferInstrumentId = await findTransferInstrumentId(account.legalEntityId);
+      transferInstrumentId = await findTransferInstrumentId(account.legalEntityId);
 
-        if (transferInstrumentId) {
+      if (transferInstrumentId) {
+        try {
           const sweep = await createSweep(account.balanceAccountId, {
             counterparty: { transferInstrumentId },
             category: "bank",
@@ -146,13 +147,18 @@ export async function POST() {
           updates.sweepId = sweep.id;
           updates.transferInstrumentId = transferInstrumentId;
           updates.payoutSchedule = "daily";
-        } else {
-          console.warn(
-            "No transfer instrument found -- sweep creation skipped. Bank details may not be provided yet."
-          );
+        } catch (error: any) {
+          // Sweep already exists in Adyen (e.g. after a local DB reset) — recover
+          // by extracting the existing sweep ID from the 422 error detail.
+          const existingSweepId = error.apiError?.detail?.match(/already exists: \(([^)]+)\)/)?.[1];
+          if (error.statusCode === 422 && existingSweepId) {
+            updates.sweepId = existingSweepId;
+            updates.transferInstrumentId = transferInstrumentId;
+            updates.payoutSchedule = "daily";
+          } else {
+            throw error;
+          }
         }
-      } catch (error) {
-        console.error("Sweep creation failed:", error);
       }
     }
 
@@ -166,8 +172,7 @@ export async function POST() {
     return NextResponse.json({
       storeId: updates.storeId || account.storeId,
       storeReference: updates.storeReference || account.storeReference,
-      sweepId: updates.sweepId || account.sweepId,
-      message: "Finalization complete",
+      sweepId: updates.sweepId || account.sweepId || null,
     });
   } catch (error: any) {
     console.error("Finalization failed:", error);

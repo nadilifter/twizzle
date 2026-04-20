@@ -41,6 +41,7 @@ type OnboardingAccount = {
   legalEntityId: string | null;
   accountHolderId: string | null;
   balanceAccountId: string | null;
+  verifiedAt: string | null;
   transferInstrumentId?: string | null;
 };
 
@@ -149,6 +150,7 @@ export default function OnboardingPage() {
           legalEntityId: data.account.legalEntityId,
           accountHolderId: data.account.accountHolderId,
           balanceAccountId: data.account.balanceAccountId,
+          verifiedAt: null,
         });
       } else {
         setError(data.error || "Failed to initiate onboarding");
@@ -291,16 +293,24 @@ export default function OnboardingPage() {
       )}
       {(account?.onboardingStatus === "IN_PROGRESS" ||
         account?.onboardingStatus === "IN_REVIEW" ||
-        account?.onboardingStatus === "AWAITING_DATA") && (
-        <InProgressState
+        account?.onboardingStatus === "AWAITING_DATA") &&
+        (account.verifiedAt ? (
+          <RegressedState account={account} onGetLink={handleGetLink} loading={actionLoading} />
+        ) : (
+          <InProgressState
+            account={account}
+            onGetLink={handleGetLink}
+            onRefresh={handleRefresh}
+            loading={actionLoading}
+          />
+        ))}
+      {account?.onboardingStatus === "VERIFIED" && (
+        <VerifiedState
           account={account}
+          onFinalize={handleFinalize}
           onGetLink={handleGetLink}
-          onRefresh={handleRefresh}
           loading={actionLoading}
         />
-      )}
-      {account?.onboardingStatus === "VERIFIED" && (
-        <VerifiedState account={account} onFinalize={handleFinalize} loading={actionLoading} />
       )}
       {account?.onboardingStatus === "REJECTED" && (
         <RejectedState account={account} onGetLink={handleGetLink} loading={actionLoading} />
@@ -500,7 +510,7 @@ function PendingHostedState({
         <StatusRows account={account} />
       </CardContent>
       <CardFooter>
-        <Button onClick={onGetLink} disabled={loading}>
+        <Button onClick={() => onGetLink()} disabled={loading}>
           {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
           Continue to Adyen
           <ExternalLinkIcon className="h-4 w-4 ml-2" />
@@ -543,9 +553,58 @@ function InProgressState({
             <RefreshCwIcon className="h-4 w-4 mr-2" />
             Check Status
           </Button>
-          <Button variant="outline" onClick={onGetLink} disabled={loading}>
+          <Button variant="outline" onClick={() => onGetLink()} disabled={loading}>
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Return to Adyen
+            <ExternalLinkIcon className="h-4 w-4 ml-2" />
+          </Button>
+        </CardFooter>
+      </Card>
+
+      <HelpCard />
+    </div>
+  );
+}
+
+function RegressedState({
+  account,
+  onGetLink,
+  loading,
+}: {
+  account: OnboardingAccount;
+  onGetLink: () => void;
+  loading: boolean;
+}) {
+  return (
+    <div className="grid gap-6 md:grid-cols-[2fr_1fr]">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Verification Requires Attention</CardTitle>
+              <CardDescription>
+                Your account was previously verified but now requires re-verification.
+              </CardDescription>
+            </div>
+            <StatusBadge status={account.onboardingStatus} />
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Alert className="bg-amber-50 border-amber-200 text-amber-800">
+            <AlertCircleIcon className="h-4 w-4 text-amber-600" />
+            <AlertTitle>Payouts Paused</AlertTitle>
+            <AlertDescription>
+              Your account verification requires attention. Payouts have been paused until your
+              account is re-verified. This may be due to an expired document, a removed bank
+              account, or a periodic review initiated by our payment provider.
+            </AlertDescription>
+          </Alert>
+          <CapabilitiesDisplay capabilities={account.capabilities} />
+        </CardContent>
+        <CardFooter>
+          <Button onClick={onGetLink} disabled={loading}>
+            {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Re-enter Setup
             <ExternalLinkIcon className="h-4 w-4 ml-2" />
           </Button>
         </CardFooter>
@@ -559,13 +618,16 @@ function InProgressState({
 function VerifiedState({
   account,
   onFinalize,
+  onGetLink,
   loading,
 }: {
   account: OnboardingAccount;
   onFinalize: () => void;
+  onGetLink: () => void;
   loading: boolean;
 }) {
   const needsFinalize = !account.hasStore;
+  const missingBankAccount = account.hasStore && !account.hasSweep;
 
   return (
     <div className="grid gap-6 md:grid-cols-[2fr_1fr]">
@@ -577,15 +639,28 @@ function VerifiedState({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Alert className="bg-green-50 border-green-200 text-green-800">
-            <CheckCircle2Icon className="h-4 w-4 text-green-600" />
-            <AlertTitle>{needsFinalize ? "Verification Complete" : "Ready to Process"}</AlertTitle>
-            <AlertDescription>
-              {needsFinalize
-                ? "Your account is verified. Finalize setup to start accepting payments."
-                : "Your account is fully set up. You can now accept payments and receive payouts."}
-            </AlertDescription>
-          </Alert>
+          {missingBankAccount ? (
+            <Alert className="bg-amber-50 border-amber-200 text-amber-800">
+              <AlertCircleIcon className="h-4 w-4 text-amber-600" />
+              <AlertTitle>Bank Account Required</AlertTitle>
+              <AlertDescription>
+                Your identity has been verified, but we couldn&apos;t find a linked bank account.
+                Please re-enter setup to add your bank account before payouts can be processed.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert className="bg-green-50 border-green-200 text-green-800">
+              <CheckCircle2Icon className="h-4 w-4 text-green-600" />
+              <AlertTitle>
+                {needsFinalize ? "Verification Complete" : "Ready to Process"}
+              </AlertTitle>
+              <AlertDescription>
+                {needsFinalize
+                  ? "Your account is verified. Finalize setup to start accepting payments."
+                  : "Your account is fully set up. You can now accept payments and receive payouts."}
+              </AlertDescription>
+            </Alert>
+          )}
           <StatusRows account={account} verified />
         </CardContent>
         <CardFooter className="flex justify-between border-t pt-6">
@@ -593,12 +668,27 @@ function VerifiedState({
             Account Holder:{" "}
             <span className="font-mono text-foreground">{account.accountHolderId}</span>
           </div>
-          {needsFinalize && (
-            <Button onClick={onFinalize} disabled={loading}>
-              {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Finalize Setup
-            </Button>
-          )}
+          <div className="flex gap-3">
+            {needsFinalize && (
+              <Button onClick={onFinalize} disabled={loading}>
+                {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Finalize Setup
+              </Button>
+            )}
+            {missingBankAccount && (
+              <>
+                <Button variant="outline" onClick={onGetLink} disabled={loading}>
+                  {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Add Bank Account
+                  <ExternalLinkIcon className="h-4 w-4 ml-2" />
+                </Button>
+                <Button onClick={onFinalize} disabled={loading}>
+                  {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Complete Payout Setup
+                </Button>
+              </>
+            )}
+          </div>
         </CardFooter>
       </Card>
 
@@ -619,14 +709,19 @@ function VerifiedState({
               <p className="font-mono text-green-600">Configured</p>
             </div>
           )}
-          {account.hasSweep && (
+          {account.hasSweep ? (
             <div>
               <span className="text-muted-foreground">Payouts</span>
               <p className="font-mono text-green-600 capitalize">
                 {account.payoutSchedule ?? "daily"} sweep active
               </p>
             </div>
-          )}
+          ) : account.hasStore ? (
+            <div>
+              <span className="text-muted-foreground">Payouts</span>
+              <p className="font-mono text-amber-600">Bank account required</p>
+            </div>
+          ) : null}
           {account.transferInstrumentId && (
             <div>
               <span className="text-muted-foreground">Linked Bank Account</span>
@@ -668,7 +763,7 @@ function RejectedState({
         <CapabilitiesDisplay capabilities={account.capabilities} />
       </CardContent>
       <CardFooter>
-        <Button onClick={onGetLink} disabled={loading}>
+        <Button onClick={() => onGetLink()} disabled={loading}>
           {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
           Update Details on Adyen
           <ExternalLinkIcon className="h-4 w-4 ml-2" />
@@ -687,30 +782,35 @@ function StatusRows({
   account: OnboardingAccount;
   verified?: boolean;
 }) {
+  const bankAccountMissing = verified && account.hasStore && !account.hasSweep;
+
   const rows = [
     {
       icon: Building2Icon,
       title: "Legal Entity",
       desc: "Business details and address",
       done: !!account.legalEntityId,
+      warning: false,
     },
     {
       icon: UserIcon,
       title: "Identity Verification",
       desc: "Ultimate Beneficial Owners (UBOs)",
       done: verified,
+      warning: false,
     },
     {
       icon: UniversityIcon,
       title: "Bank Account",
       desc: "Payout destination details",
       done: verified && account.hasSweep,
+      warning: bankAccountMissing,
     },
   ];
 
   return (
     <div className="grid gap-4">
-      {rows.map(({ icon: Icon, title, desc, done }) => (
+      {rows.map(({ icon: Icon, title, desc, done, warning }) => (
         <div key={title} className="flex items-center justify-between p-4 border rounded-lg">
           <div className="flex items-center gap-4">
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -723,6 +823,8 @@ function StatusRows({
           </div>
           {done ? (
             <CheckCircle2Icon className="h-5 w-5 text-green-600" />
+          ) : warning ? (
+            <AlertCircleIcon className="h-5 w-5 text-amber-500" />
           ) : (
             <ClockIcon className="h-5 w-5 text-amber-500" />
           )}

@@ -6,7 +6,9 @@ import { extractHmacSignature } from "@/lib/adyen";
 import {
   getTransferInstrumentLast4,
   getBalanceAccountSweepDescription,
+  setSweepStatus,
 } from "@/lib/adyen-platform";
+import { handleVerificationRecovery } from "@/lib/adyen-onboarding-recovery";
 import { linkTransactionsToPayout } from "@/lib/payout-utils";
 import { deriveOnboardingStatus, summarizeVerification } from "@/lib/adyen-onboarding-status";
 
@@ -60,6 +62,22 @@ function verifyHmac(rawBody: string, parsedBody: any): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function extractRegressionErrors(capabilities: Record<string, any>): Record<string, any[]> {
+  const errors: Record<string, any[]> = {};
+  for (const [capability, details] of Object.entries(capabilities)) {
+    const problems: any[] = details?.problems ?? [];
+    const verificationErrors = problems.flatMap((p: any) => p.verificationErrors ?? []);
+    if (verificationErrors.length > 0) {
+      errors[capability] = verificationErrors;
+    }
+  }
+  return errors;
+}
+
+// ---------------------------------------------------------------------------
 // POST handler
 // ---------------------------------------------------------------------------
 
@@ -73,22 +91,29 @@ export async function POST(request: NextRequest) {
     parsedBody = body;
   }
 
-  const hmacSignature = extractHmacSignature(request.headers, parsedBody);
-  const hmacKeys = getBpHmacKeys();
+  const skipHmac =
+    process.env.NODE_ENV !== "production" && process.env.SKIP_WEBHOOK_HMAC === "true";
 
-  if (hmacKeys.length === 0) {
-    logger.error("[BP-WEBHOOK] No HMAC keys configured (ADYEN_BP_*_WEBHOOK_HMAC_KEY)");
-    return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
-  }
+  if (!skipHmac) {
+    const hmacSignature = extractHmacSignature(request.headers, parsedBody);
+    const hmacKeys = getBpHmacKeys();
 
-  if (!hmacSignature) {
-    logger.warn("[BP-WEBHOOK] Missing HMAC signature");
-    return NextResponse.json({ error: "Missing signature" }, { status: 401 });
-  }
+    if (hmacKeys.length === 0) {
+      logger.error("[BP-WEBHOOK] No HMAC keys configured (ADYEN_BP_*_WEBHOOK_HMAC_KEY)");
+      return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
+    }
 
-  if (!verifyHmac(body, parsedBody)) {
-    logger.warn("[BP-WEBHOOK] HMAC verification failed");
-    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    if (!hmacSignature) {
+      logger.warn("[BP-WEBHOOK] Missing HMAC signature");
+      return NextResponse.json({ error: "Missing signature" }, { status: 401 });
+    }
+
+    if (!verifyHmac(body, parsedBody)) {
+      logger.warn("[BP-WEBHOOK] HMAC verification failed");
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
+  } else {
+    logger.warn("[BP-WEBHOOK] HMAC verification skipped (SKIP_WEBHOOK_HMAC=true)");
   }
 
   // Standard payment notification format (notificationItems) is handled by
@@ -193,21 +218,90 @@ async function handleAccountHolderUpdated(data: any) {
       ? "INACTIVE"
       : "ACTIVE";
 
+  const previousStatus = account.onboardingStatus;
+  const isRegression = previousStatus === "VERIFIED" && onboardingStatus !== "VERIFIED";
+  const isRecovery = previousStatus !== "VERIFIED" && onboardingStatus === "VERIFIED";
+
+  if (isRegression) {
+    logger.warn("[BP-WEBHOOK] Onboarding status regression detected", {
+      accountHolderId,
+      organizationId: account.organizationId,
+      previousStatus,
+      newStatus: onboardingStatus,
+    });
+  }
+
+  const updateData: Record<string, any> = {
+    capabilities,
+    onboardingStatus,
+    verificationStatus,
+    accountStatus,
+  };
+
+  // Set verifiedAt once when the account first reaches VERIFIED; never clear it on regression
+  if (onboardingStatus === "VERIFIED" && !account.verifiedAt) {
+    updateData.verifiedAt = new Date();
+  }
+
+  // Stamp regressionAt each time the account regresses so recovery logic can compare timestamps
+  if (isRegression) {
+    updateData.regressionAt = new Date();
+    updateData.regressionErrors = extractRegressionErrors(capabilities);
+  }
+
+  if (isRecovery) {
+    updateData.regressionErrors = null;
+  }
+
   await db.adyenPlatformAccount.update({
     where: { id: account.id },
-    data: {
-      capabilities,
-      onboardingStatus,
-      verificationStatus,
-      accountStatus,
-    },
+    data: updateData,
   });
+
+  // On regression: disable the payout sweep and unpublish the marketing site
+  if (isRegression) {
+    if (account.balanceAccountId && account.sweepId) {
+      try {
+        await setSweepStatus(account.balanceAccountId, account.sweepId, "inactive");
+        logger.warn("[BP-WEBHOOK] Sweep disabled due to onboarding regression", {
+          organizationId: account.organizationId,
+          sweepId: account.sweepId,
+        });
+      } catch {
+        logger.error("[BP-WEBHOOK] Failed to disable sweep on regression", {
+          organizationId: account.organizationId,
+          sweepId: account.sweepId,
+        });
+      }
+    }
+
+    try {
+      await db.websiteConfig.updateMany({
+        where: { organizationId: account.organizationId, isPublished: true },
+        data: { isPublished: false },
+      });
+      logger.warn("[BP-WEBHOOK] Website unpublished due to onboarding regression", {
+        organizationId: account.organizationId,
+      });
+    } catch {
+      logger.error("[BP-WEBHOOK] Failed to unpublish website on regression", {
+        organizationId: account.organizationId,
+      });
+    }
+  }
+
+  // On recovery: re-enable sweep and conditionally republish website
+  if (isRecovery) {
+    await handleVerificationRecovery(account);
+  }
 
   logger.info("[BP-WEBHOOK] accountHolder.updated processed", {
     accountHolderId,
     organizationId: account.organizationId,
     onboardingStatus,
     verificationStatus,
+    ...(isRegression && { regression: true, previousStatus }),
+    ...(isRecovery && { recovery: true, previousStatus }),
   });
 }
 

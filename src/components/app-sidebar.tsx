@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -859,9 +860,34 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     [features]
   );
 
+  // Track website subdomain as reactive state so the Marketing Site link hides immediately
+  // when the website is unpublished (e.g. on Adyen verification regression).
+  // undefined = still fetching, null = not published, string = published subdomain
+  const [websiteSubdomain, setWebsiteSubdomain] = useState<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    const organizationId = session?.user?.organizationId;
+    if (!organizationId) {
+      setWebsiteSubdomain(null);
+      return;
+    }
+    let cancelled = false;
+    getOrganizationWebsiteSubdomain(organizationId)
+      .then((subdomain) => {
+        if (!cancelled) setWebsiteSubdomain(subdomain);
+      })
+      .catch(() => {
+        if (!cancelled) setWebsiteSubdomain(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.organizationId, pathname]);
+
   // Compute navSecondary items with proper subdomain URLs
   // Use useState + useEffect to ensure URLs are computed on the client where window is available
-  const navSecondaryCacheKey = `${session?.user?.organizationId ?? ""}:${filteredAccessPoints.map((a) => a.title).join(",")}`;
+  // Include websiteSubdomain in the key so the cache busts when publish state changes
+  const navSecondaryCacheKey = `${session?.user?.organizationId ?? ""}:${websiteSubdomain ?? "none"}:${filteredAccessPoints.map((a) => a.title).join(",")}`;
 
   const [navSecondary, setNavSecondary] = React.useState<NavSecondaryItem[]>(() => {
     if (navSecondaryCache?.key === navSecondaryCacheKey) return navSecondaryCache.items;
@@ -872,7 +898,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   });
 
   React.useEffect(() => {
-    if (!isFeaturesLoaded) return;
+    if (!isFeaturesLoaded || websiteSubdomain === undefined) return;
 
     if (navSecondaryCache?.key === navSecondaryCacheKey) {
       if (navSecondary.length === 0) setNavSecondary(navSecondaryCache.items);
@@ -882,20 +908,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
     const organizationId = session?.user?.organizationId;
 
-    const computeNavSecondary = async () => {
+    const computeNavSecondary = () => {
       const items: NavSecondaryItem[] = [];
 
       // Add marketing site link if organization has a published website
-      if (organizationId) {
-        const websiteSubdomain = await getOrganizationWebsiteSubdomain(organizationId);
-        if (websiteSubdomain) {
-          items.push({
-            title: "Marketing Site",
-            url: getAccessPointUrl(websiteSubdomain),
-            icon: Globe,
-            external: true,
-          });
-        }
+      if (websiteSubdomain) {
+        items.push({
+          title: "Marketing Site",
+          url: getAccessPointUrl(websiteSubdomain),
+          icon: Globe,
+          external: true,
+        });
       }
 
       // Add access point items filtered by feature toggles
@@ -919,7 +942,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
     computeNavSecondary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isFeaturesLoaded, session?.user?.organizationId, filteredAccessPoints, navSecondaryCacheKey]);
+  }, [
+    isFeaturesLoaded,
+    websiteSubdomain,
+    session?.user?.organizationId,
+    filteredAccessPoints,
+    navSecondaryCacheKey,
+  ]);
 
   return (
     <Sidebar {...props}>
