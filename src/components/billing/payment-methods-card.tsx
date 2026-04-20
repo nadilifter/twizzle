@@ -5,13 +5,14 @@ import {
   CreditCard,
   Plus,
   Trash2,
-  Check,
+  Star,
   AlertTriangle,
   Loader2,
   Wallet,
   Landmark,
   Smartphone,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -44,7 +44,17 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { AdyenCheckoutComponent } from "@/components/sites/adyen-checkout";
-import { getMethodLabel } from "@/lib/payment-utils";
+import {
+  getMethodLabel,
+  getMethodIdentifier,
+  getMethodShortLabel,
+  formatExpiryDate,
+  isCardType,
+  isWalletType,
+  isBankType,
+  isPaymentMethodExpired,
+  isPaymentMethodExpiringSoon,
+} from "@/lib/payment-utils";
 
 interface PaymentMethod {
   id: string;
@@ -177,58 +187,14 @@ export function PaymentMethodsCard({
     }
   };
 
-  const isCardType = (method: PaymentMethod) => method.type === "scheme" || method.type === "card";
-
-  const isWalletType = (method: PaymentMethod) =>
-    ["googlepay", "applepay", "paywithgoogle"].includes(method.type);
-
-  const isBankType = (method: PaymentMethod) =>
-    ["ach", "sepadirectdebit", "directdebit_GB", "bankTransfer"].includes(method.type);
-
   const getMethodIcon = (method: PaymentMethod) => {
     if (isWalletType(method)) return <Smartphone className="h-6 w-6" />;
     if (isBankType(method)) return <Landmark className="h-6 w-6" />;
     return <CreditCard className="h-6 w-6" />;
   };
 
-  const getMethodIdentifier = (method: PaymentMethod): string => {
-    if (method.lastFour && method.lastFour !== "****") {
-      return `•••• ${method.lastFour}`;
-    }
-    if (method.holderName) return method.holderName;
-    return "";
-  };
-
-  const getDeleteDescription = (method: PaymentMethod): string => {
-    const label = getMethodLabel(method);
-    if (method.lastFour && method.lastFour !== "****") {
-      return `${label} ending in ${method.lastFour}`;
-    }
-    return label;
-  };
-
   const hasExpiry = (method: PaymentMethod) =>
     isCardType(method) && method.expiryMonth && method.expiryYear;
-
-  const parseExpiryDate = (method: PaymentMethod): Date => {
-    const year = parseInt(method.expiryYear!);
-    const fullYear = year < 100 ? 2000 + year : year;
-    return new Date(fullYear, parseInt(method.expiryMonth!), 0);
-  };
-
-  const isExpired = (method: PaymentMethod): boolean => {
-    if (!hasExpiry(method)) return false;
-    return new Date() > parseExpiryDate(method);
-  };
-
-  const isExpiringSoon = (method: PaymentMethod): boolean => {
-    if (!hasExpiry(method)) return false;
-    const now = new Date();
-    const expiryDate = parseExpiryDate(method);
-    const twoMonthsFromNow = new Date();
-    twoMonthsFromNow.setMonth(twoMonthsFromNow.getMonth() + 2);
-    return now <= expiryDate && expiryDate <= twoMonthsFromNow;
-  };
 
   return (
     <Card>
@@ -248,8 +214,8 @@ export function PaymentMethodsCard({
         ) : (
           <div className="space-y-3">
             {paymentMethods.map((method) => {
-              const expired = isExpired(method);
-              const expiringSoon = isExpiringSoon(method);
+              const expired = isPaymentMethodExpired(method);
+              const expiringSoon = isPaymentMethodExpiringSoon(method);
               const identifier = getMethodIdentifier(method);
 
               return (
@@ -276,11 +242,7 @@ export function PaymentMethodsCard({
                         )}
                       </div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        {hasExpiry(method) && (
-                          <span>
-                            Expires {method.expiryMonth}/{method.expiryYear!.slice(-2)}
-                          </span>
-                        )}
+                        {hasExpiry(method) && <span>Exp. {formatExpiryDate(method)}</span>}
                       </div>
                       {expired && (
                         <div className="flex items-center gap-1 text-sm text-destructive mt-1">
@@ -297,7 +259,11 @@ export function PaymentMethodsCard({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {!method.isDefault && (
+                    {method.isDefault ? (
+                      <Button variant="ghost" size="sm" className="pointer-events-none">
+                        <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                      </Button>
+                    ) : (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -307,7 +273,7 @@ export function PaymentMethodsCard({
                         {settingDefaultId === method.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
-                          <Check className="h-4 w-4" />
+                          <Star className="h-4 w-4" />
                         )}
                         <span className="sr-only">Set as default</span>
                       </Button>
@@ -332,7 +298,7 @@ export function PaymentMethodsCard({
                         <AlertDialogHeader>
                           <AlertDialogTitle>Remove payment method?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            This will remove {getDeleteDescription(method)} from your account.
+                            This will remove {getMethodShortLabel(method)} from your account.
                             {method.isDefault &&
                               " This is your default payment method - removing it may affect your subscription."}
                           </AlertDialogDescription>

@@ -44,6 +44,11 @@ import { ReactivationDialog } from "./reactivation-dialog";
 import { AdyenPlatformCard } from "./adyen-platform-card";
 import { WebsitePublishToggle } from "./website-publish-toggle";
 import { getSubdomainUrl, getCurrentEnvironment } from "@/lib/env-domains";
+import {
+  isPaymentMethodExpired,
+  isPaymentMethodExpiringSoon,
+  formatExpiryDate,
+} from "@/lib/payment-utils";
 import { TestBillingButton } from "./test-billing-button";
 
 function getMarketingSiteUrl(
@@ -519,24 +524,8 @@ export default async function OrganizationDetailPage({ params }: Props) {
           ) : (
             <div className="space-y-3">
               {organization.organizationPaymentMethods.map((method) => {
-                const isExpired =
-                  method.expiryMonth && method.expiryYear
-                    ? new Date() >
-                      new Date(parseInt(method.expiryYear), parseInt(method.expiryMonth), 0)
-                    : false;
-                const isExpiringSoon =
-                  method.expiryMonth && method.expiryYear
-                    ? (() => {
-                        const expiryDate = new Date(
-                          parseInt(method.expiryYear),
-                          parseInt(method.expiryMonth),
-                          0
-                        );
-                        const twoMonthsFromNow = new Date();
-                        twoMonthsFromNow.setMonth(twoMonthsFromNow.getMonth() + 2);
-                        return !isExpired && expiryDate <= twoMonthsFromNow;
-                      })()
-                    : false;
+                const isExpired = isPaymentMethodExpired(method);
+                const isExpiringSoon = isPaymentMethodExpiringSoon(method);
 
                 return (
                   <div
@@ -564,10 +553,8 @@ export default async function OrganizationDetailPage({ params }: Props) {
                           )}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          {method.expiryMonth && method.expiryYear && (
-                            <span>
-                              Expires {method.expiryMonth}/{method.expiryYear.slice(-2)}
-                            </span>
+                          {formatExpiryDate(method) && (
+                            <span>Expires {formatExpiryDate(method)}</span>
                           )}
                           {method.holderName && (
                             <>

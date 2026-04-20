@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { chargeSubscription, isAdyenConfigured } from "@/lib/adyen";
+import { isPaymentMethodExpired } from "@/lib/payment-utils";
 import { sendTemplatedEmail } from "@/lib/email";
 import { logger } from "@/lib/logger";
 import { registerAllowedOrigin, removeAllowedOrigin } from "@/lib/adyen-platform";
@@ -45,32 +46,6 @@ function addOneYear(date: Date): Date {
   const newDay = Math.min(day, lastDayOfMonth);
 
   return new Date(Date.UTC(year + 1, month, newDay));
-}
-
-/**
- * Check if a payment method has expired based on its expiryMonth/expiryYear.
- * Cards expire at the end of their expiry month (e.g. 03/2026 is valid through March 31).
- */
-function isPaymentMethodExpired(pm: {
-  expiryMonth?: string | null;
-  expiryYear?: string | null;
-}): boolean {
-  if (!pm.expiryMonth || !pm.expiryYear) return false;
-
-  const month = parseInt(pm.expiryMonth, 10);
-  const rawYear = parseInt(pm.expiryYear, 10);
-  if (isNaN(month) || isNaN(rawYear)) return false;
-  // Normalize 2-digit years (e.g. "30" -> 2030) stored by the Adyen webhook handler
-  const year = rawYear < 100 ? 2000 + rawYear : rawYear;
-
-  // Card is valid through the last day of the expiry month.
-  // Date(year, month, 0) gives the last day of that month, but we compare
-  // at month granularity: expired if we're past the expiry month.
-  const now = new Date();
-  const currentYear = now.getUTCFullYear();
-  const currentMonth = now.getUTCMonth() + 1;
-
-  return year < currentYear || (year === currentYear && month < currentMonth);
 }
 
 /**

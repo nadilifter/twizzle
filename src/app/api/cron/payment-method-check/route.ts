@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { isAdyenConfigured } from "@/lib/adyen";
 import { syncPaymentMethodsFromAdyen } from "@/lib/payment-method-sync";
+import { isPaymentMethodExpired, isPaymentMethodExpiringSoon } from "@/lib/payment-utils";
 import { sendTemplatedEmail } from "@/lib/email";
 import { logger } from "@/lib/logger";
 
@@ -63,10 +64,6 @@ export async function GET(request: NextRequest) {
       errors: [] as string[],
     };
 
-    const now = new Date();
-    const currentYear = now.getUTCFullYear();
-    const currentMonth = now.getUTCMonth() + 1;
-
     for (const org of activeOrgs) {
       summary.orgsChecked++;
 
@@ -94,26 +91,13 @@ export async function GET(request: NextRequest) {
 
         if (activeMethods.length === 0) continue;
 
-        const expiringMethods = activeMethods.filter((pm) => {
-          if (!pm.expiryMonth || !pm.expiryYear) return false;
-          const month = parseInt(pm.expiryMonth, 10);
-          const year = parseInt(pm.expiryYear, 10);
-          if (isNaN(month) || isNaN(year)) return false;
-
-          const monthsUntilExpiry = (year - currentYear) * 12 + (month - currentMonth);
-          return monthsUntilExpiry >= 0 && monthsUntilExpiry <= 1;
-        });
+        const expiringMethods = activeMethods.filter((pm) => isPaymentMethodExpiringSoon(pm));
 
         if (expiringMethods.length === 0) continue;
 
-        const hasNonExpiringMethod = activeMethods.some((pm) => {
-          if (!pm.expiryMonth || !pm.expiryYear) return true;
-          const month = parseInt(pm.expiryMonth, 10);
-          const year = parseInt(pm.expiryYear, 10);
-          if (isNaN(month) || isNaN(year)) return true;
-          const monthsUntilExpiry = (year - currentYear) * 12 + (month - currentMonth);
-          return monthsUntilExpiry > 1;
-        });
+        const hasNonExpiringMethod = activeMethods.some(
+          (pm) => !isPaymentMethodExpired(pm) && !isPaymentMethodExpiringSoon(pm)
+        );
 
         if (hasNonExpiringMethod) continue;
 
@@ -143,7 +127,7 @@ export async function GET(request: NextRequest) {
     }
 
     logger.info("Payment method check cron completed", summary);
-    return NextResponse.json({ success: true, summary, timestamp: now.toISOString() });
+    return NextResponse.json({ success: true, summary, timestamp: new Date().toISOString() });
   } catch (error) {
     logger.error("Payment method check cron failed", {
       error: error instanceof Error ? error.message : String(error),

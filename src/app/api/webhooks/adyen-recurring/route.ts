@@ -6,6 +6,7 @@ import {
   parseRecurringTokenWebhook,
 } from "@/lib/adyen";
 import { logger } from "@/lib/logger";
+import { formatExpiryDate } from "@/lib/payment-utils";
 import { saveUserPaymentMethodFromToken } from "@/lib/payment-method-sync";
 
 /**
@@ -360,10 +361,7 @@ async function handleUserTokenUpdated(tokenData: {
     return;
   }
 
-  const expiry =
-    tokenData.paymentMethod?.expiryMonth && tokenData.paymentMethod?.expiryYear
-      ? `${tokenData.paymentMethod.expiryMonth}/${tokenData.paymentMethod.expiryYear.slice(-2)}`
-      : undefined;
+  const expiry = formatExpiryDate(tokenData.paymentMethod ?? {}) ?? undefined;
 
   await db.paymentMethod.update({
     where: { adyenTokenId: tokenData.storedPaymentMethodId },
