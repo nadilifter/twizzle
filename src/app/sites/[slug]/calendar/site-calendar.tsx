@@ -206,7 +206,6 @@ export function SiteCalendar({
       categories={categories}
       filters={filters}
       onFiltersChange={setFilters}
-      activeFilterCount={activeFilterCount}
       hideDateRange
     />
   );

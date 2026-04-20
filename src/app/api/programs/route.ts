@@ -184,6 +184,9 @@ export async function GET(request: NextRequest) {
           season: {
             select: { id: true, name: true, color: true, startDate: true, endDate: true },
           },
+          category: {
+            select: { id: true, name: true },
+          },
         },
         orderBy: { name: "asc" },
         take: limit,

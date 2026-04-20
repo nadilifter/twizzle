@@ -35,6 +35,7 @@ import {
   type Coach,
   type SeasonFilter,
   type CategoryFilter,
+  type FacilityFilter,
   type ProgramFilterState,
 } from "./program-filters";
 
@@ -176,6 +177,17 @@ export function FilterableProgramList({
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [programs]);
 
+  // Derive unique facilities from programs
+  const facilities = useMemo<FacilityFilter[]>(() => {
+    const map = new Map<string, FacilityFilter>();
+    for (const program of programs) {
+      if (program.facility && !map.has(program.facility.id)) {
+        map.set(program.facility.id, { id: program.facility.id, name: program.facility.name });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [programs]);
+
   const filteredPrograms = useMemo(() => {
     return programs.filter((program) => {
       // Age filter: show programs whose age range overlaps the filter range
@@ -268,6 +280,23 @@ export function FilterableProgramList({
         }
       }
 
+      // Facility filter
+      if (filters.selectedFacility) {
+        if (program.facility?.id !== filters.selectedFacility) {
+          return false;
+        }
+      }
+
+      // Gender filter
+      if (filters.selectedGenders.length > 0) {
+        if (program.hasGenderRestriction && program.allowedGenders?.length) {
+          const hasOverlap = program.allowedGenders.some((g) =>
+            filters.selectedGenders.includes(g)
+          );
+          if (!hasOverlap) return false;
+        }
+      }
+
       return true;
     });
   }, [programs, filters]);
@@ -340,9 +369,10 @@ export function FilterableProgramList({
       coaches={coaches}
       seasons={seasons}
       categories={categories}
+      facilities={facilities}
+      showGenderFilter
       filters={filters}
       onFiltersChange={setFilters}
-      activeFilterCount={activeFilterCount}
     />
   );
 
@@ -376,19 +406,30 @@ export function FilterableProgramList({
           /* Desktop: right-side Sheet */
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>{triggerButton}</SheetTrigger>
-            <SheetContent>
+            <SheetContent className="flex flex-col">
               <SheetHeader>
                 <SheetTitle>Filter Programs</SheetTitle>
                 <SheetDescription>
                   Narrow down programs by age, schedule, time, or level
                 </SheetDescription>
               </SheetHeader>
-              <div className="mt-6 overflow-y-auto flex-1">{filtersContent}</div>
-              <SheetFooter className="mt-6">
+              <div className="mt-6 flex-1 overflow-y-auto min-h-0 pr-1">{filtersContent}</div>
+              <div className="border-t pt-4 mt-4 flex flex-col gap-2 shrink-0">
                 <SheetClose asChild>
                   <Button className="w-full">{resultLabel}</Button>
                 </SheetClose>
-              </SheetFooter>
+                {activeFilterCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setFilters({ ...DEFAULT_FILTERS })}
+                    className="w-full gap-2"
+                  >
+                    <X className="h-4 w-4" />
+                    Clear All Filters
+                  </Button>
+                )}
+              </div>
             </SheetContent>
           </Sheet>
         )}

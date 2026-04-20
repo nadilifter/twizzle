@@ -153,10 +153,11 @@ export default async function SitePage({ params }: { params: { slug: string } })
 
   const programsVersion = await getCacheVersion(config.organizationId, "programs");
 
-  const [{ programs, levels, waitlistedCounts }, seasonsEnabled, siteCategories] =
+  const [{ programs, levels, waitlistedCounts }, seasonsEnabled, trainingEnabled, siteCategories] =
     await Promise.all([
       getCachedHomePrograms(config.organizationId, programsVersion),
       isFeatureEnabled(config.organizationId, "seasons"),
+      isFeatureEnabled(config.organizationId, "training"),
       getCachedCategories(config.organizationId),
     ]);
 
@@ -346,7 +347,7 @@ export default async function SitePage({ params }: { params: { slug: string } })
                     discountValue: Number(d.discountValue),
                   })) || [],
               }))}
-              levels={levels}
+              levels={trainingEnabled ? levels : []}
               seasons={seasons}
               slug={params.slug}
               primaryColor={primaryColor}

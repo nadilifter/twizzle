@@ -122,12 +122,17 @@ export default async function RegisterPage({
 
   const programsVersion = await getCacheVersion(config.organizationId, "programs");
 
-  const [{ programs, levels, waitlistedCounts }, seasonsEnabled, registerCategories] =
-    await Promise.all([
-      getCachedRegisterPrograms(config.organizationId, programsVersion),
-      isFeatureEnabled(config.organizationId, "seasons"),
-      getCachedRegisterCategories(config.organizationId),
-    ]);
+  const [
+    { programs, levels, waitlistedCounts },
+    seasonsEnabled,
+    trainingEnabled,
+    registerCategories,
+  ] = await Promise.all([
+    getCachedRegisterPrograms(config.organizationId, programsVersion),
+    isFeatureEnabled(config.organizationId, "seasons"),
+    isFeatureEnabled(config.organizationId, "training"),
+    getCachedRegisterCategories(config.organizationId),
+  ]);
 
   const seasons = seasonsEnabled ? await getCachedSeasons(config.organizationId) : [];
   const waitlistCountMap = new Map(waitlistedCounts.map((w) => [w.programId, w._count]));
@@ -175,7 +180,7 @@ export default async function RegisterPage({
 
         <FilterableProgramList
           programs={serializedPrograms}
-          levels={levels}
+          levels={trainingEnabled ? levels : []}
           seasons={seasons}
           slug={subdomain}
           primaryColor={config.primaryColor || undefined}

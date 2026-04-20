@@ -9,6 +9,8 @@ import {
   UserCircle,
   CalendarRange,
   Layers,
+  MapPin,
+  CircleDot,
   X,
 } from "lucide-react";
 import type { DateRange } from "react-day-picker";
@@ -52,6 +54,11 @@ export interface CategoryFilter {
   name: string;
 }
 
+export interface FacilityFilter {
+  id: string;
+  name: string;
+}
+
 export interface ProgramFilterState {
   ageRange: [number, number];
   dateRange: DateRange | undefined;
@@ -60,6 +67,9 @@ export interface ProgramFilterState {
   selectedCoaches: string[];
   selectedSeason: string;
   selectedCategory: string;
+  selectedFacility: string;
+  selectedGenders: string[];
+  selectedStatus: string;
 }
 
 export const DEFAULT_FILTERS: ProgramFilterState = {
@@ -70,6 +80,9 @@ export const DEFAULT_FILTERS: ProgramFilterState = {
   selectedCoaches: [],
   selectedSeason: "",
   selectedCategory: "",
+  selectedFacility: "",
+  selectedGenders: [],
+  selectedStatus: "",
 };
 
 // Generate hour options: 12 AM (midnight) through 11 PM
@@ -97,18 +110,31 @@ export function countActiveFilters(
   if (filters.selectedCoaches.length > 0) count++;
   if (filters.selectedSeason) count++;
   if (filters.selectedCategory) count++;
+  if (filters.selectedFacility) count++;
+  if (filters.selectedGenders.length > 0) count++;
+  if (filters.selectedStatus) count++;
   return count;
 }
+
+const GENDER_OPTIONS = [
+  { value: "MALE", label: "Male" },
+  { value: "FEMALE", label: "Female" },
+  { value: "OTHER", label: "Other" },
+  { value: "PREFER_NOT_TO_SAY", label: "Prefer Not to Say" },
+] as const;
 
 interface ProgramFiltersProps {
   levels: Level[];
   coaches: Coach[];
   seasons?: SeasonFilter[];
   categories?: CategoryFilter[];
+  facilities?: FacilityFilter[];
   filters: ProgramFilterState;
   onFiltersChange: (filters: ProgramFilterState) => void;
-  activeFilterCount: number;
   hideDateRange?: boolean;
+  showGenderFilter?: boolean;
+  showStatusFilter?: boolean;
+  showSeasonFilter?: boolean;
 }
 
 export function ProgramFiltersContent({
@@ -116,10 +142,13 @@ export function ProgramFiltersContent({
   coaches,
   seasons = [],
   categories = [],
+  facilities = [],
   filters,
   onFiltersChange,
-  activeFilterCount,
   hideDateRange = false,
+  showGenderFilter = false,
+  showStatusFilter = false,
+  showSeasonFilter = false,
 }: ProgramFiltersProps) {
   const handleMinAgeChange = (raw: string) => {
     const val = raw === "" ? 0 : Math.max(0, Math.min(99, parseInt(raw, 10) || 0));
@@ -165,14 +194,78 @@ export function ProgramFiltersContent({
     onFiltersChange({ ...filters, selectedCoaches: next });
   };
 
-  const clearAll = () => {
-    onFiltersChange({ ...DEFAULT_FILTERS });
+  const toggleGender = (gender: string) => {
+    const current = filters.selectedGenders;
+    const next = current.includes(gender)
+      ? current.filter((g) => g !== gender)
+      : [...current, gender];
+    onFiltersChange({ ...filters, selectedGenders: next });
   };
 
   return (
     <div className="space-y-5">
+      {/* Status (admin only) */}
+      {showStatusFilter && (
+        <>
+          <div className="space-y-3">
+            <Label className="flex items-center gap-1.5 text-sm font-medium">
+              <CircleDot className="h-3.5 w-3.5" />
+              Status
+            </Label>
+            <Select
+              value={filters.selectedStatus || "__all__"}
+              onValueChange={(v) =>
+                onFiltersChange({ ...filters, selectedStatus: v === "__all__" ? "" : v })
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="All Statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Statuses</SelectItem>
+                <SelectItem value="ACTIVE">Active</SelectItem>
+                <SelectItem value="INACTIVE">Inactive</SelectItem>
+                <SelectItem value="ARCHIVED">Archived</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Separator />
+        </>
+      )}
+
+      {/* Facility */}
+      {facilities.length > 0 && (
+        <>
+          <div className="space-y-3">
+            <Label className="flex items-center gap-1.5 text-sm font-medium">
+              <MapPin className="h-3.5 w-3.5" />
+              Facility
+            </Label>
+            <Select
+              value={filters.selectedFacility || "__all__"}
+              onValueChange={(v) =>
+                onFiltersChange({ ...filters, selectedFacility: v === "__all__" ? "" : v })
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="All Facilities" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Facilities</SelectItem>
+                {facilities.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Separator />
+        </>
+      )}
+
       {/* Season */}
-      {seasons.length > 0 && (
+      {(showSeasonFilter || seasons.length > 0) && (
         <>
           <div className="space-y-3">
             <Label className="flex items-center gap-1.5 text-sm font-medium">
@@ -450,14 +543,38 @@ export function ProgramFiltersContent({
         </>
       )}
 
-      {/* Clear All */}
-      {activeFilterCount > 0 && (
+      {/* Gender */}
+      {showGenderFilter && (
         <>
           <Separator />
-          <Button variant="outline" onClick={clearAll} className="w-full gap-2">
-            <X className="h-4 w-4" />
-            Clear All Filters
-          </Button>
+          <div className="space-y-3">
+            <Label className="flex items-center gap-1.5 text-sm font-medium">
+              <Users className="h-3.5 w-3.5" />
+              Gender
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {GENDER_OPTIONS.map((option) => {
+                const isSelected = filters.selectedGenders.includes(option.value);
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => toggleGender(option.value)}
+                    className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 rounded-md"
+                  >
+                    <Badge
+                      variant={isSelected ? "default" : "outline"}
+                      className={cn(
+                        "cursor-pointer select-none transition-colors",
+                        !isSelected && "hover:bg-muted"
+                      )}
+                    >
+                      {option.label}
+                    </Badge>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </>
       )}
     </div>
