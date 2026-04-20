@@ -55,21 +55,16 @@ export async function GET(request: NextRequest) {
         }),
       ]);
 
-    const totalItems = programCount + eventCount + competitionCount;
-
     return NextResponse.json({
       data: categories,
-      allPrograms:
-        totalItems > 0
-          ? {
-              imageUrl: websiteConfig?.allProgramsCategoryImageUrl ?? null,
-              _count: {
-                programs: programCount,
-                events: eventCount,
-                competitions: competitionCount,
-              },
-            }
-          : null,
+      allPrograms: {
+        imageUrl: websiteConfig?.allProgramsCategoryImageUrl ?? null,
+        _count: {
+          programs: programCount,
+          events: eventCount,
+          competitions: competitionCount,
+        },
+      },
     });
   } catch (error) {
     console.error("Error fetching categories:", error);
