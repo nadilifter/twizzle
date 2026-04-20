@@ -73,6 +73,9 @@ export default async function TeamPage({ params }: { params: { slug: string } })
   const hero = getHeroContrastStyles(primaryColor);
   const showCertifications = config.showTeamCertifications ?? false;
   const teamMembers = await getCachedTeamMembers(config.organizationId);
+  // With 4+ staff, switch to a two-column grid on desktop so rows don't get visually thin and the page stays scannable.
+  // Cards keep the same 3/4 image aspect ratio and show the full bio — just with reduced padding and typography.
+  const twoColumn = teamMembers.length >= 4;
 
   return (
     <div className="min-h-screen">
@@ -99,9 +102,13 @@ export default async function TeamPage({ params }: { params: { slug: string } })
       {/* Team Member Sections */}
       <section className="mx-auto w-full max-w-6xl px-4 md:px-8 pt-16 pb-16">
         {teamMembers.length > 0 ? (
-          <div className="space-y-16">
+          <div
+            className={twoColumn ? "grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-10" : "space-y-16"}
+          >
             {teamMembers.map((member, index) => {
-              const isReversed = index % 2 === 1;
+              // Only alternate image side when rendered as wide single-column rows; in the two-column grid
+              // all cards read left-to-right for visual consistency.
+              const isReversed = !twoColumn && index % 2 === 1;
               const imageUrl = member.overrideImage || member.avatar;
 
               return (
@@ -109,7 +116,11 @@ export default async function TeamPage({ params }: { params: { slug: string } })
                   key={member.id}
                   className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden"
                 >
-                  <div className={`grid md:grid-cols-2 ${isReversed ? "md:[direction:rtl]" : ""}`}>
+                  <div
+                    className={`grid ${
+                      twoColumn ? "sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]" : "md:grid-cols-2"
+                    } ${isReversed ? "md:[direction:rtl]" : ""}`}
+                  >
                     {/* Image Panel */}
                     <div
                       className={`bg-muted flex items-start justify-center overflow-hidden ${
@@ -123,25 +134,35 @@ export default async function TeamPage({ params }: { params: { slug: string } })
                             alt={member.name}
                             fill
                             className="object-cover"
-                            sizes="(max-width: 768px) 100vw, 50vw"
+                            sizes={
+                              twoColumn
+                                ? "(max-width: 640px) 100vw, (max-width: 1024px) 40vw, 20vw"
+                                : "(max-width: 768px) 100vw, 50vw"
+                            }
                           />
                         </div>
                       ) : (
                         <div className="flex items-center justify-center w-full aspect-[3/4] text-muted-foreground/40">
-                          <User className="h-24 w-24" />
+                          <User className={twoColumn ? "h-16 w-16" : "h-24 w-24"} />
                         </div>
                       )}
                     </div>
 
                     {/* Info Panel */}
                     <div
-                      className={`p-6 md:p-8 lg:p-10 flex flex-col justify-start ${
-                        isReversed ? "[direction:ltr]" : ""
-                      }`}
+                      className={`flex flex-col justify-start ${
+                        twoColumn ? "p-5 md:p-6" : "p-6 md:p-8 lg:p-10"
+                      } ${isReversed ? "[direction:ltr]" : ""}`}
                     >
-                      <div className="mb-5">
+                      <div className={twoColumn ? "mb-4" : "mb-5"}>
                         <p className="text-sm text-muted-foreground">{member.title}</p>
-                        <h2 className="text-2xl font-bold tracking-tight">{member.name}</h2>
+                        <h2
+                          className={`font-bold tracking-tight ${
+                            twoColumn ? "text-xl" : "text-2xl"
+                          }`}
+                        >
+                          {member.name}
+                        </h2>
                         {showCertifications && member.certifications.length > 0 && (
                           <div className="flex flex-wrap gap-1.5 mt-2">
                             {member.certifications.map((cert) => (
@@ -161,7 +182,11 @@ export default async function TeamPage({ params }: { params: { slug: string } })
                       </div>
 
                       {member.bio && (
-                        <p className="text-muted-foreground mb-6 leading-relaxed whitespace-pre-line">
+                        <p
+                          className={`text-muted-foreground leading-relaxed whitespace-pre-line ${
+                            twoColumn ? "mb-5 text-sm" : "mb-6"
+                          }`}
+                        >
                           {member.bio}
                         </p>
                       )}
@@ -170,11 +195,13 @@ export default async function TeamPage({ params }: { params: { slug: string } })
                         <div className="mt-auto">
                           <Link
                             href={`/register?coach=${member.userId}`}
-                            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${hero.isLight ? "text-gray-900" : "text-white"} transition-colors hover:opacity-90`}
+                            className={`inline-flex items-center gap-2 rounded-lg font-medium ${
+                              twoColumn ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm"
+                            } ${hero.isLight ? "text-gray-900" : "text-white"} transition-colors hover:opacity-90`}
                             style={{ backgroundColor: primaryColor }}
                           >
                             View Programs
-                            <ArrowRight className="h-4 w-4" />
+                            <ArrowRight className={twoColumn ? "h-3.5 w-3.5" : "h-4 w-4"} />
                           </Link>
                         </div>
                       )}

@@ -1300,6 +1300,17 @@ async function main() {
       status: "ACTIVE",
     },
   });
+  const org1Coach3 = await prisma.user.upsert({
+    where: { email: "coach.ava@sunrise-gymnastics.com" },
+    update: {},
+    create: {
+      email: "coach.ava@sunrise-gymnastics.com",
+      name: "Ava Patel",
+      passwordHash: null,
+      role: "COACH",
+      status: "ACTIVE",
+    },
+  });
   const org2Admin = await prisma.user.upsert({
     where: { email: "admin@metro-sports.com" },
     update: {},
@@ -1393,7 +1404,7 @@ async function main() {
       status: "ACTIVE",
     },
   });
-  console.log("  ✓ Created 12 users across all organizations");
+  console.log("  ✓ Created 13 users across all organizations");
 
   // ============================================
   // ORGANIZATION MEMBERS
@@ -1440,6 +1451,17 @@ async function main() {
       organizationId: ORG1_ID,
       userId: org1Accountant.id,
       role: "ACCOUNTANT",
+      status: "ACTIVE",
+    },
+  });
+  const org1Coach3Member = await prisma.organizationMember.upsert({
+    where: { organizationId_userId: { organizationId: ORG1_ID, userId: org1Coach3.id } },
+    update: { role: "COACH", status: "ACTIVE" },
+    create: {
+      id: `${ORG1_ID}-staff-4`,
+      organizationId: ORG1_ID,
+      userId: org1Coach3.id,
+      role: "COACH",
       status: "ACTIVE",
     },
   });
@@ -1602,6 +1624,12 @@ async function main() {
     { memberId: org1Coach2Member.id, permission: "coaching.portal" },
     { memberId: org1Coach2Member.id, permission: "coaching.assign" },
     { memberId: org1Coach2Member.id, permission: "coaching.attendance" },
+    { memberId: org1Coach3Member.id, permission: "dashboard.view" },
+    { memberId: org1Coach3Member.id, permission: "athletes.view" },
+    { memberId: org1Coach3Member.id, permission: "training.view" },
+    { memberId: org1Coach3Member.id, permission: "coaching.portal" },
+    { memberId: org1Coach3Member.id, permission: "coaching.assign" },
+    { memberId: org1Coach3Member.id, permission: "coaching.attendance" },
     { memberId: org2CoachMember.id, permission: "dashboard.view" },
     { memberId: org2CoachMember.id, permission: "athletes.view" },
     { memberId: org2CoachMember.id, permission: "events.view" },
@@ -6593,7 +6621,7 @@ async function main() {
   await Promise.all([
     prisma.websiteConfig.upsert({
       where: { organizationId: ORG1_ID },
-      update: {},
+      update: { showTeam: true },
       create: {
         organizationId: ORG1_ID,
         subdomain: "sunrise-gymnastics",
@@ -6607,6 +6635,7 @@ async function main() {
         showCalendar: true,
         showRegistration: true,
         showContact: true,
+        showTeam: true,
         isPublished: true,
         infoBox1Title: defaultInfoBox1Title,
         infoBox1Content: defaultInfoBox1Content,
@@ -6691,6 +6720,72 @@ async function main() {
   ]);
 
   console.log("  ✓ Created 4 website configurations");
+
+  // ============================================
+  // TEAM MEMBER HIGHLIGHTS (Sunrise Gymnastics)
+  // ============================================
+  // Seeded so the public team page has 5 visible staffers, exercising the 2-column desktop layout (USC-350).
+  console.log("\n🌟 Creating team member highlights for sunrise-gymnastics...");
+  const sunriseTeamHighlights: Array<{
+    memberId: string;
+    title: string;
+    bio: string;
+  }> = [
+    {
+      memberId: org1AdminMember.id,
+      title: "Club Director",
+      bio: "Jennifer leads Sunrise with 20+ years of gymnastics coaching and program design. She founded the club to build a home where kids of every level can find their fit and stay in love with the sport.",
+    },
+    {
+      memberId: org1Coach1Member.id,
+      title: "Head Coach, Competitive Team",
+      bio: "Maria guides our competitive athletes from first beam routine to state finals. A former collegiate gymnast, she brings a calm, technical eye and a relentless belief in steady, confident progress.",
+    },
+    {
+      memberId: org1Coach2Member.id,
+      title: "Recreational Program Lead",
+      bio: "James runs our recreational program and parent-and-tot classes. He specializes in making the first day of gymnastics feel safe and fun — and in giving every family a clear path for what comes next.",
+    },
+    {
+      memberId: org1Coach3Member.id,
+      title: "Tumbling & Trampoline Coach",
+      bio: "Ava coaches our tumbling and trampoline squads and runs our summer skills camps. She loves the moment an athlete lands a new skill for the first time and the quiet work it takes to get there.",
+    },
+    {
+      memberId: org1AccountantMember.id,
+      title: "Operations & Finance",
+      bio: "Robert keeps the club running behind the scenes — tuition, scheduling, invoicing, and making sure coaches have what they need on the floor. He's the first person families meet at the front desk.",
+    },
+  ];
+
+  await Promise.all(
+    sunriseTeamHighlights.map((highlight, index) =>
+      prisma.teamMemberHighlight.upsert({
+        where: {
+          organizationId_memberId: {
+            organizationId: ORG1_ID,
+            memberId: highlight.memberId,
+          },
+        },
+        update: {
+          title: highlight.title,
+          bio: highlight.bio,
+          isVisible: true,
+          displayOrder: index,
+        },
+        create: {
+          id: `${ORG1_ID}-team-highlight-${index + 1}`,
+          organizationId: ORG1_ID,
+          memberId: highlight.memberId,
+          title: highlight.title,
+          bio: highlight.bio,
+          isVisible: true,
+          displayOrder: index,
+        },
+      })
+    )
+  );
+  console.log(`  ✓ Created ${sunriseTeamHighlights.length} team highlights for sunrise-gymnastics`);
 
   // ============================================
   // PRODUCTS (POS)
@@ -9754,7 +9849,7 @@ See you at Metro Sports!
   console.log("  • 4 subscription plans");
   console.log("  • 6 sports with organization associations");
   console.log("  • 32 athletics events, 8 age categories, ~210 eligibility entries");
-  console.log("  • 10 users with permissions");
+  console.log("  • 11 users with permissions");
   console.log("  • 9 families with payment methods");
   console.log("  • 14 athletes with guardian relationships");
   console.log("  • 9 programs with membership tiers");

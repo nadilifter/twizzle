@@ -115,6 +115,7 @@ interface AthleteRequirements {
   athleteName: string;
   requiredWaiverIds: string[];
   needsMedical: boolean;
+  medicalRequired: boolean;
 }
 
 export default function CheckoutPage({ params }: { params: { slug: string } }) {
@@ -397,6 +398,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   const [athleteCustomInfoComplete, setAthleteCustomInfoComplete] = useState<Set<string>>(
     new Set()
   );
+  const [athleteNeedsCustomInfo, setAthleteNeedsCustomInfo] = useState<Set<string>>(new Set());
 
   // Per-athlete requirements flow
   const [athleteQueue, setAthleteQueue] = useState<AthleteRequirements[]>([]);
@@ -564,6 +566,12 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
           if (ciRes.ok) {
             const { questions } = await ciRes.json();
             if (questions && questions.length > 0) {
+              setAthleteNeedsCustomInfo((prev) => {
+                const next = new Set(prev);
+                next.add(athlete.athleteId);
+                return next;
+              });
+
               const respRes = await fetch(
                 `/api/public/athletes/${athlete.athleteId}/custom-information?organizationId=${orgId}&email=${encodeURIComponent(formData.email)}`
               );
@@ -718,6 +726,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
             athleteName,
             requiredWaiverIds: Array.from(waiverIdSet),
             needsMedical,
+            medicalRequired: needsMedical,
           };
         }
       );
@@ -1050,10 +1059,32 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
       </div>
     );
   }
+
+  const allRequirementsComplete =
+    athleteQueue.length > 0 &&
+    athleteQueue.every(
+      (a) =>
+        (a.requiredWaiverIds.length === 0 || athleteWaiverComplete.has(a.athleteId)) &&
+        (!a.medicalRequired || athleteMedicalComplete.has(a.athleteId)) &&
+        (!athleteNeedsCustomInfo.has(a.athleteId) || athleteCustomInfoComplete.has(a.athleteId))
+    );
+
+  const isRequirementStep =
+    checkoutStep === "waivers" || checkoutStep === "customInfo" || checkoutStep === "medical";
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 md:px-8 py-12">
       <button
-        onClick={() => router.back()}
+        onClick={() => {
+          if (checkoutStep === "details") {
+            router.back();
+          } else {
+            setCheckoutStep("details");
+            setPaymentSession(null);
+            setPaymentError(null);
+            setRequiredWaivers([]);
+          }
+        }}
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6 -ml-1"
       >
         <ChevronLeft className="h-4 w-4" />
@@ -1724,7 +1755,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                         </div>
                         <span className="text-xs font-semibold text-foreground">{athleteName}</span>
                         {/* Requirement status indicators */}
-                        {checkoutStep !== "details" &&
+                        {athleteQueue.length > 0 &&
                           (() => {
                             const reqs = athleteQueue.find((a) => a.athleteId === athleteId);
                             if (!reqs) return null;
@@ -1742,7 +1773,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                                       Waivers
                                     </span>
                                   ))}
-                                {reqs.needsMedical &&
+                                {reqs.medicalRequired &&
                                   (athleteMedicalComplete.has(athleteId) ? (
                                     <span className="inline-flex items-center gap-1 text-[10px] text-green-600 bg-green-50 dark:bg-green-950/50 px-1.5 py-0.5 rounded-full">
                                       <Check className="h-2.5 w-2.5" />
@@ -1752,6 +1783,18 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                                     <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 bg-amber-50 dark:bg-amber-950/50 px-1.5 py-0.5 rounded-full">
                                       <AlertCircle className="h-2.5 w-2.5" />
                                       Medical
+                                    </span>
+                                  ))}
+                                {athleteNeedsCustomInfo.has(athleteId) &&
+                                  (athleteCustomInfoComplete.has(athleteId) ? (
+                                    <span className="inline-flex items-center gap-1 text-[10px] text-green-600 bg-green-50 dark:bg-green-950/50 px-1.5 py-0.5 rounded-full">
+                                      <Check className="h-2.5 w-2.5" />
+                                      Custom Info
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 bg-amber-50 dark:bg-amber-950/50 px-1.5 py-0.5 rounded-full">
+                                      <AlertCircle className="h-2.5 w-2.5" />
+                                      Custom Info
                                     </span>
                                   ))}
                               </>
@@ -1902,23 +1945,17 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   <div className="flex items-center gap-2">
                     <div
                       className={`h-2 w-2 rounded-full ${
-                        checkoutStep === "payment" || checkoutStep === "confirmation"
+                        allRequirementsComplete
                           ? "bg-green-500"
-                          : checkoutStep === "waivers" || checkoutStep === "medical"
+                          : isRequirementStep
                             ? "bg-primary"
                             : "bg-muted"
                       }`}
                     />
-                    <span
-                      className={
-                        checkoutStep === "payment" || checkoutStep === "confirmation"
-                          ? "text-green-600"
-                          : ""
-                      }
-                    >
-                      {checkoutStep === "payment" || checkoutStep === "confirmation"
+                    <span className={allRequirementsComplete ? "text-green-600" : ""}>
+                      {allRequirementsComplete
                         ? "All requirements complete"
-                        : checkoutStep === "waivers" || checkoutStep === "medical"
+                        : isRequirementStep
                           ? `Athlete requirements (${currentAthleteIndex + 1}/${athleteQueue.length})`
                           : "Complete requirements"}
                     </span>

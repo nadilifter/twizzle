@@ -35,7 +35,7 @@ The development seed (`seed-dev.ts`) creates two complete organizations with rea
 
 | Model          | Sunrise Gym                      | Metro Sports                |
 | -------------- | -------------------------------- | --------------------------- |
-| Users          | 4 (admin, 2 coaches, accountant) | 3 (admin, coach, volunteer) |
+| Users          | 5 (admin, 3 coaches, accountant) | 3 (admin, coach, volunteer) |
 | Families       | 5                                | 4                           |
 | Athletes       | 8                                | 6                           |
 | Programs       | 5                                | 4                           |
@@ -53,6 +53,7 @@ Seed accounts are created **without passwords**. Use email-based login (magic li
 | `admin@sunrise-gymnastics.com`       | Admin      | Sunrise Gymnastics |
 | `coach.maria@sunrise-gymnastics.com` | Coach      | Sunrise Gymnastics |
 | `coach.james@sunrise-gymnastics.com` | Coach      | Sunrise Gymnastics |
+| `coach.ava@sunrise-gymnastics.com`   | Coach      | Sunrise Gymnastics |
 | `finance@sunrise-gymnastics.com`     | Accountant | Sunrise Gymnastics |
 | `admin@metro-sports.com`             | Admin      | Metro Sports       |
 | `coach.sarah@metro-sports.com`       | Coach      | Metro Sports       |
