@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { sanitizeHtml } from "@/lib/sanitize";
+import { sanitizeHtml, stripHtml } from "@/lib/sanitize";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { calculateAge, isAgeEligible } from "@/lib/age-utils";
@@ -1085,7 +1085,7 @@ export function ProgramRegistrationFlow({
           referenceId: program.id,
           type: "program",
           name: program.name,
-          description: program.description || undefined,
+          description: program.description ? stripHtml(program.description) : undefined,
           price: isRecurringProgram ? program.recurringPrice || 0 : program.basePrice || 0,
           quantity: 1,
           athleteId: selectedAthlete.id,
