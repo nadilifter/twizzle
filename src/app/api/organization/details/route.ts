@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { isValidPhoneNumber } from "libphonenumber-js";
+import { geocodeAddress, hasAddressChanged } from "@/lib/geocode";
 
 export async function GET() {
   try {
@@ -28,12 +29,31 @@ export async function GET() {
         stateProvince: true,
         postalCode: true,
         country: true,
+        latitude: true,
+        longitude: true,
         taxRate: true,
         taxEnabled: true,
         createdAt: true,
+        facilities: {
+          where: { latitude: { not: null }, longitude: { not: null } },
+          select: {
+            id: true,
+            name: true,
+            latitude: true,
+            longitude: true,
+            street: true,
+            city: true,
+            stateProvince: true,
+          },
+          take: 10,
+        },
         _count: {
           select: {
-            members: true,
+            members: {
+              where: {
+                user: { email: { not: { endsWith: "@uplifterinc.com" } } },
+              },
+            },
             organizationAthletes: true,
             programs: true,
           },
@@ -41,6 +61,7 @@ export async function GET() {
         subscription: {
           select: {
             status: true,
+            nextBillingDate: true,
             plan: {
               select: { name: true },
             },
@@ -131,6 +152,36 @@ export async function PATCH(request: Request) {
       );
     }
 
+    // Geocode if address changed or coordinates are missing
+    const current = await db.organization.findUnique({
+      where: { id: organizationId },
+      select: {
+        street: true,
+        city: true,
+        stateProvince: true,
+        postalCode: true,
+        country: true,
+        latitude: true,
+        longitude: true,
+      },
+    });
+
+    const incoming = { street, city, stateProvince, postalCode, country };
+    const addressChanged = current && hasAddressChanged(incoming, current);
+    const missingCoords = !current?.latitude || !current?.longitude;
+    let coords: { latitude: number; longitude: number } | null = null;
+
+    if (addressChanged || missingCoords) {
+      const addrToGeocode = {
+        street: street ?? current?.street,
+        city: city ?? current?.city,
+        stateProvince: stateProvince ?? current?.stateProvince,
+        postalCode: postalCode ?? current?.postalCode,
+        country: country ?? current?.country,
+      };
+      coords = await geocodeAddress(addrToGeocode);
+    }
+
     const organization = await db.organization.update({
       where: { id: organizationId },
       data: {
@@ -144,6 +195,7 @@ export async function PATCH(request: Request) {
         ...(country !== undefined && { country }),
         ...(taxRate !== undefined && { taxRate }),
         ...(taxEnabled !== undefined && { taxEnabled }),
+        ...(coords && { latitude: coords.latitude, longitude: coords.longitude }),
       },
     });
 

@@ -30,6 +30,8 @@ model Organization {
   stateProvince String?
   postalCode    String?
   country       String?
+  latitude      Float?
+  longitude     Float?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

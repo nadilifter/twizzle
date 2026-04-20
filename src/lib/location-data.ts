@@ -78,6 +78,10 @@ export const CA_PROVINCES = [
   { code: "YT", name: "Yukon" },
 ] as const;
 
+export function getCountryName(code: string) {
+  return COUNTRIES.find((c) => c.code === code)?.name ?? code;
+}
+
 export function getRegionsForCountry(countryCode: string) {
   if (countryCode === "US") return US_STATES;
   if (countryCode === "CA") return CA_PROVINCES;

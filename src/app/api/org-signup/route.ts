@@ -202,6 +202,8 @@ export async function POST(request: NextRequest) {
           stateProvince: validatedData.stateProvince || null,
           postalCode: validatedData.postalCode || null,
           country: validatedData.country || null,
+          latitude: facilityCoords?.latitude ?? null,
+          longitude: facilityCoords?.longitude ?? null,
           taxRate: defaultTaxRate,
           taxEnabled: defaultTaxRate > 0,
           referralCode: newReferralCode,

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { COUNTRIES } from "@/lib/location-data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ import { StateProvinceCombobox } from "@/components/ui/state-province-combobox";
 
 interface OrganizationAddressFormProps {
   organization: {
+    email?: string | null;
     street: string | null;
     city: string | null;
     stateProvince: string | null;
@@ -37,13 +39,26 @@ export function OrganizationAddressForm({
   onCancel,
 }: OrganizationAddressFormProps) {
   const [loading, setLoading] = useState(false);
+
+  const defaultCountry = (organization.country || "US") as "US" | "CA";
+
+  // Normalize stored phone to E.164 so PhoneInput can parse it correctly
+  const initialPhone = (() => {
+    const raw = organization.phone || "";
+    if (!raw) return "";
+    if (raw.startsWith("+")) return raw;
+    const parsed = parsePhoneNumberFromString(raw, defaultCountry);
+    return parsed?.format("E.164") ?? raw;
+  })();
+
   const [formData, setFormData] = useState({
+    email: organization.email || "",
     street: organization.street || "",
     city: organization.city || "",
     stateProvince: organization.stateProvince || "",
     postalCode: organization.postalCode || "",
     country: organization.country || "US",
-    phone: organization.phone || "",
+    phone: initialPhone,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -64,14 +79,15 @@ export function OrganizationAddressForm({
       });
 
       if (!res.ok) {
-        throw new Error("Failed to update organization address");
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || "Failed to update contact information");
       }
 
       const updated = await res.json();
-      toast.success("Address updated successfully");
+      toast.success("Contact information updated successfully");
       onSuccess(updated);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update address");
+      toast.error(error instanceof Error ? error.message : "Failed to update contact information");
     } finally {
       setLoading(false);
     }
@@ -80,10 +96,21 @@ export function OrganizationAddressForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          value={formData.email}
+          onChange={handleChange}
+          placeholder="contact@yourorg.com"
+        />
+      </div>
+      <div className="space-y-2">
         <Label htmlFor="phone">Phone Number</Label>
         <PhoneInput
           id="phone"
-          defaultCountry="US"
+          defaultCountry={defaultCountry}
           value={formData.phone}
           onChange={(value) => setFormData((prev) => ({ ...prev, phone: value || "" }))}
           required
@@ -166,7 +193,7 @@ export function OrganizationAddressForm({
         )}
         <Button type="submit" disabled={loading}>
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Save Address
+          Save
         </Button>
       </div>
     </form>
