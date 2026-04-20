@@ -88,6 +88,7 @@ import type {
 import { cn } from "@/lib/utils";
 import { CopySettingsDialog } from "@/components/copy-settings-dialog";
 import { ColorSelector } from "@/components/color-selector";
+import { GLCodeSelector } from "@/components/gl-code-selector";
 import {
   RecurrencePicker,
   type RecurrenceConfig,
@@ -142,6 +143,9 @@ interface ProgramFormData {
 
   // Category
   categoryId: string | null;
+
+  // GL Code
+  glCodeId: string | null;
 
   // Step 1: General
   name: string;
@@ -304,6 +308,9 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
 
     // Category
     categoryId: program?.categoryId || null,
+
+    // GL Code
+    glCodeId: (program as any)?.glCodeId || null,
 
     // Step 1: General
     name: program?.name || "",
@@ -937,6 +944,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         })),
         seasonId: formData.seasonId,
         categoryId: formData.categoryId,
+        glCodeId: formData.glCodeId,
         registrationOpen: formData.registrationOpen,
         registrationStartDate: !formData.registrationOpen
           ? formData.registrationStartDate?.toISOString()
@@ -1438,6 +1446,13 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                     </p>
                   </div>
                 )}
+
+              {/* GL Code */}
+              <GLCodeSelector
+                value={formData.glCodeId}
+                onChange={(v) => setFormData((prev) => ({ ...prev, glCodeId: v }))}
+                entityType="PROGRAM"
+              />
             </CardContent>
           </Card>
         )}

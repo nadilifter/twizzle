@@ -307,6 +307,7 @@ export interface CreateProgramPayload {
   spaceIds?: string[];
   seasonId?: string | null;
   categoryId?: string | null;
+  glCodeId?: string | null;
   registrationStartDate?: string | null;
   registrationStartTime?: string | null;
   registrationEndDate?: string | null;
@@ -371,6 +372,7 @@ export interface UpdateProgramPayload {
   spaceIds?: string[];
   seasonId?: string | null;
   categoryId?: string | null;
+  glCodeId?: string | null;
   registrationStartDate?: string | null;
   registrationStartTime?: string | null;
   registrationEndDate?: string | null;
