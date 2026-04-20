@@ -51,51 +51,65 @@ const cartItemSchema = z.object({
 const checkoutBodySchema = z
   .object({
     items: z.array(cartItemSchema).min(1).max(100),
-    userDetails: z.object({
-      firstName: z.string().min(1).max(255),
-      lastName: z.string().min(1).max(255),
-      email: z.string().email().max(320),
+
+    // Who is placing the order
+    contact: z.object({
+      firstName: z.string().min(1, "First name is required").max(255),
+      lastName: z.string().min(1, "Last name is required").max(255),
+      email: z.string().email("Please enter a valid email address").max(320),
       phone: z
         .string()
         .max(30)
         .refine((val) => !val || isValidPhoneNumber(val), "Please enter a valid phone number")
         .optional()
         .default(""),
-      address: z.string().max(500).optional().default(""),
-      city: z.string().max(255).optional().default(""),
-      stateProvince: z.string().max(255).optional().default(""),
-      postalCode: z.string().max(20).optional().default(""),
     }),
+
+    // Billing address — required unless billingAddressId references a saved record
+    billingAddress: z
+      .object({
+        firstName: z.string().min(1, "Billing first name is required").max(255),
+        lastName: z.string().min(1, "Billing last name is required").max(255),
+        street: z.string().min(1, "Street address is required").max(500),
+        city: z.string().min(1, "City is required").max(255),
+        stateProvince: z.string().max(255).default(""),
+        postalCode: z.string().min(1, "Postal code is required").max(20),
+        country: z.literal("US", { error: "Country must be US" }),
+      })
+      .optional(),
+
+    // Shipping address — only required when cart contains physical store items
+    shippingAddress: z
+      .object({
+        street: z.string().min(1, "Shipping street is required").max(500),
+        city: z.string().min(1, "Shipping city is required").max(255),
+        stateProvince: z.string().max(255).default(""),
+        postalCode: z.string().min(1, "Shipping postal code is required").max(20),
+        country: z.string().max(10).default("US"),
+      })
+      .optional(),
+
     contactId: z.string().optional(),
     billingAddressId: z.string().optional(),
-    editingContact: z.boolean().optional(),
     editingAddress: z.boolean().optional(),
     discountCode: z.string().max(100).optional(),
   })
   .superRefine((data, ctx) => {
-    const needsAddressFromForm = !data.billingAddressId || data.editingAddress;
-    if (needsAddressFromForm) {
-      if (!data.userDetails.address) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Street address is required",
-          path: ["userDetails", "address"],
-        });
-      }
-      if (!data.userDetails.city) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "City is required",
-          path: ["userDetails", "city"],
-        });
-      }
-      if (!data.userDetails.postalCode) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Postal code is required",
-          path: ["userDetails", "postalCode"],
-        });
-      }
+    const needsBillingFromForm = !data.billingAddressId || data.editingAddress;
+    if (needsBillingFromForm && !data.billingAddress) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Billing address is required",
+        path: ["billingAddress"],
+      });
+    }
+    const hasPhysical = data.items.some((i) => i.type === "item");
+    if (hasPhysical && !data.shippingAddress) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Shipping address is required for orders containing store items",
+        path: ["shippingAddress"],
+      });
     }
   });
 
@@ -140,17 +154,20 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
     const body = await request.json();
     const parsed = checkoutBodySchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Invalid request data", details: parsed.error.flatten().fieldErrors },
-        { status: 400 }
-      );
+      const details: Record<string, string> = {};
+      for (const issue of parsed.error.issues) {
+        const path = issue.path.join(".");
+        if (path && !details[path]) details[path] = issue.message;
+      }
+      return NextResponse.json({ error: "Invalid request data", details }, { status: 400 });
     }
     const {
       items: validatedItems,
-      userDetails,
+      contact,
+      billingAddress: billingAddressInput,
+      shippingAddress,
       contactId,
       billingAddressId,
-      editingContact,
       editingAddress,
       discountCode,
     } = parsed.data;
@@ -207,14 +224,14 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
     if (!authUserId) {
       try {
         const { userId } = await resolveOrProvisionCheckoutUser({
-          email: body.userDetails.email,
-          firstName: body.userDetails.firstName,
-          lastName: body.userDetails.lastName,
+          email: contact.email,
+          firstName: contact.firstName,
+          lastName: contact.lastName,
           organizationId,
         });
         authUserId = userId;
       } catch (err) {
-        console.error("checkout/session: failed to resolve/provision user:", err, body.email);
+        console.error("checkout/session: failed to resolve/provision user:", err, contact);
         // Continue as anonymous guest — no regression in checkout flow
       }
     }
@@ -1492,47 +1509,20 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
     if (taxPaidBy === "CUSTOMER") total += tax;
     total = Math.round(total * 100) / 100;
 
-    // 4. Resolve User Contact and Billing Address
-    // Use saved contact if contactId provided, else use form data
+    // 4. Resolve contact and billing address
+    // Contact: use saved record if contactId provided, else use submitted contact fields
     let resolvedContact = {
-      firstName: userDetails.firstName,
-      lastName: userDetails.lastName,
-      email: userDetails.email,
-      phone: userDetails.phone,
+      firstName: contact.firstName,
+      lastName: contact.lastName,
+      email: contact.email,
+      phone: contact.phone,
     };
 
     if (contactId) {
-      if (editingContact) {
-        if (!authUserId) {
-          return NextResponse.json(
-            { error: "Authentication required to update contact" },
-            { status: 401 }
-          );
-        }
-        const ownedContact = await db.userContact.findFirst({
+      if (authUserId) {
+        const savedContact = await db.userContact.findFirst({
           where: { id: contactId, userId: authUserId },
-          select: { id: true },
         });
-        if (!ownedContact) {
-          return NextResponse.json({ error: "Contact not found" }, { status: 404 });
-        }
-        resolvedContact = {
-          firstName: userDetails.firstName,
-          lastName: userDetails.lastName,
-          email: userDetails.email,
-          phone: userDetails.phone,
-        };
-        await db.userContact.update({
-          where: { id: contactId },
-          data: {
-            firstName: userDetails.firstName,
-            lastName: userDetails.lastName,
-            email: userDetails.email,
-            phone: userDetails.phone,
-          },
-        });
-      } else {
-        const savedContact = await db.userContact.findUnique({ where: { id: contactId } });
         if (savedContact) {
           resolvedContact = {
             firstName: savedContact.firstName,
@@ -1544,12 +1534,12 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
       }
     }
 
-    // Resolve billing address: use saved address if billingAddressId provided, else use form data
+    // Billing address: use saved record if billingAddressId provided, else use submitted billingAddress
     let resolvedAddress = {
-      street: userDetails.address || "",
-      city: userDetails.city || "",
-      stateProvince: userDetails.stateProvince || "",
-      postalCode: userDetails.postalCode || "",
+      street: billingAddressInput?.street || "",
+      city: billingAddressInput?.city || "",
+      stateProvince: billingAddressInput?.stateProvince || "",
+      postalCode: billingAddressInput?.postalCode || "",
     };
 
     if (billingAddressId) {
@@ -1567,85 +1557,84 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
         if (!ownedAddress) {
           return NextResponse.json({ error: "Address not found" }, { status: 404 });
         }
-        resolvedAddress = {
-          street: userDetails.address || "",
-          city: userDetails.city || "",
-          stateProvince: userDetails.stateProvince || "",
-          postalCode: userDetails.postalCode || "",
-        };
         await db.userBillingAddress.update({
-          where: { id: billingAddressId },
+          where: { id: billingAddressId, userId: authUserId },
           data: {
-            street: userDetails.address || "",
-            city: userDetails.city || "",
-            stateProvince: userDetails.stateProvince || null,
-            postalCode: userDetails.postalCode || "",
+            street: billingAddressInput?.street || "",
+            city: billingAddressInput?.city || "",
+            stateProvince: billingAddressInput?.stateProvince || null,
+            postalCode: billingAddressInput?.postalCode || "",
           },
         });
       } else {
-        const savedAddress = await db.userBillingAddress.findUnique({
-          where: { id: billingAddressId },
-        });
-        if (savedAddress) {
-          resolvedAddress = {
-            street: savedAddress.street,
-            city: savedAddress.city,
-            stateProvince: savedAddress.stateProvince || "",
-            postalCode: savedAddress.postalCode,
-          };
+        if (authUserId) {
+          const savedAddress = await db.userBillingAddress.findFirst({
+            where: { id: billingAddressId, userId: authUserId },
+          });
+          if (savedAddress) {
+            resolvedAddress = {
+              street: savedAddress.street,
+              city: savedAddress.city,
+              stateProvince: savedAddress.stateProvince || "",
+              postalCode: savedAddress.postalCode,
+            };
+          }
         }
       }
     }
 
-    // Save contacts and addresses to the User profile
+    // Save new contacts and addresses to the User profile (run in parallel)
     if (authUserId) {
-      if (!contactId && resolvedContact.firstName && resolvedContact.email) {
-        const existingUserContact = await db.userContact.findFirst({
-          where: { userId: authUserId, email: resolvedContact.email },
-        });
-        if (!existingUserContact) {
-          const hasAnyUserContacts = await db.userContact.count({ where: { userId: authUserId } });
-          await db.userContact.create({
-            data: {
-              userId: authUserId,
-              firstName: resolvedContact.firstName,
-              lastName: resolvedContact.lastName,
-              email: resolvedContact.email,
-              phone: resolvedContact.phone,
-              relationship: "Self",
-              isPrimary: hasAnyUserContacts === 0,
-            },
-          });
-        }
-      }
-
-      if (!billingAddressId && resolvedAddress.street) {
-        const existingUserAddress = await db.userBillingAddress.findFirst({
-          where: {
-            userId: authUserId,
-            street: resolvedAddress.street,
-            city: resolvedAddress.city,
-            postalCode: resolvedAddress.postalCode,
-          },
-        });
-        if (!existingUserAddress) {
-          const hasAnyUserAddresses = await db.userBillingAddress.count({
-            where: { userId: authUserId },
-          });
-          await db.userBillingAddress.create({
-            data: {
-              userId: authUserId,
-              label: "Home",
-              street: resolvedAddress.street,
-              city: resolvedAddress.city,
-              stateProvince: resolvedAddress.stateProvince || null,
-              postalCode: resolvedAddress.postalCode,
-              country: "US",
-              isPrimary: hasAnyUserAddresses === 0,
-            },
-          });
-        }
-      }
+      await Promise.all([
+        !contactId && resolvedContact.firstName && resolvedContact.email
+          ? (async () => {
+              const existing = await db.userContact.findFirst({
+                where: { userId: authUserId, email: resolvedContact.email },
+              });
+              if (!existing) {
+                const count = await db.userContact.count({ where: { userId: authUserId } });
+                await db.userContact.create({
+                  data: {
+                    userId: authUserId,
+                    firstName: resolvedContact.firstName,
+                    lastName: resolvedContact.lastName,
+                    email: resolvedContact.email,
+                    phone: resolvedContact.phone,
+                    relationship: "Self",
+                    isPrimary: count === 0,
+                  },
+                });
+              }
+            })()
+          : Promise.resolve(),
+        !billingAddressId && resolvedAddress.street
+          ? (async () => {
+              const existing = await db.userBillingAddress.findFirst({
+                where: {
+                  userId: authUserId,
+                  street: resolvedAddress.street,
+                  city: resolvedAddress.city,
+                  postalCode: resolvedAddress.postalCode,
+                },
+              });
+              if (!existing) {
+                const count = await db.userBillingAddress.count({ where: { userId: authUserId } });
+                await db.userBillingAddress.create({
+                  data: {
+                    userId: authUserId,
+                    label: "Home",
+                    street: resolvedAddress.street,
+                    city: resolvedAddress.city,
+                    stateProvince: resolvedAddress.stateProvince || null,
+                    postalCode: resolvedAddress.postalCode,
+                    country: "US",
+                    isPrimary: count === 0,
+                  },
+                });
+              }
+            })()
+          : Promise.resolve(),
+      ]);
     }
 
     // 5. Create Invoice with metadata for post-payment processing
@@ -1852,6 +1841,11 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
           customerName: `${resolvedContact.firstName} ${resolvedContact.lastName}`.trim() || null,
           customerEmail: resolvedContact.email || null,
           customerPhone: resolvedContact.phone || null,
+          shippingStreet: shippingAddress?.street || null,
+          shippingCity: shippingAddress?.city || null,
+          shippingState: shippingAddress?.stateProvince || null,
+          shippingPostalCode: shippingAddress?.postalCode || null,
+          shippingCountry: shippingAddress?.country || null,
         },
       });
     }
@@ -2095,6 +2089,20 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
     );
     const hasRecurringItems = hasRecurringProgram || hasRecurringPass || hasRecurringMembership;
 
+    const billingFirstName = billingAddressInput?.firstName || resolvedContact.firstName;
+    const billingLastName = billingAddressInput?.lastName || resolvedContact.lastName;
+    const shopperName = `${billingFirstName} ${billingLastName}`.trim() || undefined;
+
+    const adyenBillingAddress = resolvedAddress.street
+      ? {
+          street: resolvedAddress.street,
+          city: resolvedAddress.city,
+          stateOrProvince: resolvedAddress.stateProvince || "N/A",
+          postalCode: resolvedAddress.postalCode,
+          country: billingAddressInput?.country || "US",
+        }
+      : undefined;
+
     const session = await createPaymentSession(
       total,
       "USD",
@@ -2108,7 +2116,9 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
             storePaymentMethodMode: hasRecurringItems ? "enabled" : "askForConsent",
             recurringProcessingModel: hasRecurringItems ? "Subscription" : "CardOnFile",
           }
-        : undefined
+        : undefined,
+      shopperName,
+      adyenBillingAddress
     );
 
     return NextResponse.json({

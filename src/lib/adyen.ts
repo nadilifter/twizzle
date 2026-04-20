@@ -202,19 +202,35 @@ export async function createPaymentSession(
   returnUrl: string,
   shopperEmail?: string,
   lineItems?: AdyenLineItem[],
-  tokenization?: TokenizationOptions
+  tokenization?: TokenizationOptions,
+  shopperName?: string,
+  billingAddress?: AdyenBillingAddress
 ) {
   try {
+    const splitStreet = billingAddress ? splitStreetAddress(billingAddress.street) : null;
     const sessionRequest: Record<string, any> = {
       amount: { currency, value: Math.round(amount * 100) },
       reference,
       returnUrl,
       merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT!,
       shopperEmail,
+      ...(shopperName && { shopperName }),
       lineItems,
       channel: "Web",
       countryCode: "US",
       allowedPaymentMethods: getCheckoutAllowedPaymentMethods(),
+      ...(splitStreet && {
+        billingAddress: {
+          street: splitStreet.street,
+          ...(splitStreet.houseNumberOrName && {
+            houseNumberOrName: splitStreet.houseNumberOrName,
+          }),
+          city: billingAddress!.city,
+          stateOrProvince: billingAddress!.stateOrProvince,
+          postalCode: billingAddress!.postalCode,
+          country: billingAddress!.country,
+        },
+      }),
     };
 
     if (tokenization) {

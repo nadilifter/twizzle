@@ -131,6 +131,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   const router = useRouter();
   const { data: session } = useSession();
   const hasWaitlistItems = items.some((item) => item.details?.waitlist === true);
+  const hasPhysicalItems = items.some((item) => item.type === "item");
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("details");
   const [formData, setFormData] = useState({
     firstName: "",
@@ -142,6 +143,8 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
     stateProvince: "",
     postalCode: "",
     country: "US",
+    billingFirstName: "",
+    billingLastName: "",
   });
 
   // Saved contacts & billing addresses
@@ -149,18 +152,35 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   const [savedAddresses, setSavedAddresses] = useState<SavedBillingAddress[]>([]);
   const [selectedContactId, setSelectedContactId] = useState<string>("new");
   const [selectedAddressId, setSelectedAddressId] = useState<string>("new");
-  const [isEditingContact, setIsEditingContact] = useState(false);
+  const [selectedBillingAddressId, setSelectedBillingAddressId] = useState<string>("new");
   const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [isEditingBillingAddress, setIsEditingBillingAddress] = useState(false);
   const [isRedirectingToReceipt, setIsRedirectingToReceipt] = useState(false);
   const [freeCheckoutInvoiceId, setFreeCheckoutInvoiceId] = useState<string | null>(null);
   const formDataInitialized = useRef(false);
+
+  // Shipping address (collected before billing)
+  const [shippingAddress, setShippingAddress] = useState({
+    address: "",
+    city: "",
+    stateProvince: "",
+    postalCode: "",
+    country: "US",
+  });
+  const [shippingAddressConfirmed, setShippingAddressConfirmed] = useState(false);
+  const [shippingErrors, setShippingErrors] = useState<
+    Partial<Record<"address" | "city" | "stateProvince" | "postalCode", string>>
+  >({});
+  const [useSameAddressBilling, setUseSameAddressBilling] = useState(true);
+  const effectiveSameAsBilling = hasPhysicalItems && useSameAddressBilling;
 
   // Persist formData to sessionStorage so it survives page navigations
   const FORM_STORAGE_KEY = `checkout-form-${params.slug}`;
   const CONTACT_STORAGE_KEY = `checkout-contact-${params.slug}`;
   const ADDRESS_STORAGE_KEY = `checkout-address-${params.slug}`;
-  const EDITING_CONTACT_KEY = `checkout-editing-contact-${params.slug}`;
   const EDITING_ADDRESS_KEY = `checkout-editing-address-${params.slug}`;
+  const SHIPPING_ADDRESS_KEY = `checkout-shipping-${params.slug}`;
+  const SHIPPING_CONFIRMED_KEY = `checkout-shipping-confirmed-${params.slug}`;
 
   // Save form data to sessionStorage whenever it changes
   useEffect(() => {
@@ -169,8 +189,9 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
       sessionStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(formData));
       sessionStorage.setItem(CONTACT_STORAGE_KEY, selectedContactId);
       sessionStorage.setItem(ADDRESS_STORAGE_KEY, selectedAddressId);
-      sessionStorage.setItem(EDITING_CONTACT_KEY, isEditingContact ? "1" : "0");
       sessionStorage.setItem(EDITING_ADDRESS_KEY, isEditingAddress ? "1" : "0");
+      sessionStorage.setItem(SHIPPING_ADDRESS_KEY, JSON.stringify(shippingAddress));
+      sessionStorage.setItem(SHIPPING_CONFIRMED_KEY, shippingAddressConfirmed ? "1" : "0");
     } catch {
       // sessionStorage may not be available
     }
@@ -178,13 +199,15 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
     formData,
     selectedContactId,
     selectedAddressId,
-    isEditingContact,
     isEditingAddress,
+    shippingAddress,
+    shippingAddressConfirmed,
     FORM_STORAGE_KEY,
     CONTACT_STORAGE_KEY,
     ADDRESS_STORAGE_KEY,
-    EDITING_CONTACT_KEY,
     EDITING_ADDRESS_KEY,
+    SHIPPING_ADDRESS_KEY,
+    SHIPPING_CONFIRMED_KEY,
   ]);
 
   // Fetch saved contacts & addresses on mount when authenticated
@@ -201,14 +224,12 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
         let restoredForm: typeof formData | null = null;
         let restoredContactId: string | null = null;
         let restoredAddressId: string | null = null;
-        let restoredEditingContact = false;
         let restoredEditingAddress = false;
         try {
           const stored = sessionStorage.getItem(FORM_STORAGE_KEY);
           if (stored) restoredForm = JSON.parse(stored);
           restoredContactId = sessionStorage.getItem(CONTACT_STORAGE_KEY);
           restoredAddressId = sessionStorage.getItem(ADDRESS_STORAGE_KEY);
-          restoredEditingContact = sessionStorage.getItem(EDITING_CONTACT_KEY) === "1";
           restoredEditingAddress = sessionStorage.getItem(EDITING_ADDRESS_KEY) === "1";
         } catch {
           // ignore
@@ -221,7 +242,6 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
           if (restoredForm && restoredContactId) {
             // Restore previously entered data
             setSelectedContactId(restoredContactId);
-            setIsEditingContact(restoredEditingContact);
             setFormData((prev) => ({
               ...prev,
               firstName: restoredForm!.firstName,
@@ -248,31 +268,46 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
           const { addresses } = await addressesRes.json();
           setSavedAddresses(addresses || []);
 
-          if (restoredForm && restoredAddressId) {
-            // Restore previously entered data
+          // Try to restore shipping address from sessionStorage
+          let restoredShipping: typeof shippingAddress | null = null;
+          let restoredShippingConfirmed = false;
+          try {
+            const storedShipping = sessionStorage.getItem(SHIPPING_ADDRESS_KEY);
+            if (storedShipping) restoredShipping = JSON.parse(storedShipping);
+            restoredShippingConfirmed = sessionStorage.getItem(SHIPPING_CONFIRMED_KEY) === "1";
+          } catch {
+            // ignore
+          }
+
+          if (restoredShipping && restoredAddressId) {
+            // Restore previously entered shipping data
             setSelectedAddressId(restoredAddressId);
             setIsEditingAddress(restoredEditingAddress);
-            setFormData((prev) => ({
-              ...prev,
-              address: restoredForm!.address,
-              city: restoredForm!.city,
-              stateProvince: restoredForm!.stateProvince,
-              postalCode: restoredForm!.postalCode,
-              country: restoredForm!.country || "US",
-            }));
+            setShippingAddress(restoredShipping);
+            setShippingAddressConfirmed(restoredShippingConfirmed);
+            if (restoredShippingConfirmed && restoredForm) {
+              // Restore billing address fields too
+              setFormData((prev) => ({
+                ...prev,
+                address: restoredForm!.address,
+                city: restoredForm!.city,
+                stateProvince: restoredForm!.stateProvince,
+                postalCode: restoredForm!.postalCode,
+                country: restoredForm!.country || "US",
+              }));
+            }
           } else {
-            // Auto-select primary address if available
+            // Auto-select primary address and pre-fill shipping
             const primary = (addresses || []).find((a: SavedBillingAddress) => a.isPrimary);
             if (primary) {
               setSelectedAddressId(primary.id);
-              setFormData((prev) => ({
-                ...prev,
+              setShippingAddress({
                 address: primary.street,
                 city: primary.city,
                 stateProvince: primary.stateProvince || "",
                 postalCode: primary.postalCode,
                 country: primary.country || "US",
-              }));
+              });
             }
           }
         }
@@ -290,8 +325,9 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
     FORM_STORAGE_KEY,
     CONTACT_STORAGE_KEY,
     ADDRESS_STORAGE_KEY,
-    EDITING_CONTACT_KEY,
     EDITING_ADDRESS_KEY,
+    SHIPPING_ADDRESS_KEY,
+    SHIPPING_CONFIRMED_KEY,
   ]);
 
   // Pre-fill contact info from session when available (only if no saved contacts loaded)
@@ -313,7 +349,6 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   // Handle saved contact selection
   const handleContactSelect = (contactId: string) => {
     setSelectedContactId(contactId);
-    setIsEditingContact(false);
     if (contactId === "new") {
       setFormData((prev) => ({ ...prev, firstName: "", lastName: "", email: "", phone: "" }));
     } else {
@@ -330,30 +365,28 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
     }
   };
 
-  // Handle saved address selection
+  // Handle saved address selection — fills shipping address
   const handleAddressSelect = (addressId: string) => {
     setSelectedAddressId(addressId);
     setIsEditingAddress(false);
     if (addressId === "new") {
-      setFormData((prev) => ({
-        ...prev,
+      setShippingAddress({
         address: "",
         city: "",
         stateProvince: "",
         postalCode: "",
         country: "US",
-      }));
+      });
     } else {
       const addr = savedAddresses.find((a) => a.id === addressId);
       if (addr) {
-        setFormData((prev) => ({
-          ...prev,
+        setShippingAddress({
           address: addr.street,
           city: addr.city,
           stateProvince: addr.stateProvince || "",
           postalCode: addr.postalCode,
           country: addr.country || "US",
-        }));
+        });
       }
     }
   };
@@ -617,6 +650,95 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
 
     // All athletes processed — proceed to payment
     await createPaymentSession();
+  };
+
+  const handleContinueShipping = () => {
+    const errs: Partial<Record<"address" | "city" | "stateProvince" | "postalCode", string>> = {};
+    if (!shippingAddress.address.trim()) errs.address = "Street is required";
+    if (!shippingAddress.city.trim()) errs.city = "City is required";
+    if (!shippingAddress.stateProvince.trim()) errs.stateProvince = "State/Province is required";
+    if (!shippingAddress.postalCode.trim()) errs.postalCode = "Postal code is required";
+    if (Object.keys(errs).length > 0) {
+      setShippingErrors(errs);
+      return;
+    }
+    setShippingErrors({});
+    const shippingIsUS = shippingAddress.country !== "CA";
+    setShippingAddressConfirmed(true);
+    setUseSameAddressBilling(shippingIsUS);
+    setFormData((prev) => ({
+      ...prev,
+      billingFirstName: shippingIsUS ? prev.firstName : "",
+      billingLastName: shippingIsUS ? prev.lastName : "",
+      address: shippingIsUS ? shippingAddress.address : "",
+      city: shippingIsUS ? shippingAddress.city : "",
+      stateProvince: shippingIsUS ? shippingAddress.stateProvince : "",
+      postalCode: shippingIsUS ? shippingAddress.postalCode : "",
+      country: "US",
+    }));
+  };
+
+  const handleBillingAddressSelect = (addressId: string) => {
+    setSelectedBillingAddressId(addressId);
+    setIsEditingBillingAddress(false);
+    setUseSameAddressBilling(false);
+    if (addressId === "new") {
+      setFormData((prev) => ({
+        ...prev,
+        billingFirstName: prev.billingFirstName || prev.firstName,
+        billingLastName: prev.billingLastName || prev.lastName,
+        address: "",
+        city: "",
+        stateProvince: "",
+        postalCode: "",
+      }));
+    } else {
+      const addr = savedAddresses.find((a) => a.id === addressId);
+      if (addr) {
+        setFormData((prev) => ({
+          ...prev,
+          billingFirstName: prev.billingFirstName || prev.firstName,
+          billingLastName: prev.billingLastName || prev.lastName,
+          address: addr.street,
+          city: addr.city,
+          stateProvince: addr.stateProvince || "",
+          postalCode: addr.postalCode,
+          country: "US",
+        }));
+      }
+    }
+  };
+
+  const handleUseSameAddressBilling = (checked: boolean) => {
+    setUseSameAddressBilling(checked);
+    if (checked) {
+      setSelectedBillingAddressId("new");
+      setIsEditingBillingAddress(false);
+    }
+    const shippingIsUS = shippingAddress.country !== "CA";
+    if (checked && shippingIsUS) {
+      setFormData((prev) => ({
+        ...prev,
+        billingFirstName: prev.firstName,
+        billingLastName: prev.lastName,
+        address: shippingAddress.address,
+        city: shippingAddress.city,
+        stateProvince: shippingAddress.stateProvince,
+        postalCode: shippingAddress.postalCode,
+        country: "US",
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        billingFirstName: "",
+        billingLastName: "",
+        address: "",
+        city: "",
+        stateProvince: "",
+        postalCode: "",
+        country: "US",
+      }));
+    }
   };
 
   // Check for per-athlete requirements (waivers + medical) and proceed accordingly
@@ -894,11 +1016,52 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           items,
-          userDetails: formData,
+          contact: {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            phone: formData.phone,
+          },
+          billingAddress: {
+            firstName: hasPhysicalItems
+              ? effectiveSameAsBilling
+                ? formData.firstName
+                : formData.billingFirstName
+              : formData.firstName,
+            lastName: hasPhysicalItems
+              ? effectiveSameAsBilling
+                ? formData.lastName
+                : formData.billingLastName
+              : formData.lastName,
+            street: formData.address,
+            city: formData.city,
+            stateProvince: formData.stateProvince,
+            postalCode: formData.postalCode,
+            country: "US",
+          },
+          ...(hasPhysicalItems
+            ? {
+                shippingAddress: {
+                  street: shippingAddress.address,
+                  city: shippingAddress.city,
+                  stateProvince: shippingAddress.stateProvince,
+                  postalCode: shippingAddress.postalCode,
+                  country: shippingAddress.country,
+                },
+              }
+            : {}),
           contactId: selectedContactId !== "new" ? selectedContactId : undefined,
-          billingAddressId: selectedAddressId !== "new" ? selectedAddressId : undefined,
-          editingContact: isEditingContact && selectedContactId !== "new",
-          editingAddress: isEditingAddress && selectedAddressId !== "new",
+          billingAddressId: useSameAddressBilling
+            ? selectedAddressId !== "new"
+              ? selectedAddressId
+              : undefined
+            : selectedBillingAddressId !== "new"
+              ? selectedBillingAddressId
+              : undefined,
+          editingAddress: useSameAddressBilling
+            ? isEditingAddress && selectedAddressId !== "new"
+            : isEditingBillingAddress && selectedBillingAddressId !== "new",
+          editingContact: false,
           discountCode,
         }),
       });
@@ -935,7 +1098,6 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
       sessionStorage.removeItem(FORM_STORAGE_KEY);
       sessionStorage.removeItem(CONTACT_STORAGE_KEY);
       sessionStorage.removeItem(ADDRESS_STORAGE_KEY);
-      sessionStorage.removeItem(EDITING_CONTACT_KEY);
       sessionStorage.removeItem(EDITING_ADDRESS_KEY);
     } catch {
       // ignore
@@ -955,7 +1117,6 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
         sessionStorage.removeItem(FORM_STORAGE_KEY);
         sessionStorage.removeItem(CONTACT_STORAGE_KEY);
         sessionStorage.removeItem(ADDRESS_STORAGE_KEY);
-        sessionStorage.removeItem(EDITING_CONTACT_KEY);
         sessionStorage.removeItem(EDITING_ADDRESS_KEY);
       } catch {
         // ignore
@@ -1105,7 +1266,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
               {savedContacts.length > 0 && checkoutStep === "details" && (
-                <div className="space-y-2 md:col-span-2">
+                <div className="space-y-2 md:col-span-2 pb-2">
                   <Label>Saved Contacts</Label>
                   <Select value={selectedContactId} onValueChange={handleContactSelect}>
                     <SelectTrigger>
@@ -1127,26 +1288,6 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   </Select>
                 </div>
               )}
-              {selectedContactId !== "new" && !isEditingContact && checkoutStep === "details" && (
-                <div className="md:col-span-2 flex justify-end">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsEditingContact(true)}
-                  >
-                    <Pencil className="h-3.5 w-3.5 mr-1" />
-                    Edit Contact
-                  </Button>
-                </div>
-              )}
-              {isEditingContact && selectedContactId !== "new" && checkoutStep === "details" && (
-                <div className="md:col-span-2">
-                  <p className="text-sm text-muted-foreground">
-                    Editing saved contact. Changes will be saved when you continue.
-                  </p>
-                </div>
-              )}
               <div className="space-y-2">
                 <Label htmlFor="firstName">First Name</Label>
                 <Input
@@ -1156,9 +1297,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   value={formData.firstName}
                   onChange={handleInputChange}
                   required
-                  disabled={
-                    checkoutStep !== "details" || (selectedContactId !== "new" && !isEditingContact)
-                  }
+                  disabled={checkoutStep !== "details" || selectedContactId !== "new"}
                 />
               </div>
               <div className="space-y-2">
@@ -1170,9 +1309,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   value={formData.lastName}
                   onChange={handleInputChange}
                   required
-                  disabled={
-                    checkoutStep !== "details" || (selectedContactId !== "new" && !isEditingContact)
-                  }
+                  disabled={checkoutStep !== "details" || selectedContactId !== "new"}
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
@@ -1185,9 +1322,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   value={formData.email}
                   onChange={handleInputChange}
                   required
-                  disabled={
-                    checkoutStep !== "details" || (selectedContactId !== "new" && !isEditingContact)
-                  }
+                  disabled={checkoutStep !== "details" || selectedContactId !== "new"}
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
@@ -1197,162 +1332,412 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   defaultCountry="US"
                   value={formData.phone}
                   onChange={(value) => setFormData((prev) => ({ ...prev, phone: value || "" }))}
-                  disabled={
-                    checkoutStep !== "details" || (selectedContactId !== "new" && !isEditingContact)
-                  }
+                  disabled={checkoutStep !== "details" || selectedContactId !== "new"}
                 />
               </div>
             </CardContent>
           </Card>
 
-          {/* Billing Address */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Billing Address</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              {savedAddresses.length > 0 && checkoutStep === "details" && (
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Saved Addresses</Label>
-                  <Select value={selectedAddressId} onValueChange={handleAddressSelect}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select an address" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {savedAddresses.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>
-                          {a.label ? `${a.label} — ` : ""}
-                          {a.street}, {a.city}
-                          {a.stateProvince
-                            ? `, ${getRegionsForCountry(a.country).find((r) => r.code === a.stateProvince)?.name ?? a.stateProvince}`
-                            : ""}{" "}
-                          {a.postalCode}
-                          {a.isPrimary ? " (Primary)" : ""}
+          {/* Shipping Address — only shown for carts containing physical store items */}
+          {hasPhysicalItems && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Shipping Address</CardTitle>
+              </CardHeader>
+              {shippingAddressConfirmed ? (
+                <CardContent>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-950/50">
+                        <Check className="h-4 w-4 text-green-600" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {shippingAddress.address}, {shippingAddress.city},{" "}
+                        {shippingAddress.stateProvince} {shippingAddress.postalCode}
+                      </p>
+                    </div>
+                    {checkoutStep === "details" && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setShippingAddressConfirmed(false);
+                          setUseSameAddressBilling(true);
+                          setFormData((prev) => ({
+                            ...prev,
+                            billingFirstName: "",
+                            billingLastName: "",
+                            address: "",
+                            city: "",
+                            stateProvince: "",
+                            postalCode: "",
+                            country: "US",
+                          }));
+                        }}
+                      >
+                        <Pencil className="h-3.5 w-3.5 mr-1" />
+                        Edit
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              ) : (
+                <>
+                  <CardContent className="grid gap-4 md:grid-cols-2">
+                    {savedAddresses.length > 0 && checkoutStep === "details" && (
+                      <div className="space-y-2 md:col-span-2">
+                        <Label>Saved Addresses</Label>
+                        <Select value={selectedAddressId} onValueChange={handleAddressSelect}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select an address" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {savedAddresses.map((a) => (
+                              <SelectItem key={a.id} value={a.id}>
+                                {a.street}, {a.city}
+                                {a.stateProvince
+                                  ? `, ${getRegionsForCountry(a.country).find((r) => r.code === a.stateProvince)?.name ?? a.stateProvince}`
+                                  : ""}{" "}
+                                {a.postalCode}
+                                {a.isPrimary ? " (Primary)" : ""}
+                              </SelectItem>
+                            ))}
+                            <SelectItem value="new">
+                              <span className="flex items-center gap-1">
+                                <Plus className="h-3 w-3" /> Add new address
+                              </span>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {selectedAddressId !== "new" &&
+                      !isEditingAddress &&
+                      checkoutStep === "details" && (
+                        <div className="md:col-span-2 flex justify-end">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setIsEditingAddress(true)}
+                          >
+                            <Pencil className="h-3.5 w-3.5 mr-1" />
+                            Edit Address
+                          </Button>
+                        </div>
+                      )}
+                    {isEditingAddress &&
+                      selectedAddressId !== "new" &&
+                      checkoutStep === "details" && (
+                        <div className="md:col-span-2">
+                          <p className="text-sm text-muted-foreground">
+                            Editing saved address. Changes will be saved when you continue.
+                          </p>
+                        </div>
+                      )}
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="shipping-address">Street Address</Label>
+                      <Input
+                        id="shipping-address"
+                        autoComplete="street-address"
+                        value={shippingAddress.address}
+                        onChange={(e) => {
+                          setShippingAddress((prev) => ({ ...prev, address: e.target.value }));
+                          if (shippingErrors.address)
+                            setShippingErrors((prev) => ({ ...prev, address: "" }));
+                        }}
+                        disabled={
+                          checkoutStep !== "details" ||
+                          (selectedAddressId !== "new" && !isEditingAddress)
+                        }
+                        className={shippingErrors.address ? "border-destructive" : ""}
+                      />
+                      {shippingErrors.address && (
+                        <p className="text-sm text-destructive">{shippingErrors.address}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="shipping-city">City</Label>
+                      <Input
+                        id="shipping-city"
+                        autoComplete="address-level2"
+                        value={shippingAddress.city}
+                        onChange={(e) => {
+                          setShippingAddress((prev) => ({ ...prev, city: e.target.value }));
+                          if (shippingErrors.city)
+                            setShippingErrors((prev) => ({ ...prev, city: "" }));
+                        }}
+                        disabled={
+                          checkoutStep !== "details" ||
+                          (selectedAddressId !== "new" && !isEditingAddress)
+                        }
+                        className={shippingErrors.city ? "border-destructive" : ""}
+                      />
+                      {shippingErrors.city && (
+                        <p className="text-sm text-destructive">{shippingErrors.city}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="shipping-stateProvince">
+                        {shippingAddress.country === "CA"
+                          ? "Province"
+                          : shippingAddress.country === "US"
+                            ? "State"
+                            : "State / Province"}
+                      </Label>
+                      <StateProvinceCombobox
+                        country={shippingAddress.country}
+                        value={shippingAddress.stateProvince}
+                        onChange={(val) => {
+                          setShippingAddress((prev) => ({ ...prev, stateProvince: val }));
+                          if (shippingErrors.stateProvince)
+                            setShippingErrors((prev) => ({ ...prev, stateProvince: "" }));
+                        }}
+                        disabled={
+                          checkoutStep !== "details" ||
+                          (selectedAddressId !== "new" && !isEditingAddress)
+                        }
+                        error={!!shippingErrors.stateProvince}
+                      />
+                      {shippingErrors.stateProvince && (
+                        <p className="text-sm text-destructive">{shippingErrors.stateProvince}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="shipping-postalCode">
+                        {shippingAddress.country === "CA"
+                          ? "Postal Code"
+                          : shippingAddress.country === "US"
+                            ? "ZIP Code"
+                            : "Postal Code"}
+                      </Label>
+                      <Input
+                        id="shipping-postalCode"
+                        autoComplete="postal-code"
+                        value={shippingAddress.postalCode}
+                        onChange={(e) => {
+                          setShippingAddress((prev) => ({ ...prev, postalCode: e.target.value }));
+                          if (shippingErrors.postalCode)
+                            setShippingErrors((prev) => ({ ...prev, postalCode: "" }));
+                        }}
+                        placeholder={
+                          shippingAddress.country === "CA"
+                            ? "A1A 1A1"
+                            : shippingAddress.country === "US"
+                              ? "12345"
+                              : ""
+                        }
+                        disabled={
+                          checkoutStep !== "details" ||
+                          (selectedAddressId !== "new" && !isEditingAddress)
+                        }
+                        className={shippingErrors.postalCode ? "border-destructive" : ""}
+                      />
+                      {shippingErrors.postalCode && (
+                        <p className="text-sm text-destructive">{shippingErrors.postalCode}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="shipping-country">Country</Label>
+                      <Select
+                        value={shippingAddress.country}
+                        onValueChange={(value) =>
+                          setShippingAddress((prev) => ({
+                            ...prev,
+                            country: value,
+                            stateProvince: prev.country !== value ? "" : prev.stateProvince,
+                          }))
+                        }
+                        disabled={
+                          checkoutStep !== "details" ||
+                          (selectedAddressId !== "new" && !isEditingAddress)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select country" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {COUNTRIES.map((c) => (
+                            <SelectItem key={c.code} value={c.code}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardContent>
+                  {checkoutStep === "details" && (
+                    <CardFooter>
+                      <Button onClick={handleContinueShipping} className="w-full">
+                        Continue
+                        <ChevronRight className="ml-1 h-4 w-4" />
+                      </Button>
+                    </CardFooter>
+                  )}
+                </>
+              )}
+            </Card>
+          )}
+
+          {/* Billing Address — shown after shipping is confirmed, or immediately for non-physical carts */}
+          {(shippingAddressConfirmed || !hasPhysicalItems) && checkoutStep === "details" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Billing Address</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 md:grid-cols-2">
+                {hasPhysicalItems && (
+                  <div className="md:col-span-2 flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="same-as-shipping"
+                      checked={useSameAddressBilling}
+                      onChange={(e) => handleUseSameAddressBilling(e.target.checked)}
+                      className="rounded border-border h-4 w-4"
+                    />
+                    <Label htmlFor="same-as-shipping" className="font-normal cursor-pointer">
+                      Same as shipping address
+                    </Label>
+                  </div>
+                )}
+                {savedAddresses.length > 0 && !effectiveSameAsBilling && (
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Saved Billing Addresses</Label>
+                    <Select
+                      value={selectedBillingAddressId}
+                      onValueChange={handleBillingAddressSelect}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select an address" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {savedAddresses.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.street}, {a.city}
+                            {a.stateProvince
+                              ? `, ${getRegionsForCountry(a.country).find((r) => r.code === a.stateProvince)?.name ?? a.stateProvince}`
+                              : ""}{" "}
+                            {a.postalCode}
+                            {a.isPrimary ? " (Primary)" : ""}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="new">
+                          <span className="flex items-center gap-1">
+                            <Plus className="h-3 w-3" /> Add new address
+                          </span>
                         </SelectItem>
-                      ))}
-                      <SelectItem value="new">
-                        <span className="flex items-center gap-1">
-                          <Plus className="h-3 w-3" /> Add new address
-                        </span>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {selectedBillingAddressId !== "new" &&
+                  !isEditingBillingAddress &&
+                  !effectiveSameAsBilling && (
+                    <div className="md:col-span-2 flex justify-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsEditingBillingAddress(true)}
+                      >
+                        <Pencil className="h-3.5 w-3.5 mr-1" />
+                        Edit Address
+                      </Button>
+                    </div>
+                  )}
+                {hasPhysicalItems && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="billingFirstName">First Name</Label>
+                      <Input
+                        id="billingFirstName"
+                        name="billingFirstName"
+                        autoComplete="given-name"
+                        value={
+                          effectiveSameAsBilling ? formData.firstName : formData.billingFirstName
+                        }
+                        onChange={handleInputChange}
+                        disabled={
+                          effectiveSameAsBilling ||
+                          (selectedBillingAddressId !== "new" && !isEditingBillingAddress)
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="billingLastName">Last Name</Label>
+                      <Input
+                        id="billingLastName"
+                        name="billingLastName"
+                        autoComplete="family-name"
+                        value={
+                          effectiveSameAsBilling ? formData.lastName : formData.billingLastName
+                        }
+                        onChange={handleInputChange}
+                        disabled={
+                          effectiveSameAsBilling ||
+                          (selectedBillingAddressId !== "new" && !isEditingBillingAddress)
+                        }
+                      />
+                    </div>
+                  </>
+                )}
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="address">Street Address</Label>
+                  <Input
+                    id="address"
+                    name="address"
+                    autoComplete="street-address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    disabled={
+                      effectiveSameAsBilling ||
+                      (selectedBillingAddressId !== "new" && !isEditingBillingAddress)
+                    }
+                  />
                 </div>
-              )}
-              {selectedAddressId !== "new" && !isEditingAddress && checkoutStep === "details" && (
-                <div className="md:col-span-2 flex justify-end">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsEditingAddress(true)}
-                  >
-                    <Pencil className="h-3.5 w-3.5 mr-1" />
-                    Edit Address
-                  </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="city">City</Label>
+                  <Input
+                    id="city"
+                    name="city"
+                    autoComplete="address-level2"
+                    value={formData.city}
+                    onChange={handleInputChange}
+                    disabled={
+                      effectiveSameAsBilling ||
+                      (selectedBillingAddressId !== "new" && !isEditingBillingAddress)
+                    }
+                  />
                 </div>
-              )}
-              {isEditingAddress && selectedAddressId !== "new" && checkoutStep === "details" && (
-                <div className="md:col-span-2">
-                  <p className="text-sm text-muted-foreground">
-                    Editing saved address. Changes will be saved when you continue.
-                  </p>
+                <div className="space-y-2">
+                  <Label htmlFor="stateProvince">State</Label>
+                  <StateProvinceCombobox
+                    country="US"
+                    value={formData.stateProvince}
+                    onChange={(val) => setFormData((prev) => ({ ...prev, stateProvince: val }))}
+                    disabled={
+                      effectiveSameAsBilling ||
+                      (selectedBillingAddressId !== "new" && !isEditingBillingAddress)
+                    }
+                  />
                 </div>
-              )}
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="address">Street Address</Label>
-                <Input
-                  id="address"
-                  name="address"
-                  autoComplete="street-address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                  disabled={
-                    checkoutStep !== "details" || (selectedAddressId !== "new" && !isEditingAddress)
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="city">City</Label>
-                <Input
-                  id="city"
-                  name="city"
-                  autoComplete="address-level2"
-                  value={formData.city}
-                  onChange={handleInputChange}
-                  disabled={
-                    checkoutStep !== "details" || (selectedAddressId !== "new" && !isEditingAddress)
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="stateProvince">
-                  {formData.country === "CA"
-                    ? "Province"
-                    : formData.country === "US"
-                      ? "State"
-                      : "State / Province"}
-                </Label>
-                <StateProvinceCombobox
-                  country={formData.country}
-                  value={formData.stateProvince}
-                  onChange={(val) => setFormData((prev) => ({ ...prev, stateProvince: val }))}
-                  disabled={
-                    checkoutStep !== "details" || (selectedAddressId !== "new" && !isEditingAddress)
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="postalCode">
-                  {formData.country === "CA"
-                    ? "Postal Code"
-                    : formData.country === "US"
-                      ? "ZIP Code"
-                      : "Postal Code"}
-                </Label>
-                <Input
-                  id="postalCode"
-                  name="postalCode"
-                  autoComplete="postal-code"
-                  value={formData.postalCode}
-                  onChange={handleInputChange}
-                  placeholder={
-                    formData.country === "CA" ? "A1A 1A1" : formData.country === "US" ? "12345" : ""
-                  }
-                  disabled={
-                    checkoutStep !== "details" || (selectedAddressId !== "new" && !isEditingAddress)
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="country">Country</Label>
-                <Select
-                  value={formData.country}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      country: value,
-                      stateProvince: prev.country !== value ? "" : prev.stateProvince,
-                    }))
-                  }
-                  disabled={
-                    checkoutStep !== "details" || (selectedAddressId !== "new" && !isEditingAddress)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select country" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {COUNTRIES.map((c) => (
-                      <SelectItem key={c.code} value={c.code}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-            {checkoutStep === "details" && (
+                <div className="space-y-2">
+                  <Label htmlFor="postalCode">ZIP Code</Label>
+                  <Input
+                    id="postalCode"
+                    name="postalCode"
+                    autoComplete="postal-code"
+                    value={formData.postalCode}
+                    onChange={handleInputChange}
+                    placeholder="12345"
+                    disabled={
+                      effectiveSameAsBilling ||
+                      (selectedBillingAddressId !== "new" && !isEditingBillingAddress)
+                    }
+                  />
+                </div>
+              </CardContent>
               <CardFooter>
                 <Button onClick={handleProceedToPayment} disabled={isProcessing} className="w-full">
                   {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -1360,8 +1745,8 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   <ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
               </CardFooter>
-            )}
-          </Card>
+            </Card>
+          )}
 
           {/* Waiver Signing Step */}
           {checkoutStep === "waivers" && (

@@ -2965,8 +2965,13 @@ model Order {
   fulfillmentStatus OrderFulfillmentStatus @default(PENDING)
   customerName      String?
   customerEmail     String?
-  customerPhone     String?
-  fulfilledAt       DateTime?
+  customerPhone      String?
+  shippingStreet     String?
+  shippingCity       String?
+  shippingState      String?
+  shippingPostalCode String?
+  shippingCountry    String?
+  fulfilledAt        DateTime?
   fulfilledBy       String?
   notes             String?
   createdAt         DateTime               @default(now())
