@@ -38,7 +38,7 @@ export function DashboardGrid({
     <div
       className={`grid w-full max-w-[2000px] grid-cols-1 gap-4 ${
         panelVisible
-          ? "xl:grid-cols-[360px_minmax(0,1fr)] min-[1920px]:grid-cols-[minmax(360px,1fr)_1400px]"
+          ? "xl:grid-cols-[360px_minmax(0,1fr)] min-[1920px]:grid-cols-[minmax(360px,1fr)_minmax(0,1400px)]"
           : ""
       }`}
     >
