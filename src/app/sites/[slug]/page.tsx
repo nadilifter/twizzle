@@ -164,7 +164,8 @@ export default async function SitePage({ params }: { params: { slug: string } })
   const seasons = seasonsEnabled ? await getCachedSeasons(config.organizationId) : [];
   const waitlistCountMap = new Map(waitlistedCounts.map((w) => [w.programId, w._count]));
   const hasUncategorizedPrograms = programs.some((p) => !p.categoryId);
-  const hasCategories = siteCategories.length > 0;
+  const populatedCategories = siteCategories.filter((c) => c._count.programs > 0);
+  const hasCategories = populatedCategories.length > 0;
 
   const enrichedPrograms = programs.map((p) => ({
     ...p,
@@ -311,7 +312,7 @@ export default async function SitePage({ params }: { params: { slug: string } })
 
           {hasCategories ? (
             <CategoryTiles
-              categories={siteCategories}
+              categories={populatedCategories}
               hasUncategorizedPrograms={hasUncategorizedPrograms}
               primaryColor={primaryColor}
               allProgramsImageUrl={config.allProgramsCategoryImageUrl}
