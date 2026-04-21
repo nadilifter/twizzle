@@ -4,8 +4,6 @@ import { Prisma } from "@prisma/client";
 import { createPaymentSession, type AdyenLineItem } from "@/lib/adyen";
 import { calculateAge, isAgeEligible } from "@/lib/age-utils";
 import { subDays } from "date-fns";
-import { processInvoiceRegistrations } from "@/lib/invoice-processing";
-import { sendTemplatedEmail } from "@/lib/email";
 import { getAuthSession } from "@/lib/auth";
 import { resolveOrProvisionCheckoutUser } from "@/lib/checkout-user-provisioning";
 import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
@@ -95,14 +93,6 @@ const checkoutBodySchema = z
     discountCode: z.string().max(100).optional(),
   })
   .superRefine((data, ctx) => {
-    const needsBillingFromForm = !data.billingAddressId || data.editingAddress;
-    if (needsBillingFromForm && !data.billingAddress) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Billing address is required",
-        path: ["billingAddress"],
-      });
-    }
     const hasPhysical = data.items.some((i) => i.type === "item");
     if (hasPhysical && !data.shippingAddress) {
       ctx.addIssue({
@@ -1509,6 +1499,26 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
     if (taxPaidBy === "CUSTOMER") total += tax;
     total = Math.round(total * 100) / 100;
 
+    // Billing address is required for paid orders — validated here using server-computed total.
+    // We don't use client-submitted flags; we check the actual data.
+    if (total > 0) {
+      const hasSavedAddress = !!billingAddressId;
+      const hasFormAddress = !!(
+        billingAddressInput?.street &&
+        billingAddressInput?.city &&
+        billingAddressInput?.postalCode
+      );
+      if (!hasSavedAddress && !hasFormAddress) {
+        return NextResponse.json(
+          {
+            error: "Invalid request data",
+            details: { billingAddress: "Full billing address is required" },
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     // 4. Resolve contact and billing address
     // Contact: use saved record if contactId provided, else use submitted contact fields
     let resolvedContact = {
@@ -1571,14 +1581,15 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
           const savedAddress = await db.userBillingAddress.findFirst({
             where: { id: billingAddressId, userId: authUserId },
           });
-          if (savedAddress) {
-            resolvedAddress = {
-              street: savedAddress.street,
-              city: savedAddress.city,
-              stateProvince: savedAddress.stateProvince || "",
-              postalCode: savedAddress.postalCode,
-            };
+          if (!savedAddress) {
+            return NextResponse.json({ error: "Billing address not found" }, { status: 404 });
           }
+          resolvedAddress = {
+            street: savedAddress.street,
+            city: savedAddress.city,
+            stateProvince: savedAddress.stateProvince || "",
+            postalCode: savedAddress.postalCode,
+          };
         }
       }
     }
@@ -1655,6 +1666,9 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
       })),
       programRegistrations: programItems.map((item) => ({
         programId: item.details?.programId,
+        instanceId: item.details?.instanceId,
+        athleteId: item.athleteId || item.details?.athleteId,
+        waitlist: item.details?.waitlist ?? false,
         requiredMemberships: item.details?.requiredMemberships || [],
       })),
       competitionRegistrations: competitionItems.map((item) => ({
@@ -1852,161 +1866,11 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
 
     // 8. Handle payment — skip Adyen entirely for $0 orders
     if (total === 0) {
-      const payment = await db.payment.create({
-        data: {
-          invoiceId: invoice.id,
-          userId: authUserId || undefined,
-          amount: 0,
-          method: "CASH",
-          status: "COMPLETED",
-          processedAt: new Date(),
-        },
-      });
-
-      await db.transaction.create({
-        data: {
-          organizationId,
-          paymentId: payment.id,
-          pspReference: `FREE-${invoice.id}`,
-          merchantRef: invoice.reference,
-          type: "PAYMENT",
-          amount: 0,
-          currency: "USD",
-          status: "SETTLED",
-          method: "comp",
-          description: `Free checkout – ${invoice.reference}`,
-          settledAt: new Date(),
-          feeRate: plan ? planTransactionFee : null,
-          feeFixed: plan ? planPerTransactionFee : null,
-        },
-      });
-
-      await db.invoice.update({
-        where: { id: invoice.id },
-        data: { status: "PAID" },
-      });
-
-      await processInvoiceRegistrations(invoiceMetadata, items, authUserId, organizationId);
-
-      // Decrement inventory for store products (atomic with row-level locking)
-      if (productItems.length > 0) {
-        const productIds = productItems.map((i: CartItem) => i.referenceId);
-        const variantIdsForLock = productItems
-          .map((i: CartItem) => i.details?.variantId as string | undefined)
-          .filter(Boolean) as string[];
-        await db.$transaction(async (tx) => {
-          await tx.$queryRaw(
-            Prisma.sql`SELECT id FROM "Product" WHERE id IN (${Prisma.join(productIds)}) FOR UPDATE`
-          );
-          if (variantIdsForLock.length > 0) {
-            await tx.$queryRaw(
-              Prisma.sql`SELECT id FROM "ProductVariant" WHERE id IN (${Prisma.join(variantIdsForLock)}) FOR UPDATE`
-            );
-          }
-          for (const item of productItems) {
-            const variantId = item.details?.variantId as string | undefined;
-
-            if (variantId) {
-              const variant = await tx.productVariant.findUnique({
-                where: { id: variantId },
-                select: { id: true, currentInventory: true },
-              });
-              if (variant && variant.currentInventory !== null) {
-                const previousQty = variant.currentInventory;
-                const newQty = Math.max(previousQty - item.quantity, 0);
-                await tx.productVariant.update({
-                  where: { id: variant.id },
-                  data: { currentInventory: newQty },
-                });
-                await tx.stockMovement.create({
-                  data: {
-                    productId: item.referenceId,
-                    productVariantId: variantId,
-                    type: "SALE",
-                    quantity: -item.quantity,
-                    previousQty,
-                    newQty,
-                    referenceId: invoice.id,
-                    notes: `Online Sale: ${invoice.reference}`,
-                    createdBy: authUserId || undefined,
-                  },
-                });
-              }
-            } else {
-              const product = await tx.product.findUnique({
-                where: { id: item.referenceId },
-                select: { id: true, currentInventory: true },
-              });
-              if (product && product.currentInventory !== null) {
-                const previousQty = product.currentInventory;
-                const newQty = Math.max(previousQty - item.quantity, 0);
-                await tx.product.update({
-                  where: { id: product.id },
-                  data: { currentInventory: newQty },
-                });
-                await tx.stockMovement.create({
-                  data: {
-                    productId: product.id,
-                    type: "SALE",
-                    quantity: -item.quantity,
-                    previousQty,
-                    newQty,
-                    referenceId: invoice.id,
-                    notes: `Online Sale: ${invoice.reference}`,
-                    createdBy: authUserId || undefined,
-                  },
-                });
-              }
-            }
-          }
-        });
-      }
-
-      // Send receipt email (fire-and-forget so it doesn't block the response)
-      const protocol = request.headers.get("x-forwarded-proto") || "http";
-      const host = request.headers.get("host");
-      const receiptUrl = `${protocol}://${host}/receipt/${invoice.id}`;
-      const lineItemsHtml = items
-        .map(
-          (item: CartItem) =>
-            `<tr><td style="padding: 4px 0;">${item.name}</td><td style="padding: 4px 0; text-align: right;">$${(Number(item.price) * item.quantity).toFixed(2)}</td></tr>`
-        )
-        .join("");
-      const lineItemsText = items
-        .map(
-          (item: CartItem) => `${item.name} — $${(Number(item.price) * item.quantity).toFixed(2)}`
-        )
-        .join("\n");
-
-      const taxHtml =
-        tax > 0 && taxPaidBy === "CUSTOMER"
-          ? `<tr><td style="padding: 4px 0;">Tax</td><td style="padding: 4px 0; text-align: right;">$${tax.toFixed(2)}</td></tr>`
-          : "";
-      const processingFeeHtml = "";
-      const taxText = tax > 0 && taxPaidBy === "CUSTOMER" ? `Tax: $${tax.toFixed(2)}` : "";
-      const processingFeeText = "";
-
-      sendTemplatedEmail("checkout-receipt", [resolvedContact.email], {
-        name: resolvedContact.firstName,
-        reference: invoice.reference,
-        subtotal: `$${discountedSubtotal.toFixed(2)}`,
-        total: `$${total.toFixed(2)}`,
-        lineItemsHtml,
-        lineItemsText,
-        taxHtml,
-        processingFeeHtml,
-        taxText,
-        processingFeeText,
-        receiptUrl,
-      }).catch((err) => console.error("Failed to send receipt email:", err));
-
+      // Invoice and line items are already created above (shared path).
+      // Finalize will complete the order when the user confirms.
       return NextResponse.json({
         freeCheckout: true,
         invoiceId: invoice.id,
-        taxRate,
-        hasMembershipPurchases: membershipInvoiceItems.length > 0,
-        hasProgramRegistrations: programItems.length > 0,
-        hasCompetitionRegistrations: competitionItems.length > 0,
       });
     }
 

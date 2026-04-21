@@ -98,7 +98,7 @@ export function ReceiptContent({
       <div className="container mx-auto px-4 py-16 flex flex-col items-center">
         <div className="max-w-md w-full text-center">
           <Loader2 className="h-16 w-16 animate-spin text-muted-foreground mx-auto mb-4" />
-          <h1 className="text-2xl font-bold">Confirming your payment&hellip;</h1>
+          <h1 className="text-2xl font-bold">Confirming your order&hellip;</h1>
           <p className="text-muted-foreground mt-2">This should only take a moment.</p>
         </div>
       </div>
@@ -133,7 +133,7 @@ export function ReceiptContent({
           <div className="text-center mb-8">
             <Clock className="h-16 w-16 text-amber-500 mx-auto mb-4" />
             <h1 className="text-3xl font-bold">Payment Submitted</h1>
-            <p className="text-muted-foreground mt-2">Thank you, {firstName}!</p>
+            <p className="text-muted-foreground mt-2">Thank you!</p>
             <p className="text-sm text-muted-foreground mt-1">
               ACH bank transfers take 1–3 business days to confirm. We&apos;ll send you a
               confirmation email once your payment clears.
@@ -197,7 +197,7 @@ export function ReceiptContent({
         <div className="text-center mb-8">
           <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
           <h1 className="text-3xl font-bold">Order Confirmed</h1>
-          <p className="text-muted-foreground mt-2">Thank you, {firstName}!</p>
+          <p className="text-muted-foreground mt-2">Thank you!</p>
           <p className="text-sm text-muted-foreground">
             Your order reference is{" "}
             <span className="font-mono text-foreground">{receipt.reference}</span>

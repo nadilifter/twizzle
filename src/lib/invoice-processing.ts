@@ -17,6 +17,9 @@ export interface InvoiceMetadata {
   }[];
   programRegistrations: {
     programId?: string;
+    instanceId?: string;
+    athleteId?: string;
+    waitlist?: boolean;
     requiredMemberships: string[];
   }[];
   competitionRegistrations: {
@@ -55,6 +58,75 @@ function pickSeedFields(raw: Record<string, unknown>) {
     }
   }
   return { seedData: out, hasSeed };
+}
+
+/**
+ * Build the metadata and CartItem array needed to call processInvoiceRegistrations,
+ * given an invoice's line items and stored notes JSON.
+ *
+ * Filters out product and discount line items (those are handled separately).
+ * Supplements program items with instanceId/waitlist from stored metadata, which
+ * are not stored directly on the LineItem record.
+ *
+ * Used by both the /finalize endpoint (free checkout) and the Adyen webhook (paid checkout).
+ */
+export function buildRegistrationArgs(
+  lineItems: Array<{
+    id: string;
+    productId: string | null;
+    discountId?: string | null;
+    programId: string | null;
+    membershipInstanceId: string | null;
+    passId: string | null;
+    competitionId: string | null;
+    athleteId: string | null;
+    description: string;
+    quantity: number;
+  }>,
+  notes: string | null
+): { metadata: InvoiceMetadata; items: CartItem[] } {
+  const metadata: InvoiceMetadata = notes
+    ? JSON.parse(notes)
+    : {
+        membershipPurchases: [],
+        passPurchases: [],
+        programRegistrations: [],
+        competitionRegistrations: [],
+      };
+
+  const items = lineItems
+    .filter((li) => !li.productId && !li.discountId)
+    .map((li) => {
+      const notesProg = li.programId
+        ? (metadata.programRegistrations ?? []).find((p) => p.programId === li.programId)
+        : null;
+      return {
+        referenceId:
+          li.programId || li.membershipInstanceId || li.passId || li.competitionId || li.id,
+        type: li.competitionId
+          ? ("competition" as const)
+          : li.membershipInstanceId
+            ? ("membership" as const)
+            : li.passId
+              ? ("pass" as const)
+              : ("program" as const),
+        athleteId: li.athleteId || undefined,
+        details: {
+          programId: li.programId || undefined,
+          instanceId: notesProg?.instanceId,
+          waitlist: notesProg?.waitlist ?? false,
+          requiredMemberships: notesProg?.requiredMemberships ?? [],
+          membershipInstanceId: li.membershipInstanceId || undefined,
+          passId: li.passId || undefined,
+          competitionId: li.competitionId || undefined,
+        },
+        name: li.description,
+        price: 0,
+        quantity: li.quantity,
+      };
+    });
+
+  return { metadata, items };
 }
 
 /**

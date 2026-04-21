@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { verifyWebhookSignature, extractHmacSignature, resolvePaymentType } from "@/lib/adyen";
-import { processInvoiceRegistrations, type InvoiceMetadata } from "@/lib/invoice-processing";
+import { processInvoiceRegistrations, buildRegistrationArgs } from "@/lib/invoice-processing";
 import { logger } from "@/lib/logger";
 import { Prisma } from "@prisma/client";
 import { saveUserPaymentMethodFromToken } from "@/lib/payment-method-sync";
@@ -264,35 +264,8 @@ async function handleAuthorisation(
 
   if (invoice.notes) {
     try {
-      const metadata: InvoiceMetadata = JSON.parse(invoice.notes);
-
-      const cartItems = invoice.lineItems
-        .filter((li) => !li.productId && !li.discountId)
-        .map((li) => ({
-          referenceId:
-            li.programId || li.membershipInstanceId || li.passId || li.competitionId || li.id,
-          type: li.competitionId
-            ? ("competition" as const)
-            : li.membershipInstanceId
-              ? ("membership" as const)
-              : li.passId
-                ? ("pass" as const)
-                : ("program" as const),
-          athleteId: li.athleteId || undefined,
-          details: {
-            programId: li.programId || undefined,
-            membershipInstanceId: li.membershipInstanceId || undefined,
-            passId: li.passId || undefined,
-            competitionId: li.competitionId || undefined,
-          },
-        }));
-
-      await processInvoiceRegistrations(
-        metadata,
-        cartItems,
-        invoice.userId,
-        invoice.organizationId
-      );
+      const { metadata, items } = buildRegistrationArgs(invoice.lineItems, invoice.notes);
+      await processInvoiceRegistrations(metadata, items, invoice.userId, invoice.organizationId);
     } catch (err) {
       console.error(`Failed to process registrations for invoice ${invoiceId}:`, err);
     }
