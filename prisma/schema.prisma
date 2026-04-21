@@ -1111,7 +1111,6 @@ model MembershipGroup {
   organizationId String
   name           String // e.g., "Annual Membership"
   description    String?
-  programTypes   String[] // Relevant program types
 
   // Recurrence Configuration
   isRecurring    Boolean @default(false)

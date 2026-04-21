@@ -3697,7 +3697,6 @@ async function main() {
       name: "Annual Club Membership",
       description:
         "Required annual membership for all club athletes. Grants access to recreational and competitive programs.",
-      programTypes: ["Recreational", "Competitive"],
       isRecurring: true,
       allowAutoRenew: true,
       defaultPrice: 75,
@@ -3719,7 +3718,6 @@ async function main() {
       organizationId: ORG2_ID,
       name: "Seasonal Pass",
       description: "Access to all programs for one season. Purchase once per season.",
-      programTypes: ["Soccer", "Basketball", "Swimming"],
       isRecurring: true,
       allowAutoRenew: false,
       defaultPrice: 150,

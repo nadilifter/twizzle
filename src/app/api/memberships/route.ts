@@ -9,7 +9,6 @@ const genderEnum = z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]);
 const createMembershipGroupSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  programTypes: z.array(z.string()).default([]),
 
   // Recurrence
   isRecurring: z.boolean().default(false),
@@ -198,7 +197,6 @@ export async function POST(request: NextRequest) {
           organizationId: session.user.organizationId!,
           name: validatedData.name,
           description: validatedData.description,
-          programTypes: validatedData.programTypes,
           isRecurring: validatedData.isRecurring,
           allowAutoRenew: validatedData.allowAutoRenew,
           defaultPrice: validatedData.defaultPrice,

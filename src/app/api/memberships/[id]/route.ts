@@ -9,7 +9,6 @@ const genderEnum = z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]);
 const updateMembershipGroupSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
   description: z.string().nullable().optional(),
-  programTypes: z.array(z.string()).optional(),
 
   // Recurrence
   isRecurring: z.boolean().optional(),

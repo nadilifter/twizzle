@@ -636,7 +636,6 @@ erDiagram
         string organizationId FK
         string name "Annual Membership"
         string description
-        string_array programTypes "Legacy"
         boolean isRecurring
         boolean allowAutoRenew
         decimal defaultPrice

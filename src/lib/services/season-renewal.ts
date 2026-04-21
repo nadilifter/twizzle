@@ -140,7 +140,6 @@ async function rolloverMemberships(
         organizationId,
         name: group.name,
         description: group.description,
-        programTypes: group.programTypes,
         isRecurring: group.isRecurring,
         allowAutoRenew: group.allowAutoRenew,
         defaultPrice: group.defaultPrice,

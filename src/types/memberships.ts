@@ -9,7 +9,6 @@ export interface MembershipGroup {
   organizationId: string;
   name: string;
   description: string | null;
-  programTypes: string[];
 
   // Recurrence Configuration
   isRecurring: boolean;
@@ -155,7 +154,6 @@ export interface MembershipGroupsListResponse {
 export interface CreateMembershipGroupPayload {
   name: string;
   description?: string;
-  programTypes?: string[];
   isRecurring?: boolean;
   allowAutoRenew?: boolean;
   defaultPrice?: number;

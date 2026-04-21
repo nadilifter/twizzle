@@ -203,13 +203,6 @@ export default function MembershipsPage() {
                     </Badge>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {group.programTypes.map((type, i) => (
-                    <Badge key={i} variant="secondary" className="text-xs">
-                      {type}
-                    </Badge>
-                  ))}
-                </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Badge variant="outline">{group._count?.instances || 0} Instances</Badge>
                   {group.allowAutoRenew && (

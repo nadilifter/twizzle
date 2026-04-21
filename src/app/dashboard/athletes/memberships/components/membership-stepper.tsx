@@ -99,7 +99,6 @@ interface MembershipFormData {
   // Step 1: Details
   name: string;
   description: string;
-  programTypes: string;
   isRecurring: boolean;
   glCodeId: string | null;
 
@@ -153,7 +152,6 @@ export function MembershipStepper() {
     seasonId: null,
     name: "",
     description: "",
-    programTypes: "",
     isRecurring: false,
     glCodeId: null,
 
@@ -390,15 +388,9 @@ export function MembershipStepper() {
     setIsSaving(true);
 
     try {
-      const programTypesArray = formData.programTypes
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-
       const groupPayload: CreateMembershipGroupPayload = {
         name: formData.name,
         description: formData.description || undefined,
-        programTypes: programTypesArray,
         isRecurring: formData.isRecurring,
         glCodeId: formData.glCodeId,
 
@@ -634,21 +626,6 @@ export function MembershipStepper() {
                     setFormData((prev) => ({ ...prev, description: e.target.value }))
                   }
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="programTypes">Program Types (comma separated)</Label>
-                <Input
-                  id="programTypes"
-                  placeholder="e.g., Recreational, Competitive"
-                  value={formData.programTypes}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, programTypes: e.target.value }))
-                  }
-                />
-                <p className="text-sm text-muted-foreground">
-                  Define which program types this membership applies to
-                </p>
               </div>
 
               <div className="rounded-lg border p-4 space-y-4">
