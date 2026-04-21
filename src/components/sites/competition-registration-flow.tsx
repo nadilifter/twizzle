@@ -1066,9 +1066,19 @@ export function CompetitionRegistrationFlow({
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
             You need to be signed in to register for this competition.
           </p>
-          <Button onClick={() => signIn(undefined, { callbackUrl: window.location.href })}>
-            Sign In
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button onClick={() => signIn(undefined, { callbackUrl: window.location.href })}>
+              Sign In
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                window.location.href = "/signup";
+              }}
+            >
+              Create Account
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Minus, Plus, ShoppingCart, Trash2, User, Info } from "lucide-react";
 
@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useCart, CartItem, isRegistrationType } from "@/components/sites/cart-context";
+import { calculateBulkDiscounts, type BulkDiscount } from "@/lib/bulk-discounts";
 import { RemoveItemDialog } from "@/components/sites/remove-item-dialog";
 
 export function CartSheet() {
@@ -57,6 +58,16 @@ export function CartSheet() {
     setItemToRemove(null);
     setDependentItems([]);
   };
+
+  const bulkDiscountAmount = useMemo(() => {
+    const bulkDiscountsByProgramId = new Map<string, BulkDiscount[]>();
+    for (const item of items) {
+      if (item.type === "program" && item.details?.programId && item.details?.bulkDiscounts) {
+        bulkDiscountsByProgramId.set(item.details.programId, item.details.bulkDiscounts);
+      }
+    }
+    return calculateBulkDiscounts(items, bulkDiscountsByProgramId).totalDiscount;
+  }, [items]);
   return (
     <>
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -170,6 +181,12 @@ export function CartSheet() {
                 <span>Subtotal</span>
                 <span>${subtotal.toFixed(2)}</span>
               </div>
+              {bulkDiscountAmount > 0 && (
+                <div className="flex items-center justify-between text-sm text-green-600 dark:text-green-400">
+                  <span>Discounts</span>
+                  <span>-${bulkDiscountAmount.toFixed(2)}</span>
+                </div>
+              )}
               {items.some((item) => item.type === "program") && (
                 <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/50 rounded-md p-2">
                   <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />

@@ -44,6 +44,7 @@ import { CustomInformationForm } from "@/components/sites/custom-information-for
 import type { MedicalFormConfig, CustomMedicalQuestion } from "@/types/medical";
 import type { CustomInfoQuestion, CustomInfoResponse } from "@/types/custom-information";
 import type { FileRequirementConfig } from "@/types/file-requirements";
+import { getBestDiscount, getDiscountAmount, type BulkDiscount } from "@/lib/bulk-discounts";
 import {
   User,
   Calendar as CalendarIcon,
@@ -161,6 +162,7 @@ interface ProgramData {
   waitlistedCount?: number;
   requiredMemberships: RequiredMembership[];
   requiredPasses?: RequiredPass[];
+  bulkDiscounts: BulkDiscount[];
   waiverRequirements: WaiverRequirement[];
   registrationOpen?: boolean;
   registrationStartDate?: string | null;
@@ -993,10 +995,20 @@ export function ProgramRegistrationFlow({
     program.recurringPrice,
   ]);
 
+  const activeMultiSessionDiscount = isPerInstance
+    ? getBestDiscount(program.bulkDiscounts, "MULTI_SESSION", selectedInstanceIds.size)
+    : null;
+
+  const multiSessionSavings = activeMultiSessionDiscount
+    ? getDiscountAmount(totalPrice, activeMultiSessionDiscount)
+    : 0;
+
+  const discountedTotalPrice = totalPrice - multiSessionSavings;
+
   const membershipPrice =
     needsMembershipPurchase && selectedMembership ? selectedMembership.price : 0;
   const passPrice = needsPass && selectedPass && !athleteHasPass ? selectedPass.price : 0;
-  const combinedTotal = totalPrice + membershipPrice + passPrice;
+  const combinedTotal = discountedTotalPrice + membershipPrice + passPrice;
 
   // ---------- Add to cart ----------
 
@@ -1072,6 +1084,7 @@ export function ProgramRegistrationFlow({
               startTime: instance.startTime,
               waitlist: instanceIsFull && program.waitlistEnabled,
               endTime: instance.endTime,
+              bulkDiscounts: program.bulkDiscounts,
               ...(uploadedFileId && { fileUploadId: uploadedFileId }),
               ...(earlyAccessCode && { earlyAccessCode }),
             },
@@ -1096,6 +1109,7 @@ export function ProgramRegistrationFlow({
             billingInterval: program.billingInterval,
             requiredMemberships: program.requiredMemberships.map((m) => m.id),
             waitlist: isWaitlistMode,
+            bulkDiscounts: program.bulkDiscounts,
             ...(uploadedFileId && { fileUploadId: uploadedFileId }),
             ...(earlyAccessCode && { earlyAccessCode }),
           },
@@ -1132,9 +1146,19 @@ export function ProgramRegistrationFlow({
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
             You need to be signed in to register for this program.
           </p>
-          <Button onClick={() => signIn(undefined, { callbackUrl: window.location.href })}>
-            Sign In
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button onClick={() => signIn(undefined, { callbackUrl: window.location.href })}>
+              Sign In
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                window.location.href = "/signup";
+              }}
+            >
+              Create Account
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );
@@ -1646,14 +1670,30 @@ export function ProgramRegistrationFlow({
               )}
 
               {selectedInstanceIds.size > 0 && program.perSessionPrice != null && (
-                <div className="rounded-lg border bg-muted/30 p-4">
+                <div className="rounded-lg border bg-muted/30 p-4 space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">
                       {selectedInstanceIds.size} session{selectedInstanceIds.size !== 1 ? "s" : ""}{" "}
                       selected
                     </span>
-                    <span className="text-lg font-bold">{formatPrice(totalPrice)}</span>
+                    {multiSessionSavings > 0 ? (
+                      <div className="text-right">
+                        <span className="text-sm text-muted-foreground line-through mr-1.5">
+                          {formatPrice(totalPrice)}
+                        </span>
+                        <span className="text-lg font-bold">
+                          {formatPrice(discountedTotalPrice)}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-lg font-bold">{formatPrice(totalPrice)}</span>
+                    )}
                   </div>
+                  {multiSessionSavings > 0 && (
+                    <div className="text-xs font-medium text-green-600 dark:text-green-400 text-right">
+                      You save {formatPrice(multiSessionSavings)} with multi-session discount
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -2161,6 +2201,12 @@ export function ProgramRegistrationFlow({
                     )}
                   </span>
                 </div>
+                {multiSessionSavings > 0 && (
+                  <div className="flex items-center justify-between text-xs text-green-600 dark:text-green-400">
+                    <span>Multi-session discount</span>
+                    <span>-{formatPrice(multiSessionSavings)}</span>
+                  </div>
+                )}
                 {needsMembershipPurchase && selectedMembership && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">{selectedMembership.name}</span>

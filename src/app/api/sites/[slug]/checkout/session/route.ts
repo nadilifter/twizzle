@@ -8,6 +8,7 @@ import { getAuthSession } from "@/lib/auth";
 import { resolveOrProvisionCheckoutUser } from "@/lib/checkout-user-provisioning";
 import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { getRegistrationStatus } from "@/lib/registration-utils";
+import { calculateBulkDiscounts } from "@/lib/bulk-discounts";
 import { z } from "zod";
 import { isValidPhoneNumber } from "libphonenumber-js";
 
@@ -1271,19 +1272,45 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
             .filter(Boolean)
         ),
       ] as string[];
-      const programsForPrice = await db.program.findMany({
-        where: { id: { in: allProgramIds }, organizationId },
-        select: {
-          id: true,
-          basePrice: true,
-          perSessionPrice: true,
-          pricingModel: true,
-          billingInterval: true,
-          recurringPrice: true,
-        },
-      });
+      const allInstanceIds = [
+        ...new Set(
+          programItemsForPrice
+            .map(({ item }) => item.details?.instanceId)
+            .filter(Boolean) as string[]
+        ),
+      ];
+      const [programsForPrice, programInstances] = await Promise.all([
+        db.program.findMany({
+          where: { id: { in: allProgramIds }, organizationId },
+          select: {
+            id: true,
+            basePrice: true,
+            perSessionPrice: true,
+            pricingModel: true,
+            billingInterval: true,
+            recurringPrice: true,
+          },
+        }),
+        allInstanceIds.length > 0
+          ? db.programInstance.findMany({
+              where: { id: { in: allInstanceIds }, organizationId },
+              select: { id: true, programId: true },
+            })
+          : Promise.resolve([]),
+      ]);
       for (const p of programsForPrice) {
         programPriceMap.set(p.id, p);
+      }
+      const instanceProgramMap = new Map(programInstances.map((i) => [i.id, i.programId]));
+      for (const { item } of programItemsForPrice) {
+        if (!item.details?.instanceId) continue;
+        const serverProgramId = instanceProgramMap.get(item.details.instanceId);
+        if (!serverProgramId || serverProgramId !== item.details?.programId) {
+          return NextResponse.json(
+            { error: `Invalid session for "${item.name}".` },
+            { status: 400 }
+          );
+        }
       }
       for (const { item, index } of programItemsForPrice) {
         const programId = item.details?.programId || item.referenceId;
@@ -1432,7 +1459,43 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
       }
       return sum + Number(item.price) * item.quantity;
     }, 0);
-    // 3b. Validate and apply discount code
+    // 3b. Calculate bulk registration discounts (server-verified)
+    const bulkDiscountProgramIds = [
+      ...new Set(
+        items
+          .filter((i: CartItem) => i.type === "program" && i.details?.programId)
+          .map((i: CartItem) => i.details!.programId as string)
+      ),
+    ];
+    let bulkDiscountLineAmount = 0;
+    if (bulkDiscountProgramIds.length > 0) {
+      const programBulkDiscounts = await db.programBulkDiscount.findMany({
+        where: { programId: { in: bulkDiscountProgramIds }, program: { organizationId } },
+      });
+      const bulkDiscountsByProgramId = new Map(
+        bulkDiscountProgramIds.map((id) => [
+          id,
+          programBulkDiscounts
+            .filter((d) => d.programId === id)
+            .map((d) => ({
+              id: d.id,
+              type: d.type,
+              minQuantity: d.minQuantity,
+              discountType: d.discountType,
+              discountValue: Number(d.discountValue),
+            })),
+        ])
+      );
+      const { totalDiscount } = calculateBulkDiscounts(
+        items,
+        bulkDiscountsByProgramId,
+        (index, item) =>
+          serverPrices.has(index) ? serverPrices.get(index)! : Number(item.price) * item.quantity
+      );
+      bulkDiscountLineAmount = totalDiscount;
+    }
+
+    // 3c. Validate and apply discount code
     let discountRecord: { id: string; type: string; amount: any; name: string } | null = null;
     let discountLineAmount = 0;
 
@@ -1482,7 +1545,7 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
       }
     }
 
-    const discountedSubtotal = Math.max(subtotal - discountLineAmount, 0);
+    const discountedSubtotal = Math.max(subtotal - discountLineAmount - bulkDiscountLineAmount, 0);
     const tax = Math.round(discountedSubtotal * taxRate * 100) / 100;
 
     const taxPaidBy = config.organization.taxPaidBy;
@@ -1843,7 +1906,20 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
       });
     }
 
-    // 7c. Create Order record if cart contains store products
+    // 7c. Create bulk discount line item
+    if (bulkDiscountLineAmount > 0) {
+      await db.lineItem.create({
+        data: {
+          invoiceId: invoice.id,
+          description: "Bulk Registration Discount",
+          quantity: 1,
+          unitPrice: -bulkDiscountLineAmount,
+          total: -bulkDiscountLineAmount,
+        },
+      });
+    }
+
+    // 7d. Create Order record if cart contains store products
     const productItems = items.filter((i: CartItem) => i.type === "item");
     if (productItems.length > 0) {
       await db.order.create({

@@ -217,9 +217,11 @@ export default function TransactionsPage() {
                       {trx.pspReference}
                     </TableCell>
                     <TableCell>
-                      {trx.method
-                        ? getMethodLabel({ type: trx.method.toLowerCase(), brand: null })
-                        : "—"}
+                      {Number(trx.amount) === 0
+                        ? "—"
+                        : trx.method
+                          ? getMethodLabel({ type: trx.method.toLowerCase(), brand: null })
+                          : "—"}
                     </TableCell>
                     <TableCell>
                       <Badge variant={statusVariants[trx.status] || "outline"}>

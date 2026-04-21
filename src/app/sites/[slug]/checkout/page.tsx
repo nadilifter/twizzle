@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { useCart, CartItem } from "@/components/sites/cart-context";
@@ -53,6 +53,7 @@ import {
 } from "@/components/ui/select";
 import type { MedicalFormConfig, CustomMedicalQuestion } from "@/types/medical";
 import type { CustomInfoQuestion, CustomInfoResponse } from "@/types/custom-information";
+import { calculateBulkDiscounts, type BulkDiscount } from "@/lib/bulk-discounts";
 
 const CustomInformationForm = dynamic(
   () => import("@/components/sites/custom-information-form").then((m) => m.CustomInformationForm),
@@ -249,7 +250,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
           const { contacts } = await contactsRes.json();
           setSavedContacts(contacts || []);
 
-          if (restoredForm && restoredContactId) {
+          if (restoredForm && restoredContactId && restoredContactId !== "new") {
             // Restore previously entered data
             setSelectedContactId(restoredContactId);
             setFormData((prev) => ({
@@ -291,7 +292,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
 
           const primary = (addresses || []).find((a: SavedBillingAddress) => a.isPrimary);
 
-          if (restoredShipping && restoredAddressId) {
+          if (restoredShipping && restoredAddressId && restoredAddressId !== "new") {
             // Restore previously entered shipping data
             setSelectedAddressId(restoredAddressId);
             setIsEditingAddress(restoredEditingAddress);
@@ -1240,7 +1241,18 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   };
 
   const discountAmount = appliedDiscount?.discountAmount ?? 0;
-  const taxableSubtotal = Math.max(subtotal - discountAmount, 0);
+
+  const bulkDiscountAmount = useMemo(() => {
+    const bulkDiscountsByProgramId = new Map<string, BulkDiscount[]>();
+    for (const item of items) {
+      if (item.type === "program" && item.details?.programId && item.details?.bulkDiscounts) {
+        bulkDiscountsByProgramId.set(item.details.programId, item.details.bulkDiscounts);
+      }
+    }
+    return calculateBulkDiscounts(items, bulkDiscountsByProgramId).totalDiscount;
+  }, [items]);
+
+  const taxableSubtotal = Math.max(subtotal - discountAmount - bulkDiscountAmount, 0);
   const taxAmount = Math.round(taxableSubtotal * taxRate * 100) / 100;
 
   let total = taxableSubtotal;
@@ -2378,6 +2390,12 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   <div className="flex justify-between text-green-600 dark:text-green-400">
                     <span>Discount ({appliedDiscount.description})</span>
                     <span>-${discountAmount.toFixed(2)}</span>
+                  </div>
+                )}
+                {bulkDiscountAmount > 0 && (
+                  <div className="flex justify-between text-green-600 dark:text-green-400">
+                    <span>Discounts</span>
+                    <span>-${bulkDiscountAmount.toFixed(2)}</span>
                   </div>
                 )}
                 {taxPaidBy === "CUSTOMER" && taxAmount > 0 && (

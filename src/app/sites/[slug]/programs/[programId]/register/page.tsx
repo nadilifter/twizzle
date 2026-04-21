@@ -177,6 +177,13 @@ export default async function ProgramRegisterPage({
       hasGenderRestriction: p.hasGenderRestriction,
       allowedGenders: p.allowedGenders,
     })),
+    bulkDiscounts: program.bulkDiscounts.map((d) => ({
+      id: d.id,
+      type: d.type,
+      minQuantity: d.minQuantity,
+      discountType: d.discountType,
+      discountValue: Number(d.discountValue),
+    })),
     waiverRequirements: program.waiverRequirements,
     registrationOpen: program.registrationOpen,
     registrationStartDate: program.registrationStartDate

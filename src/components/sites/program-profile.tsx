@@ -17,6 +17,7 @@ import {
   ArrowRight,
   Ban,
   ListEnd,
+  Loader2,
   Hourglass,
   CircleCheck,
   User,
@@ -45,6 +46,7 @@ import { SessionCalendar, type SessionInstance } from "@/components/sites/sessio
 import { LocationMap } from "@/components/location-map";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import type { RegistrationStatus } from "@/lib/registration-utils";
+import { getBestDiscount, getDiscountAmount, type BulkDiscount } from "@/lib/bulk-discounts";
 
 const ROLE_ORDER: Record<string, number> = {
   LEAD_COACH: 0,
@@ -84,14 +86,6 @@ interface StaffAssignment {
 interface LevelRequirement {
   id: string;
   level: { id: string; name: string; color: string | null };
-}
-
-interface BulkDiscount {
-  id: string;
-  type: "FAMILY_SIBLING" | "MULTI_SESSION";
-  minQuantity: number;
-  discountType: "PERCENTAGE" | "FIXED_AMOUNT";
-  discountValue: number;
 }
 
 interface RequiredMembership {
@@ -160,25 +154,6 @@ interface ProgramProfileProps {
   primaryColor: string;
 }
 
-function getBestDiscount(
-  discounts: BulkDiscount[],
-  type: "MULTI_SESSION" | "FAMILY_SIBLING",
-  quantity: number
-): BulkDiscount | null {
-  return (
-    discounts
-      .filter((d) => d.type === type && quantity >= d.minQuantity)
-      .sort((a, b) => b.minQuantity - a.minQuantity)[0] ?? null
-  );
-}
-
-function applyDiscount(subtotal: number, discount: BulkDiscount): number {
-  if (discount.discountType === "PERCENTAGE") {
-    return subtotal * (1 - discount.discountValue / 100);
-  }
-  return Math.max(0, subtotal - discount.discountValue);
-}
-
 export function ProgramProfile({
   program,
   instances,
@@ -190,6 +165,7 @@ export function ProgramProfile({
 }: ProgramProfileProps) {
   const router = useRouter();
   const [selectedInstanceIds, setSelectedInstanceIds] = useState<Set<string>>(new Set());
+  const [isNavigating, setIsNavigating] = useState(false);
 
   const isPerInstance = program.registrationType === "PER_INSTANCE";
   const totalCapacity = program.capacity || 0;
@@ -298,6 +274,7 @@ export function ProgramProfile({
   }, [program.name]);
 
   const handleRegister = () => {
+    setIsNavigating(true);
     const params = new URLSearchParams();
     if (earlyAccessCode) params.set("code", earlyAccessCode);
     if (isPerInstance && selectedInstanceIds.size > 0) {
@@ -315,14 +292,14 @@ export function ProgramProfile({
     ? getBestDiscount(program.bulkDiscounts, "MULTI_SESSION", selectedInstanceIds.size)
     : null;
 
-  const selectedTotal = activeMultiSessionDiscount
-    ? applyDiscount(selectedSubtotal, activeMultiSessionDiscount)
-    : selectedSubtotal;
+  const savings = activeMultiSessionDiscount
+    ? getDiscountAmount(selectedSubtotal, activeMultiSessionDiscount)
+    : 0;
 
-  const savings = selectedSubtotal - selectedTotal;
+  const selectedTotal = selectedSubtotal - savings;
 
   const ctaDisabled =
-    !canRegister || isSoldOut || (isPerInstance && selectedInstanceIds.size === 0);
+    !canRegister || isSoldOut || (isPerInstance && selectedInstanceIds.size === 0) || isNavigating;
 
   const ctaLabel = (() => {
     if (registrationStatus === "closed") return "Registration Closed";
@@ -822,8 +799,8 @@ export function ProgramProfile({
                     : undefined
                 }
               >
-                {ctaLabel}
-                {!ctaDisabled && <ArrowRight className="h-4 w-4" />}
+                {isNavigating ? <Loader2 className="h-4 w-4 animate-spin" /> : ctaLabel}
+                {!isNavigating && !ctaDisabled && <ArrowRight className="h-4 w-4" />}
               </Button>
             </div>
           </div>
@@ -869,8 +846,8 @@ export function ProgramProfile({
                 : undefined
             }
           >
-            {ctaLabel}
-            {!ctaDisabled && <ArrowRight className="h-3.5 w-3.5" />}
+            {isNavigating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : ctaLabel}
+            {!isNavigating && !ctaDisabled && <ArrowRight className="h-3.5 w-3.5" />}
           </Button>
         </div>
       </div>
