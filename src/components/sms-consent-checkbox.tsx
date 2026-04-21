@@ -28,9 +28,14 @@ import { PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL } from "@/components/sms-conse
 export interface SmsConsentCheckboxProps {
   /** Current checked state. Consumers own this — render `false` on mount. */
   checked: boolean;
-  /** Called with the new checked state when the user toggles the checkbox. */
-  onChange: (checked: boolean) => void;
-  /** Disable the control (e.g., while a form is submitting). */
+  /** Called with the new checked state when the user toggles the checkbox.
+   *  Optional so the component can be rendered from a Server Component as a
+   *  pure disclosure (e.g., /sms-opt-in) without passing a function across the
+   *  server/client boundary. When omitted, toggling is a no-op and the control
+   *  should typically also be `disabled`. */
+  onChange?: (checked: boolean) => void;
+  /** Disable the control (e.g., while a form is submitting, or when rendering
+   *  purely as a disclosure without an onChange handler). */
   disabled?: boolean;
   /** Suffix appended to `sms-consent` for the input/label `id`. Useful when
    *  rendering more than one instance on the same page. */
@@ -53,7 +58,7 @@ export function SmsConsentCheckbox({
       <Checkbox
         id={id}
         checked={checked}
-        onCheckedChange={(value) => onChange(value === true)}
+        onCheckedChange={(value) => onChange?.(value === true)}
         disabled={disabled}
         className="mt-0.5"
       />

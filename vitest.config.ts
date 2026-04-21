@@ -12,11 +12,11 @@ export default defineConfig({
     globals: true,
     environment: "node",
     setupFiles: ["./vitest.setup.ts"],
-    include: ["src/**/*.test.{ts,tsx}"],
+    include: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
-      include: ["src/lib/**", "src/app/api/**"],
+      include: ["src/lib/**", "src/app/api/**", "scripts/lib/**"],
     },
   },
 });

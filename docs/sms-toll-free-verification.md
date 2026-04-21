@@ -1,6 +1,6 @@
 # SMS Toll-Free Verification
 
-This document covers how to provision new toll-free phone numbers for the SMS pool and manage their Twilio toll-free verification (TFV).
+How to provision new toll-free phone numbers for the SMS pool and manage their Twilio toll-free verification (TFV).
 
 ---
 
@@ -16,118 +16,86 @@ Only numbers with `TWILIO_APPROVED` status are used for sending. The app checks 
 
 ---
 
-## Prerequisites
+## Canonical flow (scripts)
 
-All commands below use Basic Auth with `TWILIO_ACCOUNT_SID:TWILIO_AUTH_TOKEN`. Export these from the target environment before running any commands:
+All provisioning and resubmission happens through two scripts. They read canonical TFV field values from env vars — there is no longer any hardcoded personal information in this file or elsewhere.
 
-```bash
-export TWILIO_ACCOUNT_SID="<from .env>"
-export TWILIO_AUTH_TOKEN="<from .env>"
-export TWILIO_MESSAGING_SERVICE_SID="<from .env>"
-export TWILIO_CUSTOMER_PROFILE_SID="<from Twilio Console > Trust Hub > Customer Profiles>"
-```
+| Script                                                                                        | Purpose                                                                 |
+| --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| [`scripts/provision-tollfree-number.ts`](../scripts/provision-tollfree-number.ts)             | Search → purchase → attach to Messaging Service → submit TFV            |
+| [`scripts/resubmit-tollfree-verifications.ts`](../scripts/resubmit-tollfree-verifications.ts) | Bulk-resubmit all `TWILIO_REJECTED` verifications with corrected fields |
 
-The Customer Profile SID, business contact details, and EIN are available in the Twilio Console under Trust Hub > Customer Profiles, or in the existing approved verification (see "Checking Verification Status" below).
+Both import from [`scripts/lib/tollfree-fields.ts`](../scripts/lib/tollfree-fields.ts), the single source of truth for TFV submission copy (business identity, opt-in disclosure, use-case summary).
 
----
+### Required env vars
 
-## Step 1: Purchase a Toll-Free Number
-
-Search for available toll-free numbers and purchase one:
+Copy from `.env.example` and fill in for the target Twilio account (non-prod, prod, etc.). The scripts hard-fail before any Twilio API call if any of these are missing or look personal.
 
 ```bash
-# Search for available numbers
-curl -s -u "$TWILIO_ACCOUNT_SID:$TWILIO_AUTH_TOKEN" \
-  "https://api.twilio.com/2010-04-01/Accounts/$TWILIO_ACCOUNT_SID/AvailablePhoneNumbers/US/TollFree.json?PageSize=5" \
-  | python3 -m json.tool
+# Twilio credentials
+TWILIO_ACCOUNT_SID=AC...
+TWILIO_AUTH_TOKEN=...
+TWILIO_MESSAGING_SERVICE_SID=MG...
+TWILIO_CUSTOMER_PROFILE_SID=BU...  # Trust Hub > Customer Profiles
 
-# Purchase a number (replace the phone number with one from search results)
-curl -s -X POST \
-  "https://api.twilio.com/2010-04-01/Accounts/$TWILIO_ACCOUNT_SID/IncomingPhoneNumbers.json" \
-  -u "$TWILIO_ACCOUNT_SID:$TWILIO_AUTH_TOKEN" \
-  --data-urlencode "PhoneNumber=+18005551234" \
-  | python3 -m json.tool
+# Authorized rep of the LLC (Twilio requires a real person)
+TWILIO_TFV_BUSINESS_CONTACT_FIRST_NAME=Authorized
+TWILIO_TFV_BUSINESS_CONTACT_LAST_NAME=Representative
+
+# MUST be role-based — not @gmail/@outlook/etc., not containing first/last name
+TWILIO_TFV_BUSINESS_CONTACT_EMAIL=compliance@uplifterinc.com
+TWILIO_TFV_NOTIFICATION_EMAIL=compliance@uplifterinc.com
+
+# Business phone line (NOT a personal cell)
+TWILIO_TFV_BUSINESS_CONTACT_PHONE=+18005551234
+
+# Public disclosure page that renders the live <SmsConsentCheckbox> component.
+# See "Why a dedicated opt-in URL?" below for the reason this is preferred
+# over submitting the actual signup page. Must be reachable without auth.
+# Localhost and our auth-gated dev subdomain are blocked by the pre-flight.
+TWILIO_TFV_OPTIN_URL_PRIMARY=https://upliftergymnastics.com/sms-opt-in
+# Optional second URL — leave unset unless there's a specific reason
+# TWILIO_TFV_OPTIN_URL_SECONDARY=
 ```
 
-Note the `sid` (starts with `PN`) and `phone_number` from the response.
+See [`scripts/lib/tollfree-fields.ts`](../scripts/lib/tollfree-fields.ts) `validateEnv` for the complete validation behavior.
 
-## Step 2: Add to Messaging Service
+### Provisioning a new number
 
 ```bash
-curl -s -X POST \
-  "https://messaging.twilio.com/v1/Services/$TWILIO_MESSAGING_SERVICE_SID/PhoneNumbers" \
-  -u "$TWILIO_ACCOUNT_SID:$TWILIO_AUTH_TOKEN" \
-  --data-urlencode "PhoneNumberSid=PNxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
-  | python3 -m json.tool
+# Dry-run first — prints the exact payload Twilio would receive, no API calls
+DRY_RUN=1 pnpm dlx tsx scripts/provision-tollfree-number.ts
+
+# Real run — picks the first available toll-free number
+pnpm dlx tsx scripts/provision-tollfree-number.ts
+
+# Real run with a specific number
+pnpm dlx tsx scripts/provision-tollfree-number.ts --number +18881234567
 ```
 
-## Step 3: Submit Toll-Free Verification
+After a successful run:
 
-This is the critical step. The submission must include proper opt-in consent information or it will be rejected (error 30513).
+1. Add the new E.164 number to `SMS_PHONE_POOL` in the target environment (comma-separated).
+2. Redeploy (or wait for the hourly pool refresh in `src/lib/sms-number-pool.ts`).
+3. The pool manager holds back numbers until Twilio flips status to `TWILIO_APPROVED`, so there is no risk of routing traffic through an unverified number.
+4. Monitor Twilio Console → Trust Hub → Toll-Free Verifications. Approval typically takes 2–5 business days.
+
+### Resubmitting rejected numbers
+
+When Twilio rejects a TFV, you have **7 days** to resubmit in the priority queue before it falls back to the normal queue.
 
 ```bash
-# Copy business details from an existing approved verification first:
-# curl -s -u "$TWILIO_ACCOUNT_SID:$TWILIO_AUTH_TOKEN" \
-#   "https://messaging.twilio.com/v1/Tollfree/Verifications?PageSize=1&Status=TWILIO_APPROVED" \
-#   | python3 -m json.tool
+# Dry-run
+DRY_RUN=1 pnpm dlx tsx scripts/resubmit-tollfree-verifications.ts
 
-curl -s -X POST \
-  "https://messaging.twilio.com/v1/Tollfree/Verifications" \
-  -u "$TWILIO_ACCOUNT_SID:$TWILIO_AUTH_TOKEN" \
-  --data-urlencode "TollfreePhoneNumberSid=PNxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
-  --data-urlencode "CustomerProfileSid=$TWILIO_CUSTOMER_PROFILE_SID" \
-  --data-urlencode "BusinessName=Uplifter LLC" \
-  --data-urlencode "BusinessWebsite=https://www.uplifterinc.com/" \
-  --data-urlencode "BusinessStreetAddress=<from existing verification>" \
-  --data-urlencode "BusinessCity=<from existing verification>" \
-  --data-urlencode "BusinessStateProvinceRegion=<from existing verification>" \
-  --data-urlencode "BusinessPostalCode=<from existing verification>" \
-  --data-urlencode "BusinessCountry=US" \
-  --data-urlencode "BusinessContactFirstName=<from existing verification>" \
-  --data-urlencode "BusinessContactLastName=<from existing verification>" \
-  --data-urlencode "BusinessContactEmail=<from existing verification>" \
-  --data-urlencode "BusinessContactPhone=<from existing verification>" \
-  --data-urlencode "NotificationEmail=<from existing verification>" \
-  --data-urlencode "BusinessRegistrationNumber=<EIN from existing verification>" \
-  --data-urlencode "BusinessRegistrationAuthority=EIN" \
-  --data-urlencode "BusinessRegistrationCountry=US" \
-  --data-urlencode "BusinessType=PRIVATE_PROFIT" \
-  --data-urlencode "OptInType=WEB_FORM" \
-  --data-urlencode "UseCaseSummary=Uplifter is a sports club management platform. Organizations send transactional SMS to parents and athletes: registration confirmations, schedule alerts, billing reminders, and coach messages." \
-  --data-urlencode "ProductionMessageSample=Hi Jane, your registration for Summer Soccer Camp has been confirmed. First session is Mon Jun 15 at 9:00 AM. Reply STOP to opt out." \
-  --data-urlencode "AdditionalInformation=Users create an account on our web app and provide their phone number during registration. They must click Send Verification Code and enter the SMS code to verify ownership. Only verified users receive SMS. Users can reply STOP to opt out and START to re-subscribe. All messages are transactional." \
-  --data-urlencode "OptInConfirmationMessage=Your phone number has been verified. You will now receive SMS notifications from your organization. Reply STOP at any time to opt out." \
-  --data-urlencode "HelpMessageSample=Reply STOP to unsubscribe. Reply START to re-subscribe. For help, contact your organization or email support@uplifterinc.com." \
-  --data-urlencode "PrivacyPolicyUrl=https://www.uplifterinc.com/privacy-policy" \
-  --data-urlencode "TermsAndConditionsUrl=https://www.uplifterinc.com/terms" \
-  --data-urlencode "AgeGatedContent=false" \
-  --data-urlencode "OptInKeywords=START" \
-  --data-urlencode "OptInKeywords=YES" \
-  --data-urlencode "OptInKeywords=UNSTOP" \
-  --data-urlencode "OptInImageUrls=https://www.uplifterinc.com/privacy-policy" \
-  --data-urlencode "UseCaseCategories=ACCOUNT_NOTIFICATIONS" \
-  --data-urlencode "UseCaseCategories=CUSTOMER_CARE" \
-  --data-urlencode "MessageVolume=10,000" \
-  | python3 -m json.tool
+# Resubmit all TWILIO_REJECTED verifications at once
+pnpm dlx tsx scripts/resubmit-tollfree-verifications.ts
+
+# Resubmit a single verification by HH SID
+pnpm dlx tsx scripts/resubmit-tollfree-verifications.ts --sid HHxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-The response will include a `sid` (starts with `HH`) and `status` of `PENDING_REVIEW`.
-
-## Step 4: Add to SMS_PHONE_POOL
-
-Add the new E.164 number to the `SMS_PHONE_POOL` environment variable on the target deployment (comma-separated):
-
-```
-SMS_PHONE_POOL=+1XXXXXXXXXX,+1XXXXXXXXXX,+1YYYYYYYYYY
-```
-
-The number will automatically be picked up by the pool manager. Only numbers with `TWILIO_APPROVED` verification status will be used for sending; unverified numbers are held back until approval.
-
----
-
-## Checking Verification Status
-
-List all toll-free verifications and their statuses:
+### Checking verification status
 
 ```bash
 curl -s -u "$TWILIO_ACCOUNT_SID:$TWILIO_AUTH_TOKEN" \
@@ -141,121 +109,78 @@ for v in data['verifications']:
 
 ---
 
-## Handling Rejections (Error 30513)
+## Why a dedicated opt-in URL?
 
-If a verification is rejected with error 30513 ("Opt-in - Consent for messaging is a requirement for service"), update and resubmit the verification within 7 days to stay in the prioritized resubmission queue.
+Our real guardian signup flow at `<club>.upliftergymnastics.com/signup` is a 3-step wizard: `email → verify code → complete details`. The SMS consent checkbox only renders on step 3, which a Twilio reviewer cannot reach — they can't complete the email verification step without a real mailbox.
 
-### Common rejection causes
+Rather than submit a URL that appears empty on first load (guaranteeing another rejection), we submit a dedicated disclosure page at `/sms-opt-in` that:
 
-- `opt_in_type` set to something other than `WEB_FORM`
-- Missing `AdditionalInformation` describing the consent flow
-- Missing `OptInConfirmationMessage`, `HelpMessageSample`, or `PrivacyPolicyUrl`
-- `OptInImageUrls` not showing the actual opt-in mechanism
+- Renders the live `<SmsConsentCheckbox>` component (the exact same control guardians see at step 3 of signup)
+- Documents the SMS program (message types, frequency, rates, STOP/HELP behavior)
+- Describes where the checkbox appears in the real flow so reviewers have full context
 
-### Resubmit a rejected verification
+The page is implemented in [`src/app/sms-opt-in/page.tsx`](../src/app/sms-opt-in/page.tsx). It renders the live component rather than a screenshot, so the disclosure copy cannot drift from what real users see. If you ever change the checkbox label copy, bump `SMS_CONSENT_VERSION` in [`src/lib/sms-consent.ts`](../src/lib/sms-consent.ts) AND coordinate a fresh TFV submission — the reviewer is looking at this URL for the canonical disclosure.
 
-Use the same fields from Step 3 but as a POST to the verification SID, with an `EditReason`:
+---
+
+## Environments and accounts
+
+Uplifter has separate Twilio accounts for non-prod and prod. Each has its own:
+
+- `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN`
+- `TWILIO_MESSAGING_SERVICE_SID`
+- `TWILIO_CUSTOMER_PROFILE_SID` (per-account Trust Hub profile)
+- Pool of toll-free numbers and their TFV records
+
+**Dev (`upliftergymnastics-dev.com`) is not publicly reachable**, so it must not be used as a `TWILIO_TFV_OPTIN_URL_*`. Dev Twilio numbers still point their opt-in URLs at the publicly reachable non-prod host (`upliftergymnastics.com`), since the UI renders identically across envs and Twilio only needs to load the checkbox, not process a real signup.
+
+---
+
+## Handling rejections
+
+Common Twilio TFV rejection codes for our flow:
+
+| Code  | Meaning                                                                | Fix                                                                                                                      |
+| ----- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| 30475 | Opt-in cannot be combined with other agreements / required for service | Confirm Phase 3 UI is deployed on the OPTIN_URL host (standalone unchecked checkbox below the Terms checkbox). Resubmit. |
+| 30513 | Opt-in not sufficient (legacy reason code)                             | Usually same remediation as 30475 — ensure OPTIN_URL serves a visible unchecked checkbox, not a privacy policy page.     |
+| 30447 | Phone number not provisioned to Twilio                                 | Something went wrong in the purchase step; use the Twilio Console to verify the number exists before resubmitting.       |
+
+Read `rejection_reason` on the HH resource for details:
 
 ```bash
-curl -s -X POST \
+curl -s -u "$TWILIO_ACCOUNT_SID:$TWILIO_AUTH_TOKEN" \
   "https://messaging.twilio.com/v1/Tollfree/Verifications/HHxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
-  -u "$TWILIO_ACCOUNT_SID:$TWILIO_AUTH_TOKEN" \
-  --data-urlencode "OptInType=WEB_FORM" \
-  --data-urlencode "UseCaseSummary=Uplifter is a sports club management platform. Organizations send transactional SMS to parents and athletes: registration confirmations, schedule alerts, billing reminders, and coach messages." \
-  --data-urlencode "ProductionMessageSample=Hi Jane, your registration for Summer Soccer Camp has been confirmed. First session is Mon Jun 15 at 9:00 AM. Reply STOP to opt out." \
-  --data-urlencode "AdditionalInformation=Users create an account on our web app and provide their phone number during registration. They must click Send Verification Code and enter the SMS code to verify ownership. Only verified users receive SMS. Users can reply STOP to opt out and START to re-subscribe. All messages are transactional." \
-  --data-urlencode "OptInConfirmationMessage=Your phone number has been verified. You will now receive SMS notifications from your organization. Reply STOP at any time to opt out." \
-  --data-urlencode "HelpMessageSample=Reply STOP to unsubscribe. Reply START to re-subscribe. For help, contact your organization or email support@uplifterinc.com." \
-  --data-urlencode "PrivacyPolicyUrl=https://www.uplifterinc.com/privacy-policy" \
-  --data-urlencode "TermsAndConditionsUrl=https://www.uplifterinc.com/terms" \
-  --data-urlencode "AgeGatedContent=false" \
-  --data-urlencode "OptInKeywords=START" \
-  --data-urlencode "OptInKeywords=YES" \
-  --data-urlencode "OptInKeywords=UNSTOP" \
-  --data-urlencode "OptInImageUrls=https://www.uplifterinc.com/privacy-policy" \
-  --data-urlencode "UseCaseCategories=ACCOUNT_NOTIFICATIONS" \
-  --data-urlencode "UseCaseCategories=CUSTOMER_CARE" \
-  --data-urlencode "EditReason=Corrected opt-in type and added consent details" \
   | python3 -m json.tool
 ```
 
-A successful update changes the status to `PENDING_REVIEW` or `IN_REVIEW`.
+---
 
-### Batch resubmit all rejected numbers
+## SMS consent enforcement (downstream)
 
-```bash
-# List rejected verifications and resubmit each one
-curl -s -u "$TWILIO_ACCOUNT_SID:$TWILIO_AUTH_TOKEN" \
-  "https://messaging.twilio.com/v1/Tollfree/Verifications?PageSize=50" \
-  | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-for v in data['verifications']:
-    if v['status'] == 'TWILIO_REJECTED':
-        print(v['sid'])" \
-  | while read SID; do
-    echo "Resubmitting: $SID"
-    curl -s -X POST \
-      "https://messaging.twilio.com/v1/Tollfree/Verifications/$SID" \
-      -u "$TWILIO_ACCOUNT_SID:$TWILIO_AUTH_TOKEN" \
-      --data-urlencode "OptInType=WEB_FORM" \
-      --data-urlencode "UseCaseSummary=Uplifter is a sports club management platform. Organizations send transactional SMS to parents and athletes: registration confirmations, schedule alerts, billing reminders, and coach messages." \
-      --data-urlencode "ProductionMessageSample=Hi Jane, your registration for Summer Soccer Camp has been confirmed. First session is Mon Jun 15 at 9:00 AM. Reply STOP to opt out." \
-      --data-urlencode "AdditionalInformation=Users create an account on our web app and provide their phone number during registration. They must click Send Verification Code and enter the SMS code to verify ownership. Only verified users receive SMS. Users can reply STOP to opt out and START to re-subscribe. All messages are transactional." \
-      --data-urlencode "OptInConfirmationMessage=Your phone number has been verified. You will now receive SMS notifications from your organization. Reply STOP at any time to opt out." \
-      --data-urlencode "HelpMessageSample=Reply STOP to unsubscribe. Reply START to re-subscribe. For help, contact your organization or email support@uplifterinc.com." \
-      --data-urlencode "PrivacyPolicyUrl=https://www.uplifterinc.com/privacy-policy" \
-      --data-urlencode "TermsAndConditionsUrl=https://www.uplifterinc.com/terms" \
-      --data-urlencode "AgeGatedContent=false" \
-      --data-urlencode "OptInKeywords=START" \
-      --data-urlencode "OptInKeywords=YES" \
-      --data-urlencode "OptInKeywords=UNSTOP" \
-      --data-urlencode "OptInImageUrls=https://www.uplifterinc.com/privacy-policy" \
-      --data-urlencode "UseCaseCategories=ACCOUNT_NOTIFICATIONS" \
-      --data-urlencode "UseCaseCategories=CUSTOMER_CARE" \
-      --data-urlencode "EditReason=Corrected opt-in type and added consent details" \
-      | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'  {d.get(\"tollfree_phone_number\",\"?\")} -> {d.get(\"status\",\"ERROR\")}')"
-  done
-```
+Outbound SMS is gated on `User.smsConsentAt` — see `src/lib/sms-service.ts`. The `AdditionalInformation` field of our TFV submission describes this gate; if it ever stops being true, resubmissions will be rejected with 30475. See the plan at `~/.claude/plans/streamed-dancing-popcorn.md` for the full phase breakdown.
 
 ---
 
-## Verification Field Reference
+## Relevant code
 
-These are the fields that have been tested and approved by Twilio for Uplifter:
-
-| Field                           | Value                                               |
-| ------------------------------- | --------------------------------------------------- |
-| `OptInType`                     | `WEB_FORM`                                          |
-| `CustomerProfileSid`            | From Twilio Console (Trust Hub > Customer Profiles) |
-| `BusinessName`                  | `Uplifter LLC`                                      |
-| `BusinessType`                  | `PRIVATE_PROFIT`                                    |
-| `BusinessRegistrationAuthority` | `EIN`                                               |
-| `BusinessRegistrationNumber`    | From existing approved verification                 |
-| `UseCaseCategories`             | `ACCOUNT_NOTIFICATIONS`, `CUSTOMER_CARE`            |
-| `MessageVolume`                 | `10,000`                                            |
-| `AgeGatedContent`               | `false`                                             |
-| `OptInKeywords`                 | `START`, `YES`, `UNSTOP`                            |
-
-Do **not** use `MOBILE_QR_CODE` for `OptInType` -- this was the cause of the original 30513 rejections.
+| What                              | Where                                                                                         |
+| --------------------------------- | --------------------------------------------------------------------------------------------- |
+| Canonical TFV fields + validation | [`scripts/lib/tollfree-fields.ts`](../scripts/lib/tollfree-fields.ts)                         |
+| Provisioning script               | [`scripts/provision-tollfree-number.ts`](../scripts/provision-tollfree-number.ts)             |
+| Resubmission script               | [`scripts/resubmit-tollfree-verifications.ts`](../scripts/resubmit-tollfree-verifications.ts) |
+| Pool manager                      | [`src/lib/sms-number-pool.ts`](../src/lib/sms-number-pool.ts)                                 |
+| Verified-pool fetcher             | `fetchVerifiedTollFreeNumbers()` in [`src/lib/twilio.ts`](../src/lib/twilio.ts)               |
+| Inbound webhook                   | [`src/app/api/twilio/webhook/route.ts`](../src/app/api/twilio/webhook/route.ts)               |
+| Consent disclosure copy           | [`src/components/sms-consent-copy.ts`](../src/components/sms-consent-copy.ts)                 |
+| Superadmin pool dashboard         | [`src/app/superadmin/usage/page.tsx`](../src/app/superadmin/usage/page.tsx)                   |
 
 ---
 
-## Relevant Code
-
-| What                                 | Where                                       |
-| ------------------------------------ | ------------------------------------------- |
-| Twilio client and verification fetch | `src/lib/twilio.ts`                         |
-| SMS pool manager (env-based)         | `src/lib/sms-number-pool.ts`                |
-| Superadmin pool dashboard            | `src/app/superadmin/usage/page.tsx`         |
-| Pool env var                         | `SMS_PHONE_POOL` in `.env` / `.env.example` |
-| Inbound SMS webhook                  | `src/app/api/twilio/webhook/route.ts`       |
-
----
-
-## Twilio API Docs
+## Twilio API reference
 
 - [Toll-free verification resource](https://www.twilio.com/docs/messaging/api/tollfree-verification-resource)
-- [Error 30513 reference](https://www.twilio.com/docs/api/errors/30513)
+- [Error 30475](https://www.twilio.com/docs/api/errors/30475)
+- [Error 30513](https://www.twilio.com/docs/api/errors/30513)
 - [Available phone numbers](https://www.twilio.com/docs/phone-numbers/api/availablephonenumber-tollfree-resource)
 - [Incoming phone numbers](https://www.twilio.com/docs/phone-numbers/api/incomingphonenumber-resource)
