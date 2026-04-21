@@ -869,6 +869,9 @@ export function ProgramRegistrationFlow({
         if (!isNavigatingBackRef.current) {
           const nextId = getNextStepId("customInfo");
           if (nextId) stepper.navigation.goTo(nextId as any);
+        } else {
+          const prevId = getPreviousStepId("customInfo");
+          if (prevId) stepper.navigation.goTo(prevId as any);
         }
         return;
       }
@@ -879,6 +882,9 @@ export function ProgramRegistrationFlow({
         if (!isNavigatingBackRef.current) {
           const nextId = getNextStepId("customInfo");
           if (nextId) stepper.navigation.goTo(nextId as any);
+        } else {
+          const prevId = getPreviousStepId("customInfo");
+          if (prevId) stepper.navigation.goTo(prevId as any);
         }
         return;
       }
@@ -890,11 +896,16 @@ export function ProgramRegistrationFlow({
       if (responsesRes.ok) {
         const { responses, isCurrent } = await responsesRes.json();
         if (isCurrent && responses.length >= questions.length) {
-          setNeedsCustomInfo(false);
           if (!isNavigatingBackRef.current) {
+            setNeedsCustomInfo(false);
             const nextId = getNextStepId("customInfo");
             if (nextId) stepper.navigation.goTo(nextId as any);
+            return;
           }
+          // Navigating back — show the completed form so user can review/edit
+          setCustomInfoResponses(responses || []);
+          setCustomInfoQuestions(questions);
+          setNeedsCustomInfo(true);
           return;
         }
         setCustomInfoResponses(responses || []);
@@ -908,6 +919,9 @@ export function ProgramRegistrationFlow({
       if (!isNavigatingBackRef.current) {
         const nextId = getNextStepId("customInfo");
         if (nextId) stepper.navigation.goTo(nextId as any);
+      } else {
+        const prevId = getPreviousStepId("customInfo");
+        if (prevId) stepper.navigation.goTo(prevId as any);
       }
     } finally {
       setIsLoadingCustomInfo(false);
@@ -920,6 +934,7 @@ export function ProgramRegistrationFlow({
     program.id,
     session?.user?.email,
     getNextStepId,
+    getPreviousStepId,
     stepper.navigation,
   ]);
 
@@ -2229,44 +2244,70 @@ export function ProgramRegistrationFlow({
 
               {/* Actions */}
               <div className="flex flex-col gap-2 pt-2">
-                <Button
-                  className="w-full gap-2"
-                  onClick={() => handleAddToCart(true)}
-                  disabled={isNavigatingToCheckout || (!isPerInstance && isAlreadyFullyRegistered)}
-                >
-                  {isNavigatingToCheckout ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <ClipboardList className="h-4 w-4" />
-                  )}
-                  {isNavigatingToCheckout
-                    ? "Going to checkout…"
-                    : isWaitlistMode
-                      ? "Join Waitlist & Checkout"
-                      : "Register & Checkout"}
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full gap-2"
-                  onClick={() => handleAddToCart(false)}
-                  disabled={isNavigatingToCheckout || (!isPerInstance && isAlreadyFullyRegistered)}
-                >
-                  <ShoppingCart className="h-4 w-4" />
-                  {isWaitlistMode
-                    ? "Add to Cart & Continue Browsing"
-                    : "Add to Cart & Continue Browsing"}
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="w-full gap-2"
-                  onClick={() => {
-                    const prevId = getPreviousStepId("review");
-                    if (prevId) stepper.navigation.goTo(prevId as any);
-                  }}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Back
-                </Button>
+                {!isPerInstance && isFullProgramInCart && !hasFullEnrollment ? (
+                  <>
+                    <Button className="w-full gap-2" onClick={() => router.push("/checkout")}>
+                      <ClipboardList className="h-4 w-4" />
+                      Go to Checkout
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full gap-2"
+                      onClick={() => {
+                        const prevId = getPreviousStepId("review");
+                        if (prevId) stepper.navigation.goTo(prevId as any);
+                      }}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Back
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      className="w-full gap-2"
+                      onClick={() => handleAddToCart(true)}
+                      disabled={
+                        isNavigatingToCheckout || (!isPerInstance && isAlreadyFullyRegistered)
+                      }
+                    >
+                      {isNavigatingToCheckout ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <ClipboardList className="h-4 w-4" />
+                      )}
+                      {isNavigatingToCheckout
+                        ? "Going to checkout…"
+                        : isWaitlistMode
+                          ? "Join Waitlist & Checkout"
+                          : "Register & Checkout"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2"
+                      onClick={() => handleAddToCart(false)}
+                      disabled={
+                        isNavigatingToCheckout || (!isPerInstance && isAlreadyFullyRegistered)
+                      }
+                    >
+                      <ShoppingCart className="h-4 w-4" />
+                      {isWaitlistMode
+                        ? "Add to Cart & Continue Browsing"
+                        : "Add to Cart & Continue Browsing"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full gap-2"
+                      onClick={() => {
+                        const prevId = getPreviousStepId("review");
+                        if (prevId) stepper.navigation.goTo(prevId as any);
+                      }}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Back
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </CardContent>
