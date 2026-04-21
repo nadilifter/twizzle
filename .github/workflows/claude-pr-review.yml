@@ -1,0 +1,71 @@
+name: Claude PR Review
+
+on:
+  pull_request:
+    branches: [dev]
+    types: [opened, synchronize]
+
+concurrency:
+  group: claude-pr-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: Claude Code Review
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for merge-from-base commit
+        id: merge-check
+        env:
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          BASE: ${{ github.event.pull_request.base.ref }}
+        run: |
+          # Use the actual PR head SHA, not HEAD (which is a synthetic merge commit
+          # created by GitHub Actions and always has the base branch as a parent).
+          PARENT_COUNT=$(git log -1 --pretty=%P "$PR_HEAD" | wc -w | tr -d ' ')
+
+          if [ "$PARENT_COUNT" -gt "1" ]; then
+            BASE_TIP=$(git ls-remote origin "refs/heads/${BASE}" | awk '{print $1}')
+            if [ -n "$BASE_TIP" ] && git log -1 --pretty=%P "$PR_HEAD" | grep -q "$BASE_TIP"; then
+              echo "skip=true" >> $GITHUB_OUTPUT
+              echo "Skipping: merge from base branch ${BASE} (${BASE_TIP})"
+            else
+              echo "skip=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Node.js
+        if: steps.merge-check.outputs.skip != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        if: steps.merge-check.outputs.skip != 'true'
+        working-directory: .github/scripts
+        run: npm install
+
+      - name: Run Claude PR Review
+        if: steps.merge-check.outputs.skip != 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL || 'claude-opus-4-6' }}
+          CLAUDE_MAX_TOKENS: ${{ vars.CLAUDE_MAX_TOKENS || '128000' }}
+        run: node .github/scripts/claude-pr-review.js
