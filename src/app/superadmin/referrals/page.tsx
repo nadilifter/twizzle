@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { db } from "@/lib/db";
+import { computeReferralLedgerMismatches } from "@/lib/referral";
 import Link from "next/link";
 import {
   Table,
@@ -19,9 +20,19 @@ export default async function SuperadminReferralsPage() {
     include: {
       referrerOrganization: { select: { id: true, name: true, slug: true } },
       referredOrganization: { select: { id: true, name: true, slug: true } },
+      applications: {
+        include: {
+          subscriptionInvoice: {
+            select: { id: true, reference: true, periodStart: true, paidAt: true },
+          },
+        },
+        orderBy: { appliedAt: "desc" },
+      },
     },
     orderBy: { createdAt: "desc" },
   });
+
+  const integrityMismatches = computeReferralLedgerMismatches(referrals);
 
   const totalReferrals = referrals.length;
   const totalCreditMonths = referrals.reduce((sum, r) => sum + r.creditMonths, 0);
@@ -70,6 +81,38 @@ export default async function SuperadminReferralsPage() {
           Track referral activity and billing credits across all organizations
         </p>
       </div>
+
+      {integrityMismatches.length > 0 && (
+        <Card className="border-destructive">
+          <CardHeader>
+            <CardTitle className="text-destructive">Ledger integrity mismatch</CardTitle>
+            <CardDescription>
+              The counter on these referrals disagrees with the sum of recorded credit applications.
+              Rows with no applications may be pre-ledger (applied before this feature shipped).
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Referral ID</TableHead>
+                  <TableHead className="text-right">creditMonthsUsed</TableHead>
+                  <TableHead className="text-right">Σ monthsApplied</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {integrityMismatches.map((m) => (
+                  <TableRow key={m.referralId}>
+                    <TableCell className="font-mono text-xs">{m.referralId}</TableCell>
+                    <TableCell className="text-right">{m.counter}</TableCell>
+                    <TableCell className="text-right">{m.summed}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -179,6 +222,7 @@ export default async function SuperadminReferralsPage() {
                   <TableHead>Date</TableHead>
                   <TableHead className="text-right">Credit</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Applied to</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -217,6 +261,31 @@ export default async function SuperadminReferralsPage() {
                           <Badge variant="default">Active</Badge>
                         ) : (
                           <Badge variant="secondary">Used</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {referral.applications.length === 0 ? (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        ) : (
+                          <ul className="flex flex-col gap-0.5">
+                            {referral.applications.map((app) => (
+                              <li key={app.id} className="text-xs">
+                                <span className="font-mono">
+                                  {app.subscriptionInvoice.reference}
+                                </span>
+                                <span className="text-muted-foreground">
+                                  {" "}
+                                  ·{" "}
+                                  {app.appliedAt.toLocaleDateString("en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                  })}
+                                  {app.monthsApplied !== 1 && ` · ${app.monthsApplied}mo`}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
                         )}
                       </TableCell>
                     </TableRow>

@@ -39,7 +39,7 @@ A domain-grouped ERD of the Uplifter platform's PostgreSQL schema (Prisma, ~150 
 17. [Platform Subscription (SaaS Billing)](#17-platform-subscription)
 18. [Accounting Integrations (QBO / Xero)](#18-accounting-integrations)
 19. [Feedback & Feature Requests](#19-feedback--feature-requests)
-20. [Media, Registration Files, Categories, Holidays, Referrals, Cache](#20-misc--cross-cutting)
+20. [Media, Registration Files, Categories, Holidays, Referrals (+ credit ledger), Cache](#20-misc--cross-cutting)
 
 ---
 
@@ -2501,20 +2501,33 @@ erDiagram
 
 ### Referral Program
 
-Orgs earn free platform-subscription months by referring other orgs. `Organization.referralCode` is the shareable unique code; `Referral` is the credit ledger — each row is one referral relationship with a running balance of how many credit months have been applied against the referrer's `SubscriptionInvoice`s.
+Orgs earn free platform-subscription months by referring other orgs. `Organization.referralCode` is the shareable unique code; `Referral` is the credit grant (how many months were awarded and a materialized used-counter); `ReferralCreditApplication` is the per-invoice ledger that records each drawdown.
+
+**Integrity invariant:** for every `Referral`, `SUM(applications.monthsApplied) == creditMonthsUsed`. Enforced by a `SELECT ... FOR UPDATE` row lock + re-read inside the billing transaction (the locked re-read verifies `creditMonthsUsed < creditMonths` and the referrer org still owns the row; otherwise the txn rolls back via `ReferralExhaustedError` and falls back to a full-price invoice) and surfaced by `computeReferralLedgerMismatches` on the superadmin referrals page.
 
 ```mermaid
 erDiagram
     Organization ||--o{ Referral : "ReferralsMade (referrer)"
     Organization ||--o{ Referral : "ReferralsReceived (referred)"
+    Referral ||--o{ ReferralCreditApplication : "drawdowns"
+    SubscriptionInvoice ||--o| ReferralCreditApplication : "paid by credit"
 
     Referral {
         string id PK
         string referrerOrganizationId FK "Org that shared the code"
         string referredOrganizationId FK "Org that signed up via code"
         int creditMonths "Total months awarded (default 1)"
-        int creditMonthsUsed "Months already applied to invoices"
+        int creditMonthsUsed "Materialized counter; = SUM(applications.monthsApplied)"
         datetime createdAt
+    }
+
+    ReferralCreditApplication {
+        string id PK
+        string referralId FK
+        string subscriptionInvoiceId FK UK "One application per invoice"
+        datetime appliedAt
+        int monthsApplied "Default 1 (one invoice = one billing period)"
+        string notes "Source of the application (cron, manual superadmin, etc.)"
     }
 ```
 

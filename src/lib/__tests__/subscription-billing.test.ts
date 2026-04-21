@@ -117,7 +117,7 @@ describe("generateMonthlyInvoices", () => {
     expect(result.skipped).toBe(1);
   });
 
-  it("applies referral credit as a $0 PAID invoice and increments usage", async () => {
+  it("applies referral credit as a $0 PAID invoice, writes a ledger row, and increments the counter", async () => {
     vi.mocked(db.organizationSubscription.findMany).mockResolvedValueOnce([
       {
         id: "sub-1",
@@ -131,19 +131,31 @@ describe("generateMonthlyInvoices", () => {
     ] as never);
 
     vi.mocked(db.subscriptionInvoice.findFirst).mockResolvedValueOnce(null);
-    vi.mocked(db.$queryRaw).mockResolvedValueOnce([
-      {
-        id: "ref-1",
-        creditMonths: 3,
-        creditMonthsUsed: 1,
-        referredOrgName: "Referred Gym",
-      },
-    ]);
+    // First $queryRaw call: eligible-referral SELECT (pre-transaction).
+    // Second $queryRaw call: SELECT FOR UPDATE (inside transaction).
+    vi.mocked(db.$queryRaw)
+      .mockResolvedValueOnce([
+        {
+          id: "ref-1",
+          creditMonths: 3,
+          creditMonthsUsed: 1,
+          referredOrgName: "Referred Gym",
+        },
+      ])
+      .mockResolvedValueOnce([] as never);
     vi.mocked(db.$transaction).mockImplementation(async (fn) => {
       await (fn as CallableFunction)(db);
     });
-    vi.mocked(db.subscriptionInvoice.create).mockResolvedValueOnce({} as never);
+    vi.mocked(db.referral.findUnique).mockResolvedValueOnce({
+      creditMonths: 3,
+      creditMonthsUsed: 1,
+      referrerOrganizationId: "org-1",
+    } as never);
     vi.mocked(db.referral.update).mockResolvedValueOnce({} as never);
+    vi.mocked(db.subscriptionInvoice.create).mockResolvedValueOnce({
+      id: "inv-1",
+    } as never);
+    vi.mocked(db.referralCreditApplication.create).mockResolvedValueOnce({} as never);
     vi.mocked(db.organizationSubscription.update).mockResolvedValueOnce({} as never);
 
     const result = await generateMonthlyInvoices();
@@ -166,6 +178,80 @@ describe("generateMonthlyInvoices", () => {
       expect.objectContaining({
         where: { id: "ref-1" },
         data: { creditMonthsUsed: { increment: 1 } },
+      })
+    );
+    expect(db.referralCreditApplication.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          referralId: "ref-1",
+          subscriptionInvoiceId: "inv-1",
+          monthsApplied: 1,
+        }),
+      })
+    );
+  });
+
+  it("falls back to a full-price PENDING invoice when the referral was drained between SELECT and row lock", async () => {
+    vi.mocked(db.organizationSubscription.findMany).mockResolvedValueOnce([
+      {
+        id: "sub-1",
+        organizationId: "org-1",
+        planId: "plan-1",
+        billingCycle: "MONTHLY",
+        nextBillingDate: new Date(Date.now() - 1000),
+        plan: { monthlyPrice: 49.99, yearlyPrice: 499.99 },
+        organization: { id: "org-1", slug: "acme" },
+      },
+    ] as never);
+
+    vi.mocked(db.subscriptionInvoice.findFirst).mockResolvedValueOnce(null);
+    // Pre-transaction SELECT returns a candidate referral (stale view).
+    // SELECT FOR UPDATE inside the txn returns nothing meaningful (ignored).
+    vi.mocked(db.$queryRaw)
+      .mockResolvedValueOnce([
+        {
+          id: "ref-1",
+          creditMonths: 3,
+          creditMonthsUsed: 2,
+          referredOrgName: "Referred Gym",
+        },
+      ])
+      .mockResolvedValueOnce([] as never);
+
+    // First $transaction: the locked re-read shows the counter is already
+    // at the cap (a concurrent run drained it). We throw
+    // ReferralExhaustedError and the txn rolls back.
+    vi.mocked(db.$transaction).mockImplementationOnce(async (fn) => {
+      await (fn as CallableFunction)(db);
+    });
+    vi.mocked(db.referral.findUnique).mockResolvedValueOnce({
+      creditMonths: 3,
+      creditMonthsUsed: 3,
+      referrerOrganizationId: "org-1",
+    } as never);
+
+    // Second $transaction: the fallback PENDING-invoice array form.
+    vi.mocked(db.$transaction).mockImplementationOnce((ops: Promise<unknown>[]) =>
+      Promise.all(ops)
+    );
+    vi.mocked(db.subscriptionInvoice.create).mockResolvedValueOnce({} as never);
+    vi.mocked(db.organizationSubscription.update).mockResolvedValueOnce({} as never);
+
+    const result = await generateMonthlyInvoices();
+
+    expect(result.generated).toBe(1);
+    expect(result.errors).toHaveLength(0);
+    // Counter must NOT be bumped when the row is already exhausted.
+    expect(db.referral.update).not.toHaveBeenCalled();
+    // Ledger row must NOT be written when the guard trips.
+    expect(db.referralCreditApplication.create).not.toHaveBeenCalled();
+    // Normal PENDING invoice was created as the fallback.
+    expect(db.subscriptionInvoice.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          amount: 49.99,
+          status: "PENDING",
+        }),
       })
     );
   });

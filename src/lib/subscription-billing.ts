@@ -8,6 +8,16 @@ import { Prisma } from "@prisma/client";
 import { GRACE_PERIOD_DAYS } from "@/lib/billing-config";
 import * as Sentry from "@sentry/nextjs";
 
+// Thrown inside the referral-credit $transaction when a concurrent run has
+// drained the referral's remaining credit between our SELECT (outside the
+// txn) and the guarded decrement. Caught to fall back to a full-price invoice.
+class ReferralExhaustedError extends Error {
+  constructor() {
+    super("referral-exhausted");
+    this.name = "ReferralExhaustedError";
+  }
+}
+
 /**
  * Build a noon-UTC Date for a given year/month/day.
  * Avoids day-off-by-one bugs in western timezones.
@@ -204,41 +214,102 @@ export async function generateDueInvoices(options?: { organizationId?: string })
       `);
 
       if (referralCredit) {
-        await db.$transaction(async (tx) => {
-          await tx.subscriptionInvoice.create({
-            data: {
-              organizationId: sub.organizationId,
-              planId: sub.planId,
-              reference,
-              periodStart,
-              periodEnd,
-              amount: 0,
-              currency: "USD",
-              status: "PAID",
-              paidAt: new Date(),
-              notes: `Referral credit applied (referred: ${referralCredit.referredOrgName})`,
+        try {
+          await db.$transaction(
+            async (tx) => {
+              // Row-lock the Referral before reading/updating its counter so
+              // concurrent billing runs (different period, same org) serialize
+              // through this row. Matches the SELECT-FOR-UPDATE pattern used
+              // for inventory / waitlist counters elsewhere in the codebase.
+              await tx.$queryRaw(
+                Prisma.sql`SELECT id FROM "Referral" WHERE id = ${referralCredit.id} FOR UPDATE`
+              );
+
+              // Re-read current state under the lock. Guards against:
+              //   - a concurrent run that already bumped the counter to the cap
+              //   - a superadmin having decreased creditMonths since our SELECT
+              //   - the referral being reassigned to another referrer org since
+              //     our SELECT (defensive; no code path currently reassigns,
+              //     but the cost of checking is one column in the SELECT)
+              const fresh = await tx.referral.findUnique({
+                where: { id: referralCredit.id },
+                select: {
+                  creditMonths: true,
+                  creditMonthsUsed: true,
+                  referrerOrganizationId: true,
+                },
+              });
+
+              if (
+                !fresh ||
+                fresh.referrerOrganizationId !== sub.organizationId ||
+                fresh.creditMonthsUsed >= fresh.creditMonths
+              ) {
+                throw new ReferralExhaustedError();
+              }
+
+              await tx.referral.update({
+                where: { id: referralCredit.id },
+                data: { creditMonthsUsed: { increment: 1 } },
+              });
+
+              const invoice = await tx.subscriptionInvoice.create({
+                data: {
+                  organizationId: sub.organizationId,
+                  planId: sub.planId,
+                  reference,
+                  periodStart,
+                  periodEnd,
+                  amount: 0,
+                  currency: "USD",
+                  status: "PAID",
+                  paidAt: new Date(),
+                  notes: `Referral credit applied (referred: ${referralCredit.referredOrgName})`,
+                },
+              });
+
+              await tx.referralCreditApplication.create({
+                data: {
+                  referralId: referralCredit.id,
+                  subscriptionInvoiceId: invoice.id,
+                  monthsApplied: 1,
+                  notes: "Auto-applied by subscription-billing cron",
+                },
+              });
+
+              await tx.organizationSubscription.update({
+                where: { id: sub.id },
+                data: { nextBillingDate },
+              });
             },
+            // Default Prisma interactive-txn timeout is 5s. Bump to 15s to
+            // absorb FOR UPDATE lock waits if the cron overlaps with a manual
+            // generateDueInvoices({ organizationId }) call on the same org.
+            { timeout: 15000 }
+          );
+
+          logger.info("Referral credit applied to subscription invoice", {
+            organizationId: sub.organizationId,
+            referralId: referralCredit.id,
+            reference,
           });
 
-          await tx.referral.update({
-            where: { id: referralCredit.id },
-            data: { creditMonthsUsed: { increment: 1 } },
-          });
-
-          await tx.organizationSubscription.update({
-            where: { id: sub.id },
-            data: { nextBillingDate },
-          });
-        });
-
-        logger.info("Referral credit applied to subscription invoice", {
-          organizationId: sub.organizationId,
-          referralId: referralCredit.id,
-          reference,
-        });
-
-        generated++;
-        continue;
+          generated++;
+          continue;
+        } catch (err) {
+          if (err instanceof ReferralExhaustedError) {
+            logger.warn(
+              "Referral credit was exhausted by a concurrent run — falling back to paid invoice",
+              {
+                organizationId: sub.organizationId,
+                referralId: referralCredit.id,
+              }
+            );
+            // Fall through to the normal paid-invoice path below.
+          } else {
+            throw err;
+          }
+        }
       }
 
       await db.$transaction([

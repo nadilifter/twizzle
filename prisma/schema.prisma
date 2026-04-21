@@ -5094,9 +5094,10 @@ model SubscriptionInvoice {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  organization    Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  plan            SubscriptionPlan            @relation(fields: [planId], references: [id])
-  paymentAttempts SubscriptionPaymentAttempt[]
+  organization              Organization                 @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan                      SubscriptionPlan             @relation(fields: [planId], references: [id])
+  paymentAttempts           SubscriptionPaymentAttempt[]
+  referralCreditApplication ReferralCreditApplication?
 
   @@index([organizationId])
   @@index([status])
@@ -5198,11 +5199,34 @@ model Referral {
   creditMonthsUsed       Int      @default(0)
   createdAt              DateTime @default(now())
 
-  referrerOrganization Organization @relation("ReferralsMade", fields: [referrerOrganizationId], references: [id])
-  referredOrganization Organization @relation("ReferralsReceived", fields: [referredOrganizationId], references: [id])
+  referrerOrganization Organization                @relation("ReferralsMade", fields: [referrerOrganizationId], references: [id])
+  referredOrganization Organization                @relation("ReferralsReceived", fields: [referredOrganizationId], references: [id])
+  applications         ReferralCreditApplication[]
 
   @@index([referrerOrganizationId])
   @@index([referredOrganizationId])
+}
+
+// Per-invoice ledger entry recording a referral credit drawdown.
+// creditMonthsUsed on Referral is a materialized counter; SUM(monthsApplied)
+// across a Referral's applications must equal creditMonthsUsed (integrity
+// invariant enforced in the billing transaction via SELECT FOR UPDATE +
+// locked re-read, and checked by a test).
+// Superadmin manual credit adjustments, if added later, must also write a row.
+model ReferralCreditApplication {
+  id                    String   @id @default(cuid())
+  referralId            String
+  subscriptionInvoiceId String   @unique
+  appliedAt             DateTime @default(now())
+  monthsApplied         Int      @default(1)
+  notes                 String?
+
+  // Restrict on Referral so a ledger row cannot be orphaned — deletions must
+  // go through the applications first, preserving audit history.
+  referral            Referral            @relation(fields: [referralId], references: [id], onDelete: Restrict)
+  subscriptionInvoice SubscriptionInvoice @relation(fields: [subscriptionInvoiceId], references: [id], onDelete: Cascade)
+
+  @@index([referralId])
 }
 
 model CacheVersion {
