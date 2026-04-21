@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import { logger } from "@/lib/logger";
 import crypto from "crypto";
 import { extractHmacSignature } from "@/lib/adyen";
@@ -9,7 +10,7 @@ import {
   setSweepStatus,
 } from "@/lib/adyen-platform";
 import { handleVerificationRecovery } from "@/lib/adyen-onboarding-recovery";
-import { linkTransactionsToPayout } from "@/lib/payout-utils";
+import { linkTransactionsToPayout, determinePayoutType } from "@/lib/payout-utils";
 import { deriveOnboardingStatus, summarizeVerification } from "@/lib/adyen-onboarding-status";
 
 // ---------------------------------------------------------------------------
@@ -356,7 +357,20 @@ async function handleTransferEvent(data: any, eventType: string) {
   // detailed handling added in Phase 8
 }
 
-async function handleBankTransfer(transfer: any) {
+interface AdyenBankTransfer {
+  id: string;
+  description?: string;
+  createdAt?: string;
+  balanceAccountId?: string;
+  balanceAccount?: { id?: string };
+  amount?: { value?: number; currency?: string };
+  status?: { statusCode?: string } | string;
+  tracking?: { estimatedArrivalTime?: string };
+  events?: { type?: string; trackingData?: { estimatedArrivalTime?: string } }[];
+  counterparty?: { balanceAccountId?: string; transferInstrumentId?: string };
+}
+
+async function handleBankTransfer(transfer: AdyenBankTransfer) {
   const balanceAccountId =
     transfer?.balanceAccountId ||
     transfer?.balanceAccount?.id ||
@@ -388,12 +402,13 @@ async function handleBankTransfer(transfer: any) {
   const transferId = transfer.id;
   const amount = transfer.amount?.value ? Number(transfer.amount.value) / 100 : 0;
   const currency = transfer.amount?.currency || "USD";
-  const status = transfer.status?.statusCode || transfer.status;
+  const status =
+    typeof transfer.status === "object" ? transfer.status?.statusCode : transfer.status;
+  const transferDate = transfer.createdAt ? new Date(transfer.createdAt) : new Date();
   const sweepDescription = account.sweepId
     ? await getBalanceAccountSweepDescription(balanceAccountId, account.sweepId)
     : null;
-  const payoutType =
-    sweepDescription && transfer.description === sweepDescription ? "SWEEP" : "MANUAL";
+  const payoutType = determinePayoutType(transfer.description, sweepDescription);
 
   const TRANSFER_STATUS_MAP: Record<string, "PAID" | "SCHEDULED" | "FAILED" | "PENDING"> = {
     booked: "PAID",
@@ -421,9 +436,12 @@ async function handleBankTransfer(transfer: any) {
     bankAccount = await getTransferInstrumentLast4(transfer.counterparty.transferInstrumentId);
   }
 
-  const updateData: Record<string, any> = {
-    status: payoutStatus as any,
-    ...(payoutStatus === "PAID" ? { paidAt: new Date() } : {}),
+  const updateData: Prisma.PayoutUpdateInput = {
+    status: payoutStatus,
+    // Always overwrite so webhooks self-correct misclassified records; see determinePayoutType.
+    payoutType,
+    ...(payoutStatus === "PAID" ? { paidAt: transferDate } : {}),
+    ...(payoutStatus === "SCHEDULED" ? { scheduledAt: transferDate } : {}),
     ...(bankAccount ? { bankAccount } : {}),
     ...(estimatedArrivalTime ? { estimatedArrivalTime: new Date(estimatedArrivalTime) } : {}),
   };
@@ -449,11 +467,11 @@ async function handleBankTransfer(transfer: any) {
         fees: 0,
         net: amount,
         currency,
-        status: payoutStatus as any,
-        payoutType: payoutType as any,
+        status: payoutStatus,
+        payoutType,
         bankAccount,
-        ...(payoutStatus === "PAID" ? { paidAt: new Date() } : {}),
-        ...(payoutStatus === "SCHEDULED" ? { scheduledAt: new Date() } : {}),
+        ...(payoutStatus === "PAID" ? { paidAt: transferDate } : {}),
+        ...(payoutStatus === "SCHEDULED" ? { scheduledAt: transferDate } : {}),
         ...(estimatedArrivalTime ? { estimatedArrivalTime: new Date(estimatedArrivalTime) } : {}),
       },
     });

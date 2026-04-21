@@ -249,19 +249,31 @@ export default function PayoutsPage() {
   };
 
   const handleExport = () => {
-    const headers = ["Date", "Batch ID", "Bank Account", "Type", "Status", "Gross", "Fees", "Net"];
-    const rows = payouts.map((po) => [
-      po.paidAt
-        ? format(new Date(po.paidAt), "yyyy-MM-dd")
-        : format(new Date(po.createdAt), "yyyy-MM-dd"),
-      po.reference,
-      po.bankAccount || "",
-      po.payoutType === "SWEEP" ? "Scheduled" : "Manual",
-      po.status,
-      `$${Number(po.amount).toFixed(2)}`,
-      `-$${Number(po.fees).toFixed(2)}`,
-      `$${Number(po.net).toFixed(2)}`,
-    ]);
+    const headers = [
+      "Date",
+      "Time",
+      "Batch ID",
+      "Bank Account",
+      "Type",
+      "Status",
+      "Gross",
+      "Fees",
+      "Net",
+    ];
+    const rows = payouts.map((po) => {
+      const d = new Date(po.paidAt ?? po.createdAt ?? Date.now());
+      return [
+        format(d, "yyyy-MM-dd"),
+        format(d, "HH:mm"),
+        po.reference,
+        po.bankAccount || "",
+        po.payoutType === "SWEEP" ? "Scheduled" : "Manual",
+        po.status,
+        `$${Number(po.amount).toFixed(2)}`,
+        `-$${Number(po.fees).toFixed(2)}`,
+        `$${Number(po.net).toFixed(2)}`,
+      ];
+    });
 
     const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -533,43 +545,51 @@ export default function PayoutsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {payouts.map((po) => (
-                    <TableRow
-                      key={po.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => router.push(`/dashboard/financials/payouts/${po.id}`)}
-                    >
-                      <TableCell>
-                        {po.paidAt
-                          ? format(new Date(po.paidAt), "MMM d, yyyy")
-                          : format(new Date(po.createdAt), "MMM d, yyyy")}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {po.reference}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <LandmarkIcon className="h-3 w-3 text-muted-foreground" />
-                          {po.bankAccount ? `****${po.bankAccount}` : "\u2014"}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={po.payoutType === "SWEEP" ? "secondary" : "outline"}>
-                          {po.payoutType === "SWEEP" ? "Scheduled" : "Manual"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={statusColors[po.status] || "outline"}>{po.status}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">${Number(po.amount).toFixed(2)}</TableCell>
-                      <TableCell className="text-right text-red-600">
-                        -${Number(po.fees).toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right font-bold">
-                        ${Number(po.net).toFixed(2)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {payouts.map((po) => {
+                    const payoutDate = new Date(po.paidAt ?? po.createdAt ?? Date.now());
+                    return (
+                      <TableRow
+                        key={po.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => router.push(`/dashboard/financials/payouts/${po.id}`)}
+                      >
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span>{format(payoutDate, "MMM d, yyyy")}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {format(payoutDate, "h:mm a")}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+                          {po.reference}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <LandmarkIcon className="h-3 w-3 text-muted-foreground" />
+                            {po.bankAccount ? `****${po.bankAccount}` : "\u2014"}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={po.payoutType === "SWEEP" ? "secondary" : "outline"}>
+                            {po.payoutType === "SWEEP" ? "Scheduled" : "Manual"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={statusColors[po.status] || "outline"}>{po.status}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          ${Number(po.amount).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right text-red-600">
+                          -${Number(po.fees).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right font-bold">
+                          ${Number(po.net).toFixed(2)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
 

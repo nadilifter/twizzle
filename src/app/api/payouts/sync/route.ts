@@ -6,7 +6,7 @@ import {
   getTransferInstrumentLast4,
   getBalanceAccountSweepDescription,
 } from "@/lib/adyen-platform";
-import { linkTransactionsToPayout } from "@/lib/payout-utils";
+import { linkTransactionsToPayout, determinePayoutType } from "@/lib/payout-utils";
 import { redis } from "@/lib/redis";
 
 const THROTTLE_KEY = (orgId: string) => `payout-sync:${orgId}`;
@@ -135,8 +135,7 @@ export async function POST(request: NextRequest) {
         bankAccount = await getTransferInstrumentLast4(transferInstrumentIdFromTransfer);
       }
 
-      const payoutType =
-        sweepDescription && transfer.description === sweepDescription ? "SWEEP" : "MANUAL";
+      const payoutType = determinePayoutType(transfer.description, sweepDescription);
 
       const estimatedArrivalTime = transfer?.tracking?.estimatedArrivalTime ?? null;
 
@@ -158,9 +157,11 @@ export async function POST(request: NextRequest) {
         },
         update: {
           status: payoutStatus,
+          // Always overwrite so re-sync self-corrects misclassified records; see determinePayoutType.
+          payoutType,
           ...(bankAccount ? { bankAccount } : {}),
-          ...(payoutType === "SWEEP" ? { payoutType } : {}),
           ...(payoutStatus === "PAID" ? { paidAt: transferDate } : {}),
+          ...(payoutStatus === "SCHEDULED" ? { scheduledAt: transferDate } : {}),
           ...(estimatedArrivalTime ? { estimatedArrivalTime: new Date(estimatedArrivalTime) } : {}),
         },
       });

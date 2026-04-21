@@ -1,6 +1,53 @@
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 
+// Adyen appends a unique execution reference (e.g. "SWPE42CLR2235BR65P8L87243W36VX")
+// to the sweep description when creating the transfer. This regex validates that suffix.
+const ADYEN_SWEEP_REF_RE = /^SWPE\w+$/;
+
+/**
+ * Returns true if `desc` (already uppercased) matches `prefix` either exactly
+ * or as a prefix followed by an Adyen sweep execution reference.
+ */
+function matchesSweepPrefix(desc: string, prefix: string): boolean {
+  if (desc === prefix) return true;
+  if (!desc.startsWith(prefix + " ")) return false;
+  const suffix = desc.slice(prefix.length + 1);
+  return ADYEN_SWEEP_REF_RE.test(suffix);
+}
+
+/**
+ * Classify a transfer as SWEEP or MANUAL.
+ *
+ * When the sweep has a configured description, we match it as a prefix because
+ * Adyen appends a unique execution reference (SWPE...) to that description on
+ * the resulting transfer. The suffix is validated against Adyen's reference
+ * pattern to avoid false positives from short or generic sweep descriptions.
+ *
+ * When no description is configured on the sweep, we fall back to Adyen's
+ * auto-generated "EXT BAL SWEEP" prefix, which is exclusive to external
+ * balance sweep transfers.
+ *
+ * Both strings are uppercased before comparison to guard against inconsistent
+ * casing from Adyen (e.g. "Ext Bal Sweep" vs "EXT BAL SWEEP"). Adyen returns
+ * these strings verbatim from its own stored values, so case variations between
+ * a manual transfer and a sweep description are not expected in practice — the
+ * ADYEN_SWEEP_REF_RE suffix check provides a secondary guard against the
+ * theoretical case where a manual transfer description happens to match a
+ * sweep description modulo case.
+ */
+export function determinePayoutType(
+  transferDescription: string | null | undefined,
+  sweepDescription: string | null | undefined
+): "SWEEP" | "MANUAL" {
+  const desc = (transferDescription ?? "").toUpperCase();
+  const sweep = sweepDescription?.toUpperCase();
+  if (sweep) {
+    return matchesSweepPrefix(desc, sweep) ? "SWEEP" : "MANUAL";
+  }
+  return matchesSweepPrefix(desc, "EXT BAL SWEEP") ? "SWEEP" : "MANUAL";
+}
+
 export async function linkTransactionsToPayout(payoutId: string, organizationId: string) {
   try {
     const payout = await db.payout.findUnique({
