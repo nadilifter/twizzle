@@ -8,6 +8,8 @@ import { Loader2, CheckCircle2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { validatePassword, PASSWORD_PLACEHOLDER, PASSWORD_MIN_LENGTH } from "@/lib/password";
 import { SmsConsentCheckbox } from "@/components/sms-consent-checkbox";
+import { isValidPhoneNumber } from "libphonenumber-js";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 type SignupStep = "email" | "verify" | "details";
 
@@ -37,6 +39,7 @@ export default function MarketingSiteSignupPage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    phone: "",
     password: "",
     confirmPassword: "",
   });
@@ -196,6 +199,14 @@ export default function MarketingSiteSignupPage() {
       setError("Name is required");
       return;
     }
+    if (!formData.phone) {
+      setError("Phone number is required");
+      return;
+    }
+    if (!isValidPhoneNumber(formData.phone)) {
+      setError("Please enter a valid phone number");
+      return;
+    }
     const pwError = validatePassword(formData.password);
     if (pwError) {
       setError(pwError);
@@ -217,7 +228,11 @@ export default function MarketingSiteSignupPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...formData,
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          password: formData.password,
+          confirmPassword: formData.confirmPassword,
           verificationToken,
           acceptedTerms,
           smsConsent,
@@ -494,6 +509,22 @@ export default function MarketingSiteSignupPage() {
               placeholder="Your full name"
               disabled={isSubmitting}
               required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="phone" className="block text-sm font-medium mb-1 text-foreground">
+              Phone Number
+            </label>
+            <PhoneInput
+              id="phone"
+              defaultCountry="US"
+              value={formData.phone}
+              onChange={(value) => {
+                setFormData((prev) => ({ ...prev, phone: value || "" }));
+                if (error) setError(null);
+              }}
+              disabled={isSubmitting}
             />
           </div>
 

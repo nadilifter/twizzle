@@ -54,11 +54,13 @@ function mockHappyPath() {
     name: "Parent",
   } as never);
   vi.mocked(db.organizationMember.create).mockResolvedValueOnce({} as never);
+  vi.mocked(db.userContact.create).mockResolvedValueOnce({} as never);
 }
 
 const VALID_BODY = {
   name: "Parent",
   email: "parent@example.com",
+  phone: "+14155552671",
   password: "StrongPass1!",
   confirmPassword: "StrongPass1!",
   verificationToken: "verified-token",
