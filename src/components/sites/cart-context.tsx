@@ -189,7 +189,14 @@ export function CartProvider({ children, organizationId }: CartProviderProps) {
           return prev;
         }
         const newItems = [...prev];
-        newItems[existingItemIndex].quantity += normalizedItem.quantity;
+        const existing = newItems[existingItemIndex];
+        const cap: number | null = existing.details?.currentInventory ?? null;
+        const newQty = existing.quantity + normalizedItem.quantity;
+        if (cap !== null && newQty > cap) {
+          if (!silent) toast.error(`Only ${cap} available in stock`);
+          return prev;
+        }
+        newItems[existingItemIndex].quantity = newQty;
         if (!silent) toast.success("Item quantity updated in cart");
         return newItems;
       }
@@ -210,7 +217,14 @@ export function CartProvider({ children, organizationId }: CartProviderProps) {
       removeItem(id);
       return;
     }
-    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, quantity } : item)));
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        const cap: number | null = item.details?.currentInventory ?? null;
+        const capped = cap !== null ? Math.min(quantity, cap) : quantity;
+        return { ...item, quantity: capped };
+      })
+    );
   };
 
   const clearCart = useCallback(() => {

@@ -7,6 +7,13 @@ import { sendTemplatedEmail } from "@/lib/email";
 import { processInvoiceRegistrations, buildRegistrationArgs } from "@/lib/invoice-processing";
 import { sendCheckoutSetupEmailIfNeeded } from "@/lib/checkout-user-provisioning";
 
+class InsufficientInventoryError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InsufficientInventoryError";
+  }
+}
+
 /**
  * POST /api/sites/[slug]/checkout/finalize
  *
@@ -176,11 +183,16 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
               });
               if (variant && variant.currentInventory !== null) {
                 const previousQty = variant.currentInventory;
-                const newQty = Math.max(previousQty - li.quantity, 0);
-                await tx.productVariant.update({
-                  where: { id: variant.id },
-                  data: { currentInventory: newQty },
+                const result = await tx.productVariant.updateMany({
+                  where: { id: variant.id, currentInventory: { gte: li.quantity } },
+                  data: { currentInventory: { decrement: li.quantity } },
                 });
+                if (result.count === 0) {
+                  throw new InsufficientInventoryError(
+                    `Only ${previousQty} of "${li.description}" are available — please update your cart and try again.`
+                  );
+                }
+                const newQty = previousQty - li.quantity;
                 await tx.stockMovement.create({
                   data: {
                     productId: li.productId!,
@@ -202,11 +214,16 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
               });
               if (product && product.currentInventory !== null) {
                 const previousQty = product.currentInventory;
-                const newQty = Math.max(previousQty - li.quantity, 0);
-                await tx.product.update({
-                  where: { id: product.id },
-                  data: { currentInventory: newQty },
+                const result = await tx.product.updateMany({
+                  where: { id: product.id, currentInventory: { gte: li.quantity } },
+                  data: { currentInventory: { decrement: li.quantity } },
                 });
+                if (result.count === 0) {
+                  throw new InsufficientInventoryError(
+                    `Only ${previousQty} of "${li.description}" are available — please update your cart and try again.`
+                  );
+                }
+                const newQty = previousQty - li.quantity;
                 await tx.stockMovement.create({
                   data: {
                     productId: product.id,
@@ -297,6 +314,9 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
       postPaymentProcessed: invoice.postPaymentProcessed,
     });
   } catch (error) {
+    if (error instanceof InsufficientInventoryError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
     logger.error("Finalize endpoint error", {
       error: error instanceof Error ? error.message : String(error),
     });

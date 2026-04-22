@@ -302,11 +302,29 @@ async function handleAuthorisation(
             });
             if (variant && variant.currentInventory !== null) {
               const previousQty = variant.currentInventory;
-              const newQty = Math.max(previousQty - li.quantity, 0);
-              await tx.productVariant.update({
-                where: { id: variant.id },
-                data: { currentInventory: newQty },
+              const result = await tx.productVariant.updateMany({
+                where: { id: variant.id, currentInventory: { gte: li.quantity } },
+                data: { currentInventory: { decrement: li.quantity } },
               });
+              const oversold = result.count === 0;
+              const newQty = oversold ? 0 : previousQty - li.quantity;
+              if (oversold) {
+                await tx.productVariant.update({
+                  where: { id: variant.id },
+                  data: { currentInventory: 0 },
+                });
+                Sentry.captureMessage("Inventory oversell detected at settlement", {
+                  level: "fatal",
+                  extra: {
+                    invoiceId: invoice.id,
+                    invoiceReference: invoice.reference,
+                    productVariantId: li.productVariantId,
+                    productId: li.productId,
+                    ordered: li.quantity,
+                    availableAtSettlement: previousQty,
+                  },
+                });
+              }
               await tx.stockMovement.create({
                 data: {
                   productId: li.productId!,
@@ -316,7 +334,9 @@ async function handleAuthorisation(
                   previousQty,
                   newQty,
                   referenceId: invoice.id,
-                  notes: `Online Sale: ${invoice.reference}`,
+                  notes: oversold
+                    ? `OVERSELL: ordered ${li.quantity}, only ${previousQty} available at settlement. Invoice: ${invoice.reference}`
+                    : `Online Sale: ${invoice.reference}`,
                   createdBy: invoice.userId || undefined,
                 },
               });
@@ -328,11 +348,28 @@ async function handleAuthorisation(
             });
             if (product && product.currentInventory !== null) {
               const previousQty = product.currentInventory;
-              const newQty = Math.max(previousQty - li.quantity, 0);
-              await tx.product.update({
-                where: { id: product.id },
-                data: { currentInventory: newQty },
+              const result = await tx.product.updateMany({
+                where: { id: product.id, currentInventory: { gte: li.quantity } },
+                data: { currentInventory: { decrement: li.quantity } },
               });
+              const oversold = result.count === 0;
+              const newQty = oversold ? 0 : previousQty - li.quantity;
+              if (oversold) {
+                await tx.product.update({
+                  where: { id: product.id },
+                  data: { currentInventory: 0 },
+                });
+                Sentry.captureMessage("Inventory oversell detected at settlement", {
+                  level: "fatal",
+                  extra: {
+                    invoiceId: invoice.id,
+                    invoiceReference: invoice.reference,
+                    productId: product.id,
+                    ordered: li.quantity,
+                    availableAtSettlement: previousQty,
+                  },
+                });
+              }
               await tx.stockMovement.create({
                 data: {
                   productId: product.id,
@@ -341,7 +378,9 @@ async function handleAuthorisation(
                   previousQty,
                   newQty,
                   referenceId: invoice.id,
-                  notes: `Online Sale: ${invoice.reference}`,
+                  notes: oversold
+                    ? `OVERSELL: ordered ${li.quantity}, only ${previousQty} available at settlement. Invoice: ${invoice.reference}`
+                    : `Online Sale: ${invoice.reference}`,
                   createdBy: invoice.userId || undefined,
                 },
               });

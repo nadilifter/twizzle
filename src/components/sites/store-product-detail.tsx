@@ -144,6 +144,7 @@ export function StoreProductDetail({ product, primaryColor }: StoreProductDetail
       athleteName: "Customer",
       details: {
         category: product.category,
+        currentInventory: effectiveInventory,
         ...(selectedVariantId && selectedVariant
           ? {
               variantId: selectedVariantId,

@@ -137,6 +137,13 @@ export function CartSheet() {
                                         variant="outline"
                                         size="icon"
                                         className="h-6 w-6"
+                                        disabled={(() => {
+                                          const inventoryCap: number | null =
+                                            item.details?.currentInventory ?? null;
+                                          return (
+                                            inventoryCap !== null && item.quantity >= inventoryCap
+                                          );
+                                        })()}
                                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
                                       >
                                         <Plus className="h-3 w-3" />

@@ -133,6 +133,7 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
       athleteName: "Customer",
       details: {
         category: product.category,
+        currentInventory: inventory,
         ...(variantId && variant
           ? { variantId, variantLabel: variant.label, typeName: product.typeName }
           : {}),
