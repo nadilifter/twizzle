@@ -48,7 +48,7 @@ export function getStockStatus(product: StockableProduct, selectedVariantId?: st
         return { outOfStock: false, badge: null };
       }
       if (variant.currentInventory !== null && variant.currentInventory <= 0) {
-        return { outOfStock: true, badge: { label: "Out of Stock", variant: "destructive" } };
+        return { outOfStock: true, badge: { label: "Sold out", variant: "destructive" } };
       }
       if (variant.currentInventory !== null && variant.currentInventory <= 5) {
         return {
@@ -63,7 +63,7 @@ export function getStockStatus(product: StockableProduct, selectedVariantId?: st
       (v) => v.currentInventory !== null && v.currentInventory <= 0
     );
     if (allOutOfStock) {
-      return { outOfStock: true, badge: { label: "Out of Stock", variant: "destructive" } };
+      return { outOfStock: true, badge: { label: "Sold out", variant: "destructive" } };
     }
 
     const anyTracked = product.variants.some((v) => v.currentInventory !== null);
@@ -84,7 +84,7 @@ export function getStockStatus(product: StockableProduct, selectedVariantId?: st
     return { outOfStock: false, badge: null };
   }
   if (product.currentInventory !== null && product.currentInventory <= 0) {
-    return { outOfStock: true, badge: { label: "Out of Stock", variant: "destructive" } };
+    return { outOfStock: true, badge: { label: "Sold out", variant: "destructive" } };
   }
   if (product.currentInventory !== null && product.currentInventory <= 5) {
     return {

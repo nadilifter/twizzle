@@ -154,7 +154,7 @@ function POSPageContent() {
 
     const inventory = variant ? variant.currentInventory : product.currentInventory;
     if (inventory !== null && inventory <= 0) {
-      toast.error("This product is out of stock");
+      toast.error("This product is sold out");
       return;
     }
 

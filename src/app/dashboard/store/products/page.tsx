@@ -108,7 +108,6 @@ type VariantFormData = {
   imageUrl: string;
   maxInventory: string;
   currentInventory: string;
-  isUnlimited: boolean;
 };
 
 type ProductFormData = {
@@ -134,7 +133,6 @@ const defaultVariant: VariantFormData = {
   imageUrl: "",
   maxInventory: "",
   currentInventory: "",
-  isUnlimited: true,
 };
 
 const defaultFormData: ProductFormData = {
@@ -176,7 +174,9 @@ export default function StorePage() {
   const [isSaving, setIsSaving] = React.useState(false);
   const [restockQuantity, setRestockQuantity] = React.useState<number>(0);
   const [restockType, setRestockType] = React.useState<"add" | "set" | "max">("add");
-  const [restockVariantId, setRestockVariantId] = React.useState<string>("");
+  const [restockVariantStocks, setRestockVariantStocks] = React.useState<Record<string, string>>(
+    {}
+  );
 
   // Fetch products
   const fetchProducts = React.useCallback(async () => {
@@ -235,23 +235,26 @@ export default function StorePage() {
     setIsSaving(true);
     try {
       const variants = formData.hasType
-        ? formData.variants.map((v, i) => ({
-            id: v.id,
-            label: v.label,
-            price: v.price ? parseFloat(v.price) : null,
-            imageUrl: v.imageUrl || null,
-            maxInventory: v.isUnlimited
-              ? null
-              : v.maxInventory.trim() !== ""
-                ? parseInt(v.maxInventory)
-                : null,
-            currentInventory: v.isUnlimited
-              ? null
-              : v.currentInventory.trim() !== ""
-                ? parseInt(v.currentInventory)
-                : null,
-            sortOrder: i,
-          }))
+        ? formData.variants.map((v, i) => {
+            const maxRaw = v.maxInventory.trim();
+            const currentRaw = v.currentInventory.trim();
+            // Both blank → unlimited (null/null). If either is filled,
+            // coerce the blank one to the filled value so we never save a
+            // half-tracked variant.
+            const maxParsed = maxRaw !== "" ? parseInt(maxRaw) : null;
+            const currentParsed = currentRaw !== "" ? parseInt(currentRaw) : null;
+            const maxInventory = maxParsed ?? currentParsed;
+            const currentInventory = currentParsed ?? maxParsed;
+            return {
+              id: v.id,
+              label: v.label,
+              price: v.price ? parseFloat(v.price) : null,
+              imageUrl: v.imageUrl || null,
+              maxInventory,
+              currentInventory,
+              sortOrder: i,
+            };
+          })
         : undefined;
 
       const payload = {
@@ -306,7 +309,7 @@ export default function StorePage() {
     }
   };
 
-  // Handle restock
+  // Handle restock (non-variant product)
   const handleRestock = async () => {
     if (!restockingProduct) return;
 
@@ -318,7 +321,6 @@ export default function StorePage() {
         body: JSON.stringify({
           type: restockType,
           quantity: restockType !== "max" ? restockQuantity : undefined,
-          variantId: restockVariantId || undefined,
         }),
       });
 
@@ -331,10 +333,67 @@ export default function StorePage() {
       setRestockDialogOpen(false);
       setRestockingProduct(null);
       setRestockQuantity(0);
-      setRestockVariantId("");
       fetchProducts();
     } catch (error) {
       console.error("Error restocking:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to restock");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Handle bulk variant restock — set stock per variant from the dialog inputs.
+  const handleBulkVariantRestock = async () => {
+    if (!restockingProduct) return;
+
+    const changes: { variant: ProductVariant; newQty: number }[] = [];
+    for (const variant of restockingProduct.variants) {
+      if (!variant.id) continue;
+      const raw = restockVariantStocks[variant.id]?.trim() ?? "";
+      if (raw === "") continue;
+      const newQty = parseInt(raw, 10);
+      if (Number.isNaN(newQty) || newQty < 0) continue;
+      if (newQty === (variant.currentInventory ?? 0)) continue;
+      changes.push({ variant, newQty });
+    }
+
+    if (changes.length === 0) {
+      toast.info("No stock changes to save");
+      setRestockDialogOpen(false);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const results = await Promise.allSettled(
+        changes.map(({ variant, newQty }) =>
+          fetch(`/api/products/${restockingProduct.id}/inventory`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ type: "set", quantity: newQty, variantId: variant.id }),
+          }).then(async (res) => {
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}));
+              throw new Error(err.error || `Failed to update ${variant.label}`);
+            }
+          })
+        )
+      );
+      const failures = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
+      if (failures.length > 0) {
+        const msg = failures.map((f) => (f.reason as Error).message).join("; ");
+        toast.error(`${failures.length} update${failures.length === 1 ? "" : "s"} failed: ${msg}`);
+      } else {
+        const label = restockingProduct.typeName?.toLowerCase() || "variant";
+        toast.success(
+          `Updated stock for ${changes.length} ${label}${changes.length === 1 ? "" : "s"}`
+        );
+        setRestockDialogOpen(false);
+        setRestockingProduct(null);
+      }
+      fetchProducts();
+    } catch (error) {
+      console.error("Error restocking variants:", error);
       toast.error(error instanceof Error ? error.message : "Failed to restock");
     } finally {
       setIsSaving(false);
@@ -384,7 +443,6 @@ export default function StorePage() {
             imageUrl: v.imageUrl || "",
             maxInventory: v.maxInventory !== null ? String(v.maxInventory) : "",
             currentInventory: v.currentInventory !== null ? String(v.currentInventory) : "",
-            isUnlimited: v.maxInventory === null && v.currentInventory === null,
           }))
         : [],
     });
@@ -396,42 +454,20 @@ export default function StorePage() {
     setRestockingProduct(product);
     setRestockQuantity(0);
     setRestockType("add");
-    const hasTrackedVariants = product.variants.some((v) => v.maxInventory !== null);
-    setRestockVariantId(
-      hasTrackedVariants ? product.variants.find((v) => v.maxInventory !== null)?.id || "" : ""
-    );
+    const stocks: Record<string, string> = {};
+    if (product.typeName && product.variants.length > 0) {
+      for (const v of product.variants) {
+        if (!v.id) continue;
+        if (v.maxInventory === null && v.currentInventory === null) continue;
+        stocks[v.id] = String(v.currentInventory ?? 0);
+      }
+    }
+    setRestockVariantStocks(stocks);
     setRestockDialogOpen(true);
   };
 
-  // Get inventory status
+  // Get inventory status for non-variant products (variant products use getVariantStockLine)
   const getInventoryStatus = (product: Product) => {
-    if (product.typeName && product.variants.length > 0) {
-      const allUnlimited = product.variants.every(
-        (v) => v.maxInventory === null && v.currentInventory === null
-      );
-      if (allUnlimited) {
-        return { label: "Unlimited", variant: "secondary" as const, icon: Infinity };
-      }
-      const totalCurrent = product.variants.reduce((sum, v) => sum + (v.currentInventory ?? 0), 0);
-      const totalMax = product.variants.reduce(
-        (sum, v) => sum + (v.maxInventory ?? v.currentInventory ?? 0),
-        0
-      );
-      const percentage = totalMax > 0 ? (totalCurrent / totalMax) * 100 : 0;
-
-      if (totalCurrent === 0) {
-        return { label: "Out of Stock", variant: "destructive" as const, icon: AlertCircle };
-      }
-      if (percentage <= 20) {
-        return {
-          label: `Low Stock (${totalCurrent})`,
-          variant: "warning" as const,
-          icon: AlertCircle,
-        };
-      }
-      return { label: `${totalCurrent}/${totalMax}`, variant: "default" as const, icon: Package };
-    }
-
     if (product.maxInventory === null && product.currentInventory === null) {
       return { label: "Unlimited", variant: "secondary" as const, icon: Infinity };
     }
@@ -440,12 +476,27 @@ export default function StorePage() {
     const percentage = max > 0 ? (current / max) * 100 : 0;
 
     if (current === 0) {
-      return { label: "Out of Stock", variant: "destructive" as const, icon: AlertCircle };
+      return { label: "Sold out", variant: "destructive" as const, icon: AlertCircle };
     }
     if (percentage <= 20) {
       return { label: `Low Stock (${current})`, variant: "warning" as const, icon: AlertCircle };
     }
     return { label: `${current}/${max}`, variant: "default" as const, icon: Package };
+  };
+
+  // Per-variant stock line for the admin table cell
+  const getVariantStockLine = (
+    variant: ProductVariant
+  ): { label: string; tone: "default" | "muted" | "destructive" } => {
+    if (variant.maxInventory === null && variant.currentInventory === null) {
+      return { label: "Unlimited", tone: "muted" };
+    }
+    const current = variant.currentInventory ?? 0;
+    if (current <= 0) {
+      return { label: "Sold out", tone: "destructive" };
+    }
+    const max = variant.maxInventory ?? current;
+    return { label: `${current}/${max}`, tone: "default" };
   };
 
   const hasTrackedInventory = (product: Product) => {
@@ -563,6 +614,46 @@ export default function StorePage() {
       header: ({ column }) => <DataTableColumnHeader column={column} title="Inventory" />,
       cell: ({ row }) => {
         const product = row.original;
+        const hasVariants = !!product.typeName && product.variants.length > 0;
+        const restockButton = hasTrackedInventory(product) && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 shrink-0"
+            onClick={() => openRestockDialog(product)}
+            title="Restock"
+          >
+            <RefreshCw className="h-3 w-3" />
+          </Button>
+        );
+
+        if (hasVariants) {
+          const sortedVariants = [...product.variants].sort((a, b) => a.sortOrder - b.sortOrder);
+          return (
+            <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-0.5 text-xs">
+                {sortedVariants.map((variant) => {
+                  const { label, tone } = getVariantStockLine(variant);
+                  const toneClass =
+                    tone === "destructive"
+                      ? "text-destructive"
+                      : tone === "muted"
+                        ? "text-muted-foreground"
+                        : "text-foreground";
+                  return (
+                    <div key={variant.id ?? variant.label} className="leading-tight">
+                      <span className="font-medium">{variant.label}</span>
+                      <span className="text-muted-foreground"> - </span>
+                      <span className={toneClass}>{label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              {restockButton}
+            </div>
+          );
+        }
+
         const status = getInventoryStatus(product);
         return (
           <div className="flex items-center gap-2">
@@ -570,17 +661,7 @@ export default function StorePage() {
               {status.variant === "warning" && <AlertCircle className="h-3 w-3 mr-1" />}
               {status.label}
             </Badge>
-            {hasTrackedInventory(product) && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={() => openRestockDialog(product)}
-                title="Restock"
-              >
-                <RefreshCw className="h-3 w-3" />
-              </Button>
-            )}
+            {restockButton}
           </div>
         );
       },
@@ -667,9 +748,8 @@ export default function StorePage() {
   };
 
   const isFiltered = table.getState().columnFilters.length > 0;
-
-  // Get restock variant info
-  const restockVariant = restockingProduct?.variants.find((v) => v.id === restockVariantId);
+  const isRestockingVariantProduct =
+    !!restockingProduct?.typeName && restockingProduct.variants.length > 0;
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
@@ -847,47 +927,31 @@ export default function StorePage() {
                               </Button>
                             )}
                           </div>
-                          <div className="flex items-center gap-3">
-                            <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
-                              <Checkbox
-                                checked={variant.isUnlimited}
-                                onCheckedChange={(checked) =>
-                                  updateVariant(index, {
-                                    isUnlimited: !!checked,
-                                    maxInventory: checked ? "" : variant.maxInventory || "10",
-                                    currentInventory: checked
-                                      ? ""
-                                      : variant.currentInventory || "10",
-                                  })
-                                }
-                              />
-                              Unlimited
-                            </label>
-                            {!variant.isUnlimited && (
-                              <>
-                                <Input
-                                  type="number"
-                                  min="1"
-                                  placeholder="Max"
-                                  value={variant.maxInventory}
-                                  onChange={(e) =>
-                                    updateVariant(index, { maxInventory: e.target.value })
-                                  }
-                                  className="h-7 w-20 text-xs"
-                                />
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  placeholder="Current"
-                                  value={variant.currentInventory}
-                                  onChange={(e) =>
-                                    updateVariant(index, { currentInventory: e.target.value })
-                                  }
-                                  className="h-7 w-20 text-xs"
-                                />
-                              </>
-                            )}
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              min="1"
+                              placeholder="Max (unlimited)"
+                              value={variant.maxInventory}
+                              onChange={(e) =>
+                                updateVariant(index, { maxInventory: e.target.value })
+                              }
+                              className="h-7 flex-1 text-xs"
+                            />
+                            <Input
+                              type="number"
+                              min="0"
+                              placeholder="Current (unlimited)"
+                              value={variant.currentInventory}
+                              onChange={(e) =>
+                                updateVariant(index, { currentInventory: e.target.value })
+                              }
+                              className="h-7 flex-1 text-xs"
+                            />
                           </div>
+                          <p className="text-[10px] text-muted-foreground">
+                            Leave both blank for unlimited inventory.
+                          </p>
                           <ImageUpload
                             label="Variant Image"
                             value={variant.imageUrl || null}
@@ -1006,85 +1070,97 @@ export default function StorePage() {
 
       {/* Restock Dialog */}
       <Dialog open={restockDialogOpen} onOpenChange={setRestockDialogOpen}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>
             <DialogTitle>Restock {restockingProduct?.name}</DialogTitle>
             <DialogDescription>
-              {restockVariant
-                ? `${restockingProduct?.typeName}: ${restockVariant.label} — Stock: ${restockVariant.currentInventory ?? 0} / ${restockVariant.maxInventory ?? "∞"}`
+              {isRestockingVariantProduct
+                ? `Set current stock for each ${restockingProduct?.typeName?.toLowerCase()}.`
                 : `Current stock: ${restockingProduct?.currentInventory ?? 0} / ${restockingProduct?.maxInventory ?? "∞"}`}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {restockingProduct?.typeName && restockingProduct.variants.length > 0 && (
+          {isRestockingVariantProduct ? (
+            <div className="grid gap-3 py-4">
+              {[...restockingProduct.variants]
+                .sort((a, b) => a.sortOrder - b.sortOrder)
+                .map((v) => {
+                  const isTracked = !(v.maxInventory === null && v.currentInventory === null);
+                  return (
+                    <div key={v.id ?? v.label} className="flex items-center gap-3">
+                      <Label className="flex-1 text-sm font-medium leading-none">{v.label}</Label>
+                      {isTracked && v.id ? (
+                        <>
+                          <Input
+                            type="number"
+                            min="0"
+                            max={v.maxInventory ?? undefined}
+                            value={restockVariantStocks[v.id] ?? ""}
+                            onChange={(e) =>
+                              setRestockVariantStocks((prev) => ({
+                                ...prev,
+                                [v.id!]: e.target.value,
+                              }))
+                            }
+                            className="h-8 w-20 text-right text-sm"
+                          />
+                          <span className="w-14 text-xs text-muted-foreground">
+                            / {v.maxInventory ?? "∞"}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">Unlimited</span>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          ) : (
+            <div className="grid gap-4 py-4">
               <div className="space-y-2">
-                <Label>Variant</Label>
+                <Label>Restock Type</Label>
                 <Select
-                  value={restockVariantId}
-                  onValueChange={(value) => {
-                    setRestockVariantId(value);
-                    setRestockQuantity(0);
-                    setRestockType("add");
-                  }}
+                  value={restockType}
+                  onValueChange={(value) => setRestockType(value as "add" | "set" | "max")}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select variant" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {restockingProduct.variants
-                      .filter((v) => v.maxInventory !== null || v.currentInventory !== null)
-                      .map((v) => (
-                        <SelectItem key={v.id} value={v.id!}>
-                          {v.label} ({v.currentInventory ?? 0}/{v.maxInventory ?? "∞"})
-                        </SelectItem>
-                      ))}
+                    <SelectItem value="add">Add to current stock</SelectItem>
+                    <SelectItem value="set">Set exact quantity</SelectItem>
+                    {restockingProduct?.maxInventory && (
+                      <SelectItem value="max">
+                        Restore to max ({restockingProduct.maxInventory})
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
-            )}
 
-            <div className="space-y-2">
-              <Label>Restock Type</Label>
-              <Select
-                value={restockType}
-                onValueChange={(value) => setRestockType(value as "add" | "set" | "max")}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="add">Add to current stock</SelectItem>
-                  <SelectItem value="set">Set exact quantity</SelectItem>
-                  {(restockVariant?.maxInventory ?? restockingProduct?.maxInventory) && (
-                    <SelectItem value="max">
-                      Restore to max (
-                      {restockVariant?.maxInventory ?? restockingProduct?.maxInventory})
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
+              {restockType !== "max" && (
+                <div className="space-y-2">
+                  <Label htmlFor="restockQty">
+                    {restockType === "add" ? "Quantity to Add" : "New Quantity"}
+                  </Label>
+                  <Input
+                    id="restockQty"
+                    type="number"
+                    min="0"
+                    value={restockQuantity}
+                    onChange={(e) => setRestockQuantity(parseInt(e.target.value) || 0)}
+                  />
+                </div>
+              )}
             </div>
-
-            {restockType !== "max" && (
-              <div className="space-y-2">
-                <Label htmlFor="restockQty">
-                  {restockType === "add" ? "Quantity to Add" : "New Quantity"}
-                </Label>
-                <Input
-                  id="restockQty"
-                  type="number"
-                  min="0"
-                  value={restockQuantity}
-                  onChange={(e) => setRestockQuantity(parseInt(e.target.value) || 0)}
-                />
-              </div>
-            )}
-          </div>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setRestockDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleRestock} disabled={isSaving}>
+            <Button
+              onClick={isRestockingVariantProduct ? handleBulkVariantRestock : handleRestock}
+              disabled={isSaving}
+            >
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Update Stock
             </Button>

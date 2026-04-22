@@ -125,7 +125,7 @@ export function StoreProductDetail({ product, primaryColor }: StoreProductDetail
     }
 
     if (isOutOfStock) {
-      toast.error("This product is out of stock");
+      toast.error("This product is sold out");
       return;
     }
 
@@ -326,7 +326,7 @@ export function StoreProductDetail({ product, primaryColor }: StoreProductDetail
                             {variant.label}
                           </span>
                           {variantOutOfStock && (
-                            <span className="ml-2 text-xs text-destructive">Out of stock</span>
+                            <span className="ml-2 text-xs text-destructive">Sold out</span>
                           )}
                           {variantLowStock && (
                             <span className="ml-2 text-xs text-amber-600">
@@ -365,7 +365,7 @@ export function StoreProductDetail({ product, primaryColor }: StoreProductDetail
               {isOutOfStock ? (
                 <Badge variant="destructive" className="gap-1.5">
                   <AlertTriangle className="h-3 w-3" />
-                  Out of Stock
+                  Sold out
                 </Badge>
               ) : isLowStock ? (
                 <Badge

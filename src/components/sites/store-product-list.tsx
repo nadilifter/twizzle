@@ -104,7 +104,7 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
 
     const inventory = getEffectiveInventory(product, variantId);
     if (inventory !== null && inventory <= 0) {
-      toast.error("This product is out of stock");
+      toast.error("This product is sold out");
       return;
     }
 
@@ -326,7 +326,7 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
                               key={variant.id}
                               variant={isSelected ? "default" : "outline"}
                               size="sm"
-                              className={`h-7 text-xs px-2.5 gap-1 ${variantOutOfStock ? "opacity-50 cursor-not-allowed" : ""}`}
+                              className={`h-7 text-xs px-2.5 ${variantOutOfStock ? "opacity-50 cursor-not-allowed" : ""}`}
                               disabled={variantOutOfStock}
                               title={variantOutOfStock ? `${variant.label} is sold out` : undefined}
                               onClick={() =>
@@ -339,11 +339,6 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
                               <span className={variantOutOfStock ? "line-through" : ""}>
                                 {variant.label}
                               </span>
-                              {variantOutOfStock && (
-                                <span className="text-[10px] text-destructive font-normal no-underline">
-                                  (Sold out)
-                                </span>
-                              )}
                             </Button>
                           );
                         })}
