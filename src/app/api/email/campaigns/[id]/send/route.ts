@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
+import { checkFeatureGate } from "@/lib/feature-resolver";
 import {
   executeEmailCampaign,
   checkEmailUsageLimits,
@@ -14,6 +15,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!session?.user?.organizationId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const emailBlocked = await checkFeatureGate(session.user.organizationId, "emailCampaigns");
+    if (emailBlocked) return emailBlocked;
 
     // Check permission
     if (

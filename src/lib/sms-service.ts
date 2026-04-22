@@ -8,6 +8,7 @@ import {
   isTwilioConfigured,
 } from "@/lib/twilio";
 import { getPoolNumberForSend } from "@/lib/sms-number-pool";
+import { isFeatureEnabled } from "@/lib/feature-resolver";
 import type {
   MessageClassification,
   MessageStatus,
@@ -147,12 +148,26 @@ export async function getOrCreateUsageRecord(organizationId: string) {
 
 /**
  * Check if organization can send more SMS messages
+ *
+ * Access is gated by the `sms` feature flag (plan defaults + superadmin overrides).
+ * Plan fields (`smsIncluded`, `smsOverageRate`) only control quota/billing, never access.
  */
 export async function checkUsageLimits(
   organizationId: string,
   messageCount: number = 1
 ): Promise<UsageLimitResult> {
-  // Get organization with subscription plan
+  const enabled = await isFeatureEnabled(organizationId, "sms");
+  if (!enabled) {
+    return {
+      allowed: false,
+      remaining: 0,
+      used: 0,
+      included: 0,
+      overageRate: null,
+      error: "SMS is not enabled for your organization",
+    };
+  }
+
   const org = await db.organization.findUnique({
     where: { id: organizationId },
     include: {
@@ -174,38 +189,26 @@ export async function checkUsageLimits(
   }
 
   const plan = org.subscription?.plan;
+  const included = plan?.smsIncluded ?? 0;
+  const overageRate = plan?.smsOverageRate ? Number(plan.smsOverageRate) : null;
 
-  // If no plan or SMS not included, check if they have overage enabled
-  if (!plan?.smsIncluded) {
-    // Allow if they have overage rate set (pay-per-use)
-    if (plan?.smsOverageRate) {
-      return {
-        allowed: true,
-        remaining: Infinity,
-        used: 0,
-        included: 0,
-        overageRate: Number(plan.smsOverageRate),
-      };
-    }
-
+  // Feature enabled with no included allowance: either pay-per-use (overageRate set)
+  // or comped (overageRate null). Either way the flag is in charge, so allow unlimited.
+  if (included === 0) {
     return {
-      allowed: false,
-      remaining: 0,
+      allowed: true,
+      remaining: Infinity,
       used: 0,
       included: 0,
-      overageRate: null,
-      error: "SMS is not included in your plan",
+      overageRate,
     };
   }
 
-  // Get current usage
+  // Plan has an included allowance — enforce it, with overage spillover if configured.
   const usage = await getOrCreateUsageRecord(organizationId);
   const used = usage.messagesSent;
-  const included = plan.smsIncluded;
   const remaining = Math.max(0, included - used);
-  const overageRate = plan.smsOverageRate ? Number(plan.smsOverageRate) : null;
 
-  // Check if within limits or overage is allowed
   if (used + messageCount <= included) {
     return {
       allowed: true,
@@ -216,7 +219,6 @@ export async function checkUsageLimits(
     };
   }
 
-  // Over limit - check if overage is allowed
   if (overageRate !== null) {
     return {
       allowed: true,
@@ -262,7 +264,20 @@ export async function recordUsage(
     ? Number(org.subscription.plan.smsOverageRate)
     : 0;
 
-  // Calculate overage
+  // Comped/unlimited access (feature flag on, plan has no allowance and no overage rate):
+  // track the send but don't label it as overage.
+  if (included === 0 && overageRate === 0) {
+    await db.smsUsage.update({
+      where: { id: usage.id },
+      data: {
+        messagesSent: { increment: 1 },
+        totalSegments: { increment: segments },
+        totalCost: { increment: cost },
+      },
+    });
+    return;
+  }
+
   const newSent = usage.messagesSent + 1;
   const newOverage = Math.max(0, newSent - included);
   const overageCost = newOverage * overageRate;

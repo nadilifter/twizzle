@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
+import { isFeatureEnabled } from "@/lib/feature-resolver";
 import type {
   EmailClassification,
   EmailStatus,
@@ -154,12 +155,26 @@ export async function getOrCreateEmailUsageRecord(organizationId: string) {
 
 /**
  * Check if organization can send more emails
+ *
+ * Access is gated by the `emailCampaigns` feature flag (plan defaults + superadmin overrides).
+ * Plan fields (`emailIncluded`, `emailOverageRate`) only control quota/billing, never access.
  */
 export async function checkEmailUsageLimits(
   organizationId: string,
   emailCount: number = 1
 ): Promise<EmailUsageLimitResult> {
-  // Get organization with subscription plan
+  const enabled = await isFeatureEnabled(organizationId, "emailCampaigns");
+  if (!enabled) {
+    return {
+      allowed: false,
+      remaining: 0,
+      used: 0,
+      included: 0,
+      overageRate: null,
+      error: "Email campaigns are not enabled for your organization",
+    };
+  }
+
   const org = await db.organization.findUnique({
     where: { id: organizationId },
     include: {
@@ -181,38 +196,26 @@ export async function checkEmailUsageLimits(
   }
 
   const plan = org.subscription?.plan;
+  const included = plan?.emailIncluded ?? 0;
+  const overageRate = plan?.emailOverageRate ? Number(plan.emailOverageRate) : null;
 
-  // If no plan or emails not included, check if they have overage enabled
-  if (!plan?.emailIncluded) {
-    // Allow if they have overage rate set (pay-per-use)
-    if (plan?.emailOverageRate) {
-      return {
-        allowed: true,
-        remaining: Infinity,
-        used: 0,
-        included: 0,
-        overageRate: Number(plan.emailOverageRate),
-      };
-    }
-
+  // Feature enabled with no included allowance: either pay-per-use (overageRate set)
+  // or comped (overageRate null). Either way the flag is in charge, so allow unlimited.
+  if (included === 0) {
     return {
-      allowed: false,
-      remaining: 0,
+      allowed: true,
+      remaining: Infinity,
       used: 0,
       included: 0,
-      overageRate: null,
-      error: "Email campaigns are not included in your plan",
+      overageRate,
     };
   }
 
-  // Get current usage
+  // Plan has an included allowance — enforce it, with overage spillover if configured.
   const usage = await getOrCreateEmailUsageRecord(organizationId);
   const used = usage.emailsSent;
-  const included = plan.emailIncluded;
   const remaining = Math.max(0, included - used);
-  const overageRate = plan.emailOverageRate ? Number(plan.emailOverageRate) : null;
 
-  // Check if within limits or overage is allowed
   if (used + emailCount <= included) {
     return {
       allowed: true,
@@ -223,7 +226,6 @@ export async function checkEmailUsageLimits(
     };
   }
 
-  // Over limit - check if overage is allowed
   if (overageRate !== null) {
     return {
       allowed: true,
@@ -265,7 +267,18 @@ export async function recordEmailUsage(organizationId: string): Promise<void> {
     ? Number(org.subscription.plan.emailOverageRate)
     : 0;
 
-  // Calculate overage
+  // Comped/unlimited access (feature flag on, plan has no allowance and no overage rate):
+  // track the send but don't label it as overage.
+  if (included === 0 && overageRate === 0) {
+    await db.emailUsage.update({
+      where: { id: usage.id, organizationId },
+      data: {
+        emailsSent: { increment: 1 },
+      },
+    });
+    return;
+  }
+
   const newSent = usage.emailsSent + 1;
   const newOverage = Math.max(0, newSent - included);
   const overageCost = newOverage * overageRate;

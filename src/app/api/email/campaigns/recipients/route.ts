@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
+import { checkFeatureGate } from "@/lib/feature-resolver";
 import { z } from "zod";
 import { getExpandedCampaignRecipients } from "@/lib/email-campaign-service";
 import type { EmailTargetType } from "@prisma/client";
@@ -36,6 +37,9 @@ export async function POST(request: NextRequest) {
     if (!session?.user?.organizationId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const emailBlocked = await checkFeatureGate(session.user.organizationId, "emailCampaigns");
+    if (emailBlocked) return emailBlocked;
 
     // Check permission
     if (

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
+import { checkFeatureGate } from "@/lib/feature-resolver";
 import { z } from "zod";
 import { cancelEmailCampaign } from "@/lib/email-campaign-service";
 import { renderCampaignEmail, getOrganizationBranding } from "@/lib/email-template-renderer";
@@ -28,6 +29,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!session?.user?.organizationId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const emailBlocked = await checkFeatureGate(session.user.organizationId, "emailCampaigns");
+    if (emailBlocked) return emailBlocked;
 
     // Check permission
     if (
@@ -111,6 +115,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (!session?.user?.organizationId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const emailBlocked = await checkFeatureGate(session.user.organizationId, "emailCampaigns");
+    if (emailBlocked) return emailBlocked;
 
     // Check permission
     if (
@@ -211,6 +218,9 @@ export async function DELETE(
     if (!session?.user?.organizationId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const emailBlocked = await checkFeatureGate(session.user.organizationId, "emailCampaigns");
+    if (emailBlocked) return emailBlocked;
 
     // Check permission
     if (
