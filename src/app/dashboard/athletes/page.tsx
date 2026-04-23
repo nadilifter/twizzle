@@ -124,7 +124,10 @@ export default function AthletesPage() {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([
     { id: "status", value: ["ACTIVE", "TRIAL", "GRADUATED"] },
   ]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
+    programIds: false,
+    membershipGroupIds: false,
+  });
   const [rowSelection, setRowSelection] = React.useState({});
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
   const [isEditOpen, setIsEditOpen] = React.useState(false);
@@ -302,6 +305,32 @@ export default function AthletesPage() {
         ),
         filterFn: (row, id, value) => {
           return value.includes(row.getValue(id));
+        },
+      },
+      {
+        id: "programIds",
+        accessorFn: (row) => (row.activeProgramList ?? []).map((p) => p.id),
+        enableHiding: false,
+        enableSorting: false,
+        header: () => null,
+        cell: () => null,
+        filterFn: (row, id, value: string[]) => {
+          if (!value?.length) return true;
+          const ids = (row.getValue(id) as string[]) ?? [];
+          return ids.some((programId) => value.includes(programId));
+        },
+      },
+      {
+        id: "membershipGroupIds",
+        accessorFn: (row) => (row.activeMembershipGroupList ?? []).map((g) => g.id),
+        enableHiding: false,
+        enableSorting: false,
+        header: () => null,
+        cell: () => null,
+        filterFn: (row, id, value: string[]) => {
+          if (!value?.length) return true;
+          const ids = (row.getValue(id) as string[]) ?? [];
+          return ids.some((groupId) => value.includes(groupId));
         },
       },
       {
@@ -502,17 +531,39 @@ export default function AthletesPage() {
     () => Array.from(new Set(athletes.map((a) => a.status))).sort(),
     [athletes]
   );
+  const programOptions = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const athlete of athletes) {
+      for (const program of athlete.activeProgramList ?? []) {
+        map.set(program.id, program.name);
+      }
+    }
+    return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+  }, [athletes]);
+  const membershipOptions = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const athlete of athletes) {
+      for (const group of athlete.activeMembershipGroupList ?? []) {
+        map.set(group.id, group.name);
+      }
+    }
+    return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+  }, [athletes]);
 
   // Helper to handle checkbox changes for filters
   const handleFilterChange = (columnId: string, value: string, checked: boolean) => {
     const column = table.getColumn(columnId);
     const filterValue = (column?.getFilterValue() as string[]) || [];
 
-    if (checked) {
-      column?.setFilterValue([...filterValue, value]);
-    } else {
-      column?.setFilterValue(filterValue.filter((v) => v !== value));
-    }
+    const next = checked ? [...filterValue, value] : filterValue.filter((v) => v !== value);
+
+    // Clearing the last checkbox must remove the filter entirely, otherwise
+    // `filterFn`s that do `value.includes(...)` reject every row.
+    column?.setFilterValue(next.length > 0 ? next : undefined);
   };
 
   const isFiltered = table.getState().columnFilters.length > 0;
@@ -761,11 +812,11 @@ export default function AthletesPage() {
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-[200px] p-0" align="end">
+          <PopoverContent className="w-[240px] p-0" align="end">
             <div className="p-4 pb-0">
               <h4 className="font-medium leading-none">Filters</h4>
             </div>
-            <div className="p-4 pt-2 space-y-4">
+            <div className="p-4 pt-2 space-y-4 max-h-[60vh] overflow-y-auto">
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-muted-foreground">Level</h4>
                 <div className="grid gap-2">
@@ -812,6 +863,58 @@ export default function AthletesPage() {
                   ))}
                 </div>
               </div>
+              {programOptions.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">Program</h4>
+                  <div className="grid gap-2">
+                    {programOptions.map((program) => (
+                      <div key={program.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`program-${program.id}`}
+                          checked={(
+                            table.getColumn("programIds")?.getFilterValue() as string[]
+                          )?.includes(program.id)}
+                          onCheckedChange={(checked) =>
+                            handleFilterChange("programIds", program.id, !!checked)
+                          }
+                        />
+                        <label
+                          htmlFor={`program-${program.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          {program.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {membershipsEnabled && membershipOptions.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">Membership</h4>
+                  <div className="grid gap-2">
+                    {membershipOptions.map((group) => (
+                      <div key={group.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`membership-${group.id}`}
+                          checked={(
+                            table.getColumn("membershipGroupIds")?.getFilterValue() as string[]
+                          )?.includes(group.id)}
+                          onCheckedChange={(checked) =>
+                            handleFilterChange("membershipGroupIds", group.id, !!checked)
+                          }
+                        />
+                        <label
+                          htmlFor={`membership-${group.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          {group.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {isFiltered && (
                 <Button
                   variant="ghost"
