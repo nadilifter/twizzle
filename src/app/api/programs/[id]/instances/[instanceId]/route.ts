@@ -90,7 +90,7 @@ export async function GET(
 
     // Lesson plans are linked to the Program (not ProgramInstance) but optionally have a date;
     // return any plans whose date matches this instance's date.
-    const sameDayLessonPlans = await db.lessonPlan.findMany({
+    const lessonPlans = await db.lessonPlan.findMany({
       where: {
         programId,
         organizationId: session.user.organizationId,
@@ -100,7 +100,7 @@ export async function GET(
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ ...instance, lessonPlans: sameDayLessonPlans });
+    return NextResponse.json({ ...instance, lessonPlans });
   } catch (error) {
     console.error("Error fetching instance:", error);
     return NextResponse.json({ error: "Failed to fetch instance" }, { status: 500 });

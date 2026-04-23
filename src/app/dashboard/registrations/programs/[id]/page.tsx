@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { format, isPast } from "date-fns";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -43,7 +43,8 @@ import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
 import { LocationMap } from "@/components/location-map";
-import { RegistrationTimeline, type TimelineItem } from "@/components/registration-timeline";
+import { RegistrationTimeline } from "@/components/registration-timeline";
+import { buildProgramTimelineItems } from "@/lib/program-timeline";
 import { TransactionHistoryCard } from "@/components/transaction-history-card";
 import { LatestRegistrationsCard } from "@/components/latest-registrations-card";
 import { sanitizeHtml } from "@/lib/sanitize";
@@ -162,59 +163,6 @@ function getDisplayPrice(program: ProgramDetail): string {
       ? "/session"
       : "";
   return formatted + suffix;
-}
-
-function buildTimelineItems(program: ProgramDetail): TimelineItem[] {
-  const items: TimelineItem[] = [];
-
-  items.push({
-    title: "Program Created",
-    date: new Date(program.createdAt),
-    time: format(new Date(program.createdAt), "h:mm a"),
-    hollow: false,
-  });
-
-  if (program.registrationStartDate) {
-    const d = new Date(program.registrationStartDate);
-    items.push({
-      title: "Registration Opens",
-      date: d,
-      time: program.registrationStartTime,
-      hollow: !isPast(d),
-    });
-  }
-
-  if (program.registrationEndDate) {
-    const d = new Date(program.registrationEndDate);
-    items.push({
-      title: "Registration Closes",
-      date: d,
-      time: program.registrationEndTime,
-      hollow: !isPast(d),
-    });
-  }
-
-  if (program.startDate) {
-    const d = new Date(program.startDate);
-    items.push({
-      title: "Program Begins",
-      date: d,
-      time: program.startTime,
-      hollow: !isPast(d),
-    });
-  }
-
-  if (program.endDate) {
-    const d = new Date(program.endDate);
-    items.push({
-      title: "Program Ends",
-      date: d,
-      time: null,
-      hollow: !isPast(d),
-    });
-  }
-
-  return items;
 }
 
 function getSessionsPreview(instances: ProgramDetail["instances"]) {
@@ -415,7 +363,7 @@ export default function ProgramProfilePage() {
         ? "bg-muted text-muted-foreground"
         : "bg-yellow-50 text-yellow-700 border-yellow-200";
 
-  const timelineItems = buildTimelineItems(program);
+  const timelineItems = buildProgramTimelineItems(program);
   const { upcoming, recent } = getSessionsPreview(program.instances);
 
   const latestAthletes = [...athletes]
