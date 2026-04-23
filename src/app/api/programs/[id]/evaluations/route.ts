@@ -40,7 +40,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const where = {
-      programId,
+      OR: [{ programId }, { programInstance: { programId } }],
       ...(templateId && { templateId }),
       ...(status && {
         status: status as
@@ -82,6 +82,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             },
           },
           level: true,
+          programInstance: {
+            select: { id: true, date: true, startTime: true, endTime: true },
+          },
           skillRatings: {
             include: {
               skill: true,

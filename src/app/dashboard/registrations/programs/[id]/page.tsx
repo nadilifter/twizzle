@@ -40,6 +40,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
 import { LocationMap } from "@/components/location-map";
 import { RegistrationTimeline, type TimelineItem } from "@/components/registration-timeline";
@@ -50,6 +51,9 @@ import { formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 
 import { AthletesTab } from "./athletes-tab";
+import { AttendanceTab } from "./attendance-tab";
+import { EvaluationsTab } from "./evaluations-tab";
+import { ProgramConfiguration } from "./program-configuration";
 import { SessionsTab } from "./sessions-tab";
 import { TransactionsTab, type ProgramLineItem } from "./transactions-tab";
 
@@ -237,6 +241,7 @@ export default function ProgramProfilePage() {
   const [loading, setLoading] = React.useState(true);
   const [waitlistLoading, setWaitlistLoading] = React.useState(false);
   const [promotingId, setPromotingId] = React.useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [orgMismatch, setOrgMismatch] = React.useState<{
     organizationId: string;
     organizationName: string | null;
@@ -261,62 +266,62 @@ export default function ProgramProfilePage() {
     program?.name
   );
 
+  const fetchProgram = React.useCallback(async () => {
+    try {
+      const response = await fetch(`/api/programs/${programId}`);
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        if (data?.code === "ORG_MISMATCH") {
+          setOrgMismatch({
+            organizationId: data.organizationId,
+            organizationName: data.organizationName,
+          });
+          return;
+        }
+        throw new Error("Failed to fetch program");
+      }
+      const data = await response.json();
+      setProgram(data);
+    } catch {
+      toast.error("Failed to load program");
+    } finally {
+      setLoading(false);
+    }
+  }, [programId]);
+
+  const fetchAthletes = React.useCallback(async () => {
+    try {
+      const response = await fetch(`/api/programs/${programId}/athletes`);
+      if (!response.ok) return;
+      const data = await response.json();
+      setAthletes(data.athletes ?? []);
+    } catch {
+      // Non-critical for overview; athletes tab has its own fetch
+    }
+  }, [programId]);
+
+  const fetchWaitlist = React.useCallback(async () => {
+    setWaitlistLoading(true);
+    try {
+      const response = await fetch(`/api/programs/${programId}/waitlist`);
+      if (response.ok) {
+        const data = await response.json();
+        setWaitlistEntries(data.waitlisted || []);
+      }
+    } catch {
+      // Non-critical
+    } finally {
+      setWaitlistLoading(false);
+    }
+  }, [programId]);
+
   React.useEffect(() => {
-    const fetchProgram = async () => {
-      try {
-        const response = await fetch(`/api/programs/${programId}`);
-        if (!response.ok) {
-          const data = await response.json().catch(() => null);
-          if (data?.code === "ORG_MISMATCH") {
-            setOrgMismatch({
-              organizationId: data.organizationId,
-              organizationName: data.organizationName,
-            });
-            return;
-          }
-          throw new Error("Failed to fetch program");
-        }
-        const data = await response.json();
-        setProgram(data);
-      } catch {
-        toast.error("Failed to load program");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const fetchAthletes = async () => {
-      try {
-        const response = await fetch(`/api/programs/${programId}/athletes`);
-        if (!response.ok) return;
-        const data = await response.json();
-        setAthletes(data.athletes ?? []);
-      } catch {
-        // Non-critical for overview; athletes tab has its own fetch
-      }
-    };
-
-    const fetchWaitlist = async () => {
-      setWaitlistLoading(true);
-      try {
-        const response = await fetch(`/api/programs/${programId}/waitlist`);
-        if (response.ok) {
-          const data = await response.json();
-          setWaitlistEntries(data.waitlisted || []);
-        }
-      } catch {
-        // Non-critical
-      } finally {
-        setWaitlistLoading(false);
-      }
-    };
-
     if (programId) {
       fetchProgram();
       fetchAthletes();
       fetchWaitlist();
     }
-  }, [programId]);
+  }, [programId, fetchProgram, fetchAthletes, fetchWaitlist]);
 
   const promoteFromWaitlist = async (enrollmentId: string) => {
     setPromotingId(enrollmentId);
@@ -328,12 +333,7 @@ export default function ProgramProfilePage() {
       });
       if (!response.ok) throw new Error("Failed to promote");
       toast.success("Athlete promoted from waitlist");
-      // Refresh waitlist
-      const ws = await fetch(`/api/programs/${programId}/waitlist`);
-      if (ws.ok) {
-        const data = await ws.json();
-        setWaitlistEntries(data.waitlisted || []);
-      }
+      await fetchWaitlist();
     } catch {
       toast.error("Failed to promote from waitlist");
     } finally {
@@ -459,13 +459,23 @@ export default function ProgramProfilePage() {
             {recurringBadge}
           </Badge>
         </div>
-        <Button variant="outline" asChild>
-          <Link href={`/dashboard/registrations/programs/${programId}/edit`}>
-            <Settings className="mr-2 h-4 w-4" />
-            Settings
-          </Link>
+        <Button variant="outline" onClick={() => setSettingsOpen(true)}>
+          <Settings className="mr-2 h-4 w-4" />
+          Settings
         </Button>
       </div>
+
+      <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <SheetContent className="sm:max-w-lg p-0">
+          <ProgramConfiguration
+            programId={programId}
+            onClose={() => setSettingsOpen(false)}
+            onUpdated={async () => {
+              await fetchProgram();
+            }}
+          />
+        </SheetContent>
+      </Sheet>
 
       {program.description && (
         <div
@@ -756,25 +766,11 @@ export default function ProgramProfilePage() {
         </TabsContent>
 
         <TabsContent value="attendance">
-          <Card>
-            <CardContent className="py-16 text-center">
-              <BarChart3 className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-              <p className="text-sm text-muted-foreground">
-                Attendance dashboard ships in the next PR.
-              </p>
-            </CardContent>
-          </Card>
+          <AttendanceTab programId={programId} />
         </TabsContent>
 
         <TabsContent value="evaluations">
-          <Card>
-            <CardContent className="py-16 text-center">
-              <ClipboardList className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-              <p className="text-sm text-muted-foreground">
-                Evaluations dashboard ships in the next PR.
-              </p>
-            </CardContent>
-          </Card>
+          <EvaluationsTab programId={programId} />
         </TabsContent>
 
         <TabsContent value="waitlist">

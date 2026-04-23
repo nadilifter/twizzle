@@ -144,6 +144,7 @@ src/app/api/programs/[id]/instances/[instanceId]/evaluations/route.ts
 src/app/api/programs/[id]/instances/[instanceId]/attendance/route.ts
 src/app/api/programs/[id]/athletes/route.ts
 src/app/api/programs/[id]/athletes/[athleteId]/route.ts
+src/app/api/programs/[id]/attendance-summary/route.ts
 src/app/api/programs/[id]/bulk-discounts/route.ts
 src/app/api/programs/[id]/bulk-discounts/[discountId]/route.ts
 src/app/api/programs/[id]/requirements/route.ts
