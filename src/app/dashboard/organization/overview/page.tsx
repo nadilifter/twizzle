@@ -91,7 +91,7 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
   return (
     <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-0 py-2.5">
       <dt className="text-sm text-muted-foreground sm:w-36 sm:shrink-0">{label}</dt>
-      <dd className="text-sm font-medium">{children}</dd>
+      <dd className="min-w-0 flex-1 text-sm font-medium">{children}</dd>
     </div>
   );
 }
@@ -332,9 +332,11 @@ export default function OrganizationOverviewPage() {
             <dl className="space-y-1">
               {orgDetails.email && (
                 <DetailRow label="Email">
-                  <span className="flex items-center gap-2">
-                    <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                    {orgDetails.email}
+                  <span className="flex min-w-0 items-center gap-2">
+                    <Mail className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <span className="truncate" title={orgDetails.email}>
+                      {orgDetails.email}
+                    </span>
                   </span>
                 </DetailRow>
               )}
