@@ -98,8 +98,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const requiredMembershipIds = program.requiredMemberships.map((m) => m.id);
     const requiredWaiverIds = program.waiverRequirements.map((w) => w.waiverId);
     const needLevels = program.hasLevelRestriction;
-    const needMemberships =
-      program.hasMembershipRestriction && requiredMembershipIds.length > 0;
+    const needMemberships = program.hasMembershipRestriction && requiredMembershipIds.length > 0;
     const needWaivers = program.hasWaiverRestriction && requiredWaiverIds.length > 0;
     const needMedical = program.hasMedicalRequirement;
 

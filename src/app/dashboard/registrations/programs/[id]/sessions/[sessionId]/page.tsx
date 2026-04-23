@@ -118,6 +118,11 @@ export default function ProgramSessionDetailPage() {
     data?.program.name
   );
   useBreadcrumbOverride(
+    programId ? `/dashboard/registrations/programs/${programId}/sessions` : undefined,
+    undefined,
+    programId ? `/dashboard/registrations/programs/${programId}?tab=sessions` : undefined
+  );
+  useBreadcrumbOverride(
     data ? `/dashboard/registrations/programs/${programId}/sessions/${sessionId}` : undefined,
     data ? format(new Date(data.date), "MMM d, yyyy") : undefined
   );

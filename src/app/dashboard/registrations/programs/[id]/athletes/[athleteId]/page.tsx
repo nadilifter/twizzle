@@ -166,6 +166,11 @@ export default function ProgramAthleteDetailPage() {
     data?.programName
   );
   useBreadcrumbOverride(
+    programId ? `/dashboard/registrations/programs/${programId}/athletes` : undefined,
+    undefined,
+    programId ? `/dashboard/registrations/programs/${programId}?tab=athletes` : undefined
+  );
+  useBreadcrumbOverride(
     data ? `/dashboard/registrations/programs/${programId}/athletes/${athleteId}` : undefined,
     athleteName
   );

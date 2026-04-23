@@ -43,10 +43,12 @@ export function DynamicBreadcrumb() {
   const breadcrumbItems = segments.reduce<
     { href: string; title: string; isIdPlaceholder: boolean }[]
   >((acc, segment, index) => {
-    const href = `/${segments.slice(0, index + 1).join("/")}`;
+    const defaultHref = `/${segments.slice(0, index + 1).join("/")}`;
+    const override = overrides[defaultHref];
+    const href = override?.href ?? defaultHref;
 
-    if (overrides[href]) {
-      acc.push({ href, title: overrides[href], isIdPlaceholder: false });
+    if (override?.label) {
+      acc.push({ href, title: override.label, isIdPlaceholder: false });
     } else if (looksLikeId(segment)) {
       acc.push({ href, title: "\u2026", isIdPlaceholder: true });
     } else {

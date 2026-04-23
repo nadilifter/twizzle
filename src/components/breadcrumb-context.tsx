@@ -10,11 +10,16 @@ import {
   useState,
 } from "react";
 
-type Overrides = Record<string, string>;
+export interface BreadcrumbOverride {
+  label?: string;
+  href?: string;
+}
+
+type Overrides = Record<string, BreadcrumbOverride>;
 
 interface BreadcrumbOverrideContextValue {
   overrides: Overrides;
-  setOverride: (path: string, label: string) => void;
+  setOverride: (path: string, override: BreadcrumbOverride) => void;
   removeOverride: (path: string) => void;
 }
 
@@ -27,8 +32,14 @@ const BreadcrumbOverrideContext = createContext<BreadcrumbOverrideContextValue>(
 export function BreadcrumbOverrideProvider({ children }: { children: React.ReactNode }) {
   const [overrides, setOverrides] = useState<Overrides>({});
 
-  const setOverride = useCallback((path: string, label: string) => {
-    setOverrides((prev) => (prev[path] === label ? prev : { ...prev, [path]: label }));
+  const setOverride = useCallback((path: string, override: BreadcrumbOverride) => {
+    setOverrides((prev) => {
+      const existing = prev[path];
+      if (existing && existing.label === override.label && existing.href === override.href) {
+        return prev;
+      }
+      return { ...prev, [path]: override };
+    });
   }, []);
 
   const removeOverride = useCallback((path: string) => {
@@ -57,10 +68,15 @@ export function useBreadcrumbOverrides() {
 }
 
 /**
- * Sets a breadcrumb label override for a given path segment.
- * Automatically cleans up on unmount.
+ * Sets a breadcrumb override for a given path segment. Pass `href` to redirect
+ * that breadcrumb to a different URL (e.g. a tabbed parent page) instead of
+ * the auto-generated path.
  */
-export function useBreadcrumbOverride(path: string | undefined, label: string | undefined) {
+export function useBreadcrumbOverride(
+  path: string | undefined,
+  label: string | undefined,
+  href?: string
+) {
   const { setOverride, removeOverride } = useBreadcrumbOverrides();
   const prevPathRef = useRef<string>();
 
@@ -70,12 +86,12 @@ export function useBreadcrumbOverride(path: string | undefined, label: string | 
     }
     prevPathRef.current = path;
 
-    if (path && label) {
-      setOverride(path, label);
+    if (path && (label !== undefined || href !== undefined)) {
+      setOverride(path, { label, href });
     }
 
     return () => {
       if (path) removeOverride(path);
     };
-  }, [path, label, setOverride, removeOverride]);
+  }, [path, label, href, setOverride, removeOverride]);
 }
