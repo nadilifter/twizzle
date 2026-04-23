@@ -787,7 +787,11 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
       toast.error("Please fill in all required fields");
       return;
     }
-    if (formData.phone && !isValidPhoneNumber(formData.phone)) {
+    if (!formData.phone) {
+      toast.error("Phone number is required");
+      return;
+    }
+    if (!isValidPhoneNumber(formData.phone)) {
       toast.error("Please enter a valid phone number");
       return;
     }

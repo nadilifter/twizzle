@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { OrganizationAddressForm } from "@/components/organization-address-form";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -13,7 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   CheckCircle2Icon,
   AlertCircleIcon,
@@ -25,11 +24,13 @@ import {
   RefreshCwIcon,
   ClockIcon,
   XCircleIcon,
-  MapPinIcon,
-  PhoneIcon,
 } from "lucide-react";
-import { toast } from "sonner";
-import { formatPhoneNumberIntl } from "react-phone-number-input";
+import {
+  firstIncompleteStep,
+  OnboardingStepper,
+  type OnboardingStepperOrganization,
+  type OnboardingStepperPlan,
+} from "./onboarding-stepper";
 
 type OnboardingAccount = {
   onboardingStatus: string;
@@ -45,26 +46,18 @@ type OnboardingAccount = {
   transferInstrumentId?: string | null;
 };
 
-type OrganizationDetails = {
-  id: string;
-  name: string;
-  street: string | null;
-  city: string | null;
-  stateProvince: string | null;
-  postalCode: string | null;
-  country: string | null;
-  phone: string | null;
+type OrganizationDetails = OnboardingStepperOrganization & {
   taxRate: string | number | null;
   taxEnabled: boolean;
 };
 
-type PlanDetails = {
-  transactionFee: string | number;
-  perTransactionFee: string | number;
-};
+type PlanDetails = NonNullable<OnboardingStepperPlan>;
 const NON_TERMINAL_STATUSES = ["PENDING_HOSTED", "IN_PROGRESS", "IN_REVIEW", "AWAITING_DATA"];
 
 export default function OnboardingPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const stepParam = searchParams.get("step");
   const [account, setAccount] = useState<OnboardingAccount | null>(null);
   const [organization, setOrganization] = useState<OrganizationDetails | null>(null);
   const [plan, setPlan] = useState<PlanDetails | null>(null);
@@ -73,11 +66,6 @@ export default function OnboardingPage() {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [secondsAgo, setSecondsAgo] = useState<number | null>(null);
-
-  // Gate checkbox state
-  const [legalNameConfirmed, setLegalNameConfirmed] = useState(false);
-  const [feeAcknowledged, setFeeAcknowledged] = useState(false);
-  const [agreementAccepted, setAgreementAccepted] = useState(false);
 
   const fetchStatus = async () => {
     try {
@@ -125,39 +113,40 @@ export default function OnboardingPage() {
     return () => clearInterval(timer);
   }, [lastUpdated, accountStatus]);
 
-  const handleInitiate = async () => {
+  const handleInitiateAndRedirect = async () => {
     setActionLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/organization/adyen-onboarding", {
+      const initRes = await fetch("/api/organization/adyen-onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          legalNameConfirmed,
-          platformAgreementAccepted: agreementAccepted,
-          platformFeeAcknowledged: feeAcknowledged,
+          legalNameConfirmed: true,
+          platformAgreementAccepted: true,
+          platformFeeAcknowledged: true,
         }),
       });
-      const data = await res.json();
-      if (res.ok) {
-        setAccount({
-          onboardingStatus: data.account.onboardingStatus,
-          verificationStatus: null,
-          capabilities: null,
-          hasStore: false,
-          hasSweep: false,
-          payoutSchedule: null,
-          legalEntityId: data.account.legalEntityId,
-          accountHolderId: data.account.accountHolderId,
-          balanceAccountId: data.account.balanceAccountId,
-          verifiedAt: null,
-        });
-      } else {
-        setError(data.error || "Failed to initiate onboarding");
+      const initData = await initRes.json();
+      if (!initRes.ok) {
+        setError(initData.error || "Failed to initiate onboarding");
+        setActionLoading(false);
+        return;
       }
+
+      const linkRes = await fetch("/api/organization/adyen-onboarding/link", {
+        method: "POST",
+      });
+      const linkData = await linkRes.json();
+      if (linkRes.ok && linkData.url) {
+        window.location.href = linkData.url;
+        return;
+      }
+
+      setError(linkData.error || "Failed to generate onboarding link");
+      await fetchStatus();
+      setActionLoading(false);
     } catch {
-      setError("Failed to initiate onboarding");
-    } finally {
+      setError("Failed to begin verification");
       setActionLoading(false);
     }
   };
@@ -252,42 +241,27 @@ export default function OnboardingPage() {
         </Alert>
       )}
 
-      {!account && organization && (
-        <>
-          <OrganizationAddressCard
-            organization={organization}
-            onUpdate={(org) => setOrganization(org)}
-          />
-          <LegalNameConfirmationGate
-            orgName={organization.name}
-            checked={legalNameConfirmed}
-            onChange={setLegalNameConfirmed}
-          />
-          <FeeDisclosureGate plan={plan} checked={feeAcknowledged} onChange={setFeeAcknowledged} />
-          <PlatformAgreementGate checked={agreementAccepted} onChange={setAgreementAccepted} />
-        </>
+      {!account && organization && !stepParam && (
+        <OnboardingLandingCTA
+          organization={organization}
+          onStart={(targetStep) => {
+            const params = new URLSearchParams(searchParams.toString());
+            params.set("step", targetStep);
+            router.replace(`?${params.toString()}`, { scroll: false });
+          }}
+        />
       )}
-
-      {!account &&
-        (() => {
-          const addressComplete = Boolean(
-            organization?.street &&
-            organization?.city &&
-            organization?.stateProvince &&
-            organization?.postalCode &&
-            organization?.country &&
-            organization?.phone
-          );
-          const allGatesPass =
-            addressComplete && legalNameConfirmed && feeAcknowledged && agreementAccepted;
-          return (
-            <NotStartedState
-              onInitiate={handleInitiate}
-              loading={actionLoading}
-              disabled={!allGatesPass}
-            />
-          );
-        })()}
+      {!account && organization && stepParam && (
+        <OnboardingStepper
+          organization={organization}
+          plan={plan}
+          onOrganizationUpdate={(org) =>
+            setOrganization((prev) => ({ ...(prev as OrganizationDetails), ...org }))
+          }
+          onInitiateAndRedirect={handleInitiateAndRedirect}
+          initiateLoading={actionLoading}
+        />
+      )}
       {account?.onboardingStatus === "PENDING_HOSTED" && (
         <PendingHostedState account={account} onGetLink={handleGetLink} loading={actionLoading} />
       )}
@@ -319,143 +293,63 @@ export default function OnboardingPage() {
   );
 }
 
-function OrganizationAddressCard({
+function OnboardingLandingCTA({
   organization,
-  onUpdate,
+  onStart,
 }: {
   organization: OrganizationDetails;
-  onUpdate: (org: OrganizationDetails) => void;
+  onStart: (targetStep: string) => void;
 }) {
-  const [isEditing, setIsEditing] = useState(false);
-
-  const isComplete = Boolean(
-    organization.street &&
-    organization.city &&
-    organization.stateProvince &&
-    organization.postalCode &&
-    organization.country &&
-    organization.phone
-  );
-
-  const address = [
-    organization.street,
-    organization.city,
-    organization.stateProvince,
-    organization.postalCode,
-    organization.country,
-  ]
-    .filter(Boolean)
-    .join(", ");
+  const hasProgress =
+    !!organization.onboardingLegalNameConfirmedAt ||
+    !!organization.onboardingFeeAcknowledgedAt ||
+    !!organization.onboardingAgreementAcceptedAt;
+  // On a fresh start, always land on step 1 so the user explicitly reviews org details.
+  // Only use resume logic when they've already begun checking off later gates.
+  const targetStep = hasProgress ? firstIncompleteStep(organization) : "org-details";
+  const ctaLabel = hasProgress ? "Continue Onboarding" : "Begin Onboarding";
 
   return (
-    <Card>
-      <CardHeader className="relative">
-        <CardTitle>Organization Contact Details</CardTitle>
-        <CardDescription>
-          Your organization&apos;s physical address and phone number. These must be complete before
-          initiating Adyen onboarding.
-        </CardDescription>
-        {!isEditing && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="absolute right-4 top-4"
-            onClick={() => setIsEditing(true)}
-          >
-            Edit
-          </Button>
-        )}
-      </CardHeader>
-      <CardContent>
-        {isEditing ? (
-          <OrganizationAddressForm
-            organization={organization}
-            onSuccess={(updated) => {
-              onUpdate(updated);
-              setIsEditing(false);
-            }}
-            onCancel={() => setIsEditing(false)}
-          />
-        ) : (
-          <div className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="flex items-center gap-4 p-4 border rounded-lg">
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <MapPinIcon className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <h4 className="font-semibold">Address</h4>
-                  {address ? (
-                    <p className="text-sm text-muted-foreground">{address}</p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">Not provided</p>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-4 p-4 border rounded-lg">
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <PhoneIcon className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <h4 className="font-semibold">Phone</h4>
-                  {organization.phone ? (
-                    <p className="text-sm text-muted-foreground">
-                      {formatPhoneNumberIntl(organization.phone) || organization.phone}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">Not provided</p>
-                  )}
-                </div>
-              </div>
-            </div>
-            {!isComplete && <Badge variant="destructive">Missing required fields</Badge>}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function NotStartedState({
-  onInitiate,
-  loading,
-  disabled,
-}: {
-  onInitiate: () => void;
-  loading: boolean;
-  disabled: boolean;
-}) {
-  return (
-    <Card>
+    <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
         <CardTitle>Get Started with Payment Processing</CardTitle>
         <CardDescription>
           To accept payments and receive payouts, you need to verify your business details with our
-          payment provider, Adyen.
+          payment provider, Adyen. We&apos;ll walk you through it in five quick steps.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3">
           {[
             {
-              icon: Building2Icon,
-              title: "Business Details",
-              desc: "Legal name, address, and business type",
+              step: 1,
+              title: "Confirm organization details",
+              desc: "Check your address and phone number.",
             },
             {
-              icon: UserIcon,
-              title: "Identity Verification",
-              desc: "Business owners and representatives",
+              step: 2,
+              title: "Confirm legal name",
+              desc: "Make sure your legal business name is correct.",
             },
             {
-              icon: UniversityIcon,
-              title: "Bank Account",
-              desc: "Where you'll receive your payouts",
+              step: 3,
+              title: "Platform fees",
+              desc: "Review the fees deducted from each payout.",
             },
-          ].map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="flex items-center gap-4 p-4 border rounded-lg">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <Icon className="h-5 w-5 text-primary" />
+            {
+              step: 4,
+              title: "Marketplace agreement",
+              desc: "Accept the Uplifter Marketplace Agreement.",
+            },
+            {
+              step: 5,
+              title: "Review & begin",
+              desc: "Review and get redirected to Adyen to finish verification.",
+            },
+          ].map(({ step, title, desc }) => (
+            <div key={step} className="flex items-center gap-4 p-4 border rounded-lg">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 font-semibold text-primary">
+                {step}
               </div>
               <div>
                 <h4 className="font-semibold">{title}</h4>
@@ -465,16 +359,11 @@ function NotStartedState({
           ))}
         </div>
       </CardContent>
-      <CardFooter className="flex flex-col items-start gap-3">
-        <Button onClick={onInitiate} disabled={loading || disabled}>
-          {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          Begin Verification
+      <CardFooter>
+        <Button onClick={() => onStart(targetStep)}>
+          {ctaLabel}
+          <ExternalLinkIcon className="h-4 w-4 ml-2" />
         </Button>
-        {disabled && (
-          <p className="text-sm text-muted-foreground">
-            Complete all required confirmations above before proceeding.
-          </p>
-        )}
       </CardFooter>
     </Card>
   );
@@ -895,167 +784,6 @@ function HelpCard() {
         <Button variant="link" className="px-0 mt-2">
           Contact Support &rarr;
         </Button>
-      </CardContent>
-    </Card>
-  );
-}
-
-// --- Pre-onboarding gate components ---
-
-function LegalNameConfirmationGate({
-  orgName,
-  checked,
-  onChange,
-}: {
-  orgName: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Confirm Legal Business Name</CardTitle>
-        <CardDescription>
-          The name below will be submitted to Adyen as your registered legal business name. It must
-          match your official business registration exactly.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="rounded-lg border bg-muted/50 px-4 py-3">
-          <p className="text-sm text-muted-foreground">Legal name to be submitted</p>
-          <p className="mt-1 font-semibold">{orgName}</p>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          If this name is incorrect, update it in{" "}
-          <a href="/dashboard/organization/overview" className="underline underline-offset-4">
-            Organization Settings
-          </a>{" "}
-          before proceeding.
-        </p>
-        <div className="flex items-start gap-3">
-          <Checkbox
-            id="legal-name-confirm"
-            checked={checked}
-            onCheckedChange={(val) => onChange(Boolean(val))}
-          />
-          <label htmlFor="legal-name-confirm" className="text-sm leading-snug cursor-pointer">
-            I confirm that <span className="font-medium">{orgName}</span> is our registered legal
-            business name.
-          </label>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function FeeDisclosureGate({
-  plan,
-  checked,
-  onChange,
-}: {
-  plan: PlanDetails | null;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  if (plan && (plan.transactionFee == null || plan.perTransactionFee == null)) {
-    return (
-      <Card>
-        <CardContent className="py-6">
-          <p className="text-sm text-destructive">
-            Unable to display fee information. Please contact support.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const transactionFeePercent = plan ? `${(Number(plan.transactionFee) * 100).toFixed(2)}%` : "—";
-  const perTransactionFlat = plan ? `$${Number(plan.perTransactionFee).toFixed(2)}` : "—";
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Platform Fee Disclosure</CardTitle>
-        <CardDescription>
-          {/* Placeholder — final copy pending product/legal review (USC-206) */}
-          Review the platform fees that apply to your plan before proceeding with verification.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Placeholder body copy — to be replaced with product/legal-approved text (USC-206) */}
-        <p className="text-sm text-muted-foreground">
-          [Fee disclosure copy — pending product/legal review]
-        </p>
-        <div className="rounded-lg border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="px-4 py-2 text-left font-medium">Fee type</th>
-                <th className="px-4 py-2 text-right font-medium">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b">
-                <td className="px-4 py-3">Transaction fee (% of payout)</td>
-                <td className="px-4 py-3 text-right font-mono">{transactionFeePercent}</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3">Per-transaction flat fee</td>
-                <td className="px-4 py-3 text-right font-mono">{perTransactionFlat}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div className="flex items-start gap-3">
-          <Checkbox
-            id="fee-acknowledge"
-            checked={checked}
-            onCheckedChange={(val) => onChange(Boolean(val))}
-          />
-          <label htmlFor="fee-acknowledge" className="text-sm leading-snug cursor-pointer">
-            I understand that the fees shown above will be deducted from each payout.
-          </label>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function PlatformAgreementGate({
-  checked,
-  onChange,
-}: {
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Platform Agreement</CardTitle>
-        <CardDescription>
-          Review and accept the Uplifter Marketplace Agreement before initiating verification.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-start gap-3">
-          <Checkbox
-            id="platform-agreement"
-            checked={checked}
-            onCheckedChange={(val) => onChange(Boolean(val))}
-          />
-          <label htmlFor="platform-agreement" className="text-sm leading-snug cursor-pointer">
-            I agree to the{" "}
-            <a
-              href="#"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline underline-offset-4"
-            >
-              Uplifter Marketplace Agreement
-            </a>
-            .
-          </label>
-        </div>
       </CardContent>
     </Card>
   );

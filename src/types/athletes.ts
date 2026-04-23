@@ -65,6 +65,16 @@ export interface EnrollmentWithProgram {
   program: ProgramSummary;
 }
 
+export interface AthleteProgramRef {
+  id: string;
+  name: string;
+}
+
+export interface AthleteMembershipGroupRef {
+  id: string;
+  name: string;
+}
+
 // Athlete with related data for list views
 export interface AthleteWithRelations extends Athlete {
   guardians: AthleteGuardian[];
@@ -77,6 +87,9 @@ export interface AthleteWithRelations extends Athlete {
   activePrograms: number;
   activeMemberships: number;
   upcomingCompetitions: number;
+  // Filterable lists derived server-side from active enrollments / memberships
+  activeProgramList: AthleteProgramRef[];
+  activeMembershipGroupList: AthleteMembershipGroupRef[];
   // Transformed fields for UI compatibility
   parent?: string;
 }

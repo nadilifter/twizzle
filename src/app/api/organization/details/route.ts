@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { isValidPhoneNumber } from "libphonenumber-js";
 import { geocodeAddress, hasAddressChanged } from "@/lib/geocode";
+import { normalizePhoneNumber } from "@/lib/twilio";
 
 export async function GET() {
   try {
@@ -130,8 +130,16 @@ export async function PATCH(request: Request) {
       taxEnabled,
     } = data;
 
-    if (phone && !isValidPhoneNumber(phone)) {
-      return NextResponse.json({ error: "Please enter a valid phone number" }, { status: 400 });
+    // Normalize phone to canonical E.164 before saving so downstream consumers
+    // (Adyen onboarding, store creation, SMS) see a single clean format. Uses
+    // the same lenient normalizer as the Twilio stack — doesn't reject numbers
+    // libphonenumber considers invalid (e.g. +1-555 reserved prefixes in seed
+    // data).
+    let normalizedPhone: string | undefined;
+    if (phone) {
+      normalizedPhone = normalizePhoneNumber(phone);
+    } else if (phone === "") {
+      normalizedPhone = "";
     }
 
     // Validate 2-letter codes for Adyen compliance
@@ -187,7 +195,7 @@ export async function PATCH(request: Request) {
       data: {
         ...(name !== undefined && { name }),
         ...(email !== undefined && { email }),
-        ...(phone !== undefined && { phone }),
+        ...(phone !== undefined && { phone: normalizedPhone }),
         ...(street !== undefined && { street }),
         ...(city !== undefined && { city }),
         ...(stateProvince !== undefined && { stateProvince }),

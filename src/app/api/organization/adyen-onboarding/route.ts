@@ -136,6 +136,9 @@ export async function GET() {
         phone: true,
         taxRate: true,
         taxEnabled: true,
+        onboardingLegalNameConfirmedAt: true,
+        onboardingFeeAcknowledgedAt: true,
+        onboardingAgreementAcceptedAt: true,
         subscription: {
           select: {
             plan: {

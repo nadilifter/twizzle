@@ -30,6 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { INVOICE_STATUS_STYLES } from "@/lib/invoice-status";
 
 interface CompetitionLineItem {
   id: string;
@@ -51,14 +52,6 @@ interface CompetitionLineItem {
 interface TransactionsTabProps {
   lineItems: CompetitionLineItem[];
 }
-
-const INVOICE_STATUS_STYLES: Record<string, string> = {
-  PAID: "bg-green-50 text-green-700 border-green-200",
-  SENT: "bg-blue-50 text-blue-700 border-blue-200",
-  OVERDUE: "bg-red-50 text-red-700 border-red-200",
-  DRAFT: "bg-muted text-muted-foreground",
-  CANCELLED: "bg-muted text-muted-foreground",
-};
 
 function formatCurrency(price: number | string | null | undefined): string {
   if (price === null || price === undefined) return "$0.00";

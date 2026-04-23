@@ -95,7 +95,16 @@ export async function GET(request: NextRequest) {
           },
           memberships: {
             where: { status: "ACTIVE" },
-            select: { id: true },
+            select: {
+              id: true,
+              instance: {
+                select: {
+                  id: true,
+                  name: true,
+                  group: { select: { id: true, name: true } },
+                },
+              },
+            },
           },
           competitionEntries: {
             where: {
@@ -123,13 +132,35 @@ export async function GET(request: NextRequest) {
       const guardianUser = primaryGuardian?.user ?? null;
       const orgAthlete = athlete.organizationAthletes[0];
 
+      const enrollmentsWithFutureInstances = athlete.enrollments.filter(
+        (e) => e.program.instances.length > 0
+      );
       const programsWithFutureInstances = new Set(
-        athlete.enrollments.filter((e) => e.program.instances.length > 0).map((e) => e.program.id)
+        enrollmentsWithFutureInstances.map((e) => e.program.id)
+      );
+      const activeProgramList = Array.from(
+        new Map(
+          enrollmentsWithFutureInstances.map((e) => [
+            e.program.id,
+            { id: e.program.id, name: e.program.name },
+          ])
+        ).values()
+      );
+
+      const activeMembershipGroupList = Array.from(
+        new Map(
+          athlete.memberships
+            .filter((m) => m.instance?.group)
+            .map((m) => [
+              m.instance.group.id,
+              { id: m.instance.group.id, name: m.instance.group.name },
+            ])
+        ).values()
       );
 
       const uniqueCompetitionIds = new Set(athlete.competitionEntries.map((e) => e.competitionId));
 
-      const { organizationAthletes: _oa, ...rest } = athlete;
+      const { organizationAthletes: _oa, memberships: _m, ...rest } = athlete;
       return {
         ...rest,
         level: orgAthlete?.level ?? "Unassigned",
@@ -137,7 +168,9 @@ export async function GET(request: NextRequest) {
         customId: orgAthlete?.customId ?? null,
         parent: guardianUser?.name ?? "Unknown",
         activePrograms: programsWithFutureInstances.size,
+        activeProgramList,
         activeMemberships: athlete.memberships.length,
+        activeMembershipGroupList,
         upcomingCompetitions: uniqueCompetitionIds.size,
       };
     });
@@ -254,7 +287,9 @@ export async function POST(request: NextRequest) {
       customId: orgAthlete?.customId ?? null,
       parent: guardianUserData?.name ?? "Unknown",
       activePrograms: 0,
+      activeProgramList: [],
       activeMemberships: 0,
+      activeMembershipGroupList: [],
       upcomingCompetitions: 0,
     };
 

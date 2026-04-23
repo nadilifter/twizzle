@@ -5,12 +5,18 @@ import { verifyVerifiedToken } from "@/lib/mfa";
 import { z } from "zod";
 import { passwordSchema } from "@/lib/password";
 import { checkApiRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit";
+import { isValidPhoneNumber } from "libphonenumber-js";
 import { buildSmsConsentGrant } from "@/lib/sms-consent";
+import { splitName } from "@/lib/sync-self-athlete";
 
 const signupSchema = z
   .object({
     name: z.string().min(1, "Name is required"),
     email: z.string().email("Invalid email address"),
+    phone: z
+      .string()
+      .min(1, "Phone number is required")
+      .refine(isValidPhoneNumber, "Please enter a valid phone number"),
     password: passwordSchema,
     confirmPassword: z.string(),
     verificationToken: z.string().min(1, "Email verification is required"),
@@ -118,6 +124,7 @@ export async function POST(
         data: {
           email,
           name: validatedData.name,
+          phone: validatedData.phone,
           passwordHash,
           role: "PARENT",
           status: "ACTIVE",
@@ -126,13 +133,24 @@ export async function POST(
         },
       });
 
-      // Create organization member relationship
       await tx.organizationMember.create({
         data: {
           organizationId,
           userId: newUser.id,
           role: "PARENT",
           status: "ACTIVE",
+        },
+      });
+
+      const { firstName, lastName } = splitName(validatedData.name);
+      await tx.userContact.create({
+        data: {
+          userId: newUser.id,
+          firstName,
+          lastName,
+          email,
+          phone: validatedData.phone,
+          isPrimary: true,
         },
       });
 

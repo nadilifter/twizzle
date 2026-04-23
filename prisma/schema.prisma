@@ -142,6 +142,12 @@ model Organization {
   // Adyen Platform
   adyenPlatformAccount AdyenPlatformAccount?
 
+  // Pre-onboarding stepper progress — persisted so users can resume the flow before
+  // AdyenPlatformAccount exists. Authoritative timestamps are copied to AdyenPlatformAccount on initiate.
+  onboardingLegalNameConfirmedAt DateTime?
+  onboardingFeeAcknowledgedAt    DateTime?
+  onboardingAgreementAcceptedAt  DateTime?
+
   // Program Instances
   programInstances ProgramInstance[]
 

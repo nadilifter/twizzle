@@ -400,6 +400,16 @@ refactor: DEV-95 migrate ledger tables to reusable DataTable components
 chore: LF-7 remove defunct quick link from superadmin sidebar
 ```
 
+## Before Pushing
+
+Before running `git push`, review all files changed on the current branch for:
+
+- **Duplicate code** — logic that appears in multiple places and should be a shared helper
+- **Dead code** — unused variables, functions, or imports
+- **Extraction opportunities** — inline logic complex enough to warrant its own named function
+
+Run the `/simplify` skill on the changed files, fix any issues found, then push.
+
 ## Pull Requests
 
 **Title format:** `type: USC-### description` — ticket number goes in the subject, not as the type.

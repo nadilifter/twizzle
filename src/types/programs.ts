@@ -1,4 +1,5 @@
 import type { ProgramStaffWithProfile } from "./staff";
+import type { BulkDiscount } from "@/lib/bulk-discounts";
 
 export type ProgramStatus = "ACTIVE" | "INACTIVE" | "ARCHIVED";
 
@@ -243,6 +244,7 @@ export interface ProgramWithRelations extends Program {
     events: number;
     lessonPlans: number;
   };
+  bulkDiscounts?: BulkDiscount[];
   staffAssignments?: ProgramStaffWithProfile[];
   requiredMemberships?: ProgramRequiredMembership[];
   levelRequirements?: ProgramLevelRequirement[];
@@ -314,6 +316,12 @@ export interface CreateProgramPayload {
   registrationEndTime?: string | null;
   registrationOpen?: boolean;
   earlyAccessCode?: string | null;
+  bulkDiscounts?: Array<{
+    type: "FAMILY_SIBLING" | "MULTI_SESSION";
+    minQuantity: number;
+    discountType: "PERCENTAGE" | "FIXED_AMOUNT";
+    discountValue: number;
+  }>;
 }
 
 export interface UpdateProgramPayload {
@@ -379,6 +387,12 @@ export interface UpdateProgramPayload {
   registrationEndTime?: string | null;
   registrationOpen?: boolean;
   earlyAccessCode?: string | null;
+  bulkDiscounts?: Array<{
+    type: "FAMILY_SIBLING" | "MULTI_SESSION";
+    minQuantity: number;
+    discountType: "PERCENTAGE" | "FIXED_AMOUNT";
+    discountValue: number;
+  }>;
 }
 
 export interface ProgramsQueryParams {

@@ -31,20 +31,20 @@ export interface RateLimitResult {
 const isDev = process.env.NODE_ENV === "development";
 
 export const RATE_LIMITS = {
-  /** Auth endpoints (login, signup) - strict to prevent brute force */
-  auth: { limit: isDev ? 30 : 5, windowSeconds: 60 }, // 30/min dev, 5/min prod
-  /** Password reset - very strict */
-  passwordReset: { limit: isDev ? 10 : 3, windowSeconds: 300 }, // More lenient in dev
-  /** API endpoints - more lenient for legitimate usage */
-  api: { limit: 100, windowSeconds: 60 }, // 100 requests per minute
+  /** Auth endpoints (login, signup) - prevent brute force */
+  auth: { limit: isDev ? 100 : 30, windowSeconds: 60 },
+  /** Password reset */
+  passwordReset: { limit: isDev ? 30 : 10, windowSeconds: 300 },
+  /** API endpoints - burst protection */
+  api: { limit: isDev ? 50 : 20, windowSeconds: 1 },
   /** Sensitive operations (payment, etc) */
-  sensitive: { limit: isDev ? 30 : 10, windowSeconds: 60 }, // More lenient in dev
+  sensitive: { limit: isDev ? 15 : 5, windowSeconds: 1 },
   /** MFA challenge requests */
-  mfaChallenge: { limit: isDev ? 10 : 5, windowSeconds: 300 },
+  mfaChallenge: { limit: isDev ? 50 : 20, windowSeconds: 300 },
   /** Email login code requests */
-  emailLoginSend: { limit: isDev ? 10 : 3, windowSeconds: 300 },
-  /** Medical/PHI endpoints - strict to limit data harvesting */
-  medical: { limit: isDev ? 20 : 5, windowSeconds: 60 },
+  emailLoginSend: { limit: isDev ? 30 : 10, windowSeconds: 300 },
+  /** Medical/PHI endpoints - covers multi-athlete multi-step flows */
+  medical: { limit: isDev ? 100 : 45, windowSeconds: 60 },
 } as const;
 
 /**

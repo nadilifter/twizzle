@@ -14,11 +14,11 @@ import {
   Package,
   Loader2,
   ShoppingCart,
-  X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/components/sites/cart-context";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Image from "next/image";
 import { toast } from "sonner";
 import { verifyOrganizationMembership } from "@/app/actions/organization";
@@ -29,6 +29,7 @@ type ProductVariant = {
   id: string;
   label: string;
   price: number | null;
+  imageUrl: string | null;
   maxInventory: number | null;
   currentInventory: number | null;
   isActive: boolean;
@@ -154,7 +155,7 @@ function POSPageContent() {
 
     const inventory = variant ? variant.currentInventory : product.currentInventory;
     if (inventory !== null && inventory <= 0) {
-      toast.error("This product is out of stock");
+      toast.error("This product is sold out");
       return;
     }
 
@@ -265,106 +266,47 @@ function POSPageContent() {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3">
                 {filteredProducts.map((product) => {
                   const { outOfStock, badge: stockBadge } = getStockStatus(product);
-                  const hasVariants = product.typeName && product.variants?.length > 0;
 
                   return (
-                    <div key={product.id} className="relative">
-                      <Button
-                        variant="outline"
-                        className={`w-full aspect-square flex flex-col items-center justify-center gap-1.5 md:gap-2 whitespace-normal p-2 md:p-3 hover:border-primary hover:bg-accent/50 relative transition-colors touch-manipulation overflow-hidden ${
-                          outOfStock ? "opacity-50 cursor-not-allowed" : ""
-                        }`}
-                        onClick={() => handleAddToCart(product)}
-                        disabled={outOfStock}
-                      >
-                        {stockBadge && (
-                          <Badge
-                            variant={stockBadge.variant}
-                            className="absolute top-1.5 right-1.5 text-[10px]"
-                          >
-                            {stockBadge.label}
-                          </Badge>
-                        )}
-                        {hasVariants && (
-                          <Badge
-                            variant="outline"
-                            className="absolute top-1.5 left-1.5 text-[10px]"
-                          >
-                            {product.typeName}
-                          </Badge>
-                        )}
-                        {product.imageUrl ? (
+                    <Button
+                      key={product.id}
+                      variant="outline"
+                      className={`w-full h-auto aspect-square flex flex-col items-center gap-1.5 md:gap-2 whitespace-normal p-2 md:p-3 hover:border-primary hover:bg-accent/50 relative transition-colors touch-manipulation overflow-hidden ${
+                        outOfStock ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
+                      onClick={() => handleAddToCart(product)}
+                      disabled={outOfStock}
+                    >
+                      {stockBadge && (
+                        <Badge
+                          variant={stockBadge.variant}
+                          className="absolute top-1.5 right-1.5 text-[10px] z-10"
+                        >
+                          {stockBadge.label}
+                        </Badge>
+                      )}
+                      {product.imageUrl ? (
+                        <div className="relative w-full flex-1 min-h-0 rounded-lg overflow-hidden">
                           <Image
                             src={product.imageUrl}
                             alt={product.name}
-                            width={48}
-                            height={48}
-                            className="rounded-lg object-cover max-w-12 max-h-12 shrink-0"
+                            fill
+                            sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
+                            className="object-cover"
                           />
-                        ) : (
-                          <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                            <Package className="h-5 w-5 md:h-6 md:w-6 text-muted-foreground" />
-                          </div>
-                        )}
-                        <span className="font-medium text-center leading-tight text-xs md:text-sm line-clamp-2">
-                          {product.name}
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          ${Number(product.price).toFixed(2)}
-                        </span>
-                      </Button>
-
-                      {/* Variant picker overlay */}
-                      {variantPickerProduct?.id === product.id && (
-                        <div className="absolute inset-0 z-10 bg-background border-2 border-primary rounded-md p-2 flex flex-col gap-1 shadow-lg">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium truncate">{product.typeName}</span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-5 w-5"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setVariantPickerProduct(null);
-                              }}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </div>
-                          <div className="flex-1 overflow-y-auto space-y-1">
-                            {product.variants
-                              .filter((v) => v.isActive)
-                              .map((variant) => {
-                                const variantOOS =
-                                  variant.currentInventory !== null &&
-                                  variant.currentInventory <= 0;
-                                const variantPrice =
-                                  variant.price !== null
-                                    ? Number(variant.price)
-                                    : Number(product.price);
-                                return (
-                                  <Button
-                                    key={variant.id}
-                                    variant="outline"
-                                    size="sm"
-                                    className={`w-full justify-between h-8 text-xs ${variantOOS ? "opacity-40" : ""}`}
-                                    disabled={variantOOS}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleAddToCart(product, variant);
-                                    }}
-                                  >
-                                    <span className="truncate">{variant.label}</span>
-                                    <span className="shrink-0 ml-1">
-                                      ${variantPrice.toFixed(2)}
-                                    </span>
-                                  </Button>
-                                );
-                              })}
-                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-full flex-1 min-h-0 rounded-lg bg-muted flex items-center justify-center">
+                          <Package className="h-8 w-8 md:h-10 md:w-10 text-muted-foreground" />
                         </div>
                       )}
-                    </div>
+                      <span className="font-medium text-center leading-tight text-xs md:text-sm line-clamp-2 shrink-0">
+                        {product.name}
+                      </span>
+                      <span className="text-sm text-muted-foreground shrink-0">
+                        ${Number(product.price).toFixed(2)}
+                      </span>
+                    </Button>
                   );
                 })}
               </div>
@@ -486,6 +428,76 @@ function POSPageContent() {
           </div>
         </div>
       </div>
+
+      <Dialog
+        open={variantPickerProduct !== null}
+        onOpenChange={(open) => {
+          if (!open) setVariantPickerProduct(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-xl">
+          {variantPickerProduct && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{variantPickerProduct.name}</DialogTitle>
+                {variantPickerProduct.typeName && (
+                  <p className="text-sm text-muted-foreground">
+                    Select {variantPickerProduct.typeName.toLowerCase()}
+                  </p>
+                )}
+              </DialogHeader>
+              <div className="max-h-[60vh] overflow-y-auto -mx-1 px-1">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 md:gap-3">
+                  {variantPickerProduct.variants
+                    .filter((v) => v.isActive)
+                    .map((variant) => {
+                      const variantOOS =
+                        variant.currentInventory !== null && variant.currentInventory <= 0;
+                      const variantPrice =
+                        variant.price !== null
+                          ? Number(variant.price)
+                          : Number(variantPickerProduct.price);
+                      const variantImage = variant.imageUrl ?? variantPickerProduct.imageUrl;
+                      return (
+                        <Button
+                          key={variant.id}
+                          variant="outline"
+                          className={`w-full h-auto aspect-square flex flex-col items-center gap-1.5 whitespace-normal p-2 md:p-3 touch-manipulation overflow-hidden ${
+                            variantOOS ? "opacity-40" : ""
+                          }`}
+                          disabled={variantOOS}
+                          onClick={() => handleAddToCart(variantPickerProduct, variant)}
+                        >
+                          {variantImage ? (
+                            <div className="relative w-full flex-1 min-h-0 rounded-lg overflow-hidden">
+                              <Image
+                                src={variantImage}
+                                alt={variant.label}
+                                fill
+                                sizes="(min-width: 640px) 180px, 40vw"
+                                className="object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-full flex-1 min-h-0 rounded-lg bg-muted flex items-center justify-center">
+                              <Package className="h-8 w-8 text-muted-foreground" />
+                            </div>
+                          )}
+                          <span className="font-medium text-center leading-tight text-sm line-clamp-2 shrink-0">
+                            {variant.label}
+                          </span>
+                          <span className="text-sm text-muted-foreground shrink-0">
+                            ${variantPrice.toFixed(2)}
+                          </span>
+                        </Button>
+                      );
+                    })}
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -3,11 +3,12 @@ import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
 import { bumpCacheVersion } from "@/lib/cache-version";
 import { parseDateOnly } from "@/lib/date-utils";
-import { checkMemberCertifications } from "@/lib/services/certification-check";
+import { checkMemberCertifications, CertificationError } from "@/lib/services/certification-check";
 import { z } from "zod";
 import { imageUrlSchema } from "@/lib/schemas";
 import { generateInstanceDates, calculateEndTime } from "@/lib/program-instance-utils";
 import { getEnabledHolidayDates, filterOutHolidayDates } from "@/lib/holiday-utils";
+import { bulkDiscountsSchema, validateBulkDiscountsForProgram } from "@/lib/bulk-discounts";
 
 const updateProgramSchema = z.object({
   name: z.string().min(1).optional(),
@@ -74,6 +75,8 @@ const updateProgramSchema = z.object({
     .optional(),
   glCodeId: z.string().optional().nullable(),
   categoryId: z.string().optional().nullable(),
+  // Bulk discounts — full replacement when provided
+  bulkDiscounts: bulkDiscountsSchema,
   // Registration window
   registrationStartDate: z.string().optional().nullable(),
   registrationStartTime: z.string().optional().nullable(),
@@ -185,14 +188,23 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         },
         lineItems: {
           orderBy: { createdAt: "desc" },
-          take: 10,
+          // Safety limit — the Transactions tab renders this array client-side.
+          // Programs with more than 500 line items are vanishingly rare today;
+          // paginate via a dedicated endpoint if this becomes constraining.
+          take: 500,
           include: {
             invoice: {
               select: {
                 id: true,
                 reference: true,
                 status: true,
+                user: {
+                  select: { id: true, name: true, email: true },
+                },
               },
+            },
+            athlete: {
+              select: { id: true, name: true, avatar: true },
             },
           },
         },
@@ -332,6 +344,26 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       });
       if (valid.length !== validatedData.spaceIds.length)
         return NextResponse.json({ error: "One or more spaces not found" }, { status: 404 });
+    }
+
+    // Validate bulk discount business rules server-side
+    if (validatedData.bulkDiscounts?.length) {
+      const err = validateBulkDiscountsForProgram(validatedData.bulkDiscounts, {
+        billingInterval: validatedData.billingInterval ?? existing.billingInterval,
+        basePrice:
+          validatedData.basePrice !== undefined
+            ? validatedData.basePrice
+            : Number(existing.basePrice),
+        perSessionPrice:
+          validatedData.perSessionPrice !== undefined
+            ? validatedData.perSessionPrice
+            : Number(existing.perSessionPrice),
+        recurringPrice:
+          validatedData.recurringPrice !== undefined
+            ? validatedData.recurringPrice
+            : Number(existing.recurringPrice),
+      });
+      if (err) return NextResponse.json({ error: err }, { status: 400 });
     }
 
     // Pre-compute holiday dates outside the transaction
@@ -602,13 +634,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
             "programs"
           );
           if (!certResult.valid) {
-            return NextResponse.json(
-              { error: "Missing required certifications", certifications: certResult.missing },
-              { status: 422 }
-            );
+            throw new CertificationError(certResult.missing);
           }
         }
-
         await tx.programStaff.deleteMany({
           where: { programId: id },
         });
@@ -664,6 +692,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
               data: instanceSpaceData,
             });
           }
+        }
+      }
+
+      // Replace bulk discounts if provided (full replace, inside transaction for atomicity)
+      if (validatedData.bulkDiscounts) {
+        await tx.programBulkDiscount.deleteMany({ where: { programId: id } });
+        if (validatedData.bulkDiscounts.length > 0) {
+          await tx.programBulkDiscount.createMany({
+            data: validatedData.bulkDiscounts.map((d) => ({
+              programId: id,
+              type: d.type,
+              minQuantity: d.minQuantity,
+              discountType: d.discountType,
+              discountValue: d.discountValue,
+            })),
+          });
         }
       }
 
@@ -745,12 +789,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       });
     });
 
+    if (!program) {
+      return NextResponse.json({ error: "Failed to update program" }, { status: 500 });
+    }
+
     await bumpCacheVersion(session.user.organizationId, "programs");
 
     return NextResponse.json(program);
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
+    }
+    if (error instanceof CertificationError) {
+      return NextResponse.json(
+        { error: "Missing required certifications", certifications: error.certifications },
+        { status: 422 }
+      );
     }
     console.error("Error updating program:", error);
     return NextResponse.json({ error: "Failed to update program" }, { status: 500 });

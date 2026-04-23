@@ -32,7 +32,10 @@ interface UseProgramsReturn {
   // Actions
   fetchPrograms: (params?: ProgramsQueryParams) => Promise<void>;
   createProgram: (data: CreateProgramPayload) => Promise<ProgramWithRelations | null>;
-  updateProgram: (id: string, data: UpdateProgramPayload) => Promise<ProgramWithRelations | null>;
+  updateProgram: (
+    id: string,
+    data: UpdateProgramPayload
+  ) => Promise<{ data: ProgramWithRelations | null; error: string | null }>;
   deleteProgram: (id: string) => Promise<boolean>;
   refresh: () => Promise<void>;
   clearError: () => void;
@@ -112,22 +115,24 @@ export function usePrograms(options: UseProgramsOptions = {}): UseProgramsReturn
 
   // Update program
   const updateProgram = useCallback(
-    async (id: string, data: UpdateProgramPayload): Promise<ProgramWithRelations | null> => {
+    async (
+      id: string,
+      data: UpdateProgramPayload
+    ): Promise<{ data: ProgramWithRelations | null; error: string | null }> => {
       setIsUpdating(true);
       setError(null);
 
       try {
         const updatedProgram = await api.patch<ProgramWithRelations>(`/api/programs/${id}`, data);
-        // Update local state
         setPrograms((prev) =>
           prev.map((program) => (program.id === id ? updatedProgram : program))
         );
-        return updatedProgram;
+        return { data: updatedProgram, error: null };
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to update program";
         setError(message);
         console.error("Error updating program:", err);
-        return null;
+        return { data: null, error: message };
       } finally {
         setIsUpdating(false);
       }

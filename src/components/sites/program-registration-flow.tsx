@@ -226,7 +226,6 @@ export function ProgramRegistrationFlow({
   const { addItem, setIsOpen, items: cartItems } = useCart();
   const router = useRouter();
   const stepper = useStepper();
-
   const isPerInstance = program.registrationType === "PER_INSTANCE";
   const needsWaivers = program.hasWaiverRestriction && program.waiverRequirements.length > 0;
   const needsMedicalStep = program.hasMedicalRequirement;

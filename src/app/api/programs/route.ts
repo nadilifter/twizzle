@@ -3,24 +3,12 @@ import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
 import { bumpCacheVersion } from "@/lib/cache-version";
 import { parseDateOnly } from "@/lib/date-utils";
-import {
-  checkMemberCertifications,
-  type CertCheckFailure,
-} from "@/lib/services/certification-check";
+import { checkMemberCertifications, CertificationError } from "@/lib/services/certification-check";
 import { z } from "zod";
 import { imageUrlSchema } from "@/lib/schemas";
 import { generateInstanceDates, calculateEndTime } from "@/lib/program-instance-utils";
 import { getEnabledHolidayDates, filterOutHolidayDates } from "@/lib/holiday-utils";
-
-class CertificationError extends Error {
-  memberId: string;
-  missing: CertCheckFailure[];
-  constructor(memberId: string, missing: CertCheckFailure[]) {
-    super("Missing required certifications");
-    this.memberId = memberId;
-    this.missing = missing;
-  }
-}
+import { bulkDiscountsSchema, validateBulkDiscountsForProgram } from "@/lib/bulk-discounts";
 
 const createProgramSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -88,6 +76,8 @@ const createProgramSchema = z.object({
   glCodeId: z.string().optional().nullable(),
   seasonId: z.string().optional().nullable(),
   categoryId: z.string().optional().nullable(),
+  // Bulk discounts
+  bulkDiscounts: bulkDiscountsSchema,
   // Registration window
   registrationStartDate: z.string().optional().nullable(),
   registrationStartTime: z.string().optional().nullable(),
@@ -318,6 +308,12 @@ export async function POST(request: NextRequest) {
       if (!cat) return NextResponse.json({ error: "Category not found" }, { status: 404 });
     }
 
+    // Validate bulk discount business rules server-side
+    if (validatedData.bulkDiscounts?.length) {
+      const err = validateBulkDiscountsForProgram(validatedData.bulkDiscounts, validatedData);
+      if (err) return NextResponse.json({ error: err }, { status: 400 });
+    }
+
     // Pre-compute holiday dates outside the transaction so the read uses `db` properly
     let holidayDates = new Set<string>();
     if (validatedData.startDate && validatedData.startTime && validatedData.duration) {
@@ -422,7 +418,7 @@ export async function POST(request: NextRequest) {
             "programs"
           );
           if (!certResult.valid) {
-            throw new CertificationError(sa.memberId, certResult.missing);
+            throw new CertificationError(certResult.missing);
           }
         }
 
@@ -495,6 +491,19 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Create bulk discounts if provided
+      if (validatedData.bulkDiscounts?.length) {
+        await tx.programBulkDiscount.createMany({
+          data: validatedData.bulkDiscounts.map((d) => ({
+            programId: newProgram.id,
+            type: d.type,
+            minQuantity: d.minQuantity,
+            discountType: d.discountType,
+            discountValue: d.discountValue,
+          })),
+        });
+      }
+
       // Fetch the complete program with all relations
       return tx.program.findUnique({
         where: { id: newProgram.id },
@@ -560,7 +569,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof CertificationError) {
       return NextResponse.json(
-        { error: "Missing required certifications", certifications: error.missing },
+        { error: "Missing required certifications", certifications: error.certifications },
         { status: 422 }
       );
     }

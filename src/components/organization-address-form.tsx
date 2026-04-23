@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { COUNTRIES } from "@/lib/location-data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,15 +41,6 @@ export function OrganizationAddressForm({
 
   const defaultCountry = (organization.country || "US") as "US" | "CA";
 
-  // Normalize stored phone to E.164 so PhoneInput can parse it correctly
-  const initialPhone = (() => {
-    const raw = organization.phone || "";
-    if (!raw) return "";
-    if (raw.startsWith("+")) return raw;
-    const parsed = parsePhoneNumberFromString(raw, defaultCountry);
-    return parsed?.format("E.164") ?? raw;
-  })();
-
   const [formData, setFormData] = useState({
     email: organization.email || "",
     street: organization.street || "",
@@ -58,7 +48,7 @@ export function OrganizationAddressForm({
     stateProvince: organization.stateProvince || "",
     postalCode: organization.postalCode || "",
     country: organization.country || "US",
-    phone: initialPhone,
+    phone: organization.phone || "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

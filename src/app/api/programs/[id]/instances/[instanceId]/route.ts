@@ -53,6 +53,9 @@ export async function GET(
                 avatar: true,
               },
             },
+            user: {
+              select: { id: true, name: true, email: true },
+            },
           },
           orderBy: { createdAt: "asc" },
         },
@@ -67,6 +70,14 @@ export async function GET(
             },
           },
         },
+        evaluations: {
+          include: {
+            athlete: { select: { id: true, name: true, avatar: true } },
+            coach: { select: { id: true, name: true } },
+            template: { select: { id: true, name: true } },
+          },
+          orderBy: { date: "desc" },
+        },
         _count: {
           select: { registrations: true, attendances: true },
         },
@@ -77,7 +88,19 @@ export async function GET(
       return NextResponse.json({ error: "Instance not found" }, { status: 404 });
     }
 
-    return NextResponse.json(instance);
+    // Lesson plans are linked to the Program (not ProgramInstance) but optionally have a date;
+    // return any plans whose date matches this instance's date.
+    const lessonPlans = await db.lessonPlan.findMany({
+      where: {
+        programId,
+        organizationId: session.user.organizationId,
+        date: instance.date,
+      },
+      select: { id: true, name: true, status: true, theme: true, notes: true, date: true },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json({ ...instance, lessonPlans });
   } catch (error) {
     console.error("Error fetching instance:", error);
     return NextResponse.json({ error: "Failed to fetch instance" }, { status: 500 });

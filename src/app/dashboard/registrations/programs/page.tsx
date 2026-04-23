@@ -338,6 +338,7 @@ export default function ProgramsPage() {
         <SheetContent className="sm:max-w-2xl p-0">
           {selectedProgram ? (
             <ProgramConfiguration
+              key={selectedProgram.id}
               program={selectedProgram}
               onClose={() => setIsConfigOpen(false)}
               onUpdated={() => fetchPrograms()}

@@ -18,14 +18,12 @@ interface CategoryTile {
 
 interface CategoryTilesProps {
   categories: CategoryTile[];
-  hasUncategorizedPrograms: boolean;
   primaryColor: string;
   allProgramsImageUrl?: string | null;
 }
 
 export function CategoryTiles({
   categories,
-  hasUncategorizedPrograms,
   primaryColor,
   allProgramsImageUrl,
 }: CategoryTilesProps) {
@@ -38,17 +36,6 @@ export function CategoryTiles({
       _count: { programs: 0, events: 0, competitions: 0 },
     },
     ...categories,
-    ...(hasUncategorizedPrograms
-      ? [
-          {
-            id: "other",
-            name: "Other Programs",
-            description: "Browse additional programs",
-            imageUrl: null as string | null,
-            _count: { programs: 0, events: 0, competitions: 0 },
-          },
-        ]
-      : []),
   ];
 
   return (

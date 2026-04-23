@@ -58,10 +58,9 @@ const checkoutBodySchema = z
       email: z.string().email("Please enter a valid email address").max(320),
       phone: z
         .string()
+        .min(1, "Phone number is required")
         .max(30)
-        .refine((val) => !val || isValidPhoneNumber(val), "Please enter a valid phone number")
-        .optional()
-        .default(""),
+        .refine((val) => isValidPhoneNumber(val), "Please enter a valid phone number"),
     }),
 
     // Billing address — required unless billingAddressId references a saved record
