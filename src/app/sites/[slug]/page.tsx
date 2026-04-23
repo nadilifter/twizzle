@@ -7,8 +7,7 @@ import { sanitizeHtml } from "@/lib/sanitize";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { isFeatureEnabled } from "@/lib/feature-resolver";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Users, Calendar, MapPin, Trophy } from "lucide-react";
+import { Users, Calendar, MapPin } from "lucide-react";
 import { FilterableProgramList } from "@/components/sites/filterable-program-list";
 import { CategoryTiles } from "@/components/sites/category-tiles";
 import { InfoSection } from "@/components/sites/info-section";
@@ -196,10 +195,13 @@ export default async function SitePage({ params }: { params: { slug: string } })
         <div className="relative z-10 mx-auto w-full max-w-6xl px-4 md:px-8">
           <div className="mx-auto max-w-3xl text-center">
             {config.showRegistration && enrichedPrograms.length > 0 && (
-              <Badge variant="secondary" className={`mb-6 ${hero.badge}`}>
-                <Trophy className="mr-1.5 h-3.5 w-3.5" />
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-1.5 text-sm font-semibold text-white shadow-lg shadow-emerald-900/20 ring-1 ring-white/20">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+                </span>
                 Registration Now Open
-              </Badge>
+              </div>
             )}
 
             <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
