@@ -21,10 +21,13 @@ import {
   Building2,
   Calendar,
   User,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { api } from "@/lib/api-client";
+import { WaiverViewerDialog } from "@/components/waiver-viewer-dialog";
+import type { AthleteWaiverSummary, WaiverPageWithSignature } from "@/types/athletes";
 
 interface Athlete {
   id: string;
@@ -44,6 +47,7 @@ interface WaiverAcceptance {
       id: string;
       name: string;
     };
+    pages: WaiverPageWithSignature[];
   };
   user: {
     name: string | null;
@@ -62,6 +66,7 @@ export default function AthleteWaiversPage() {
   const [isLoadingAthletes, setIsLoadingAthletes] = useState(true);
   const [acceptances, setAcceptances] = useState<WaiverAcceptance[]>([]);
   const [isLoadingWaivers, setIsLoadingWaivers] = useState(false);
+  const [viewingWaiver, setViewingWaiver] = useState<AthleteWaiverSummary | null>(null);
 
   useEffect(() => {
     async function fetchAthletes() {
@@ -252,47 +257,67 @@ export default function AthleteWaiversPage() {
               </CardHeader>
               <CardContent>
                 <div className="divide-y">
-                  {group.acceptances.map((acceptance) => (
-                    <div
-                      key={acceptance.id}
-                      className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
-                    >
-                      <div className="flex items-center gap-3">
-                        <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
-                        <div>
-                          <p className="font-medium">{acceptance.waiver.title}</p>
-                          <div className="flex items-center gap-3 text-sm text-muted-foreground mt-0.5">
-                            <span className="inline-flex items-center gap-1">
-                              <Calendar className="h-3.5 w-3.5" />
-                              {new Date(acceptance.completedAt).toLocaleDateString("en-US", {
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                              })}
-                            </span>
-                            {acceptance.user?.name && (
+                  {group.acceptances.map((acceptance) => {
+                    const openViewer = () =>
+                      setViewingWaiver({
+                        id: acceptance.waiver.id,
+                        title: acceptance.waiver.title,
+                        signed: true,
+                        signedAt: acceptance.completedAt,
+                        pages: acceptance.waiver.pages,
+                      });
+                    return (
+                      <button
+                        key={acceptance.id}
+                        type="button"
+                        onClick={openViewer}
+                        className="w-full flex items-center justify-between gap-3 py-3 px-3 -mx-3 text-left rounded-md hover:bg-muted/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">{acceptance.waiver.title}</p>
+                            <div className="flex items-center gap-3 text-sm text-muted-foreground mt-0.5">
                               <span className="inline-flex items-center gap-1">
-                                <User className="h-3.5 w-3.5" />
-                                Signed by {acceptance.user.name}
+                                <Calendar className="h-3.5 w-3.5" />
+                                {new Date(acceptance.completedAt).toLocaleDateString("en-US", {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                })}
                               </span>
-                            )}
+                              {acceptance.user?.name && (
+                                <span className="inline-flex items-center gap-1">
+                                  <User className="h-3.5 w-3.5" />
+                                  Signed by {acceptance.user.name}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <Badge
-                        variant="secondary"
-                        className="text-green-700 bg-green-50 dark:bg-green-950/50 dark:text-green-400"
-                      >
-                        Signed
-                      </Badge>
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge
+                            variant="secondary"
+                            className="text-green-700 bg-green-50 dark:bg-green-950/50 dark:text-green-400"
+                          >
+                            Signed
+                          </Badge>
+                          <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+                            <Eye className="h-4 w-4" />
+                            View
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+
+      <WaiverViewerDialog waiver={viewingWaiver} onClose={() => setViewingWaiver(null)} />
     </div>
   );
 }

@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   ClipboardList,
   DollarSign,
+  Eye,
   Heart,
   Loader2,
   Shield,
@@ -38,6 +39,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { WaiverViewerDialog } from "@/components/waiver-viewer-dialog";
+import type { AthleteWaiverSummary } from "@/types/athletes";
 
 interface AthleteDetail {
   programName: string;
@@ -119,7 +122,7 @@ interface AthleteDetail {
     waivers: {
       required: boolean;
       status: string;
-      waivers: { id: string; title: string; signed: boolean; signedAt: string | null }[];
+      waivers: AthleteWaiverSummary[];
     };
     medical: {
       required: boolean;
@@ -156,6 +159,7 @@ export default function ProgramAthleteDetailPage() {
 
   const [data, setData] = React.useState<AthleteDetail | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [viewingWaiver, setViewingWaiver] = React.useState<AthleteWaiverSummary | null>(null);
 
   const athleteName = data
     ? [data.athlete.firstName, data.athlete.lastName].filter(Boolean).join(" ") ||
@@ -342,20 +346,33 @@ export default function ProgramAthleteDetailPage() {
               </CardHeader>
               <CardContent className="space-y-2">
                 {compliance.waivers.waivers.map((w) => (
-                  <div key={w.id} className="flex items-start justify-between text-sm gap-2">
+                  <div key={w.id} className="flex items-center justify-between text-sm gap-2">
                     <span className="truncate">{w.title}</span>
-                    {w.signed ? (
-                      <Badge
-                        variant="outline"
-                        className="bg-green-50 text-green-700 border-green-200"
-                      >
-                        Signed
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                        Not signed
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {w.signed ? (
+                        <Badge
+                          variant="outline"
+                          className="bg-green-50 text-green-700 border-green-200"
+                        >
+                          Signed
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                          Not signed
+                        </Badge>
+                      )}
+                      {w.signed && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => setViewingWaiver(w)}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          View
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </CardContent>
@@ -637,6 +654,8 @@ export default function ProgramAthleteDetailPage() {
           </Card>
         </div>
       </div>
+
+      <WaiverViewerDialog waiver={viewingWaiver} onClose={() => setViewingWaiver(null)} />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import type { AthleteWaiverSummary } from "@/types/athletes";
 
 /**
  * GET /api/programs/[id]/athletes/[athleteId]
@@ -241,82 +242,132 @@ export async function GET(
       }[];
     } | null;
 
-    const [requiredInstances, athleteMemberships, requiredWaivers, acceptances, medicalInfoRaw] =
-      (await Promise.all([
-        needMembership
-          ? db.membershipInstance.findMany({
-              where: { id: { in: requiredMembershipIds }, group: { organizationId } },
-              select: { id: true, name: true, group: { select: { name: true } } },
-            })
-          : Promise.resolve([] as { id: string; name: string; group: { name: string } }[]),
-        needMembership
-          ? db.athleteMembership.findMany({
-              where: { athleteId, membershipInstanceId: { in: requiredMembershipIds } },
-              select: { membershipInstanceId: true, status: true },
-            })
-          : Promise.resolve([] as { membershipInstanceId: string; status: string }[]),
-        needWaivers
-          ? db.waiver.findMany({
-              where: { id: { in: requiredWaiverIds }, organizationId },
-              select: { id: true, title: true },
-            })
-          : Promise.resolve([] as { id: string; title: string }[]),
-        needWaivers
-          ? db.waiverAcceptance.findMany({
-              where: { athleteId, waiverId: { in: requiredWaiverIds } },
-              select: { waiverId: true, completedAt: true },
-            })
-          : Promise.resolve([] as { waiverId: string; completedAt: Date | null }[]),
-        needMedical
-          ? db.athleteMedicalInfo.findUnique({
-              where: { athleteId },
-              select: {
-                id: true,
-                allergies: true,
-                medications: true,
-                conditions: true,
-                dietaryRestrictions: true,
-                insuranceProvider: true,
-                insurancePolicyNumber: true,
-                emergencyContactName: true,
-                emergencyContactPhone: true,
-                emergencyContactRelation: true,
-                additionalNotes: true,
-                createdAt: true,
-                updatedAt: true,
-                customResponses: {
-                  // Scope custom responses to THIS org's questions only — the
-                  // CustomMedicalQuestion model is org-scoped even though the
-                  // parent AthleteMedicalInfo row is shared across orgs.
-                  where: { question: { organizationId } },
-                  select: {
-                    id: true,
-                    questionId: true,
-                    response: true,
-                    createdAt: true,
-                    updatedAt: true,
-                    question: {
-                      select: {
-                        id: true,
-                        questionText: true,
-                        questionType: true,
-                        options: true,
-                        required: true,
-                        displayOrder: true,
-                      },
+    const [
+      requiredInstances,
+      athleteMemberships,
+      requiredWaivers,
+      acceptances,
+      waiverSignatures,
+      medicalInfoRaw,
+    ] = (await Promise.all([
+      needMembership
+        ? db.membershipInstance.findMany({
+            where: { id: { in: requiredMembershipIds }, group: { organizationId } },
+            select: { id: true, name: true, group: { select: { name: true } } },
+          })
+        : Promise.resolve([] as { id: string; name: string; group: { name: string } }[]),
+      needMembership
+        ? db.athleteMembership.findMany({
+            where: { athleteId, membershipInstanceId: { in: requiredMembershipIds } },
+            select: { membershipInstanceId: true, status: true },
+          })
+        : Promise.resolve([] as { membershipInstanceId: string; status: string }[]),
+      needWaivers
+        ? db.waiver.findMany({
+            where: { id: { in: requiredWaiverIds }, organizationId },
+            select: {
+              id: true,
+              title: true,
+              pages: {
+                orderBy: { pageNumber: "asc" },
+                select: { id: true, pageNumber: true, title: true, content: true },
+              },
+            },
+          })
+        : Promise.resolve(
+            [] as {
+              id: string;
+              title: string;
+              pages: { id: string; pageNumber: number; title: string | null; content: string }[];
+            }[]
+          ),
+      needWaivers
+        ? db.waiverAcceptance.findMany({
+            where: { athleteId, waiverId: { in: requiredWaiverIds } },
+            select: { waiverId: true, completedAt: true },
+          })
+        : Promise.resolve([] as { waiverId: string; completedAt: Date | null }[]),
+      needWaivers
+        ? db.waiverSignature.findMany({
+            where: { athleteId, waiverId: { in: requiredWaiverIds } },
+            select: {
+              waiverPageId: true,
+              signatureData: true,
+              signedByName: true,
+              signedByEmail: true,
+              signedAt: true,
+            },
+          })
+        : Promise.resolve(
+            [] as {
+              waiverPageId: string;
+              signatureData: string;
+              signedByName: string;
+              signedByEmail: string;
+              signedAt: Date;
+            }[]
+          ),
+      needMedical
+        ? db.athleteMedicalInfo.findUnique({
+            where: { athleteId },
+            select: {
+              id: true,
+              allergies: true,
+              medications: true,
+              conditions: true,
+              dietaryRestrictions: true,
+              insuranceProvider: true,
+              insurancePolicyNumber: true,
+              emergencyContactName: true,
+              emergencyContactPhone: true,
+              emergencyContactRelation: true,
+              additionalNotes: true,
+              createdAt: true,
+              updatedAt: true,
+              customResponses: {
+                // Scope custom responses to THIS org's questions only — the
+                // CustomMedicalQuestion model is org-scoped even though the
+                // parent AthleteMedicalInfo row is shared across orgs.
+                where: { question: { organizationId } },
+                select: {
+                  id: true,
+                  questionId: true,
+                  response: true,
+                  createdAt: true,
+                  updatedAt: true,
+                  question: {
+                    select: {
+                      id: true,
+                      questionText: true,
+                      questionType: true,
+                      options: true,
+                      required: true,
+                      displayOrder: true,
                     },
                   },
                 },
               },
-            })
-          : Promise.resolve(null),
-      ])) as [
-        { id: string; name: string; group: { name: string } }[],
-        { membershipInstanceId: string; status: string }[],
-        { id: string; title: string }[],
-        { waiverId: string; completedAt: Date | null }[],
-        MedicalInfoRow,
-      ];
+            },
+          })
+        : Promise.resolve(null),
+    ])) as [
+      { id: string; name: string; group: { name: string } }[],
+      { membershipInstanceId: string; status: string }[],
+      {
+        id: string;
+        title: string;
+        pages: { id: string; pageNumber: number; title: string | null; content: string }[];
+      }[],
+      { waiverId: string; completedAt: Date | null }[],
+      {
+        waiverPageId: string;
+        signatureData: string;
+        signedByName: string;
+        signedByEmail: string;
+        signedAt: Date;
+      }[],
+      MedicalInfoRow,
+    ];
 
     const compliance: {
       membership: {
@@ -327,7 +378,7 @@ export async function GET(
       waivers: {
         required: boolean;
         status: string;
-        waivers: { id: string; title: string; signed: boolean; signedAt: string | null }[];
+        waivers: AthleteWaiverSummary[];
       };
       medical: {
         required: boolean;
@@ -359,6 +410,7 @@ export async function GET(
     if (needWaivers) {
       compliance.waivers.required = true;
       const acceptanceMap = new Map(acceptances.map((a) => [a.waiverId, a.completedAt]));
+      const signaturesByPage = new Map(waiverSignatures.map((s) => [s.waiverPageId, s]));
       compliance.waivers.waivers = requiredWaivers.map((w) => {
         const completedAt = acceptanceMap.get(w.id);
         return {
@@ -366,6 +418,23 @@ export async function GET(
           title: w.title,
           signed: !!completedAt,
           signedAt: completedAt?.toISOString() ?? null,
+          pages: w.pages.map((p) => {
+            const sig = signaturesByPage.get(p.id);
+            return {
+              id: p.id,
+              pageNumber: p.pageNumber,
+              title: p.title,
+              content: p.content,
+              signature: sig
+                ? {
+                    signatureData: sig.signatureData,
+                    signedByName: sig.signedByName,
+                    signedByEmail: sig.signedByEmail,
+                    signedAt: sig.signedAt.toISOString(),
+                  }
+                : null,
+            };
+          }),
         };
       });
       compliance.waivers.status = compliance.waivers.waivers.every((w) => w.signed)
