@@ -18,6 +18,8 @@ import {
   Users,
 } from "lucide-react";
 
+import { formatPhoneNumberIntl } from "react-phone-number-input";
+
 import { calculateAge } from "@/lib/age-utils";
 import { formatPrice } from "@/lib/format-utils";
 import { INVOICE_STATUS_STYLES } from "@/lib/invoice-status";
@@ -289,7 +291,9 @@ export default function ProgramAthleteDetailPage() {
                     <p className="font-medium">{primaryGuardian.name ?? "Unknown"}</p>
                     <p className="text-muted-foreground text-xs">{primaryGuardian.email}</p>
                     {primaryGuardian.phone && (
-                      <p className="text-muted-foreground text-xs">{primaryGuardian.phone}</p>
+                      <p className="text-muted-foreground text-xs">
+                        {formatPhoneNumberIntl(primaryGuardian.phone) || primaryGuardian.phone}
+                      </p>
                     )}
                   </div>
                 </>
@@ -400,10 +404,10 @@ export default function ProgramAthleteDetailPage() {
                   : `${enrollments.length} enrollment${enrollments.length === 1 ? "" : "s"}`}
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-0">
+            <CardContent>
               {isPerInstance ? (
                 instanceRegistrations.length === 0 ? (
-                  <p className="px-6 pb-6 text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     No session registrations for this athlete.
                   </p>
                 ) : (
@@ -440,9 +444,7 @@ export default function ProgramAthleteDetailPage() {
                   </Table>
                 )
               ) : enrollments.length === 0 ? (
-                <p className="px-6 pb-6 text-sm text-muted-foreground">
-                  No enrollments for this athlete.
-                </p>
+                <p className="text-sm text-muted-foreground">No enrollments for this athlete.</p>
               ) : (
                 <Table>
                   <TableHeader>
@@ -487,11 +489,9 @@ export default function ProgramAthleteDetailPage() {
                 {attendances.length} record{attendances.length === 1 ? "" : "s"}
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-0">
+            <CardContent>
               {attendances.length === 0 ? (
-                <p className="px-6 pb-6 text-sm text-muted-foreground">
-                  No attendance recorded yet.
-                </p>
+                <p className="text-sm text-muted-foreground">No attendance recorded yet.</p>
               ) : (
                 <Table>
                   <TableHeader>
@@ -543,9 +543,9 @@ export default function ProgramAthleteDetailPage() {
                 {evaluations.length} evaluation{evaluations.length === 1 ? "" : "s"} in this program
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-0">
+            <CardContent>
               {evaluations.length === 0 ? (
-                <p className="px-6 pb-6 text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   No evaluations for this athlete in this program.
                 </p>
               ) : (
@@ -588,9 +588,9 @@ export default function ProgramAthleteDetailPage() {
                 {lineItems.length} line item{lineItems.length === 1 ? "" : "s"} for this program
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-0">
+            <CardContent>
               {lineItems.length === 0 ? (
-                <p className="px-6 pb-6 text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   No charges for this athlete in this program.
                 </p>
               ) : (

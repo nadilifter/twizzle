@@ -19,7 +19,6 @@ import {
   Loader2,
   MapPin,
   Receipt,
-  Repeat,
   Settings,
   UserCheck,
   Users,
@@ -54,7 +53,7 @@ import { cn } from "@/lib/utils";
 import { AthletesTab } from "./athletes-tab";
 import { AttendanceTab } from "./attendance-tab";
 import { EvaluationsTab } from "./evaluations-tab";
-import { ProgramConfiguration } from "./program-configuration";
+import { ProgramConfiguration } from "../program-configuration";
 import { SessionsTab } from "./sessions-tab";
 import { TransactionsTab, type ProgramLineItem } from "./transactions-tab";
 
@@ -352,10 +351,6 @@ export default function ProgramProfilePage() {
   }
 
   const isPerInstance = program.registrationType === "PER_INSTANCE";
-  const recurringBadge = isPerInstance ? "Drop-in" : "Recurring";
-  const recurringStyle = isPerInstance
-    ? "bg-purple-50 text-purple-700 border-purple-200"
-    : "bg-blue-50 text-blue-700 border-blue-200";
   const statusStyle =
     program.status === "ACTIVE"
       ? "bg-green-50 text-green-700 border-green-200"
@@ -392,6 +387,11 @@ export default function ProgramProfilePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/dashboard/registrations/programs">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
           <h1 className="text-2xl font-semibold tracking-tight">{program.name}</h1>
           <Badge
             variant="outline"
@@ -402,10 +402,6 @@ export default function ProgramProfilePage() {
           >
             {program.status}
           </Badge>
-          <Badge variant="outline" className={cn("h-5 px-1.5 gap-1 shrink-0", recurringStyle)}>
-            <Repeat className="h-3 w-3" />
-            {recurringBadge}
-          </Badge>
         </div>
         <Button variant="outline" onClick={() => setSettingsOpen(true)}>
           <Settings className="mr-2 h-4 w-4" />
@@ -414,14 +410,16 @@ export default function ProgramProfilePage() {
       </div>
 
       <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <SheetContent className="sm:max-w-lg p-0">
-          <ProgramConfiguration
-            programId={programId}
-            onClose={() => setSettingsOpen(false)}
-            onUpdated={async () => {
-              await fetchProgram();
-            }}
-          />
+        <SheetContent className="sm:max-w-2xl p-0">
+          {program ? (
+            <ProgramConfiguration
+              program={program}
+              onClose={() => setSettingsOpen(false)}
+              onUpdated={async () => {
+                await fetchProgram();
+              }}
+            />
+          ) : null}
         </SheetContent>
       </Sheet>
 
@@ -434,7 +432,10 @@ export default function ProgramProfilePage() {
 
       {/* Metric row */}
       <div className={cn("grid gap-4", isPerInstance ? "md:grid-cols-5" : "md:grid-cols-4")}>
-        <Card>
+        <Card
+          className="cursor-pointer transition-colors hover:bg-muted/50"
+          onClick={() => setActiveTab("sessions")}
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Sessions</CardTitle>
           </CardHeader>
@@ -444,7 +445,10 @@ export default function ProgramProfilePage() {
         </Card>
         {isPerInstance ? (
           <>
-            <Card>
+            <Card
+              className="cursor-pointer transition-colors hover:bg-muted/50"
+              onClick={() => setActiveTab("athletes")}
+            >
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   Athletes
@@ -468,7 +472,10 @@ export default function ProgramProfilePage() {
             </Card>
           </>
         ) : (
-          <Card>
+          <Card
+            className="cursor-pointer transition-colors hover:bg-muted/50"
+            onClick={() => setActiveTab("athletes")}
+          >
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Enrollments
@@ -539,11 +546,11 @@ export default function ProgramProfilePage() {
               <Card>
                 <CardContent className="pt-6">
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="flex items-center gap-2 text-muted-foreground col-span-2">
                       <DollarSign className="h-3.5 w-3.5 shrink-0" />
                       <span>{getDisplayPrice(program)}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="flex items-center gap-2 text-muted-foreground col-span-2">
                       <Users className="h-3.5 w-3.5 shrink-0" />
                       <span>{isPerInstance ? "Drop-in / Per Session" : "Full Program"}</span>
                     </div>
@@ -735,10 +742,7 @@ export default function ProgramProfilePage() {
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Waitlist
-                </CardTitle>
+                <CardTitle>Waitlist</CardTitle>
                 <CardDescription>
                   {waitlistEntries.length} athlete
                   {waitlistEntries.length === 1 ? "" : "s"} on the waitlist

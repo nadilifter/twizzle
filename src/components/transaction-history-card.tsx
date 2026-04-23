@@ -54,7 +54,7 @@ export function TransactionHistoryCard({
           </Button>
         )}
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent>
         {items.length > 0 ? (
           <Table>
             <TableHeader>
