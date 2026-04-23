@@ -11,6 +11,14 @@ export interface CertCheckResult {
   missing: CertCheckFailure[];
 }
 
+export class CertificationError extends Error {
+  certifications: CertCheckFailure[];
+  constructor(certifications: CertCheckFailure[]) {
+    super("Missing required certifications");
+    this.certifications = certifications;
+  }
+}
+
 /**
  * Checks whether a member has all required certifications for a given scope.
  * Returns { valid: true } if all certs are met, otherwise lists missing ones.

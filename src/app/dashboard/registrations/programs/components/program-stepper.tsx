@@ -72,6 +72,9 @@ import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-co
 import type { FileRequirementConfig } from "@/types/file-requirements";
 import { useFeatures } from "@/components/feature-context";
 import { useStaff } from "@/hooks/use-staff";
+import type { BulkDiscount } from "@/lib/bulk-discounts";
+import { validateBulkDiscount } from "@/lib/bulk-discounts";
+import { ProgramDiscountsEditor } from "@/components/program-discounts-editor";
 import { useStaffCertStatus } from "@/hooks/use-staff-cert-status";
 import { useMemberships } from "@/hooks/use-memberships";
 import { usePasses } from "@/hooks/use-passes";
@@ -157,6 +160,7 @@ interface ProgramFormData {
   price: number | null;
   billingInterval: "ONE_TIME" | "MONTHLY" | "YEARLY";
   recurringPrice: number | null;
+  bulkDiscounts: BulkDiscount[];
 
   // Step 2: Date & Location
   startDate: Date | null;
@@ -327,6 +331,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     })(),
     billingInterval: (program?.billingInterval || "ONE_TIME") as "ONE_TIME" | "MONTHLY" | "YEARLY",
     recurringPrice: program?.recurringPrice != null ? Number(program.recurringPrice) : null,
+    bulkDiscounts: (program?.bulkDiscounts as BulkDiscount[] | undefined) ?? [],
 
     // Step 2: Date & Location
     startDate: program?.startDate ? new Date(program.startDate) : null,
@@ -408,6 +413,11 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
   const [isSaving, setIsSaving] = React.useState(false);
   const [copyDialogOpen, setCopyDialogOpen] = React.useState(false);
   const stepper = useStepper();
+
+  const effectivePrice =
+    formData.billingInterval !== "ONE_TIME"
+      ? (formData.recurringPrice ?? 0)
+      : (formData.price ?? 0);
 
   React.useEffect(() => {
     if (!visibleStepIds.includes(stepper.state.current.data.id)) {
@@ -738,6 +748,21 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
           toast.error("Price cannot be negative");
           return false;
         }
+        for (const d of formData.bulkDiscounts) {
+          const error = validateBulkDiscount(
+            {
+              type: d.type,
+              minQuantity: d.minQuantity,
+              discountType: d.discountType,
+              discountValue: Number(d.discountValue),
+            },
+            effectivePrice
+          );
+          if (error) {
+            toast.error(error);
+            return false;
+          }
+        }
         return true;
       case "schedule":
         if (!formData.startDate) {
@@ -953,6 +978,15 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         registrationEndDate: formData.registrationEndDate?.toISOString() ?? null,
         registrationEndTime: formData.registrationEndTime || null,
         earlyAccessCode: formData.earlyAccessCode,
+        bulkDiscounts:
+          effectivePrice > 0
+            ? formData.bulkDiscounts.map((d) => ({
+                type: d.type,
+                minQuantity: d.minQuantity,
+                discountType: d.discountType,
+                discountValue: Number(d.discountValue),
+              }))
+            : [],
       };
 
       const url = isEditing ? `/api/programs/${program.id}` : "/api/programs";
@@ -1446,6 +1480,24 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                     </p>
                   </div>
                 )}
+
+              {/* Discounts */}
+              {effectivePrice > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-base font-medium flex items-center gap-2">
+                    <Ticket className="h-4 w-4 text-muted-foreground" />
+                    Discounts
+                  </Label>
+                  <ProgramDiscountsEditor
+                    discounts={formData.bulkDiscounts}
+                    onChange={(discounts) =>
+                      setFormData((prev) => ({ ...prev, bulkDiscounts: discounts }))
+                    }
+                    effectivePrice={effectivePrice}
+                    registrationType={formData.registrationType}
+                  />
+                </div>
+              )}
 
               {/* GL Code */}
               <GLCodeSelector

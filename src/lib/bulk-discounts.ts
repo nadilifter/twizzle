@@ -1,4 +1,17 @@
 import type { BulkDiscountType, DiscountType } from "@prisma/client";
+import { z } from "zod";
+
+export const bulkDiscountItemSchema = z.object({
+  type: z.enum(["FAMILY_SIBLING", "MULTI_SESSION"]),
+  minQuantity: z.number().int().min(1),
+  discountType: z.enum(["PERCENTAGE", "FIXED_AMOUNT"]),
+  discountValue: z.number().min(0.01),
+});
+
+export const bulkDiscountsSchema = z
+  .array(bulkDiscountItemSchema)
+  .max(5, "A program can have at most 5 discounts")
+  .optional();
 
 export type BulkDiscount = {
   id: string;
@@ -15,6 +28,66 @@ export type BulkDiscountCartItem = {
   quantity: number;
   details?: Record<string, any>;
 };
+
+export function validateBulkDiscount(
+  discount: {
+    type: "MULTI_SESSION" | "FAMILY_SIBLING";
+    minQuantity: number;
+    discountType: "FIXED_AMOUNT" | "PERCENTAGE";
+    discountValue: number;
+  },
+  effectivePrice: number
+): string | null {
+  if (isNaN(effectivePrice) || effectivePrice < 0) return "Invalid program price";
+  if (!discount.minQuantity || discount.minQuantity < 1)
+    return "Minimum quantity must be at least 1";
+  const value = Number(discount.discountValue);
+  if (isNaN(value) || value <= 0) return "Discount amount must be greater than 0";
+  if (discount.discountType === "PERCENTAGE") {
+    if (value < 1 || value > 100) return "Percentage discount must be between 1% and 100%";
+    return null;
+  }
+  if (value > discount.minQuantity * effectivePrice) {
+    return `Discount cannot exceed the total cost ($${(discount.minQuantity * effectivePrice).toFixed(2)})`;
+  }
+  return null;
+}
+
+export type ProgramPricingInfo = {
+  billingInterval: string;
+  basePrice?: number | null;
+  perSessionPrice?: number | null;
+  recurringPrice?: number | null;
+};
+
+export function resolveEffectivePrice(pricingInfo: ProgramPricingInfo): number {
+  if (pricingInfo.billingInterval !== "ONE_TIME" && pricingInfo.billingInterval !== "SESSION") {
+    return Number(pricingInfo.recurringPrice ?? 0);
+  }
+  return Number(pricingInfo.basePrice ?? pricingInfo.perSessionPrice ?? 0);
+}
+
+export function validateBulkDiscountsForProgram(
+  discounts: z.infer<typeof bulkDiscountItemSchema>[],
+  pricingInfo: ProgramPricingInfo
+): string | null {
+  if (!discounts.length) return null;
+  const effectivePrice = resolveEffectivePrice(pricingInfo);
+  if (!effectivePrice || effectivePrice <= 0) {
+    return "Discounts cannot be added to a free program";
+  }
+  const seen = new Set<string>();
+  for (const d of discounts) {
+    const key = `${d.type}:${d.minQuantity}`;
+    if (seen.has(key)) {
+      return `Duplicate discount: ${d.type === "MULTI_SESSION" ? "session" : "family"} discount for quantity ${d.minQuantity} appears more than once`;
+    }
+    seen.add(key);
+    const err = validateBulkDiscount(d, effectivePrice);
+    if (err) return err;
+  }
+  return null;
+}
 
 export function getBestDiscount(
   discounts: BulkDiscount[],

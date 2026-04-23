@@ -21,6 +21,7 @@ interface OrganizationInfo {
 export default function MarketingSiteSignupPage() {
   const params = useParams();
   const router = useRouter();
+
   const slug = params.slug as string;
 
   const [orgInfo, setOrgInfo] = useState<OrganizationInfo | null>(null);
@@ -267,8 +268,10 @@ export default function MarketingSiteSignupPage() {
       });
 
       if (signInResult?.ok) {
-        router.push("/");
-        router.refresh();
+        // Full page reload so the server re-reads the session cookie and
+        // initializes SessionProvider with the authenticated state. router.push()
+        // keeps the layout mounted with the old null session from before signup.
+        window.location.href = "/";
       } else {
         toast.info("Please log in with your new credentials.");
         router.push(`/login?email=${encodeURIComponent(formData.email)}`);

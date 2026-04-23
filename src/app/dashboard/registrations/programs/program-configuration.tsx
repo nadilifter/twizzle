@@ -75,6 +75,8 @@ import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import type { BulkDiscount } from "@/lib/bulk-discounts";
+import { ProgramDiscountsEditor } from "@/components/program-discounts-editor";
 
 interface ProgramConfigProps {
   program: any;
@@ -145,6 +147,11 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
 
   const [activeTab, setActiveTab] = useState("general");
   const [isSaving, setIsSaving] = useState(false);
+
+  // Bulk discounts — initialized from the already-fetched program object
+  const [bulkDiscounts, setBulkDiscounts] = useState<BulkDiscount[]>(
+    () => (program.bulkDiscounts as BulkDiscount[] | undefined) ?? []
+  );
 
   // Levels state
   const [levels, setLevels] = useState<Level[]>([]);
@@ -543,7 +550,9 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
           ? Math.max(0, Math.round(formData.recurringPrice * 100) / 100)
           : null;
 
-      await updateProgram(program.id, {
+      const discountsToSave = isProgramFree ? [] : bulkDiscounts;
+
+      const { data: saved, error: saveError } = await updateProgram(program.id, {
         name: formData.name,
         description: formData.description || undefined,
         color: formData.color,
@@ -601,7 +610,18 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
         registrationEndDate: formData.registrationEndDate || null,
         registrationEndTime: formData.registrationEndTime || null,
         earlyAccessCode: formData.earlyAccessCode,
-      } as any);
+        bulkDiscounts: discountsToSave.map((d) => ({
+          type: d.type,
+          minQuantity: d.minQuantity,
+          discountType: d.discountType,
+          discountValue: Number(d.discountValue),
+        })),
+      });
+      if (!saved) {
+        toast.error(saveError || "Failed to save program");
+        return;
+      }
+      if (isProgramFree) setBulkDiscounts([]);
       toast.success("Program saved");
       if (onUpdated) await onUpdated();
       onClose();
@@ -622,6 +642,13 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
   // Derived values for schedule tab
   const startDateObj = formData.startDate ? new Date(formData.startDate + "T12:00:00Z") : null;
   const endDateObj = formData.endDate ? new Date(formData.endDate + "T12:00:00Z") : null;
+
+  // Effective price used to gate and validate discounts
+  const effectivePrice =
+    formData.billingInterval !== "ONE_TIME"
+      ? (formData.recurringPrice ?? 0)
+      : (formData.price ?? 0);
+  const isProgramFree = !effectivePrice || effectivePrice === 0;
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -877,6 +904,22 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                   </p>
                 </div>
               )}
+
+            {/* Discounts */}
+            {!isProgramFree && (
+              <div className="space-y-2">
+                <Label className="text-base font-medium flex items-center gap-2">
+                  <Ticket className="h-4 w-4 text-muted-foreground" />
+                  Discounts
+                </Label>
+                <ProgramDiscountsEditor
+                  discounts={bulkDiscounts}
+                  onChange={setBulkDiscounts}
+                  effectivePrice={effectivePrice}
+                  registrationType={formData.registrationType}
+                />
+              </div>
+            )}
 
             {/* Category */}
             {!categoriesLoading && categories.length > 0 && (
