@@ -1,0 +1,141 @@
+name: Build and Push Docker Image
+
+on:
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  IMAGE_NAME: gymnastics
+  ECR_REPOSITORY: 642524882888.dkr.ecr.us-east-1.amazonaws.com/uplifter/gymnastics
+
+jobs:
+  initialize-workspace:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.create_image_tag.outputs.IMAGE_TAG }}
+      short_sha: ${{ steps.create_image_tag.outputs.SHORT_SHA }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Create image tag
+        id: create_image_tag
+        run: |
+          # Extract the short commit hash (first 7 characters)
+          SHORT_SHA=${GITHUB_SHA::7}
+
+          # Check if we're on a hotfix-build-* branch
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          if [[ $BRANCH_NAME == hotfix-build-* ]]; then
+            IMAGE_TAG="hotfix-build-git-${SHORT_SHA}"
+          else
+            IMAGE_TAG="git-${SHORT_SHA}"
+          fi
+
+          echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          echo "SHORT_SHA=$SHORT_SHA" >> "$GITHUB_OUTPUT"
+
+  build-and-push:
+    runs-on: ubuntu-latest-m
+    needs: initialize-workspace
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      IMAGE_TAG: ${{ needs.initialize-workspace.outputs.image_tag }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::642524882888:role/github-actions-pipeline-role-20260422184931186800000001
+          aws-region: us-east-1
+
+      # secret-ids needs to be variablized
+      - name: Fetch secrets
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        with:
+          secret-ids: |
+            ,gymnastics-dev
+          parse-json-secrets: true
+          
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build and Push - Gymnastics
+        uses: docker/build-push-action@v7
+        with:
+          file: Dockerfile
+          context: .
+          tags: ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          push: true
+          cache-from: type=registry,ref=642524882888.dkr.ecr.us-east-1.amazonaws.com/uplifter/gymnastics-build-cache:build-cache
+          cache-to: type=registry,mode=max,ref=642524882888.dkr.ecr.us-east-1.amazonaws.com/uplifter/gymnastics-build-cache:build-cache
+          build-args: |
+            APP_ENVIRONMENT=${{ env.APP_ENVIRONMENT }}
+            NEXT_PUBLIC_ADYEN_CLIENT_KEY=${{ env.NEXT_PUBLIC_ADYEN_CLIENT_KEY }}
+            NEXT_PUBLIC_ADYEN_ENVIRONMENT=${{ env.NEXT_PUBLIC_ADYEN_ENVIRONMENT }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ env.NEXT_PUBLIC_SENTRY_DSN }}
+            NEXT_PUBLIC_APP_ENVIRONMENT=${{ env.NEXT_PUBLIC_APP_ENVIRONMENT }}
+            SENTRY_AUTH_TOKEN=${{ env.SENTRY_AUTH_TOKEN }}
+            NEXT_PUBLIC_APP_VERSION=${{ steps.create_image_tag.outputs.SHORT_SHA }}
+
+  # deploy-non-prod:
+  #   runs-on: ubuntu-latest
+  #   needs:
+  #     - initialize-workspace
+  #     - build-and-push
+  #   permissions:
+  #     id-token: write
+  #     contents: read
+  #   if: ${{ !startsWith(github.ref, 'refs/heads/hotfix-build-') && github.ref != 'refs/heads/main' }}
+  #   env:
+  #     IMAGE_TAG: ${{ needs.initialize-workspace.outputs.image_tag }}
+  #     SHORT_SHA: ${{ needs.initialize-workspace.outputs.short_sha }}
+
+  #   steps:
+  #     - name: 'Checkout target repository'
+  #       uses: actions/checkout@v6
+  #       with:
+  #         repository: uplifterinc/gymnastics-aoa
+  #         ssh-key: ${{ secrets.GYMNASTICS_AOA_DEPLOY_KEY }}
+  #         path: gymnastics-aoa
+  #         ref: main
+
+  #     - name: Decide env (dev/stg) based on branch
+  #       run: |
+  #         if [[ "${GITHUB_REF}" == "refs/heads/dev" ]]; then
+  #           echo "VALUES_FILE=dev-us/values.yaml" >> "$GITHUB_ENV"
+  #         elif [[ "${GITHUB_REF}" == "refs/heads/staging" ]]; then
+  #           echo "VALUES_FILE=stg-us/values.yaml" >> "$GITHUB_ENV"
+  #         else
+  #           echo "Not a non-prod branch. Exiting."
+  #           exit 0
+  #         fi
+
+      # TBD
+      # - name: 'Update image tag in dev and stg -values.yaml'
+      #   run: |
+      #     # Navigate to the target file and update the tag value using sed
+      #     sed -i "s|tag:.*|tag: ${IMAGE_TAG}|" gymnastics-aoa/workloads/${{ env.IMAGE_NAME }}/${VALUES_FILE}
+      #     sed -i "s|git\.sha:.*|git.sha: \"${SHORT_SHA}\"|" gymnastics-aoa/workloads/${{ env.IMAGE_NAME }}/${VALUES_FILE}
+
+      #     # Commit and push the changes to the develop branch
+      #     cd gymnastics-aoa
+      #     git config --global user.name "GitHub Actions"
+      #     git config --global user.email "actions@github.com"
+      #     git add workloads/${{ env.IMAGE_NAME }}/${VALUES_FILE}
+      #     git commit -m "(ACTIONS) ${{ env.IMAGE_NAME }} Update image tag to ${IMAGE_TAG} in ${VALUES_FILE}"
+      #     git push origin main
