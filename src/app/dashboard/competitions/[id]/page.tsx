@@ -42,10 +42,12 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
 import { LocationMap } from "@/components/location-map";
-// Timeline is rendered inline in the Overview tab
+import { RegistrationTimeline, type TimelineItem } from "@/components/registration-timeline";
+import { TransactionHistoryCard } from "@/components/transaction-history-card";
+import { LatestRegistrationsCard } from "@/components/latest-registrations-card";
+import { formatPrice } from "@/lib/format-utils";
 import { CompetitionConfiguration } from "../competition-configuration";
 import { COMPETITION_TYPE_LABELS, getStatusLabel, getStatusStyle } from "../lib/competition-status";
 import { AthletesTab } from "./athletes-tab";
@@ -220,18 +222,6 @@ function formatResultValue(value: number, resultType: string, precision: number)
   return value.toFixed(precision);
 }
 
-function formatPrice(price: number | string | null | undefined): string {
-  if (price === null || price === undefined) return "Free";
-  const numPrice = typeof price === "string" ? parseFloat(price) : price;
-  if (numPrice === 0) return "Free";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(numPrice);
-}
-
 const PRICING_MODE_LABELS: Record<string, string> = {
   FREE: "Free",
   PER_COMPETITION: "Per Competition",
@@ -240,22 +230,8 @@ const PRICING_MODE_LABELS: Record<string, string> = {
   PER_CATEGORY: "Per Category",
 };
 
-const INVOICE_STATUS_STYLES: Record<string, string> = {
-  PAID: "bg-green-50 text-green-700 border-green-200",
-  SENT: "bg-blue-50 text-blue-700 border-blue-200",
-  OVERDUE: "bg-red-50 text-red-700 border-red-200",
-  DRAFT: "bg-muted text-muted-foreground",
-  CANCELLED: "bg-muted text-muted-foreground",
-  PARTIAL: "bg-yellow-50 text-yellow-700 border-yellow-200",
-};
-
-function buildTimelineItems(competition: CompetitionDetail) {
-  const items: {
-    title: string;
-    date: Date | null;
-    time: string | null;
-    hollow: boolean;
-  }[] = [];
+function buildTimelineItems(competition: CompetitionDetail): TimelineItem[] {
+  const items: TimelineItem[] = [];
 
   items.push({
     title: "Registration Created",
@@ -680,174 +656,26 @@ export default function CompetitionProfilePage() {
 
             {/* Right column */}
             <div className="md:col-span-2 space-y-6">
-              {/* Registration Timeline Card */}
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Registration Timeline</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-0">
-                    {timelineItems.map((item, idx) => {
-                      const isLast = idx === timelineItems.length - 1;
-                      return (
-                        <div key={idx} className="relative flex gap-4">
-                          <div className="flex flex-col items-center">
-                            <div
-                              className={cn(
-                                "h-3 w-3 rounded-full border-2 shrink-0 mt-1.5",
-                                item.hollow
-                                  ? "bg-background border-muted-foreground/40"
-                                  : "bg-primary border-primary"
-                              )}
-                            />
-                            {!isLast && <div className="w-[2px] flex-1 bg-border my-1" />}
-                          </div>
-                          <div className={cn("pb-5", isLast && "pb-0")}>
-                            <div className="flex items-center gap-2">
-                              <h4 className="text-sm font-semibold">{item.title}</h4>
-                              {item.hollow && (
-                                <Badge variant="outline" className="text-[10px] h-5 px-1.5">
-                                  Upcoming
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {item.date
-                                ? `${format(item.date, "MMMM d, yyyy")}${item.time ? ` at ${item.time}` : ""}`
-                                : "Date pending"}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
+              <RegistrationTimeline items={timelineItems} />
 
-              {/* Transaction History + Latest Registrations side by side */}
               <div className="grid gap-6 lg:grid-cols-2">
-                {/* Transaction History Card (latest 5) */}
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Transaction History</CardTitle>
-                    {competition.lineItems && competition.lineItems.length > 5 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="gap-1 text-xs"
-                        onClick={() => setActiveTab("transactions")}
-                      >
-                        View All
-                        <ArrowRight className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    {competition.lineItems && competition.lineItems.length > 0 ? (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Description</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Amount</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {competition.lineItems.slice(0, 5).map((item) => (
-                            <TableRow key={item.id}>
-                              <TableCell>
-                                <p className="font-medium">{item.description}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {item.invoice?.user?.name ?? "N/A"} &middot;{" "}
-                                  {format(new Date(item.createdAt), "MM/dd/yyyy")}
-                                </p>
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant="outline"
-                                  className={cn(
-                                    "capitalize",
-                                    INVOICE_STATUS_STYLES[item.invoice?.status] ?? ""
-                                  )}
-                                >
-                                  {item.invoice?.status?.toLowerCase() ?? "unknown"}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {formatPrice(item.total)}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    ) : (
-                      <div className="py-10 text-center text-muted-foreground">
-                        No transactions found.
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Latest Registrations Card */}
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Latest Registrations</CardTitle>
-                    {latestRegistrations.length > 5 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="gap-1 text-xs"
-                        onClick={() => setActiveTab("athletes")}
-                      >
-                        View All
-                        <ArrowRight className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </CardHeader>
-                  <CardContent>
-                    {latestRegistrations.length > 0 ? (
-                      <div className="space-y-4">
-                        {latestRegistrations.slice(0, 5).map((reg) => (
-                          <div key={reg.athleteId} className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-10 w-10">
-                                <AvatarImage
-                                  src={reg.athleteAvatar || undefined}
-                                  alt={reg.athleteName}
-                                />
-                                <AvatarFallback>
-                                  {reg.athleteName
-                                    .split(" ")
-                                    .map((w) => w[0])
-                                    .join("")
-                                    .slice(0, 2)
-                                    .toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <p className="text-sm font-medium">{reg.athleteName}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {format(new Date(reg.registeredAt), "MMM d, yyyy")}
-                                </p>
-                              </div>
-                            </div>
-                            <Button variant="outline" size="sm" asChild>
-                              <Link
-                                href={`/dashboard/competitions/${competition.id}/athletes/${reg.athleteId}`}
-                              >
-                                View
-                              </Link>
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="py-6 text-center text-muted-foreground">
-                        No athletes registered yet.
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                <TransactionHistoryCard
+                  lineItems={competition.lineItems ?? []}
+                  onViewAll={() => setActiveTab("transactions")}
+                />
+                <LatestRegistrationsCard
+                  registrations={latestRegistrations.map((r) => ({
+                    id: r.athleteId,
+                    athleteId: r.athleteId,
+                    athleteName: r.athleteName,
+                    athleteAvatar: r.athleteAvatar,
+                    registeredAt: r.registeredAt,
+                  }))}
+                  drillInHref={(athleteId) =>
+                    `/dashboard/competitions/${competition.id}/athletes/${athleteId}`
+                  }
+                  onViewAll={() => setActiveTab("athletes")}
+                />
               </div>
             </div>
           </div>

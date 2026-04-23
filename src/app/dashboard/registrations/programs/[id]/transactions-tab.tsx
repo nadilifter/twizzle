@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { format } from "date-fns";
 import {
   type ColumnDef,
@@ -30,104 +31,117 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatPrice } from "@/lib/format-utils";
 import { INVOICE_STATUS_STYLES } from "@/lib/invoice-status";
 
-interface CompetitionLineItem {
+export interface ProgramLineItem {
   id: string;
   description: string;
-  quantity: number;
-  unitPrice: string | number;
   total: string | number;
   createdAt: string;
+  athlete: { id: string; name: string | null; avatar: string | null } | null;
   invoice: {
     id: string;
     reference: string;
     status: string;
-    total: string | number;
-    createdAt: string;
-    user: { id: string; name: string; email: string } | null;
-  };
+    user: { id: string; name: string | null; email: string } | null;
+  } | null;
 }
 
 interface TransactionsTabProps {
-  lineItems: CompetitionLineItem[];
+  lineItems: ProgramLineItem[];
+  athleteHrefPrefix: string;
 }
 
-function formatCurrency(price: number | string | null | undefined): string {
-  if (price === null || price === undefined) return "$0.00";
-  const num = typeof price === "string" ? parseFloat(price) : price;
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(num);
-}
-
-const columns: ColumnDef<CompetitionLineItem>[] = [
-  {
-    id: "reference",
-    accessorFn: (row) => row.invoice.reference,
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Invoice" />,
-    cell: ({ row }) => <span className="font-mono text-xs">{row.original.invoice.reference}</span>,
-  },
-  {
-    id: "guardian",
-    accessorFn: (row) => row.invoice.user?.name ?? "",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Guardian" />,
-    cell: ({ row }) => {
-      const user = row.original.invoice.user;
-      if (!user) return <span className="text-muted-foreground">-</span>;
-      return (
-        <div>
-          <p className="font-medium">{user.name}</p>
-          <p className="text-xs text-muted-foreground">{user.email}</p>
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: "description",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Description" />,
-    cell: ({ row }) => <span>{row.original.description}</span>,
-    filterFn: "includesString",
-  },
-  {
-    id: "date",
-    accessorFn: (row) => new Date(row.createdAt).getTime(),
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Date" />,
-    cell: ({ row }) => format(new Date(row.original.createdAt), "MMM d, yyyy"),
-  },
-  {
-    id: "status",
-    accessorFn: (row) => row.invoice.status,
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
-    cell: ({ row }) => {
-      const status = row.original.invoice.status;
-      return (
-        <Badge variant="outline" className={INVOICE_STATUS_STYLES[status] ?? ""}>
-          {status.charAt(0) + status.slice(1).toLowerCase()}
-        </Badge>
-      );
-    },
-  },
-  {
-    id: "amount",
-    accessorFn: (row) => {
-      const val = row.total;
-      return typeof val === "string" ? parseFloat(val) : val;
-    },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Amount" className="justify-end" />
-    ),
-    cell: ({ row }) => (
-      <div className="text-right font-medium">{formatCurrency(row.original.total)}</div>
-    ),
-  },
-];
-
-export function TransactionsTab({ lineItems }: TransactionsTabProps) {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+export function TransactionsTab({ lineItems, athleteHrefPrefix }: TransactionsTabProps) {
+  const [sorting, setSorting] = React.useState<SortingState>([{ id: "date", desc: true }]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+
+  const columns = React.useMemo<ColumnDef<ProgramLineItem>[]>(
+    () => [
+      {
+        id: "reference",
+        accessorFn: (row) => row.invoice?.reference ?? "",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Invoice" />,
+        cell: ({ row }) => (
+          <span className="font-mono text-xs">{row.original.invoice?.reference ?? "-"}</span>
+        ),
+      },
+      {
+        id: "athlete",
+        accessorFn: (row) => row.athlete?.name ?? "",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Athlete" />,
+        cell: ({ row }) => {
+          const a = row.original.athlete;
+          if (!a) return <span className="text-muted-foreground">-</span>;
+          return (
+            <Link
+              href={`${athleteHrefPrefix}/${a.id}`}
+              className="text-sm text-primary hover:underline"
+            >
+              {a.name ?? "Unknown"}
+            </Link>
+          );
+        },
+      },
+      {
+        id: "guardian",
+        accessorFn: (row) => row.invoice?.user?.name ?? "",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Guardian" />,
+        cell: ({ row }) => {
+          const user = row.original.invoice?.user;
+          if (!user) return <span className="text-muted-foreground">-</span>;
+          return (
+            <div>
+              <p className="text-sm font-medium">{user.name}</p>
+              <p className="text-xs text-muted-foreground">{user.email}</p>
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "description",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Description" />,
+        cell: ({ row }) => <span>{row.original.description}</span>,
+        filterFn: "includesString",
+      },
+      {
+        id: "date",
+        accessorFn: (row) => new Date(row.createdAt).getTime(),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Date" />,
+        cell: ({ row }) => format(new Date(row.original.createdAt), "MMM d, yyyy"),
+      },
+      {
+        id: "status",
+        accessorFn: (row) => row.invoice?.status ?? "",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+        cell: ({ row }) => {
+          const status = row.original.invoice?.status;
+          if (!status) return <span className="text-muted-foreground">-</span>;
+          return (
+            <Badge variant="outline" className={INVOICE_STATUS_STYLES[status] ?? ""}>
+              {status.charAt(0) + status.slice(1).toLowerCase()}
+            </Badge>
+          );
+        },
+      },
+      {
+        id: "amount",
+        accessorFn: (row) => {
+          const val = row.total;
+          return typeof val === "string" ? parseFloat(val) : val;
+        },
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Amount" className="justify-end" />
+        ),
+        cell: ({ row }) => (
+          <div className="text-right font-medium">{formatPrice(row.original.total)}</div>
+        ),
+      },
+    ],
+    [athleteHrefPrefix]
+  );
 
   const table = useReactTable({
     data: lineItems,
@@ -140,9 +154,7 @@ export function TransactionsTab({ lineItems }: TransactionsTabProps) {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: { pageSize: 20 },
-    },
+    initialState: { pagination: { pageSize: 20 } },
   });
 
   return (
@@ -175,8 +187,7 @@ export function TransactionsTab({ lineItems }: TransactionsTabProps) {
             <Receipt className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <h3 className="text-lg font-medium">No Transactions Yet</h3>
             <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-              Transactions will appear here once athletes register and pay for events in this
-              competition.
+              Transactions will appear here once athletes register or pay for this program.
             </p>
           </div>
         ) : (
@@ -199,7 +210,7 @@ export function TransactionsTab({ lineItems }: TransactionsTabProps) {
                 <TableBody>
                   {table.getRowModel().rows?.length ? (
                     table.getRowModel().rows.map((row) => (
-                      <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                      <TableRow key={row.id}>
                         {row.getVisibleCells().map((cell) => (
                           <TableCell key={cell.id}>
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}

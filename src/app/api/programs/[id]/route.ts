@@ -185,14 +185,23 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         },
         lineItems: {
           orderBy: { createdAt: "desc" },
-          take: 10,
+          // Safety limit — the Transactions tab renders this array client-side.
+          // Programs with more than 500 line items are vanishingly rare today;
+          // paginate via a dedicated endpoint if this becomes constraining.
+          take: 500,
           include: {
             invoice: {
               select: {
                 id: true,
                 reference: true,
                 status: true,
+                user: {
+                  select: { id: true, name: true, email: true },
+                },
               },
+            },
+            athlete: {
+              select: { id: true, name: true, avatar: true },
             },
           },
         },
