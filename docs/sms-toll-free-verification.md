@@ -76,9 +76,10 @@ pnpm dlx tsx scripts/provision-tollfree-number.ts --number +18881234567
 After a successful run:
 
 1. Add the new E.164 number to `SMS_PHONE_POOL` in the target environment (comma-separated).
-2. Redeploy (or wait for the hourly pool refresh in `src/lib/sms-number-pool.ts`).
-3. The pool manager holds back numbers until Twilio flips status to `TWILIO_APPROVED`, so there is no risk of routing traffic through an unverified number.
-4. Monitor Twilio Console → Trust Hub → Toll-Free Verifications. Approval typically takes 2–5 business days.
+2. Confirm the runtime forwards `SMS_PHONE_POOL` into the app process (see [Forwarding `SMS_PHONE_POOL` to the running app](#forwarding-sms_phone_pool-to-the-running-app) below).
+3. Restart the app so it re-reads the env var. `sms-number-pool.ts` caches the raw pool in-process and the hourly refresh only re-checks the verification status of numbers already in the raw pool — it does **not** pick up new additions.
+4. The pool manager holds back numbers until Twilio flips status to `TWILIO_APPROVED`, so there is no risk of routing traffic through an unverified number once the restart has taken effect.
+5. Monitor Twilio Console → Trust Hub → Toll-Free Verifications. Approval typically takes 2–5 business days.
 
 ### Resubmitting rejected numbers
 
@@ -134,6 +135,15 @@ Uplifter has separate Twilio accounts for non-prod and prod. Each has its own:
 
 **Dev (`upliftergymnastics-dev.com`) is not publicly reachable**, so it must not be used as a `TWILIO_TFV_OPTIN_URL_*`. Dev Twilio numbers still point their opt-in URLs at the publicly reachable non-prod host (`upliftergymnastics.com`), since the UI renders identically across envs and Twilio only needs to load the checkbox, not process a real signup.
 
+### Forwarding `SMS_PHONE_POOL` to the running app
+
+Setting `SMS_PHONE_POOL` on the host (e.g., `.env.uplifter`, a `values.yaml`, a secret) is only half the job — the runtime must also pass it through to the app process. Easy to miss because the symptom is mild: the pool silently falls back to `[TWILIO_PHONE_NUMBER]` (one number), the superadmin usage page shows a single row, and outbound SMS keeps working from the fallback number. The TFV scripts are unaffected because they run outside the container with `.env.uplifter` loaded directly.
+
+- **Staging** (single-EC2 docker-compose): `SMS_PHONE_POOL: ${SMS_PHONE_POOL}` must be in the `app` service's `environment:` block in `docker-compose.staging.yml`. After editing, `docker compose -f docker-compose.staging.yml up -d app` recreates the container.
+- **Prod** (K8s via `charts/uplifter/`): the Helm values for the prod environment need `SMS_PHONE_POOL` wired into the app deployment's env. The chart does not reference it today; add it the same way existing Twilio vars are wired before cutting prod over.
+
+Sanity check after any env-var change: `docker exec <app-container> env | grep SMS_PHONE_POOL` (or `kubectl exec`) should show the full comma-separated list.
+
 ---
 
 ## Handling rejections
@@ -153,6 +163,18 @@ curl -s -u "$TWILIO_ACCOUNT_SID:$TWILIO_AUTH_TOKEN" \
   "https://messaging.twilio.com/v1/Tollfree/Verifications/HHxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
   | python3 -m json.tool
 ```
+
+---
+
+## Gotchas (learned the hard way)
+
+Small Twilio API quirks that aren't obvious from the SDK types and cost real time if you hit them cold.
+
+- **`BusinessContactEmail` / `BusinessContactPhone` are inherited from the Customer Profile.** POSTing them to a verification is silently ignored; the values you see on a verification mirror whatever the Customer Profile (`BU…`) has. To change them, edit the Customer Profile in Trust Hub (Console or API). `NotificationEmail` is editable on the verification itself.
+- **`EditReason` is capped at ~100 characters.** Longer text returns `400 Invalid edit reason`. Keep it short and specific; the canonical fields in `scripts/lib/tollfree-fields.ts` carry the long-form explanation via `AdditionalInformation`.
+- **The Tollfree list endpoint caps `PageSize` at 50.** `error 20007 "Page size must be between 1 and 50"`. The SDK's `.list({ limit: N })` picks its own `pageSize` and can breach the cap — pass `pageSize: 50` explicitly.
+- **Verifications lock on edit while in review.** Once a verification is `IN_REVIEW` or `PENDING_REVIEW`, `edit_allowed` goes to `null`/`false` and Twilio rejects edits with `400 "PENDING_REVIEW and IN_REVIEW submissions cannot be edited"`. Wait for rejection or approval, then edit.
+- **Never POST only `EditReason`.** Twilio still accepts it and moves the verification to `IN_REVIEW` with the **existing** (old) fields intact — effectively burning a review cycle on the same bad data. Always send the full canonical payload alongside `EditReason` (both scripts do this correctly; the trap is ad-hoc `curl` debugging).
 
 ---
 
