@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { sanitizeHtml } from "@/lib/sanitize";
 import { useFeatures } from "@/components/feature-context";
 import { Card, CardContent } from "@/components/ui/card";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -194,184 +195,174 @@ export default function EmailCampaignsPage() {
   }, [campaigns, searchQuery]);
 
   return (
-    <div className="@container/main flex flex-1 flex-col gap-2">
-      <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-        <div className="flex items-center justify-between px-4 lg:px-6">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Email Campaigns</h1>
-            <p className="text-muted-foreground text-sm">
-              Create and send personalized email campaigns to your community.
-            </p>
-          </div>
+    <div className="flex flex-col gap-6 p-6">
+      <DashboardPageHeader
+        variant="small"
+        title="Email Campaigns"
+        description="Create and send personalized email campaigns to your community."
+        actions={
           <Button onClick={handleOpenCompose}>
             <Plus className="mr-2 h-4 w-4" />
             New Campaign
           </Button>
-        </div>
+        }
+      />
 
-        <div className="flex items-center gap-3 px-4 lg:px-6">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search campaigns..."
-              className="pl-8"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="All statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="DRAFT">Draft</SelectItem>
-              <SelectItem value="SENDING">Sending</SelectItem>
-              <SelectItem value="COMPLETED">Completed</SelectItem>
-              <SelectItem value="SCHEDULED">Scheduled</SelectItem>
-              <SelectItem value="FAILED">Failed</SelectItem>
-            </SelectContent>
-          </Select>
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search campaigns..."
+            className="pl-8"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
-
-        <div className="px-4 lg:px-6">
-          <Card>
-            <CardContent className="p-0">
-              {isLoading ? (
-                <div className="p-6 space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between p-4 border rounded-lg"
-                    >
-                      <div className="space-y-2 flex-1">
-                        <Skeleton className="h-5 w-48" />
-                        <Skeleton className="h-4 w-64" />
-                        <Skeleton className="h-3 w-32" />
-                      </div>
-                      <div className="flex gap-6">
-                        <Skeleton className="h-8 w-12" />
-                        <Skeleton className="h-8 w-12" />
-                        <Skeleton className="h-8 w-12" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : filteredCampaigns.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Mail className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="font-medium">
-                    {searchQuery || statusFilter !== "all"
-                      ? "No campaigns match your filters."
-                      : "No email campaigns yet."}
-                  </p>
-                  <p className="text-sm mt-1">
-                    {!searchQuery &&
-                      statusFilter === "all" &&
-                      "Create your first campaign to get started."}
-                  </p>
-                </div>
-              ) : (
-                <div className="divide-y">
-                  {filteredCampaigns.map((campaign) => (
-                    <div
-                      key={campaign.id}
-                      className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer transition-colors"
-                      onClick={() => setSelectedCampaign(campaign)}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-medium truncate">{campaign.name}</h3>
-                          <Badge className={STATUS_COLORS[campaign.status] || STATUS_COLORS.DRAFT}>
-                            {campaign.status}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground truncate">{campaign.subject}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-muted-foreground">
-                            {TARGET_TYPE_LABELS[campaign.targetType as TargetType] ||
-                              campaign.targetType}
-                          </span>
-                          <span className="text-xs text-muted-foreground">·</span>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(campaign.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-6 text-sm text-muted-foreground ml-4">
-                        <div className="text-center hidden sm:block">
-                          <p className="font-semibold text-foreground">
-                            {campaign.totalRecipients}
-                          </p>
-                          <p className="text-xs">Recipients</p>
-                        </div>
-                        <div className="text-center hidden md:block">
-                          <p className="font-semibold text-foreground">
-                            {campaign.deliveredCount > 0
-                              ? `${((campaign.openedCount / campaign.deliveredCount) * 100).toFixed(0)}%`
-                              : "-"}
-                          </p>
-                          <p className="text-xs">Opened</p>
-                        </div>
-                        <div className="text-center hidden md:block">
-                          <p className="font-semibold text-foreground">
-                            {campaign.deliveredCount > 0
-                              ? `${((campaign.clickedCount / campaign.deliveredCount) * 100).toFixed(0)}%`
-                              : "-"}
-                          </p>
-                          <p className="text-xs">Clicked</p>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {campaign.status === "DRAFT" && (
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleSendExisting(campaign.id);
-                                }}
-                              >
-                                <Send className="mr-2 h-4 w-4" />
-                                Send Now
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDuplicateCampaign(campaign);
-                              }}
-                            >
-                              <Copy className="mr-2 h-4 w-4" />
-                              Duplicate
-                            </DropdownMenuItem>
-                            {campaign.status === "DRAFT" && (
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteCampaign(campaign.id);
-                                }}
-                                className="text-destructive"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="All statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="DRAFT">Draft</SelectItem>
+            <SelectItem value="SENDING">Sending</SelectItem>
+            <SelectItem value="COMPLETED">Completed</SelectItem>
+            <SelectItem value="SCHEDULED">Scheduled</SelectItem>
+            <SelectItem value="FAILED">Failed</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
+
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="p-6 space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-5 w-48" />
+                    <Skeleton className="h-4 w-64" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                  <div className="flex gap-6">
+                    <Skeleton className="h-8 w-12" />
+                    <Skeleton className="h-8 w-12" />
+                    <Skeleton className="h-8 w-12" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filteredCampaigns.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Mail className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="font-medium">
+                {searchQuery || statusFilter !== "all"
+                  ? "No campaigns match your filters."
+                  : "No email campaigns yet."}
+              </p>
+              <p className="text-sm mt-1">
+                {!searchQuery &&
+                  statusFilter === "all" &&
+                  "Create your first campaign to get started."}
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y">
+              {filteredCampaigns.map((campaign) => (
+                <div
+                  key={campaign.id}
+                  className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+                  onClick={() => setSelectedCampaign(campaign)}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-medium truncate">{campaign.name}</h3>
+                      <Badge className={STATUS_COLORS[campaign.status] || STATUS_COLORS.DRAFT}>
+                        {campaign.status}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground truncate">{campaign.subject}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-muted-foreground">
+                        {TARGET_TYPE_LABELS[campaign.targetType as TargetType] ||
+                          campaign.targetType}
+                      </span>
+                      <span className="text-xs text-muted-foreground">·</span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(campaign.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-6 text-sm text-muted-foreground ml-4">
+                    <div className="text-center hidden sm:block">
+                      <p className="font-semibold text-foreground">{campaign.totalRecipients}</p>
+                      <p className="text-xs">Recipients</p>
+                    </div>
+                    <div className="text-center hidden md:block">
+                      <p className="font-semibold text-foreground">
+                        {campaign.deliveredCount > 0
+                          ? `${((campaign.openedCount / campaign.deliveredCount) * 100).toFixed(0)}%`
+                          : "-"}
+                      </p>
+                      <p className="text-xs">Opened</p>
+                    </div>
+                    <div className="text-center hidden md:block">
+                      <p className="font-semibold text-foreground">
+                        {campaign.deliveredCount > 0
+                          ? `${((campaign.clickedCount / campaign.deliveredCount) * 100).toFixed(0)}%`
+                          : "-"}
+                      </p>
+                      <p className="text-xs">Clicked</p>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {campaign.status === "DRAFT" && (
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSendExisting(campaign.id);
+                            }}
+                          >
+                            <Send className="mr-2 h-4 w-4" />
+                            Send Now
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDuplicateCampaign(campaign);
+                          }}
+                        >
+                          <Copy className="mr-2 h-4 w-4" />
+                          Duplicate
+                        </DropdownMenuItem>
+                        {campaign.status === "DRAFT" && (
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteCampaign(campaign.id);
+                            }}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Sheet open={!!selectedCampaign} onOpenChange={(o) => !o && setSelectedCampaign(null)}>
         <SheetContent className="sm:max-w-[540px] overflow-y-auto">

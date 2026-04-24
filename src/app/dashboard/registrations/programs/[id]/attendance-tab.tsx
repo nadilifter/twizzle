@@ -10,7 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs";
 import {
   Table,
   TableBody,
@@ -107,7 +108,10 @@ export function AttendanceTab({ programId }: AttendanceTabProps) {
             </CardDescription>
           </div>
           <Tabs value={view} onValueChange={(v) => setView(v as "athlete" | "session")}>
-            <TabsList>
+            <ResponsiveTabsList
+              value={view}
+              onValueChange={(v) => setView(v as "athlete" | "session")}
+            >
               <TabsTrigger value="athlete" className="gap-2">
                 <Users className="h-4 w-4" />
                 By Athlete
@@ -116,7 +120,7 @@ export function AttendanceTab({ programId }: AttendanceTabProps) {
                 <Calendar className="h-4 w-4" />
                 By Session
               </TabsTrigger>
-            </TabsList>
+            </ResponsiveTabsList>
             <TabsContent value="athlete" className="hidden" />
             <TabsContent value="session" className="hidden" />
           </Tabs>

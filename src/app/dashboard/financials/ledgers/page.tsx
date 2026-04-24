@@ -242,8 +242,8 @@ export default function LedgersPage() {
           <TabsTrigger value="reports">Financial Reports</TabsTrigger>
         </ResponsiveTabsList>
         <TabsContent value="overview" className="space-y-4">
-          <div className="grid items-start gap-6 md:grid-cols-2 lg:grid-cols-7">
-            <Card className="col-span-4">
+          <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-7">
+            <Card className="lg:col-span-4">
               <CardHeader>
                 <CardTitle>GL Codes</CardTitle>
                 <CardDescription>
@@ -325,7 +325,7 @@ export default function LedgersPage() {
               </CardContent>
             </Card>
 
-            <div className="col-span-3 flex flex-col gap-6">
+            <div className="flex flex-col gap-6 lg:col-span-3">
               <Card>
                 <CardHeader>
                   <CardTitle>Revenue by GL Code</CardTitle>
@@ -415,7 +415,7 @@ export default function LedgersPage() {
                           content={
                             <ChartLegendContent
                               nameKey="category"
-                              className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center text-foreground font-medium"
+                              className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/2 [&>*]:justify-center text-foreground font-medium sm:[&>*]:basis-1/4"
                             />
                           }
                         />

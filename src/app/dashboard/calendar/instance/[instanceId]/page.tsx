@@ -614,56 +614,63 @@ export default function InstanceDetailPage() {
   return (
     <div className="flex flex-col gap-6 p-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() =>
-            router.push(from === "programs" ? "/dashboard/registrations/programs" : "/dashboard")
-          }
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">{instance.program.name}</h1>
-            <Badge
-              variant={
-                instance.status === "SCHEDULED"
-                  ? "outline"
-                  : instance.status === "COMPLETED"
-                    ? "secondary"
-                    : "destructive"
-              }
-            >
-              {instance.status}
-            </Badge>
-          </div>
-          <div className="flex items-center gap-4 mt-1 text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Calendar className="h-4 w-4" />
-              {format(parseISO(instance.date), "EEEE, MMMM d, yyyy")}
-            </span>
-            <span className="flex items-center gap-1">
-              <Clock className="h-4 w-4" />
-              {instance.startTime} - {instance.endTime} ({duration} min)
-            </span>
-            {instance.facility && (
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+        <div className="flex min-w-0 flex-1 items-start gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0"
+            onClick={() =>
+              router.push(from === "programs" ? "/dashboard/registrations/programs" : "/dashboard")
+            }
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold">{instance.program.name}</h1>
+              <Badge
+                variant={
+                  instance.status === "SCHEDULED"
+                    ? "outline"
+                    : instance.status === "COMPLETED"
+                      ? "secondary"
+                      : "destructive"
+                }
+              >
+                {instance.status}
+              </Badge>
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground">
               <span className="flex items-center gap-1">
-                <MapPin className="h-4 w-4" />
-                {instance.facility.name}
+                <Calendar className="h-4 w-4" />
+                {format(parseISO(instance.date), "EEEE, MMMM d, yyyy")}
               </span>
-            )}
+              <span className="flex items-center gap-1">
+                <Clock className="h-4 w-4" />
+                {instance.startTime} - {instance.endTime} ({duration} min)
+              </span>
+              {instance.facility && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-4 w-4" />
+                  {instance.facility.name}
+                </span>
+              )}
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setNotesDialogOpen(true)}>
+        <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+          <Button
+            variant="outline"
+            onClick={() => setNotesDialogOpen(true)}
+            className="flex-1 sm:flex-none"
+          >
             <FileText className="h-4 w-4 mr-2" />
             Notes
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline">
+              <Button variant="outline" className="flex-1 sm:flex-none">
                 Actions
                 <MoreHorizontal className="h-4 w-4 ml-2" />
               </Button>

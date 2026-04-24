@@ -21,12 +21,16 @@ export function DashboardPageHeader({
   variant = "default",
 }: DashboardPageHeaderProps) {
   return (
-    <div className="flex items-center justify-between">
-      <div>
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <div className="min-w-0">
         <h1 className={titleVariants[variant]}>{title}</h1>
         {description != null && <p className="text-muted-foreground mt-0.5">{description}</p>}
       </div>
-      {actions != null && <div className="shrink-0">{actions}</div>}
+      {actions != null && (
+        <div className="flex w-full flex-wrap gap-2 [&>*]:flex-1 sm:w-auto sm:shrink-0 sm:[&>*]:flex-none">
+          {actions}
+        </div>
+      )}
     </div>
   );
 }

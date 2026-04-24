@@ -186,8 +186,8 @@ export function LedgerTransactions() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="relative max-w-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative w-full sm:max-w-sm">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Filter transactions..."
@@ -198,7 +198,7 @@ export function LedgerTransactions() {
                 className="pl-9"
               />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <DataTableViewOptions table={table} />
               <Button variant="outline" size="sm">
                 <Download className="mr-2 h-4 w-4" />
@@ -206,7 +206,7 @@ export function LedgerTransactions() {
               </Button>
             </div>
           </div>
-          <div className="overflow-hidden rounded-md border">
+          <div className="overflow-x-auto rounded-md border">
             <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (

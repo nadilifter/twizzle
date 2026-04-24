@@ -386,14 +386,14 @@ export default function ProgramProfilePage() {
   return (
     <div className="flex flex-col gap-6 p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" asChild>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <Button variant="ghost" size="icon" asChild className="shrink-0">
             <Link href="/dashboard/registrations/programs">
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
-          <h1 className="text-2xl font-semibold tracking-tight">{program.name}</h1>
+          <h1 className="min-w-0 truncate text-2xl font-semibold tracking-tight">{program.name}</h1>
           <Badge
             variant="outline"
             className={cn(
@@ -404,7 +404,11 @@ export default function ProgramProfilePage() {
             {program.status}
           </Badge>
         </div>
-        <Button variant="outline" onClick={() => setSettingsOpen(true)}>
+        <Button
+          variant="outline"
+          onClick={() => setSettingsOpen(true)}
+          className="w-full sm:w-auto"
+        >
           <Settings className="mr-2 h-4 w-4" />
           Settings
         </Button>

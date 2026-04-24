@@ -42,8 +42,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -753,320 +753,319 @@ export default function StorePage() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-bold tracking-tight">Products</h2>
-          <p className="text-sm text-muted-foreground">
-            Manage products available for sale in your store and point of sale.
-          </p>
-        </div>
-        <Dialog
-          open={dialogOpen}
-          onOpenChange={(open) => {
-            setDialogOpen(open);
-            if (!open) {
+      <DashboardPageHeader
+        variant="small"
+        title="Products"
+        description="Manage products available for sale in your store and point of sale."
+        actions={
+          <Button
+            onClick={() => {
               setEditingProduct(null);
               setFormData(defaultFormData);
-            }
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" /> Add Product
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-4xl">
-            <DialogHeader>
-              <DialogTitle>{editingProduct ? "Edit Product" : "Add New Product"}</DialogTitle>
-              <DialogDescription>
-                {editingProduct
-                  ? "Update product details."
-                  : "Add a new product to your store inventory."}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4 px-1 max-h-[60vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Product Name *</Label>
-                  <Input
-                    id="name"
-                    placeholder="e.g. Water Bottle"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="sku">SKU</Label>
-                  <Input
-                    id="sku"
-                    placeholder="e.g. WB-001"
-                    value={formData.sku}
-                    onChange={(e) =>
-                      setFormData({ ...formData, sku: e.target.value.toUpperCase() })
-                    }
-                  />
-                </div>
-              </div>
-
+              setDialogOpen(true);
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add Product
+          </Button>
+        }
+      />
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            setEditingProduct(null);
+            setFormData(defaultFormData);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>{editingProduct ? "Edit Product" : "Add New Product"}</DialogTitle>
+            <DialogDescription>
+              {editingProduct
+                ? "Update product details."
+                : "Add a new product to your store inventory."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 px-1 max-h-[60vh] overflow-y-auto">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Product description..."
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                <Label htmlFor="name">Product Name *</Label>
+                <Input
+                  id="name"
+                  placeholder="e.g. Water Bottle"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sku">SKU</Label>
+                <Input
+                  id="sku"
+                  placeholder="e.g. WB-001"
+                  value={formData.sku}
+                  onChange={(e) => setFormData({ ...formData, sku: e.target.value.toUpperCase() })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Product description..."
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="category">Category</Label>
+                <Select
+                  value={formData.category}
+                  onValueChange={(value) => setFormData({ ...formData, category: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="price">Base Price ($) *</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={formData.price || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })
+                  }
+                />
+              </div>
+            </div>
+
+            <ImageUpload
+              label="Product Image"
+              value={formData.imageUrl || null}
+              onChange={(url) => setFormData({ ...formData, imageUrl: url || "" })}
+              type="product"
+            />
+
+            {/* Type / Variants Section */}
+            <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Product Type</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Enable to add options like sizes, colors, or fits
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.hasType}
+                  onCheckedChange={(checked) => {
+                    setFormData({
+                      ...formData,
+                      hasType: checked,
+                      variants:
+                        checked && formData.variants.length === 0
+                          ? [{ ...defaultVariant }]
+                          : formData.variants,
+                    });
+                  }}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="category">Category</Label>
-                  <Select
-                    value={formData.category}
-                    onValueChange={(value) => setFormData({ ...formData, category: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="price">Base Price ($) *</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={formData.price || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })
-                    }
-                  />
-                </div>
-              </div>
+              {formData.hasType && (
+                <div className="space-y-4 pt-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="typeName">Type Name *</Label>
+                    <Input
+                      id="typeName"
+                      placeholder='e.g. "Size", "Color", "Fit"'
+                      value={formData.typeName}
+                      onChange={(e) => setFormData({ ...formData, typeName: e.target.value })}
+                    />
+                  </div>
 
-              <ImageUpload
-                label="Product Image"
-                value={formData.imageUrl || null}
-                onChange={(url) => setFormData({ ...formData, imageUrl: url || "" })}
-                type="product"
-              />
+                  <div className="space-y-3">
+                    <Label>Options</Label>
+                    {formData.variants.map((variant, index) => (
+                      <div key={index} className="space-y-2 p-3 border rounded-md bg-background">
+                        <div className="flex items-center gap-2">
+                          <Input
+                            placeholder="Label (e.g. Red, Large)"
+                            value={variant.label}
+                            onChange={(e) => updateVariant(index, { label: e.target.value })}
+                            className="flex-[3]"
+                          />
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="Price override"
+                            value={variant.price}
+                            onChange={(e) => updateVariant(index, { price: e.target.value })}
+                            className="flex-[2]"
+                          />
+                          {formData.variants.length > 1 && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive shrink-0"
+                              onClick={() => removeVariant(index)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min="1"
+                            placeholder="Max (unlimited)"
+                            value={variant.maxInventory}
+                            onChange={(e) => updateVariant(index, { maxInventory: e.target.value })}
+                            className="h-7 flex-1 text-xs"
+                          />
+                          <Input
+                            type="number"
+                            min="0"
+                            placeholder="Current (unlimited)"
+                            value={variant.currentInventory}
+                            onChange={(e) =>
+                              updateVariant(index, { currentInventory: e.target.value })
+                            }
+                            className="h-7 flex-1 text-xs"
+                          />
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">
+                          Leave both blank for unlimited inventory.
+                        </p>
+                        <ImageUpload
+                          label="Variant Image"
+                          value={variant.imageUrl || null}
+                          onChange={(url) => updateVariant(index, { imageUrl: url || "" })}
+                          type="product"
+                        />
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addVariant}
+                      className="w-full"
+                    >
+                      <Plus className="h-3.5 w-3.5 mr-1" /> Add Option
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
 
-              {/* Type / Variants Section */}
+            {/* Standard Inventory (only when no type) */}
+            {!formData.hasType && (
               <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Product Type</Label>
+                    <Label>Unlimited Inventory</Label>
                     <p className="text-xs text-muted-foreground">
-                      Enable to add options like sizes, colors, or fits
+                      Don&apos;t track inventory for this product
                     </p>
                   </div>
                   <Switch
-                    checked={formData.hasType}
-                    onCheckedChange={(checked) => {
+                    checked={formData.isUnlimited}
+                    onCheckedChange={(checked) =>
                       setFormData({
                         ...formData,
-                        hasType: checked,
-                        variants:
-                          checked && formData.variants.length === 0
-                            ? [{ ...defaultVariant }]
-                            : formData.variants,
-                      });
-                    }}
+                        isUnlimited: checked,
+                        maxInventory: checked ? null : (formData.maxInventory ?? 10),
+                        currentInventory: checked ? null : (formData.currentInventory ?? 10),
+                      })
+                    }
                   />
                 </div>
 
-                {formData.hasType && (
-                  <div className="space-y-4 pt-2">
+                {!formData.isUnlimited && (
+                  <div className="grid grid-cols-2 gap-4 pt-2">
                     <div className="space-y-2">
-                      <Label htmlFor="typeName">Type Name *</Label>
+                      <Label htmlFor="maxInventory">Max Inventory</Label>
                       <Input
-                        id="typeName"
-                        placeholder='e.g. "Size", "Color", "Fit"'
-                        value={formData.typeName}
-                        onChange={(e) => setFormData({ ...formData, typeName: e.target.value })}
+                        id="maxInventory"
+                        type="number"
+                        min="1"
+                        placeholder="e.g. 100"
+                        value={formData.maxInventory ?? ""}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            maxInventory:
+                              e.target.value.trim() !== "" ? parseInt(e.target.value) : null,
+                          })
+                        }
                       />
                     </div>
-
-                    <div className="space-y-3">
-                      <Label>Options</Label>
-                      {formData.variants.map((variant, index) => (
-                        <div key={index} className="space-y-2 p-3 border rounded-md bg-background">
-                          <div className="flex items-center gap-2">
-                            <Input
-                              placeholder="Label (e.g. Red, Large)"
-                              value={variant.label}
-                              onChange={(e) => updateVariant(index, { label: e.target.value })}
-                              className="flex-[3]"
-                            />
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              placeholder="Price override"
-                              value={variant.price}
-                              onChange={(e) => updateVariant(index, { price: e.target.value })}
-                              className="flex-[2]"
-                            />
-                            {formData.variants.length > 1 && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive shrink-0"
-                                onClick={() => removeVariant(index)}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="number"
-                              min="1"
-                              placeholder="Max (unlimited)"
-                              value={variant.maxInventory}
-                              onChange={(e) =>
-                                updateVariant(index, { maxInventory: e.target.value })
-                              }
-                              className="h-7 flex-1 text-xs"
-                            />
-                            <Input
-                              type="number"
-                              min="0"
-                              placeholder="Current (unlimited)"
-                              value={variant.currentInventory}
-                              onChange={(e) =>
-                                updateVariant(index, { currentInventory: e.target.value })
-                              }
-                              className="h-7 flex-1 text-xs"
-                            />
-                          </div>
-                          <p className="text-[10px] text-muted-foreground">
-                            Leave both blank for unlimited inventory.
-                          </p>
-                          <ImageUpload
-                            label="Variant Image"
-                            value={variant.imageUrl || null}
-                            onChange={(url) => updateVariant(index, { imageUrl: url || "" })}
-                            type="product"
-                          />
-                        </div>
-                      ))}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={addVariant}
-                        className="w-full"
-                      >
-                        <Plus className="h-3.5 w-3.5 mr-1" /> Add Option
-                      </Button>
+                    <div className="space-y-2">
+                      <Label htmlFor="currentInventory">Current Stock</Label>
+                      <Input
+                        id="currentInventory"
+                        type="number"
+                        min="0"
+                        placeholder="e.g. 50"
+                        value={formData.currentInventory ?? ""}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            currentInventory:
+                              e.target.value.trim() !== "" ? parseInt(e.target.value) : null,
+                          })
+                        }
+                      />
                     </div>
                   </div>
                 )}
               </div>
+            )}
 
-              {/* Standard Inventory (only when no type) */}
-              {!formData.hasType && (
-                <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Unlimited Inventory</Label>
-                      <p className="text-xs text-muted-foreground">
-                        Don&apos;t track inventory for this product
-                      </p>
-                    </div>
-                    <Switch
-                      checked={formData.isUnlimited}
-                      onCheckedChange={(checked) =>
-                        setFormData({
-                          ...formData,
-                          isUnlimited: checked,
-                          maxInventory: checked ? null : (formData.maxInventory ?? 10),
-                          currentInventory: checked ? null : (formData.currentInventory ?? 10),
-                        })
-                      }
-                    />
-                  </div>
+            <GLCodeSelector
+              value={formData.glCodeId}
+              onChange={(v) => setFormData({ ...formData, glCodeId: v })}
+              entityType="PRODUCT"
+            />
 
-                  {!formData.isUnlimited && (
-                    <div className="grid grid-cols-2 gap-4 pt-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="maxInventory">Max Inventory</Label>
-                        <Input
-                          id="maxInventory"
-                          type="number"
-                          min="1"
-                          placeholder="e.g. 100"
-                          value={formData.maxInventory ?? ""}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              maxInventory:
-                                e.target.value.trim() !== "" ? parseInt(e.target.value) : null,
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="currentInventory">Current Stock</Label>
-                        <Input
-                          id="currentInventory"
-                          type="number"
-                          min="0"
-                          placeholder="e.g. 50"
-                          value={formData.currentInventory ?? ""}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              currentInventory:
-                                e.target.value.trim() !== "" ? parseInt(e.target.value) : null,
-                            })
-                          }
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <GLCodeSelector
-                value={formData.glCodeId}
-                onChange={(v) => setFormData({ ...formData, glCodeId: v })}
-                entityType="PRODUCT"
-              />
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Active</Label>
-                  <p className="text-xs text-muted-foreground">Product is available for sale</p>
-                </div>
-                <Switch
-                  checked={formData.isActive}
-                  onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-                />
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Active</Label>
+                <p className="text-xs text-muted-foreground">Product is available for sale</p>
               </div>
+              <Switch
+                checked={formData.isActive}
+                onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+              />
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSubmit} disabled={isSaving}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editingProduct ? "Save Changes" : "Add Product"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {editingProduct ? "Save Changes" : "Add Product"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Restock Dialog */}
       <Dialog open={restockDialogOpen} onOpenChange={setRestockDialogOpen}>

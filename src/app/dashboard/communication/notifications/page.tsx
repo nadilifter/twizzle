@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useFeatures } from "@/components/feature-context";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -704,18 +705,17 @@ export default function NotificationsPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Notifications & Reminders</h1>
-          <p className="text-muted-foreground">
-            Configure automated messages based on system events.
-          </p>
-        </div>
-        <Button onClick={() => handleOpenDialog()}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Notification Rule
-        </Button>
-      </div>
+      <DashboardPageHeader
+        variant="small"
+        title="Notifications & Reminders"
+        description="Configure automated messages based on system events."
+        actions={
+          <Button onClick={() => handleOpenDialog()}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Notification Rule
+          </Button>
+        }
+      />
 
       <Card>
         <CardHeader>

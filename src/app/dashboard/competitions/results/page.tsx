@@ -9,6 +9,7 @@ import {
   type ResultType as AthleticsResultType,
 } from "@/lib/athletics-formats";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -351,12 +352,10 @@ export default function ResultsPage() {
     <div className="flex flex-col gap-6 p-6">
       <DemoDataBanner />
 
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Results</h1>
-        <p className="text-muted-foreground">
-          View and manage competition results, review seed marks, and enter scores.
-        </p>
-      </div>
+      <DashboardPageHeader
+        title="Results"
+        description="View and manage competition results, review seed marks, and enter scores."
+      />
 
       {competitions.length === 0 ? (
         <Card>

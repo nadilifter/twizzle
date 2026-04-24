@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Loader2, Globe, Trophy, Type, FileText } from "lucide-react";
@@ -74,24 +75,22 @@ export default function CompetitionsMarketingPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Competitions - Marketing Site</h1>
-          <p className="text-muted-foreground">
-            Configure how competitions appear on your public marketing site.
-          </p>
-        </div>
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            "Save Changes"
-          )}
-        </Button>
-      </div>
+      <DashboardPageHeader
+        title="Competitions - Marketing Site"
+        description="Configure how competitions appear on your public marketing site."
+        actions={
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save Changes"
+            )}
+          </Button>
+        }
+      />
 
       {/* Visibility Toggle */}
       <Card>

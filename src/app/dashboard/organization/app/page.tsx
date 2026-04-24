@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import {
   Card,
   CardContent,
@@ -50,18 +51,16 @@ export default function AppPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">App Configuration</h1>
-          <p className="text-muted-foreground">
-            Customize the look and feel of your white-labeled organization app.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline">Discard Changes</Button>
-          <Button>Publish Changes</Button>
-        </div>
-      </div>
+      <DashboardPageHeader
+        title="App Configuration"
+        description="Customize the look and feel of your white-labeled organization app."
+        actions={
+          <>
+            <Button variant="outline">Discard Changes</Button>
+            <Button>Publish Changes</Button>
+          </>
+        }
+      />
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Main Configuration Area */}

@@ -14,7 +14,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   CalendarIcon,
@@ -349,10 +350,14 @@ export default function AthleteAttendancePage() {
 
       {/* View Toggle */}
       <Tabs value={activeView} onValueChange={(v) => setActiveView(v as "list" | "calendar")}>
-        <TabsList className="grid w-full max-w-[400px] grid-cols-2">
+        <ResponsiveTabsList
+          value={activeView}
+          onValueChange={(v) => setActiveView(v as "list" | "calendar")}
+          className="grid w-full max-w-[400px] grid-cols-2"
+        >
           <TabsTrigger value="list">List View</TabsTrigger>
           <TabsTrigger value="calendar">Calendar View</TabsTrigger>
-        </TabsList>
+        </ResponsiveTabsList>
 
         {/* List View */}
         <TabsContent value="list" className="mt-4">

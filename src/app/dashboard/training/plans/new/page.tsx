@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -158,22 +159,29 @@ export default function NewPlanPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6 max-w-5xl mx-auto">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
+      <div className="flex items-start gap-4">
+        <Button variant="ghost" size="icon" asChild className="shrink-0">
           <Link href="/dashboard/training/plans">
             <ChevronLeft className="h-4 w-4" />
           </Link>
         </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Create Lesson Plan</h1>
+        <div className="min-w-0 flex-1">
+          <DashboardPageHeader
+            variant="small"
+            title="Create Lesson Plan"
+            actions={
+              <>
+                <Button variant="outline" className="gap-2" onClick={handleSaveDraft}>
+                  Save Draft
+                </Button>
+                <Button className="gap-2" onClick={handlePublish}>
+                  <Save className="h-4 w-4" />
+                  Publish Plan
+                </Button>
+              </>
+            }
+          />
         </div>
-        <Button variant="outline" className="gap-2" onClick={handleSaveDraft}>
-          Save Draft
-        </Button>
-        <Button className="gap-2" onClick={handlePublish}>
-          <Save className="h-4 w-4" />
-          Publish Plan
-        </Button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-[300px_1fr]">

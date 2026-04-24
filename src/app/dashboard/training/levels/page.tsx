@@ -39,8 +39,8 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -275,79 +275,75 @@ export default function LevelsPage() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Levels</h1>
-          <p className="text-muted-foreground">
-            Define skill and program levels for your organization
-          </p>
-        </div>
-        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-          <SheetTrigger asChild>
-            <Button onClick={() => handleOpenSheet()}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Level
-            </Button>
-          </SheetTrigger>
-          <SheetContent className="sm:max-w-md">
-            <SheetHeader>
-              <SheetTitle>{editingLevel ? "Edit Level" : "Create Level"}</SheetTitle>
-              <SheetDescription>
-                {editingLevel
-                  ? "Update the level details below."
-                  : "Add a new level for programs and skills."}
-              </SheetDescription>
-            </SheetHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">Name *</Label>
-                <Input
-                  id="name"
-                  placeholder="e.g., Bronze, Level 1, Beginner"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Optional description for this level"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={3}
-                />
-              </div>
-              <ColorSelector
-                value={formData.color}
-                onChange={(color) => setFormData({ ...formData, color })}
+      <DashboardPageHeader
+        title="Levels"
+        description="Define skill and program levels for your organization"
+        actions={
+          <Button onClick={() => handleOpenSheet()}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Level
+          </Button>
+        }
+      />
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+        <SheetContent className="sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>{editingLevel ? "Edit Level" : "Create Level"}</SheetTitle>
+            <SheetDescription>
+              {editingLevel
+                ? "Update the level details below."
+                : "Add a new level for programs and skills."}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Name *</Label>
+              <Input
+                id="name"
+                placeholder="e.g., Bronze, Level 1, Beginner"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="isDefault"
-                  checked={formData.isDefault}
-                  onCheckedChange={(checked) => setFormData({ ...formData, isDefault: checked })}
-                />
-                <Label htmlFor="isDefault">Set as default level</Label>
-              </div>
             </div>
-            <SheetFooter>
-              <Button onClick={handleSave} disabled={isSaving || !formData.name.trim()}>
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : editingLevel ? (
-                  "Save Changes"
-                ) : (
-                  "Create Level"
-                )}
-              </Button>
-            </SheetFooter>
-          </SheetContent>
-        </Sheet>
-      </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Optional description for this level"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                rows={3}
+              />
+            </div>
+            <ColorSelector
+              value={formData.color}
+              onChange={(color) => setFormData({ ...formData, color })}
+            />
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="isDefault"
+                checked={formData.isDefault}
+                onCheckedChange={(checked) => setFormData({ ...formData, isDefault: checked })}
+              />
+              <Label htmlFor="isDefault">Set as default level</Label>
+            </div>
+          </div>
+          <SheetFooter>
+            <Button onClick={handleSave} disabled={isSaving || !formData.name.trim()}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : editingLevel ? (
+                "Save Changes"
+              ) : (
+                "Create Level"
+              )}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       <Card>
         <CardHeader>

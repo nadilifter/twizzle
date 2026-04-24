@@ -23,6 +23,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import {
   Dialog,
   DialogContent,
@@ -285,26 +286,24 @@ export default function CategoriesPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Categories</h1>
-          <p className="text-muted-foreground">
-            Group your programs, events, and competitions into categories for your marketing site.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {categories.length > 1 && (
-            <Button variant="outline" onClick={handleOpenReorder}>
-              <ArrowUpDown className="mr-2 h-4 w-4" />
-              Reorder
+      <DashboardPageHeader
+        title="Categories"
+        description="Group your programs, events, and competitions into categories for your marketing site."
+        actions={
+          <>
+            {categories.length > 1 && (
+              <Button variant="outline" onClick={handleOpenReorder}>
+                <ArrowUpDown className="mr-2 h-4 w-4" />
+                Reorder
+              </Button>
+            )}
+            <Button onClick={openCreateForm}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Category
             </Button>
-          )}
-          <Button onClick={openCreateForm}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Category
-          </Button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <div className="flex items-center gap-4">
         <div className="relative flex-1 md:max-w-sm">

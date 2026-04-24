@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import {
   Dialog,
   DialogContent,
@@ -974,29 +975,31 @@ export default function CategoriesPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Categories</h1>
-          <p className="text-muted-foreground">
+      <DashboardPageHeader
+        title="Categories"
+        description={
+          <>
             Manage competition categories for your organization. Toggle sport presets on or off, and
             create your own custom categories.
-          </p>
-          {orgSports.length > 0 && (
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className="text-xs text-muted-foreground">Sports:</span>
-              {orgSports.map((sport) => (
-                <Badge key={sport.id} variant="secondary" className="text-xs">
-                  {sport.name}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
-        <Button onClick={handleOpenCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Category
-        </Button>
-      </div>
+            {orgSports.length > 0 && (
+              <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">Sports:</span>
+                {orgSports.map((sport) => (
+                  <Badge key={sport.id} variant="secondary" className="text-xs">
+                    {sport.name}
+                  </Badge>
+                ))}
+              </span>
+            )}
+          </>
+        }
+        actions={
+          <Button onClick={handleOpenCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Category
+          </Button>
+        }
+      />
 
       {/* Sport-Specific Events Section */}
       {Object.keys(sportSpecific).length > 0 && (

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -488,14 +489,10 @@ export default function MedicalSettingsPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Medical Information Settings</h1>
-          <p className="text-muted-foreground">
-            Configure what medical information to collect from athletes
-          </p>
-        </div>
-      </div>
+      <DashboardPageHeader
+        title="Medical Information Settings"
+        description="Configure what medical information to collect from athletes"
+      />
 
       {/* Standard Questions */}
       <Card>

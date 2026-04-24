@@ -12,7 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs";
 import { Target, CheckCircle2, Circle, XCircle, TrendingUp, Award, Dumbbell } from "lucide-react";
 import { format } from "date-fns";
 import { api } from "@/lib/api-client";
@@ -74,6 +75,7 @@ export default function AthleteSkillsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingSkills, setIsLoadingSkills] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [statusTab, setStatusTab] = useState("all");
 
   // Fetch athletes
   useEffect(() => {
@@ -258,9 +260,9 @@ export default function AthleteSkillsPage() {
       )}
 
       {/* Skills List */}
-      <Tabs defaultValue="all" className="space-y-4">
+      <Tabs value={statusTab} onValueChange={setStatusTab} className="space-y-4">
         <div className="flex items-center justify-between">
-          <TabsList>
+          <ResponsiveTabsList value={statusTab} onValueChange={setStatusTab}>
             <TabsTrigger value="all">All ({filteredSkills.length})</TabsTrigger>
             <TabsTrigger value="mastered" className="text-green-600">
               Mastered ({skillsByStatus.succeeded.length})
@@ -271,7 +273,7 @@ export default function AthleteSkillsPage() {
             <TabsTrigger value="notstarted">
               Not Started ({skillsByStatus.notAttempted.length})
             </TabsTrigger>
-          </TabsList>
+          </ResponsiveTabsList>
 
           {selectedCategory !== "all" && (
             <Badge

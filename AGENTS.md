@@ -211,6 +211,50 @@ Use the `ImageUpload` component from `src/components/ui/image-upload.tsx`. It ha
 
 Use TanStack React Table v8 (`@tanstack/react-table`). See `docs/data-table-migration.md` for the standard column/table setup used throughout the app.
 
+### Dashboard Page Headers
+
+Every list/section page in the admin portal uses `DashboardPageHeader` (`src/components/dashboard-page-header.tsx`) — do **not** hand-roll a `<div className="flex items-center justify-between"><h1>...</h1><Button/>...` header. The shared component handles mobile responsiveness (actions drop below the title on narrow screens and the primary button grows to fill the width).
+
+```tsx
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
+
+<DashboardPageHeader
+  title="Programs"
+  description="Manage your registration programs and enrollment options."
+  actions={
+    <Button asChild>
+      <Link href="/dashboard/registrations/programs/new">Add Program</Link>
+    </Button>
+  }
+/>;
+```
+
+Pass multiple action buttons as a fragment — they render inside a `flex-wrap` container and each grows to fill on mobile. Use `variant="small"` for sub-pages (edit/create forms) that want `text-2xl` instead of the default `text-3xl` title.
+
+If the page has a back button (create/edit forms), wrap the back button + `DashboardPageHeader` in a flex row: `<div className="flex items-start gap-4"><BackButton /><div className="min-w-0 flex-1"><DashboardPageHeader ... /></div></div>`.
+
+### Chat Split-Pane Layout
+
+Chat pages across the three portals use the `ChatPanels` family (`src/components/chat/chat-panels.tsx`) for responsive sidebar + message-view layouts. Compose `ChatPanelsSidebar` and `ChatPanelsMain` as children of `ChatPanels`, and put a `ChatPanelsBackButton` inside the `ChatHeader` on the main pane. Desktop renders side-by-side; mobile shows one pane at a time driven by the `hasSelection` prop.
+
+### Responsive Toolbars
+
+For search + filter/action button rows above a table, stack on mobile and switch to the inline layout at `sm:`:
+
+```tsx
+<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+  <div className="relative w-full sm:max-w-sm sm:flex-1">
+    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+    <Input className="pl-8" placeholder="Search..." />
+  </div>
+  <div className="flex flex-wrap items-center gap-2">
+    {/* action buttons; use `flex-1 sm:flex-none` on any button that should grow on mobile */}
+  </div>
+</div>
+```
+
+Wrap data tables in `<div className="overflow-x-auto rounded-md border">` so they scroll horizontally on narrow screens instead of squishing columns.
+
 ---
 
 ## Where Things Live
@@ -228,6 +272,8 @@ Use TanStack React Table v8 (`@tanstack/react-table`). See `docs/data-table-migr
 | File storage                 | `src/lib/storage.ts`                             |
 | Shared Zod schemas           | `src/lib/schemas.ts`                             |
 | Image upload component       | `src/components/ui/image-upload.tsx`             |
+| Dashboard page header        | `src/components/dashboard-page-header.tsx`       |
+| Chat split-pane layout       | `src/components/chat/chat-panels.tsx`            |
 | Feature flags                | `src/lib/feature-toggles.ts`                     |
 | Accounting integrations      | `src/lib/qbo.ts`, `src/lib/xero.ts`              |
 | Prisma schema                | `prisma/schema.prisma`                           |

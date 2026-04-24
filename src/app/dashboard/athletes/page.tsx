@@ -790,8 +790,8 @@ export default function AthletesPage() {
         }
       />
 
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+        <div className="relative w-full sm:max-w-sm sm:flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search athletes..."
@@ -800,137 +800,141 @@ export default function AthletesPage() {
             className="pl-8"
           />
         </div>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="border-dashed">
-              <Filter className="mr-2 h-4 w-4" />
-              Filter
-              {isFiltered && (
-                <Badge variant="secondary" className="ml-2 rounded-sm px-1 font-normal lg:hidden">
-                  {table.getState().columnFilters.length}
-                </Badge>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[240px] p-0" align="end">
-            <div className="p-4 pb-0">
-              <h4 className="font-medium leading-none">Filters</h4>
-            </div>
-            <div className="p-4 pt-2 space-y-4 max-h-[60vh] overflow-y-auto">
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground">Level</h4>
-                <div className="grid gap-2">
-                  {levels.map((level) => (
-                    <div key={level} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`level-${level}`}
-                        checked={(table.getColumn("level")?.getFilterValue() as string[])?.includes(
-                          level
-                        )}
-                        onCheckedChange={(checked) => handleFilterChange("level", level, !!checked)}
-                      />
-                      <label
-                        htmlFor={`level-${level}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        {level}
-                      </label>
-                    </div>
-                  ))}
-                </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="flex-1 border-dashed sm:flex-none">
+                <Filter className="mr-2 h-4 w-4" />
+                Filter
+                {isFiltered && (
+                  <Badge variant="secondary" className="ml-2 rounded-sm px-1 font-normal lg:hidden">
+                    {table.getState().columnFilters.length}
+                  </Badge>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[240px] p-0" align="end">
+              <div className="p-4 pb-0">
+                <h4 className="font-medium leading-none">Filters</h4>
               </div>
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground">Status</h4>
-                <div className="grid gap-2">
-                  {statuses.map((status) => (
-                    <div key={status} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`status-${status}`}
-                        checked={(
-                          table.getColumn("status")?.getFilterValue() as string[]
-                        )?.includes(status)}
-                        onCheckedChange={(checked) =>
-                          handleFilterChange("status", status, !!checked)
-                        }
-                      />
-                      <label
-                        htmlFor={`status-${status}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        {formatStatus(status)}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {programOptions.length > 0 && (
+              <div className="p-4 pt-2 space-y-4 max-h-[60vh] overflow-y-auto">
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-muted-foreground">Program</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground">Level</h4>
                   <div className="grid gap-2">
-                    {programOptions.map((program) => (
-                      <div key={program.id} className="flex items-center space-x-2">
+                    {levels.map((level) => (
+                      <div key={level} className="flex items-center space-x-2">
                         <Checkbox
-                          id={`program-${program.id}`}
+                          id={`level-${level}`}
                           checked={(
-                            table.getColumn("programIds")?.getFilterValue() as string[]
-                          )?.includes(program.id)}
+                            table.getColumn("level")?.getFilterValue() as string[]
+                          )?.includes(level)}
                           onCheckedChange={(checked) =>
-                            handleFilterChange("programIds", program.id, !!checked)
+                            handleFilterChange("level", level, !!checked)
                           }
                         />
                         <label
-                          htmlFor={`program-${program.id}`}
+                          htmlFor={`level-${level}`}
                           className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                         >
-                          {program.name}
+                          {level}
                         </label>
                       </div>
                     ))}
                   </div>
                 </div>
-              )}
-              {membershipsEnabled && membershipOptions.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-muted-foreground">Membership</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground">Status</h4>
                   <div className="grid gap-2">
-                    {membershipOptions.map((group) => (
-                      <div key={group.id} className="flex items-center space-x-2">
+                    {statuses.map((status) => (
+                      <div key={status} className="flex items-center space-x-2">
                         <Checkbox
-                          id={`membership-${group.id}`}
+                          id={`status-${status}`}
                           checked={(
-                            table.getColumn("membershipGroupIds")?.getFilterValue() as string[]
-                          )?.includes(group.id)}
+                            table.getColumn("status")?.getFilterValue() as string[]
+                          )?.includes(status)}
                           onCheckedChange={(checked) =>
-                            handleFilterChange("membershipGroupIds", group.id, !!checked)
+                            handleFilterChange("status", status, !!checked)
                           }
                         />
                         <label
-                          htmlFor={`membership-${group.id}`}
+                          htmlFor={`status-${status}`}
                           className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                         >
-                          {group.name}
+                          {formatStatus(status)}
                         </label>
                       </div>
                     ))}
                   </div>
                 </div>
-              )}
-              {isFiltered && (
-                <Button
-                  variant="ghost"
-                  className="w-full justify-center text-center"
-                  onClick={() => table.resetColumnFilters()}
-                >
-                  Clear filters
-                </Button>
-              )}
-            </div>
-          </PopoverContent>
-        </Popover>
-        <DataTableViewOptions table={table} />
-        <Button variant="outline" onClick={() => fetchAthletes()} disabled={isLoading}>
-          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refresh"}
-        </Button>
+                {programOptions.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium text-muted-foreground">Program</h4>
+                    <div className="grid gap-2">
+                      {programOptions.map((program) => (
+                        <div key={program.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`program-${program.id}`}
+                            checked={(
+                              table.getColumn("programIds")?.getFilterValue() as string[]
+                            )?.includes(program.id)}
+                            onCheckedChange={(checked) =>
+                              handleFilterChange("programIds", program.id, !!checked)
+                            }
+                          />
+                          <label
+                            htmlFor={`program-${program.id}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            {program.name}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {membershipsEnabled && membershipOptions.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium text-muted-foreground">Membership</h4>
+                    <div className="grid gap-2">
+                      {membershipOptions.map((group) => (
+                        <div key={group.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`membership-${group.id}`}
+                            checked={(
+                              table.getColumn("membershipGroupIds")?.getFilterValue() as string[]
+                            )?.includes(group.id)}
+                            onCheckedChange={(checked) =>
+                              handleFilterChange("membershipGroupIds", group.id, !!checked)
+                            }
+                          />
+                          <label
+                            htmlFor={`membership-${group.id}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            {group.name}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {isFiltered && (
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-center text-center"
+                    onClick={() => table.resetColumnFilters()}
+                  >
+                    Clear filters
+                  </Button>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+          <DataTableViewOptions table={table} />
+          <Button variant="outline" onClick={() => fetchAthletes()} disabled={isLoading}>
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refresh"}
+          </Button>
+        </div>
       </div>
 
       {/* Loading State */}

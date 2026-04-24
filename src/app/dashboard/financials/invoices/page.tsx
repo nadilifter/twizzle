@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import {
   Table,
   TableBody,
@@ -163,17 +164,12 @@ export default function InvoicesPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Invoices</h1>
-            <p className="text-muted-foreground">
-              Create and manage payment links using Adyen Pay by Link.
-            </p>
-          </div>
-          <CreateInvoiceSheet onSuccess={fetchInvoices} />
-        </div>
-      </div>
+      <DashboardPageHeader
+        variant="small"
+        title="Invoices"
+        description="Create and manage payment links using Adyen Pay by Link."
+        actions={<CreateInvoiceSheet onSuccess={fetchInvoices} />}
+      />
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>

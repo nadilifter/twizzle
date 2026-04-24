@@ -21,8 +21,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import {
   Table,
   TableBody,
@@ -340,250 +340,247 @@ export default function AnnouncementsPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Announcements</h1>
-          <p className="text-muted-foreground">
-            Broadcast updates, news, and alerts to your community.
-          </p>
-        </div>
-        <Dialog
-          open={isDialogOpen}
-          onOpenChange={(open) => {
-            setIsDialogOpen(open);
-            if (!open) resetForm();
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button onClick={() => handleOpenDialog()}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Announcement
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[700px]">
-            <DialogHeader>
-              <DialogTitle>
-                {editingAnnouncement ? "Edit Announcement" : "Create Announcement"}
-              </DialogTitle>
-              <DialogDescription>
-                {editingAnnouncement
-                  ? "Update this announcement."
-                  : "Compose a new announcement to share with your audience."}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
+      <DashboardPageHeader
+        variant="small"
+        title="Announcements"
+        description="Broadcast updates, news, and alerts to your community."
+        actions={
+          <Button onClick={() => handleOpenDialog()}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Announcement
+          </Button>
+        }
+      />
+      <Dialog
+        open={isDialogOpen}
+        onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) resetForm();
+        }}
+      >
+        <DialogContent className="sm:max-w-[700px]">
+          <DialogHeader>
+            <DialogTitle>
+              {editingAnnouncement ? "Edit Announcement" : "Create Announcement"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingAnnouncement
+                ? "Update this announcement."
+                : "Compose a new announcement to share with your audience."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g. Important Facility Update"
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Important Facility Update"
-                />
+                <Label>Audience</Label>
+                <Select
+                  value={targetScope}
+                  onValueChange={(val: any) => {
+                    setTargetScope(val);
+                    if (val !== "PROGRAM") setTargetProgramId("");
+                    if (val !== "EVENT") setTargetEventId("");
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All Members</SelectItem>
+                    <SelectItem value="GUARDIAN">Guardians</SelectItem>
+                    <SelectItem value="PROGRAM">Program</SelectItem>
+                    {eventsEnabled && <SelectItem value="EVENT">Event</SelectItem>}
+                  </SelectContent>
+                </Select>
               </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="grid gap-2">
-                  <Label>Audience</Label>
-                  <Select
-                    value={targetScope}
-                    onValueChange={(val: any) => {
-                      setTargetScope(val);
-                      if (val !== "PROGRAM") setTargetProgramId("");
-                      if (val !== "EVENT") setTargetEventId("");
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ALL">All Members</SelectItem>
-                      <SelectItem value="GUARDIAN">Guardians</SelectItem>
-                      <SelectItem value="PROGRAM">Program</SelectItem>
-                      {eventsEnabled && <SelectItem value="EVENT">Event</SelectItem>}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label>Priority</Label>
-                  <Select value={priority} onValueChange={(val: any) => setPriority(val)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="LOW">Low</SelectItem>
-                      <SelectItem value="NORMAL">Normal</SelectItem>
-                      <SelectItem value="HIGH">High</SelectItem>
-                      <SelectItem value="URGENT">Urgent</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label>Status</Label>
-                  <Select value={status} onValueChange={(val: any) => setStatus(val)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="DRAFT">Draft</SelectItem>
-                      <SelectItem value="PUBLISHED">Publish Now</SelectItem>
-                      <SelectItem value="ARCHIVED">Archived</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {targetScope === "PROGRAM" && (
-                <div className="grid gap-2">
-                  <Label>Program</Label>
-                  <Select value={targetProgramId} onValueChange={setTargetProgramId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All program registrants" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Program Registrants</SelectItem>
-                      {programs.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    {targetProgramId && targetProgramId !== "all"
-                      ? "Only members with athletes registered for this program will see this announcement."
-                      : "All members with athletes enrolled in any program will see this announcement."}
-                  </p>
-                </div>
-              )}
-
-              {targetScope === "EVENT" && eventsEnabled && (
-                <div className="grid gap-2">
-                  <Label>Event</Label>
-                  <Select value={targetEventId} onValueChange={setTargetEventId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select an event" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {events.map((e) => (
-                        <SelectItem key={e.id} value={e.id}>
-                          {e.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Only members with athletes registered for this event will see this announcement.
-                  </p>
-                </div>
-              )}
-
               <div className="grid gap-2">
-                <Label>Content</Label>
-                {editor && (
-                  <div className="border rounded-md">
-                    <div className="flex items-center gap-1 border-b p-2 bg-muted/20">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => editor.chain().focus().toggleBold().run()}
-                        className={cn("h-8 w-8 p-0", editor.isActive("bold") && "bg-muted")}
-                      >
-                        <Bold className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => editor.chain().focus().toggleItalic().run()}
-                        className={cn("h-8 w-8 p-0", editor.isActive("italic") && "bg-muted")}
-                      >
-                        <Italic className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => editor.chain().focus().toggleUnderline().run()}
-                        className={cn("h-8 w-8 p-0", editor.isActive("underline") && "bg-muted")}
-                      >
-                        <UnderlineIcon className="h-4 w-4" />
-                      </Button>
-                      <div className="w-px h-4 bg-border mx-1" />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => editor.chain().focus().setTextAlign("left").run()}
-                        className={cn(
-                          "h-8 w-8 p-0",
-                          editor.isActive({ textAlign: "left" }) && "bg-muted"
-                        )}
-                      >
-                        <AlignLeft className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => editor.chain().focus().setTextAlign("center").run()}
-                        className={cn(
-                          "h-8 w-8 p-0",
-                          editor.isActive({ textAlign: "center" }) && "bg-muted"
-                        )}
-                      >
-                        <AlignCenter className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => editor.chain().focus().setTextAlign("right").run()}
-                        className={cn(
-                          "h-8 w-8 p-0",
-                          editor.isActive({ textAlign: "right" }) && "bg-muted"
-                        )}
-                      >
-                        <AlignRight className="h-4 w-4" />
-                      </Button>
-                      <div className="w-px h-4 bg-border mx-1" />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => editor.chain().focus().toggleBulletList().run()}
-                        className={cn("h-8 w-8 p-0", editor.isActive("bulletList") && "bg-muted")}
-                      >
-                        <List className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => editor.chain().focus().toggleOrderedList().run()}
-                        className={cn("h-8 w-8 p-0", editor.isActive("orderedList") && "bg-muted")}
-                      >
-                        <ListOrdered className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <EditorContent editor={editor} className="p-1" />
-                  </div>
-                )}
+                <Label>Priority</Label>
+                <Select value={priority} onValueChange={(val: any) => setPriority(val)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="LOW">Low</SelectItem>
+                    <SelectItem value="NORMAL">Normal</SelectItem>
+                    <SelectItem value="HIGH">High</SelectItem>
+                    <SelectItem value="URGENT">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Status</Label>
+                <Select value={status} onValueChange={(val: any) => setStatus(val)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="DRAFT">Draft</SelectItem>
+                    <SelectItem value="PUBLISHED">Publish Now</SelectItem>
+                    <SelectItem value="ARCHIVED">Archived</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSave} disabled={saving || !title}>
-                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editingAnnouncement ? "Update" : "Create"} Announcement
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+
+            {targetScope === "PROGRAM" && (
+              <div className="grid gap-2">
+                <Label>Program</Label>
+                <Select value={targetProgramId} onValueChange={setTargetProgramId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All program registrants" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Program Registrants</SelectItem>
+                    {programs.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {targetProgramId && targetProgramId !== "all"
+                    ? "Only members with athletes registered for this program will see this announcement."
+                    : "All members with athletes enrolled in any program will see this announcement."}
+                </p>
+              </div>
+            )}
+
+            {targetScope === "EVENT" && eventsEnabled && (
+              <div className="grid gap-2">
+                <Label>Event</Label>
+                <Select value={targetEventId} onValueChange={setTargetEventId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select an event" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {events.map((e) => (
+                      <SelectItem key={e.id} value={e.id}>
+                        {e.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Only members with athletes registered for this event will see this announcement.
+                </p>
+              </div>
+            )}
+
+            <div className="grid gap-2">
+              <Label>Content</Label>
+              {editor && (
+                <div className="border rounded-md">
+                  <div className="flex items-center gap-1 border-b p-2 bg-muted/20">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => editor.chain().focus().toggleBold().run()}
+                      className={cn("h-8 w-8 p-0", editor.isActive("bold") && "bg-muted")}
+                    >
+                      <Bold className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => editor.chain().focus().toggleItalic().run()}
+                      className={cn("h-8 w-8 p-0", editor.isActive("italic") && "bg-muted")}
+                    >
+                      <Italic className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => editor.chain().focus().toggleUnderline().run()}
+                      className={cn("h-8 w-8 p-0", editor.isActive("underline") && "bg-muted")}
+                    >
+                      <UnderlineIcon className="h-4 w-4" />
+                    </Button>
+                    <div className="w-px h-4 bg-border mx-1" />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => editor.chain().focus().setTextAlign("left").run()}
+                      className={cn(
+                        "h-8 w-8 p-0",
+                        editor.isActive({ textAlign: "left" }) && "bg-muted"
+                      )}
+                    >
+                      <AlignLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => editor.chain().focus().setTextAlign("center").run()}
+                      className={cn(
+                        "h-8 w-8 p-0",
+                        editor.isActive({ textAlign: "center" }) && "bg-muted"
+                      )}
+                    >
+                      <AlignCenter className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => editor.chain().focus().setTextAlign("right").run()}
+                      className={cn(
+                        "h-8 w-8 p-0",
+                        editor.isActive({ textAlign: "right" }) && "bg-muted"
+                      )}
+                    >
+                      <AlignRight className="h-4 w-4" />
+                    </Button>
+                    <div className="w-px h-4 bg-border mx-1" />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => editor.chain().focus().toggleBulletList().run()}
+                      className={cn("h-8 w-8 p-0", editor.isActive("bulletList") && "bg-muted")}
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => editor.chain().focus().toggleOrderedList().run()}
+                      className={cn("h-8 w-8 p-0", editor.isActive("orderedList") && "bg-muted")}
+                    >
+                      <ListOrdered className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <EditorContent editor={editor} className="p-1" />
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={saving || !title}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {editingAnnouncement ? "Update" : "Create"} Announcement
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">

@@ -1,0 +1,120 @@
+---
+description: Use shared layout components (DashboardPageHeader, ChatPanels) and the standard responsive toolbar pattern instead of hand-rolling page-level flex layouts
+globs: "src/app/**/page.tsx,src/components/chat/**"
+alwaysApply: false
+---
+
+# Shared Page Components
+
+Don't hand-roll page-level headers, chat split-panes, or toolbar rows. Use the shared primitives listed here so mobile responsiveness is handled consistently.
+
+## Dashboard Page Headers
+
+Use `DashboardPageHeader` from `@/components/dashboard-page-header` for every list/section page in the admin portal. It standardizes the `h1 + description + optional right-side actions` layout and handles mobile (actions drop below the title, primary button grows to fill).
+
+```tsx
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
+
+<DashboardPageHeader
+  title="Programs"
+  description="Manage your registration programs and enrollment options."
+  actions={
+    <Button asChild>
+      <Link href="/dashboard/registrations/programs/new">Add Program</Link>
+    </Button>
+  }
+/>
+```
+
+Multiple action buttons — pass as a fragment. Each direct child gets `flex-1` on mobile so the buttons share the row evenly.
+
+```tsx
+actions={
+  <>
+    <Button variant="outline">Secondary</Button>
+    <Button>Primary</Button>
+  </>
+}
+```
+
+Sub-pages / create-edit forms — pass `variant="small"` for `text-2xl` titles instead of the default `text-3xl`.
+
+Back button — wrap the back `Button` and `DashboardPageHeader` in a flex row:
+
+```tsx
+<div className="flex items-start gap-4">
+  <Button variant="ghost" size="icon" asChild className="shrink-0">
+    <Link href="/dashboard/events">
+      <ArrowLeft className="h-5 w-5" />
+    </Link>
+  </Button>
+  <div className="min-w-0 flex-1">
+    <DashboardPageHeader title="Create Event" description="..." />
+  </div>
+</div>
+```
+
+**Never** write `<div className="flex items-center justify-between"><div><h1 className="text-3xl font-bold tracking-tight">...</h1><p className="text-muted-foreground">...</p></div>...</div>` by hand. It won't be mobile responsive.
+
+## Chat Split-Pane Layout
+
+The three chat pages (admin/coach/athletes) use `ChatPanels` from `@/components/chat/chat-panels` for the sidebar + message-view layout. Compose `ChatPanelsSidebar` and `ChatPanelsMain` as children, and render `ChatPanelsBackButton` inside the main pane's `ChatHeader`. The component swaps to a single-pane layout on mobile driven by the `hasSelection` prop.
+
+```tsx
+<ChatPanels
+  hasSelection={!!selectedConversationId}
+  onBack={() => setSelectedConversationId(null)}
+>
+  <ChatPanelsSidebar>
+    <ConversationSidebar ... />
+  </ChatPanelsSidebar>
+  <ChatPanelsMain>
+    <Chat>
+      <ChatHeader>
+        <ChatHeaderAddon>
+          <ChatPanelsBackButton />
+          <ChatHeaderAvatar ... />
+        </ChatHeaderAddon>
+        ...
+      </ChatHeader>
+      ...
+    </Chat>
+  </ChatPanelsMain>
+</ChatPanels>
+```
+
+## Responsive Toolbars
+
+For the standard "search input + action buttons" row above a table, stack on mobile and switch to the inline layout at `sm:`:
+
+```tsx
+<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+  <div className="relative w-full sm:max-w-sm sm:flex-1">
+    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+    <Input className="pl-8" placeholder="Search..." />
+  </div>
+  <div className="flex flex-wrap items-center gap-2">
+    <Button variant="outline" size="icon" className="shrink-0">
+      <Filter className="h-4 w-4" />
+    </Button>
+    <Button className="flex-1 sm:flex-none">Primary Action</Button>
+  </div>
+</div>
+```
+
+Key classes:
+- Search wrapper `w-full sm:max-w-sm sm:flex-1` — full-width on mobile, bounded on desktop
+- Buttons group `flex flex-wrap items-center gap-2` — wraps cleanly if cramped
+- Primary button `flex-1 sm:flex-none` — grows on mobile, natural width on desktop
+- Icon-only utility buttons keep `shrink-0` so they don't get squished
+
+## Data Table Overflow
+
+Wrap any multi-column `<Table>` in `<div className="overflow-x-auto rounded-md border">` so it scrolls horizontally on narrow screens instead of squishing columns.
+
+## Where to find these
+
+| Component                | Path                                       |
+| ------------------------ | ------------------------------------------ |
+| `DashboardPageHeader`    | `src/components/dashboard-page-header.tsx` |
+| `ChatPanels` family      | `src/components/chat/chat-panels.tsx`      |

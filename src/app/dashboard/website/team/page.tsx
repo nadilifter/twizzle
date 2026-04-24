@@ -25,6 +25,7 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import {
   Dialog,
   DialogContent,
@@ -360,35 +361,35 @@ export default function TeamHighlightsPage() {
   return (
     <div className="flex flex-col gap-6 p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard/website">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Team Highlights</h1>
-            <p className="text-muted-foreground">
-              Toggle visibility and customize how each team member appears on your public website.
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          {highlights.length > 1 && (
-            <Button variant="outline" onClick={handleOpenReorder}>
-              <ArrowUpDown className="mr-2 h-4 w-4" />
-              Set Order
-            </Button>
-          )}
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            {saving ? "Saving..." : "Save Changes"}
+      <div className="flex items-start gap-4">
+        <Link href="/dashboard/website">
+          <Button variant="ghost" size="icon" className="shrink-0">
+            <ArrowLeft className="h-4 w-4" />
           </Button>
+        </Link>
+        <div className="min-w-0 flex-1">
+          <DashboardPageHeader
+            title="Team Highlights"
+            description="Toggle visibility and customize how each team member appears on your public website."
+            actions={
+              <>
+                {highlights.length > 1 && (
+                  <Button variant="outline" onClick={handleOpenReorder}>
+                    <ArrowUpDown className="mr-2 h-4 w-4" />
+                    Set Order
+                  </Button>
+                )}
+                <Button onClick={handleSave} disabled={saving}>
+                  {saving ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  {saving ? "Saving..." : "Save Changes"}
+                </Button>
+              </>
+            }
+          />
         </div>
       </div>
 

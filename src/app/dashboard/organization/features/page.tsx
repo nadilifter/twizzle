@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useDebounce } from "@/hooks";
@@ -147,21 +148,22 @@ export default function OrganizationFeaturesPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Features</h1>
-          <p className="text-muted-foreground">
-            {isSuperAdmin
-              ? "Manage feature access for this organization. Toggle overrides beyond the plan defaults."
-              : "View which features are available on your current plan"}
-          </p>
-        </div>
-        {isSuperAdmin && superadminData?.plan && (
-          <Badge variant="outline" className="text-xs">
-            Plan: {superadminData.plan.name}
-          </Badge>
-        )}
-      </div>
+      <DashboardPageHeader
+        variant="small"
+        title="Features"
+        description={
+          isSuperAdmin
+            ? "Manage feature access for this organization. Toggle overrides beyond the plan defaults."
+            : "View which features are available on your current plan"
+        }
+        actions={
+          isSuperAdmin && superadminData?.plan ? (
+            <Badge variant="outline" className="text-xs">
+              Plan: {superadminData.plan.name}
+            </Badge>
+          ) : undefined
+        }
+      />
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12">

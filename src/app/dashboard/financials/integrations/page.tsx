@@ -266,7 +266,7 @@ function DisconnectedCard({
       <CardHeader>
         <div className="flex items-center gap-4">
           <div
-            className={`flex h-12 w-12 items-center justify-center rounded-lg ${config.logoBg} text-white font-bold text-xl`}
+            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${config.logoBg} text-white font-bold text-xl`}
           >
             {config.logoText}
           </div>
@@ -464,7 +464,7 @@ function SetupView({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div
-                className={`flex h-10 w-10 items-center justify-center rounded-lg ${config.logoBg} text-white font-bold`}
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${config.logoBg} text-white font-bold`}
               >
                 {config.logoText}
               </div>
@@ -743,13 +743,13 @@ function ConnectedCard({
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 min-w-0">
             <div
-              className={`flex h-10 w-10 items-center justify-center rounded-lg ${config.logoBg} text-white font-bold`}
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${config.logoBg} text-white font-bold`}
             >
               {config.logoText}
             </div>
-            <div>
+            <div className="min-w-0">
               <CardTitle className="text-lg">
                 {config.label}
                 {status.companyName && (

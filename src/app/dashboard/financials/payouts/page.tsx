@@ -4,6 +4,7 @@ import React, { useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import {
   Table,
   TableBody,
@@ -354,14 +355,19 @@ export default function PayoutsPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold tracking-tight">Payouts</h1>
-        <p className="text-muted-foreground">Track settlements transferred to your bank account.</p>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <InfoIcon className="h-3 w-3" />
-          Payouts are processed {payoutSchedule} via automated sweeps.
-        </div>
-      </div>
+      <DashboardPageHeader
+        variant="small"
+        title="Payouts"
+        description={
+          <>
+            Track settlements transferred to your bank account.
+            <span className="mt-1 flex items-center gap-1.5 text-xs">
+              <InfoIcon className="h-3 w-3" />
+              Payouts are processed {payoutSchedule} via automated sweeps.
+            </span>
+          </>
+        }
+      />
 
       {wasVerified && !isVerified && (
         <Alert className="bg-amber-50 border-amber-200 text-amber-800">
@@ -500,8 +506,8 @@ export default function PayoutsPage() {
           </div>
           <CardDescription>Detailed breakdown of batches paid out to your account.</CardDescription>
 
-          <div className="flex flex-wrap items-end gap-3 pt-2">
-            <div className="flex flex-col gap-1">
+          <div className="grid grid-cols-2 gap-3 pt-2 sm:flex sm:flex-wrap sm:items-end">
+            <div className="col-span-2 flex flex-col gap-1 sm:col-auto">
               <label className="text-xs font-medium text-muted-foreground">Status</label>
               <Select
                 value={statusFilter}
@@ -510,7 +516,7 @@ export default function PayoutsPage() {
                   setPage(0);
                 }}
               >
-                <SelectTrigger className="w-[140px]">
+                <SelectTrigger className="w-full sm:w-[140px]">
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
@@ -529,7 +535,7 @@ export default function PayoutsPage() {
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-[160px] justify-start text-left font-normal",
+                      "w-full justify-start text-left font-normal sm:w-[160px]",
                       !startDate && "text-muted-foreground"
                     )}
                   >
@@ -557,7 +563,7 @@ export default function PayoutsPage() {
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-[160px] justify-start text-left font-normal",
+                      "w-full justify-start text-left font-normal sm:w-[160px]",
                       !endDate && "text-muted-foreground"
                     )}
                   >

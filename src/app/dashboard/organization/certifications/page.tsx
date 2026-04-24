@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import {
   Table,
   TableBody,
@@ -261,19 +262,17 @@ export default function CertificationsPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Certifications</h1>
-          <p className="text-muted-foreground">
-            Define certification requirements for your organization. Assign certifications to
-            individual staff from their profile page.
-          </p>
-        </div>
-        <Button onClick={openCreateForm}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Certification
-        </Button>
-      </div>
+      <DashboardPageHeader
+        variant="small"
+        title="Certifications"
+        description="Define certification requirements for your organization. Assign certifications to individual staff from their profile page."
+        actions={
+          <Button onClick={openCreateForm}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Certification
+          </Button>
+        }
+      />
 
       <Card>
         <CardHeader className="pb-3">

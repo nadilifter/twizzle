@@ -4,19 +4,22 @@ import { CompetitionStepper } from "../components/competition-stepper";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 
 export default function NewCompetitionPage() {
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
+      <div className="flex items-start gap-4">
+        <Button variant="ghost" size="icon" asChild className="shrink-0">
           <Link href="/dashboard/competitions">
             <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Create Competition</h1>
-          <p className="text-muted-foreground">Set up a new competition for your organization.</p>
+        <div className="min-w-0 flex-1">
+          <DashboardPageHeader
+            title="Create Competition"
+            description="Set up a new competition for your organization."
+          />
         </div>
       </div>
 

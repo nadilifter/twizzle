@@ -226,36 +226,54 @@ export function OnboardingStepper({
 
         {currentStepId === "review" && <ReviewStep organization={organization} plan={plan} />}
 
-        <div className="flex items-center justify-between mt-6">
-          <Button type="button" variant="outline" onClick={exitStepper} disabled={initiateLoading}>
-            Cancel
-          </Button>
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={exitStepper}
+              disabled={initiateLoading}
+              className="flex-1 sm:flex-none"
+            >
+              Cancel
+            </Button>
             {!isFirst && (
-              <Button type="button" variant="outline" onClick={goPrev} disabled={initiateLoading}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={goPrev}
+                disabled={initiateLoading}
+                className="flex-1 sm:flex-none"
+              >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Previous
               </Button>
             )}
-            {isLast ? (
-              <Button
-                type="button"
-                onClick={() => {
-                  void onInitiateAndRedirect();
-                }}
-                disabled={initiateLoading}
-              >
-                {initiateLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Begin Verification
-                <ExternalLinkIcon className="h-4 w-4 ml-2" />
-              </Button>
-            ) : (
-              <Button type="button" onClick={goNext} disabled={!canAdvanceFromCurrent}>
-                Next
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            )}
           </div>
+          {isLast ? (
+            <Button
+              type="button"
+              onClick={() => {
+                void onInitiateAndRedirect();
+              }}
+              disabled={initiateLoading}
+              className="w-full sm:w-auto"
+            >
+              {initiateLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Begin Verification
+              <ExternalLinkIcon className="h-4 w-4 ml-2" />
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              onClick={goNext}
+              disabled={!canAdvanceFromCurrent}
+              className="w-full sm:w-auto"
+            >
+              Next
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          )}
         </div>
       </div>
     </div>

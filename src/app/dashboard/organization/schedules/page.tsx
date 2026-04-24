@@ -16,6 +16,7 @@ import {
   Grid3X3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
@@ -255,14 +256,10 @@ export default function SchedulesPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Schedules & Availability</h1>
-          <p className="text-muted-foreground">
-            Manage employee shifts, facility usage, and role assignments.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+      <DashboardPageHeader
+        title="Schedules & Availability"
+        description="Manage employee shifts, facility usage, and role assignments."
+        actions={
           <Button
             variant={viewMode === "table" ? "outline" : "default"}
             size="sm"
@@ -280,8 +277,8 @@ export default function SchedulesPage() {
               </>
             )}
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {shiftsError && (
         <Alert variant="destructive">
@@ -302,150 +299,152 @@ export default function SchedulesPage() {
 
         {/* Shifts & Assignments Tab */}
         <TabsContent value="assignments" className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative w-full sm:max-w-sm sm:flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search shifts..." className="pl-8" />
+            </div>
             <div className="flex items-center gap-2">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search shifts..." className="w-[250px]" />
-              <Button variant="outline" size="icon">
+              <Button variant="outline" size="icon" className="shrink-0">
                 <Filter className="h-4 w-4" />
               </Button>
-            </div>
-            <Sheet
-              open={shiftSheetOpen}
-              onOpenChange={(open) => {
-                setShiftSheetOpen(open);
-                if (!open) resetShiftForm();
-              }}
-            >
-              <SheetTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" /> Create Shift
-                </Button>
-              </SheetTrigger>
-              <SheetContent>
-                <SheetHeader>
-                  <SheetTitle>{editingShift ? "Edit Shift" : "Create New Shift"}</SheetTitle>
-                  <SheetDescription>
-                    Assign an employee to a specific role and time.
-                  </SheetDescription>
-                </SheetHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="staff">Employee</Label>
-                    <Select value={formMemberId} onValueChange={setFormMemberId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select employee" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {staff.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>
-                            {s.user.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="shiftType">Shift Type / Role</Label>
-                    <Input
-                      id="shiftType"
-                      placeholder="e.g. Opening Manager, Coach, Front Desk"
-                      value={formShiftType}
-                      onChange={(e) => setFormShiftType(e.target.value)}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Date</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !formDate && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {formDate
-                            ? format(new Date(formDate + "T12:00:00Z"), "PPP")
-                            : "Pick a date"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={formDate ? new Date(formDate + "T12:00:00Z") : undefined}
-                          onSelect={(date) => setFormDate(date ? format(date, "yyyy-MM-dd") : "")}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="start-time">Start Time</Label>
-                      <Input
-                        id="start-time"
-                        type="time"
-                        value={formStartTime}
-                        onChange={(e) => setFormStartTime(e.target.value)}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="end-time">End Time</Label>
-                      <Input
-                        id="end-time"
-                        type="time"
-                        value={formEndTime}
-                        onChange={(e) => setFormEndTime(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="facility">Location (Optional)</Label>
-                    <Select
-                      value={formFacilityId || "none"}
-                      onValueChange={(v) => setFormFacilityId(v === "none" ? "" : v)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select facility" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">No specific location</SelectItem>
-                        {facilities.map((f) => (
-                          <SelectItem key={f.id} value={f.id}>
-                            {f.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="notes">Notes</Label>
-                    <Input
-                      id="notes"
-                      placeholder="Optional notes..."
-                      value={formNotes}
-                      onChange={(e) => setFormNotes(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <SheetFooter>
-                  <Button
-                    onClick={handleSubmitShift}
-                    disabled={
-                      !formMemberId || !formDate || !formShiftType || isCreating || isUpdating
-                    }
-                  >
-                    {(isCreating || isUpdating) && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    {editingShift ? "Save Changes" : "Create Shift"}
+              <Sheet
+                open={shiftSheetOpen}
+                onOpenChange={(open) => {
+                  setShiftSheetOpen(open);
+                  if (!open) resetShiftForm();
+                }}
+              >
+                <SheetTrigger asChild>
+                  <Button className="flex-1 sm:flex-none">
+                    <Plus className="mr-2 h-4 w-4" /> Create Shift
                   </Button>
-                </SheetFooter>
-              </SheetContent>
-            </Sheet>
+                </SheetTrigger>
+                <SheetContent>
+                  <SheetHeader>
+                    <SheetTitle>{editingShift ? "Edit Shift" : "Create New Shift"}</SheetTitle>
+                    <SheetDescription>
+                      Assign an employee to a specific role and time.
+                    </SheetDescription>
+                  </SheetHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="staff">Employee</Label>
+                      <Select value={formMemberId} onValueChange={setFormMemberId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select employee" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {staff.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.user.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="shiftType">Shift Type / Role</Label>
+                      <Input
+                        id="shiftType"
+                        placeholder="e.g. Opening Manager, Coach, Front Desk"
+                        value={formShiftType}
+                        onChange={(e) => setFormShiftType(e.target.value)}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Date</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !formDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {formDate
+                              ? format(new Date(formDate + "T12:00:00Z"), "PPP")
+                              : "Pick a date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={formDate ? new Date(formDate + "T12:00:00Z") : undefined}
+                            onSelect={(date) => setFormDate(date ? format(date, "yyyy-MM-dd") : "")}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="start-time">Start Time</Label>
+                        <Input
+                          id="start-time"
+                          type="time"
+                          value={formStartTime}
+                          onChange={(e) => setFormStartTime(e.target.value)}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="end-time">End Time</Label>
+                        <Input
+                          id="end-time"
+                          type="time"
+                          value={formEndTime}
+                          onChange={(e) => setFormEndTime(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="facility">Location (Optional)</Label>
+                      <Select
+                        value={formFacilityId || "none"}
+                        onValueChange={(v) => setFormFacilityId(v === "none" ? "" : v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select facility" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No specific location</SelectItem>
+                          {facilities.map((f) => (
+                            <SelectItem key={f.id} value={f.id}>
+                              {f.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="notes">Notes</Label>
+                      <Input
+                        id="notes"
+                        placeholder="Optional notes..."
+                        value={formNotes}
+                        onChange={(e) => setFormNotes(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <SheetFooter>
+                    <Button
+                      onClick={handleSubmitShift}
+                      disabled={
+                        !formMemberId || !formDate || !formShiftType || isCreating || isUpdating
+                      }
+                    >
+                      {(isCreating || isUpdating) && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      {editingShift ? "Save Changes" : "Create Shift"}
+                    </Button>
+                  </SheetFooter>
+                </SheetContent>
+              </Sheet>
+            </div>
           </div>
 
           {viewMode === "table" ? (

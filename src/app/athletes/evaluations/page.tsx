@@ -22,7 +22,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs";
 import {
   ClipboardList,
   Calendar,
@@ -259,7 +260,7 @@ export default function AthleteEvaluationsPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        <ResponsiveTabsList value={activeTab} onValueChange={setActiveTab}>
           <TabsTrigger value="upcoming" className="gap-2">
             <Clock className="h-4 w-4" />
             Upcoming ({upcomingEvaluations.length})
@@ -268,7 +269,7 @@ export default function AthleteEvaluationsPage() {
             <CheckCircle2 className="h-4 w-4" />
             Completed ({completedEvaluations.length})
           </TabsTrigger>
-        </TabsList>
+        </ResponsiveTabsList>
 
         <TabsContent value="upcoming" className="mt-4">
           {isLoadingEvaluations ? (

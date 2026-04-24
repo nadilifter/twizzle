@@ -60,6 +60,12 @@ import {
   ChatToolbarButton,
 } from "@/components/chat/chat-toolbar";
 import { ChatEvent, ChatEventTime } from "@/components/chat/chat-event";
+import {
+  ChatPanels,
+  ChatPanelsSidebar,
+  ChatPanelsMain,
+  ChatPanelsBackButton,
+} from "@/components/chat/chat-panels";
 
 // ============================================
 // Types
@@ -561,9 +567,11 @@ export default function CoachChatPage() {
     <TooltipProvider>
       <div className="flex h-[calc(100vh-3rem)] flex-col p-4 md:p-6">
         <div className="flex-1 overflow-hidden rounded-lg border bg-background shadow">
-          <div className="flex h-full">
-            {/* Sidebar */}
-            <div className="w-[300px] shrink-0">
+          <ChatPanels
+            hasSelection={!!selectedConversationId}
+            onBack={() => setSelectedConversationId(null)}
+          >
+            <ChatPanelsSidebar>
               <ConversationSidebar
                 conversations={conversations}
                 selectedId={selectedConversationId}
@@ -573,10 +581,9 @@ export default function CoachChatPage() {
                 onNewConversation={() => setIsNewConvOpen(true)}
                 isLoading={isLoadingConversations}
               />
-            </div>
+            </ChatPanelsSidebar>
 
-            {/* Main chat area */}
-            <div className="flex-1 min-w-0">
+            <ChatPanelsMain>
               {!selectedConversationId ? (
                 <div className="flex flex-col items-center justify-center h-full text-center px-8">
                   <MessageSquare className="h-16 w-16 text-muted-foreground/30 mb-4" />
@@ -596,6 +603,7 @@ export default function CoachChatPage() {
                   {/* Header */}
                   <ChatHeader className="border-b px-4">
                     <ChatHeaderAddon>
+                      <ChatPanelsBackButton />
                       <ChatHeaderAvatar
                         fallback={
                           selectedConversation ? getInitials(selectedConversation.userName) : "?"
@@ -809,8 +817,8 @@ export default function CoachChatPage() {
                   )}
                 </Chat>
               )}
-            </div>
-          </div>
+            </ChatPanelsMain>
+          </ChatPanels>
         </div>
 
         {/* New Conversation Dialog */}

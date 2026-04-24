@@ -35,8 +35,8 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -303,151 +303,158 @@ export default function SkillsPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Skills Database</h1>
-          <p className="text-muted-foreground">Library of skills, drills, and progressions.</p>
-          {orgSports.length > 0 && (
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className="text-xs text-muted-foreground">Sports:</span>
-              {orgSports.map((sport) => (
-                <Badge key={sport.id} variant="secondary" className="text-xs">
-                  {sport.name}
-                </Badge>
-              ))}
+      <DashboardPageHeader
+        title="Skills Database"
+        description={
+          <>
+            Library of skills, drills, and progressions.
+            {orgSports.length > 0 && (
+              <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">Sports:</span>
+                {orgSports.map((sport) => (
+                  <Badge key={sport.id} variant="secondary" className="text-xs">
+                    {sport.name}
+                  </Badge>
+                ))}
+              </span>
+            )}
+          </>
+        }
+        actions={
+          <Button
+            onClick={() => {
+              setFormData(initialFormData);
+              setIsCreateOpen(true);
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add New Skill
+          </Button>
+        }
+      />
+      <Sheet open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Add New Skill</SheetTitle>
+            <SheetDescription>Add a new skill to the training database.</SheetDescription>
+          </SheetHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Skill Name *</Label>
+              <Input
+                id="name"
+                placeholder="e.g. Forward Roll"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
             </div>
-          )}
-        </div>
-        <Sheet open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <SheetTrigger asChild>
-            <Button onClick={() => setFormData(initialFormData)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add New Skill
+            <div className="grid gap-2">
+              <Label htmlFor="category">Category *</Label>
+              <Select
+                value={formData.category}
+                onValueChange={(value) => setFormData({ ...formData, category: value })}
+              >
+                <SelectTrigger id="category">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DEFAULT_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="difficulty">Level</Label>
+              <Select
+                value={formData.levelId || "none"}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, levelId: value === "none" ? "" : value })
+                }
+              >
+                <SelectTrigger id="difficulty">
+                  <SelectValue placeholder="Select a level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No level</SelectItem>
+                  {levels.map((level) => (
+                    <SelectItem key={level.id} value={level.id}>
+                      {level.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="minAge">Min Age</Label>
+                <Input
+                  id="minAge"
+                  type="number"
+                  min="0"
+                  max="100"
+                  placeholder="e.g. 4"
+                  value={formData.minAge}
+                  onChange={(e) => setFormData({ ...formData, minAge: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="maxAge">Max Age</Label>
+                <Input
+                  id="maxAge"
+                  type="number"
+                  min="0"
+                  max="100"
+                  placeholder="e.g. 18"
+                  value={formData.maxAge}
+                  onChange={(e) => setFormData({ ...formData, maxAge: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Describe the skill and key technique points..."
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                rows={4}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="videoUrl">Video URL</Label>
+              <Input
+                id="videoUrl"
+                type="url"
+                placeholder="https://..."
+                value={formData.videoUrl}
+                onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="imageUrl">Image URL</Label>
+              <Input
+                id="imageUrl"
+                type="url"
+                placeholder="https://..."
+                value={formData.imageUrl}
+                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+              />
+            </div>
+          </div>
+          <SheetFooter>
+            <Button onClick={handleCreate} disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Create Skill
             </Button>
-          </SheetTrigger>
-          <SheetContent>
-            <SheetHeader>
-              <SheetTitle>Add New Skill</SheetTitle>
-              <SheetDescription>Add a new skill to the training database.</SheetDescription>
-            </SheetHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">Skill Name *</Label>
-                <Input
-                  id="name"
-                  placeholder="e.g. Forward Roll"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="category">Category *</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) => setFormData({ ...formData, category: value })}
-                >
-                  <SelectTrigger id="category">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DEFAULT_CATEGORIES.map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="difficulty">Level</Label>
-                <Select
-                  value={formData.levelId || "none"}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, levelId: value === "none" ? "" : value })
-                  }
-                >
-                  <SelectTrigger id="difficulty">
-                    <SelectValue placeholder="Select a level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No level</SelectItem>
-                    {levels.map((level) => (
-                      <SelectItem key={level.id} value={level.id}>
-                        {level.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="minAge">Min Age</Label>
-                  <Input
-                    id="minAge"
-                    type="number"
-                    min="0"
-                    max="100"
-                    placeholder="e.g. 4"
-                    value={formData.minAge}
-                    onChange={(e) => setFormData({ ...formData, minAge: e.target.value })}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="maxAge">Max Age</Label>
-                  <Input
-                    id="maxAge"
-                    type="number"
-                    min="0"
-                    max="100"
-                    placeholder="e.g. 18"
-                    value={formData.maxAge}
-                    onChange={(e) => setFormData({ ...formData, maxAge: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Describe the skill and key technique points..."
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={4}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="videoUrl">Video URL</Label>
-                <Input
-                  id="videoUrl"
-                  type="url"
-                  placeholder="https://..."
-                  value={formData.videoUrl}
-                  onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="imageUrl">Image URL</Label>
-                <Input
-                  id="imageUrl"
-                  type="url"
-                  placeholder="https://..."
-                  value={formData.imageUrl}
-                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                />
-              </div>
-            </div>
-            <SheetFooter>
-              <Button onClick={handleCreate} disabled={isSaving}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create Skill
-              </Button>
-            </SheetFooter>
-          </SheetContent>
-        </Sheet>
-      </div>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
-      <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-        <div className="relative flex-1 md:max-w-sm">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-4">
+        <div className="relative w-full md:max-w-sm md:flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
@@ -457,35 +464,37 @@ export default function SkillsPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Select
-          value={levelFilter || "all"}
-          onValueChange={(v) => setLevelFilter(v === "all" ? "" : v)}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="All Levels" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Levels</SelectItem>
-            {levels.map((level) => (
-              <SelectItem key={level.id} value={level.id}>
-                {level.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <ToggleGroup
-          type="single"
-          value={viewMode}
-          onValueChange={(value) => value && setViewMode(value as "grid" | "table")}
-          className="border rounded-md"
-        >
-          <ToggleGroupItem value="grid" aria-label="Grid view" className="px-3">
-            <LayoutGrid className="h-4 w-4" />
-          </ToggleGroupItem>
-          <ToggleGroupItem value="table" aria-label="Table view" className="px-3">
-            <List className="h-4 w-4" />
-          </ToggleGroupItem>
-        </ToggleGroup>
+        <div className="flex items-center gap-2">
+          <Select
+            value={levelFilter || "all"}
+            onValueChange={(v) => setLevelFilter(v === "all" ? "" : v)}
+          >
+            <SelectTrigger className="w-full md:w-[180px]">
+              <SelectValue placeholder="All Levels" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Levels</SelectItem>
+              {levels.map((level) => (
+                <SelectItem key={level.id} value={level.id}>
+                  {level.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <ToggleGroup
+            type="single"
+            value={viewMode}
+            onValueChange={(value) => value && setViewMode(value as "grid" | "table")}
+            className="shrink-0 rounded-md border"
+          >
+            <ToggleGroupItem value="grid" aria-label="Grid view" className="px-3">
+              <LayoutGrid className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="table" aria-label="Table view" className="px-3">
+              <List className="h-4 w-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
       </div>
 
       <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="space-y-4">

@@ -203,6 +203,7 @@ export default async function SitePage({ params }: { params: { slug: string } })
                     shineColor={["#10b981", "#34d399"]}
                     borderWidth={2}
                     className="rounded-full"
+                    duration={25}
                     style={{ backgroundSize: "600% 600%" }}
                   />
                   <span className="relative flex h-2 w-2">

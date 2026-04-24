@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/select";
 import { useFeatures } from "@/components/feature-context";
 import { useSeasons } from "@/hooks/use-seasons";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import { CompetitionConfiguration } from "./competition-configuration";
 import { COMPETITION_TYPE_LABELS, getStatusLabel, getStatusStyle } from "./lib/competition-status";
 
@@ -166,20 +167,18 @@ export default function CompetitionsPage() {
   return (
     <TooltipProvider>
       <div className="flex flex-col gap-6 p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Competitions</h1>
-            <p className="text-muted-foreground">
-              Manage competitions, meets, and large-scale events.
-            </p>
-          </div>
-          <Button asChild>
-            <Link href="/dashboard/competitions/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Competition
-            </Link>
-          </Button>
-        </div>
+        <DashboardPageHeader
+          title="Competitions"
+          description="Manage competitions, meets, and large-scale events."
+          actions={
+            <Button asChild>
+              <Link href="/dashboard/competitions/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Competition
+              </Link>
+            </Button>
+          }
+        />
 
         <div className="flex items-center gap-4">
           <div className="relative flex-1 md:max-w-sm">

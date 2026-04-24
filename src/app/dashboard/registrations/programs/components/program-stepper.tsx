@@ -1249,8 +1249,8 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         {stepper.state.current.data.id === "general" && (
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="space-y-1.5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                <div className="min-w-0 space-y-1.5">
                   <CardTitle className="flex items-center gap-2">
                     <Layers className="h-5 w-5" />
                     Program Details
@@ -1262,6 +1262,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                     type="button"
                     variant="outline"
                     size="sm"
+                    className="w-full sm:w-auto sm:shrink-0"
                     onClick={() => setCopyDialogOpen(true)}
                   >
                     <Copy className="mr-2 h-4 w-4" />

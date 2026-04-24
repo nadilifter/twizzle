@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -57,6 +58,7 @@ export function FeedbackContent() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("votes");
+  const [activeTab, setActiveTab] = useState<string>("requests");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitOpen, setIsSubmitOpen] = useState(false);
   const [selectedFeature, setSelectedFeature] = useState<FeatureRequest | null>(null);
@@ -279,13 +281,13 @@ export function FeedbackContent() {
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <Tabs defaultValue="requests" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           {/* Toolbar */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-4">
-            <TabsList className="w-fit">
+            <ResponsiveTabsList value={activeTab} onValueChange={setActiveTab} className="w-fit">
               <TabsTrigger value="requests">Feature Requests</TabsTrigger>
               <TabsTrigger value="roadmap">Roadmap</TabsTrigger>
-            </TabsList>
+            </ResponsiveTabsList>
 
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground shrink-0" />

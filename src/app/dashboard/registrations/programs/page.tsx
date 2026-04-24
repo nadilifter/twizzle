@@ -7,6 +7,7 @@ import { parseISO, isAfter, isBefore, startOfDay } from "date-fns";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -255,23 +256,21 @@ export default function ProgramsPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Programs</h1>
-          <p className="text-muted-foreground">
-            Manage your registration programs and enrollment options.
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/dashboard/registrations/programs/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Program
-          </Link>
-        </Button>
-      </div>
+      <DashboardPageHeader
+        title="Programs"
+        description="Manage your registration programs and enrollment options."
+        actions={
+          <Button asChild>
+            <Link href="/dashboard/registrations/programs/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Program
+            </Link>
+          </Button>
+        }
+      />
 
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 md:max-w-sm">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+        <div className="relative w-full sm:max-w-sm sm:flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
@@ -282,72 +281,74 @@ export default function ProgramsPage() {
           />
         </div>
 
-        <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <Filter className="h-4 w-4" />
-              Filters
-              {activeFilterCount > 0 && (
-                <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">
-                  {activeFilterCount}
-                </Badge>
-              )}
+        <div className="flex flex-wrap items-center gap-2">
+          <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" className="flex-1 gap-2 sm:flex-none">
+                <Filter className="h-4 w-4" />
+                Filters
+                {activeFilterCount > 0 && (
+                  <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">
+                    {activeFilterCount}
+                  </Badge>
+                )}
+              </Button>
+            </SheetTrigger>
+            <SheetContent className="flex flex-col">
+              <SheetHeader>
+                <SheetTitle>Filter Programs</SheetTitle>
+                <SheetDescription>
+                  Narrow down programs by status, facility, level, and more
+                </SheetDescription>
+              </SheetHeader>
+              <div className="mt-6 flex-1 overflow-y-auto min-h-0 pr-1">
+                <ProgramFiltersContent
+                  levels={
+                    trainingEnabled
+                      ? levels.map((l) => ({ id: l.id, name: l.name, color: l.color }))
+                      : []
+                  }
+                  coaches={coaches}
+                  seasons={
+                    seasonsEnabled
+                      ? seasons.map((s) => ({ id: s.id, name: s.name, color: s.color }))
+                      : undefined
+                  }
+                  categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+                  facilities={facilities.map((f) => ({ id: f.id, name: f.name }))}
+                  showGenderFilter
+                  showStatusFilter
+                  showSeasonFilter={seasonsEnabled}
+                  filters={filters}
+                  onFiltersChange={setFilters}
+                />
+              </div>
+              <div className="border-t pt-4 mt-4 flex flex-col gap-2 shrink-0">
+                <SheetClose asChild>
+                  <Button className="w-full">
+                    Show {filteredPrograms.length} program{filteredPrograms.length !== 1 ? "s" : ""}
+                  </Button>
+                </SheetClose>
+                {activeFilterCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setFilters({ ...DEFAULT_FILTERS })}
+                    className="w-full gap-2"
+                  >
+                    <X className="h-4 w-4" />
+                    Clear All Filters
+                  </Button>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
+          {activeFilterCount > 0 && (
+            <Button variant="ghost" size="sm" onClick={() => setFilters({ ...DEFAULT_FILTERS })}>
+              Clear filters
             </Button>
-          </SheetTrigger>
-          <SheetContent className="flex flex-col">
-            <SheetHeader>
-              <SheetTitle>Filter Programs</SheetTitle>
-              <SheetDescription>
-                Narrow down programs by status, facility, level, and more
-              </SheetDescription>
-            </SheetHeader>
-            <div className="mt-6 flex-1 overflow-y-auto min-h-0 pr-1">
-              <ProgramFiltersContent
-                levels={
-                  trainingEnabled
-                    ? levels.map((l) => ({ id: l.id, name: l.name, color: l.color }))
-                    : []
-                }
-                coaches={coaches}
-                seasons={
-                  seasonsEnabled
-                    ? seasons.map((s) => ({ id: s.id, name: s.name, color: s.color }))
-                    : undefined
-                }
-                categories={categories.map((c) => ({ id: c.id, name: c.name }))}
-                facilities={facilities.map((f) => ({ id: f.id, name: f.name }))}
-                showGenderFilter
-                showStatusFilter
-                showSeasonFilter={seasonsEnabled}
-                filters={filters}
-                onFiltersChange={setFilters}
-              />
-            </div>
-            <div className="border-t pt-4 mt-4 flex flex-col gap-2 shrink-0">
-              <SheetClose asChild>
-                <Button className="w-full">
-                  Show {filteredPrograms.length} program{filteredPrograms.length !== 1 ? "s" : ""}
-                </Button>
-              </SheetClose>
-              {activeFilterCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setFilters({ ...DEFAULT_FILTERS })}
-                  className="w-full gap-2"
-                >
-                  <X className="h-4 w-4" />
-                  Clear All Filters
-                </Button>
-              )}
-            </div>
-          </SheetContent>
-        </Sheet>
-        {activeFilterCount > 0 && (
-          <Button variant="ghost" size="sm" onClick={() => setFilters({ ...DEFAULT_FILTERS })}>
-            Clear filters
-          </Button>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Result count */}

@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import {
   Dialog,
   DialogContent,
@@ -305,12 +306,11 @@ export default function StaffPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold tracking-tight">Staff Management</h1>
-        <p className="text-muted-foreground">
-          Manage your staff and configure granular access permissions.
-        </p>
-      </div>
+      <DashboardPageHeader
+        variant="small"
+        title="Staff Management"
+        description="Manage your staff and configure granular access permissions."
+      />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">

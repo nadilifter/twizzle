@@ -221,14 +221,14 @@ export function GLCodesTable({ data, onAddClick }: GLCodesTableProps) {
 
   return (
     <div className="w-full space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <Input
           placeholder="Filter descriptions..."
           value={(table.getColumn("description")?.getFilterValue() as string) ?? ""}
           onChange={(event) => table.getColumn("description")?.setFilterValue(event.target.value)}
-          className="max-w-sm"
+          className="sm:max-w-sm"
         />
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleExportCSV}>
             <Download className="mr-2 h-4 w-4" />
             Export
@@ -246,7 +246,7 @@ export function GLCodesTable({ data, onAddClick }: GLCodesTableProps) {
           )}
         </div>
       </div>
-      <div className="overflow-hidden rounded-md border">
+      <div className="overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

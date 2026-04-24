@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import {
   Table,
   TableBody,
@@ -146,15 +147,10 @@ export default function RecurringBillingPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Recurring Billing</h1>
-          <p className="text-muted-foreground">
-            Automated tuition collection and payment schedules. Charges are processed daily at 8 AM
-            UTC.
-          </p>
-        </div>
-      </div>
+      <DashboardPageHeader
+        title="Recurring Billing"
+        description="Automated tuition collection and payment schedules. Charges are processed daily at 8 AM UTC."
+      />
 
       <div className="grid gap-6 md:grid-cols-4">
         <Card>

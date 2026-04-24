@@ -35,7 +35,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Plus,
@@ -409,11 +410,11 @@ function CoachEvaluationsContent() {
       {/* Tabs and Filters */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <TabsList>
+          <ResponsiveTabsList value={activeTab} onValueChange={setActiveTab}>
             <TabsTrigger value="all">All</TabsTrigger>
             <TabsTrigger value="pending">Pending</TabsTrigger>
             <TabsTrigger value="completed">Completed</TabsTrigger>
-          </TabsList>
+          </ResponsiveTabsList>
 
           <div className="flex-1 flex gap-4">
             <div className="flex-1 relative max-w-sm">

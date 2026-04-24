@@ -7,7 +7,8 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs";
 import {
   Table,
   TableBody,
@@ -175,10 +176,10 @@ export default function HolidaysPage() {
       />
 
       <Tabs value={String(year)} onValueChange={(val) => setYear(Number(val))}>
-        <TabsList>
+        <ResponsiveTabsList value={String(year)} onValueChange={(val) => setYear(Number(val))}>
           <TabsTrigger value={String(currentYear)}>{currentYear}</TabsTrigger>
           <TabsTrigger value={String(nextYear)}>{nextYear}</TabsTrigger>
-        </TabsList>
+        </ResponsiveTabsList>
 
         {[currentYear, nextYear].map((tabYear) => (
           <TabsContent key={tabYear} value={String(tabYear)}>

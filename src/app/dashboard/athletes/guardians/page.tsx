@@ -17,6 +17,7 @@ import Link from "next/link";
 import { formatPhoneNumberIntl } from "react-phone-number-input";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -127,18 +128,16 @@ export default function GuardiansPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Guardians</h1>
-          <p className="text-muted-foreground">
-            Manage guardian accounts, billing, and contact information.
-          </p>
-        </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Guardian
-        </Button>
-      </div>
+      <DashboardPageHeader
+        title="Guardians"
+        description="Manage guardian accounts, billing, and contact information."
+        actions={
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Guardian
+          </Button>
+        }
+      />
 
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2 flex-1 max-w-sm">

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -824,12 +825,10 @@ export default function QuestionsPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Custom Information Questions</h1>
-        <p className="text-muted-foreground">
-          Configure questions to collect additional information from athletes during registration
-        </p>
-      </div>
+      <DashboardPageHeader
+        title="Custom Information Questions"
+        description="Configure questions to collect additional information from athletes during registration"
+      />
 
       <Card>
         <CardHeader>

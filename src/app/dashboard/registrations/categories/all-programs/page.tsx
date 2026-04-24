@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { api, ApiError } from "@/lib/api-client";
@@ -55,18 +56,17 @@ export default function EditAllProgramsCategoryPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
+      <div className="flex items-start gap-4">
+        <Button variant="ghost" size="icon" asChild className="shrink-0">
           <Link href="/dashboard/registrations/categories">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Edit All Programs</h1>
-          <p className="text-muted-foreground">
-            Customize the image for the default &ldquo;All Programs&rdquo; category on your
-            marketing site.
-          </p>
+        <div className="min-w-0 flex-1">
+          <DashboardPageHeader
+            title="Edit All Programs"
+            description={`Customize the image for the default "All Programs" category on your marketing site.`}
+          />
         </div>
       </div>
 

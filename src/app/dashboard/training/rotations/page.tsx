@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import {
   Card,
   CardContent,
@@ -76,106 +77,104 @@ const templates = [
 export default function RotationsPage() {
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Rotation Templates</h1>
-          <p className="text-muted-foreground">
-            Standardized time blocks for your classes to ensure consistent pacing.
-          </p>
-        </div>
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              New Template
-            </Button>
-          </SheetTrigger>
-          <SheetContent className="sm:max-w-xl">
-            <SheetHeader>
-              <SheetTitle>New Rotation Template</SheetTitle>
-              <SheetDescription>Design the timeline for a class type.</SheetDescription>
-            </SheetHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">Template Name</Label>
-                <Input id="name" placeholder="e.g. Advanced Rec 90min" />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="duration">Total Duration (min)</Label>
-                <Input id="duration" type="number" placeholder="90" />
-              </div>
-              <div className="border-t my-2"></div>
-              <Label>Timeline Blocks</Label>
-              <div className="space-y-3">
-                <div className="flex gap-2 items-end">
-                  <div className="grid gap-1 flex-1">
-                    <Label className="text-xs">Block Name</Label>
-                    <Input placeholder="Warmup" />
+      <DashboardPageHeader
+        title="Rotation Templates"
+        description="Standardized time blocks for your classes to ensure consistent pacing."
+        actions={
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                New Template
+              </Button>
+            </SheetTrigger>
+            <SheetContent className="sm:max-w-xl">
+              <SheetHeader>
+                <SheetTitle>New Rotation Template</SheetTitle>
+                <SheetDescription>Design the timeline for a class type.</SheetDescription>
+              </SheetHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Template Name</Label>
+                  <Input id="name" placeholder="e.g. Advanced Rec 90min" />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="duration">Total Duration (min)</Label>
+                  <Input id="duration" type="number" placeholder="90" />
+                </div>
+                <div className="border-t my-2"></div>
+                <Label>Timeline Blocks</Label>
+                <div className="space-y-3">
+                  <div className="flex gap-2 items-end">
+                    <div className="grid gap-1 flex-1">
+                      <Label className="text-xs">Block Name</Label>
+                      <Input placeholder="Warmup" />
+                    </div>
+                    <div className="grid gap-1 w-24">
+                      <Label className="text-xs">Duration</Label>
+                      <Input placeholder="15" type="number" />
+                    </div>
+                    <div className="grid gap-1 w-32">
+                      <Label className="text-xs">Color</Label>
+                      <Select defaultValue="cyan">
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="purple">Purple</SelectItem>
+                          <SelectItem value="cyan">Cyan</SelectItem>
+                          <SelectItem value="pink">Pink</SelectItem>
+                          <SelectItem value="teal">Teal</SelectItem>
+                          <SelectItem value="indigo">Indigo</SelectItem>
+                          <SelectItem value="gray">Gray</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button variant="ghost" size="icon">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <div className="grid gap-1 w-24">
-                    <Label className="text-xs">Duration</Label>
-                    <Input placeholder="15" type="number" />
+                  <div className="flex gap-2 items-end">
+                    <div className="grid gap-1 flex-1">
+                      <Label className="text-xs">Block Name</Label>
+                      <Input placeholder="Rotation 1" />
+                    </div>
+                    <div className="grid gap-1 w-24">
+                      <Label className="text-xs">Duration</Label>
+                      <Input placeholder="20" type="number" />
+                    </div>
+                    <div className="grid gap-1 w-32">
+                      <Label className="text-xs">Color</Label>
+                      <Select defaultValue="purple">
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="purple">Purple</SelectItem>
+                          <SelectItem value="cyan">Cyan</SelectItem>
+                          <SelectItem value="pink">Pink</SelectItem>
+                          <SelectItem value="teal">Teal</SelectItem>
+                          <SelectItem value="indigo">Indigo</SelectItem>
+                          <SelectItem value="gray">Gray</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button variant="ghost" size="icon">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <div className="grid gap-1 w-32">
-                    <Label className="text-xs">Color</Label>
-                    <Select defaultValue="cyan">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="purple">Purple</SelectItem>
-                        <SelectItem value="cyan">Cyan</SelectItem>
-                        <SelectItem value="pink">Pink</SelectItem>
-                        <SelectItem value="teal">Teal</SelectItem>
-                        <SelectItem value="indigo">Indigo</SelectItem>
-                        <SelectItem value="gray">Gray</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button variant="ghost" size="icon">
-                    <Trash2 className="h-4 w-4" />
+                  <Button variant="outline" size="sm" className="w-full border-dashed">
+                    <Plus className="mr-2 h-4 w-4" /> Add Block
                   </Button>
                 </div>
-                <div className="flex gap-2 items-end">
-                  <div className="grid gap-1 flex-1">
-                    <Label className="text-xs">Block Name</Label>
-                    <Input placeholder="Rotation 1" />
-                  </div>
-                  <div className="grid gap-1 w-24">
-                    <Label className="text-xs">Duration</Label>
-                    <Input placeholder="20" type="number" />
-                  </div>
-                  <div className="grid gap-1 w-32">
-                    <Label className="text-xs">Color</Label>
-                    <Select defaultValue="purple">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="purple">Purple</SelectItem>
-                        <SelectItem value="cyan">Cyan</SelectItem>
-                        <SelectItem value="pink">Pink</SelectItem>
-                        <SelectItem value="teal">Teal</SelectItem>
-                        <SelectItem value="indigo">Indigo</SelectItem>
-                        <SelectItem value="gray">Gray</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button variant="ghost" size="icon">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-                <Button variant="outline" size="sm" className="w-full border-dashed">
-                  <Plus className="mr-2 h-4 w-4" /> Add Block
-                </Button>
               </div>
-            </div>
-            <SheetFooter>
-              <Button type="submit">Create Template</Button>
-            </SheetFooter>
-          </SheetContent>
-        </Sheet>
-      </div>
+              <SheetFooter>
+                <Button type="submit">Create Template</Button>
+              </SheetFooter>
+            </SheetContent>
+          </Sheet>
+        }
+      />
 
       <div className="grid gap-6">
         {templates.map((template) => (

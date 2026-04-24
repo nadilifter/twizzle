@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { Loader2, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -248,24 +249,23 @@ export default function TaxesAndFeesPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Taxes & Fees</h1>
-          <p className="text-muted-foreground">
-            Configure how taxes and processing fees are handled for your organization.
-          </p>
-        </div>
-        <Button onClick={handleSave} disabled={saving || !hasConfigChanges}>
-          {saving ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            "Save Changes"
-          )}
-        </Button>
-      </div>
+      <DashboardPageHeader
+        variant="small"
+        title="Taxes & Fees"
+        description="Configure how taxes and processing fees are handled for your organization."
+        actions={
+          <Button onClick={handleSave} disabled={saving || !hasConfigChanges}>
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save Changes"
+            )}
+          </Button>
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Sales Tax Card */}

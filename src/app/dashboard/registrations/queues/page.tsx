@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Settings, Loader2, AlertCircle, Users, Clock, Globe, Timer } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import { useQueueConfig, type QueueConfig } from "@/hooks/use-queue-config";
 import { usePrograms } from "@/hooks/use-programs";
 import { toast } from "sonner";
@@ -110,20 +111,16 @@ export default function QueuesPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Registration Queues</h1>
-          <p className="text-muted-foreground">
-            Configure virtual waiting rooms to manage high-traffic registration periods.
-          </p>
-        </div>
-        <Sheet open={isAddOpen} onOpenChange={setIsAddOpen}>
+      <DashboardPageHeader
+        title="Registration Queues"
+        description="Configure virtual waiting rooms to manage high-traffic registration periods."
+        actions={
           <Button onClick={() => setIsAddOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Add Queue
           </Button>
-        </Sheet>
-      </div>
+        }
+      />
 
       {isLoading && configs.length === 0 && (
         <div className="flex items-center justify-center h-64">

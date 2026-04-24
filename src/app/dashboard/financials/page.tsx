@@ -308,8 +308,8 @@ export default function FinancialsPage() {
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-7">
+        <Card className="lg:col-span-4">
           <CardHeader>
             <CardTitle>Revenue Over Time</CardTitle>
             <CardDescription>Monthly revenue for the last 6 months.</CardDescription>
@@ -332,7 +332,7 @@ export default function FinancialsPage() {
           </CardContent>
         </Card>
 
-        <Card className="col-span-3">
+        <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>Revenue Breakdown</CardTitle>
             <CardDescription>Revenue distribution by category.</CardDescription>
@@ -385,7 +385,7 @@ export default function FinancialsPage() {
                 </Pie>
                 <ChartLegend
                   content={<ChartLegendContent nameKey="category" />}
-                  className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
+                  className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/2 [&>*]:justify-center sm:[&>*]:basis-1/4"
                 />
               </PieChart>
             </ChartContainer>

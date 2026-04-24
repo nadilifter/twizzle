@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useEvents } from "@/hooks/use-events";
 import { format } from "date-fns";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
   CLASS: "Class",
@@ -64,18 +65,18 @@ export default function EventsPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Events</h1>
-          <p className="text-muted-foreground">Manage your events, competitions, and gatherings.</p>
-        </div>
-        <Button asChild>
-          <Link href="/dashboard/events/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Event
-          </Link>
-        </Button>
-      </div>
+      <DashboardPageHeader
+        title="Events"
+        description="Manage your events, competitions, and gatherings."
+        actions={
+          <Button asChild>
+            <Link href="/dashboard/events/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Event
+            </Link>
+          </Button>
+        }
+      />
 
       <div className="flex items-center gap-4">
         <div className="relative flex-1 md:max-w-sm">

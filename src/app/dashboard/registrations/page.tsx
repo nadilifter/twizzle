@@ -4,16 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { ClipboardList, Users, CalendarOff, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { DashboardPageHeader } from "@/components/dashboard-page-header";
 
 export default function RegistrationsPage() {
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Registrations</h1>
-        <p className="text-muted-foreground">
-          Manage your registration programs and queue settings.
-        </p>
-      </div>
+      <DashboardPageHeader
+        title="Registrations"
+        description="Manage your registration programs and queue settings."
+      />
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card>

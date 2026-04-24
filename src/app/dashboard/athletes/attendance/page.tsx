@@ -315,9 +315,9 @@ export default function AttendancePage() {
 
         {/* Overview Tab */}
         <TabsContent value="overall" className="space-y-4">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-7">
             {/* Trend Chart */}
-            <Card className="col-span-4">
+            <Card className="lg:col-span-4">
               <CardHeader>
                 <CardTitle>Attendance Trend</CardTitle>
                 <CardDescription>Daily attendance rate over time</CardDescription>
@@ -365,7 +365,7 @@ export default function AttendancePage() {
             </Card>
 
             {/* Status Distribution */}
-            <Card className="col-span-3">
+            <Card className="lg:col-span-3">
               <CardHeader>
                 <CardTitle>Status Distribution</CardTitle>
                 <CardDescription>Breakdown by attendance status</CardDescription>
@@ -417,7 +417,7 @@ export default function AttendancePage() {
                       </Pie>
                       <ChartLegend
                         content={<ChartLegendContent nameKey="status" />}
-                        className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
+                        className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/2 [&>*]:justify-center sm:[&>*]:basis-1/4"
                       />
                     </PieChart>
                   </ChartContainer>
