@@ -1308,22 +1308,6 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 md:px-8 py-12">
-      <button
-        onClick={() => {
-          if (checkoutStep === "details") {
-            router.back();
-          } else {
-            setCheckoutStep("details");
-            setPaymentSession(null);
-            setPaymentError(null);
-            setRequiredWaivers([]);
-          }
-        }}
-        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6 -ml-1"
-      >
-        <ChevronLeft className="h-4 w-4" />
-        Back
-      </button>
       <h1 className="text-3xl font-bold mb-8">Checkout</h1>
 
       <div className="grid gap-8 lg:grid-cols-3">
