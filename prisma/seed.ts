@@ -3435,6 +3435,22 @@ async function main() {
     });
   });
 
+  // Swim Team - Mon/Wed/Fri/Sat 6:00 AM, 120 min
+  const swimDates = generateWeeklyDates(daysAgo(60), daysFromNow(90), [1, 3, 5, 6]); // Mon, Wed, Fri, Sat
+  swimDates.forEach((date, i) => {
+    programInstanceData.push({
+      id: `${ORG2_ID}-prog-swim-inst-${i}`,
+      programId: `${ORG2_ID}-prog-swim`,
+      organizationId: ORG2_ID,
+      date,
+      startTime: "06:00",
+      endTime: calculateEndTime("06:00", 120),
+      facilityId: `${ORG2_ID}-facility-main`,
+      capacity: null,
+      status: date < new Date() ? "COMPLETED" : "SCHEDULED",
+    });
+  });
+
   // Create all instances (using createMany for efficiency, but handling potential duplicates)
   let instancesCreated = 0;
   for (const instance of programInstanceData) {
@@ -3535,6 +3551,17 @@ async function main() {
     }
   }
   console.log(`  ✓ Created ${regsCreated} instance registrations`);
+
+  await Promise.all(
+    [ORG1_ID, ORG2_ID, ORG_DEMO_ID].map((orgId) =>
+      prisma.cacheVersion.upsert({
+        where: { organizationId_entityType: { organizationId: orgId, entityType: "programs" } },
+        update: { version: { increment: 1 } },
+        create: { organizationId: orgId, entityType: "programs", version: 1 },
+      })
+    )
+  );
+  console.log("  ✓ Bumped program cache versions");
 
   // ============================================
   // PROGRAM LEVEL REQUIREMENTS (many-to-many)

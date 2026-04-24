@@ -21,7 +21,6 @@ import {
   Hourglass,
   CircleCheck,
   User,
-  Check,
   Zap,
   Tag,
   Share2,
@@ -46,7 +45,7 @@ import { SessionCalendar, type SessionInstance } from "@/components/sites/sessio
 import { LocationMap } from "@/components/location-map";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import type { RegistrationStatus } from "@/lib/registration-utils";
-import { getBestDiscount, getDiscountAmount, type BulkDiscount } from "@/lib/bulk-discounts";
+import { type BulkDiscount } from "@/lib/bulk-discounts";
 
 const ROLE_ORDER: Record<string, number> = {
   LEAD_COACH: 0,
@@ -164,7 +163,6 @@ export function ProgramProfile({
   primaryColor,
 }: ProgramProfileProps) {
   const router = useRouter();
-  const [selectedInstanceIds, setSelectedInstanceIds] = useState<Set<string>>(new Set());
   const [isNavigating, setIsNavigating] = useState(false);
 
   const isPerInstance = program.registrationType === "PER_INSTANCE";
@@ -239,26 +237,6 @@ export function ProgramProfile({
     });
   }, [program.staffAssignments]);
 
-  const toggleInstance = useCallback((id: string) => {
-    setSelectedInstanceIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  }, []);
-
-  const bulkSelectInstances = useCallback((ids: string[]) => {
-    setSelectedInstanceIds((prev) => {
-      const next = new Set(prev);
-      for (const id of ids) next.add(id);
-      return next;
-    });
-  }, []);
-
   const handleShare = useCallback(async () => {
     const url = window.location.href;
     if (navigator.share) {
@@ -277,29 +255,11 @@ export function ProgramProfile({
     setIsNavigating(true);
     const params = new URLSearchParams();
     if (earlyAccessCode) params.set("code", earlyAccessCode);
-    if (isPerInstance && selectedInstanceIds.size > 0) {
-      params.set("instances", Array.from(selectedInstanceIds).join(","));
-    }
     const qs = params.toString();
     router.push(`/programs/${program.id}/register${qs ? `?${qs}` : ""}`);
   };
 
-  const selectedSubtotal = isPerInstance
-    ? selectedInstanceIds.size * (program.perSessionPrice || 0)
-    : 0;
-
-  const activeMultiSessionDiscount = isPerInstance
-    ? getBestDiscount(program.bulkDiscounts, "MULTI_SESSION", selectedInstanceIds.size)
-    : null;
-
-  const savings = activeMultiSessionDiscount
-    ? getDiscountAmount(selectedSubtotal, activeMultiSessionDiscount)
-    : 0;
-
-  const selectedTotal = selectedSubtotal - savings;
-
-  const ctaDisabled =
-    !canRegister || isSoldOut || (isPerInstance && selectedInstanceIds.size === 0) || isNavigating;
+  const ctaDisabled = !canRegister || isSoldOut || isNavigating;
 
   const ctaLabel = (() => {
     if (registrationStatus === "closed") return "Registration Closed";
@@ -310,9 +270,6 @@ export function ProgramProfile({
     }
     if (isSoldOut) return "Sold Out";
     if (isFull && canJoinWaitlist) return "Join Waitlist";
-    if (isPerInstance && selectedInstanceIds.size > 0) {
-      return `Register for ${selectedInstanceIds.size} session${selectedInstanceIds.size !== 1 ? "s" : ""}`;
-    }
     return "Register Now";
   })();
 
@@ -479,7 +436,7 @@ export function ProgramProfile({
           )}
 
           {/* Staff section */}
-          {program.showCoachOnSite && sortedStaff.length > 0 && (
+          {sortedStaff.length > 0 && (
             <TooltipProvider delayDuration={200}>
               <div>
                 <h2 className="text-lg font-semibold mb-4">
@@ -521,6 +478,14 @@ export function ProgramProfile({
             </TooltipProvider>
           )}
 
+          {/* Sessions calendar */}
+          {instances.length > 0 && (
+            <div id="sessions" className="scroll-mt-24">
+              <h2 className="text-lg font-semibold mb-4">Schedule</h2>
+              <SessionCalendar instances={instances} readOnly primaryColor={primaryColor} />
+            </div>
+          )}
+
           {/* Location map */}
           {program.facility?.latitude != null && program.facility?.longitude != null && (
             <div id="location" className="scroll-mt-24">
@@ -541,22 +506,6 @@ export function ProgramProfile({
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Session calendar for PER_INSTANCE */}
-          {isPerInstance && (
-            <div id="sessions" className="scroll-mt-24">
-              <h2 className="text-lg font-semibold mb-4">Pick your sessions</h2>
-              <SessionCalendar
-                instances={instances}
-                selectedIds={selectedInstanceIds}
-                onToggle={toggleInstance}
-                onBulkSelect={bulkSelectInstances}
-                waitlistEnabled={program.waitlistEnabled}
-                perSessionPrice={program.perSessionPrice}
-                primaryColor={primaryColor}
-              />
             </div>
           )}
         </div>
@@ -695,93 +644,24 @@ export function ProgramProfile({
                         discount.discountType === "PERCENTAGE"
                           ? `${discount.discountValue}% off`
                           : `${formatPrice(discount.discountValue)} off`;
-                      const isActive =
-                        discount.type === "MULTI_SESSION" &&
-                        activeMultiSessionDiscount?.id === discount.id;
                       return (
                         <div
                           key={discount.id}
-                          className={cn(
-                            "flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors",
-                            isActive
-                              ? "border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/30"
-                              : "border-border bg-muted/30"
-                          )}
+                          className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2.5"
                         >
-                          <Tag
-                            className={cn(
-                              "h-4 w-4 shrink-0",
-                              isActive
-                                ? "text-green-600 dark:text-green-400"
-                                : "text-muted-foreground"
-                            )}
-                          />
+                          <Tag className="h-4 w-4 shrink-0 text-muted-foreground" />
                           <div className="flex-1 min-w-0">
-                            <p
-                              className={cn(
-                                "text-sm font-medium leading-tight",
-                                isActive ? "text-green-700 dark:text-green-300" : "text-foreground"
-                              )}
-                            >
-                              {label}
-                            </p>
+                            <p className="text-sm font-medium leading-tight">{label}</p>
                             <p className="text-xs text-muted-foreground">
                               {discount.type === "FAMILY_SIBLING"
                                 ? `${discount.minQuantity}+ siblings`
                                 : `${discount.minQuantity}+ sessions`}
                             </p>
                           </div>
-                          {isActive && (
-                            <Check className="h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
-                          )}
                         </div>
                       );
                     })}
                 </div>
-              )}
-
-              {/* Selected sessions summary (PER_INSTANCE) */}
-              {isPerInstance && selectedInstanceIds.size > 0 && (
-                <>
-                  <Separator />
-                  <div className="space-y-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive h-auto px-1.5 py-0.5 text-xs -ml-1.5"
-                      onClick={() => setSelectedInstanceIds(new Set())}
-                    >
-                      Clear all
-                    </Button>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">
-                        {selectedInstanceIds.size} session
-                        {selectedInstanceIds.size !== 1 ? "s" : ""}
-                      </span>
-                      {program.perSessionPrice != null && (
-                        <div className="text-right">
-                          {savings > 0 ? (
-                            <>
-                              <span className="text-sm text-muted-foreground line-through mr-1.5">
-                                {formatPrice(selectedSubtotal)}
-                              </span>
-                              <span className="text-lg font-bold">
-                                {formatPrice(selectedTotal)}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-lg font-bold">{formatPrice(selectedTotal)}</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    {savings > 0 && (
-                      <div className="text-xs font-medium text-green-600 dark:text-green-400 text-right">
-                        You save {formatPrice(savings)} with multi-session discount
-                      </div>
-                    )}
-                  </div>
-                </>
               )}
 
               {/* CTA */}
@@ -811,26 +691,12 @@ export function ProgramProfile({
       <div className="fixed bottom-0 inset-x-0 z-50 lg:hidden border-t bg-background/95 backdrop-blur-sm shadow-[0_-2px_10px_rgba(0,0,0,0.08)]">
         <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between gap-3">
           <div className="min-w-0">
-            {isPerInstance && selectedInstanceIds.size > 0 && program.perSessionPrice != null ? (
-              <div>
-                <span className="text-sm font-bold">{formatPrice(selectedTotal)}</span>
-                {savings > 0 && (
-                  <span className="text-xs text-muted-foreground line-through ml-1.5">
-                    {formatPrice(selectedSubtotal)}
-                  </span>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  {selectedInstanceIds.size} session{selectedInstanceIds.size !== 1 ? "s" : ""}
-                </p>
-              </div>
-            ) : (
-              <div>
-                <span className="text-sm font-bold">{priceDisplay}</span>
-                {pricePeriod && (
-                  <span className="text-xs text-muted-foreground ml-0.5">{pricePeriod}</span>
-                )}
-              </div>
-            )}
+            <div>
+              <span className="text-sm font-bold">{priceDisplay}</span>
+              {pricePeriod && (
+                <span className="text-xs text-muted-foreground ml-0.5">{pricePeriod}</span>
+              )}
+            </div>
           </div>
           <Button
             onClick={handleRegister}

@@ -31,26 +31,30 @@ export interface SessionInstance {
   facility?: { name: string; city?: string | null };
 }
 
+const EMPTY_SELECTED = new Set<string>();
+
 interface SessionCalendarProps {
   instances: SessionInstance[];
-  selectedIds: Set<string>;
-  onToggle: (id: string) => void;
+  selectedIds?: Set<string>;
+  onToggle?: (id: string) => void;
   onBulkSelect?: (ids: string[]) => void;
   waitlistEnabled?: boolean;
   perSessionPrice?: number | null;
   primaryColor?: string;
+  readOnly?: boolean;
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function SessionCalendar({
   instances,
-  selectedIds,
+  selectedIds = EMPTY_SELECTED,
   onToggle,
   onBulkSelect,
   waitlistEnabled = false,
   perSessionPrice,
   primaryColor,
+  readOnly = false,
 }: SessionCalendarProps) {
   const firstInstanceDate = instances.length > 0 ? parseISO(instances[0].date) : new Date();
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(firstInstanceDate));
@@ -181,7 +185,7 @@ export function SessionCalendar({
             </Button>
           </div>
 
-          {onBulkSelect && availableDays.length > 0 && (
+          {!readOnly && onBulkSelect && availableDays.length > 0 && (
             <Popover
               open={quickSelectOpen}
               onOpenChange={(open) => {
@@ -385,40 +389,50 @@ export function SessionCalendar({
                       session.capacity !== undefined &&
                       session.registrationCount >= session.capacity;
                     const hasWaitlist = isFull && waitlistEnabled;
-                    const isUnavailable = isFull && !hasWaitlist;
-                    const isSelected = selectedIds.has(session.id);
+                    const isUnavailable = !readOnly && isFull && !hasWaitlist;
+                    const isSelected = !readOnly && selectedIds.has(session.id);
                     const spotsLeft = session.capacity
                       ? Math.max(0, session.capacity - session.registrationCount)
                       : null;
 
+                    const chipContent = (
+                      <span>
+                        {session.startTime}
+                        <span className="hidden md:inline">–{session.endTime}</span>
+                      </span>
+                    );
+
                     return (
                       <Tooltip key={session.id}>
                         <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            onClick={() => !isUnavailable && onToggle(session.id)}
-                            disabled={isUnavailable}
-                            className={cn(
-                              "block w-fit ml-auto md:ml-0 text-[10px] md:text-xs leading-tight rounded-md px-1 py-1 transition-all font-medium",
-                              isSelected
-                                ? "text-white shadow-sm"
-                                : isUnavailable
-                                  ? "bg-muted/80 text-muted-foreground/40 line-through cursor-not-allowed"
-                                  : hasWaitlist
-                                    ? "bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/50 cursor-pointer"
-                                    : "bg-primary/8 text-foreground hover:bg-primary/15 cursor-pointer"
-                            )}
-                            style={
-                              isSelected && primaryColor
-                                ? { backgroundColor: primaryColor }
-                                : undefined
-                            }
-                          >
-                            <span>
-                              {session.startTime}
-                              <span className="hidden md:inline">–{session.endTime}</span>
-                            </span>
-                          </button>
+                          {readOnly ? (
+                            <div className="block w-fit ml-auto md:ml-0 text-[10px] md:text-xs leading-tight rounded-md px-1 py-1 font-medium bg-primary/8 text-foreground cursor-default">
+                              {chipContent}
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => !isUnavailable && onToggle?.(session.id)}
+                              disabled={isUnavailable}
+                              className={cn(
+                                "block w-fit ml-auto md:ml-0 text-[10px] md:text-xs leading-tight rounded-md px-1 py-1 transition-all font-medium",
+                                isSelected
+                                  ? "text-white shadow-sm"
+                                  : isUnavailable
+                                    ? "bg-muted/80 text-muted-foreground/40 line-through cursor-not-allowed"
+                                    : hasWaitlist
+                                      ? "bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/50 cursor-pointer"
+                                      : "bg-primary/8 text-foreground hover:bg-primary/15 cursor-pointer"
+                              )}
+                              style={
+                                isSelected && primaryColor
+                                  ? { backgroundColor: primaryColor }
+                                  : undefined
+                              }
+                            >
+                              {chipContent}
+                            </button>
+                          )}
                         </TooltipTrigger>
                         <TooltipContent
                           side="top"

@@ -7818,6 +7818,95 @@ See you at Metro Sports!
   console.log("  ✓ Attached waiver requirements to Bronze Gymnastics and Youth Soccer");
 
   // ============================================
+  // PROGRAM INSTANCES
+  // ============================================
+  console.log("\n📆 Creating program instances...");
+
+  function buildInstances(
+    prefix: string,
+    programId: string,
+    orgId: string,
+    facilityId: string,
+    daysOfWeek: number[],
+    startTime: string,
+    endTime: string,
+    fromDaysAgo: number,
+    toDaysFromNow: number
+  ) {
+    const rows: {
+      id: string;
+      programId: string;
+      organizationId: string;
+      facilityId: string;
+      date: Date;
+      startTime: string;
+      endTime: string;
+      status: "SCHEDULED";
+    }[] = [];
+    let counter = 1;
+    const now = Date.now();
+    const from = now - fromDaysAgo * 86400000;
+    const to = now + toDaysFromNow * 86400000;
+    for (let t = from; t <= to; t += 86400000) {
+      const d = new Date(t);
+      if (daysOfWeek.includes(d.getDay())) {
+        const noon = new Date(d);
+        noon.setUTCHours(12, 0, 0, 0);
+        rows.push({
+          id: `${prefix}-${String(counter).padStart(3, "0")}`,
+          programId,
+          organizationId: orgId,
+          facilityId,
+          date: noon,
+          startTime,
+          endTime,
+          status: "SCHEDULED",
+        });
+        counter++;
+      }
+    }
+    return rows;
+  }
+
+  // Delete stale instances so re-seeding refreshes dates
+  await prisma.programInstance.deleteMany({
+    where: { programId: { in: [`${ORG2_ID}-prog-swim`, `${ORG2_ID}-prog-fitness`] } },
+  });
+
+  // Swim Team: Mon/Wed/Fri/Sat, 06:00–08:00, 60 days past → 90 days future
+  const swimInstances = buildInstances(
+    `${ORG2_ID}-swim-inst`,
+    `${ORG2_ID}-prog-swim`,
+    ORG2_ID,
+    `${ORG2_ID}-facility-main`,
+    [1, 3, 5, 6],
+    "06:00",
+    "08:00",
+    60,
+    90
+  );
+
+  // Kids Fitness: Tue/Thu, 10:00–11:00, 30 days past → 60 days future
+  const fitnessInstances = buildInstances(
+    `${ORG2_ID}-fitness-inst`,
+    `${ORG2_ID}-prog-fitness`,
+    ORG2_ID,
+    `${ORG2_ID}-facility-main`,
+    [2, 4],
+    "10:00",
+    "11:00",
+    30,
+    60
+  );
+
+  await prisma.programInstance.createMany({
+    data: [...swimInstances, ...fitnessInstances],
+  });
+  console.log(
+    `  ✓ Created ${swimInstances.length} swim instances, ${fitnessInstances.length} fitness instances`
+  );
+
+  // ============================================
   // COMPLETE
   // ============================================
   console.log("\n" + "=".repeat(50));

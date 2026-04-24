@@ -7,6 +7,7 @@ import { sanitizeHtml, stripHtml } from "@/lib/sanitize";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { calculateAge, isAgeEligible } from "@/lib/age-utils";
+import { sameDay, timesOverlap } from "@/lib/time-utils";
 import { useCart } from "@/components/sites/cart-context";
 import { getClientSubdomainUrl } from "@/lib/client-domains";
 import {
@@ -68,6 +69,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { SessionCalendar } from "@/components/sites/session-calendar";
 
 // ---------- Types ----------
 
@@ -219,6 +221,7 @@ export function ProgramRegistrationFlow({
   program,
   instances,
   slug,
+  primaryColor,
   earlyAccessCode,
   preSelectedInstanceIds,
 }: ProgramRegistrationFlowProps) {
@@ -313,11 +316,9 @@ export function ProgramRegistrationFlow({
 
   const needsMembershipPurchase = needsMembership && !athleteHasMembership;
 
-  const hasPreSelectedInstances = preSelectedInstanceIds && preSelectedInstanceIds.length > 0;
-
   const visibleStepIds = useMemo(() => {
     const ids = ["athlete"];
-    if (isPerInstance && !hasPreSelectedInstances) ids.push("sessions");
+    if (isPerInstance) ids.push("sessions");
     if (needsMembershipPurchase) ids.push("membership");
     if (needsPass) ids.push("pass");
     if (needsWaivers) ids.push("waivers");
@@ -328,7 +329,6 @@ export function ProgramRegistrationFlow({
     return ids;
   }, [
     isPerInstance,
-    hasPreSelectedInstances,
     needsMembershipPurchase,
     needsPass,
     needsWaivers,
@@ -490,6 +490,37 @@ export function ProgramRegistrationFlow({
     );
   }, [cartItems, selectedAthlete]);
 
+  const conflictingInstanceIds = useMemo(() => {
+    const conflicting = new Set<string>();
+    const blockedIds = new Set([...alreadyRegisteredIds, ...inCartIds, ...selectedInstanceIds]);
+    if (blockedIds.size === 0) return conflicting;
+    const blockedInstances = instances.filter((i) => blockedIds.has(i.id));
+    for (const inst of instances) {
+      if (blockedIds.has(inst.id)) continue;
+      for (const blocked of blockedInstances) {
+        if (
+          sameDay(inst.date, blocked.date) &&
+          timesOverlap(inst.startTime, inst.endTime, blocked.startTime, blocked.endTime)
+        ) {
+          conflicting.add(inst.id);
+          break;
+        }
+      }
+    }
+    return conflicting;
+  }, [instances, alreadyRegisteredIds, inCartIds, selectedInstanceIds]);
+
+  const availableInstances = useMemo(
+    () =>
+      instances.filter(
+        (i) =>
+          !alreadyRegisteredIds.has(i.id) &&
+          !inCartIds.has(i.id) &&
+          !conflictingInstanceIds.has(i.id)
+      ),
+    [instances, alreadyRegisteredIds, inCartIds, conflictingInstanceIds]
+  );
+
   const isFullProgramInCart = useMemo(() => {
     if (!selectedAthlete) return false;
     return cartItems.some(
@@ -542,11 +573,27 @@ export function ProgramRegistrationFlow({
     }
   }, [selectedAthlete, checkExistingRegistrations]);
 
+  useEffect(() => {
+    if (conflictingInstanceIds.size === 0) return;
+    setSelectedInstanceIds((prev) => {
+      const next = new Set(prev);
+      let changed = false;
+      for (const id of conflictingInstanceIds) {
+        if (next.has(id)) {
+          next.delete(id);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [conflictingInstanceIds]);
+
   // ---------- Session helpers ----------
 
   const toggleInstance = useCallback(
     (id: string) => {
-      if (alreadyRegisteredIds.has(id) || inCartIds.has(id)) return;
+      if (alreadyRegisteredIds.has(id) || inCartIds.has(id) || conflictingInstanceIds.has(id))
+        return;
       setSelectedInstanceIds((prev) => {
         const next = new Set(prev);
         if (next.has(id)) next.delete(id);
@@ -554,17 +601,8 @@ export function ProgramRegistrationFlow({
         return next;
       });
     },
-    [alreadyRegisteredIds, inCartIds]
+    [alreadyRegisteredIds, inCartIds, conflictingInstanceIds]
   );
-
-  const selectAllInstances = () => {
-    const available = instances
-      .filter((i) => !i.capacity || i.registrationCount < i.capacity)
-      .filter((i) => !alreadyRegisteredIds.has(i.id))
-      .filter((i) => !inCartIds.has(i.id))
-      .map((i) => i.id);
-    setSelectedInstanceIds(new Set(available));
-  };
 
   // ---------- Eligible memberships & passes ----------
 
@@ -1555,132 +1593,44 @@ export function ProgramRegistrationFlow({
                 </div>
               )}
 
-              {isCheckingRegistrations && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Checking existing registrations…
+              {isCheckingRegistrations ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
-              )}
-
-              <div className="flex items-center justify-between pb-3 border-b border-border">
-                <div className="flex items-center gap-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={selectAllInstances}
-                    disabled={instances.length === 0}
-                  >
-                    Select All
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedInstanceIds(new Set())}
-                    disabled={selectedInstanceIds.size === 0}
-                  >
-                    Clear
-                  </Button>
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {selectedInstanceIds.size} of {instances.length} selected
-                </div>
-              </div>
-
-              <div className="divide-y divide-border max-h-[400px] overflow-y-auto">
-                {instances.map((instance) => {
-                  const isFull =
-                    instance.capacity !== undefined &&
-                    instance.registrationCount >= instance.capacity;
-                  const isAlreadyRegistered = alreadyRegisteredIds.has(instance.id);
-                  const isInCart = inCartIds.has(instance.id);
-                  const instanceWaitlistAvailable = isFull && program.waitlistEnabled;
-                  const isUnavailable =
-                    (isFull && !instanceWaitlistAvailable) || isAlreadyRegistered || isInCart;
-                  const isSelected = selectedInstanceIds.has(instance.id);
-                  const spotsLeft = instance.capacity
-                    ? instance.capacity - instance.registrationCount
-                    : null;
-
-                  return (
-                    <div
-                      key={instance.id}
-                      className={`flex items-center gap-4 py-3 px-2 rounded transition-colors ${
-                        isSelected ? "bg-primary/5" : isUnavailable ? "" : "hover:bg-muted/50"
-                      } ${isUnavailable ? "opacity-50" : "cursor-pointer"}`}
-                      onClick={() => !isUnavailable && toggleInstance(instance.id)}
-                    >
-                      <Checkbox
-                        checked={isSelected}
-                        disabled={isUnavailable}
-                        onCheckedChange={() => !isUnavailable && toggleInstance(instance.id)}
-                        className="shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium text-foreground">
-                            {format(new Date(instance.date), "EEE, MMM d")}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3.5 w-3.5" />
-                            {instance.startTime} – {instance.endTime}
-                          </div>
-                          {instance.facility && (
-                            <div className="flex items-center gap-1">
-                              <MapPin className="h-3.5 w-3.5" />
-                              {instance.facility.name}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        {program.perSessionPrice != null &&
-                          program.perSessionPrice > 0 &&
-                          !isAlreadyRegistered &&
-                          !isInCart && (
-                            <div className="font-medium text-foreground">
-                              {formatPrice(program.perSessionPrice)}
-                            </div>
-                          )}
-                        {isAlreadyRegistered ? (
-                          <div className="text-xs font-medium text-blue-600 dark:text-blue-400">
-                            Already registered
-                          </div>
-                        ) : isInCart ? (
-                          <div className="text-xs font-medium text-amber-600 dark:text-amber-400">
-                            In cart
-                          </div>
-                        ) : spotsLeft !== null ? (
-                          <div
-                            className={`text-xs ${
-                              isFull && instanceWaitlistAvailable
-                                ? "text-amber-600 dark:text-amber-400"
-                                : isFull
-                                  ? "text-red-600 dark:text-red-400"
-                                  : spotsLeft <= 3
-                                    ? "text-orange-600 dark:text-orange-400"
-                                    : "text-green-600 dark:text-green-400"
-                            }`}
-                          >
-                            {isFull && instanceWaitlistAvailable
-                              ? "Waitlist"
-                              : isFull
-                                ? "Full"
-                                : `${spotsLeft} spot${spotsLeft !== 1 ? "s" : ""} left`}
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {instances.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  No upcoming sessions available for this program.
-                </div>
+              ) : availableInstances.length === 0 ? (
+                <p className="py-12 text-center text-sm text-muted-foreground">
+                  No sessions available — all sessions are already registered or conflict with
+                  existing registrations.
+                </p>
+              ) : (
+                <SessionCalendar
+                  instances={availableInstances}
+                  selectedIds={selectedInstanceIds}
+                  onToggle={toggleInstance}
+                  onBulkSelect={(ids) => {
+                    setSelectedInstanceIds((prev) => {
+                      const next = new Set(prev);
+                      const selected = instances.filter((i) => next.has(i.id));
+                      for (const id of ids) {
+                        const inst = instances.find((i) => i.id === id);
+                        if (!inst) continue;
+                        const conflicts = selected.some(
+                          (s) =>
+                            sameDay(inst.date, s.date) &&
+                            timesOverlap(inst.startTime, inst.endTime, s.startTime, s.endTime)
+                        );
+                        if (!conflicts) {
+                          next.add(id);
+                          selected.push(inst);
+                        }
+                      }
+                      return next;
+                    });
+                  }}
+                  waitlistEnabled={program.waitlistEnabled ?? false}
+                  perSessionPrice={program.perSessionPrice ?? null}
+                  primaryColor={primaryColor}
+                />
               )}
 
               {selectedInstanceIds.size > 0 && program.perSessionPrice != null && (

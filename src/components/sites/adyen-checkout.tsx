@@ -92,6 +92,13 @@ export function AdyenCheckoutComponent({
 
         if (cancelled || !containerRef.current) return;
 
+        const pmResponse = checkout.paymentMethodsResponse;
+        if (pmResponse?.paymentMethods) {
+          pmResponse.paymentMethods = pmResponse.paymentMethods.sort((a, b) =>
+            a.type === "ach" ? 1 : b.type === "ach" ? -1 : 0
+          );
+        }
+
         if (mountedComponentRef.current) {
           mountedComponentRef.current.unmount();
           mountedComponentRef.current = null;
