@@ -215,20 +215,25 @@
   height: 0;
 }
 
-/* Adyen Web Components — dark mode overrides */
-.dark .adyen-checkout__payment-method,
-.dark .adyen-checkout__dropin {
+/* Adyen Web Components — dark mode overrides
+   Scoped to .dark (html element) so variables apply to ALL Adyen component types
+   (Card, Dropin, etc.) regardless of which root class they render. */
+.dark {
   --adyen-sdk-color-background-primary: hsl(0 0% 9%);
   --adyen-sdk-color-background-secondary: hsl(0 0% 14.9%);
   --adyen-sdk-color-background-tertiary: hsl(0 0% 14.9%);
-  --adyen-sdk-color-background-primary-hover: hsl(0 0% 14.9%);
+  --adyen-sdk-color-background-primary-hover: hsl(0 0% 20%);
   --adyen-sdk-color-label-primary: hsl(0 0% 98%);
   --adyen-sdk-color-label-secondary: hsl(0 0% 63.9%);
   --adyen-sdk-color-label-tertiary: hsl(0 0% 45.1%);
-  --adyen-sdk-color-outline-primary: hsl(0 0% 14.9%);
-  --adyen-sdk-color-outline-secondary: hsl(0 0% 14.9%);
-  --adyen-sdk-color-separator-primary: hsl(0 0% 14.9%);
+  --adyen-sdk-color-outline-primary: hsl(0 0% 30%);
+  --adyen-sdk-color-outline-secondary: hsl(0 0% 25%);
+  --adyen-sdk-color-separator-primary: hsl(0 0% 20%);
   --adyen-sdk-color-background-inverse-primary: hsl(0 0% 98%);
+  /* Primary action button: Adyen default (#00112c) is invisible on dark bg — use project primary */
+  --adyen-sdk-color-background-always-dark: hsl(240 81% 63%);
+  --adyen-sdk-color-background-always-dark-active: hsl(240 81% 53%);
+  --adyen-sdk-color-background-inverse-primary-hover: hsl(240 81% 53%);
 }
 
 /* Adyen checkbox — dark mode */

@@ -2,10 +2,23 @@
 
 import { useState, useEffect } from "react";
 import { formatPhoneNumberIntl, isValidPhoneNumber } from "react-phone-number-input";
-import { Loader2, Plus, Pencil, Trash2, Star, MapPin, Phone, User, CreditCard } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  Pencil,
+  Trash2,
+  Star,
+  MapPin,
+  Phone,
+  User,
+  CreditCard,
+  Landmark,
+  Smartphone,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { COUNTRIES, getRegionsForCountry, isValidPostalCode } from "@/lib/location-data";
+import { getMethodLabel, getMethodShortLabel, isBankType, isWalletType } from "@/lib/payment-utils";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -28,6 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { StateProvinceCombobox } from "@/components/ui/state-province-combobox";
+import { AddPaymentMethodDialog } from "@/components/billing/add-payment-method-dialog";
 import {
   Dialog,
   DialogContent,
@@ -96,20 +110,23 @@ const emptyAddress = {
   postalCode: "",
 };
 
-const BRAND_LABELS: Record<string, string> = {
-  visa: "Visa",
-  mc: "Mastercard",
-  amex: "American Express",
-  discover: "Discover",
-  diners: "Diners Club",
-  jcb: "JCB",
-  maestro: "Maestro",
-  cup: "UnionPay",
-};
+// User-side PaymentMethod.type is the Prisma enum (CARD | BANK). payment-utils
+// helpers expect Adyen-style types (scheme, ach, googlepay, applepay, ...), so
+// normalize before delegating.
+function normalizeUserPaymentType(pm: { type: string; brand: string | null }): string {
+  const brand = pm.brand?.toLowerCase() ?? "";
+  if (brand.endsWith("_googlepay") || brand === "googlepay" || brand === "paywithgoogle") {
+    return "googlepay";
+  }
+  if (brand.endsWith("_applepay") || brand === "applepay") return "applepay";
+  if (pm.type === "BANK") return "ach";
+  return "scheme";
+}
 
-function formatBrand(brand: string | null): string {
-  if (!brand) return "Card";
-  return BRAND_LABELS[brand.toLowerCase()] || brand.charAt(0).toUpperCase() + brand.slice(1);
+function getPaymentMethodIcon(type: string, className = "h-4 w-4 shrink-0") {
+  if (isWalletType({ type })) return <Smartphone className={className} />;
+  if (isBankType({ type })) return <Landmark className={className} />;
+  return <CreditCard className={className} />;
 }
 
 export default function BillingPage() {
@@ -389,6 +406,14 @@ export default function BillingPage() {
     }
   };
 
+  const refreshPaymentMethods = async () => {
+    const res = await fetch("/api/user/payment-methods");
+    if (res.ok) {
+      const data = await res.json();
+      setPaymentMethods(data.paymentMethods || []);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-1 flex-col space-y-8">
@@ -618,6 +643,11 @@ export default function BillingPage() {
             <CreditCard className="h-4 w-4" />
             Payment Methods
           </h2>
+          <AddPaymentMethodDialog
+            sessionEndpoint="/api/user/payment-methods/session"
+            onPaymentMethodAdded={refreshPaymentMethods}
+            description="Add a card, digital wallet, or bank account to pre-fill during checkout."
+          />
         </div>
 
         {paymentMethods.length === 0 ? (
@@ -625,80 +655,99 @@ export default function BillingPage() {
             <CardContent className="py-10 text-center text-muted-foreground">
               <CreditCard className="h-10 w-10 mx-auto mb-3 opacity-40" />
               <p className="font-medium">No payment methods saved yet</p>
-              <p className="text-sm mt-1">
-                Cards are saved automatically when you opt in during checkout.
+              <p className="text-sm mt-1 mb-4">
+                Payment methods saved here will be pre-filled during checkout.
               </p>
+              <AddPaymentMethodDialog
+                sessionEndpoint="/api/user/payment-methods/session"
+                onPaymentMethodAdded={refreshPaymentMethods}
+                description="Add a card, digital wallet, or bank account to pre-fill during checkout."
+                trigger={
+                  <Button size="sm" variant="outline">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Payment Method
+                  </Button>
+                }
+              />
             </CardContent>
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
-            {paymentMethods.map((pm) => (
-              <Card key={pm.id}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <CreditCard className="h-4 w-4 shrink-0" />
-                      {formatBrand(pm.brand)}
-                    </CardTitle>
-                    {pm.isDefault && (
-                      <Badge variant="secondary" className="shrink-0">
-                        <Star className="h-3 w-3 mr-1" />
-                        Default
-                      </Badge>
+            {paymentMethods.map((pm) => {
+              const normalizedType = normalizeUserPaymentType(pm);
+              const label = getMethodLabel({ type: normalizedType, brand: pm.brand });
+              const shortLabel = getMethodShortLabel({
+                type: normalizedType,
+                brand: pm.brand,
+                lastFour: pm.last4,
+              });
+              return (
+                <Card key={pm.id}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        {getPaymentMethodIcon(normalizedType)}
+                        {label}
+                      </CardTitle>
+                      {pm.isDefault && (
+                        <Badge variant="secondary" className="shrink-0">
+                          <Star className="h-3 w-3 mr-1" />
+                          Default
+                        </Badge>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pb-3 text-sm text-muted-foreground space-y-1">
+                    {pm.last4 && pm.last4 !== "****" && (
+                      <p className="font-mono">&bull;&bull;&bull;&bull; {pm.last4}</p>
                     )}
-                  </div>
-                </CardHeader>
-                <CardContent className="pb-3 text-sm text-muted-foreground space-y-1">
-                  <p className="font-mono">
-                    &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull;{" "}
-                    {pm.last4}
-                  </p>
-                  {pm.expiry && <p>Expires {pm.expiry}</p>}
-                </CardContent>
-                <CardFooter className="gap-2">
-                  {!pm.isDefault && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDefaultPaymentMethod(pm.id)}
-                    >
-                      <Star className="h-3 w-3 mr-1" />
-                      Set Default
-                    </Button>
-                  )}
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
+                    {pm.expiry && <p>Expires {pm.expiry}</p>}
+                  </CardContent>
+                  <CardFooter className="gap-2">
+                    {!pm.isDefault && (
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-destructive hover:text-destructive ml-auto"
+                        onClick={() => setDefaultPaymentMethod(pm.id)}
                       >
-                        <Trash2 className="h-3 w-3 mr-1" />
-                        Remove
+                        <Star className="h-3 w-3 mr-1" />
+                        Set Default
                       </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Remove payment method?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will remove {formatBrand(pm.brand)} ending in {pm.last4} from your
-                          saved payment methods. This cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => deletePaymentMethod(pm.id)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    )}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive ml-auto"
                         >
+                          <Trash2 className="h-3 w-3 mr-1" />
                           Remove
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </CardFooter>
-              </Card>
-            ))}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Remove payment method?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will remove {shortLabel} from your saved payment methods. This
+                            cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deletePaymentMethod(pm.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Remove
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </CardFooter>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>

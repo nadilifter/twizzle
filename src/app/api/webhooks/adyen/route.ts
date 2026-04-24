@@ -42,12 +42,11 @@ export async function POST(request: NextRequest) {
     }
     const isValid = verifyWebhookSignature(body, hmacSignature);
     if (!isValid) {
-      console.error("Invalid webhook signature");
+      console.log("Invalid webhook signature", body, hmacSignature);
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
     const notificationItem = notificationRequest.notificationItems?.[0]?.NotificationRequestItem;
-
     if (!notificationItem) {
       console.error("Invalid webhook payload - no notification item");
       return NextResponse.json({ notificationResponse: "[accepted]" }, { status: 200 });

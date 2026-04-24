@@ -25,14 +25,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -43,7 +35,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { AdyenCheckoutComponent } from "@/components/sites/adyen-checkout";
+import { AddPaymentMethodDialog } from "@/components/billing/add-payment-method-dialog";
 import {
   getMethodLabel,
   getMethodIdentifier,
@@ -78,62 +70,13 @@ interface PaymentMethodsCardProps {
 
 export function PaymentMethodsCard({
   paymentMethods: initialPaymentMethods,
-  organizationId,
-  hasSubscription,
 }: PaymentMethodsCardProps) {
   const [paymentMethods, setPaymentMethods] = React.useState(initialPaymentMethods);
   React.useEffect(() => {
     setPaymentMethods(initialPaymentMethods);
   }, [initialPaymentMethods]);
-  const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [sessionId, setSessionId] = React.useState<string | null>(null);
-  const [sessionData, setSessionData] = React.useState<string | null>(null);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
   const [settingDefaultId, setSettingDefaultId] = React.useState<string | null>(null);
-
-  const handleAddPaymentMethod = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch("/api/payment-methods/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          returnUrl: window.location.href,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create payment session");
-      }
-
-      const data = await response.json();
-      setSessionId(data.sessionId);
-      setSessionData(data.sessionData);
-    } catch (error) {
-      toast.error("Failed to initialize payment form");
-      setIsAddDialogOpen(false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handlePaymentCompleted = async (result: { resultCode: string }) => {
-    if (result.resultCode === "Authorised" || result.resultCode === "Pending") {
-      toast.success("Payment method added successfully!");
-      setIsAddDialogOpen(false);
-      setSessionId(null);
-      setSessionData(null);
-      // Refresh payment methods
-      await refreshPaymentMethods();
-    } else {
-      toast.error(`Failed to add payment method: ${result.resultCode}`);
-    }
-  };
-
-  const handlePaymentError = (error: { message?: string }) => {
-    toast.error(error?.message || "Failed to add payment method");
-  };
 
   const refreshPaymentMethods = async () => {
     try {
@@ -322,40 +265,16 @@ export function PaymentMethodsCard({
         )}
       </CardContent>
       <CardFooter>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" className="w-full" onClick={handleAddPaymentMethod}>
+        <AddPaymentMethodDialog
+          sessionEndpoint="/api/payment-methods/session"
+          onPaymentMethodAdded={refreshPaymentMethods}
+          trigger={
+            <Button variant="outline" className="w-full">
               <Plus className="h-4 w-4 mr-2" />
               Add Payment Method
             </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add Payment Method</DialogTitle>
-              <DialogDescription>
-                Add a card, digital wallet, or bank account to your account.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
-              {isLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : sessionId && sessionData ? (
-                <AdyenCheckoutComponent
-                  sessionId={sessionId}
-                  sessionData={sessionData}
-                  onPaymentCompleted={handlePaymentCompleted}
-                  onError={handlePaymentError}
-                />
-              ) : (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
+          }
+        />
       </CardFooter>
     </Card>
   );

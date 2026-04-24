@@ -21,6 +21,7 @@ interface AdyenCheckoutProps {
   componentType?: string;
   adyenConfig?: Partial<CoreConfiguration>;
   showSavePaymentMethod?: boolean;
+  showStoredPaymentMethods?: boolean;
 }
 
 export function AdyenCheckoutComponent({
@@ -32,6 +33,7 @@ export function AdyenCheckoutComponent({
   componentType = "dropin",
   adyenConfig,
   showSavePaymentMethod = true,
+  showStoredPaymentMethods = true,
 }: AdyenCheckoutProps) {
   const { resolvedTheme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -110,6 +112,7 @@ export function AdyenCheckoutComponent({
         const component = new ComponentClass(checkout, {
           ...(componentType !== "card" && {
             paymentMethodComponents: [Card, GooglePay, ApplePay, Ach],
+            showStoredPaymentMethods,
           }),
           ...darkCardStyles,
           ...(componentType !== "card" && {
@@ -154,6 +157,7 @@ export function AdyenCheckoutComponent({
     stableOnPaymentCompleted,
     stableOnError,
     showSavePaymentMethod,
+    showStoredPaymentMethods,
   ]);
 
   return (

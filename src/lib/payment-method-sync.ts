@@ -140,3 +140,89 @@ export async function syncPaymentMethodsFromAdyen(organizationId: string) {
     }
   }
 }
+
+/**
+ * Mirror of `syncPaymentMethodsFromAdyen` for user-scoped payment methods.
+ * Reconciles local `PaymentMethod` records with Adyen's stored methods for
+ * `user-{userId}`. Covers webhook-missed cases (local dev without a tunnel,
+ * brief delivery delays) so the athlete billing page renders correctly even
+ * if `RECURRING_CONTRACT` hasn't arrived yet.
+ *
+ * Fails silently so callers always get local records if Adyen is unreachable.
+ */
+export async function syncUserPaymentMethodsFromAdyen(userId: string) {
+  if (!isAdyenConfigured()) return;
+
+  const shopperReference = `user-${userId}`;
+
+  const [adyenMethods, localMethods] = await Promise.all([
+    getStoredPaymentMethods(shopperReference),
+    db.paymentMethod.findMany({ where: { userId } }),
+  ]);
+
+  const localByAdyenId = new Map(
+    localMethods.filter((m) => m.adyenTokenId).map((m) => [m.adyenTokenId!, m])
+  );
+  const adyenIds = new Set(adyenMethods.map((m) => m.id));
+
+  const toExpiryString = (month?: string, year?: string) =>
+    month && year ? `${month}/${year.slice(-2)}` : null;
+
+  for (const adyenMethod of adyenMethods) {
+    const local = localByAdyenId.get(adyenMethod.id);
+
+    if (!local) {
+      const isFirst = localMethods.length === 0 && adyenMethods.indexOf(adyenMethod) === 0;
+      await db.paymentMethod.create({
+        data: {
+          userId,
+          type: adyenMethod.type === "ach" ? "BANK" : "CARD",
+          last4: adyenMethod.lastFour || "****",
+          brand: adyenMethod.brand,
+          expiry: toExpiryString(adyenMethod.expiryMonth, adyenMethod.expiryYear),
+          isDefault: isFirst,
+          adyenTokenId: adyenMethod.id,
+          shopperReference,
+        },
+      });
+    } else {
+      const newExpiry = toExpiryString(adyenMethod.expiryMonth, adyenMethod.expiryYear);
+      const needsUpdate =
+        adyenMethod.brand !== (local.brand ?? undefined) ||
+        adyenMethod.lastFour !== local.last4 ||
+        (newExpiry !== null && newExpiry !== local.expiry);
+
+      if (needsUpdate) {
+        await db.paymentMethod.update({
+          where: { id: local.id },
+          data: {
+            brand: adyenMethod.brand ?? local.brand,
+            last4: adyenMethod.lastFour || local.last4,
+            ...(newExpiry && { expiry: newExpiry }),
+          },
+        });
+      }
+    }
+  }
+
+  // Delete local records that no longer exist in Adyen, promoting a new
+  // default if the deleted one was marked default.
+  for (const local of localMethods) {
+    if (!local.adyenTokenId || adyenIds.has(local.adyenTokenId)) continue;
+
+    await db.paymentMethod.delete({ where: { id: local.id } });
+
+    if (local.isDefault) {
+      const next = await db.paymentMethod.findFirst({
+        where: { userId },
+        orderBy: { createdAt: "asc" },
+      });
+      if (next) {
+        await db.paymentMethod.update({
+          where: { id: next.id },
+          data: { isDefault: true },
+        });
+      }
+    }
+  }
+}
