@@ -1624,34 +1624,67 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
         }
         const ownedAddress = await db.userBillingAddress.findFirst({
           where: { id: billingAddressId, userId: authUserId },
-          select: { id: true },
         });
-        if (!ownedAddress) {
-          return NextResponse.json({ error: "Address not found" }, { status: 404 });
+        if (ownedAddress) {
+          if (
+            billingAddressInput?.street &&
+            billingAddressInput?.city &&
+            billingAddressInput?.postalCode
+          ) {
+            await db.userBillingAddress.update({
+              where: { id: billingAddressId, userId: authUserId },
+              data: {
+                street: billingAddressInput.street,
+                city: billingAddressInput.city,
+                stateProvince: billingAddressInput.stateProvince || null,
+                postalCode: billingAddressInput.postalCode,
+              },
+            });
+          } else {
+            resolvedAddress = {
+              street: ownedAddress.street,
+              city: ownedAddress.city,
+              stateProvince: ownedAddress.stateProvince || "",
+              postalCode: ownedAddress.postalCode,
+            };
+          }
+        } else if (
+          billingAddressInput?.street &&
+          billingAddressInput?.city &&
+          billingAddressInput?.postalCode
+        ) {
+          await db.userBillingAddress.create({
+            data: {
+              userId: authUserId,
+              street: billingAddressInput.street,
+              city: billingAddressInput.city,
+              stateProvince: billingAddressInput.stateProvince || null,
+              postalCode: billingAddressInput.postalCode,
+            },
+          });
         }
-        await db.userBillingAddress.update({
-          where: { id: billingAddressId, userId: authUserId },
-          data: {
-            street: billingAddressInput?.street || "",
-            city: billingAddressInput?.city || "",
-            stateProvince: billingAddressInput?.stateProvince || null,
-            postalCode: billingAddressInput?.postalCode || "",
-          },
-        });
       } else {
         if (authUserId) {
           const savedAddress = await db.userBillingAddress.findFirst({
             where: { id: billingAddressId, userId: authUserId },
           });
-          if (!savedAddress) {
-            return NextResponse.json({ error: "Billing address not found" }, { status: 404 });
+          if (savedAddress) {
+            resolvedAddress = {
+              street: savedAddress.street,
+              city: savedAddress.city,
+              stateProvince: savedAddress.stateProvince || "",
+              postalCode: savedAddress.postalCode,
+            };
+          } else if (
+            !billingAddressInput?.street ||
+            !billingAddressInput?.city ||
+            !billingAddressInput?.postalCode
+          ) {
+            return NextResponse.json(
+              { error: "Billing address not found and no address provided" },
+              { status: 400 }
+            );
           }
-          resolvedAddress = {
-            street: savedAddress.street,
-            city: savedAddress.city,
-            stateProvince: savedAddress.stateProvince || "",
-            postalCode: savedAddress.postalCode,
-          };
         }
       }
     }
