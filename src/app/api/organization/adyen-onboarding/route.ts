@@ -16,6 +16,26 @@ import { handleVerificationRecovery } from "@/lib/adyen-onboarding-recovery";
 import { getSubdomainUrl } from "@/lib/env-domains";
 
 /**
+ * Extract human-readable verification errors from the capabilities object.
+ * Returns a flat list of { capability, code, message } so the dashboard can
+ * show exactly what the user needs to fix and prompt them to re-enter onboarding.
+ */
+function extractCapabilityProblems(
+  capabilities: any
+): { capability: string; code: string; message: string }[] {
+  if (!capabilities || typeof capabilities !== "object") return [];
+  const problems: { capability: string; code: string; message: string }[] = [];
+  for (const [capability, details] of Object.entries(capabilities as Record<string, any>)) {
+    for (const problem of details?.problems ?? []) {
+      for (const err of problem?.verificationErrors ?? []) {
+        problems.push({ capability, code: err.code ?? "", message: err.message ?? "" });
+      }
+    }
+  }
+  return problems;
+}
+
+/**
  * GET /api/organization/adyen-onboarding
  * Returns the current organization's Adyen platform onboarding status.
  */
@@ -35,12 +55,7 @@ export async function GET() {
     const skipLiveSync =
       process.env.NODE_ENV !== "production" && process.env.SKIP_ADYEN_LIVE_SYNC === "true";
 
-    if (
-      !skipLiveSync &&
-      account?.accountHolderId &&
-      account.onboardingStatus !== "VERIFIED" &&
-      isPlatformConfigured()
-    ) {
+    if (!skipLiveSync && account?.accountHolderId && isPlatformConfigured()) {
       try {
         const liveHolder = await getAccountHolder(account.accountHolderId);
         const onboardingStatus = deriveOnboardingStatus(liveHolder);
@@ -174,6 +189,7 @@ export async function GET() {
             onboardingStatus: account.onboardingStatus,
             verificationStatus: account.verificationStatus,
             capabilities: account.capabilities,
+            capabilityProblems: extractCapabilityProblems(account.capabilities),
             hasStore: !!account.storeId,
             hasSweep: !!account.sweepId,
             payoutSchedule: account.payoutSchedule,
@@ -325,7 +341,9 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Step 2: Create Business Line
+    // Step 2: Create Business Line — required for hosted onboarding and store compliance.
+    // 422 duplicate means a business line already exists for this legal entity (e.g. a
+    // prior partial attempt). Extract its ID and continue; throw on any other error.
     const subdomain = org.websiteConfig?.subdomain || org.slug;
     const webAddress = getSubdomainUrl(subdomain);
     let businessLine: { id: string } | null = null;
@@ -337,8 +355,29 @@ export async function POST(request: NextRequest) {
         salesChannels: ["eCommerce"],
         webData: [{ webAddress }],
       });
-    } catch (error) {
-      console.error("Business line creation failed, continuing:", error);
+    } catch (error: any) {
+      const existingId = (() => {
+        try {
+          const parsed = JSON.parse(error.responseBody ?? "{}");
+          return (
+            (parsed.invalidFields ?? []).find(
+              (f: any) => f.name === "ACQUIRING_BUSINESS_LINE" && f.message?.includes("duplicate")
+            )?.value ?? null
+          );
+        } catch {
+          return null;
+        }
+      })();
+      if (error.statusCode === 422 && existingId) {
+        businessLine = { id: existingId };
+      } else {
+        console.error("Business line creation failed", {
+          legalEntityId: legalEntity.id,
+          status: error.statusCode,
+          body: error.responseBody,
+        });
+        throw error;
+      }
     }
 
     // Step 3: Create Account Holder

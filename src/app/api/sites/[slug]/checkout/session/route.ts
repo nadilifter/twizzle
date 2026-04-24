@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { createPaymentSession, type AdyenLineItem } from "@/lib/adyen";
@@ -192,6 +193,7 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
                 },
               },
             },
+            adyenPlatformAccount: { select: { storeReference: true } },
           },
         },
       },
@@ -2075,6 +2077,26 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
         }
       : undefined;
 
+    // Every payment must be routed to the org's Adyen store via its storeReference so
+    // split-configured funds land in the right balance account. Missing either the
+    // platform account or the storeReference means onboarding was never completed;
+    // failing loudly is safer than booking the funds to the platform's liable account.
+    const storeReference = config.organization.adyenPlatformAccount?.storeReference;
+    if (!storeReference) {
+      Sentry.captureMessage("Adyen storeReference missing at checkout", {
+        level: "fatal",
+        extra: {
+          organizationId: config.organization.id,
+          invoiceId: invoice.id,
+          hasPlatformAccount: !!config.organization.adyenPlatformAccount,
+        },
+      });
+      return NextResponse.json(
+        { error: "Payment routing is not configured. Please contact support." },
+        { status: 500 }
+      );
+    }
+
     const session = await createPaymentSession(
       total,
       "USD",
@@ -2090,7 +2112,8 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
           }
         : undefined,
       shopperName,
-      adyenBillingAddress
+      adyenBillingAddress,
+      storeReference
     );
 
     return NextResponse.json({

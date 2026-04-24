@@ -12,7 +12,11 @@ export function deriveOnboardingStatus(accountHolder: any): AdyenOnboardingStatu
     return AdyenOnboardingStatus.PENDING_HOSTED;
   }
 
-  const allAllowed = capEntries.every((c: any) => c.allowed === true);
+  // Adyen can set allowed:true conditionally within a grace period even when
+  // verificationStatus is "invalid". Both conditions must hold for VERIFIED.
+  const allAllowed = capEntries.every(
+    (c: any) => c.allowed === true && c.verificationStatus !== "invalid"
+  );
   if (allAllowed) {
     return AdyenOnboardingStatus.VERIFIED;
   }
@@ -21,19 +25,23 @@ export function deriveOnboardingStatus(accountHolder: any): AdyenOnboardingStatu
 
   if (hasProblems) {
     const allProblems = capEntries.flatMap((c: any) => c.problems || []);
-    const hasDataMissing = allProblems.some(
-      (p: any) =>
-        p.entity?.type === "LegalEntity" &&
-        p.verificationErrors?.some((e: any) => e.type === "dataMissing")
-    );
     const hasRejected = allProblems.some((p: any) =>
       p.verificationErrors?.some((e: any) => e.type === "rejected")
+    );
+    // dataMissing = required data not yet submitted; invalidInput = submitted but invalid
+    // (e.g. PCI forms not signed). Both require user action via hosted onboarding.
+    const hasActionRequired = allProblems.some(
+      (p: any) =>
+        p.entity?.type === "LegalEntity" &&
+        p.verificationErrors?.some(
+          (e: any) => e.type === "dataMissing" || e.type === "invalidInput"
+        )
     );
 
     if (hasRejected) {
       return AdyenOnboardingStatus.REJECTED;
     }
-    if (hasDataMissing) {
+    if (hasActionRequired) {
       return AdyenOnboardingStatus.AWAITING_DATA;
     }
   }

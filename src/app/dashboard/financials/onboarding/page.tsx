@@ -36,6 +36,7 @@ type OnboardingAccount = {
   onboardingStatus: string;
   verificationStatus: string | null;
   capabilities: Record<string, any> | null;
+  capabilityProblems: { capability: string; code: string; message: string }[];
   hasStore: boolean;
   hasSweep: boolean;
   payoutSchedule: string | null;
@@ -577,6 +578,12 @@ function VerifiedState({
                 </Button>
               </>
             )}
+            {!needsFinalize && !missingBankAccount && (
+              <Button variant="outline" size="sm" onClick={onFinalize} disabled={loading}>
+                {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Re-run Setup
+              </Button>
+            )}
           </div>
         </CardFooter>
       </Card>
@@ -735,23 +742,37 @@ function CapabilitiesDisplay({ capabilities }: { capabilities: Record<string, an
   return (
     <div className="grid gap-2">
       {Object.entries(capabilities).map(([name, cap]) => {
-        const allowed = cap.allowed === true;
+        const invalid = cap.verificationStatus === "invalid";
+        const allowed = cap.allowed === true && !invalid;
         const pending = cap.verificationStatus === "pending";
+        const problems: any[] = cap.problems ?? [];
+        const errors = problems.flatMap((p: any) => p.verificationErrors ?? []);
 
         return (
-          <div
-            key={name}
-            className="flex items-center justify-between py-2 px-3 rounded-md border text-sm"
-          >
-            <span className="capitalize">{name.replace(/([A-Z])/g, " $1").trim()}</span>
-            {allowed ? (
-              <Badge variant="default" className="bg-green-600">
-                Allowed
-              </Badge>
-            ) : pending ? (
-              <Badge variant="secondary">Pending</Badge>
-            ) : (
-              <Badge variant="destructive">Action needed</Badge>
+          <div key={name} className="rounded-md border text-sm">
+            <div className="flex items-center justify-between py-2 px-3">
+              <span className="capitalize">{name.replace(/([A-Z])/g, " $1").trim()}</span>
+              {allowed ? (
+                <Badge variant="default" className="bg-green-600">
+                  Allowed
+                </Badge>
+              ) : invalid ? (
+                <Badge variant="destructive">Action needed</Badge>
+              ) : pending ? (
+                <Badge variant="secondary">Pending</Badge>
+              ) : (
+                <Badge variant="destructive">Action needed</Badge>
+              )}
+            </div>
+            {invalid && errors.length > 0 && (
+              <ul className="px-3 pb-2 space-y-1">
+                {errors.map((e: any, i: number) => (
+                  <li key={i} className="text-xs text-destructive flex items-start gap-1">
+                    <AlertCircleIcon className="h-3 w-3 mt-0.5 shrink-0" />
+                    {e.message}
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         );

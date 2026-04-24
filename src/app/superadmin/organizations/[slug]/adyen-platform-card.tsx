@@ -13,6 +13,7 @@ import {
   ExternalLinkIcon,
   PlayIcon,
   CheckCircle2Icon,
+  WalletIcon,
 } from "lucide-react";
 
 type AdyenAccount = {
@@ -37,11 +38,39 @@ interface Props {
   initialAccount: AdyenAccount | null;
 }
 
+type TransferRow = {
+  id: string;
+  creationDate: string;
+  category: string | null;
+  direction: string | null;
+  status: string | null;
+  amount: { value: number; currency: string } | null;
+  reference: string | null;
+  description: string | null;
+  counterpartyDescription: string | null;
+};
+
+type BalanceDiagnostics = {
+  balanceAccountId: string;
+  balance: {
+    available: number;
+    pending: number;
+    reserved: number;
+    balance: number;
+    currency: string;
+  } | null;
+  transfers: TransferRow[];
+  windowDays: number;
+};
+
 export function AdyenPlatformCard({ organizationId, initialAccount }: Props) {
   const [account, setAccount] = useState<AdyenAccount | null>(initialAccount);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [capsOpen, setCapsOpen] = useState(false);
+  const [balanceOpen, setBalanceOpen] = useState(false);
+  const [balanceData, setBalanceData] = useState<BalanceDiagnostics | null>(null);
+  const [balanceError, setBalanceError] = useState<string | null>(null);
 
   const doAction = async (action: string, endpoint: string, method: string = "POST") => {
     setLoading(action);
@@ -83,6 +112,32 @@ export function AdyenPlatformCard({ organizationId, initialAccount }: Props) {
       // ignore
     } finally {
       setLoading(null);
+    }
+  };
+
+  const refreshBalance = async () => {
+    setLoading("balance");
+    setBalanceError(null);
+    try {
+      const res = await fetch(`/api/superadmin/organizations/${organizationId}/adyen-balance`);
+      const data = await res.json();
+      if (!res.ok) {
+        setBalanceError(data.error || "Failed to fetch balance");
+        setBalanceData(null);
+        return;
+      }
+      setBalanceData(data);
+    } catch {
+      setBalanceError("Failed to fetch balance");
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const toggleBalance = async (open: boolean) => {
+    setBalanceOpen(open);
+    if (open && !balanceData && !balanceError) {
+      await refreshBalance();
     }
   };
 
@@ -169,6 +224,143 @@ export function AdyenPlatformCard({ organizationId, initialAccount }: Props) {
               </Collapsible>
             )}
 
+            {/* Balance & Activity (collapsible, lazy-loaded) */}
+            {account.balanceAccountId && (
+              <Collapsible open={balanceOpen} onOpenChange={toggleBalance}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-full justify-between">
+                    <span className="flex items-center gap-2">
+                      <WalletIcon className="h-4 w-4" />
+                      Balance & Recent Activity
+                    </span>
+                    <ChevronDownIcon
+                      className={`h-4 w-4 transition-transform ${balanceOpen ? "rotate-180" : ""}`}
+                    />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-3 pt-2">
+                  {balanceError && <p className="text-sm text-destructive">{balanceError}</p>}
+
+                  {loading === "balance" && !balanceData && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+                    </div>
+                  )}
+
+                  {balanceData && (
+                    <>
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="grid grid-cols-3 gap-4 flex-1">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Available</p>
+                            <p className="text-lg font-semibold">
+                              {balanceData.balance
+                                ? formatAmount(
+                                    balanceData.balance.available,
+                                    balanceData.balance.currency,
+                                    { alreadyMajorUnits: true }
+                                  )
+                                : "—"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Pending</p>
+                            <p className="text-lg font-semibold">
+                              {balanceData.balance
+                                ? formatAmount(
+                                    balanceData.balance.pending,
+                                    balanceData.balance.currency,
+                                    { alreadyMajorUnits: true }
+                                  )
+                                : "—"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Reserved</p>
+                            <p className="text-lg font-semibold">
+                              {balanceData.balance
+                                ? formatAmount(
+                                    balanceData.balance.reserved,
+                                    balanceData.balance.currency,
+                                    { alreadyMajorUnits: true }
+                                  )
+                                : "—"}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={refreshBalance}
+                          disabled={loading === "balance"}
+                        >
+                          {loading === "balance" ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <RefreshCwIcon className="h-4 w-4 mr-2" />
+                          )}
+                          Refresh
+                        </Button>
+                      </div>
+
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-2">
+                          Transfers (last {balanceData.windowDays}d, all categories)
+                        </p>
+                        {balanceData.transfers.length === 0 ? (
+                          <p className="text-sm text-muted-foreground italic">
+                            No transfers in this window. If a recent payment was captured but
+                            hasn&apos;t booked yet, wait for Adyen&apos;s settlement run and
+                            refresh.
+                          </p>
+                        ) : (
+                          <div className="border rounded-md overflow-hidden">
+                            <table className="w-full text-xs">
+                              <thead className="bg-muted">
+                                <tr className="text-left">
+                                  <th className="px-2 py-1.5 font-medium">Date</th>
+                                  <th className="px-2 py-1.5 font-medium">Category</th>
+                                  <th className="px-2 py-1.5 font-medium">Dir</th>
+                                  <th className="px-2 py-1.5 font-medium">Status</th>
+                                  <th className="px-2 py-1.5 font-medium text-right">Amount</th>
+                                  <th className="px-2 py-1.5 font-medium">Reference</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {balanceData.transfers.map((t) => (
+                                  <tr key={t.id} className="border-t">
+                                    <td className="px-2 py-1.5 whitespace-nowrap">
+                                      {t.creationDate
+                                        ? new Date(t.creationDate).toLocaleString()
+                                        : "—"}
+                                    </td>
+                                    <td className="px-2 py-1.5">{t.category || "—"}</td>
+                                    <td className="px-2 py-1.5">{t.direction || "—"}</td>
+                                    <td className="px-2 py-1.5">{t.status || "—"}</td>
+                                    <td className="px-2 py-1.5 text-right font-mono">
+                                      {t.amount
+                                        ? formatAmount(t.amount.value, t.amount.currency)
+                                        : "—"}
+                                    </td>
+                                    <td
+                                      className="px-2 py-1.5 truncate max-w-[160px]"
+                                      title={t.reference || t.description || ""}
+                                    >
+                                      {t.reference || t.description || "—"}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+
             {/* Actions */}
             <div className="flex flex-wrap gap-2 pt-2">
               <Button variant="outline" size="sm" onClick={refreshStatus} disabled={!!loading}>
@@ -195,12 +387,15 @@ export function AdyenPlatformCard({ organizationId, initialAccount }: Props) {
                 </Button>
               )}
 
-              {account.onboardingStatus === "VERIFIED" && !account.storeId && (
+              {account.onboardingStatus === "VERIFIED" && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() =>
-                    doAction("finalize", "/api/organization/adyen-onboarding/finalize")
+                    doAction(
+                      "finalize",
+                      `/api/superadmin/organizations/${organizationId}/adyen-platform`
+                    )
                   }
                   disabled={!!loading}
                 >
@@ -209,7 +404,7 @@ export function AdyenPlatformCard({ organizationId, initialAccount }: Props) {
                   ) : (
                     <CheckCircle2Icon className="h-4 w-4 mr-2" />
                   )}
-                  Finalize Setup
+                  {account.storeId ? "Re-finalize Setup" : "Finalize Setup"}
                 </Button>
               )}
             </div>
@@ -229,4 +424,20 @@ function IdRow({ label, value }: { label: string; value: string | null }) {
       </p>
     </div>
   );
+}
+
+function formatAmount(
+  value: number,
+  currency: string,
+  opts: { alreadyMajorUnits?: boolean } = {}
+): string {
+  const majorAmount = opts.alreadyMajorUnits ? value : value / 100;
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+    }).format(majorAmount);
+  } catch {
+    return `${majorAmount.toFixed(2)} ${currency}`;
+  }
 }

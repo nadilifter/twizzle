@@ -436,6 +436,8 @@ export async function processInvoicePayment(invoiceId: string): Promise<boolean>
         amount,
         paymentRef,
         `Subscription payment for ${invoice.reference}`
+        // storeId intentionally omitted — B2B subscription billing must not trigger
+        // store-level platform fee splits; commission only applies to B2C payments.
       );
 
       const resultCode = result?.resultCode?.toLowerCase?.() ?? "";

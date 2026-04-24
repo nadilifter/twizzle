@@ -116,7 +116,8 @@ describe("executeRecurringCharge", () => {
       "adyen-token-1",
       50,
       "recurring-charge-1-2026-04-01",
-      "Monthly membership"
+      "Monthly membership",
+      undefined
     );
   });
 
@@ -174,7 +175,8 @@ describe("executeRecurringCharge", () => {
       expect.any(String),
       54,
       expect.any(String),
-      expect.any(String)
+      expect.any(String),
+      undefined
     );
   });
 });

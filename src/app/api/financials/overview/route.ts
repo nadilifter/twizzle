@@ -1,6 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getBalanceAccountBalance } from "@/lib/adyen-platform";
+
+type PaymentWithFees = {
+  amount: { toNumber?: () => number } | number | string;
+  transaction: {
+    feeRate: { toNumber?: () => number } | number | string | null;
+    feeFixed: { toNumber?: () => number } | number | string | null;
+  } | null;
+};
+
+function platformFee(p: PaymentWithFees): number {
+  const amount = Number(p.amount);
+  const t = p.transaction;
+  if (!t) return 0;
+  return Math.floor((amount * Number(t.feeRate ?? 0) + Number(t.feeFixed ?? 0)) * 100) / 100;
+}
+
+function netAmount(p: PaymentWithFees): number {
+  return Math.ceil(Math.max(0, Number(p.amount) - platformFee(p)) * 100) / 100;
+}
 
 // GET /api/financials/overview - Get aggregated financial metrics
 export async function GET(request: NextRequest) {
@@ -24,8 +44,8 @@ export async function GET(request: NextRequest) {
 
     // Execute queries with proper error handling
     const [
-      revenueThisMonth,
-      revenueLastMonth,
+      paymentsThisMonth,
+      paymentsLastMonth,
       pendingPayouts,
       activeSubscriptions,
       outstandingInvoices,
@@ -37,30 +57,32 @@ export async function GET(request: NextRequest) {
       nextScheduledPayout,
       payoutsThisMonth,
       payoutsYTD,
-      revenueYTD,
+      paymentsYTD,
     ] = await Promise.all([
-      // Revenue this month (from completed payments)
-      db.payment.aggregate({
+      // Revenue this month — fetch with fee rates so we can compute net
+      db.payment.findMany({
         where: {
           invoice: { organizationId },
           status: "COMPLETED",
           processedAt: { gte: currentMonth },
         },
-        _sum: { amount: true },
-        _count: true,
+        select: {
+          amount: true,
+          transaction: { select: { feeRate: true, feeFixed: true } },
+        },
       }),
 
       // Revenue last month
-      db.payment.aggregate({
+      db.payment.findMany({
         where: {
           invoice: { organizationId },
           status: "COMPLETED",
-          processedAt: {
-            gte: lastMonth,
-            lt: currentMonth,
-          },
+          processedAt: { gte: lastMonth, lt: currentMonth },
         },
-        _sum: { amount: true },
+        select: {
+          amount: true,
+          transaction: { select: { feeRate: true, feeFixed: true } },
+        },
       }),
 
       // Pending payouts
@@ -170,16 +192,25 @@ export async function GET(request: NextRequest) {
         _sum: { fees: true, net: true },
       }),
 
-      // Gross revenue YTD
-      db.payment.aggregate({
+      // Revenue YTD with fee rates for net computation
+      db.payment.findMany({
         where: {
           invoice: { organizationId },
           status: "COMPLETED",
           processedAt: { gte: yearStart },
         },
-        _sum: { amount: true },
+        select: {
+          amount: true,
+          transaction: { select: { feeRate: true, feeFixed: true } },
+        },
       }),
     ]);
+
+    const isVerified = platformAccount?.onboardingStatus === "VERIFIED";
+    const liveBalance =
+      isVerified && platformAccount?.balanceAccountId
+        ? await getBalanceAccountBalance(platformAccount.balanceAccountId)
+        : null;
 
     // Get revenue by month using Prisma instead of raw SQL
     const paymentsForChart = await db.payment.findMany({
@@ -191,10 +222,11 @@ export async function GET(request: NextRequest) {
       select: {
         amount: true,
         processedAt: true,
+        transaction: { select: { feeRate: true, feeFixed: true } },
       },
     });
 
-    // Group payments by month
+    // Group payments by month (net after platform fees)
     const monthlyRevenueMap = new Map<string, number>();
     for (const payment of paymentsForChart) {
       if (payment.processedAt) {
@@ -203,7 +235,7 @@ export async function GET(request: NextRequest) {
           year: "numeric",
         });
         const current = monthlyRevenueMap.get(monthKey) || 0;
-        monthlyRevenueMap.set(monthKey, current + Number(payment.amount));
+        monthlyRevenueMap.set(monthKey, current + netAmount(payment));
       }
     }
 
@@ -254,9 +286,14 @@ export async function GET(request: NextRequest) {
       amount,
     }));
 
-    // Calculate month-over-month change
-    const currentRevenue = Number(revenueThisMonth._sum.amount || 0);
-    const previousRevenue = Number(revenueLastMonth._sum.amount || 0);
+    // Calculate month-over-month change (net after platform fees)
+    const currentRevenue = paymentsThisMonth.reduce((sum, p) => sum + netAmount(p), 0);
+    const previousRevenue = paymentsLastMonth.reduce((sum, p) => sum + netAmount(p), 0);
+    const grossThisMonth = paymentsThisMonth.reduce((sum, p) => sum + Number(p.amount), 0);
+    const grossYTD = paymentsYTD.reduce((sum, p) => sum + Number(p.amount), 0);
+    const netYTDFromPayments = paymentsYTD.reduce((sum, p) => sum + netAmount(p), 0);
+    const feesThisMonthFromTxns = paymentsThisMonth.reduce((sum, p) => sum + platformFee(p), 0);
+    const feesYTDFromTxns = paymentsYTD.reduce((sum, p) => sum + platformFee(p), 0);
     const revenueChange =
       previousRevenue > 0 ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 : 0;
 
@@ -265,13 +302,15 @@ export async function GET(request: NextRequest) {
         current: currentRevenue,
         previous: previousRevenue,
         changePercent: revenueChange.toFixed(1),
-        transactionCount: revenueThisMonth._count || 0,
+        transactionCount: paymentsThisMonth.length,
         byMonth: monthlyRevenue,
         breakdown: completeBreakdown,
       },
       payouts: {
         pending: Number(pendingPayouts._sum.net || 0),
         pendingCount: pendingPayouts._count || 0,
+        pendingBalance: liveBalance?.pending ?? null,
+        liveBalance,
         nextScheduled: nextScheduledPayout
           ? {
               id: nextScheduledPayout.id,
@@ -313,15 +352,15 @@ export async function GET(request: NextRequest) {
         hasBalanceAccount: !!platformAccount?.balanceAccountId,
       },
       fees: {
-        thisMonth: Number(payoutsThisMonth._sum.fees ?? 0),
+        thisMonth: feesThisMonthFromTxns,
       },
       summary: {
-        grossThisMonth: currentRevenue,
-        feesThisMonth: Number(payoutsThisMonth._sum.fees ?? 0),
-        netThisMonth: Number(payoutsThisMonth._sum.net ?? 0),
-        grossYTD: Number(revenueYTD._sum.amount ?? 0),
-        feesYTD: Number(payoutsYTD._sum.fees ?? 0),
-        netYTD: Number(payoutsYTD._sum.net ?? 0),
+        grossThisMonth,
+        feesThisMonth: feesThisMonthFromTxns,
+        netThisMonth: currentRevenue,
+        grossYTD,
+        netYTD: netYTDFromPayments,
+        feesYTD: feesYTDFromTxns,
       },
     });
   } catch (error) {

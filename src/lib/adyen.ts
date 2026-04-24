@@ -204,7 +204,8 @@ export async function createPaymentSession(
   lineItems?: AdyenLineItem[],
   tokenization?: TokenizationOptions,
   shopperName?: string,
-  billingAddress?: AdyenBillingAddress
+  billingAddress?: AdyenBillingAddress,
+  storeReference?: string
 ) {
   try {
     const splitStreet = billingAddress ? splitStreetAddress(billingAddress.street) : null;
@@ -219,6 +220,7 @@ export async function createPaymentSession(
       channel: "Web",
       countryCode: "US",
       allowedPaymentMethods: getCheckoutAllowedPaymentMethods(),
+      ...(storeReference && { store: storeReference }),
       ...(splitStreet && {
         billingAddress: {
           street: splitStreet.street,
@@ -255,7 +257,8 @@ export async function createPaymentLink(
   currency: string = "USD",
   reference: string,
   description?: string,
-  expiresAt?: string
+  expiresAt?: string,
+  storeReference?: string
 ) {
   try {
     const response = await checkoutApi.PaymentLinksApi.paymentLinks({
@@ -264,8 +267,8 @@ export async function createPaymentLink(
       description: description || `Payment for order ${reference}`,
       merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT!,
       countryCode: "US",
-      // Optional: Set expiration (default is usually 24 hours)
       ...(expiresAt && { expiresAt: new Date(expiresAt) }),
+      ...(storeReference && { store: storeReference }),
     });
     return response;
   } catch (error) {
@@ -478,7 +481,8 @@ export async function chargeSubscription(
   storedPaymentMethodId: string,
   amount: number,
   reference: string,
-  description?: string
+  description?: string,
+  storeReference?: string
 ) {
   try {
     const response = await checkoutApi.PaymentsApi.payments(
@@ -496,9 +500,8 @@ export async function chargeSubscription(
         },
         shopperInteraction: "ContAuth" as any,
         recurringProcessingModel: "Subscription" as any,
-        ...(description && {
-          metadata: { description },
-        }),
+        ...(description && { metadata: { description } }),
+        ...(storeReference && { store: storeReference }),
       },
       { idempotencyKey: reference }
     );

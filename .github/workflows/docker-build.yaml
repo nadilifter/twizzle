@@ -66,7 +66,7 @@ jobs:
           secret-ids: |
             ,gymnastics-dev
           parse-json-secrets: true
-          
+
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
@@ -125,17 +125,17 @@ jobs:
   #           exit 0
   #         fi
 
-      # TBD
-      # - name: 'Update image tag in dev and stg -values.yaml'
-      #   run: |
-      #     # Navigate to the target file and update the tag value using sed
-      #     sed -i "s|tag:.*|tag: ${IMAGE_TAG}|" gymnastics-aoa/workloads/${{ env.IMAGE_NAME }}/${VALUES_FILE}
-      #     sed -i "s|git\.sha:.*|git.sha: \"${SHORT_SHA}\"|" gymnastics-aoa/workloads/${{ env.IMAGE_NAME }}/${VALUES_FILE}
+  # TBD
+  # - name: 'Update image tag in dev and stg -values.yaml'
+  #   run: |
+  #     # Navigate to the target file and update the tag value using sed
+  #     sed -i "s|tag:.*|tag: ${IMAGE_TAG}|" gymnastics-aoa/workloads/${{ env.IMAGE_NAME }}/${VALUES_FILE}
+  #     sed -i "s|git\.sha:.*|git.sha: \"${SHORT_SHA}\"|" gymnastics-aoa/workloads/${{ env.IMAGE_NAME }}/${VALUES_FILE}
 
-      #     # Commit and push the changes to the develop branch
-      #     cd gymnastics-aoa
-      #     git config --global user.name "GitHub Actions"
-      #     git config --global user.email "actions@github.com"
-      #     git add workloads/${{ env.IMAGE_NAME }}/${VALUES_FILE}
-      #     git commit -m "(ACTIONS) ${{ env.IMAGE_NAME }} Update image tag to ${IMAGE_TAG} in ${VALUES_FILE}"
-      #     git push origin main
+  #     # Commit and push the changes to the develop branch
+  #     cd gymnastics-aoa
+  #     git config --global user.name "GitHub Actions"
+  #     git config --global user.email "actions@github.com"
+  #     git add workloads/${{ env.IMAGE_NAME }}/${VALUES_FILE}
+  #     git commit -m "(ACTIONS) ${{ env.IMAGE_NAME }} Update image tag to ${IMAGE_TAG} in ${VALUES_FILE}"
+  #     git push origin main

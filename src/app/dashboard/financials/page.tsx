@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Loader2, Percent } from "lucide-react";
+import { TrendingUp, TrendingDown, Loader2, DollarSign } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, XAxis, Pie, PieChart, Cell, Label } from "recharts";
 import {
   ChartConfig,
@@ -34,6 +34,14 @@ interface FinancialOverview {
   payouts: {
     pending: number;
     pendingCount: number;
+    pendingBalance: number | null;
+    liveBalance: {
+      available: number;
+      pending: number;
+      reserved: number;
+      balance: number;
+      currency: string;
+    } | null;
     nextScheduled: string | null;
     netThisMonth: number;
     netYTD: number;
@@ -204,6 +212,16 @@ export default function FinancialsPage() {
             <p className="text-xs text-muted-foreground">
               {data?.payouts.pendingCount || 0} pending
             </p>
+            {data?.payouts.pendingBalance != null && (
+              <p className="text-xs text-muted-foreground mt-1">
+                $
+                {data.payouts.pendingBalance.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{" "}
+                awaiting settlement
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">
               $
               {(data?.payouts.netThisMonth || 0).toLocaleString(undefined, {
@@ -275,7 +293,7 @@ export default function FinancialsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Platform Fees Deducted</CardTitle>
-            <Percent className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -285,7 +303,7 @@ export default function FinancialsPage() {
                 maximumFractionDigits: 2,
               })}
             </div>
-            <p className="text-xs text-muted-foreground">Deducted from payouts this month</p>
+            <p className="text-xs text-muted-foreground">Deducted from transactions this month</p>
           </CardContent>
         </Card>
       </div>

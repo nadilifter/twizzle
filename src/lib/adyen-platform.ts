@@ -233,14 +233,29 @@ export async function getAccountHolder(
   }
 }
 
+export type PlatformBalance = {
+  available: number;
+  pending: number;
+  reserved: number;
+  balance: number;
+  currency: string;
+};
+
 export async function getBalanceAccountBalance(
   balanceAccountId: string
-): Promise<Pick<Balance, "available" | "currency"> | null> {
+): Promise<PlatformBalance | null> {
   try {
     const result: BalanceAccount =
       await getConfigApi().BalanceAccountsApi.getBalanceAccount(balanceAccountId);
     const balance = result.balances?.find((b: Balance) => b.currency === "USD");
-    return balance ? { available: balance.available / 100, currency: balance.currency } : null;
+    if (!balance) return null;
+    return {
+      available: balance.available / 100,
+      pending: (balance.pending ?? 0) / 100,
+      reserved: (balance.reserved ?? 0) / 100,
+      balance: balance.balance / 100,
+      currency: balance.currency,
+    };
   } catch (error: any) {
     console.error("adyen-platform: getBalanceAccountBalance failed", {
       balanceAccountId,
@@ -362,11 +377,17 @@ export async function getBalanceAccountSweepDescription(
 
 export async function listBalanceAccountTransfers(
   balanceAccountId: string,
-  opts?: { createdSince?: Date; createdUntil?: Date }
+  opts?: {
+    createdSince?: Date;
+    createdUntil?: Date;
+    category?: "bank" | "internal" | "platformPayment" | "issuedCard" | "platform" | "all";
+  }
 ): Promise<any[]> {
   try {
     const createdSince = opts?.createdSince ?? new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
     const createdUntil = opts?.createdUntil ?? new Date();
+    const categoryFilter = opts?.category ?? "bank";
+    const categoryParam = categoryFilter === "all" ? undefined : categoryFilter;
     const allTransfers: any[] = [];
     let cursor: string | undefined;
 
@@ -379,7 +400,7 @@ export async function listBalanceAccountTransfers(
         balanceAccountId,
         undefined, // paymentInstrumentId
         undefined, // reference
-        "bank", // category
+        categoryParam, // category
         "asc",
         cursor,
         100 // max per page
@@ -522,6 +543,7 @@ export async function createStore(data: {
   phoneNumber: string;
   reference: string;
   splitConfiguration?: { splitConfigurationId: string; balanceAccountId: string };
+  businessLineIds?: string[];
 }): Promise<{ id: string; reference: string; [key: string]: any }> {
   try {
     const { merchantId, ...storeData } = data;
@@ -613,16 +635,41 @@ export async function createPlatformSplitConfiguration(data: {
   }
 }
 
+export async function deletePlatformSplitConfiguration(
+  merchantId: string,
+  splitConfigurationId: string
+): Promise<void> {
+  try {
+    await getManagementApi().SplitConfigurationMerchantLevelApi.deleteSplitConfiguration(
+      merchantId,
+      splitConfigurationId
+    );
+  } catch (error: any) {
+    console.warn("adyen-platform: deletePlatformSplitConfiguration failed", {
+      merchantId,
+      splitConfigurationId,
+      status: error.statusCode,
+      body: error.responseBody,
+    });
+    throw error;
+  }
+}
+
 export async function attachSplitConfigurationToStore(
   merchantId: string,
   storeId: string,
   splitConfigurationId: string,
-  balanceAccountId: string
+  balanceAccountId: string,
+  businessLineIds?: string[]
 ): Promise<void> {
   try {
-    await getManagementApi().AccountStoreLevelApi.updateStore(merchantId, storeId, {
+    const updateData: Record<string, any> = {
       splitConfiguration: { splitConfigurationId, balanceAccountId },
-    });
+    };
+    if (businessLineIds && businessLineIds.length > 0) {
+      updateData.businessLineIds = businessLineIds;
+    }
+    await getManagementApi().AccountStoreLevelApi.updateStore(merchantId, storeId, updateData);
   } catch (error: any) {
     console.error("adyen-platform: attachSplitConfigurationToStore failed", {
       merchantId,
@@ -633,4 +680,280 @@ export async function attachSplitConfigurationToStore(
     });
     throw error;
   }
+}
+
+// ---------------------------------------------------------------------------
+// PCI Questionnaires (platform facilitates signing for connected accounts)
+// ---------------------------------------------------------------------------
+
+/**
+ * Generates and signs the PCI SAQ for a connected org's legal entity. Signing authority
+ * is resolved in this order:
+ *   1. Individual associated with the org as `signatory` (KYB'd during hosted onboarding)
+ *   2. Individual associated with the org as `pciSignatory`
+ *   3. The org's own legal entity (fallback — Adyen may reject if it requires an individual)
+ *
+ * The org retains PCI responsibility; the platform only automates the API calls
+ * (disclosed upfront in onboarding).
+ *
+ * Idempotent — skips if Adyen reports no signing required or returns no questionnaire templates.
+ * Never throws: PCI signing failure is logged so finalization is not blocked.
+ */
+export async function signPciForLegalEntity(
+  legalEntityId: string
+): Promise<{ signed: boolean; skipped: boolean }> {
+  try {
+    const statusResponse = await getLemApi().PCIQuestionnairesApi.calculatePciStatusOfLegalEntity(
+      legalEntityId,
+      {}
+    );
+    if (!statusResponse.signingRequired) {
+      return { signed: false, skipped: true };
+    }
+
+    const generateResponse = await getLemApi().PCIQuestionnairesApi.generatePciQuestionnaire(
+      legalEntityId,
+      { language: "en" }
+    );
+    const templateRefs: string[] = generateResponse.pciTemplateReferences ?? [];
+    if (templateRefs.length === 0) {
+      return { signed: false, skipped: true };
+    }
+
+    const { signedBy, source } = await resolvePciSignedBy(legalEntityId);
+
+    await getLemApi().PCIQuestionnairesApi.signPciQuestionnaire(legalEntityId, {
+      pciTemplateReferences: templateRefs,
+      signedBy,
+    });
+
+    console.log("adyen-platform: signPciForLegalEntity signed PCI questionnaire", {
+      legalEntityId,
+      signedBy,
+      source,
+      templateCount: templateRefs.length,
+    });
+    return { signed: true, skipped: false };
+  } catch (error: any) {
+    console.error("adyen-platform: signPciForLegalEntity failed", {
+      legalEntityId,
+      status: error.statusCode,
+      body: error.responseBody,
+    });
+    return { signed: false, skipped: false };
+  }
+}
+
+async function resolvePciSignedBy(
+  legalEntityId: string
+): Promise<{ signedBy: string; source: "signatory" | "pciSignatory" | "selfFallback" }> {
+  try {
+    const entity = await getLegalEntity(legalEntityId);
+    const associations: Array<{ legalEntityId?: string; type?: string }> =
+      entity.entityAssociations ?? [];
+    const signatory = associations.find((a) => a.type === "signatory" && a.legalEntityId);
+    if (signatory?.legalEntityId) {
+      return { signedBy: signatory.legalEntityId, source: "signatory" };
+    }
+    const pciSignatory = associations.find((a) => a.type === "pciSignatory" && a.legalEntityId);
+    if (pciSignatory?.legalEntityId) {
+      return { signedBy: pciSignatory.legalEntityId, source: "pciSignatory" };
+    }
+  } catch (error: any) {
+    console.warn("adyen-platform: resolvePciSignedBy entity lookup failed", {
+      legalEntityId,
+      status: error.statusCode,
+    });
+  }
+  return { signedBy: legalEntityId, source: "selfFallback" };
+}
+
+/**
+ * Configure payment methods on a store to create a MID (Merchant Identifier).
+ * Adyen requires at least one payment method to be enabled at the store level before
+ * the store can process checkout payments — without a MID, the checkout API returns 910 "Invalid Store".
+ *
+ * Requests `scheme` (all card brands) and `googlepay`; idempotent — silently skips already-configured methods.
+ */
+export async function addPaymentMethodsToStore(
+  merchantId: string,
+  storeId: string,
+  businessLineId: string,
+  storeDomain?: string
+): Promise<void> {
+  const types = ["mc", "visa", "amex", "discover", "ach", "googlepay", "applepay"] as const;
+  const api = getManagementApi().PaymentMethodsMerchantLevelApi;
+
+  // googlepay: use a configured merchant ID if available, otherwise ask Adyen to reuse
+  // the platform-level Google Pay merchant ID. Both paths may require manual setup in
+  // the Adyen Customer Area before the method becomes active.
+  const googlePayMerchantId = process.env.ADYEN_GOOGLE_PAY_MERCHANT_ID;
+
+  const typeExtras: Partial<Record<(typeof types)[number], Record<string, any>>> = {
+    googlepay: {
+      googlePay: googlePayMerchantId
+        ? { merchantId: googlePayMerchantId }
+        : { reuseMerchantId: true },
+    },
+    ...(storeDomain && {
+      applepay: { applePay: { domains: [storeDomain] } },
+    }),
+  };
+
+  const typesToRun = types;
+
+  let added = 0;
+  let alreadyExists = 0;
+
+  for (const type of typesToRun) {
+    try {
+      const result = await api.requestPaymentMethod(merchantId, {
+        type: type as any,
+        storeIds: [storeId],
+        businessLineId,
+        currencies: ["USD"],
+        countries: ["US"],
+        ...(typeExtras[type] ?? {}),
+      } as any);
+      added++;
+      console.log("adyen-platform: addPaymentMethodsToStore configured", {
+        merchantId,
+        storeId,
+        type,
+        pmId: (result as any).id,
+        verificationStatus: (result as any).verificationStatus,
+        allowed: (result as any).allowed,
+      });
+    } catch (error: any) {
+      const body: string = error.responseBody ?? "";
+      // A payment method of this type already exists at the merchant level.
+      // It may not be assigned to our store yet — find it (without businessLineId filter,
+      // since the existing PM may have been created with a different business line) and
+      // PATCH it to include our store.
+      if (error.statusCode === 422 && body.toLowerCase().includes("already")) {
+        try {
+          // Two-pass search:
+          // 1. Look for a PM already assigned to our store — if found, only
+          //    currencies/countries need fixing (never touches other orgs' stores).
+          // 2. If not on our store yet, find the PM to associate by preferring
+          //    businessLineId match (avoids picking up another org's config).
+          const collect = async (sid: string | undefined): Promise<any[]> => {
+            const results: any[] = [];
+            let p = 1;
+            while (true) {
+              const page = await api.getAllPaymentMethods(merchantId, sid, undefined, 100, p);
+              results.push(...(page.data ?? []).filter((pm: any) => pm.type === type));
+              if (!page.hasNext) break;
+              p++;
+            }
+            return results;
+          };
+
+          const onStore = await collect(storeId);
+          let match: any = onStore[0] ?? null;
+          if (!match) {
+            const all = await collect(undefined);
+            match = all.find((pm) => pm.businessLineId === businessLineId) ?? all[0] ?? null;
+          }
+          if (match) {
+            const currentStoreIds: string[] = match.storeIds ?? [];
+            const currentCurrencies: string[] = match.currencies ?? [];
+            const currentCountries: string[] = match.countries ?? [];
+
+            const needsStore = !currentStoreIds.includes(storeId);
+            const needsCurrencies =
+              currentCurrencies.length !== 1 || currentCurrencies[0] !== "USD";
+            const needsCountries = currentCountries.length !== 1 || currentCountries[0] !== "US";
+
+            if (needsStore || needsCurrencies || needsCountries) {
+              await api.updatePaymentMethod(merchantId, match.id, {
+                ...(needsStore && { storeIds: [...currentStoreIds, storeId] }),
+                ...(needsCurrencies && { currencies: ["USD"] }),
+                ...(needsCountries && { countries: ["US"] }),
+              } as any);
+              if (needsStore) added++;
+              else alreadyExists++;
+              console.log("adyen-platform: addPaymentMethodsToStore reconciled existing PM", {
+                merchantId,
+                storeId,
+                type,
+                pmId: match.id,
+                needsStore,
+                needsCurrencies,
+                needsCountries,
+              });
+            } else {
+              alreadyExists++;
+            }
+          } else {
+            alreadyExists++;
+          }
+        } catch (updateError: any) {
+          console.warn("adyen-platform: addPaymentMethodsToStore could not update existing PM", {
+            merchantId,
+            storeId,
+            type,
+            error: updateError?.message,
+          });
+          alreadyExists++;
+        }
+        continue;
+      }
+      // Some card brands may not be enabled on this merchant account (e.g. Discover in TEST).
+      // Log and skip rather than blocking the whole finalization.
+      if (error.statusCode === 422) {
+        // Surface credential/config issues clearly so they're not mistaken for unsupported types.
+        const isGooglePayCredential =
+          type === "googlepay" && body.toLowerCase().includes("merchant identification");
+        const isApplePayDomain =
+          type === "applepay" &&
+          (body.toLowerCase().includes("merchantshopurl") ||
+            body.toLowerCase().includes("domains"));
+        if (isGooglePayCredential) {
+          console.warn(
+            "adyen-platform: addPaymentMethodsToStore — Google Pay requires ADYEN_GOOGLE_PAY_MERCHANT_ID " +
+              "to be set to a valid Google Pay merchant ID registered in the Adyen Customer Area.",
+            { merchantId, storeId }
+          );
+        } else if (isApplePayDomain) {
+          console.warn(
+            "adyen-platform: addPaymentMethodsToStore — Apple Pay requires a verified HTTPS domain. " +
+              "Set a real domain via the storeDomain parameter (HTTPS environments only).",
+            { merchantId, storeId }
+          );
+        } else {
+          console.warn("adyen-platform: addPaymentMethodsToStore skipping unsupported type", {
+            merchantId,
+            storeId,
+            type,
+            body,
+          });
+        }
+        continue;
+      }
+      console.error("adyen-platform: addPaymentMethodsToStore failed", {
+        merchantId,
+        storeId,
+        type,
+        status: error.statusCode,
+        body,
+      });
+      throw error;
+    }
+  }
+
+  // If no type was added and none were already present, something is wrong.
+  if (added === 0 && alreadyExists === 0) {
+    throw new Error(
+      `addPaymentMethodsToStore: all payment method types were rejected as unsupported for store ${storeId}. ` +
+        "Check that the merchant account has at least mc/visa enabled."
+    );
+  }
+
+  console.log("adyen-platform: addPaymentMethodsToStore complete", {
+    merchantId,
+    storeId,
+    added,
+    alreadyExists,
+  });
 }

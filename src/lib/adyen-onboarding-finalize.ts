@@ -1,11 +1,15 @@
 import { db } from "@/lib/db";
+import { getSubdomainUrl } from "@/lib/env-domains";
 import {
   createStore,
   getStoreByReference,
   createSweep,
   getLegalEntity,
   createPlatformSplitConfiguration,
+  deletePlatformSplitConfiguration,
   attachSplitConfigurationToStore,
+  addPaymentMethodsToStore,
+  signPciForLegalEntity,
 } from "@/lib/adyen-platform";
 
 export type FinalizeOnboardingResult = {
@@ -46,6 +50,9 @@ export async function finalizeOrgOnboarding(orgId: string): Promise<FinalizeOnbo
       postalCode: true,
       country: true,
       phone: true,
+      websiteConfig: {
+        select: { subdomain: true },
+      },
       subscription: {
         select: {
           plan: {
@@ -84,6 +91,14 @@ export async function finalizeOrgOnboarding(orgId: string): Promise<FinalizeOnbo
       "Cannot configure payment splits: organization balance account is not yet set up.",
       "PRECONDITION"
     );
+
+  if (!account.businessLineId)
+    throw finalizeError(
+      "Cannot finalize: business line is missing from the platform account. Re-enter hosted onboarding to recover it.",
+      "PRECONDITION"
+    );
+
+  const businessLineIds = [account.businessLineId];
 
   // ── Split configuration (idempotent) ──────────────────────────────────────
 
@@ -184,36 +199,120 @@ export async function finalizeOrgOnboarding(orgId: string): Promise<FinalizeOnbo
           splitConfigurationId: account.splitConfigurationId as string,
           balanceAccountId: account.balanceAccountId as string,
         },
+        businessLineIds,
       });
     } catch (error: any) {
       if (error.statusCode === 400 && error.responseBody?.includes("Store already exists")) {
         const existing = await getStoreByReference(merchantId, storeReference);
         if (!existing) throw error;
-
-        if (!existing.splitConfiguration?.splitConfigurationId && account.splitConfigurationId) {
-          try {
-            await attachSplitConfigurationToStore(
-              merchantId,
-              existing.id,
-              account.splitConfigurationId,
-              account.balanceAccountId as string
-            );
-          } catch (attachError: any) {
-            throw finalizeError(
-              "Store was recovered but split configuration could not be attached. Please retry finalization.",
-              "CONFIG_ERROR"
-            );
-          }
-        }
-
         store = existing;
       } else {
         throw error;
       }
     }
 
+    // Explicitly attach the split configuration after store creation or recovery.
+    // createStoreByMerchantId accepts splitConfiguration in its payload but does not
+    // reliably apply it — an explicit updateStore call is required in both paths.
+    // Also handles the case where the store has a stale split config from a previous run
+    // (e.g. dev DB reset with the Adyen store still intact).
+    const staleSplitConfigId = store.splitConfiguration?.splitConfigurationId;
+    if (account.splitConfigurationId && staleSplitConfigId !== account.splitConfigurationId) {
+      try {
+        await attachSplitConfigurationToStore(
+          merchantId,
+          store.id,
+          account.splitConfigurationId,
+          account.balanceAccountId as string,
+          businessLineIds
+        );
+      } catch {
+        throw finalizeError(
+          "Store was created but split configuration could not be attached. Please retry finalization.",
+          "CONFIG_ERROR"
+        );
+      }
+      if (staleSplitConfigId) {
+        await deletePlatformSplitConfiguration(merchantId, staleSplitConfigId).catch(() => {
+          console.warn("adyen-onboarding-finalize: could not delete stale split configuration", {
+            staleSplitConfigId,
+          });
+        });
+      }
+    }
+
     updates.storeId = store.id;
     updates.storeReference = store.reference;
+  }
+
+  // ── Split config on pre-existing store (idempotent) ───────────────────────
+  // When storeId was already saved in the DB (store was created in a prior run
+  // before split config existed, or creation happened outside finalize), check
+  // whether the split config is attached and add it if missing.
+  if (
+    !updates.storeId &&
+    account.storeId &&
+    account.splitConfigurationId &&
+    account.balanceAccountId
+  ) {
+    const existingStoreRef = account.storeReference ?? `store-${org.slug}`;
+    const existingStore = await getStoreByReference(merchantId, existingStoreRef);
+    const staleExistingConfigId = existingStore?.splitConfiguration?.splitConfigurationId;
+    const existingBusinessLineIds: string[] = (existingStore as any)?.businessLineIds ?? [];
+    const missingBusinessLine =
+      businessLineIds.length > 0 &&
+      !businessLineIds.every((id) => existingBusinessLineIds.includes(id));
+    if (
+      existingStore &&
+      (staleExistingConfigId !== account.splitConfigurationId || missingBusinessLine)
+    ) {
+      try {
+        await attachSplitConfigurationToStore(
+          merchantId,
+          account.storeId,
+          account.splitConfigurationId,
+          account.balanceAccountId,
+          businessLineIds
+        );
+      } catch {
+        throw finalizeError(
+          "Existing store is missing split configuration and it could not be attached. Please retry finalization.",
+          "CONFIG_ERROR"
+        );
+      }
+      if (staleExistingConfigId && staleExistingConfigId !== account.splitConfigurationId) {
+        await deletePlatformSplitConfiguration(merchantId, staleExistingConfigId).catch(() => {
+          console.warn("adyen-onboarding-finalize: could not delete stale split configuration", {
+            staleExistingConfigId,
+          });
+        });
+      }
+    }
+  }
+
+  // ── Payment methods (idempotent) ─────────────────────────────────────────
+  // Runs for both newly created and pre-existing stores. addPaymentMethodsToStore
+  // skips types already configured, so it's safe to call on every finalization.
+  const storeIdForPaymentMethods = updates.storeId ?? account.storeId;
+  if (storeIdForPaymentMethods) {
+    const subdomain = org.websiteConfig?.subdomain || org.slug;
+    const storeUrl = getSubdomainUrl(subdomain);
+    // Apple Pay domain verification requires a valid HTTPS host; skip in local/non-HTTPS environments.
+    const storeDomain = storeUrl.startsWith("https://") ? new URL(storeUrl).hostname : undefined;
+    await addPaymentMethodsToStore(
+      merchantId,
+      storeIdForPaymentMethods,
+      businessLineIds[0],
+      storeDomain
+    );
+  }
+
+  // ── PCI questionnaire signing (idempotent) ────────────────────────────────
+  // The org signs its own PCI SAQ using its legal entity — responsibility stays with
+  // the org. The platform only automates the API call (disclosed upfront in onboarding).
+  // Runs every finalization — the underlying call checks status and no-ops if not required.
+  if (account.legalEntityId) {
+    await signPciForLegalEntity(account.legalEntityId);
   }
 
   // ── Sweep (idempotent) ────────────────────────────────────────────────────

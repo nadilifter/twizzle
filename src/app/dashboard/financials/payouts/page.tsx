@@ -61,7 +61,13 @@ interface PayoutStats {
   pendingCount: number;
   paidYTD: number;
   nextPayout: Payout | null;
-  liveBalance: { available: number; currency: string } | null;
+  liveBalance: {
+    available: number;
+    pending: number;
+    reserved: number;
+    balance: number;
+    currency: string;
+  } | null;
   isVerified: boolean;
   unsettledAmount: number;
   unsettledCount: number;
@@ -72,6 +78,33 @@ const SYNC_THROTTLE_MS = 30 * 60 * 1000;
 
 function getSyncThrottleKey(organizationId: string) {
   return `payout-sync-last:${organizationId}`;
+}
+
+type PayoutCache = {
+  stats: PayoutStats;
+  payouts: Payout[];
+  total: number;
+};
+
+function getPayoutCacheKey(organizationId: string) {
+  return `payout-cache:${organizationId}`;
+}
+
+function readPayoutCache(organizationId: string): PayoutCache | null {
+  try {
+    const raw = localStorage.getItem(getPayoutCacheKey(organizationId));
+    return raw ? (JSON.parse(raw) as PayoutCache) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writePayoutCache(organizationId: string, data: PayoutCache) {
+  try {
+    localStorage.setItem(getPayoutCacheKey(organizationId), JSON.stringify(data));
+  } catch {
+    // storage quota exceeded — ignore
+  }
 }
 
 const statusColors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -87,6 +120,7 @@ export default function PayoutsPage() {
   const orgId = session?.user?.organizationId ?? null;
   const [payouts, setPayouts] = React.useState<Payout[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [backgroundRefreshing, setBackgroundRefreshing] = React.useState(false);
   const [total, setTotal] = React.useState(0);
   const [page, setPage] = React.useState(0);
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
@@ -152,35 +186,57 @@ export default function PayoutsPage() {
     }
   };
 
-  const fetchPayouts = React.useCallback(async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      params.set("limit", String(PAGE_SIZE));
-      params.set("offset", String(page * PAGE_SIZE));
-      if (statusFilter && statusFilter !== "all") {
-        params.set("status", statusFilter);
+  const fetchPayouts = React.useCallback(
+    async ({ silent = false }: { silent?: boolean } = {}) => {
+      const isDefaultView = page === 0 && statusFilter === "all" && !startDate && !endDate;
+      if (silent) {
+        setBackgroundRefreshing(true);
+      } else {
+        setLoading(true);
       }
-      if (startDate) params.set("startDate", format(startDate, "yyyy-MM-dd"));
-      if (endDate) params.set("endDate", format(endDate, "yyyy-MM-dd"));
+      try {
+        const params = new URLSearchParams();
+        params.set("limit", String(PAGE_SIZE));
+        params.set("offset", String(page * PAGE_SIZE));
+        if (statusFilter && statusFilter !== "all") {
+          params.set("status", statusFilter);
+        }
+        if (startDate) params.set("startDate", format(startDate, "yyyy-MM-dd"));
+        if (endDate) params.set("endDate", format(endDate, "yyyy-MM-dd"));
 
-      const response = await fetch(`/api/payouts?${params}`);
-      if (!response.ok) throw new Error("Failed to fetch payouts");
+        const response = await fetch(`/api/payouts?${params}`);
+        if (!response.ok) throw new Error("Failed to fetch payouts");
 
-      const data = await response.json();
-      setPayouts(data.data);
-      setTotal(data.total);
-      setStats(data.stats);
-    } catch (error) {
-      console.error("Error fetching payouts:", error);
-      toast.error("Failed to load payouts");
-    } finally {
-      setLoading(false);
-    }
-  }, [page, statusFilter, startDate, endDate]);
+        const data = await response.json();
+        setPayouts(data.data);
+        setTotal(data.total);
+        setStats(data.stats);
+
+        if (isDefaultView && orgId) {
+          writePayoutCache(orgId, { stats: data.stats, payouts: data.data, total: data.total });
+        }
+      } catch (error) {
+        console.error("Error fetching payouts:", error);
+        if (!silent) toast.error("Failed to load payouts");
+      } finally {
+        setLoading(false);
+        setBackgroundRefreshing(false);
+      }
+    },
+    [page, statusFilter, startDate, endDate, orgId]
+  );
 
   useEffect(() => {
     async function init() {
+      // Seed from cache immediately so the UI has values before the network responds
+      const cached = orgId ? readPayoutCache(orgId) : null;
+      if (cached) {
+        setStats(cached.stats);
+        setPayouts(cached.payouts);
+        setTotal(cached.total);
+        setLoading(false);
+      }
+
       let verified = false;
       try {
         const res = await fetch("/api/organization/adyen-onboarding");
@@ -214,7 +270,8 @@ export default function PayoutsPage() {
         }
       }
 
-      fetchPayouts();
+      // If we already seeded from cache, refresh silently in the background
+      fetchPayouts({ silent: !!cached });
     }
     if (hasInitialized.current || !orgId) return;
     hasInitialized.current = true;
@@ -227,8 +284,8 @@ export default function PayoutsPage() {
       skipFilterFetch.current = false;
       return;
     }
-    fetchPayouts();
-  }, [fetchPayouts]);
+    fetchPayouts({ silent: payouts.length > 0 });
+  }, [fetchPayouts]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -347,9 +404,15 @@ export default function PayoutsPage() {
             <CardTitle className="text-sm font-medium">Pending Balance</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">${Number(stats.unsettledAmount).toFixed(2)}</div>
+            <div className="text-3xl font-bold">
+              ${Number(stats.liveBalance?.pending ?? stats.unsettledAmount).toFixed(2)}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {stats.unsettledCount} unsettled transaction{stats.unsettledCount !== 1 ? "s" : ""}
+              {stats.liveBalance
+                ? "Captured payments awaiting settlement"
+                : `${stats.unsettledCount} unsettled transaction${
+                    stats.unsettledCount !== 1 ? "s" : ""
+                  }`}
             </p>
           </CardContent>
         </Card>
@@ -402,7 +465,12 @@ export default function PayoutsPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Settlement History</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle>Payout History</CardTitle>
+              {backgroundRefreshing && (
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+              )}
+            </div>
             <div className="flex items-center gap-2">
               {isVerified && (
                 <Button

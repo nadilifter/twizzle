@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { checkFeatureGate } from "@/lib/feature-resolver";
 import { createPaymentLink, getPaymentLink } from "@/lib/adyen";
+import { getScopedDb } from "@/lib/db";
 import { z } from "zod";
 
 const createPaymentLinkSchema = z.object({
@@ -29,12 +30,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createPaymentLinkSchema.parse(body);
 
-    // Create payment link via Adyen
+    const scopedDb = getScopedDb(session.user.organizationId);
+    const platformAccount = await scopedDb.adyenPlatformAccount.findFirst({
+      select: { storeReference: true },
+    });
+
     const paymentLink = await createPaymentLink(
       validatedData.amount,
       validatedData.currency,
       validatedData.reference,
-      validatedData.description
+      validatedData.description,
+      undefined,
+      platformAccount?.storeReference ?? undefined
     );
 
     return NextResponse.json({

@@ -72,6 +72,7 @@ export async function executeRecurringCharge(
           },
         },
       },
+      adyenPlatformAccount: { select: { storeReference: true } },
     },
   });
 
@@ -99,7 +100,8 @@ export async function executeRecurringCharge(
       adyenTokenId,
       chargeTotal,
       reference,
-      charge.description
+      charge.description,
+      org?.adyenPlatformAccount?.storeReference ?? undefined
     );
 
     if (response.resultCode !== "Authorised") {
