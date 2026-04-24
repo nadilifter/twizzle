@@ -12,6 +12,8 @@ import { FilterableProgramList } from "@/components/sites/filterable-program-lis
 import { CategoryTiles } from "@/components/sites/category-tiles";
 import { InfoSection } from "@/components/sites/info-section";
 import { getHeroContrastStyles } from "@/lib/color-utils";
+import { getRegistrationStatus } from "@/lib/registration-utils";
+import { ShineBorder } from "@/components/ui/shine-border";
 
 function hasContent(html: string | null | undefined): boolean {
   if (!html) return false;
@@ -194,15 +196,22 @@ export default async function SitePage({ params }: { params: { slug: string } })
 
         <div className="relative z-10 mx-auto w-full max-w-6xl px-4 md:px-8">
           <div className="mx-auto max-w-3xl text-center">
-            {config.showRegistration && enrichedPrograms.length > 0 && (
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-1.5 text-sm font-semibold text-white shadow-lg shadow-emerald-900/20 ring-1 ring-white/20">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
-                </span>
-                Registration Now Open
-              </div>
-            )}
+            {config.showRegistration &&
+              enrichedPrograms.some((p) => getRegistrationStatus(p) === "open") && (
+                <div className="relative mb-6 inline-flex items-center gap-2 overflow-hidden rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-gray-900 shadow-lg shadow-emerald-900/20 dark:bg-gray-900 dark:text-white">
+                  <ShineBorder
+                    shineColor={["#10b981", "#34d399"]}
+                    borderWidth={2}
+                    className="rounded-full"
+                    style={{ backgroundSize: "600% 600%" }}
+                  />
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                  </span>
+                  Registration Now Open
+                </div>
+              )}
 
             <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
               {config.heroHeadline && <>{config.heroHeadline}</>}
