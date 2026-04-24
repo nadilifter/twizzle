@@ -76,38 +76,38 @@ export function ActionItemsPanel({
   const incompleteCount = data.totalCount - data.completedCount;
   const progressPercent = Math.round((data.completedCount / data.totalCount) * 100);
 
-  if (data.allComplete) {
-    return (
-      <Card>
-        <CardContent className="flex items-center gap-3 py-4 px-4">
-          <PartyPopper className="h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
-          <p className="flex-1 text-sm font-medium">All set! Setup complete.</p>
-          <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={onDismiss}>
-            <X className="h-3.5 w-3.5" />
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card className="flex w-full flex-col">
       <CardHeader className="px-6 pt-6 pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-semibold">
-            <Rocket className="h-4 w-4 sm:h-5 sm:w-5" />
-            Getting Started
-          </CardTitle>
-          <Badge variant="destructive" className="text-xs px-1.5 py-0">
-            {incompleteCount} remaining
-          </Badge>
-        </div>
-        <div className="flex items-center gap-2 pt-1">
-          <Progress value={progressPercent} className="h-1.5" />
-          <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
-            {data.completedCount}/{data.totalCount}
-          </span>
-        </div>
+        {data.allComplete ? (
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-semibold">
+              <PartyPopper className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 dark:text-green-400" />
+              All set! Setup complete.
+            </CardTitle>
+            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={onDismiss}>
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-semibold">
+                <Rocket className="h-4 w-4 sm:h-5 sm:w-5" />
+                Getting Started
+              </CardTitle>
+              <Badge variant="destructive" className="text-xs px-1.5 py-0">
+                {incompleteCount} remaining
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              <Progress value={progressPercent} className="h-1.5" />
+              <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+                {data.completedCount}/{data.totalCount}
+              </span>
+            </div>
+          </>
+        )}
       </CardHeader>
       <CardContent className="flex flex-1 flex-col px-4 pb-4 pt-0">
         <ul className="flex flex-1 flex-col gap-2">

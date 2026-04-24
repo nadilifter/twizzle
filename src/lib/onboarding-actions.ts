@@ -15,6 +15,7 @@ export async function getActionItems(organizationId: string): Promise<ActionItem
     websiteConfig,
     adyenAccount,
     seasonsEnabled,
+    trainingEnabled,
   ] = await Promise.all([
     scopedDb.program.count(),
     scopedDb.organizationMember.count(),
@@ -31,6 +32,7 @@ export async function getActionItems(organizationId: string): Promise<ActionItem
       select: { onboardingStatus: true },
     }),
     isFeatureEnabled(organizationId, "seasons"),
+    isFeatureEnabled(organizationId, "training"),
   ]);
 
   const items: ActionItem[] = [
@@ -70,14 +72,18 @@ export async function getActionItems(organizationId: string): Promise<ActionItem
       isComplete: categoryCount > 0,
       icon: "FolderOpen",
     },
-    {
-      id: "setup-levels",
-      title: "Set up training levels",
-      description: "Define skill levels for athlete placement and progression",
-      url: "/dashboard/training/levels",
-      isComplete: levelCount > 0,
-      icon: "GraduationCap",
-    },
+    ...(trainingEnabled
+      ? [
+          {
+            id: "setup-levels",
+            title: "Set up training levels",
+            description: "Define skill levels for athlete placement and progression",
+            url: "/dashboard/training/levels",
+            isComplete: levelCount > 0,
+            icon: "GraduationCap",
+          },
+        ]
+      : []),
     {
       id: "setup-waivers",
       title: "Set up waivers",
