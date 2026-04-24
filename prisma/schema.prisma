@@ -3507,8 +3507,9 @@ model AdyenPlatformAccount {
   businessLineId   String?
   accountHolderId  String? @unique
   balanceAccountId String? @unique
-  storeId          String?
-  storeReference   String?
+  storeId              String?
+  storeReference       String?
+  splitConfigurationId String?
 
   // Onboarding
   onboardingStatus   AdyenOnboardingStatus  @default(PENDING_HOSTED)

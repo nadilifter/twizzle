@@ -11,6 +11,9 @@
 import type { BalanceAccount } from "@adyen/api-library/lib/src/typings/balancePlatform/balanceAccount";
 import type { Balance } from "@adyen/api-library/lib/src/typings/balancePlatform/balance";
 
+// Platform is USD-only; update alongside multi-currency support if added
+const PLATFORM_CURRENCY = "USD";
+
 let _lemClient: any = null;
 let _platformClient: any = null;
 let _lemApi: any = null;
@@ -518,6 +521,7 @@ export async function createStore(data: {
   };
   phoneNumber: string;
   reference: string;
+  splitConfiguration?: { splitConfigurationId: string; balanceAccountId: string };
 }): Promise<{ id: string; reference: string; [key: string]: any }> {
   try {
     const { merchantId, ...storeData } = data;
@@ -552,6 +556,78 @@ export async function getStoreByReference(
     console.error("adyen-platform: getStoreByReference failed", {
       merchantId,
       reference,
+      status: error.statusCode,
+      body: error.responseBody,
+    });
+    throw error;
+  }
+}
+
+// TODO: USC-276 — update commission rates when org's subscription plan changes
+export async function createPlatformSplitConfiguration(data: {
+  merchantId: string;
+  description: string;
+  transactionFeeBasisPoints: number;
+  perTransactionFeeMinorUnits: number;
+}): Promise<string> {
+  try {
+    const result =
+      await getManagementApi().SplitConfigurationMerchantLevelApi.createSplitConfiguration(
+        data.merchantId,
+        {
+          description: data.description,
+          rules: [
+            {
+              currency: PLATFORM_CURRENCY,
+              fundingSource: "ANY",
+              paymentMethod: "ANY",
+              shopperInteraction: "ANY",
+              splitLogic: {
+                commission: {
+                  variablePercentage: data.transactionFeeBasisPoints,
+                  fixedAmount: data.perTransactionFeeMinorUnits,
+                },
+                acquiringFees: "deductFromLiableAccount",
+                adyenFees: "deductFromLiableAccount",
+                chargeback: "deductFromOneBalanceAccount",
+                chargebackCostAllocation: "deductFromOneBalanceAccount",
+                refund: "deductFromOneBalanceAccount",
+                remainder: "addToOneBalanceAccount",
+              },
+            },
+          ],
+        }
+      );
+
+    if (!result.splitConfigurationId) {
+      throw new Error("Adyen did not return a splitConfigurationId");
+    }
+    return result.splitConfigurationId;
+  } catch (error: any) {
+    console.error("adyen-platform: createPlatformSplitConfiguration failed", {
+      merchantId: data.merchantId,
+      status: error.statusCode,
+      body: error.responseBody,
+    });
+    throw error;
+  }
+}
+
+export async function attachSplitConfigurationToStore(
+  merchantId: string,
+  storeId: string,
+  splitConfigurationId: string,
+  balanceAccountId: string
+): Promise<void> {
+  try {
+    await getManagementApi().AccountStoreLevelApi.updateStore(merchantId, storeId, {
+      splitConfiguration: { splitConfigurationId, balanceAccountId },
+    });
+  } catch (error: any) {
+    console.error("adyen-platform: attachSplitConfigurationToStore failed", {
+      merchantId,
+      storeId,
+      splitConfigurationId,
       status: error.statusCode,
       body: error.responseBody,
     });
