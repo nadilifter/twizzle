@@ -1,6 +1,5 @@
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
-import { getRegistrationStatus } from "@/lib/registration-utils";
 
 export const getCachedSiteConfig = unstable_cache(
   async (subdomain: string) => {
@@ -28,16 +27,20 @@ export async function getEnrollmentCounts(programId: string, waitlistEnabled: bo
 }
 
 export function resolveRegistrationAccess(
-  program: { earlyAccessCode: string | null },
+  program: { earlyAccessCode: string | null; registrationStatus?: string | null },
   earlyAccessCode: string | null
 ) {
-  const registrationStatus = getRegistrationStatus(program as any);
+  const programStatus = (program.registrationStatus ?? null) as
+    | "OPEN"
+    | "SCHEDULED"
+    | "CLOSED"
+    | null;
   const hasValidEarlyAccess =
     earlyAccessCode !== null &&
     program.earlyAccessCode !== null &&
     earlyAccessCode === program.earlyAccessCode;
-  const canRegister = registrationStatus === "open" || hasValidEarlyAccess;
-  return { registrationStatus, hasValidEarlyAccess, canRegister };
+  const canRegister = programStatus === "OPEN" || hasValidEarlyAccess;
+  return { programStatus, hasValidEarlyAccess, canRegister };
 }
 
 export async function getInstanceRegistrationCounts(

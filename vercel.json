@@ -55,6 +55,10 @@
     {
       "path": "/api/cron/payment-method-check",
       "schedule": "0 14 * * 1"
+    },
+    {
+      "path": "/api/cron/registration-transitions",
+      "schedule": "0 8 * * *"
     }
   ]
 }

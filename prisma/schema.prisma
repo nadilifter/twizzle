@@ -944,7 +944,7 @@ model Program {
   name           String
   description    String?
   color          String        @default("#3b82f6")
-  status         ProgramStatus @default(ACTIVE)
+  status         ProgramStatus @default(DRAFT)
   organizationId String
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
@@ -1010,11 +1010,11 @@ model Program {
   glCodeId String?
 
   // Registration Window
+  registrationStatus    RegistrationWindowStatus?
   registrationStartDate DateTime?
   registrationStartTime String?
   registrationEndDate   DateTime?
   registrationEndTime   String?
-  registrationOpen      Boolean @default(true)
   earlyAccessCode       String?
 
   // Season
@@ -1058,9 +1058,15 @@ model Program {
 }
 
 enum ProgramStatus {
+  DRAFT
   ACTIVE
-  INACTIVE
-  ARCHIVED
+  COMPLETE
+}
+
+enum RegistrationWindowStatus {
+  OPEN
+  SCHEDULED
+  CLOSED
 }
 
 enum RegistrationType {

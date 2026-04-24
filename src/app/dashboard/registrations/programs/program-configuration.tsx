@@ -31,6 +31,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   Plus,
@@ -147,6 +148,8 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
 
   const [activeTab, setActiveTab] = useState("general");
   const [isSaving, setIsSaving] = useState(false);
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
 
   // Bulk discounts — initialized from the already-fetched program object
   const [bulkDiscounts, setBulkDiscounts] = useState<BulkDiscount[]>(
@@ -243,22 +246,19 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
     categoryId: (program.categoryId || null) as string | null,
 
     // Registration
-    registrationOpen: program.registrationOpen ?? true,
+    status: (program.status ?? "DRAFT") as "DRAFT" | "ACTIVE" | "COMPLETE",
+    registrationStatus: (program.registrationStatus ?? null) as
+      | "OPEN"
+      | "SCHEDULED"
+      | "CLOSED"
+      | null,
     registrationStartDate: program.registrationStartDate
       ? new Date(program.registrationStartDate).toISOString().split("T")[0]
-      : !program.registrationOpen && !program.registrationStartDate
-        ? ""
-        : program.startDate
-          ? new Date(program.startDate).toISOString().split("T")[0]
-          : "",
+      : "",
     registrationStartTime: program.registrationStartTime || "09:00",
     registrationEndDate: program.registrationEndDate
       ? new Date(program.registrationEndDate).toISOString().split("T")[0]
-      : !program.registrationOpen && !program.registrationStartDate
-        ? ""
-        : program.endDate
-          ? new Date(program.endDate).toISOString().split("T")[0]
-          : "",
+      : "",
     registrationEndTime: program.registrationEndTime || "23:59",
     earlyAccessCode: (program.earlyAccessCode || null) as string | null,
   }));
@@ -539,6 +539,16 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
         return;
       }
     }
+    if (formData.registrationStatus === "OPEN" || formData.registrationStatus === "SCHEDULED") {
+      if (!formData.registrationStartDate) {
+        toast.error("A registration open date is required");
+        return;
+      }
+      if (!formData.registrationEndDate) {
+        toast.error("A registration close date is required");
+        return;
+      }
+    }
 
     setIsSaving(true);
     try {
@@ -601,12 +611,10 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
         showCoachOnSite: formData.showCoachOnSite,
         glCodeId: formData.glCodeId,
         categoryId: formData.categoryId,
-        registrationOpen: formData.registrationOpen,
-        registrationStartDate:
-          !formData.registrationOpen && formData.registrationStartDate
-            ? formData.registrationStartDate
-            : null,
-        registrationStartTime: !formData.registrationOpen ? formData.registrationStartTime : null,
+        status: formData.status,
+        registrationStatus: formData.registrationStatus,
+        registrationStartDate: formData.registrationStartDate || null,
+        registrationStartTime: formData.registrationStartTime || null,
         registrationEndDate: formData.registrationEndDate || null,
         registrationEndTime: formData.registrationEndTime || null,
         earlyAccessCode: formData.earlyAccessCode,
@@ -963,7 +971,7 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
             <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Start Date *</Label>
-                <Popover>
+                <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
@@ -984,7 +992,7 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                       selected={
                         formData.startDate ? new Date(formData.startDate + "T12:00:00Z") : undefined
                       }
-                      onSelect={(date) =>
+                      onSelect={(date) => {
                         setFormData((prev) => {
                           const newStart = date ? format(date, "yyyy-MM-dd") : "";
                           return {
@@ -995,8 +1003,9 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                                 ? ""
                                 : prev.endDate,
                           };
-                        })
-                      }
+                        });
+                        setStartDateOpen(false);
+                      }}
                       initialFocus
                     />
                   </PopoverContent>
@@ -1005,7 +1014,7 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
 
               <div className="space-y-2">
                 <Label>End Date *</Label>
-                <Popover>
+                <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
@@ -1026,12 +1035,13 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                       selected={
                         formData.endDate ? new Date(formData.endDate + "T12:00:00Z") : undefined
                       }
-                      onSelect={(date) =>
+                      onSelect={(date) => {
                         setFormData((prev) => ({
                           ...prev,
                           endDate: date ? format(date, "yyyy-MM-dd") : "",
-                        }))
-                      }
+                        }));
+                        setEndDateOpen(false);
+                      }}
                       disabled={(date) =>
                         formData.startDate
                           ? date < new Date(formData.startDate + "T12:00:00Z")
@@ -2329,246 +2339,263 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
           {/* REGISTRATION TAB                              */}
           {/* ============================================= */}
           <TabsContent value="registration" className="mt-0 space-y-6 max-w-2xl">
-            {/* Registration Availability */}
+            {/* Registration Window */}
             <div className="space-y-4">
               <Label className="text-base font-medium flex items-center gap-2">
                 <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                Registration Availability
+                Registration Window
               </Label>
               <RadioGroup
-                value={
-                  formData.registrationOpen
-                    ? "now"
-                    : formData.registrationStartDate
-                      ? "scheduled"
-                      : "closed"
-                }
+                value={formData.registrationStatus ?? "CLOSED"}
                 onValueChange={(value) => {
-                  if (value === "now") {
-                    setFormData((prev) => ({
-                      ...prev,
-                      registrationOpen: true,
-                      registrationStartDate: "",
-                      registrationStartTime: "",
-                      earlyAccessCode: null,
-                    }));
-                  } else if (value === "scheduled") {
-                    setFormData((prev) => ({
-                      ...prev,
-                      registrationOpen: false,
-                      registrationStartDate:
-                        prev.registrationStartDate || new Date().toISOString().split("T")[0],
-                    }));
-                  } else {
-                    setFormData((prev) => ({
-                      ...prev,
-                      registrationOpen: false,
-                      registrationStartDate: "",
-                      registrationStartTime: "",
-                      registrationEndDate: "",
-                      registrationEndTime: "",
-                      earlyAccessCode: null,
-                    }));
+                  const newRegStatus = value as "OPEN" | "SCHEDULED" | "CLOSED";
+                  // Re-opening: if end date is expired, clear it so the cron doesn't immediately close again
+                  if (
+                    (newRegStatus === "OPEN" || newRegStatus === "SCHEDULED") &&
+                    formData.registrationEndDate
+                  ) {
+                    const endDate = new Date(formData.registrationEndDate);
+                    if (endDate < new Date()) {
+                      setFormData((prev) => ({
+                        ...prev,
+                        status: "ACTIVE",
+                        registrationStatus: newRegStatus,
+                        registrationEndDate: "",
+                        registrationEndTime: "",
+                      }));
+                      return;
+                    }
                   }
+                  setFormData((prev) => ({
+                    ...prev,
+                    status: "ACTIVE",
+                    registrationStatus: newRegStatus,
+                    ...(newRegStatus === "OPEN" && {
+                      registrationStartDate: new Date().toISOString().split("T")[0],
+                      registrationStartTime: new Date().toLocaleTimeString("en-US", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false,
+                      }),
+                    }),
+                  }));
                 }}
                 className="space-y-3"
               >
-                <label
-                  className={cn(
-                    "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
-                    formData.registrationOpen ? "border-primary bg-primary/5" : "hover:bg-muted/50"
-                  )}
-                >
-                  <RadioGroupItem value="now" className="mt-1" />
-                  <div className="flex-1 space-y-1">
-                    <span className="font-medium">Open Registration Now</span>
-                    <p className="text-sm text-muted-foreground">
-                      Registration is immediately available for athletes
-                    </p>
-                  </div>
-                </label>
-
-                <label
-                  className={cn(
-                    "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
-                    !formData.registrationOpen && formData.registrationStartDate
-                      ? "border-primary bg-primary/5"
-                      : "hover:bg-muted/50"
-                  )}
-                >
-                  <RadioGroupItem value="scheduled" className="mt-1" />
-                  <div className="flex-1 space-y-1">
-                    <span className="font-medium">Schedule Registration</span>
-                    <p className="text-sm text-muted-foreground">
-                      Set a specific date and time for registration to open
-                    </p>
-                  </div>
-                </label>
-
-                <label
-                  className={cn(
-                    "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
-                    !formData.registrationOpen && !formData.registrationStartDate
-                      ? "border-primary bg-primary/5"
-                      : "hover:bg-muted/50"
-                  )}
-                >
-                  <RadioGroupItem value="closed" className="mt-1" />
-                  <div className="flex-1 space-y-1">
-                    <span className="font-medium">Close Registration</span>
-                    <p className="text-sm text-muted-foreground">
-                      Registration is closed and not available for athletes
-                    </p>
-                  </div>
-                </label>
+                {(["OPEN", "SCHEDULED", "CLOSED"] as const).map((s) => (
+                  <label
+                    key={s}
+                    className={cn(
+                      "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
+                      formData.registrationStatus === s
+                        ? "border-primary bg-primary/5"
+                        : "hover:bg-muted/50"
+                    )}
+                  >
+                    <RadioGroupItem value={s} className="mt-1" />
+                    <div className="flex-1 space-y-1">
+                      <span className="font-medium">
+                        {s === "OPEN" && "Open Registration Now"}
+                        {s === "SCHEDULED" && "Schedule Registration"}
+                        {s === "CLOSED" && "Close Registration"}
+                      </span>
+                      <p className="text-sm text-muted-foreground">
+                        {s === "OPEN" && "Registration is immediately available for athletes"}
+                        {s === "SCHEDULED" &&
+                          "Set a specific date and time for registration to open"}
+                        {s === "CLOSED" && "Registration is closed — no new sign-ups"}
+                      </p>
+                    </div>
+                  </label>
+                ))}
               </RadioGroup>
             </div>
 
-            {/* Registration Opens — only when scheduled */}
-            {!formData.registrationOpen && formData.registrationStartDate && (
-              <div className="space-y-4">
-                <Label className="text-base font-medium">Registration Opens</Label>
-                <p className="text-sm text-muted-foreground">
-                  Set when registration becomes available. Must be on or before the first day of the
-                  program
-                  {formData.startDate
-                    ? ` (${format(new Date(formData.startDate + "T12:00:00Z"), "PPP")})`
-                    : ""}
-                  .
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Open Date</Label>
+            {/* Registration Opens */}
+            <div className="space-y-4">
+              <Label className="text-base font-medium">Registration Opens</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Open Date</Label>
+                  {formData.registrationStatus === "OPEN" ? (
+                    <Input type="date" value={new Date().toISOString().split("T")[0]} disabled />
+                  ) : (
                     <Input
                       type="date"
                       value={formData.registrationStartDate}
+                      min={new Date().toISOString().split("T")[0]}
                       max={formData.startDate || undefined}
                       onChange={(e) =>
                         setFormData((prev) => ({ ...prev, registrationStartDate: e.target.value }))
                       }
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Open Time</Label>
-                    <Input
-                      type="time"
-                      value={formData.registrationStartTime}
-                      onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, registrationStartTime: e.target.value }))
-                      }
-                    />
-                  </div>
+                  )}
                 </div>
-              </div>
-            )}
-
-            {/* Registration End Date — hidden when registration is manually closed */}
-            {(formData.registrationOpen || formData.registrationStartDate) && (
-              <div className="space-y-4">
-                <Label className="text-base font-medium">Registration Closes</Label>
-                <p className="text-sm text-muted-foreground">
-                  Set when registration closes. Defaults to the program end date if not specified.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Close Date</Label>
-                    <Input
-                      type="date"
-                      value={formData.registrationEndDate}
-                      min={
-                        !formData.registrationOpen && formData.registrationStartDate
-                          ? formData.registrationStartDate
-                          : new Date().toISOString().split("T")[0]
-                      }
-                      onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, registrationEndDate: e.target.value }))
-                      }
-                      placeholder={formData.endDate || ""}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Close Time</Label>
-                    <Input
-                      type="time"
-                      value={formData.registrationEndTime}
-                      onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, registrationEndTime: e.target.value }))
-                      }
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Early Access Code — only relevant when registration is scheduled */}
-            {!formData.registrationOpen && !!formData.registrationStartDate && (
-              <div className="space-y-4">
-                <Label className="text-base font-medium flex items-center gap-2">
-                  <KeyRound className="h-4 w-4 text-muted-foreground" />
-                  Early Access Code
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  Generate or enter a code that allows registration before the registration window
-                  opens
-                </p>
-                <div className="flex items-center gap-2">
+                <div className="space-y-2">
+                  <Label>Open Time</Label>
                   <Input
-                    placeholder="Enter or generate a code"
-                    value={formData.earlyAccessCode || ""}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, earlyAccessCode: e.target.value || null }))
+                    type="time"
+                    value={
+                      formData.registrationStatus === "OPEN"
+                        ? new Date().toLocaleTimeString("en-US", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: false,
+                          })
+                        : formData.registrationStartTime
                     }
-                    className="max-w-[300px]"
+                    disabled={formData.registrationStatus === "OPEN"}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, registrationStartTime: e.target.value }))
+                    }
                   />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      const code = crypto.randomUUID().slice(0, 8).toUpperCase();
-                      setFormData((prev) => ({ ...prev, earlyAccessCode: code }));
-                    }}
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Generate
-                  </Button>
                 </div>
-
-                {formData.earlyAccessCode && (
-                  <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
-                    <Label className="text-sm font-medium flex items-center gap-2">
-                      <Link2 className="h-4 w-4" />
-                      Early Access Link
-                    </Label>
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 text-sm bg-background px-3 py-2 rounded border break-all">
-                        {typeof window !== "undefined" ? `${window.location.origin}` : ""}/programs/
-                        {program.id}?code={formData.earlyAccessCode}
-                      </code>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const url = `${window.location.origin}/programs/${program.id}?code=${formData.earlyAccessCode}`;
-                          navigator.clipboard.writeText(url);
-                          toast.success("Link copied to clipboard");
-                        }}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Share this link with athletes who should have early access to registration
-                    </p>
-                  </div>
-                )}
               </div>
-            )}
+            </div>
+
+            {/* Registration Closes */}
+            <div className="space-y-4">
+              <Label className="text-base font-medium">Registration Closes</Label>
+              <p className="text-sm text-muted-foreground">Set when registration closes.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Close Date</Label>
+                  <Input
+                    type="date"
+                    value={formData.registrationEndDate}
+                    min={new Date().toISOString().split("T")[0]}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, registrationEndDate: e.target.value }))
+                    }
+                    placeholder={formData.endDate || ""}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Close Time</Label>
+                  <Input
+                    type="time"
+                    value={formData.registrationEndTime}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, registrationEndTime: e.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Early Access Code */}
+            <div className="space-y-4">
+              <Label className="text-base font-medium flex items-center gap-2">
+                <KeyRound className="h-4 w-4 text-muted-foreground" />
+                Early Access Code
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Generate or enter a code that allows registration before the registration window
+                opens
+              </p>
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Enter or generate a code"
+                  value={formData.earlyAccessCode || ""}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, earlyAccessCode: e.target.value || null }))
+                  }
+                  className="max-w-[300px]"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    const code = crypto.randomUUID().slice(0, 8).toUpperCase();
+                    setFormData((prev) => ({ ...prev, earlyAccessCode: code }));
+                  }}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Generate
+                </Button>
+              </div>
+
+              {formData.earlyAccessCode && (
+                <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <Link2 className="h-4 w-4" />
+                    Early Access Link
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-sm bg-background px-3 py-2 rounded border break-all">
+                      {typeof window !== "undefined" ? `${window.location.origin}` : ""}/programs/
+                      {program.id}?code={formData.earlyAccessCode}
+                    </code>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const url = `${window.location.origin}/programs/${program.id}?code=${formData.earlyAccessCode}`;
+                        navigator.clipboard.writeText(url);
+                        toast.success("Link copied to clipboard");
+                      }}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Share this link with athletes who should have early access to registration
+                  </p>
+                </div>
+              )}
+            </div>
           </TabsContent>
         </div>
       </Tabs>
 
-      <div className="p-4 border-t flex justify-end gap-2 bg-background">
+      <div className="p-4 border-t flex items-center gap-2 bg-background">
+        {program.status !== "COMPLETE" && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" className="mr-auto" disabled={isSaving}>
+                End Program
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>End this program?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will mark the program as complete and close registration permanently. This
+                  action cannot be undone — the program cannot be reopened once ended.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={async () => {
+                    setIsSaving(true);
+                    try {
+                      const { data: saved, error: saveError } = await updateProgram(program.id, {
+                        status: "COMPLETE",
+                        registrationStatus: "CLOSED",
+                      });
+                      if (!saved) {
+                        toast.error(saveError || "Failed to end program");
+                        return;
+                      }
+                      toast.success("Program marked as complete");
+                      if (onUpdated) await onUpdated();
+                      onClose();
+                    } catch {
+                      toast.error("Failed to end program");
+                    } finally {
+                      setIsSaving(false);
+                    }
+                  }}
+                >
+                  Yes, End Program
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
         <Button variant="outline" onClick={onClose}>
           Close
         </Button>

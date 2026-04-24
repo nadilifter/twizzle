@@ -109,7 +109,7 @@ export default async function ProgramDetailPage({
     getEnrollmentCounts(program.id, program.waitlistEnabled),
     getInstanceRegistrationCounts(program.instances.map((i) => i.id)),
   ]);
-  const { registrationStatus, hasValidEarlyAccess, canRegister } = resolveRegistrationAccess(
+  const { programStatus, hasValidEarlyAccess, canRegister } = resolveRegistrationAccess(
     program,
     earlyAccessCode
   );
@@ -196,7 +196,7 @@ export default async function ProgramDetailPage({
         <ProgramProfile
           program={profileData}
           instances={serializedInstances}
-          registrationStatus={registrationStatus}
+          programStatus={programStatus}
           canRegister={canRegister}
           hasValidEarlyAccess={hasValidEarlyAccess}
           earlyAccessCode={earlyAccessCode}

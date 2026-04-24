@@ -1,23 +1,14 @@
-import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { generateUpcomingSeasons, expireSeasons } from "@/lib/services/season-renewal";
 import { logger } from "@/lib/logger";
+import { verifyCronSecret } from "@/lib/cron-utils";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-const CRON_SECRET = process.env.CRON_SECRET;
-
-function verifyCronSecret(authHeader: string | null): boolean {
-  if (!CRON_SECRET || !authHeader) return false;
-  const expected = `Bearer ${CRON_SECRET}`;
-  if (authHeader.length !== expected.length) return false;
-  return crypto.timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected));
-}
-
 export async function GET(request: NextRequest) {
   try {
-    if (!CRON_SECRET) {
+    if (!process.env.CRON_SECRET) {
       logger.error("CRON_SECRET is not configured");
       return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
     }

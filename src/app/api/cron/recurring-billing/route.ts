@@ -1,4 +1,3 @@
-import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { addMonths, addYears } from "date-fns";
 import { db } from "@/lib/db";
@@ -11,25 +10,18 @@ import {
 } from "@/lib/recurring-billing-service";
 import { executeNotificationByTrigger } from "@/lib/notification-service";
 import { logger } from "@/lib/logger";
+import { verifyCronSecret } from "@/lib/cron-utils";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-const CRON_SECRET = process.env.CRON_SECRET;
 const MAX_RETRIES = 3;
 const REMINDER_DAYS_AHEAD = 3;
 const MIN_RETRY_INTERVAL_MS = 20 * 60 * 60 * 1000; // 20 hours
 
-function verifyCronSecret(authHeader: string | null): boolean {
-  if (!CRON_SECRET || !authHeader) return false;
-  const expected = `Bearer ${CRON_SECRET}`;
-  if (authHeader.length !== expected.length) return false;
-  return crypto.timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected));
-}
-
 export async function GET(request: NextRequest) {
   try {
-    if (!CRON_SECRET) {
+    if (!process.env.CRON_SECRET) {
       logger.error("CRON_SECRET is not configured");
       return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
     }

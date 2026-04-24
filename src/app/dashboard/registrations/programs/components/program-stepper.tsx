@@ -206,7 +206,8 @@ interface ProgramFormData {
   showCoachOnSite: boolean;
 
   // Step 6: Registration
-  registrationOpen: boolean;
+  status: "DRAFT" | "ACTIVE" | "COMPLETE";
+  registrationStatus: "OPEN" | "SCHEDULED" | "CLOSED" | null;
   registrationStartDate: Date | null;
   registrationStartTime: string;
   registrationEndDate: Date | null;
@@ -382,11 +383,20 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
       })) || [],
     showCoachOnSite: program?.showCoachOnSite ?? true,
 
-    // Step 6: Registration
-    registrationOpen: program?.registrationOpen ?? true,
+    // Step 6: Registration — if registrationStatus was never set (DRAFT with no launch),
+    // default to ACTIVE+OPEN. "Save as Draft" overrides this back to DRAFT via forceDraft.
+    status: (program?.registrationStatus ? program.status : "ACTIVE") as
+      | "DRAFT"
+      | "ACTIVE"
+      | "COMPLETE",
+    registrationStatus: (program?.registrationStatus ?? "OPEN") as
+      | "OPEN"
+      | "SCHEDULED"
+      | "CLOSED"
+      | null,
     registrationStartDate: program?.registrationStartDate
       ? new Date(program.registrationStartDate)
-      : null,
+      : new Date(),
     registrationStartTime: program?.registrationStartTime || "09:00",
     registrationEndDate: program?.registrationEndDate
       ? new Date(program.registrationEndDate)
@@ -412,6 +422,10 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
 
   const [isSaving, setIsSaving] = React.useState(false);
   const [copyDialogOpen, setCopyDialogOpen] = React.useState(false);
+  const [startDateOpen, setStartDateOpen] = React.useState(false);
+  const [endDateOpen, setEndDateOpen] = React.useState(false);
+  const [regStartDateOpen, setRegStartDateOpen] = React.useState(false);
+  const [regEndDateOpen, setRegEndDateOpen] = React.useState(false);
   const stepper = useStepper();
 
   const effectivePrice =
@@ -429,7 +443,6 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
   React.useEffect(() => {
     if (stepper.state.current.data.id === "registration") {
       setFormData((prev) => {
-        if (!prev.registrationOpen && !prev.registrationStartDate) return prev;
         const updates: Partial<ProgramFormData> = {};
         if (!prev.registrationStartDate && prev.startDate) {
           updates.registrationStartDate = prev.startDate;
@@ -850,19 +863,36 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
       case "staff":
         return true;
       case "registration":
-        if (!formData.registrationOpen && formData.registrationStartDate) {
-          if (formData.startDate && formData.registrationStartDate > formData.startDate) {
+        if (formData.registrationStatus === "OPEN" || formData.registrationStatus === "SCHEDULED") {
+          if (!formData.registrationStartDate) {
             toast.error(
-              "Registration start date cannot be later than the first day of the program"
+              "A registration open date is required when opening or scheduling registration"
+            );
+            return false;
+          }
+          if (!formData.registrationEndDate) {
+            toast.error(
+              "A registration close date is required when opening or scheduling registration"
             );
             return false;
           }
         }
+        // Only validate start date order for SCHEDULED — for OPEN it's auto-set to today
         if (
-          formData.registrationEndDate &&
+          formData.registrationStatus === "SCHEDULED" &&
           formData.registrationStartDate &&
-          !formData.registrationOpen
+          formData.startDate
         ) {
+          const regStart = new Date(formData.registrationStartDate);
+          regStart.setHours(0, 0, 0, 0);
+          const progStart = new Date(formData.startDate);
+          progStart.setHours(0, 0, 0, 0);
+          if (regStart > progStart) {
+            toast.error("Registration open date cannot be later than the first day of the program");
+            return false;
+          }
+        }
+        if (formData.registrationEndDate && formData.registrationStartDate) {
           if (formData.registrationEndDate < formData.registrationStartDate) {
             toast.error("Registration end date cannot be before registration start date");
             return false;
@@ -902,10 +932,14 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     if (prevId) stepper.navigation.goTo(prevId);
   };
 
-  const handleSubmit = async () => {
-    for (const stepId of visibleStepIds) {
-      if (!validateStep(stepId)) return;
+  const handleSubmit = async (forceDraft = false) => {
+    if (!forceDraft) {
+      for (const stepId of visibleStepIds) {
+        if (!validateStep(stepId)) return;
+      }
     }
+    const effectiveStatus = forceDraft ? "DRAFT" : formData.status;
+    const effectiveRegStatus = forceDraft ? null : formData.registrationStatus;
 
     setIsSaving(true);
 
@@ -970,11 +1004,10 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         seasonId: formData.seasonId,
         categoryId: formData.categoryId,
         glCodeId: formData.glCodeId,
-        registrationOpen: formData.registrationOpen,
-        registrationStartDate: !formData.registrationOpen
-          ? formData.registrationStartDate?.toISOString()
-          : null,
-        registrationStartTime: !formData.registrationOpen ? formData.registrationStartTime : null,
+        status: effectiveStatus,
+        registrationStatus: effectiveRegStatus,
+        registrationStartDate: formData.registrationStartDate?.toISOString() ?? null,
+        registrationStartTime: formData.registrationStartTime || null,
         registrationEndDate: formData.registrationEndDate?.toISOString() ?? null,
         registrationEndTime: formData.registrationEndTime || null,
         earlyAccessCode: formData.earlyAccessCode,
@@ -1051,6 +1084,16 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // Save as draft — only validates name, reuses handleSubmit with forceDraft flag
+  const handleSaveAsDraft = async () => {
+    if (!formData.name.trim()) {
+      toast.error("Program name is required before saving as a draft");
+      return;
+    }
+    // Temporarily override status to DRAFT and skip full validation
+    await handleSubmit(true);
   };
 
   // Staff management
@@ -1555,7 +1598,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
               <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Start Date *</Label>
-                  <Popover>
+                  <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
@@ -1572,6 +1615,11 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                       <CalendarComponent
                         mode="single"
                         selected={formData.startDate || undefined}
+                        disabled={
+                          formData.status === "DRAFT"
+                            ? (date) => date < new Date(new Date().setHours(0, 0, 0, 0))
+                            : undefined
+                        }
                         onSelect={(date) => {
                           setFormData((prev) => ({
                             ...prev,
@@ -1579,6 +1627,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                             endDate:
                               date && prev.endDate && prev.endDate < date ? null : prev.endDate,
                           }));
+                          setStartDateOpen(false);
                         }}
                         initialFocus
                       />
@@ -1588,7 +1637,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
 
                 <div className="space-y-2">
                   <Label>End Date *</Label>
-                  <Popover>
+                  <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
@@ -1605,9 +1654,10 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                       <CalendarComponent
                         mode="single"
                         selected={formData.endDate || undefined}
-                        onSelect={(date) =>
-                          setFormData((prev) => ({ ...prev, endDate: date || null }))
-                        }
+                        onSelect={(date) => {
+                          setFormData((prev) => ({ ...prev, endDate: date || null }));
+                          setEndDateOpen(false);
+                        }}
                         disabled={(date) =>
                           formData.startDate ? date < formData.startDate : false
                         }
@@ -3130,41 +3180,27 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Registration Open / Schedule / Close */}
+              {/* Registration Open / Schedule */}
               <div className="space-y-4">
                 <Label className="text-base font-medium">Registration Availability</Label>
                 <RadioGroup
-                  value={
-                    formData.registrationOpen
-                      ? "now"
-                      : formData.registrationStartDate
-                        ? "scheduled"
-                        : "closed"
-                  }
+                  value={formData.registrationStatus === "OPEN" ? "now" : "scheduled"}
                   onValueChange={(value) => {
                     if (value === "now") {
                       setFormData((prev) => ({
                         ...prev,
-                        registrationOpen: true,
-                        registrationStartDate: null,
+                        status: "ACTIVE",
+                        registrationStatus: "OPEN",
+                        registrationStartDate: new Date(),
                         registrationStartTime: "",
                         earlyAccessCode: null,
-                      }));
-                    } else if (value === "scheduled") {
-                      setFormData((prev) => ({
-                        ...prev,
-                        registrationOpen: false,
-                        registrationStartDate: prev.registrationStartDate ?? new Date(),
                       }));
                     } else {
                       setFormData((prev) => ({
                         ...prev,
-                        registrationOpen: false,
-                        registrationStartDate: null,
-                        registrationStartTime: "",
-                        registrationEndDate: null,
-                        registrationEndTime: "",
-                        earlyAccessCode: null,
+                        status: "ACTIVE",
+                        registrationStatus: "SCHEDULED",
+                        registrationStartDate: prev.registrationStartDate ?? new Date(),
                       }));
                     }
                   }}
@@ -3173,7 +3209,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                   <label
                     className={cn(
                       "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
-                      formData.registrationOpen
+                      formData.registrationStatus === "OPEN"
                         ? "border-primary bg-primary/5"
                         : "hover:bg-muted/50"
                     )}
@@ -3190,7 +3226,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                   <label
                     className={cn(
                       "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
-                      !formData.registrationOpen && formData.registrationStartDate
+                      formData.registrationStatus === "SCHEDULED"
                         ? "border-primary bg-primary/5"
                         : "hover:bg-muted/50"
                     )}
@@ -3203,39 +3239,26 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                       </p>
                     </div>
                   </label>
-
-                  <label
-                    className={cn(
-                      "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
-                      !formData.registrationOpen && !formData.registrationStartDate
-                        ? "border-primary bg-primary/5"
-                        : "hover:bg-muted/50"
-                    )}
-                  >
-                    <RadioGroupItem value="closed" className="mt-1" />
-                    <div className="flex-1 space-y-1">
-                      <span className="font-medium">Close Registration</span>
-                      <p className="text-sm text-muted-foreground">
-                        Registration is closed and not available for athletes
-                      </p>
-                    </div>
-                  </label>
                 </RadioGroup>
               </div>
 
-              {/* Registration Opens — only when scheduled */}
-              {!formData.registrationOpen && formData.registrationStartDate && (
-                <div className="space-y-4">
-                  <Label className="text-base font-medium">Registration Opens</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Set when registration becomes available. Must be on or before the first day of
-                    the program{formData.startDate ? ` (${format(formData.startDate, "PPP")})` : ""}
-                    .
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Open Date</Label>
-                      <Popover>
+              {/* Registration Opens */}
+              <div className="space-y-4">
+                <Label className="text-base font-medium">Registration Opens</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Open Date</Label>
+                    {formData.registrationStatus === "OPEN" ? (
+                      <Button
+                        variant="outline"
+                        disabled
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        <CalendarDays className="mr-2 h-4 w-4" />
+                        Today ({format(new Date(), "PPP")})
+                      </Button>
+                    ) : (
+                      <Popover open={regStartDateOpen} onOpenChange={setRegStartDateOpen}>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
@@ -3247,200 +3270,225 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                             <CalendarDays className="mr-2 h-4 w-4" />
                             {formData.registrationStartDate
                               ? format(formData.registrationStartDate, "PPP")
-                              : "Pick a date"}
+                              : format(new Date(), "PPP")}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
                           <CalendarComponent
                             mode="single"
-                            selected={formData.registrationStartDate || undefined}
-                            onSelect={(date) =>
+                            selected={formData.registrationStartDate || new Date()}
+                            onSelect={(date) => {
                               setFormData((prev) => ({
                                 ...prev,
-                                registrationStartDate: date || null,
-                              }))
-                            }
+                                registrationStartDate: date || new Date(),
+                              }));
+                              setRegStartDateOpen(false);
+                            }}
                             disabled={(date) => {
-                              if (formData.startDate && date > formData.startDate) return true;
+                              const today = new Date(new Date().setHours(0, 0, 0, 0));
+                              if (date < today) return true;
+                              if (formData.startDate) {
+                                const progStart = new Date(formData.startDate);
+                                progStart.setHours(0, 0, 0, 0);
+                                if (date > progStart) return true;
+                              }
                               return false;
                             }}
                             initialFocus
                           />
                         </PopoverContent>
                       </Popover>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Open Time</Label>
-                      <div className="relative">
-                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          type="time"
-                          value={formData.registrationStartTime}
-                          onChange={(e) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              registrationStartTime: e.target.value,
-                            }))
-                          }
-                          className="pl-10"
-                        />
-                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Open Time</Label>
+                    <div className="relative">
+                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="time"
+                        value={formData.registrationStartTime}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            registrationStartTime: e.target.value,
+                          }))
+                        }
+                        className="pl-10"
+                      />
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
 
-              {/* Registration End Date — hidden when registration is manually closed */}
-              {(formData.registrationOpen || formData.registrationStartDate) && (
-                <div className="space-y-4">
-                  <Label className="text-base font-medium">Registration Closes</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Set when registration closes. Defaults to the program end date if not specified.
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Close Date</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !formData.registrationEndDate && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarDays className="mr-2 h-4 w-4" />
-                            {formData.registrationEndDate
-                              ? format(formData.registrationEndDate, "PPP")
-                              : formData.endDate
-                                ? `Program end: ${format(formData.endDate, "PPP")}`
-                                : "Pick a date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent
-                            mode="single"
-                            selected={formData.registrationEndDate || undefined}
-                            onSelect={(date) =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                registrationEndDate: date || null,
-                              }))
-                            }
-                            disabled={(date) => {
-                              const earliest =
-                                !formData.registrationOpen && formData.registrationStartDate
-                                  ? formData.registrationStartDate
-                                  : new Date();
-                              if (date < earliest) return true;
-                              return false;
-                            }}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Close Time</Label>
-                      <div className="relative">
-                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          type="time"
-                          value={formData.registrationEndTime}
-                          onChange={(e) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              registrationEndTime: e.target.value,
-                            }))
-                          }
-                          className="pl-10"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Early Access Code — only relevant when registration is scheduled */}
-              {!formData.registrationOpen && !!formData.registrationStartDate && (
-                <div className="space-y-4">
-                  <Label className="text-base font-medium flex items-center gap-2">
-                    <KeyRound className="h-4 w-4 text-muted-foreground" />
-                    Early Access Code
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Generate or enter a code that allows registration before the registration window
-                    opens
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      placeholder="Enter or generate a code"
-                      value={formData.earlyAccessCode || ""}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          earlyAccessCode: e.target.value || null,
-                        }))
-                      }
-                      className="max-w-[300px]"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        const code = crypto.randomUUID().slice(0, 8).toUpperCase();
-                        setFormData((prev) => ({ ...prev, earlyAccessCode: code }));
-                      }}
-                    >
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Generate
-                    </Button>
-                  </div>
-
-                  {formData.earlyAccessCode && isEditing && program && (
-                    <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
-                      <Label className="text-sm font-medium flex items-center gap-2">
-                        <Link2 className="h-4 w-4" />
-                        Early Access Link
-                      </Label>
-                      <div className="flex items-center gap-2">
-                        <code className="flex-1 text-sm bg-background px-3 py-2 rounded border break-all">
-                          {typeof window !== "undefined" ? `${window.location.origin}` : ""}
-                          /programs/{program.id}?code={formData.earlyAccessCode}
-                        </code>
+              {/* Registration End Date */}
+              <div className="space-y-4">
+                <Label className="text-base font-medium">Registration Closes</Label>
+                <p className="text-sm text-muted-foreground">
+                  Set when registration closes. Defaults to the program end date if not specified.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Close Date</Label>
+                    <Popover open={regEndDateOpen} onOpenChange={setRegEndDateOpen}>
+                      <PopoverTrigger asChild>
                         <Button
-                          type="button"
                           variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const url = `${window.location.origin}/programs/${program.id}?code=${formData.earlyAccessCode}`;
-                            navigator.clipboard.writeText(url);
-                            toast.success("Link copied to clipboard");
-                          }}
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !formData.registrationEndDate && "text-muted-foreground"
+                          )}
                         >
-                          <Copy className="h-4 w-4" />
+                          <CalendarDays className="mr-2 h-4 w-4" />
+                          {formData.registrationEndDate
+                            ? format(formData.registrationEndDate, "PPP")
+                            : formData.endDate
+                              ? `Program end: ${format(formData.endDate, "PPP")}`
+                              : "Pick a date"}
                         </Button>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Share this link with athletes who should have early access to registration
-                      </p>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={formData.registrationEndDate || undefined}
+                          onSelect={(date) => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              registrationEndDate: date || null,
+                            }));
+                            setRegEndDateOpen(false);
+                          }}
+                          disabled={(date) => {
+                            const earliest = formData.registrationStartDate ?? new Date();
+                            return date < earliest;
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Close Time</Label>
+                    <div className="relative">
+                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="time"
+                        value={formData.registrationEndTime}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            registrationEndTime: e.target.value,
+                          }))
+                        }
+                        className="pl-10"
+                      />
                     </div>
-                  )}
+                  </div>
                 </div>
-              )}
+              </div>
+
+              {/* Early Access Code */}
+              <div className="space-y-4">
+                <Label className="text-base font-medium flex items-center gap-2">
+                  <KeyRound className="h-4 w-4 text-muted-foreground" />
+                  Early Access Code
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Generate or enter a code that allows registration before the registration window
+                  opens
+                </p>
+                <div className="flex items-center gap-2">
+                  <Input
+                    placeholder="Enter or generate a code"
+                    value={formData.earlyAccessCode || ""}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        earlyAccessCode: e.target.value || null,
+                      }))
+                    }
+                    className="max-w-[300px]"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const code = crypto.randomUUID().slice(0, 8).toUpperCase();
+                      setFormData((prev) => ({ ...prev, earlyAccessCode: code }));
+                    }}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Generate
+                  </Button>
+                </div>
+
+                {formData.earlyAccessCode && isEditing && program && (
+                  <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Link2 className="h-4 w-4" />
+                      Early Access Link
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-sm bg-background px-3 py-2 rounded border break-all">
+                        {typeof window !== "undefined" ? `${window.location.origin}` : ""}
+                        /programs/{program.id}?code={formData.earlyAccessCode}
+                      </code>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const url = `${window.location.origin}/programs/${program.id}?code=${formData.earlyAccessCode}`;
+                          navigator.clipboard.writeText(url);
+                          toast.success("Link copied to clipboard");
+                        }}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Share this link with athletes who should have early access to registration
+                    </p>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         )}
 
         {/* Navigation Buttons */}
         <div className="flex items-center justify-between mt-6">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.push("/dashboard/registrations/programs")}
-          >
-            Cancel
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.push("/dashboard/registrations/programs")}
+            >
+              Cancel
+            </Button>
+            {isEditing && program?.status === "DRAFT" && (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={isSaving}
+                onClick={async () => {
+                  if (!confirm("Delete this draft program? This cannot be undone.")) return;
+                  setIsSaving(true);
+                  try {
+                    const res = await fetch(`/api/programs/${program.id}`, { method: "DELETE" });
+                    if (!res.ok) throw new Error("Failed to delete");
+                    toast.success("Draft deleted");
+                    router.push("/dashboard/registrations/programs");
+                  } catch {
+                    toast.error("Failed to delete draft");
+                  } finally {
+                    setIsSaving(false);
+                  }
+                }}
+              >
+                Delete Draft
+              </Button>
+            )}
+          </div>
 
           <div className="flex items-center gap-2">
             {!isFirstVisible && (
@@ -3450,13 +3498,17 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
               </Button>
             )}
 
+            <Button type="button" variant="outline" onClick={handleSaveAsDraft} disabled={isSaving}>
+              Save as Draft
+            </Button>
+
             {!isLastVisible ? (
               <Button type="button" onClick={handleNext}>
                 Next
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             ) : (
-              <Button type="button" onClick={handleSubmit} disabled={isSaving}>
+              <Button type="button" onClick={() => handleSubmit()} disabled={isSaving}>
                 {isSaving ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />

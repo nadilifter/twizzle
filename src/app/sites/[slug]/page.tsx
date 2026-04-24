@@ -39,7 +39,7 @@ const getCachedHomePrograms = unstable_cache(
   async (organizationId: string, _version: number) => {
     const [programs, levels] = await Promise.all([
       db.program.findMany({
-        where: { organizationId, status: "ACTIVE" },
+        where: { organizationId, status: "ACTIVE", registrationStatus: "OPEN" },
         include: {
           facility: {
             select: { id: true, name: true, city: true, stateProvince: true },

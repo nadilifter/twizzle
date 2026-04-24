@@ -17,7 +17,8 @@ const updateProgramSchema = z.object({
     .string()
     .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color")
     .optional(),
-  status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).optional(),
+  status: z.enum(["DRAFT", "ACTIVE", "COMPLETE"]).optional(),
+  registrationStatus: z.enum(["OPEN", "SCHEDULED", "CLOSED"]).nullable().optional(),
   pricingModel: z.enum(["FLAT_RATE", "PER_SESSION"]).optional(),
   basePrice: z.number().min(0).optional().nullable(),
   perSessionPrice: z.number().min(0).optional().nullable(),
@@ -82,7 +83,6 @@ const updateProgramSchema = z.object({
   registrationStartTime: z.string().optional().nullable(),
   registrationEndDate: z.string().optional().nullable(),
   registrationEndTime: z.string().optional().nullable(),
-  registrationOpen: z.boolean().optional(),
   earlyAccessCode: z.string().optional().nullable(),
   // Flag to regenerate instances
   regenerateInstances: z.boolean().optional(),
@@ -346,6 +346,34 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         return NextResponse.json({ error: "One or more spaces not found" }, { status: 404 });
     }
 
+    // ACTIVE programs with OPEN or SCHEDULED registration must have both dates.
+    // Check against the incoming payload merged with existing values.
+    const effectiveStatus = validatedData.status ?? existing.status;
+    const effectiveRegStatus = validatedData.registrationStatus ?? existing.registrationStatus;
+    if (
+      effectiveStatus === "ACTIVE" &&
+      (effectiveRegStatus === "OPEN" || effectiveRegStatus === "SCHEDULED")
+    ) {
+      const startDate = validatedData.registrationStartDate ?? existing.registrationStartDate;
+      const endDate = validatedData.registrationEndDate ?? existing.registrationEndDate;
+      if (!startDate) {
+        return NextResponse.json(
+          { error: "registrationStartDate is required for OPEN or SCHEDULED registration" },
+          { status: 400 }
+        );
+      }
+      if (!endDate) {
+        return NextResponse.json(
+          { error: "registrationEndDate is required for OPEN or SCHEDULED registration" },
+          { status: 400 }
+        );
+      }
+    }
+    // COMPLETE always forces registrationStatus to CLOSED
+    if (validatedData.status === "COMPLETE") {
+      validatedData.registrationStatus = "CLOSED";
+    }
+
     // Validate bulk discount business rules server-side
     if (validatedData.bulkDiscounts?.length) {
       const err = validateBulkDiscountsForProgram(validatedData.bulkDiscounts, {
@@ -461,6 +489,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         updateData.waitlistCapacity = validatedData.waitlistCapacity;
       if (validatedData.glCodeId !== undefined) updateData.glCodeId = validatedData.glCodeId;
       if (validatedData.categoryId !== undefined) updateData.categoryId = validatedData.categoryId;
+      if (validatedData.registrationStatus !== undefined)
+        updateData.registrationStatus = validatedData.registrationStatus;
       if (validatedData.registrationStartDate !== undefined)
         updateData.registrationStartDate = validatedData.registrationStartDate
           ? parseDateOnly(validatedData.registrationStartDate)
@@ -473,8 +503,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           : null;
       if (validatedData.registrationEndTime !== undefined)
         updateData.registrationEndTime = validatedData.registrationEndTime;
-      if (validatedData.registrationOpen !== undefined)
-        updateData.registrationOpen = validatedData.registrationOpen;
       if (validatedData.earlyAccessCode !== undefined)
         updateData.earlyAccessCode = validatedData.earlyAccessCode;
 

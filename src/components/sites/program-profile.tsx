@@ -44,7 +44,8 @@ import { formatPrice } from "@/lib/format-utils";
 import { SessionCalendar, type SessionInstance } from "@/components/sites/session-calendar";
 import { LocationMap } from "@/components/location-map";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
-import type { RegistrationStatus } from "@/lib/registration-utils";
+import type { RegistrationWindowStatus } from "@/types/programs";
+import { isRegistrationClosed } from "@/lib/registration-utils";
 import { type BulkDiscount } from "@/lib/bulk-discounts";
 
 const ROLE_ORDER: Record<string, number> = {
@@ -146,7 +147,7 @@ export interface ProgramProfileData {
 interface ProgramProfileProps {
   program: ProgramProfileData;
   instances: SessionInstance[];
-  registrationStatus: RegistrationStatus;
+  programStatus: RegistrationWindowStatus | null;
   canRegister: boolean;
   hasValidEarlyAccess: boolean;
   earlyAccessCode: string | null;
@@ -156,7 +157,7 @@ interface ProgramProfileProps {
 export function ProgramProfile({
   program,
   instances,
-  registrationStatus,
+  programStatus,
   canRegister,
   hasValidEarlyAccess,
   earlyAccessCode,
@@ -262,8 +263,8 @@ export function ProgramProfile({
   const ctaDisabled = !canRegister || isSoldOut || isNavigating;
 
   const ctaLabel = (() => {
-    if (registrationStatus === "closed") return "Registration Closed";
-    if (registrationStatus === "scheduled" && !hasValidEarlyAccess) {
+    if (isRegistrationClosed(programStatus)) return "Registration Closed";
+    if (programStatus === "SCHEDULED" && !hasValidEarlyAccess) {
       return program.registrationStartDate
         ? `Opens ${format(new Date(program.registrationStartDate), "MMM d")}`
         : "Coming Soon";
@@ -357,7 +358,7 @@ export function ProgramProfile({
           </div>
 
           <StatusBadge
-            registrationStatus={registrationStatus}
+            programStatus={programStatus}
             hasValidEarlyAccess={hasValidEarlyAccess}
             isFull={isFull}
             canJoinWaitlist={canJoinWaitlist}
@@ -365,7 +366,7 @@ export function ProgramProfile({
             registrationStartDate={program.registrationStartDate}
           />
 
-          {registrationStatus === "scheduled" && !hasValidEarlyAccess && (
+          {programStatus === "SCHEDULED" && !hasValidEarlyAccess && (
             <EarlyAccessPrompt programId={program.id} primaryColor={primaryColor} />
           )}
         </div>
@@ -785,14 +786,14 @@ function formatCountdown(ms: number): string {
 }
 
 function StatusBadge({
-  registrationStatus,
+  programStatus,
   hasValidEarlyAccess,
   isFull,
   canJoinWaitlist,
   isPerInstance,
   registrationStartDate,
 }: {
-  registrationStatus: RegistrationStatus;
+  programStatus: RegistrationWindowStatus | null;
   hasValidEarlyAccess: boolean;
   isFull: boolean;
   canJoinWaitlist: boolean;
@@ -802,7 +803,7 @@ function StatusBadge({
   const [countdown, setCountdown] = useState<string | null>(null);
 
   useEffect(() => {
-    if (registrationStatus !== "scheduled" || hasValidEarlyAccess || !registrationStartDate) return;
+    if (programStatus !== "SCHEDULED" || hasValidEarlyAccess || !registrationStartDate) return;
 
     const target = new Date(registrationStartDate).getTime();
     const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
@@ -821,9 +822,9 @@ function StatusBadge({
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [registrationStatus, hasValidEarlyAccess, registrationStartDate]);
+  }, [programStatus, hasValidEarlyAccess, registrationStartDate]);
 
-  if (registrationStatus === "closed") {
+  if (isRegistrationClosed(programStatus)) {
     return (
       <div className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500">
         <Ban className="h-4 w-4" />
@@ -832,7 +833,7 @@ function StatusBadge({
     );
   }
 
-  if (registrationStatus === "scheduled" && !hasValidEarlyAccess) {
+  if (programStatus === "SCHEDULED" && !hasValidEarlyAccess) {
     return (
       <div className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 dark:text-blue-400">
         <Hourglass className="h-4 w-4" />

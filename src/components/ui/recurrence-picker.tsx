@@ -46,6 +46,19 @@ const WEEKDAYS = [
   { label: "Sun", value: 6, rruleDay: RRule.SU },
 ];
 
+// Returns ISO weekdays (0=Mon … 6=Sun) that have at least one occurrence
+// between start and end. Iterates at most 7 days since all weekdays appear
+// within any 7-day window.
+function getAvailableWeekdays(start: Date, end: Date): Set<number> {
+  const available = new Set<number>();
+  const current = new Date(start);
+  while (current <= end && available.size < 7) {
+    available.add((current.getDay() + 6) % 7); // JS Sunday=0 → ISO Monday=0
+    current.setDate(current.getDate() + 1);
+  }
+  return available;
+}
+
 const FREQUENCY_LABELS: Record<Frequency, string> = {
   DAILY: "day",
   WEEKLY: "week",
@@ -276,21 +289,31 @@ export function RecurrencePicker({
         <div className="space-y-2">
           <Label className="text-sm font-medium">Repeat on</Label>
           <div className="flex gap-2">
-            {WEEKDAYS.map((day) => (
-              <button
-                key={day.value}
-                type="button"
-                onClick={() => toggleDay(day.value)}
-                className={cn(
-                  "flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium transition-colors",
-                  config.byDay.includes(day.value)
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted hover:bg-muted/80 text-muted-foreground"
-                )}
-              >
-                {day.label.charAt(0)}
-              </button>
-            ))}
+            {WEEKDAYS.map((day) => {
+              const available = endDate ? getAvailableWeekdays(startDate, endDate) : null;
+              const isDisabled = available !== null && !available.has(day.value);
+              return (
+                <button
+                  key={day.value}
+                  type="button"
+                  disabled={isDisabled}
+                  title={
+                    isDisabled ? `No ${day.label} falls within the selected date range` : undefined
+                  }
+                  onClick={() => toggleDay(day.value)}
+                  className={cn(
+                    "flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium transition-colors",
+                    config.byDay.includes(day.value)
+                      ? "bg-primary text-primary-foreground"
+                      : isDisabled
+                        ? "cursor-not-allowed bg-muted/40 text-muted-foreground/40"
+                        : "bg-muted hover:bg-muted/80 text-muted-foreground"
+                  )}
+                >
+                  {day.label.charAt(0)}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

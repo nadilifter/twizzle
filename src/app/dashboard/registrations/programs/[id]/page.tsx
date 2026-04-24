@@ -79,7 +79,6 @@ interface ProgramDetail {
   registrationStartTime: string | null;
   registrationEndDate: string | null;
   registrationEndTime: string | null;
-  registrationOpen: boolean;
   waitlistEnabled: boolean;
   waitlistAutoPromote: boolean;
   waitlistCapacity: number | null;
@@ -354,9 +353,11 @@ export default function ProgramProfilePage() {
   const statusStyle =
     program.status === "ACTIVE"
       ? "bg-green-50 text-green-700 border-green-200"
-      : program.status === "ARCHIVED"
-        ? "bg-muted text-muted-foreground"
-        : "bg-yellow-50 text-yellow-700 border-yellow-200";
+      : program.status === "COMPLETE"
+        ? "bg-indigo-50 text-indigo-700 border-indigo-200"
+        : program.status === "ARCHIVED"
+          ? "bg-muted text-muted-foreground"
+          : "bg-muted text-muted-foreground";
 
   const timelineItems = buildProgramTimelineItems(program);
   const { upcoming, recent } = getSessionsPreview(program.instances);

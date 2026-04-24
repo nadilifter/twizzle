@@ -131,7 +131,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       scopedDb.program.findMany({
         where: {
           facilityId: id,
-          status: "ACTIVE",
+          status: { in: ["ACTIVE", "COMPLETE"] },
         },
         select: {
           id: true,

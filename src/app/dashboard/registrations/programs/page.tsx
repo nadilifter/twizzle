@@ -49,13 +49,25 @@ import { useStaff } from "@/hooks/use-staff";
 import { useFeatures } from "@/components/feature-context";
 import { formatRRuleDays } from "@/lib/rrule-utils";
 import { ProgramConfiguration } from "./program-configuration";
-import { getRegistrationStatus } from "@/lib/registration-utils";
+import {
+  PROGRAM_STATUS_CONFIG,
+  REGISTRATION_STATUS_CONFIG,
+  type ProgramStatus,
+  type RegistrationWindowStatus,
+} from "@/types/programs";
 import {
   ProgramFiltersContent,
   DEFAULT_FILTERS,
   countActiveFilters,
   type ProgramFilterState,
 } from "@/components/sites/program-filters";
+
+const PROGRAM_SORT_ORDER: Record<string, number> = {
+  OPEN: 0,
+  SCHEDULED: 1,
+  DRAFT: 2,
+  COMPLETE: 3,
+};
 
 function formatPrice(price: number | string | null | undefined): string {
   if (price === null || price === undefined) return "Free";
@@ -125,93 +137,116 @@ export default function ProgramsPage() {
 
   // Client-side filtering
   const filteredPrograms = React.useMemo(() => {
-    return programs.filter((program) => {
-      const p = program as any;
+    return programs
+      .filter((program) => {
+        const p = program as any;
 
-      // Status filter
-      if (filters.selectedStatus && p.status !== filters.selectedStatus) return false;
+        // Status filter — multi-select; default is ["DRAFT", "ACTIVE"]
+        if (filters.selectedStatus.length > 0) {
+          if (!filters.selectedStatus.includes(p.status)) return false;
+        }
 
-      // Season filter
-      if (filters.selectedSeason && p.seasonId !== filters.selectedSeason) return false;
+        // Season filter
+        if (filters.selectedSeason && p.seasonId !== filters.selectedSeason) return false;
 
-      // Category filter
-      if (filters.selectedCategory && p.categoryId !== filters.selectedCategory) return false;
+        // Category filter
+        if (filters.selectedCategory && p.categoryId !== filters.selectedCategory) return false;
 
-      // Facility filter
-      if (filters.selectedFacility && p.facilityId !== filters.selectedFacility) return false;
+        // Facility filter
+        if (filters.selectedFacility && p.facilityId !== filters.selectedFacility) return false;
 
-      // Age filter: show programs whose age range overlaps the filter range
-      const ageActive =
-        filters.ageRange[0] !== DEFAULT_FILTERS.ageRange[0] ||
-        filters.ageRange[1] !== DEFAULT_FILTERS.ageRange[1];
-      if (ageActive) {
-        if (p.hasAgeRestriction) {
-          const progMin = p.minAge ?? 0;
-          const progMax = p.maxAge ?? 99;
-          if (progMin > filters.ageRange[1] || progMax < filters.ageRange[0]) {
-            return false;
+        // Age filter: show programs whose age range overlaps the filter range
+        const ageActive =
+          filters.ageRange[0] !== DEFAULT_FILTERS.ageRange[0] ||
+          filters.ageRange[1] !== DEFAULT_FILTERS.ageRange[1];
+        if (ageActive) {
+          if (p.hasAgeRestriction) {
+            const progMin = p.minAge ?? 0;
+            const progMax = p.maxAge ?? 99;
+            if (progMin > filters.ageRange[1] || progMax < filters.ageRange[0]) {
+              return false;
+            }
           }
         }
-      }
 
-      // Date range filter
-      if (filters.dateRange?.from) {
-        const filterFrom = startOfDay(filters.dateRange.from);
-        const filterTo = filters.dateRange.to ? startOfDay(filters.dateRange.to) : filterFrom;
-        const progStart = toDate(p.startDate);
-        const progEnd = toDate(p.endDate);
-        if (progStart || progEnd) {
-          const effectiveStart = progStart || progEnd!;
-          const effectiveEnd = progEnd || progStart!;
-          if (
-            isAfter(startOfDay(effectiveStart), filterTo) ||
-            isBefore(startOfDay(effectiveEnd), filterFrom)
-          ) {
-            return false;
+        // Date range filter
+        if (filters.dateRange?.from) {
+          const filterFrom = startOfDay(filters.dateRange.from);
+          const filterTo = filters.dateRange.to ? startOfDay(filters.dateRange.to) : filterFrom;
+          const progStart = toDate(p.startDate);
+          const progEnd = toDate(p.endDate);
+          if (progStart || progEnd) {
+            const effectiveStart = progStart || progEnd!;
+            const effectiveEnd = progEnd || progStart!;
+            if (
+              isAfter(startOfDay(effectiveStart), filterTo) ||
+              isBefore(startOfDay(effectiveEnd), filterFrom)
+            ) {
+              return false;
+            }
           }
         }
-      }
 
-      // Time range filter
-      const hasTimeFilter = filters.timeRange[0] || filters.timeRange[1];
-      if (hasTimeFilter && p.startTime) {
-        if (filters.timeRange[0] && p.startTime < filters.timeRange[0]) return false;
-        if (filters.timeRange[1] && p.startTime > filters.timeRange[1]) return false;
-      }
-
-      // Level filter
-      if (filters.selectedLevels.length > 0) {
-        if (p.hasLevelRestriction && p.levelRequirements?.length) {
-          const hasMatchingLevel = p.levelRequirements.some((lr: any) =>
-            filters.selectedLevels.includes(lr.level.id)
-          );
-          if (!hasMatchingLevel) return false;
+        // Time range filter
+        const hasTimeFilter = filters.timeRange[0] || filters.timeRange[1];
+        if (hasTimeFilter && p.startTime) {
+          if (filters.timeRange[0] && p.startTime < filters.timeRange[0]) return false;
+          if (filters.timeRange[1] && p.startTime > filters.timeRange[1]) return false;
         }
-      }
 
-      // Coach filter
-      if (filters.selectedCoaches.length > 0) {
-        const hasMatchingCoach = (p.staffAssignments ?? []).some((sa: any) =>
-          filters.selectedCoaches.includes(sa.member?.user?.id)
-        );
-        if (!hasMatchingCoach) return false;
-      }
-
-      // Gender filter
-      if (filters.selectedGenders.length > 0) {
-        if (p.hasGenderRestriction && p.allowedGenders?.length > 0) {
-          const hasOverlap = p.allowedGenders.some((g: string) =>
-            filters.selectedGenders.includes(g)
-          );
-          if (!hasOverlap) return false;
+        // Level filter
+        if (filters.selectedLevels.length > 0) {
+          if (p.hasLevelRestriction && p.levelRequirements?.length) {
+            const hasMatchingLevel = p.levelRequirements.some((lr: any) =>
+              filters.selectedLevels.includes(lr.level.id)
+            );
+            if (!hasMatchingLevel) return false;
+          }
         }
-      }
 
-      return true;
-    });
+        // Coach filter
+        if (filters.selectedCoaches.length > 0) {
+          const hasMatchingCoach = (p.staffAssignments ?? []).some((sa: any) =>
+            filters.selectedCoaches.includes(sa.member?.user?.id)
+          );
+          if (!hasMatchingCoach) return false;
+        }
+
+        // Gender filter
+        if (filters.selectedGenders.length > 0) {
+          if (p.hasGenderRestriction && p.allowedGenders?.length > 0) {
+            const hasOverlap = p.allowedGenders.some((g: string) =>
+              filters.selectedGenders.includes(g)
+            );
+            if (!hasOverlap) return false;
+          }
+        }
+
+        // Recurring / Drop-in filter
+        if (filters.recurringFilter !== "all") {
+          const instanceCount = p._count?.instances ?? 0;
+          const isDropIn = !p.rrule || instanceCount <= 1;
+          if (filters.recurringFilter === "recurring" && isDropIn) return false;
+          if (filters.recurringFilter === "drop-in" && !isDropIn) return false;
+        }
+
+        return true;
+      })
+      .sort((a: any, b: any) => {
+        const aOrder =
+          PROGRAM_SORT_ORDER[a.registrationStatus ?? a.status] ?? PROGRAM_SORT_ORDER[a.status] ?? 5;
+        const bOrder =
+          PROGRAM_SORT_ORDER[b.registrationStatus ?? b.status] ?? PROGRAM_SORT_ORDER[b.status] ?? 5;
+        if (aOrder !== bOrder) return aOrder - bOrder;
+        return a.name.localeCompare(b.name);
+      });
   }, [programs, filters]);
 
   const handleQuickConfigure = (program: any) => {
+    if (program.status === "DRAFT") {
+      router.push(`/dashboard/registrations/programs/${program.id}/edit`);
+      return;
+    }
     setSelectedProgram(program);
     setIsConfigOpen(true);
   };
@@ -361,7 +396,8 @@ export default function ProgramsPage() {
                   p.billingInterval &&
                   p.billingInterval !== "ONE_TIME" &&
                   p.billingInterval !== "SESSION" &&
-                  p.recurringPrice;
+                  p.recurringPrice &&
+                  (p._count?.instances ?? 0) > 1;
                 const price = isRecurring ? p.recurringPrice : p.basePrice || p.perSessionPrice;
                 const levelReqs = p.levelRequirements || [];
                 const staffAssignments = p.staffAssignments || [];
@@ -370,7 +406,7 @@ export default function ProgramsPage() {
                 const enrolled = program._count?.enrollments || 0;
                 const hasCapacity = p.hasCapacityRestriction && capacity > 0;
                 const spotsLeft = hasCapacity ? Math.max(0, capacity - enrolled) : null;
-                const regStatus = getRegistrationStatus(p);
+                const regStatus = p.status;
 
                 const daysLabel = p.rrule ? formatRRuleDays(p.rrule) : null;
 
@@ -389,19 +425,23 @@ export default function ProgramsPage() {
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="space-y-1.5 min-w-0">
-                          <CardTitle className="leading-tight">
+                          <CardTitle className="leading-tight flex items-center gap-1.5">
+                            <div
+                              className="w-2.5 h-2.5 rounded-full shrink-0"
+                              style={{ backgroundColor: program.color || "#3b82f6" }}
+                            />
                             <Link
-                              href={`/dashboard/registrations/programs/${program.id}`}
+                              href={
+                                program.status === "DRAFT"
+                                  ? `/dashboard/registrations/programs/${program.id}/edit`
+                                  : `/dashboard/registrations/programs/${program.id}`
+                              }
                               className="hover:underline"
                             >
                               {program.name}
                             </Link>
                           </CardTitle>
                           <div className="flex flex-wrap items-center gap-1">
-                            <div
-                              className="w-3 h-3 rounded-full shrink-0"
-                              style={{ backgroundColor: program.color || "#3b82f6" }}
-                            />
                             {levelReqs.map((lr: any) => (
                               <Badge
                                 key={lr.id}
@@ -423,22 +463,26 @@ export default function ProgramsPage() {
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-1 shrink-0">
-                          <Badge
-                            variant="outline"
-                            className={
-                              regStatus === "open"
-                                ? "text-[10px] px-1.5 py-0 bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800"
-                                : regStatus === "scheduled"
-                                  ? "text-[10px] px-1.5 py-0 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-800"
-                                  : "text-[10px] px-1.5 py-0 bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-950/30 dark:text-gray-400 dark:border-gray-700"
-                            }
-                          >
-                            {regStatus === "open"
-                              ? "Open"
-                              : regStatus === "scheduled"
-                                ? "Scheduled"
-                                : "Closed"}
-                          </Badge>
+                          {/* Single badge: registration status when active, program status otherwise */}
+                          {regStatus === "ACTIVE" && p.registrationStatus ? (
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] px-1.5 py-0 ${REGISTRATION_STATUS_CONFIG[p.registrationStatus as RegistrationWindowStatus]?.badgeClassName}`}
+                            >
+                              {
+                                REGISTRATION_STATUS_CONFIG[
+                                  p.registrationStatus as RegistrationWindowStatus
+                                ]?.label
+                              }
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] px-1.5 py-0 ${PROGRAM_STATUS_CONFIG[regStatus as ProgramStatus]?.badgeClassName ?? PROGRAM_STATUS_CONFIG.DRAFT.badgeClassName}`}
+                            >
+                              {PROGRAM_STATUS_CONFIG[regStatus as ProgramStatus]?.label ?? "Draft"}
+                            </Badge>
+                          )}
                           {program.season && (
                             <Badge
                               variant="outline"

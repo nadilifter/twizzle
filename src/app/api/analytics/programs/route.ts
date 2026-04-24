@@ -28,7 +28,7 @@ export async function GET() {
       enrollmentsByStatus,
       topProgramsByRevenue,
     ] = await Promise.all([
-      // KPI: active programs
+      // KPI: active programs (status = ACTIVE, regardless of registration window)
       scopedDb.program.count({
         where: { status: "ACTIVE" },
       }),
@@ -49,7 +49,8 @@ export async function GET() {
         },
       }),
 
-      // KPI: avg fill rate across programs with capacity
+      // KPI: avg fill rate — only ACTIVE programs since DRAFT/COMPLETE/ARCHIVED
+      // haven't launched yet or have finished, so their fill rates would skew the average.
       db.$queryRaw<{ avg_rate: number | null }[]>`
         SELECT ROUND(AVG(
           CASE WHEN p."capacity" > 0
@@ -70,6 +71,7 @@ export async function GET() {
       `,
 
       // Enrollment trend: monthly new enrollments over 12 months
+      // No status filter — includes CLOSED programs so historical data isn't lost
       db.$queryRaw<{ month: string; count: number }[]>`
         WITH months AS (
           SELECT to_char(d, 'YYYY-MM') AS month
@@ -93,6 +95,8 @@ export async function GET() {
       `,
 
       // Program fill rates: top 10 by fill % (programs with capacity)
+      // Excludes ARCHIVED and DRAFT — those haven't launched or are retired.
+      // Includes COMPLETE so recently-finished programs still appear in the chart.
       db.$queryRaw<{ name: string; enrolled: number; capacity: number }[]>`
         SELECT
           p."name",

@@ -34,25 +34,23 @@ export async function POST(request: NextRequest) {
         where: { id: programId, organizationId: organization.id },
         select: {
           name: true,
-          registrationOpen: true,
-          registrationStartDate: true,
-          registrationStartTime: true,
-          registrationEndDate: true,
-          registrationEndTime: true,
+          status: true,
+          registrationStatus: true,
           earlyAccessCode: true,
         },
       });
 
       if (program) {
-        const status = getRegistrationStatus(program);
-        if (status !== "open") {
+        if (program.registrationStatus !== "OPEN") {
           const hasValidCode =
             earlyAccessCode &&
             program.earlyAccessCode &&
             earlyAccessCode === program.earlyAccessCode;
           if (!hasValidCode) {
             const reason =
-              status === "closed" ? "Registration has closed" : "Registration is not yet open";
+              program.registrationStatus === "CLOSED"
+                ? "Registration has closed"
+                : "Registration is not yet open";
             return NextResponse.json(
               { error: `${reason} for "${program.name}".` },
               { status: 400 }

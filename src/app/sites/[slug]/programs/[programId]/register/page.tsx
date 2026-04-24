@@ -24,7 +24,7 @@ const getCachedProgramDetail = unstable_cache(
   async (programId: string, organizationId: string, _version: number) => {
     const scopedDb = getScopedDb(organizationId);
     const program = await scopedDb.program.findFirst({
-      where: { id: programId, status: "ACTIVE" },
+      where: { id: programId },
       include: {
         facility: {
           select: { id: true, name: true, city: true, stateProvince: true },
@@ -122,7 +122,7 @@ export default async function ProgramRegisterPage({
     getEnrollmentCounts(program.id, program.waitlistEnabled),
     getInstanceRegistrationCounts(program.instances.map((i) => i.id)),
   ]);
-  const { registrationStatus, hasValidEarlyAccess, canRegister } = resolveRegistrationAccess(
+  const { programStatus, hasValidEarlyAccess, canRegister } = resolveRegistrationAccess(
     program,
     earlyAccessCode
   );
@@ -185,7 +185,7 @@ export default async function ProgramRegisterPage({
       discountValue: Number(d.discountValue),
     })),
     waiverRequirements: program.waiverRequirements,
-    registrationOpen: program.registrationOpen,
+    status: program.status,
     registrationStartDate: program.registrationStartDate
       ? new Date(program.registrationStartDate).toISOString()
       : null,
@@ -226,7 +226,7 @@ export default async function ProgramRegisterPage({
             earlyAccessCode={earlyAccessCode}
             preSelectedInstanceIds={preSelectedInstanceIds}
           />
-        ) : registrationStatus === "closed" ? (
+        ) : programStatus === "CLOSED" || programStatus == null ? (
           <div className="rounded-lg border bg-muted/30 p-8 text-center">
             <Ban className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
             <h3 className="text-lg font-semibold mb-2">Registration Closed</h3>

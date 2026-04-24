@@ -1,7 +1,50 @@
 import type { ProgramStaffWithProfile } from "./staff";
 import type { BulkDiscount } from "@/lib/bulk-discounts";
 
-export type ProgramStatus = "ACTIVE" | "INACTIVE" | "ARCHIVED";
+export type ProgramStatus = "DRAFT" | "ACTIVE" | "COMPLETE";
+export type RegistrationWindowStatus = "OPEN" | "SCHEDULED" | "CLOSED";
+
+export const PROGRAM_STATUS_CONFIG: Record<
+  ProgramStatus,
+  { label: string; badgeClassName: string }
+> = {
+  DRAFT: {
+    label: "Draft",
+    badgeClassName:
+      "bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600",
+  },
+  ACTIVE: {
+    label: "Active",
+    badgeClassName:
+      "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900 dark:text-emerald-200 dark:border-emerald-700",
+  },
+  COMPLETE: {
+    label: "Complete",
+    badgeClassName:
+      "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900 dark:text-indigo-200 dark:border-indigo-700",
+  },
+};
+
+export const REGISTRATION_STATUS_CONFIG: Record<
+  RegistrationWindowStatus,
+  { label: string; badgeClassName: string }
+> = {
+  OPEN: {
+    label: "Registration Open",
+    badgeClassName:
+      "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900 dark:text-emerald-200 dark:border-emerald-700",
+  },
+  SCHEDULED: {
+    label: "Registration Scheduled",
+    badgeClassName:
+      "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-200 dark:border-yellow-700",
+  },
+  CLOSED: {
+    label: "Registration Closed",
+    badgeClassName:
+      "bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600",
+  },
+};
 
 // Simplified membership instance for program requirements
 export interface ProgramRequiredMembership {
@@ -113,11 +156,11 @@ export interface Program {
   allowedGenders: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[];
 
   // Registration Window
+  registrationStatus: RegistrationWindowStatus | null;
   registrationStartDate: string | null;
   registrationStartTime: string | null;
   registrationEndDate: string | null;
   registrationEndTime: string | null;
-  registrationOpen: boolean;
   earlyAccessCode: string | null;
 
   // Season
@@ -310,11 +353,11 @@ export interface CreateProgramPayload {
   seasonId?: string | null;
   categoryId?: string | null;
   glCodeId?: string | null;
+  registrationStatus?: RegistrationWindowStatus | null;
   registrationStartDate?: string | null;
   registrationStartTime?: string | null;
   registrationEndDate?: string | null;
   registrationEndTime?: string | null;
-  registrationOpen?: boolean;
   earlyAccessCode?: string | null;
   bulkDiscounts?: Array<{
     type: "FAMILY_SIBLING" | "MULTI_SESSION";
@@ -381,11 +424,11 @@ export interface UpdateProgramPayload {
   seasonId?: string | null;
   categoryId?: string | null;
   glCodeId?: string | null;
+  registrationStatus?: RegistrationWindowStatus | null;
   registrationStartDate?: string | null;
   registrationStartTime?: string | null;
   registrationEndDate?: string | null;
   registrationEndTime?: string | null;
-  registrationOpen?: boolean;
   earlyAccessCode?: string | null;
   bulkDiscounts?: Array<{
     type: "FAMILY_SIBLING" | "MULTI_SESSION";

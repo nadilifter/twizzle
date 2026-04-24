@@ -11,6 +11,7 @@ import {
   Layers,
   MapPin,
   CircleDot,
+  Repeat,
   X,
 } from "lucide-react";
 import type { DateRange } from "react-day-picker";
@@ -69,7 +70,8 @@ export interface ProgramFilterState {
   selectedCategory: string;
   selectedFacility: string;
   selectedGenders: string[];
-  selectedStatus: string;
+  selectedStatus: string[];
+  recurringFilter: "all" | "recurring" | "drop-in";
 }
 
 export const DEFAULT_FILTERS: ProgramFilterState = {
@@ -82,8 +84,11 @@ export const DEFAULT_FILTERS: ProgramFilterState = {
   selectedCategory: "",
   selectedFacility: "",
   selectedGenders: [],
-  selectedStatus: "",
+  selectedStatus: ["DRAFT", "ACTIVE"],
+  recurringFilter: "all",
 };
+
+const DEFAULT_STATUS_KEY = ["DRAFT", "ACTIVE"].sort().join(",");
 
 // Generate hour options: 12 AM (midnight) through 11 PM
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => {
@@ -112,7 +117,8 @@ export function countActiveFilters(
   if (filters.selectedCategory) count++;
   if (filters.selectedFacility) count++;
   if (filters.selectedGenders.length > 0) count++;
-  if (filters.selectedStatus) count++;
+  if (filters.selectedStatus.slice().sort().join(",") !== DEFAULT_STATUS_KEY) count++;
+  if (filters.recurringFilter !== "all") count++;
   return count;
 }
 
@@ -212,22 +218,59 @@ export function ProgramFiltersContent({
               <CircleDot className="h-3.5 w-3.5" />
               Status
             </Label>
-            <Select
-              value={filters.selectedStatus || "__all__"}
-              onValueChange={(v) =>
-                onFiltersChange({ ...filters, selectedStatus: v === "__all__" ? "" : v })
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="All Statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">All Statuses</SelectItem>
-                <SelectItem value="ACTIVE">Active</SelectItem>
-                <SelectItem value="INACTIVE">Inactive</SelectItem>
-                <SelectItem value="ARCHIVED">Archived</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex flex-wrap gap-2">
+              {(["DRAFT", "ACTIVE", "COMPLETE"] as const).map((s) => {
+                const selected = filters.selectedStatus.includes(s);
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => {
+                      const next = selected
+                        ? filters.selectedStatus.filter((v) => v !== s)
+                        : [...filters.selectedStatus, s];
+                      onFiltersChange({ ...filters, selectedStatus: next });
+                    }}
+                    className={cn(
+                      "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                      selected ? "border-primary bg-primary/5 text-primary" : "hover:bg-muted/50"
+                    )}
+                  >
+                    {s === "DRAFT" ? "Draft" : s === "ACTIVE" ? "Active" : "Complete"}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <Separator />
+        </>
+      )}
+
+      {/* Recurring vs Drop-in */}
+      {showStatusFilter && (
+        <>
+          <div className="space-y-3">
+            <Label className="flex items-center gap-1.5 text-sm font-medium">
+              <Repeat className="h-3.5 w-3.5" />
+              Session Type
+            </Label>
+            <div className="flex gap-2">
+              {(["all", "recurring", "drop-in"] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => onFiltersChange({ ...filters, recurringFilter: v })}
+                  className={cn(
+                    "flex-1 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors",
+                    filters.recurringFilter === v
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "hover:bg-muted/50"
+                  )}
+                >
+                  {v === "all" ? "All" : v === "recurring" ? "Recurring" : "Drop-in"}
+                </button>
+              ))}
+            </div>
           </div>
           <Separator />
         </>

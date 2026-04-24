@@ -53,7 +53,7 @@ async function rolloverPrograms(
         name: program.name,
         description: program.description,
         color: program.color,
-        status: "INACTIVE",
+
         registrationType: program.registrationType,
         pricingModel: program.pricingModel,
         basePrice: program.basePrice,
@@ -93,7 +93,8 @@ async function rolloverPrograms(
         registrationEndDate: newEndDate,
         registrationStartTime: null,
         registrationEndTime: null,
-        registrationOpen: true,
+        status: "ACTIVE",
+        registrationStatus: "OPEN",
         earlyAccessCode: null,
       },
     });

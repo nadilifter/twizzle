@@ -17,7 +17,8 @@ const createProgramSchema = z.object({
     .string()
     .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color")
     .optional(),
-  status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).default("ACTIVE"),
+  status: z.enum(["DRAFT", "ACTIVE", "COMPLETE"]).default("DRAFT"),
+  registrationStatus: z.enum(["OPEN", "SCHEDULED", "CLOSED"]).nullable().optional(),
   pricingModel: z.enum(["FLAT_RATE", "PER_SESSION"]).default("FLAT_RATE"),
   basePrice: z.number().min(0).optional().nullable(),
   perSessionPrice: z.number().min(0).optional().nullable(),
@@ -83,7 +84,6 @@ const createProgramSchema = z.object({
   registrationStartTime: z.string().optional().nullable(),
   registrationEndDate: z.string().optional().nullable(),
   registrationEndTime: z.string().optional().nullable(),
-  registrationOpen: z.boolean().default(true),
   earlyAccessCode: z.string().optional().nullable(),
 });
 
@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
           { description: { contains: search, mode: "insensitive" as const } },
         ],
       }),
-      ...(status && { status: status as "ACTIVE" | "INACTIVE" | "ARCHIVED" }),
+      ...(status && { status: status as "DRAFT" | "ACTIVE" | "COMPLETE" }),
       ...(seasonId && { seasonId }),
     };
 
@@ -308,6 +308,30 @@ export async function POST(request: NextRequest) {
       if (!cat) return NextResponse.json({ error: "Category not found" }, { status: 404 });
     }
 
+    // ACTIVE programs with OPEN or SCHEDULED registration must have both dates
+    if (
+      validatedData.status === "ACTIVE" &&
+      (validatedData.registrationStatus === "OPEN" ||
+        validatedData.registrationStatus === "SCHEDULED")
+    ) {
+      if (!validatedData.registrationStartDate) {
+        return NextResponse.json(
+          { error: "registrationStartDate is required for OPEN or SCHEDULED registration" },
+          { status: 400 }
+        );
+      }
+      if (!validatedData.registrationEndDate) {
+        return NextResponse.json(
+          { error: "registrationEndDate is required for OPEN or SCHEDULED registration" },
+          { status: 400 }
+        );
+      }
+    }
+    // COMPLETE programs always get registrationStatus: CLOSED
+    if (validatedData.status === "COMPLETE") {
+      validatedData.registrationStatus = "CLOSED";
+    }
+
     // Validate bulk discount business rules server-side
     if (validatedData.bulkDiscounts?.length) {
       const err = validateBulkDiscountsForProgram(validatedData.bulkDiscounts, validatedData);
@@ -363,6 +387,7 @@ export async function POST(request: NextRequest) {
           waitlistAutoPromote: validatedData.waitlistAutoPromote,
           waitlistCapacity: validatedData.waitlistCapacity,
           glCodeId: validatedData.glCodeId ?? undefined,
+          registrationStatus: validatedData.registrationStatus ?? null,
           registrationStartDate: validatedData.registrationStartDate
             ? parseDateOnly(validatedData.registrationStartDate)
             : null,
@@ -371,7 +396,6 @@ export async function POST(request: NextRequest) {
             ? parseDateOnly(validatedData.registrationEndDate)
             : null,
           registrationEndTime: validatedData.registrationEndTime,
-          registrationOpen: validatedData.registrationOpen,
           earlyAccessCode: validatedData.earlyAccessCode,
           seasonId: validatedData.seasonId ?? undefined,
           categoryId: validatedData.categoryId ?? undefined,

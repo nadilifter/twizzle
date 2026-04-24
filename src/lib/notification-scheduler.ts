@@ -808,8 +808,8 @@ async function findRegistrationWindowPrograms(
   const programs = await db.program.findMany({
     where: {
       organizationId,
-      registrationOpen: true,
       status: "ACTIVE",
+      registrationStatus: { in: ["OPEN", "SCHEDULED"] },
       [dateField]: { gte: startDate, lte: endDate },
     },
     select: { id: true, name: true },

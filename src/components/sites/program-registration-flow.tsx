@@ -166,7 +166,7 @@ interface ProgramData {
   requiredPasses?: RequiredPass[];
   bulkDiscounts: BulkDiscount[];
   waiverRequirements: WaiverRequirement[];
-  registrationOpen?: boolean;
+  status?: string;
   registrationStartDate?: string | null;
   registrationStartTime?: string | null;
   registrationEndDate?: string | null;

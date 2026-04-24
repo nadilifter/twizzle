@@ -113,6 +113,10 @@ interface Program {
   allowedGenders?: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[];
   seasonId?: string | null;
   categoryId?: string | null;
+  status?: string;
+  registrationStatus?: string | null;
+  registrationStartDate?: string | Date | null;
+  registrationEndDate?: string | Date | null;
   _count?: { instances?: number; enrollments?: number; waitlistedEnrollments?: number };
 }
 

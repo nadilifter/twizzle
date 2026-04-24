@@ -344,11 +344,8 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
           select: {
             id: true,
             name: true,
-            registrationOpen: true,
-            registrationStartDate: true,
-            registrationStartTime: true,
-            registrationEndDate: true,
-            registrationEndTime: true,
+            status: true,
+            registrationStatus: true,
             earlyAccessCode: true,
           },
         }),
@@ -360,8 +357,7 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
 
       // Registration window check — fail fast before validating requirements
       for (const prog of programsForRegCheck) {
-        const status = getRegistrationStatus(prog);
-        if (status === "open") continue;
+        if (prog.registrationStatus === "OPEN") continue;
 
         const cartItemsForProgram = programItems.filter(
           (item: CartItem) => (item.details?.programId || item.referenceId) === prog.id
@@ -371,7 +367,9 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
           const hasValidCode = code && prog.earlyAccessCode && code === prog.earlyAccessCode;
           if (!hasValidCode) {
             const reason =
-              status === "closed" ? "Registration has closed" : "Registration is not yet open";
+              prog.registrationStatus === "CLOSED"
+                ? "Registration has closed"
+                : "Registration is not yet open";
             return NextResponse.json({ error: `${reason} for "${prog.name}".` }, { status: 400 });
           }
         }

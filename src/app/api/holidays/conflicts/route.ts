@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
         OR: [{ endDate: null }, { endDate: { gte: date } }],
         startTime: { not: null },
         duration: { not: null },
-        status: { in: ["ACTIVE", "INACTIVE"] },
+        status: { notIn: ["DRAFT"] },
       },
       select: {
         id: true,

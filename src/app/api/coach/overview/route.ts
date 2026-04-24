@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
             where: {
               id: { in: allProgramIds },
               organizationId: { in: orgIds },
-              status: "ACTIVE",
+              status: { in: ["ACTIVE", "COMPLETE"] },
             },
             select: {
               id: true,

@@ -19,7 +19,8 @@ import {
 } from "lucide-react";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { formatRRuleDays } from "@/lib/rrule-utils";
-import { getRegistrationStatus } from "@/lib/registration-utils";
+import type { RegistrationWindowStatus } from "@/types/programs";
+import { isRegistrationClosed } from "@/lib/registration-utils";
 import { useParams, useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
@@ -110,7 +111,8 @@ interface ProgramCardProps {
     hasMembershipRestriction?: boolean;
     waitlistEnabled?: boolean;
     waitlistCapacity?: number | null;
-    registrationOpen?: boolean;
+    status?: string; // program status (DRAFT/ACTIVE/COMPLETE/ARCHIVED)
+    registrationStatus?: string | null; // registration window status (OPEN/SCHEDULED/CLOSED)
     registrationStartDate?: string | Date | null;
     registrationStartTime?: string | null;
     registrationEndDate?: string | Date | null;
@@ -187,7 +189,8 @@ export function ProgramCard({ program }: ProgramCardProps) {
   const canJoinWaitlist = isFull && waitlistHasRoom;
   const isSoldOut = isFull && !canJoinWaitlist && !isDropIn;
 
-  const registrationStatus = getRegistrationStatus(program);
+  // Use registrationStatus for registration window logic (OPEN/SCHEDULED/CLOSED)
+  const programStatus = (program.registrationStatus ?? null) as RegistrationWindowStatus | null;
 
   const daysLabel = program.rrule ? formatRRuleDays(program.rrule) : null;
 
@@ -455,13 +458,13 @@ export function ProgramCard({ program }: ProgramCardProps) {
 
         <Button
           onClick={() => router.push(`/programs/${program.id}`)}
-          disabled={isSoldOut || registrationStatus === "closed"}
+          disabled={isSoldOut || isRegistrationClosed(programStatus)}
           className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-transform active:scale-95"
         >
           <ClipboardList className="h-4 w-4" />
-          {registrationStatus === "closed"
+          {isRegistrationClosed(programStatus)
             ? "Registration Closed"
-            : registrationStatus === "scheduled" && program.registrationStartDate
+            : programStatus === "SCHEDULED" && program.registrationStartDate
               ? `Opens ${format(new Date(program.registrationStartDate), "MMM d")}`
               : isFull && canJoinWaitlist
                 ? "Join Waitlist"
