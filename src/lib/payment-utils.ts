@@ -21,6 +21,18 @@ export interface PaymentMethodDisplay {
   brand: string | null;
 }
 
+// Converts Prisma enum types (CARD, BANK) to Adyen-style types (scheme, ach),
+// and maps wallet brand strings. Pass-through for already-normalized types.
+export function normalizePaymentMethodType(pm: PaymentMethodDisplay): string {
+  const brand = pm.brand?.toLowerCase() ?? "";
+  if (brand.endsWith("_googlepay") || brand === "googlepay" || brand === "paywithgoogle")
+    return "googlepay";
+  if (brand.endsWith("_applepay") || brand === "applepay") return "applepay";
+  if (pm.type === "BANK") return "ach";
+  if (pm.type === "CARD") return "scheme";
+  return pm.type;
+}
+
 // Returns a human-readable label for a payment method.
 // getMethodLabel({ type: "scheme", brand: "amex" }) → "Amex"
 // getMethodLabel({ type: "ach", brand: null })      → "Bank Account (ACH)"

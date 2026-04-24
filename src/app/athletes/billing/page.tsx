@@ -2,23 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { formatPhoneNumberIntl, isValidPhoneNumber } from "react-phone-number-input";
-import {
-  Loader2,
-  Plus,
-  Pencil,
-  Trash2,
-  Star,
-  MapPin,
-  Phone,
-  User,
-  CreditCard,
-  Landmark,
-  Smartphone,
-} from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Star, MapPin, Phone, User, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 
 import { COUNTRIES, getRegionsForCountry, isValidPostalCode } from "@/lib/location-data";
-import { getMethodLabel, getMethodShortLabel, isBankType, isWalletType } from "@/lib/payment-utils";
+import { getMethodShortLabel, normalizePaymentMethodType } from "@/lib/payment-utils";
+import {
+  SavedPaymentMethodDisplay,
+  type SavedPaymentMethod,
+} from "@/components/billing/saved-payment-method-display";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -84,15 +76,6 @@ interface UserBillingAddress {
   isPrimary: boolean;
 }
 
-interface SavedPaymentMethod {
-  id: string;
-  type: string;
-  brand: string | null;
-  last4: string;
-  expiry: string | null;
-  isDefault: boolean;
-}
-
 const emptyContact = {
   firstName: "",
   lastName: "",
@@ -109,25 +92,6 @@ const emptyAddress = {
   stateProvince: "",
   postalCode: "",
 };
-
-// User-side PaymentMethod.type is the Prisma enum (CARD | BANK). payment-utils
-// helpers expect Adyen-style types (scheme, ach, googlepay, applepay, ...), so
-// normalize before delegating.
-function normalizeUserPaymentType(pm: { type: string; brand: string | null }): string {
-  const brand = pm.brand?.toLowerCase() ?? "";
-  if (brand.endsWith("_googlepay") || brand === "googlepay" || brand === "paywithgoogle") {
-    return "googlepay";
-  }
-  if (brand.endsWith("_applepay") || brand === "applepay") return "applepay";
-  if (pm.type === "BANK") return "ach";
-  return "scheme";
-}
-
-function getPaymentMethodIcon(type: string, className = "h-4 w-4 shrink-0") {
-  if (isWalletType({ type })) return <Smartphone className={className} />;
-  if (isBankType({ type })) return <Landmark className={className} />;
-  return <CreditCard className={className} />;
-}
 
 export default function BillingPage() {
   const [contacts, setContacts] = useState<UserContact[]>([]);
@@ -674,10 +638,8 @@ export default function BillingPage() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {paymentMethods.map((pm) => {
-              const normalizedType = normalizeUserPaymentType(pm);
-              const label = getMethodLabel({ type: normalizedType, brand: pm.brand });
               const shortLabel = getMethodShortLabel({
-                type: normalizedType,
+                type: normalizePaymentMethodType(pm),
                 brand: pm.brand,
                 lastFour: pm.last4,
               });
@@ -685,10 +647,7 @@ export default function BillingPage() {
                 <Card key={pm.id}>
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        {getPaymentMethodIcon(normalizedType)}
-                        {label}
-                      </CardTitle>
+                      <SavedPaymentMethodDisplay paymentMethod={pm} />
                       {pm.isDefault && (
                         <Badge variant="secondary" className="shrink-0">
                           <Star className="h-3 w-3 mr-1" />
@@ -697,12 +656,6 @@ export default function BillingPage() {
                       )}
                     </div>
                   </CardHeader>
-                  <CardContent className="pb-3 text-sm text-muted-foreground space-y-1">
-                    {pm.last4 && pm.last4 !== "****" && (
-                      <p className="font-mono">&bull;&bull;&bull;&bull; {pm.last4}</p>
-                    )}
-                    {pm.expiry && <p>Expires {pm.expiry}</p>}
-                  </CardContent>
                   <CardFooter className="gap-2">
                     {!pm.isDefault && (
                       <Button

@@ -81,14 +81,16 @@ describe("executeRecurringCharge", () => {
   it("generates deterministic reference to prevent double-charging", async () => {
     const charge = makeCharge();
 
-    vi.mocked(db.organization.findUnique).mockResolvedValueOnce({
-      taxEnabled: false,
-      taxRate: 0,
-      taxPaidBy: "CUSTOMER",
-      subscription: {
-        plan: { transactionFee: 0, perTransactionFee: 0 },
-      },
-    } as never);
+    vi.mocked(db.organization.findUnique)
+      .mockResolvedValueOnce({
+        taxEnabled: false,
+        taxRate: 0,
+        taxPaidBy: "CUSTOMER",
+        subscription: { plan: { transactionFee: 0, perTransactionFee: 0 } },
+      } as never)
+      .mockResolvedValueOnce({
+        adyenPlatformAccount: { storeReference: "store-ref-1" },
+      } as never);
 
     vi.mocked(chargeSubscription).mockResolvedValueOnce({
       resultCode: "Authorised",
@@ -104,9 +106,7 @@ describe("executeRecurringCharge", () => {
     } as never);
     vi.mocked(db.lineItem.create).mockResolvedValueOnce({} as never);
     vi.mocked(db.payment.create).mockResolvedValueOnce({ id: "pay-1" } as never);
-    vi.mocked(db.transaction.create).mockResolvedValueOnce({
-      id: "tx-1",
-    } as never);
+    vi.mocked(db.transaction.create).mockResolvedValueOnce({ id: "tx-1" } as never);
 
     const result = await executeRecurringCharge(charge, "org-1");
 
@@ -117,17 +117,21 @@ describe("executeRecurringCharge", () => {
       50,
       "recurring-charge-1-2026-04-01",
       "Monthly membership",
-      undefined
+      "store-ref-1"
     );
   });
 
   it("returns failure when Adyen refuses the charge", async () => {
     const charge = makeCharge();
 
-    vi.mocked(db.organization.findUnique).mockResolvedValueOnce({
-      taxEnabled: false,
-      subscription: { plan: { transactionFee: 0, perTransactionFee: 0 } },
-    } as never);
+    vi.mocked(db.organization.findUnique)
+      .mockResolvedValueOnce({
+        taxEnabled: false,
+        subscription: { plan: { transactionFee: 0, perTransactionFee: 0 } },
+      } as never)
+      .mockResolvedValueOnce({
+        adyenPlatformAccount: { storeReference: "store-ref-1" },
+      } as never);
 
     vi.mocked(chargeSubscription).mockResolvedValueOnce({
       resultCode: "Refused",
@@ -143,12 +147,16 @@ describe("executeRecurringCharge", () => {
   it("calculates tax when customer pays", async () => {
     const charge = makeCharge();
 
-    vi.mocked(db.organization.findUnique).mockResolvedValueOnce({
-      taxEnabled: true,
-      taxRate: 0.08,
-      taxPaidBy: "CUSTOMER",
-      subscription: { plan: { transactionFee: 0.029, perTransactionFee: 0.3 } },
-    } as never);
+    vi.mocked(db.organization.findUnique)
+      .mockResolvedValueOnce({
+        taxEnabled: true,
+        taxRate: 0.08,
+        taxPaidBy: "CUSTOMER",
+        subscription: { plan: { transactionFee: 0.029, perTransactionFee: 0.3 } },
+      } as never)
+      .mockResolvedValueOnce({
+        adyenPlatformAccount: { storeReference: "store-ref-1" },
+      } as never);
 
     vi.mocked(chargeSubscription).mockResolvedValueOnce({
       resultCode: "Authorised",
@@ -176,7 +184,7 @@ describe("executeRecurringCharge", () => {
       54,
       expect.any(String),
       expect.any(String),
-      undefined
+      "store-ref-1"
     );
   });
 });

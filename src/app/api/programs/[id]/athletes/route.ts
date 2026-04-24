@@ -71,6 +71,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       db.enrollment.findMany({
         where: { programId: id, status: { not: "CANCELLED" } },
         select: {
+          id: true,
           athleteId: true,
           status: true,
           createdAt: true,

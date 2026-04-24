@@ -14,7 +14,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { CheckCircle2, AlertCircle, Search, UserCheck, Filter, X } from "lucide-react";
+import { CheckCircle2, AlertCircle, Search, UserCheck, Filter, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { calculateAge } from "@/lib/age-utils";
@@ -39,6 +39,7 @@ import { DataTableViewOptions } from "@/components/data-table/data-table-view-op
 
 interface ProgramAthlete {
   id: string;
+  enrollmentId: string | null;
   name: string | null;
   firstName: string | null;
   lastName: string | null;
@@ -110,6 +111,7 @@ export function AthletesTab({ programId }: AthletesTabProps) {
   });
   const [registrationType, setRegistrationType] = React.useState<string>("ALL_INSTANCES");
   const [loading, setLoading] = React.useState(true);
+  const [cancellingId, setCancellingId] = React.useState<string | null>(null);
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
@@ -134,6 +136,24 @@ export function AthletesTab({ programId }: AthletesTabProps) {
   }, [programId]);
 
   const isPerInstance = registrationType === "PER_INSTANCE";
+
+  const handleCancelEnrollment = React.useCallback(async (enrollmentId: string) => {
+    setCancellingId(enrollmentId);
+    try {
+      const res = await fetch(`/api/enrollments/${enrollmentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "CANCELLED" }),
+      });
+      if (!res.ok) throw new Error("Failed to cancel enrollment");
+      setAthletes((prev) => prev.filter((a) => a.enrollmentId !== enrollmentId));
+      toast.success("Enrollment cancelled");
+    } catch {
+      toast.error("Failed to cancel enrollment");
+    } finally {
+      setCancellingId(null);
+    }
+  }, []);
 
   const columns = React.useMemo<ColumnDef<ProgramAthlete>[]>(() => {
     const cols: ColumnDef<ProgramAthlete>[] = [
@@ -166,9 +186,21 @@ export function AthletesTab({ programId }: AthletesTabProps) {
         header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
         cell: ({ row }) => {
           const status = row.original.status;
+          const label =
+            status === "WAITLIST_PAYMENT_PENDING"
+              ? "Payment Pending"
+              : status.charAt(0) + status.slice(1).toLowerCase();
           return (
-            <Badge variant={status === "ACTIVE" ? "default" : "secondary"}>
-              {status.charAt(0) + status.slice(1).toLowerCase()}
+            <Badge
+              variant={
+                status === "ACTIVE"
+                  ? "default"
+                  : status === "WAITLIST_PAYMENT_PENDING"
+                    ? "destructive"
+                    : "secondary"
+              }
+            >
+              {label}
             </Badge>
           );
         },
@@ -261,8 +293,34 @@ export function AthletesTab({ programId }: AthletesTabProps) {
       });
     }
 
+    if (!isPerInstance) {
+      cols.push({
+        id: "actions",
+        cell: ({ row }) => {
+          const { enrollmentId, status } = row.original;
+          if (
+            !enrollmentId ||
+            !["ACTIVE", "WAITLISTED", "WAITLIST_PAYMENT_PENDING"].includes(status)
+          )
+            return null;
+          const isCancelling = cancellingId === enrollmentId;
+          return (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 px-2 text-xs"
+              disabled={isCancelling}
+              onClick={() => handleCancelEnrollment(enrollmentId)}
+            >
+              {isCancelling ? <Loader2 className="h-3 w-3 animate-spin" /> : "Cancel"}
+            </Button>
+          );
+        },
+      });
+    }
+
     return cols;
-  }, [requirements, isPerInstance, programId]);
+  }, [requirements, isPerInstance, programId, cancellingId, handleCancelEnrollment]);
 
   const table = useReactTable({
     data: athletes,
@@ -394,7 +452,15 @@ export function AthletesTab({ programId }: AthletesTabProps) {
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium text-muted-foreground">Status</h4>
                       <div className="grid gap-2">
-                        {(["ACTIVE", "WAITLISTED", "PAUSED", "COMPLETED"] as const).map((st) => (
+                        {(
+                          [
+                            "ACTIVE",
+                            "WAITLISTED",
+                            "WAITLIST_PAYMENT_PENDING",
+                            "PAUSED",
+                            "COMPLETED",
+                          ] as const
+                        ).map((st) => (
                           <div key={st} className="flex items-center space-x-2">
                             <Checkbox
                               id={`status-${st}`}

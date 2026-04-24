@@ -76,7 +76,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const validatedData = updateEnrollmentSchema.parse(body);
 
     const wasCancellingActive =
-      existing.status === "ACTIVE" && validatedData.status === "CANCELLED";
+      (existing.status === "ACTIVE" || existing.status === "WAITLIST_PAYMENT_PENDING") &&
+      validatedData.status === "CANCELLED";
 
     const enrollment = await db.enrollment.update({
       where: { id, program: { organizationId: session.user.organizationId } },
@@ -143,7 +144,8 @@ export async function DELETE(
       return NextResponse.json({ error: "Enrollment not found" }, { status: 404 });
     }
 
-    const wasActive = existing.status === "ACTIVE";
+    const wasActive =
+      existing.status === "ACTIVE" || existing.status === "WAITLIST_PAYMENT_PENDING";
 
     // Cancel linked recurring charges before deletion (SetNull would orphan them)
     await db.recurringCharge.updateMany({

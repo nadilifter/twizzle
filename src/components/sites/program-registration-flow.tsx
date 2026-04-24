@@ -70,6 +70,11 @@ import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SessionCalendar } from "@/components/sites/session-calendar";
+import { AddPaymentMethodDialog } from "@/components/billing/add-payment-method-dialog";
+import {
+  SavedPaymentMethodDisplay,
+  type SavedPaymentMethod,
+} from "@/components/billing/saved-payment-method-display";
 
 // ---------- Types ----------
 
@@ -252,6 +257,7 @@ export function ProgramRegistrationFlow({
   // ---------- State ----------
 
   const [athletes, setAthletes] = useState<AthleteOption[]>([]);
+  const [enrolledAthleteIds, setEnrolledAthleteIds] = useState<Set<string>>(new Set());
   const [isLoadingAthletes, setIsLoadingAthletes] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [isCreatingAthlete, setIsCreatingAthlete] = useState(false);
@@ -369,7 +375,20 @@ export function ProgramRegistrationFlow({
       const response = await fetch(`/api/sites/${slug}/athletes`);
       if (response.ok) {
         const data = await response.json();
-        setAthletes(data.athletes || []);
+        const fetched: AthleteOption[] = data.athletes || [];
+        setAthletes(fetched);
+
+        // Bulk-check which athletes are already enrolled/waitlisted
+        if (fetched.length > 0) {
+          const ids = fetched.map((a) => a.id).join(",");
+          const regRes = await fetch(
+            `/api/public/programs/registrations?programId=${encodeURIComponent(program.id)}&athleteIds=${encodeURIComponent(ids)}`
+          );
+          if (regRes.ok) {
+            const regData = await regRes.json();
+            setEnrolledAthleteIds(new Set(regData.enrolledAthleteIds ?? []));
+          }
+        }
       }
     } catch (error) {
       console.error("Error fetching athletes:", error);
@@ -1066,6 +1085,16 @@ export function ProgramRegistrationFlow({
 
   const [isNavigatingToCheckout, setIsNavigatingToCheckout] = useState(false);
 
+  // Waitlist direct-join state
+  const [isJoiningWaitlist, setIsJoiningWaitlist] = useState(false);
+  const [waitlistJoined, setWaitlistJoined] = useState(false);
+  const [showAddPaymentDialog, setShowAddPaymentDialog] = useState(false);
+  // undefined = loading, null = none on file, SavedPaymentMethod = default card
+  const [defaultPaymentMethod, setDefaultPaymentMethod] = useState<
+    SavedPaymentMethod | null | undefined
+  >(undefined);
+  const [pmRefreshKey, setPmRefreshKey] = useState(0);
+
   const addCartItems = (silent: boolean) => {
     if (!selectedAthlete) return;
 
@@ -1184,6 +1213,46 @@ export function ProgramRegistrationFlow({
     }
   };
 
+  // ---------- Waitlist direct-join ----------
+
+  const currentStepId = stepper.state.current.data.id;
+
+  useEffect(() => {
+    if (!isWaitlistMode || price === 0 || currentStepId !== "review") return;
+    fetch("/api/user/payment-methods")
+      .then((r) => r.json())
+      .then((data) => {
+        const methods: SavedPaymentMethod[] = data.paymentMethods ?? [];
+        const def = methods.find((m) => m.isDefault) ?? methods[0] ?? null;
+        setDefaultPaymentMethod(def);
+      })
+      .catch(() => setDefaultPaymentMethod(null));
+  }, [isWaitlistMode, price, currentStepId, pmRefreshKey]);
+
+  const handleJoinWaitlist = async () => {
+    setIsJoiningWaitlist(true);
+    try {
+      const res = await fetch(`/api/sites/${slug}/programs/${program.id}/waitlist`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          athleteId: selectedAthlete?.id,
+          instanceIds: isPerInstance ? Array.from(selectedInstanceIds) : undefined,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error ?? "Failed to join waitlist");
+        return;
+      }
+      setWaitlistJoined(true);
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsJoiningWaitlist(false);
+    }
+  };
+
   // ---------- Auth gate ----------
 
   if (status === "loading") {
@@ -1219,7 +1288,6 @@ export function ProgramRegistrationFlow({
   // ---------- Rendering ----------
 
   const allSteps = stepper.state.all;
-  const currentStepId = stepper.state.current.data.id;
   const visibleSteps = allSteps.filter((s: { id: string }) => visibleStepIds.includes(s.id));
   const currentVisibleIndex = visibleSteps.findIndex((s: { id: string }) => s.id === currentStepId);
 
@@ -1439,26 +1507,40 @@ export function ProgramRegistrationFlow({
                           const genderLabel = athlete.gender
                             ? GENDER_LABELS[athlete.gender] || athlete.gender
                             : null;
+                          const alreadyEnrolled = enrolledAthleteIds.has(athlete.id);
 
                           return (
                             <button
                               key={athlete.id}
-                              onClick={() => setSelectedAthlete(athlete)}
-                              className="w-full flex items-center gap-3 p-3 rounded-lg border border-border bg-card hover:bg-accent hover:border-primary/40 transition-colors text-left"
+                              onClick={() => !alreadyEnrolled && setSelectedAthlete(athlete)}
+                              disabled={alreadyEnrolled}
+                              className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
+                                alreadyEnrolled
+                                  ? "border-border bg-muted/40 opacity-60 cursor-not-allowed"
+                                  : "border-border bg-card hover:bg-accent hover:border-primary/40 cursor-pointer"
+                              }`}
                             >
-                              <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary/10 text-primary shrink-0">
+                              <div
+                                className={`flex items-center justify-center h-10 w-10 rounded-full shrink-0 ${alreadyEnrolled ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"}`}
+                              >
                                 <User className="h-5 w-5" />
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="font-medium text-sm truncate">{displayName}</div>
                                 <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                                  {birthLabel && (
-                                    <span className="flex items-center gap-1">
-                                      <CalendarIcon className="h-3 w-3" />
-                                      {birthLabel}
-                                    </span>
+                                  {alreadyEnrolled ? (
+                                    <span>Already enrolled</span>
+                                  ) : (
+                                    <>
+                                      {birthLabel && (
+                                        <span className="flex items-center gap-1">
+                                          <CalendarIcon className="h-3 w-3" />
+                                          {birthLabel}
+                                        </span>
+                                      )}
+                                      {genderLabel && <span>{genderLabel}</span>}
+                                    </>
                                   )}
-                                  {genderLabel && <span>{genderLabel}</span>}
                                 </div>
                               </div>
                             </button>
@@ -2060,6 +2142,27 @@ export function ProgramRegistrationFlow({
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
+              {/* Payment method on file — waitlist paid programs */}
+              {isWaitlistMode && price > 0 && (
+                <div className="p-3 rounded-lg border bg-muted/30 space-y-1">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Payment method on file
+                  </p>
+                  {defaultPaymentMethod === undefined ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Loading…</span>
+                    </div>
+                  ) : (
+                    <SavedPaymentMethodDisplay paymentMethod={defaultPaymentMethod} />
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {defaultPaymentMethod
+                      ? "This card will be charged when a spot opens up."
+                      : "Add a payment method before joining the waitlist."}
+                  </p>
+                </div>
+              )}
               {/* Athlete */}
               <div>
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
@@ -2213,37 +2316,97 @@ export function ProgramRegistrationFlow({
                   </>
                 ) : (
                   <>
-                    <Button
-                      className="w-full gap-2"
-                      onClick={() => handleAddToCart(true)}
-                      disabled={
-                        isNavigatingToCheckout || (!isPerInstance && isAlreadyFullyRegistered)
-                      }
-                    >
-                      {isNavigatingToCheckout ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                    {isWaitlistMode ? (
+                      waitlistJoined ? (
+                        <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30 p-4 text-center">
+                          <Check className="h-6 w-6 text-green-600 dark:text-green-400 mx-auto mb-2" />
+                          <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                            You&apos;ve been added to the waitlist!
+                          </p>
+                          <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                            We&apos;ll notify you when a spot opens up.
+                          </p>
+                        </div>
                       ) : (
-                        <ClipboardList className="h-4 w-4" />
-                      )}
-                      {isNavigatingToCheckout
-                        ? "Going to checkout…"
-                        : isWaitlistMode
-                          ? "Join Waitlist & Checkout"
-                          : "Register & Checkout"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full gap-2"
-                      onClick={() => handleAddToCart(false)}
-                      disabled={
-                        isNavigatingToCheckout || (!isPerInstance && isAlreadyFullyRegistered)
-                      }
-                    >
-                      <ShoppingCart className="h-4 w-4" />
-                      {isWaitlistMode
-                        ? "Add to Cart & Continue Browsing"
-                        : "Add to Cart & Continue Browsing"}
-                    </Button>
+                        <>
+                          <Button
+                            className="w-full gap-2"
+                            onClick={handleJoinWaitlist}
+                            disabled={
+                              isJoiningWaitlist ||
+                              (price > 0 &&
+                                (defaultPaymentMethod === null ||
+                                  defaultPaymentMethod === undefined))
+                            }
+                          >
+                            {isJoiningWaitlist ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <ClipboardList className="h-4 w-4" />
+                            )}
+                            {isJoiningWaitlist ? "Joining waitlist…" : "Join Waitlist"}
+                          </Button>
+                          <AddPaymentMethodDialog
+                            sessionEndpoint="/api/user/payment-methods/session"
+                            description="A payment method is required to hold your spot. You won't be charged until a spot becomes available."
+                            open={showAddPaymentDialog}
+                            onOpenChange={setShowAddPaymentDialog}
+                            onPaymentMethodAdded={async () => {
+                              setShowAddPaymentDialog(false);
+                              // Fetch updated methods and set the newest as default
+                              try {
+                                const res = await fetch("/api/user/payment-methods");
+                                const data = await res.json();
+                                const methods: SavedPaymentMethod[] = data.paymentMethods ?? [];
+                                const newest = methods.sort(
+                                  (a, b) =>
+                                    new Date(b.createdAt ?? 0).getTime() -
+                                    new Date(a.createdAt ?? 0).getTime()
+                                )[0];
+                                if (newest && !newest.isDefault) {
+                                  await fetch(`/api/user/payment-methods/${newest.id}`, {
+                                    method: "PATCH",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ isDefault: true }),
+                                  });
+                                }
+                              } catch {
+                                // Non-fatal — pmRefreshKey will still re-fetch
+                              }
+                              setPmRefreshKey((k) => k + 1);
+                            }}
+                          />
+                        </>
+                      )
+                    ) : (
+                      <>
+                        <Button
+                          className="w-full gap-2"
+                          onClick={() => handleAddToCart(true)}
+                          disabled={
+                            isNavigatingToCheckout || (!isPerInstance && isAlreadyFullyRegistered)
+                          }
+                        >
+                          {isNavigatingToCheckout ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <ClipboardList className="h-4 w-4" />
+                          )}
+                          {isNavigatingToCheckout ? "Going to checkout…" : "Register & Checkout"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full gap-2"
+                          onClick={() => handleAddToCart(false)}
+                          disabled={
+                            isNavigatingToCheckout || (!isPerInstance && isAlreadyFullyRegistered)
+                          }
+                        >
+                          <ShoppingCart className="h-4 w-4" />
+                          Add to Cart & Continue Browsing
+                        </Button>
+                      </>
+                    )}
                     <Button
                       variant="ghost"
                       className="w-full gap-2"

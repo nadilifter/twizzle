@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -21,6 +21,9 @@ interface AddPaymentMethodDialogProps {
   trigger?: ReactNode;
   description?: string;
   componentType?: string;
+  // Optional controlled-mode props
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function AddPaymentMethodDialog({
@@ -29,8 +32,13 @@ export function AddPaymentMethodDialog({
   trigger,
   description = "Add a card, digital wallet, or bank account to your account.",
   componentType,
+  open: controlledOpen,
+  onOpenChange: onControlledOpenChange,
 }: AddPaymentMethodDialogProps) {
-  const [open, setOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const [internalOpen, setInternalOpen] = useState(false);
+  const actualOpen = isControlled ? controlledOpen : internalOpen;
+
   const [isLoading, setIsLoading] = useState(false);
   const [session, setSession] = useState<{
     sessionId: string;
@@ -38,14 +46,7 @@ export function AddPaymentMethodDialog({
   } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const handleOpenChange = async (next: boolean) => {
-    setOpen(next);
-    if (!next) {
-      abortRef.current?.abort();
-      abortRef.current = null;
-      setSession(null);
-      return;
-    }
+  const fetchSession = async () => {
     const controller = new AbortController();
     abortRef.current = controller;
     setIsLoading(true);
@@ -62,18 +63,49 @@ export function AddPaymentMethodDialog({
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
       toast.error("Failed to initialize payment form");
-      setOpen(false);
+      if (isControlled) {
+        onControlledOpenChange?.(false);
+      } else {
+        setInternalOpen(false);
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
+  // When controlled open flips to true, fetch the session
+  useEffect(() => {
+    if (!isControlled) return;
+    if (controlledOpen) {
+      fetchSession();
+    } else {
+      abortRef.current?.abort();
+      abortRef.current = null;
+      setSession(null);
+    }
+  }, [controlledOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleOpenChange = async (next: boolean) => {
+    if (isControlled) {
+      onControlledOpenChange?.(next);
+      return;
+    }
+    setInternalOpen(next);
+    if (!next) {
+      abortRef.current?.abort();
+      abortRef.current = null;
+      setSession(null);
+      return;
+    }
+    await fetchSession();
+  };
+
   const handlePaymentCompleted = async (result: { resultCode: string }) => {
     if (result.resultCode === "Authorised" || result.resultCode === "Pending") {
       toast.success("Payment method added successfully!");
-      setOpen(false);
       setSession(null);
       await onPaymentMethodAdded();
+      await handleOpenChange(false);
     } else {
       toast.error(`Failed to add payment method: ${result.resultCode}`);
     }
@@ -91,7 +123,7 @@ export function AddPaymentMethodDialog({
   );
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={actualOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{resolvedTrigger}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

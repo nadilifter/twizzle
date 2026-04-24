@@ -74,7 +74,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       include: {
         programInstance: {
           include: {
-            program: { select: { name: true } },
+            program: { select: { id: true, name: true } },
             organization: { select: { name: true } },
           },
         },
@@ -93,6 +93,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       include: {
         program: {
           select: {
+            id: true,
             name: true,
             organization: { select: { name: true } },
           },

@@ -4,6 +4,63 @@ import { addMonths, addYears } from "date-fns";
 import { getTodayNoonUTC, normalizeToNoonUTC } from "@/lib/date-utils";
 import type { Decimal } from "@prisma/client/runtime/library";
 
+export interface ChargeAmounts {
+  tax: number;
+  processingFee: number;
+  chargeTotal: number;
+  planTransactionFee: number;
+  planPerTransactionFee: number;
+  hasPlan: boolean;
+}
+
+export async function calculateChargeAmounts(
+  baseAmount: number,
+  organizationId: string
+): Promise<ChargeAmounts> {
+  const org = await db.organization.findUnique({
+    where: { id: organizationId },
+    select: {
+      taxEnabled: true,
+      taxRate: true,
+      taxPaidBy: true,
+      subscription: {
+        select: {
+          plan: {
+            select: { transactionFee: true, perTransactionFee: true },
+          },
+        },
+      },
+    },
+  });
+
+  const taxRate = org?.taxEnabled !== false ? Number(org?.taxRate ?? 0) : 0;
+  const taxPaidBy = org?.taxPaidBy ?? "CUSTOMER";
+  const planTransactionFee = org?.subscription?.plan
+    ? Number(org.subscription.plan.transactionFee)
+    : 0;
+  const planPerTransactionFee = org?.subscription?.plan
+    ? Number(org.subscription.plan.perTransactionFee)
+    : 0;
+
+  const tax = Math.round(baseAmount * taxRate * 100) / 100;
+  const feeBase = taxPaidBy === "CUSTOMER" ? baseAmount + tax : baseAmount;
+  const processingFeeRaw = feeBase > 0 ? feeBase * planTransactionFee + planPerTransactionFee : 0;
+  const processingFee = Math.round(processingFeeRaw * 100) / 100;
+
+  let chargeTotal = baseAmount;
+  if (taxPaidBy === "CUSTOMER") chargeTotal += tax;
+  chargeTotal = Math.round(chargeTotal * 100) / 100;
+
+  return {
+    tax,
+    processingFee,
+    chargeTotal,
+    planTransactionFee,
+    planPerTransactionFee,
+    hasPlan: !!org?.subscription?.plan,
+  };
+}
+
 export interface RecurringChargeWithRelations {
   id: string;
   organizationId: string;
@@ -55,44 +112,21 @@ export async function executeRecurringCharge(
   const chargeDateStr = charge.nextChargeDate.toISOString().split("T")[0];
   const reference = `recurring-${charge.id}-${chargeDateStr}`;
 
-  // Fetch org tax/fee settings
-  const org = await db.organization.findUnique({
-    where: { id: organizationId },
-    select: {
-      taxEnabled: true,
-      taxRate: true,
-      taxPaidBy: true,
-      subscription: {
-        select: {
-          plan: {
-            select: {
-              transactionFee: true,
-              perTransactionFee: true,
-            },
-          },
-        },
-      },
-      adyenPlatformAccount: { select: { storeReference: true } },
-    },
-  });
+  const [
+    { tax, processingFee, chargeTotal, planTransactionFee, planPerTransactionFee, hasPlan },
+    orgPlatform,
+  ] = await Promise.all([
+    calculateChargeAmounts(baseAmount, organizationId),
+    db.organization.findUnique({
+      where: { id: organizationId },
+      select: { adyenPlatformAccount: { select: { storeReference: true } } },
+    }),
+  ]);
 
-  const taxRate = org?.taxEnabled !== false ? Number(org?.taxRate ?? 0) : 0;
-  const taxPaidBy = org?.taxPaidBy ?? "CUSTOMER";
-  const planTransactionFee = org?.subscription?.plan
-    ? Number(org.subscription.plan.transactionFee)
-    : 0;
-  const planPerTransactionFee = org?.subscription?.plan
-    ? Number(org.subscription.plan.perTransactionFee)
-    : 0;
-
-  const tax = Math.round(baseAmount * taxRate * 100) / 100;
-  const feeBase = taxPaidBy === "CUSTOMER" ? baseAmount + tax : baseAmount;
-  const processingFeeRaw = feeBase > 0 ? feeBase * planTransactionFee + planPerTransactionFee : 0;
-  const processingFee = Math.round(processingFeeRaw * 100) / 100;
-
-  let chargeTotal = baseAmount;
-  if (taxPaidBy === "CUSTOMER") chargeTotal += tax;
-  chargeTotal = Math.round(chargeTotal * 100) / 100;
+  const storeReference = orgPlatform?.adyenPlatformAccount?.storeReference;
+  if (!storeReference) {
+    return { success: false, error: "Organization has no Adyen platform account configured" };
+  }
 
   try {
     const response = await chargeSubscription(
@@ -101,7 +135,7 @@ export async function executeRecurringCharge(
       chargeTotal,
       reference,
       charge.description,
-      org?.adyenPlatformAccount?.storeReference ?? undefined
+      storeReference
     );
 
     if (response.resultCode !== "Authorised") {
@@ -164,8 +198,8 @@ export async function executeRecurringCharge(
           method: charge.paymentMethod!.brand || "card",
           description: `Recurring charge – ${charge.description}`,
           settledAt: new Date(),
-          feeRate: org?.subscription?.plan ? planTransactionFee : null,
-          feeFixed: org?.subscription?.plan ? planPerTransactionFee : null,
+          feeRate: hasPlan ? planTransactionFee : null,
+          feeFixed: hasPlan ? planPerTransactionFee : null,
         },
       });
 

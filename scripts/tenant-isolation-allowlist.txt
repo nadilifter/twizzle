@@ -197,6 +197,8 @@ src/app/api/sites/[slug]/discount/validate/route.ts
 src/app/api/sites/[slug]/info/route.ts
 src/app/api/sites/[slug]/contact/route.ts
 src/app/api/sites/[slug]/receipt/[invoiceId]/route.ts
+src/app/api/sites/[slug]/programs/[id]/waitlist/route.ts
+src/app/api/athletes/[id]/enrollments/[enrollmentId]/route.ts
 
 # --- User-scoped routes (no org data, personal to user) ---
 src/app/api/avatar/route.ts

@@ -19,6 +19,7 @@ export interface AthleteLite {
 }
 
 export interface EnrollmentInput {
+  id: string;
   athleteId: string;
   status: string;
   createdAt: Date;
@@ -33,6 +34,7 @@ export interface InstanceRegistrationInput {
 
 export interface AthleteRow {
   id: string;
+  enrollmentId: string | null;
   name: string | null;
   firstName: string | null;
   lastName: string | null;
@@ -59,12 +61,14 @@ export function aggregateProgramAthletes(
     const createdAtIso = enr.createdAt.toISOString();
     if (existing) {
       existing.status = enr.status;
+      existing.enrollmentId = enr.id;
       if (createdAtIso < existing.firstRegisteredAt) {
         existing.firstRegisteredAt = createdAtIso;
       }
     } else {
       byAthlete.set(a.id, {
         id: a.id,
+        enrollmentId: enr.id,
         name: a.name,
         firstName: a.firstName,
         lastName: a.lastName,
@@ -93,6 +97,7 @@ export function aggregateProgramAthletes(
     } else {
       byAthlete.set(a.id, {
         id: a.id,
+        enrollmentId: null,
         name: a.name,
         firstName: a.firstName,
         lastName: a.lastName,

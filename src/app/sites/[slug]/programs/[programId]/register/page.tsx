@@ -3,8 +3,7 @@ import { getScopedDb } from "@/lib/db";
 import { getCacheVersion } from "@/lib/cache-version";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
-import Link from "next/link";
-import { ArrowLeft, Ban, Hourglass } from "lucide-react";
+import { Ban, Hourglass } from "lucide-react";
 import { ProgramRegistrationFlow } from "@/components/sites/program-registration-flow";
 import type { FileRequirementConfig } from "@/types/file-requirements";
 import {
@@ -209,14 +208,6 @@ export default async function ProgramRegisterPage({
   return (
     <div className="min-h-screen bg-background">
       <section className="mx-auto w-full max-w-6xl px-4 md:px-8 py-12">
-        <Link
-          href={`/programs/${programId}`}
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to {program.name}
-        </Link>
-
         {canRegister ? (
           <ProgramRegistrationFlow
             program={serializedProgram}

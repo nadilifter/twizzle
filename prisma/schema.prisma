@@ -1350,6 +1350,10 @@ model Enrollment {
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 
+  // Waitlist payment tracking — set when promoted from waitlist but initial charge fails
+  waitlistPaymentDeadline DateTime? // Null = no pending charge; non-null = 24h window to pay
+  waitlistChargeAttempts  Int       @default(0) // Auto-retry cap (max 3 cron attempts)
+
   // Relations
   athlete          Athlete           @relation(fields: [athleteId], references: [id], onDelete: Cascade)
   program          Program           @relation(fields: [programId], references: [id], onDelete: Cascade)
@@ -1370,6 +1374,7 @@ model Enrollment {
 enum EnrollmentStatus {
   ACTIVE
   WAITLISTED
+  WAITLIST_PAYMENT_PENDING // Spot reserved; charge in flight or awaiting user resolution. Counts toward capacity.
   PAUSED
   CANCELLED
   COMPLETED
@@ -3870,6 +3875,8 @@ enum NotificationTriggerType {
 
   // Administrative
   WAITLIST_OPENING // Spot available from waitlist
+  WAITLIST_PAYMENT_FAILED // Promoted but initial charge failed — 24h to resolve in-app
+  WAITLIST_PAYMENT_EXPIRED // 24h window passed without payment; removed from program
 
   // Recurring billing
   RECURRING_CHARGE_UPCOMING // Charge coming in N days

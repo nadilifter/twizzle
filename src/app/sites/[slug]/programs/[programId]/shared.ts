@@ -15,7 +15,7 @@ export const getCachedSiteConfig = unstable_cache(
 export async function getEnrollmentCounts(programId: string, waitlistEnabled: boolean) {
   const [enrolled, waitlistedCount] = await Promise.all([
     db.enrollment.count({
-      where: { programId, status: { not: "WAITLISTED" } },
+      where: { programId, status: { in: ["ACTIVE", "WAITLIST_PAYMENT_PENDING"] } },
     }),
     waitlistEnabled
       ? db.enrollment.count({

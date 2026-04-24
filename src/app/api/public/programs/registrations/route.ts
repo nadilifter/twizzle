@@ -14,8 +14,30 @@ export async function GET(request: NextRequest) {
     const programId = searchParams.get("programId");
     const athleteId = searchParams.get("athleteId");
 
-    if (!programId || !athleteId) {
-      return NextResponse.json({ error: "programId and athleteId are required" }, { status: 400 });
+    if (!programId) {
+      return NextResponse.json({ error: "programId is required" }, { status: 400 });
+    }
+
+    // Multi-athlete bulk check: ?programId=x&athleteIds=a,b,c
+    const athleteIdsParam = searchParams.get("athleteIds");
+    if (athleteIdsParam) {
+      const ids = athleteIdsParam.split(",").filter(Boolean);
+      const enrollments = await db.enrollment.findMany({
+        where: {
+          programId,
+          athleteId: { in: ids },
+          status: { in: ["ACTIVE", "PAUSED", "WAITLISTED", "WAITLIST_PAYMENT_PENDING"] },
+        },
+        select: { athleteId: true, status: true },
+      });
+      return NextResponse.json({
+        enrolledAthleteIds: enrollments.map((e) => e.athleteId),
+      });
+    }
+
+    // Single-athlete check (existing behaviour)
+    if (!athleteId) {
+      return NextResponse.json({ error: "athleteId or athleteIds is required" }, { status: 400 });
     }
 
     const [instanceRegistrations, enrollment] = await Promise.all([
