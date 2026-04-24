@@ -48,8 +48,9 @@ for (const envFile of [".env.local", ".env"]) {
   }
 }
 
+// Twilio caps EditReason at ~100 chars (400 Invalid edit reason beyond that).
 const EDIT_REASON =
-  "Corrected opt-in: SMS consent is now a standalone unchecked checkbox, separate from the Terms/Privacy checkbox, on every signup surface. Server refuses sends without smsConsentAt. Updated OptInImageUrls to point at the live signup URLs and rewrote AdditionalInformation to describe the new flow. See USC-295 through USC-303.";
+  "Corrected opt-in URL to standalone consent page; role-based contact email and business phone.";
 
 function parseArg(name: string): string | undefined {
   const idx = process.argv.indexOf(name);
@@ -92,7 +93,8 @@ async function main(): Promise<void> {
     targets = [{ sid: v.sid, phone: v.tollfreePhoneNumber }];
   } else {
     console.log("\nFetching all toll-free verifications...");
-    const all = await client.messaging.v1.tollfreeVerifications.list({ limit: 500 });
+    // Twilio's Tollfree endpoint caps PageSize at 50; the SDK's default is higher, so set it explicitly.
+    const all = await client.messaging.v1.tollfreeVerifications.list({ limit: 500, pageSize: 50 });
     const rejected = all.filter((v) => v.status === "TWILIO_REJECTED");
     console.log(`  Total verifications: ${all.length}`);
     console.log(`  Rejected:            ${rejected.length}`);
