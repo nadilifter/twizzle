@@ -45,6 +45,14 @@ function _isInsideScopedQuery(): boolean {
   return _scopedQueryStorage.getStore()?.active === true;
 }
 
+// Globally-unique fields per tenant model that themselves identify a single
+// tenant. Queries keyed by one of these fields are safe cross-tenant lookups
+// (typically tenant resolution at a request boundary, or uniqueness checks
+// during signup) and should not trigger the unscoped-query warning.
+const _TENANT_IDENTIFIER_FIELDS: Record<string, readonly string[]> = {
+  WebsiteConfig: ["subdomain", "domain"],
+};
+
 // In development, wrap the base client with a monitoring extension that warns
 // when tenant-model queries are executed without organizationId. In production,
 // export the raw client with zero overhead.
@@ -61,9 +69,27 @@ function _createDevWarningDb(client: PrismaClient) {
       }
       case "upsert":
         return !!args?.create?.organizationId;
-      default:
-        return !!args?.where?.organizationId;
+      default: {
+        const where = args?.where;
+        if (!where) return false;
+        if (where.organizationId) return true;
+        // Prisma compound-unique-key input shape:
+        //   where: { organizationId_periodStart: { organizationId, periodStart } }
+        // Only walk one level deep — do not recurse into AND/OR/NOT, which
+        // could falsely whitelist a disjunction like { OR: [{ organizationId }, ...] }.
+        return Object.values(where).some(
+          (v) => v && typeof v === "object" && "organizationId" in (v as object)
+        );
+      }
     }
+  }
+
+  function hasTenantIdentifier(model: string, args: any): boolean {
+    const fields = _TENANT_IDENTIFIER_FIELDS[model];
+    if (!fields) return false;
+    const where = args?.where;
+    if (!where) return false;
+    return fields.some((f) => where[f] !== undefined && where[f] !== null);
   }
 
   function warnIfUnscoped(model: string, action: string, args: any) {
@@ -71,7 +97,8 @@ function _createDevWarningDb(client: PrismaClient) {
       !_isInsideScopedQuery() &&
       typeof _TENANT_SET !== "undefined" &&
       _TENANT_SET.has(model) &&
-      !hasOrgId(action, args)
+      !hasOrgId(action, args) &&
+      !hasTenantIdentifier(model, args)
     ) {
       console.warn(
         `\x1b[33m[TENANT WARNING]\x1b[0m ${action} on ${model} without organizationId. ` +
