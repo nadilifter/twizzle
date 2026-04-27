@@ -36,6 +36,7 @@ import { db } from "@/lib/db";
 import { PlanSelector } from "./plan-selector";
 import { getUsageStats } from "@/lib/sms-service";
 import { getEmailUsageStats, checkEmailUsageLimits } from "@/lib/email-campaign-service";
+import { getOrganizationFeatures } from "@/lib/feature-resolver";
 import { PaymentMethodsCard } from "@/components/billing/payment-methods-card";
 import { syncPaymentMethodsFromAdyen } from "@/lib/payment-method-sync";
 
@@ -117,6 +118,9 @@ export default async function BillingPage() {
 
   const currentPlan = organization.subscription?.plan;
   const subscription = organization.subscription;
+
+  // Resolve feature flags (single source of truth for SMS/Email access; plan fields only control quotas)
+  const features = await getOrganizationFeatures(session.user.organizationId);
 
   // Get SMS usage
   const smsUsage = await getUsageStats(session.user.organizationId);
@@ -402,7 +406,7 @@ export default async function BillingPage() {
       </div>
 
       {/* SMS Usage Card */}
-      {currentPlan?.smsIncluded && currentPlan.smsIncluded > 0 && (
+      {features.sms && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -413,29 +417,44 @@ export default async function BillingPage() {
                 </CardTitle>
                 <CardDescription>Your SMS messaging usage for this billing period</CardDescription>
               </div>
-              {smsUsage && smsUsage.overageMessages > 0 && (
-                <Badge variant="outline" className="text-amber-600 border-amber-300">
-                  Over limit
-                </Badge>
-              )}
+              {smsUsage &&
+                smsUsage.overageMessages > 0 &&
+                !!currentPlan?.smsIncluded &&
+                currentPlan.smsIncluded > 0 && (
+                  <Badge variant="outline" className="text-amber-600 border-amber-300">
+                    Over limit
+                  </Badge>
+                )}
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
+            {currentPlan?.smsIncluded && currentPlan.smsIncluded > 0 ? (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Messages Used</span>
+                  <span className="font-medium">
+                    {smsUsage?.messagesSent ?? 0} / {currentPlan.smsIncluded}
+                  </span>
+                </div>
+                <Progress
+                  value={Math.min(
+                    100,
+                    ((smsUsage?.messagesSent ?? 0) / currentPlan.smsIncluded) * 100
+                  )}
+                  className="h-2"
+                />
+              </div>
+            ) : (
               <div className="flex justify-between text-sm">
-                <span>Messages Used</span>
+                <span>Messages Sent</span>
                 <span className="font-medium">
-                  {smsUsage?.messagesSent ?? 0} / {currentPlan.smsIncluded}
+                  {smsUsage?.messagesSent ?? 0}{" "}
+                  <span className="text-muted-foreground font-normal">
+                    ({currentPlan?.smsOverageRate ? "pay-per-use" : "comped"})
+                  </span>
                 </span>
               </div>
-              <Progress
-                value={Math.min(
-                  100,
-                  ((smsUsage?.messagesSent ?? 0) / currentPlan.smsIncluded) * 100
-                )}
-                className="h-2"
-              />
-            </div>
+            )}
 
             <div className="grid grid-cols-3 gap-4 pt-2">
               <div className="text-center">
@@ -463,13 +482,15 @@ export default async function BillingPage() {
               </div>
             </div>
 
-            {smsUsage && smsUsage.overageMessages > 0 && currentPlan.smsOverageRate && (
+            {smsUsage && smsUsage.overageMessages > 0 && currentPlan?.smsOverageRate && (
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Overage Charges</AlertTitle>
                 <AlertDescription>
-                  You&apos;ve sent {smsUsage.overageMessages} messages over your plan limit. Overage
-                  cost: {formatCurrency(smsUsage.overageCost)} (
+                  {currentPlan.smsIncluded && currentPlan.smsIncluded > 0
+                    ? `You've sent ${smsUsage.overageMessages} messages over your plan limit.`
+                    : `You've sent ${smsUsage.overageMessages} messages at the pay-per-use rate.`}{" "}
+                  Overage cost: {formatCurrency(smsUsage.overageCost)} (
                   {formatCurrency(Number(currentPlan.smsOverageRate))}/message)
                 </AlertDescription>
               </Alert>
@@ -479,7 +500,7 @@ export default async function BillingPage() {
       )}
 
       {/* Email Usage Card */}
-      {currentPlan?.emailIncluded && currentPlan.emailIncluded > 0 && (
+      {features.emailCampaigns && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -490,26 +511,43 @@ export default async function BillingPage() {
                 </CardTitle>
                 <CardDescription>Your email campaign usage for this billing period</CardDescription>
               </div>
-              {emailLimits && emailLimits.used > emailLimits.included && (
-                <Badge variant="outline" className="text-amber-600 border-amber-300">
-                  Over limit
-                </Badge>
-              )}
+              {emailLimits &&
+                emailLimits.included > 0 &&
+                emailLimits.used > emailLimits.included && (
+                  <Badge variant="outline" className="text-amber-600 border-amber-300">
+                    Over limit
+                  </Badge>
+                )}
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
+            {currentPlan?.emailIncluded && currentPlan.emailIncluded > 0 ? (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Emails Sent</span>
+                  <span className="font-medium">
+                    {emailLimits?.used ?? 0} / {currentPlan.emailIncluded}
+                  </span>
+                </div>
+                <Progress
+                  value={Math.min(
+                    100,
+                    ((emailLimits?.used ?? 0) / currentPlan.emailIncluded) * 100
+                  )}
+                  className="h-2"
+                />
+              </div>
+            ) : (
               <div className="flex justify-between text-sm">
                 <span>Emails Sent</span>
                 <span className="font-medium">
-                  {emailLimits?.used ?? 0} / {currentPlan.emailIncluded}
+                  {emailLimits?.used ?? 0}{" "}
+                  <span className="text-muted-foreground font-normal">
+                    ({currentPlan?.emailOverageRate ? "pay-per-use" : "comped"})
+                  </span>
                 </span>
               </div>
-              <Progress
-                value={Math.min(100, ((emailLimits?.used ?? 0) / currentPlan.emailIncluded) * 100)}
-                className="h-2"
-              />
-            </div>
+            )}
 
             {emailStats && (
               <div className="grid grid-cols-4 gap-4 pt-2">
@@ -542,13 +580,15 @@ export default async function BillingPage() {
 
             {emailLimits &&
               emailLimits.used > emailLimits.included &&
-              currentPlan.emailOverageRate && (
+              currentPlan?.emailOverageRate && (
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
                   <AlertTitle>Overage Charges</AlertTitle>
                   <AlertDescription>
-                    You&apos;ve sent {emailLimits.used - emailLimits.included} emails over your plan
-                    limit. Overage cost:{" "}
+                    {emailLimits.included > 0
+                      ? `You've sent ${emailLimits.used - emailLimits.included} emails over your plan limit.`
+                      : `You've sent ${emailLimits.used} emails at the pay-per-use rate.`}{" "}
+                    Overage cost:{" "}
                     {formatCurrency(
                       (emailLimits.used - emailLimits.included) *
                         Number(currentPlan.emailOverageRate)
