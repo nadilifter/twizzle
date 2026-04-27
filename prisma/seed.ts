@@ -746,7 +746,7 @@ async function main() {
     balanceAccountId: "BA3297R22322BK5P8Z5ZG2LCQ",
     storeId: "ST3299M223229T5P7KV9K3SHW",
     storeReference: "store-metro-sports",
-    splitConfigurationId: "SCNF42CLJ223225J5P8Z6LFB5L5CXS",
+    splitConfigurationId: "SCNF42CQT223225K5P95MZD88D6H28",
     sweepId: "SWPC4292W22322435P8Z6KZCSK2V2K",
     transferInstrumentId: "SE3295Z223227J5P8Z6J695MW",
     onboardingStatus: "VERIFIED" as const,
