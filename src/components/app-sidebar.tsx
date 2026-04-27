@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   ChevronRight,
   LifeBuoy,
@@ -729,10 +729,14 @@ function EntitySearchResults({
   results,
   isLoading,
   show,
+  isHighlighted,
+  highlightedItemRef,
 }: {
   results: SidebarSearchResults;
   isLoading: boolean;
   show: boolean;
+  isHighlighted: (sectionKey: string, entityId: string) => boolean;
+  highlightedItemRef: React.RefObject<HTMLLIElement>;
 }) {
   if (!show) return null;
 
@@ -773,21 +777,27 @@ function EntitySearchResults({
                 )}
               </SidebarMenuButton>
               <SidebarMenuSub>
-                {items.map((entity) => (
-                  <SidebarMenuSubItem key={entity.id}>
-                    <SidebarMenuSubButton asChild>
-                      <Link
-                        href={
-                          section.linkToDetail
-                            ? `${section.urlPrefix}${entity.id}`
-                            : section.urlPrefix
-                        }
-                      >
-                        <span>{entity.name}</span>
-                      </Link>
-                    </SidebarMenuSubButton>
-                  </SidebarMenuSubItem>
-                ))}
+                {items.map((entity) => {
+                  const highlighted = isHighlighted(section.key, entity.id);
+                  return (
+                    <SidebarMenuSubItem
+                      key={entity.id}
+                      ref={highlighted ? highlightedItemRef : undefined}
+                    >
+                      <SidebarMenuSubButton asChild isActive={highlighted}>
+                        <Link
+                          href={
+                            section.linkToDetail
+                              ? `${section.urlPrefix}${entity.id}`
+                              : section.urlPrefix
+                          }
+                        >
+                          <span>{entity.name}</span>
+                        </Link>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  );
+                })}
               </SidebarMenuSub>
             </SidebarMenuItem>
           );
@@ -799,6 +809,7 @@ function EntitySearchResults({
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
+  const router = useRouter();
   const { isMobile } = useSidebar();
   const { data: session, status } = useSession();
   const { features, isLoaded: isFeaturesLoaded } = useFeatures();
@@ -817,7 +828,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   // Search state
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [highlightedIndex, setHighlightedIndex] = React.useState(0);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
+  const highlightedItemRef = React.useRef<HTMLLIElement>(null);
   const { results: entityResults, isLoading: isEntitySearchLoading } =
     useSidebarSearch(searchQuery);
 
@@ -855,6 +868,78 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       })
       .filter(Boolean) as typeof filteredNavMain;
   }, [filteredNavMain, searchQuery]);
+
+  const isSearchActive = searchQuery.trim().length > 0;
+
+  const { navigableItems, indexByItem } = React.useMemo(() => {
+    const items: { url: string }[] = [];
+    const map = new Map<string, number>();
+    if (!isSearchActive) return { navigableItems: items, indexByItem: map };
+
+    for (const section of searchFilteredNav) {
+      for (const subItem of section.items ?? []) {
+        map.set(`nav:${section.title}:${subItem.title}`, items.length);
+        items.push({ url: subItem.url });
+      }
+    }
+    for (const section of ENTITY_SECTIONS) {
+      for (const entity of entityResults[section.key]) {
+        const url = section.linkToDetail ? `${section.urlPrefix}${entity.id}` : section.urlPrefix;
+        map.set(`entity:${section.key}:${entity.id}`, items.length);
+        items.push({ url });
+      }
+    }
+    return { navigableItems: items, indexByItem: map };
+  }, [isSearchActive, searchFilteredNav, entityResults]);
+
+  // Reset highlight to first result whenever the query changes.
+  React.useEffect(() => {
+    setHighlightedIndex(0);
+  }, [searchQuery]);
+
+  // Clamp highlight when the results list shrinks (e.g. async entity results settle).
+  React.useEffect(() => {
+    setHighlightedIndex((idx) => {
+      if (navigableItems.length === 0) return 0;
+      return idx >= navigableItems.length ? navigableItems.length - 1 : idx;
+    });
+  }, [navigableItems.length]);
+
+  // Keep the highlighted item in view as the user arrows through results.
+  React.useEffect(() => {
+    highlightedItemRef.current?.scrollIntoView({ block: "nearest" });
+  }, [highlightedIndex]);
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      if (searchQuery) {
+        e.preventDefault();
+        setSearchQuery("");
+      } else {
+        searchInputRef.current?.blur();
+      }
+      return;
+    }
+    if (navigableItems.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightedIndex((i) => (i + 1) % navigableItems.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightedIndex((i) => (i - 1 + navigableItems.length) % navigableItems.length);
+    } else if (e.key === "Enter") {
+      const target = navigableItems[highlightedIndex];
+      const anchor = highlightedItemRef.current?.querySelector("a");
+      if (target && anchor) {
+        e.preventDefault();
+        anchor.click();
+      } else if (target) {
+        e.preventDefault();
+        router.push(target.url);
+      }
+    }
+  };
+
   const filteredAccessPoints = React.useMemo(
     () => filterAccessPointsByFeatures(data.navSecondaryAccessPoints, features),
     [features]
@@ -972,6 +1057,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   className="pl-8 pr-8"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleSearchKeyDown}
                 />
                 <Search className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 opacity-50 select-none" />
                 {searchQuery ? (
@@ -1029,25 +1115,36 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                           <SidebarMenuSub>
-                            {item.items?.map((subItem) => (
-                              <SidebarMenuSubItem key={subItem.title}>
-                                <SidebarMenuSubButton asChild isActive={pathname === subItem.url}>
-                                  <Link
-                                    href={subItem.url}
-                                    className="flex items-center justify-between w-full"
+                            {item.items?.map((subItem) => {
+                              const navIdx = indexByItem.get(`nav:${item.title}:${subItem.title}`);
+                              const isSearchHighlighted =
+                                isSearchActive && navIdx === highlightedIndex;
+                              return (
+                                <SidebarMenuSubItem
+                                  key={subItem.title}
+                                  ref={isSearchHighlighted ? highlightedItemRef : undefined}
+                                >
+                                  <SidebarMenuSubButton
+                                    asChild
+                                    isActive={isSearchHighlighted || pathname === subItem.url}
                                   >
-                                    <span>{subItem.title}</span>
-                                    {subItem.url === DASHBOARD_URL ? (
-                                      <ActionItemsBadge />
-                                    ) : subItem.url === CHAT_URL ? (
-                                      <ChatUnreadBadge />
-                                    ) : (
-                                      <FeatureStatusIndicator url={subItem.url} />
-                                    )}
-                                  </Link>
-                                </SidebarMenuSubButton>
-                              </SidebarMenuSubItem>
-                            ))}
+                                    <Link
+                                      href={subItem.url}
+                                      className="flex items-center justify-between w-full"
+                                    >
+                                      <span>{subItem.title}</span>
+                                      {subItem.url === DASHBOARD_URL ? (
+                                        <ActionItemsBadge />
+                                      ) : subItem.url === CHAT_URL ? (
+                                        <ChatUnreadBadge />
+                                      ) : (
+                                        <FeatureStatusIndicator url={subItem.url} />
+                                      )}
+                                    </Link>
+                                  </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                              );
+                            })}
                           </SidebarMenuSub>
                         </CollapsibleContent>
                       </SidebarMenuItem>
@@ -1060,6 +1157,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           results={entityResults}
           isLoading={isEntitySearchLoading}
           show={searchQuery.trim().length >= 2}
+          isHighlighted={(sectionKey, entityId) =>
+            isSearchActive &&
+            indexByItem.get(`entity:${sectionKey}:${entityId}`) === highlightedIndex
+          }
+          highlightedItemRef={highlightedItemRef}
         />
         {searchQuery.trim() &&
           isFeaturesLoaded &&
