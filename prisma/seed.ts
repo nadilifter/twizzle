@@ -30,6 +30,12 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 
 import { Redis } from "@upstash/redis";
+import {
+  listBalanceAccountTransfers,
+  getTransferInstrumentLast4,
+  getBalanceAccountSweepDescription,
+  isPlatformConfigured,
+} from "@/lib/adyen-platform";
 
 const prisma = new PrismaClient();
 
@@ -60,6 +66,236 @@ function noonUTC(dateStr: string): Date {
   const [year, month, day] = dateStr.split("-").map(Number);
   return new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
 }
+// ---------------------------------------------------------------------------
+// Adyen sync helpers
+// ---------------------------------------------------------------------------
+
+// Inlined from payout-utils to avoid pulling @/lib/db into the seed process.
+const ADYEN_SWEEP_REF_RE = /^SWPE\w+$/;
+function seedDeterminePayoutType(
+  desc: string | null | undefined,
+  sweepDesc: string | null | undefined
+): "SWEEP" | "MANUAL" {
+  const d = (desc ?? "").toUpperCase();
+  const s = sweepDesc?.toUpperCase();
+  const matchesPrefix = (str: string, prefix: string) =>
+    str === prefix ||
+    (str.startsWith(prefix + " ") && ADYEN_SWEEP_REF_RE.test(str.slice(prefix.length + 1)));
+  if (s) return matchesPrefix(d, s) ? "SWEEP" : "MANUAL";
+  return matchesPrefix(d, "EXT BAL SWEEP") ? "SWEEP" : "MANUAL";
+}
+
+function mapTransferTypeToTxnType(
+  type: string
+): "PAYMENT" | "REFUND" | "CHARGEBACK" | "CAPTURE" | "CANCEL" | null {
+  const map: Record<string, "PAYMENT" | "REFUND" | "CHARGEBACK" | "CAPTURE" | "CANCEL"> = {
+    payment: "PAYMENT",
+    capture: "CAPTURE",
+    captureReversal: "CANCEL",
+    refund: "REFUND",
+    refundReversal: "REFUND",
+    chargeback: "CHARGEBACK",
+    chargebackReversal: "CHARGEBACK",
+    chargebackCorrection: "CHARGEBACK",
+    secondChargeback: "CHARGEBACK",
+    secondChargebackCorrection: "CHARGEBACK",
+  };
+  return map[type] ?? null;
+}
+
+function mapTransferStatusToTxnStatus(
+  status: string
+): "AUTHORISED" | "CAPTURED" | "SETTLED" | "REFUSED" | "CANCELLED" | "ERROR" | "PENDING" {
+  const map: Record<
+    string,
+    "AUTHORISED" | "CAPTURED" | "SETTLED" | "REFUSED" | "CANCELLED" | "ERROR" | "PENDING"
+  > = {
+    booked: "SETTLED",
+    captured: "CAPTURED",
+    capturePending: "CAPTURED",
+    authorised: "AUTHORISED",
+    received: "AUTHORISED",
+    merchantPayin: "AUTHORISED",
+    merchantPayinPending: "PENDING",
+    pendingExecution: "PENDING",
+    bankTransferPending: "PENDING",
+    refunded: "SETTLED",
+    cancelled: "CANCELLED",
+    failed: "ERROR",
+    refused: "REFUSED",
+    rejected: "ERROR",
+    error: "ERROR",
+    returned: "ERROR",
+  };
+  return map[status] ?? "PENDING";
+}
+
+const PAYOUT_STATUS_MAP: Record<string, "PAID" | "SCHEDULED" | "FAILED" | "PENDING"> = {
+  booked: "PAID",
+  pendingApproval: "SCHEDULED",
+  authorised: "SCHEDULED",
+  failed: "FAILED",
+  refused: "FAILED",
+  returned: "FAILED",
+  internallyDeclined: "FAILED",
+  validationFailed: "FAILED",
+};
+
+/**
+ * Pulls real payout and transaction history from Adyen for a seeded org
+ * and upserts it into the local DB so the financials dashboard shows accurate
+ * data without requiring live webhook events.
+ *
+ * Requires ADYEN_PLATFORM_API_KEY to have "Balance Platform Transfers read"
+ * permission — see docs/SEEDING.md § "Adyen Test Accounts".
+ */
+async function syncAdyenDataForOrg(
+  orgId: string,
+  balanceAccountId: string,
+  sweepId: string
+): Promise<{ transactions: number; payouts: number }> {
+  let txnCount = 0;
+  let payoutCount = 0;
+
+  // ---- 1. platformPayment transfers → Transaction records ----
+  // Wrapped independently so a permission error here does not block payout sync below.
+  try {
+    const platPayTransfers = await listBalanceAccountTransfers(balanceAccountId, {
+      category: "platformPayment",
+      createdSince: new Date("2020-01-01"),
+    });
+
+    for (const transfer of platPayTransfers) {
+      const catData = transfer.categoryData as any;
+
+      // Only sync net amounts credited to the org — skip fee/commission split entries
+      if (catData?.platformPaymentType !== "BalanceAccount") continue;
+
+      // Use modification PSP ref for captures/refunds/chargebacks; original PSP ref for payments
+      const transferType = transfer.type as string;
+      const pspReference: string | undefined =
+        transferType === "payment"
+          ? (catData?.pspPaymentReference ?? undefined)
+          : (catData?.modificationPspReference ?? catData?.pspPaymentReference ?? undefined);
+
+      if (!pspReference) continue;
+
+      const txnType = mapTransferTypeToTxnType(transferType);
+      if (!txnType) continue;
+
+      const txnStatus = mapTransferStatusToTxnStatus(transfer.status as string);
+      const amount = (transfer.amount?.value ?? 0) / 100;
+      const currency = transfer.amount?.currency ?? "USD";
+      const settledAt =
+        txnStatus === "SETTLED" && transfer.createdAt ? new Date(transfer.createdAt) : null;
+
+      await prisma.transaction.upsert({
+        where: { pspReference },
+        update: {
+          status: txnStatus,
+          ...(settledAt ? { settledAt } : {}),
+        },
+        create: {
+          organizationId: orgId,
+          pspReference,
+          merchantRef: catData?.paymentMerchantReference ?? null,
+          type: txnType,
+          amount,
+          currency,
+          status: txnStatus,
+          settledAt,
+          // method (card brand) is not available from the Balance Platform Transfers API;
+          // it is only present in the standard payment webhook notification.
+        },
+      });
+      txnCount++;
+    }
+  } catch (err: any) {
+    const status = err?.statusCode ?? err?.status;
+    if (status === 401 || status === 403) {
+      console.warn(
+        `  ⚠ transactions skipped — ADYEN_PLATFORM_API_KEY may need` +
+          ` "Balance Platform Transfers read" permission. See docs/SEEDING.md.`
+      );
+    } else {
+      console.warn(`  ⚠ transaction sync failed — ${err?.message ?? err}`);
+    }
+  }
+
+  // ---- 2. bank transfers → Payout records ----
+  const bankTransfers = await listBalanceAccountTransfers(balanceAccountId, {
+    category: "bank",
+    createdSince: new Date("2020-01-01"),
+  });
+
+  const sweepDescription = await getBalanceAccountSweepDescription(balanceAccountId, sweepId).catch(
+    () => null
+  );
+
+  // Cache TI → last4 to avoid redundant API calls per org
+  const tiLast4Cache = new Map<string, string | null>();
+
+  for (const transfer of bankTransfers) {
+    const statusStr = (
+      typeof transfer.status === "object" ? transfer.status?.statusCode : transfer.status
+    ) as string;
+    const payoutStatus = PAYOUT_STATUS_MAP[statusStr ?? ""] ?? "PENDING";
+    const amount = (transfer.amount?.value ?? 0) / 100;
+    const currency = transfer.amount?.currency ?? "USD";
+    const payoutType = seedDeterminePayoutType(transfer.description, sweepDescription);
+    const transferDate = transfer.createdAt ? new Date(transfer.createdAt) : new Date();
+
+    let bankAccount: string | null = null;
+    const tiId: string | undefined = transfer.counterparty?.transferInstrumentId;
+    if (tiId) {
+      if (!tiLast4Cache.has(tiId)) {
+        tiLast4Cache.set(tiId, await getTransferInstrumentLast4(tiId).catch(() => null));
+      }
+      bankAccount = tiLast4Cache.get(tiId) ?? null;
+    }
+
+    const updateFields = {
+      status: payoutStatus,
+      payoutType,
+      ...(bankAccount ? { bankAccount } : {}),
+      ...(payoutStatus === "PAID" ? { paidAt: transferDate } : {}),
+      ...(payoutStatus === "SCHEDULED" ? { scheduledAt: transferDate } : {}),
+    };
+
+    const payout = await prisma.payout.upsert({
+      where: { reference: transfer.id },
+      update: updateFields,
+      create: {
+        organizationId: orgId,
+        reference: transfer.id,
+        amount,
+        fees: 0,
+        net: amount,
+        currency,
+        ...updateFields,
+      },
+    });
+    payoutCount++;
+
+    // Link settled transactions to PAID payouts using paidAt as the cutoff
+    if (payoutStatus === "PAID" && payout.paidAt) {
+      await prisma.transaction.updateMany({
+        where: {
+          organizationId: orgId,
+          status: "SETTLED",
+          payoutId: null,
+          settledAt: { lte: payout.paidAt },
+        },
+        data: { payoutId: payout.id },
+      });
+    }
+  }
+
+  return { transactions: txnCount, payouts: payoutCount };
+}
+
+// ---------------------------------------------------------------------------
+
 async function main() {
   console.log("🌱 Starting development seed...\n");
 
@@ -430,12 +666,203 @@ async function main() {
   console.log(`  ✓ Created: ${orgDemo.name}`);
   console.log(`  ✓ Created: ${orgUplifter.name}`);
 
-  // Clear any existing Adyen onboarding data so re-seeding always starts
-  // clean and the full KYC initiation flow can be tested from scratch.
-  await prisma.adyenPlatformAccount.deleteMany({
-    where: { organizationId: { in: [ORG1_ID, ORG2_ID, ORG_DEMO_ID] } },
+  // ============================================
+  // ADYEN PLATFORM ACCOUNTS
+  // ============================================
+  // Both orgs map to real accounts in the Adyen TEST environment (KirraCapital_Leapfrog_LOCAL_TEST).
+  // See docs/SEEDING.md § "Adyen Test Accounts" for Customer Area links and verification steps.
+  console.log("\n🏦 Creating Adyen platform accounts...");
+
+  const sunriseAdyenData = {
+    legalEntityId: "LE329CB223227L5P8Z836B2C3",
+    businessLineId: "SE329CB223227L5P8Z836B2GP",
+    accountHolderId: "AH3292V22322BK5P8Z8364KJM",
+    balanceAccountId: "BA3292V22322BK5P8Z8374KKP",
+    storeId: "ST32CSW223229T5P7L2K9547D",
+    storeReference: "store-sunrise-gymnastics",
+    splitConfigurationId: "SCNF42988223225J5P8Z8HP2HM2624",
+    sweepId: "SWPC4299322322445P8Z8GSFFB4BNG",
+    transferInstrumentId: "SE329CB223227L5P8Z878B73G",
+    onboardingStatus: "VERIFIED" as const,
+    verificationStatus: "All capabilities verified",
+    verifiedAt: new Date(),
+    legalNameConfirmedAt: new Date(),
+    platformFeeAcknowledgedAt: new Date(),
+    platformAgreementAcceptedAt: new Date(),
+    payoutSchedule: "weekly",
+    capabilities: {
+      receivePayments: {
+        requested: true,
+        allowed: true,
+        enabled: true,
+        verificationStatus: "valid",
+      },
+      sendToBalanceAccount: {
+        requested: true,
+        allowed: true,
+        enabled: true,
+        verificationStatus: "valid",
+      },
+      sendToTransferInstrument: {
+        requested: true,
+        allowed: true,
+        enabled: true,
+        verificationStatus: "valid",
+        transferInstruments: [
+          {
+            id: "SE329CB223227L5P8Z878B73G",
+            allowed: true,
+            enabled: true,
+            requested: true,
+            verificationStatus: "valid",
+          },
+        ],
+      },
+      receiveFromBalanceAccount: {
+        requested: true,
+        allowed: true,
+        enabled: true,
+        verificationStatus: "valid",
+      },
+      receiveFromPlatformPayments: {
+        requested: true,
+        allowed: true,
+        enabled: true,
+        verificationStatus: "valid",
+      },
+    },
+  };
+
+  await prisma.adyenPlatformAccount.upsert({
+    where: { organizationId: ORG1_ID },
+    update: sunriseAdyenData,
+    create: { organizationId: ORG1_ID, ...sunriseAdyenData },
   });
-  console.log("  ✓ Cleared Adyen platform account data for all seed orgs");
+
+  const metroAdyenData = {
+    legalEntityId: "LE3295Z223227J5P8Z5ZF8SD6",
+    businessLineId: "SE3295Z223227J5P8Z5ZF8SHS",
+    accountHolderId: "AH3292V22322BK5P8Z5ZF4DWF",
+    balanceAccountId: "BA3297R22322BK5P8Z5ZG2LCQ",
+    storeId: "ST3299M223229T5P7KV9K3SHW",
+    storeReference: "store-metro-sports",
+    splitConfigurationId: "SCNF42CLJ223225J5P8Z6LFB5L5CXS",
+    sweepId: "SWPC4292W22322435P8Z6KZCSK2V2K",
+    transferInstrumentId: "SE3295Z223227J5P8Z6J695MW",
+    onboardingStatus: "VERIFIED" as const,
+    verificationStatus: "All capabilities verified",
+    verifiedAt: new Date(),
+    legalNameConfirmedAt: new Date(),
+    platformFeeAcknowledgedAt: new Date(),
+    platformAgreementAcceptedAt: new Date(),
+    payoutSchedule: "daily",
+    capabilities: {
+      receivePayments: {
+        requested: true,
+        allowed: true,
+        enabled: true,
+        verificationStatus: "valid",
+      },
+      sendToBalanceAccount: {
+        requested: true,
+        allowed: true,
+        enabled: true,
+        verificationStatus: "valid",
+      },
+      sendToTransferInstrument: {
+        requested: true,
+        allowed: true,
+        enabled: true,
+        verificationStatus: "valid",
+        transferInstruments: [
+          {
+            id: "SE3295Z223227J5P8Z6J695MW",
+            allowed: true,
+            enabled: true,
+            requested: true,
+            verificationStatus: "valid",
+          },
+        ],
+      },
+      receiveFromBalanceAccount: {
+        requested: true,
+        allowed: true,
+        enabled: true,
+        verificationStatus: "valid",
+      },
+      receiveFromPlatformPayments: {
+        requested: true,
+        allowed: true,
+        enabled: true,
+        verificationStatus: "valid",
+      },
+    },
+  };
+
+  await prisma.adyenPlatformAccount.upsert({
+    where: { organizationId: ORG2_ID },
+    update: metroAdyenData,
+    create: { organizationId: ORG2_ID, ...metroAdyenData },
+  });
+
+  // Demo Gym and Uplifter: no Adyen accounts
+  await prisma.adyenPlatformAccount.deleteMany({
+    where: { organizationId: { in: [ORG_DEMO_ID, ORG_UPLIFTER_ID] } },
+  });
+
+  console.log("  ✓ Sunrise Gymnastics: VERIFIED (AH3292V22322BK5P8Z8364KJM, weekly sweep)");
+  console.log("  ✓ Metro Sports: VERIFIED (AH3292V22322BK5P8Z5ZF4DWF, daily sweep)");
+  console.log("  ✓ Demo Gym / Uplifter: no account");
+
+  // ============================================
+  // ADYEN DATA SYNC (transactions + payouts)
+  // ============================================
+  // Pulls real history from Adyen's Transfers API so the financials dashboard
+  // shows accurate data without requiring live webhook events after seeding.
+  // Requires ADYEN_PLATFORM_API_KEY to have "Balance Platform Transfers read"
+  // permission. If missing, this section is skipped gracefully.
+  console.log("\n📡 Syncing Adyen transaction and payout history...");
+
+  if (!isPlatformConfigured()) {
+    console.log("  ⚠ Adyen platform not fully configured — skipping sync");
+  } else {
+    const orgsToSync = [
+      {
+        orgId: ORG1_ID,
+        balanceAccountId: "BA3292V22322BK5P8Z8374KKP",
+        sweepId: "SWPC4299322322445P8Z8GSFFB4BNG",
+        label: "Sunrise",
+      },
+      {
+        orgId: ORG2_ID,
+        balanceAccountId: "BA3297R22322BK5P8Z5ZG2LCQ",
+        sweepId: "SWPC4292W22322435P8Z6KZCSK2V2K",
+        label: "Metro",
+      },
+    ] as const;
+
+    let totalTxns = 0;
+    let totalPayouts = 0;
+
+    for (const { orgId, balanceAccountId, sweepId, label } of orgsToSync) {
+      try {
+        const { transactions, payouts } = await syncAdyenDataForOrg(
+          orgId,
+          balanceAccountId,
+          sweepId
+        );
+        console.log(`  ✓ ${label}: synced ${transactions} transactions, ${payouts} payouts`);
+        totalTxns += transactions;
+        totalPayouts += payouts;
+      } catch (err: any) {
+        console.warn(`  ⚠ ${label}: payout sync failed — ${err?.message ?? err}`);
+      }
+    }
+
+    if (totalTxns > 0 || totalPayouts > 0) {
+      console.log(`  ✓ Total synced: ${totalTxns} transactions, ${totalPayouts} payouts`);
+    }
+  }
 
   // ============================================
   // ORGANIZATION SUBSCRIPTIONS
@@ -9891,8 +10318,7 @@ See you at Metro Sports!
   console.log("  • 3 programs with membership requirements");
   console.log("  • 33+ events with 64+ attendance records (historical + current)");
   console.log("  • 5 invoices with line items and payments");
-  console.log("  • 9 transactions (Adyen)");
-  console.log("  • 5 payouts (settlements)");
+  console.log("  • Adyen transactions + payouts synced from live TEST environment (if configured)");
   console.log("  • 7 recurring charges");
   console.log("  • 34 gymnastics skills with difficulty levels and age ranges");
   console.log("  • 8 evaluation templates with skill groupings (5 Sunrise + 3 Metro)");

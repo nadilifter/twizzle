@@ -59,6 +59,46 @@ Seed accounts are created **without passwords**. Use email-based login (magic li
 | `coach.sarah@metro-sports.com`       | Coach      | Metro Sports       |
 | `volunteer@metro-sports.com`         | Volunteer  | Metro Sports       |
 
+## Adyen Test Accounts
+
+Both seeded organizations are fully onboarded with Adyen (VERIFIED, all capabilities enabled) and map to real accounts in the **Adyen TEST environment** (`UplifterLLC` balance platform).
+
+| Organization       | Account Holder ID           | Balance Account ID          | Payout Schedule |
+| ------------------ | --------------------------- | --------------------------- | --------------- |
+| Sunrise Gymnastics | `AH3292V22322BK5P8Z8364KJM` | `BA3292V22322BK5P8Z8374KKP` | weekly          |
+| Metro Sports       | `AH3292V22322BK5P8Z5ZF4DWF` | `BA3297R22322BK5P8Z5ZG2LCQ` | daily           |
+
+Both orgs have a store, split configuration, sweep, and linked transfer instrument — all required for B2C payments with platform fee splits and manual payout initiation.
+
+### Transaction and payout history sync
+
+The seed script automatically syncs real transaction and payout history from Adyen's Transfers API at the end of `pnpm db:seed:dev`. This means the financials dashboard shows accurate data without requiring live webhook events after seeding.
+
+**Prerequisite — Transfers read permission:**
+The `ADYEN_PLATFORM_API_KEY` credential (`ws_508000@BalancePlatform.UplifterLLC`) must have the **"Balance Platform Transfers read"** role enabled. To add it:
+
+1. Log in to [https://ca-test.adyen.com](https://ca-test.adyen.com)
+2. Go to **Balance Platforms → UplifterLLC → Developers → API credentials**
+3. Open `ws_508000@BalancePlatform.UplifterLLC`
+4. Under **Permissions**, enable **Balance Platform Transfers read** (or the equivalent Transfers API read role)
+5. Click **Save changes**
+
+If this permission is missing, the seed will print a `⚠` warning and skip the sync — the `AdyenPlatformAccount` records are still created correctly; only the transaction/payout history will be empty.
+
+**What is synced:**
+
+- `Transaction` records from `platformPayment` category transfers (net amounts credited to each org's balance account). Note: card brand/method (`visa`, `mc`) is **not available** from the Balance Platform Transfers API and will be `null` on synced records — it is only present in the standard payment webhook notification.
+- `Payout` records from `bank` category transfers (sweeps to the linked bank account)
+- Settled transactions are linked to their corresponding paid payouts
+
+To verify payments in the Adyen Customer Area:
+
+1. Log in to [https://ca-test.adyen.com](https://ca-test.adyen.com)
+2. Navigate to **Balance Platforms → UplifterLLC → Account Holders**
+3. Search by the account holder ID above to see transactions, balance, and payout history
+
+> These IDs exist in the Adyen TEST environment only. Do not use them in production. If you run `pnpm db:reset`, the seed will restore these exact IDs and re-sync Adyen history automatically.
+
 ## Platform Subscription Plans
 
 The seed also creates platform-level subscription plans:
