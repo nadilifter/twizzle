@@ -91,8 +91,15 @@ export async function getExpandedSmsCampaignRecipients(
   const recipients: SmsRecipient[] = [];
   const seenPhones = new Set<string>();
 
-  const addUser = (user: { id: string; phone: string; name: string; smsOptOut?: boolean }) => {
+  const addUser = (user: {
+    id: string;
+    phone: string;
+    name: string;
+    smsOptOut?: boolean;
+    smsConsentAt?: Date | null;
+  }) => {
     if (user.smsOptOut) return;
+    if (!user.smsConsentAt) return;
     const normalized = normalizePhoneNumber(user.phone);
     if (normalized && isValidE164(normalized) && !seenPhones.has(normalized)) {
       seenPhones.add(normalized);
@@ -119,6 +126,7 @@ export async function getExpandedSmsCampaignRecipients(
               status: true,
               phone: true,
               smsOptOut: true,
+              smsConsentAt: true,
             },
           },
         },
@@ -131,6 +139,7 @@ export async function getExpandedSmsCampaignRecipients(
             phone: m.user.phone,
             name: m.user.name,
             smsOptOut: m.user.smsOptOut,
+            smsConsentAt: m.user.smsConsentAt,
           });
         }
       });
@@ -142,6 +151,7 @@ export async function getExpandedSmsCampaignRecipients(
       const users = await db.user.findMany({
         where: {
           smsOptOut: false,
+          smsConsentAt: { not: null },
           phone: { not: "" },
           athleteGuardians: {
             some: {
@@ -154,12 +164,19 @@ export async function getExpandedSmsCampaignRecipients(
           phone: true,
           name: true,
           smsOptOut: true,
+          smsConsentAt: true,
         },
       });
 
       users.forEach((u) => {
         if (u.phone) {
-          addUser({ id: u.id, phone: u.phone, name: u.name, smsOptOut: u.smsOptOut });
+          addUser({
+            id: u.id,
+            phone: u.phone,
+            name: u.name,
+            smsOptOut: u.smsOptOut,
+            smsConsentAt: u.smsConsentAt,
+          });
         }
       });
       break;
@@ -184,6 +201,7 @@ export async function getExpandedSmsCampaignRecipients(
                       phone: true,
                       name: true,
                       smsOptOut: true,
+                      smsConsentAt: true,
                     },
                   },
                 },
@@ -201,6 +219,7 @@ export async function getExpandedSmsCampaignRecipients(
               phone: g.user.phone,
               name: g.user.name,
               smsOptOut: g.user.smsOptOut,
+              smsConsentAt: g.user.smsConsentAt,
             });
           }
         });
@@ -230,6 +249,7 @@ export async function getExpandedSmsCampaignRecipients(
                       phone: true,
                       name: true,
                       smsOptOut: true,
+                      smsConsentAt: true,
                     },
                   },
                 },
@@ -247,6 +267,7 @@ export async function getExpandedSmsCampaignRecipients(
               phone: g.user.phone,
               name: g.user.name,
               smsOptOut: g.user.smsOptOut,
+              smsConsentAt: g.user.smsConsentAt,
             });
           }
         });
@@ -269,6 +290,7 @@ export async function getExpandedSmsCampaignRecipients(
                       phone: true,
                       name: true,
                       smsOptOut: true,
+                      smsConsentAt: true,
                     },
                   },
                 },
@@ -286,6 +308,7 @@ export async function getExpandedSmsCampaignRecipients(
               phone: g.user.phone,
               name: g.user.name,
               smsOptOut: g.user.smsOptOut,
+              smsConsentAt: g.user.smsConsentAt,
             });
           }
         });
@@ -312,6 +335,7 @@ export async function getExpandedSmsCampaignRecipients(
                       phone: true,
                       name: true,
                       smsOptOut: true,
+                      smsConsentAt: true,
                     },
                   },
                 },
@@ -329,6 +353,7 @@ export async function getExpandedSmsCampaignRecipients(
               phone: g.user.phone,
               name: g.user.name,
               smsOptOut: g.user.smsOptOut,
+              smsConsentAt: g.user.smsConsentAt,
             });
           }
         });
@@ -357,6 +382,7 @@ export async function getExpandedSmsCampaignRecipients(
                       phone: true,
                       name: true,
                       smsOptOut: true,
+                      smsConsentAt: true,
                     },
                   },
                 },
@@ -374,6 +400,7 @@ export async function getExpandedSmsCampaignRecipients(
               phone: g.user.phone,
               name: g.user.name,
               smsOptOut: g.user.smsOptOut,
+              smsConsentAt: g.user.smsConsentAt,
             });
           }
         });
@@ -393,6 +420,7 @@ export async function getExpandedSmsCampaignRecipients(
             phone: true,
             name: true,
             smsOptOut: true,
+            smsConsentAt: true,
           },
         });
         users.forEach((u) => {
@@ -402,6 +430,7 @@ export async function getExpandedSmsCampaignRecipients(
               phone: u.phone,
               name: u.name,
               smsOptOut: u.smsOptOut,
+              smsConsentAt: u.smsConsentAt,
             });
           }
         });
@@ -427,6 +456,7 @@ export async function getExpandedSmsCampaignRecipients(
                     phone: true,
                     name: true,
                     smsOptOut: true,
+                    smsConsentAt: true,
                   },
                 },
               },
@@ -441,7 +471,7 @@ export async function getExpandedSmsCampaignRecipients(
 
     attendances.forEach((a) => {
       a.athlete.guardians.forEach((g) => {
-        if (g.user?.phone && !g.user.smsOptOut) {
+        if (g.user?.phone && !g.user.smsOptOut && g.user.smsConsentAt) {
           const normalized = normalizePhoneNumber(g.user.phone);
           if (normalized && isValidE164(normalized) && !eventSeenPhones.has(normalized)) {
             eventSeenPhones.add(normalized);

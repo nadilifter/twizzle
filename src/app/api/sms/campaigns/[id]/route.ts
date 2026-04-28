@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { checkFeatureGate } from "@/lib/feature-resolver";
 import { db, getScopedDb } from "@/lib/db";
-import { executeCampaign } from "@/lib/sms-service";
-import { z } from "zod";
 
 // GET /api/sms/campaigns/[id] - Get campaign details
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -82,26 +80,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     if (!campaign) {
       return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
-    }
-
-    // Handle different actions
-    if (body.action === "send") {
-      if (campaign.status !== "DRAFT" && campaign.status !== "SCHEDULED") {
-        return NextResponse.json(
-          { error: "Campaign cannot be sent in its current status" },
-          { status: 400 }
-        );
-      }
-
-      // Execute campaign asynchronously
-      executeCampaign(id).catch((err) => {
-        console.error("Error executing campaign:", err);
-      });
-
-      return NextResponse.json({
-        success: true,
-        message: "Campaign is being sent",
-      });
     }
 
     if (body.action === "cancel") {

@@ -9,12 +9,8 @@ import {
 } from "@/lib/twilio";
 import { getPoolNumberForSend } from "@/lib/sms-number-pool";
 import { isFeatureEnabled } from "@/lib/feature-resolver";
-import type {
-  MessageClassification,
-  MessageStatus,
-  SmsCampaignStatus,
-  AnnouncementScope,
-} from "@prisma/client";
+import { logger } from "@/lib/logger";
+import type { MessageClassification } from "@prisma/client";
 
 /**
  * SMS Service
@@ -48,25 +44,6 @@ export interface SendSingleSmsResult {
   errorCode?: string;
 }
 
-export interface SendCampaignParams {
-  organizationId: string;
-  name: string;
-  body: string;
-  classification?: MessageClassification;
-  targetScope: AnnouncementScope;
-  targetProgramId?: string;
-  targetEventId?: string;
-  createdById?: string;
-  scheduledAt?: Date;
-}
-
-export interface SendCampaignResult {
-  success: boolean;
-  campaignId?: string;
-  totalRecipients?: number;
-  error?: string;
-}
-
 export interface UsageLimitResult {
   allowed: boolean;
   remaining: number;
@@ -87,6 +64,8 @@ export interface UsageStats {
   includedMessages: number;
   overageMessages: number;
   overageCost: number;
+  rejectedNoConsent: number;
+  rejectedOptOut: number;
 }
 
 // ============================================
@@ -295,6 +274,36 @@ export async function recordUsage(
 }
 
 /**
+ * Record a send that was blocked at the consent gate before reaching Twilio.
+ * Distinguishes opt-outs from never-consented users so we can prove compliance
+ * posture during a Twilio toll-free verification audit.
+ */
+export async function recordRejection(
+  organizationId: string,
+  kind: "no_consent" | "opted_out"
+): Promise<void> {
+  // Audit-counter writes must never break the deterministic rejection contract.
+  // A failing increment (transient DB issue, race, missing column mid-deploy) should
+  // degrade to a logged warning, not a thrown error that masks { success: false, errorCode }.
+  try {
+    const usage = await getOrCreateUsageRecord(organizationId);
+    await db.smsUsage.update({
+      where: { id: usage.id },
+      data:
+        kind === "no_consent"
+          ? { rejectedNoConsent: { increment: 1 } }
+          : { rejectedOptOut: { increment: 1 } },
+    });
+  } catch (err) {
+    logger.warn("SMS rejection counter write failed", {
+      organizationId,
+      kind,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+/**
  * Update usage on delivery/failure
  */
 export async function updateUsageOnDelivery(
@@ -337,6 +346,8 @@ export async function getUsageStats(organizationId: string): Promise<UsageStats 
     includedMessages: usage.includedMessages,
     overageMessages: usage.overageMessages,
     overageCost: Number(usage.overageCost),
+    rejectedNoConsent: usage.rejectedNoConsent,
+    rejectedOptOut: usage.rejectedOptOut,
   };
 }
 
@@ -372,14 +383,34 @@ export async function sendSingleSms(params: SendSingleSmsParams): Promise<SendSi
   if (userId) {
     const user = await db.user.findUnique({
       where: { id: userId },
-      select: { smsOptOut: true },
+      select: { smsConsentAt: true, smsOptOut: true },
     });
 
     if (user?.smsOptOut) {
+      await recordRejection(organizationId, "opted_out");
+      logger.info("SMS send rejected", {
+        reason: "opted_out",
+        userId,
+        organizationId,
+      });
       return {
         success: false,
         error: "Recipient has opted out of SMS messages",
         errorCode: "OPTED_OUT",
+      };
+    }
+
+    if (!user?.smsConsentAt) {
+      await recordRejection(organizationId, "no_consent");
+      logger.info("SMS send rejected", {
+        reason: "no_consent",
+        userId,
+        organizationId,
+      });
+      return {
+        success: false,
+        error: "Recipient has not granted SMS consent",
+        errorCode: "NO_CONSENT",
       };
     }
   }
@@ -464,230 +495,6 @@ export async function sendSingleSms(params: SendSingleSmsParams): Promise<SendSi
       errorCode: result.errorCode,
     };
   }
-}
-
-/**
- * Get phone numbers for a campaign target
- */
-async function getCampaignRecipients(
-  organizationId: string,
-  targetScope: AnnouncementScope,
-  targetProgramId?: string,
-  targetEventId?: string
-): Promise<Array<{ userId?: string; phone: string }>> {
-  const recipients: Array<{ userId?: string; phone: string }> = [];
-  const seenPhones = new Set<string>();
-
-  const addUserRecipient = (user: { id: string; phone: string | null; smsOptOut: boolean }) => {
-    if (user.phone && !user.smsOptOut && !seenPhones.has(user.phone)) {
-      seenPhones.add(user.phone);
-      recipients.push({ userId: user.id, phone: user.phone });
-    }
-  };
-
-  if (targetScope === "PROGRAM" && targetProgramId) {
-    const enrollments = await db.enrollment.findMany({
-      where: { programId: targetProgramId, status: "ACTIVE" },
-      include: {
-        athlete: {
-          include: {
-            guardians: {
-              include: {
-                user: { select: { id: true, phone: true, smsOptOut: true } },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    for (const e of enrollments) {
-      for (const g of e.athlete.guardians) {
-        if (g.user) addUserRecipient(g.user);
-      }
-    }
-  } else if (targetScope === "EVENT" && targetEventId) {
-    const attendances = await db.attendance.findMany({
-      where: { eventId: targetEventId },
-      include: {
-        athlete: {
-          include: {
-            guardians: {
-              include: {
-                user: { select: { id: true, phone: true, smsOptOut: true } },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    for (const a of attendances) {
-      for (const g of a.athlete.guardians) {
-        if (g.user) addUserRecipient(g.user);
-      }
-    }
-  } else {
-    // ALL scope: get all guardian users for this org
-    const guardianLinks = await db.athleteGuardian.findMany({
-      where: {
-        athlete: { organizationAthletes: { some: { organizationId } } },
-        userId: { not: null },
-      },
-      include: {
-        user: { select: { id: true, phone: true, smsOptOut: true } },
-      },
-    });
-
-    for (const link of guardianLinks) {
-      if (link.user) addUserRecipient(link.user);
-    }
-  }
-
-  return recipients;
-}
-
-/**
- * Create and optionally send an SMS campaign
- */
-export async function createCampaign(params: SendCampaignParams): Promise<SendCampaignResult> {
-  const {
-    organizationId,
-    name,
-    body,
-    classification = "GENERAL",
-    targetScope,
-    targetProgramId,
-    targetEventId,
-    createdById,
-    scheduledAt,
-  } = params;
-
-  // Check if Twilio is configured
-  if (!isTwilioConfigured()) {
-    return {
-      success: false,
-      error: "SMS service is not configured",
-    };
-  }
-
-  // Get recipients
-  const recipients = await getCampaignRecipients(
-    organizationId,
-    targetScope,
-    targetProgramId,
-    targetEventId
-  );
-
-  if (recipients.length === 0) {
-    return {
-      success: false,
-      error: "No valid recipients found for this campaign",
-    };
-  }
-
-  // Check usage limits for all messages
-  const limits = await checkUsageLimits(organizationId, recipients.length);
-  if (!limits.allowed) {
-    return {
-      success: false,
-      error: limits.error || "SMS limit reached",
-    };
-  }
-
-  // Create campaign
-  const campaign = await db.smsCampaign.create({
-    data: {
-      organizationId,
-      name,
-      body,
-      classification,
-      targetScope,
-      targetProgramId,
-      targetEventId,
-      totalRecipients: recipients.length,
-      createdById,
-      status: scheduledAt ? "SCHEDULED" : "DRAFT",
-      scheduledAt,
-    },
-  });
-
-  // If not scheduled, start sending immediately
-  if (!scheduledAt) {
-    await executeCampaign(campaign.id);
-  }
-
-  return {
-    success: true,
-    campaignId: campaign.id,
-    totalRecipients: recipients.length,
-  };
-}
-
-/**
- * Execute a campaign (send all messages)
- */
-export async function executeCampaign(campaignId: string): Promise<void> {
-  const campaign = await db.smsCampaign.findUnique({
-    where: { id: campaignId },
-    include: { organization: true },
-  });
-
-  if (!campaign) {
-    throw new Error("Campaign not found");
-  }
-
-  // Update status to sending
-  await db.smsCampaign.update({
-    where: { id: campaignId },
-    data: {
-      status: "SENDING",
-      startedAt: new Date(),
-    },
-  });
-
-  // Get recipients
-  const recipients = await getCampaignRecipients(
-    campaign.organizationId,
-    campaign.targetScope,
-    campaign.targetProgramId ?? undefined,
-    campaign.targetEventId ?? undefined
-  );
-
-  let sentCount = 0;
-  let failedCount = 0;
-
-  // Send to each recipient
-  for (const recipient of recipients) {
-    const result = await sendSingleSms({
-      organizationId: campaign.organizationId,
-      to: recipient.phone,
-      body: campaign.body,
-      classification: campaign.classification,
-      userId: recipient.userId,
-      campaignId,
-    });
-
-    if (result.success) {
-      sentCount++;
-    } else {
-      failedCount++;
-    }
-
-    // Small delay to avoid rate limiting
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-
-  // Update campaign status
-  await db.smsCampaign.update({
-    where: { id: campaignId },
-    data: {
-      status: failedCount === recipients.length ? "FAILED" : "COMPLETED",
-      sentCount,
-      failedCount,
-      completedAt: new Date(),
-    },
-  });
 }
 
 // ============================================

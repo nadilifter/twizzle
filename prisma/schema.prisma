@@ -2577,6 +2577,10 @@ model SmsUsage {
   messagesFailed    Int @default(0)
   totalSegments     Int @default(0)
 
+  // Sends rejected at the consent gate before hitting Twilio
+  rejectedNoConsent Int @default(0)
+  rejectedOptOut    Int @default(0)
+
   // Cost tracking (in dollars)
   totalCost Decimal @default(0) @db.Decimal(10, 2)
 

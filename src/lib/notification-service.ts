@@ -270,17 +270,19 @@ export async function getRecipients(
     phone: string | null;
     name: string;
     smsOptOut?: boolean;
+    smsConsentAt?: Date | null;
     emailOptOut?: boolean;
   }) => {
     const emailLower = user.email.toLowerCase();
     if (seenEmails.has(emailLower)) return;
     seenEmails.add(emailLower);
     if (user.phone) seenPhones.add(user.phone);
+    const smsAllowed = !user.smsOptOut && user.smsConsentAt != null;
     recipients.push({
       type: "user",
       id: user.id,
       email: user.emailOptOut ? undefined : user.email,
-      phone: user.smsOptOut ? undefined : user.phone || undefined,
+      phone: smsAllowed ? user.phone || undefined : undefined,
       name: user.name,
       userId: user.id,
     });
@@ -306,6 +308,7 @@ export async function getRecipients(
     phone: true,
     name: true,
     smsOptOut: true,
+    smsConsentAt: true,
     emailOptOut: true,
   } as const;
 
@@ -343,6 +346,7 @@ export async function getRecipients(
               phone: guardian.user.phone,
               name: guardian.user.name,
               smsOptOut: guardian.user.smsOptOut,
+              smsConsentAt: guardian.user.smsConsentAt,
               emailOptOut: guardian.user.emailOptOut,
             });
           }
@@ -385,6 +389,7 @@ export async function getRecipients(
                       phone: true,
                       name: true,
                       smsOptOut: true,
+                      smsConsentAt: true,
                       emailOptOut: true,
                     },
                   },
@@ -404,6 +409,7 @@ export async function getRecipients(
               phone: guardian.user.phone,
               name: guardian.user.name,
               smsOptOut: guardian.user.smsOptOut,
+              smsConsentAt: guardian.user.smsConsentAt,
               emailOptOut: guardian.user.emailOptOut,
             });
           }
