@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, RotateCcw, ShieldAlert } from "lucide-react";
 
@@ -10,11 +10,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
+  useSuperadminOrganizationFeatures,
+  useUpdateSuperadminFeatureOverrides,
+} from "@/hooks/use-superadmin-organization-features";
+import {
   FEATURE_KEYS,
   FEATURE_LABELS,
   FEATURE_DESCRIPTIONS,
   type FeatureKey,
-  type FeatureToggles,
 } from "@/lib/feature-toggles";
 
 interface FeatureOverridesProps {
@@ -22,39 +25,24 @@ interface FeatureOverridesProps {
   organizationName: string;
 }
 
-interface FeatureData {
-  plan: { id: string; name: string } | null;
-  planDefaults: FeatureToggles | null;
-  overrides: Record<string, boolean> | null;
-  resolved: FeatureToggles;
-}
-
 export function FeatureOverrides({ organizationId, organizationName }: FeatureOverridesProps) {
-  const [data, setData] = React.useState<FeatureData | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [isSaving, setIsSaving] = React.useState(false);
-  const [pendingOverrides, setPendingOverrides] = React.useState<Record<string, boolean>>({});
-  const [hasChanges, setHasChanges] = React.useState(false);
+  const featuresQuery = useSuperadminOrganizationFeatures(organizationId);
+  const updateOverrides = useUpdateSuperadminFeatureOverrides(organizationId);
 
-  const fetchData = React.useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch(`/api/superadmin/organizations/${organizationId}/features`);
-      if (!response.ok) throw new Error("Failed to fetch features");
-      const result = await response.json();
-      setData(result);
-      setPendingOverrides(result.overrides ?? {});
-      setHasChanges(false);
-    } catch (error) {
-      toast.error("Failed to load feature configuration");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [organizationId]);
+  const data = featuresQuery.data ?? null;
+  const isLoading = featuresQuery.isLoading;
+  const isSaving = updateOverrides.isPending;
 
-  React.useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const [pendingOverrides, setPendingOverrides] = useState<Record<string, boolean>>({});
+  const [hasChanges, setHasChanges] = useState(false);
+
+  // Don't clobber the user's in-progress edits if a background refetch fires while
+  // hasChanges is true. The effect re-runs after a successful save (hasChanges flips
+  // back to false) and re-syncs from the server response.
+  useEffect(() => {
+    if (!data || hasChanges) return;
+    setPendingOverrides(data.overrides ? { ...data.overrides } : {});
+  }, [data, hasChanges]);
 
   const handleToggle = (key: FeatureKey, checked: boolean) => {
     const planDefault = data?.planDefaults?.[key] ?? false;
@@ -62,7 +50,6 @@ export function FeatureOverrides({ organizationId, organizationName }: FeatureOv
     setPendingOverrides((prev) => {
       const next = { ...prev };
       if (checked === planDefault) {
-        // Matches plan default, remove override
         delete next[key];
       } else {
         next[key] = checked;
@@ -72,43 +59,28 @@ export function FeatureOverrides({ organizationId, organizationName }: FeatureOv
     setHasChanges(true);
   };
 
-  const handleSave = async () => {
-    try {
-      setIsSaving(true);
-      const response = await fetch(`/api/superadmin/organizations/${organizationId}/features`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ featureToggles: pendingOverrides }),
-      });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || "Failed to save");
-      }
-      toast.success("Feature overrides saved");
-      fetchData();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save overrides");
-    } finally {
-      setIsSaving(false);
-    }
+  const handleSave = () => {
+    updateOverrides.mutate(pendingOverrides, {
+      onSuccess: () => {
+        toast.success("Feature overrides saved");
+        setHasChanges(false);
+      },
+      onError: (error) =>
+        toast.error(error instanceof Error ? error.message : "Failed to save overrides"),
+    });
   };
 
-  const handleResetAll = async () => {
-    try {
-      setIsSaving(true);
-      const response = await fetch(`/api/superadmin/organizations/${organizationId}/features`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ featureToggles: {} }),
-      });
-      if (!response.ok) throw new Error("Failed to reset");
-      toast.success("All overrides cleared - using plan defaults");
-      fetchData();
-    } catch (error) {
-      toast.error("Failed to reset overrides");
-    } finally {
-      setIsSaving(false);
-    }
+  const handleResetAll = () => {
+    updateOverrides.mutate(
+      {},
+      {
+        onSuccess: () => {
+          toast.success("All overrides cleared - using plan defaults");
+          setHasChanges(false);
+        },
+        onError: () => toast.error("Failed to reset overrides"),
+      }
+    );
   };
 
   if (isLoading) {

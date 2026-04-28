@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, XCircle, Loader2, Shield, RotateCcw, Info } from "lucide-react";
 import { toast } from "sonner";
 
@@ -12,97 +13,76 @@ import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useDebounce } from "@/hooks";
+import { useOrganizationFeatures } from "@/hooks/use-organization-features";
+import {
+  superadminOrganizationFeaturesQueryKey,
+  useSuperadminOrganizationFeatures,
+  useUpdateSuperadminFeatureOverrides,
+} from "@/hooks/use-superadmin-organization-features";
 import {
   FEATURE_KEYS,
   FEATURE_LABELS,
   FEATURE_DESCRIPTIONS,
   type FeatureKey,
-  type FeatureToggles,
 } from "@/lib/feature-toggles";
-
-interface SuperadminFeatureData {
-  plan: { id: string; name: string } | null;
-  planDefaults: FeatureToggles | null;
-  overrides: Record<string, boolean> | null;
-  resolved: FeatureToggles;
-  lastUpdatedBy: string | null;
-  lastUpdatedAt: string | null;
-}
 
 export default function OrganizationFeaturesPage() {
   const { data: session } = useSession();
   const isSuperAdmin = session?.user?.isSuperAdmin ?? false;
   const organizationId = session?.user?.organizationId;
 
-  const [superadminData, setSuperadminData] = useState<SuperadminFeatureData | null>(null);
-  const [orgFeatures, setOrgFeatures] = useState<FeatureToggles | null>(null);
+  const queryClient = useQueryClient();
+  const superadminQuery = useSuperadminOrganizationFeatures(organizationId, isSuperAdmin);
+  const orgFeaturesQuery = useOrganizationFeatures();
+  const updateOverrides = useUpdateSuperadminFeatureOverrides(organizationId);
+
+  const superadminData = superadminQuery.data ?? null;
+
   const [overrideToggles, setOverrideToggles] = useState<Record<string, boolean>>({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
 
-  const features = isSuperAdmin ? (superadminData?.resolved ?? null) : orgFeatures;
-
-  const fetchFeatures = useCallback(async () => {
-    if (!organizationId) return;
-
-    try {
-      if (isSuperAdmin) {
-        const response = await fetch(`/api/superadmin/organizations/${organizationId}/features`);
-        if (!response.ok) throw new Error("Failed to fetch");
-        const data: SuperadminFeatureData = await response.json();
-        setSuperadminData(data);
-        const initial =
-          data.overrides && typeof data.overrides === "object" ? { ...data.overrides } : {};
-        setOverrideToggles(initial);
-      } else {
-        const response = await fetch("/api/organization/features");
-        if (!response.ok) throw new Error("Failed to fetch");
-        const data = await response.json();
-        setOrgFeatures(data);
-      }
-    } catch (error) {
-      console.error("Failed to load features:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [organizationId, isSuperAdmin]);
-
+  // Sync local edit state when the server-side overrides change (initial load, external refetch).
   useEffect(() => {
-    fetchFeatures();
-  }, [fetchFeatures]);
+    if (!isSuperAdmin) return;
+    const serverOverrides = superadminData?.overrides;
+    setOverrideToggles(
+      serverOverrides && typeof serverOverrides === "object" && !Array.isArray(serverOverrides)
+        ? { ...serverOverrides }
+        : {}
+    );
+  }, [isSuperAdmin, superadminData?.overrides]);
 
-  const autoSave = useCallback(
-    async (toggles: Record<string, boolean>) => {
-      if (!organizationId) return;
-      setIsSaving(true);
-      try {
-        const response = await fetch(`/api/superadmin/organizations/${organizationId}/features`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ featureToggles: toggles }),
-        });
-        if (!response.ok) {
-          const err = await response.json();
-          throw new Error(err.error || "Failed to save");
-        }
-        toast.success("Changes Saved");
-        setSuperadminData((prev) => (prev ? { ...prev, overrides: toggles } : prev));
-      } catch (error: any) {
-        toast.error(error.message || "Failed to save feature overrides");
-      } finally {
-        setIsSaving(false);
-      }
-    },
-    [organizationId]
-  );
+  const features = isSuperAdmin
+    ? (superadminData?.resolved ?? null)
+    : orgFeaturesQuery.isLoaded
+      ? orgFeaturesQuery.features
+      : null;
 
-  const savedOverrides = superadminData?.overrides ?? {};
-  const hasChanges = (() => {
+  const isLoading = isSuperAdmin ? superadminQuery.isLoading : !orgFeaturesQuery.isLoaded;
+  const isSaving = updateOverrides.isPending;
+
+  const hasChanges = useMemo(() => {
+    const savedOverrides = superadminData?.overrides ?? {};
     const keys = new Set([...Object.keys(overrideToggles), ...Object.keys(savedOverrides)]);
     return [...keys].some(
       (k) => overrideToggles[k] !== (savedOverrides as Record<string, boolean>)[k]
     );
-  })();
+  }, [overrideToggles, superadminData?.overrides]);
+
+  const { mutate: mutateOverrides } = updateOverrides;
+  const autoSave = useCallback(
+    (toggles: Record<string, boolean>) => {
+      mutateOverrides(toggles, {
+        onSuccess: () => {
+          toast.success("Changes Saved");
+          queryClient.invalidateQueries({
+            queryKey: superadminOrganizationFeaturesQueryKey(organizationId),
+          });
+        },
+        onError: (error) => toast.error(error instanceof Error ? error.message : "Failed to save"),
+      });
+    },
+    [mutateOverrides, queryClient, organizationId]
+  );
 
   useDebounce(overrideToggles, 1000, isSuperAdmin && hasChanges ? autoSave : null);
 
