@@ -1,5 +1,33 @@
-import { db } from "@/lib/db";
+import { db, getScopedDb } from "@/lib/db";
 import { logger } from "@/lib/logger";
+
+export type PayoutStatus = "PAID" | "SCHEDULED" | "FAILED" | "PENDING";
+
+// Maps Adyen Balance Platform transfer status codes to our internal PayoutStatus.
+// Source of truth for the sync route, webhook handler, and manual-payout initiate route.
+export const TRANSFER_STATUS_MAP: Record<string, PayoutStatus> = {
+  booked: "PAID",
+  pendingApproval: "SCHEDULED",
+  authorised: "SCHEDULED",
+  received: "PENDING",
+  failed: "FAILED",
+  refused: "FAILED",
+  returned: "FAILED",
+  internallyDeclined: "FAILED",
+  validationFailed: "FAILED",
+};
+
+/**
+ * Coerces Adyen's transfer status (which may arrive as a bare string or as an
+ * object with `statusCode` depending on the API surface) into our PayoutStatus.
+ * Unknown statuses fall back to PENDING.
+ */
+export function mapTransferStatus(
+  status: string | { statusCode?: string } | null | undefined
+): PayoutStatus {
+  const code = typeof status === "object" ? status?.statusCode : status;
+  return TRANSFER_STATUS_MAP[code ?? ""] ?? "PENDING";
+}
 
 // Adyen appends a unique execution reference (e.g. "SWPE42CLR2235BR65P8L87243W36VX")
 // to the sweep description when creating the transfer. This regex validates that suffix.
@@ -50,7 +78,9 @@ export function determinePayoutType(
 
 export async function linkTransactionsToPayout(payoutId: string, organizationId: string) {
   try {
-    const payout = await db.payout.findUnique({
+    const scopedDb = getScopedDb(organizationId);
+
+    const payout = await scopedDb.payout.findUnique({
       where: { id: payoutId },
       select: { paidAt: true },
     });
@@ -60,9 +90,8 @@ export async function linkTransactionsToPayout(payoutId: string, organizationId:
     // transactions settled after the transfer went out
     const cutoff = payout.paidAt ?? new Date();
 
-    const result = await db.transaction.updateMany({
+    const result = await scopedDb.transaction.updateMany({
       where: {
-        organizationId,
         status: "SETTLED",
         payoutId: null,
         settledAt: { lte: cutoff },
@@ -88,11 +117,14 @@ export async function linkTransactionsToPayout(payoutId: string, organizationId:
 
 async function calculatePayoutFees(payoutId: string, organizationId: string) {
   try {
+    const scopedDb = getScopedDb(organizationId);
+
     const [transactions, org] = await Promise.all([
-      db.transaction.findMany({
-        where: { payoutId, organizationId, status: "SETTLED" },
+      scopedDb.transaction.findMany({
+        where: { payoutId, status: "SETTLED" },
         select: { amount: true, feeRate: true, feeFixed: true },
       }),
+      // Organization is not a tenant model (its `id` IS the org id), so use raw db.
       db.organization.findUnique({
         where: { id: organizationId },
         select: {
@@ -127,7 +159,7 @@ async function calculatePayoutFees(payoutId: string, organizationId: string) {
     }
     const totalFees = totalFeesMinor / 100;
 
-    const payoutRecord = await db.payout.findUnique({
+    const payoutRecord = await scopedDb.payout.findUnique({
       where: { id: payoutId },
       select: { amount: true },
     });
@@ -136,7 +168,7 @@ async function calculatePayoutFees(payoutId: string, organizationId: string) {
     const payoutAmount = Number(payoutRecord.amount);
     const net = Math.round((payoutAmount - totalFees) * 100) / 100;
 
-    await db.payout.update({
+    await scopedDb.payout.update({
       where: { id: payoutId },
       data: { fees: totalFees, net },
     });

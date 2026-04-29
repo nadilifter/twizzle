@@ -9,6 +9,7 @@ import {
   getAccountHolder,
   getLegalEntity,
   createSweep,
+  getSweepSchedule,
   isPlatformConfigured,
 } from "@/lib/adyen-platform";
 import { deriveOnboardingStatus, summarizeVerification } from "@/lib/adyen-onboarding-status";
@@ -62,7 +63,10 @@ export async function GET() {
         const verificationStatus = summarizeVerification(liveHolder);
         const capabilities = liveHolder.capabilities || {};
 
-        const isRecovery = onboardingStatus === "VERIFIED" && !!account.verifiedAt;
+        const isRecovery =
+          onboardingStatus === "VERIFIED" &&
+          account.onboardingStatus !== "VERIFIED" &&
+          !!account.verifiedAt;
 
         if (
           onboardingStatus !== account.onboardingStatus ||
@@ -126,15 +130,32 @@ export async function GET() {
               /already exists: \(([^)]+)\)/
             )?.[1];
             if (sweepError.statusCode === 422 && existingSweepId) {
+              // Don't hardcode payoutSchedule here — Adyen owns the actual schedule
+              // for the recovered sweep, and the read-through block below will
+              // reconcile it.
               account = await db.adyenPlatformAccount.update({
                 where: { organizationId: orgId, id: account.id },
-                data: { sweepId: existingSweepId, transferInstrumentId, payoutSchedule: "daily" },
+                data: { sweepId: existingSweepId, transferInstrumentId },
               });
             }
           }
         }
       } catch {
         // Best-effort: if Adyen API is unreachable, fall back to stored state
+      }
+    }
+
+    // Live-sync payout schedule: Adyen owns the canonical sweep schedule, our
+    // payoutSchedule column is just a cache. After db:reset/seed (or an
+    // out-of-band schedule edit in Adyen Customer Area) the cache drifts, so
+    // reconcile from Adyen on read and self-heal the DB when it differs.
+    if (!skipLiveSync && account?.sweepId && account.balanceAccountId && isPlatformConfigured()) {
+      const adyenSchedule = await getSweepSchedule(account.balanceAccountId, account.sweepId);
+      if (adyenSchedule && adyenSchedule !== account.payoutSchedule) {
+        account = await db.adyenPlatformAccount.update({
+          where: { organizationId: orgId, id: account.id },
+          data: { payoutSchedule: adyenSchedule },
+        });
       }
     }
 

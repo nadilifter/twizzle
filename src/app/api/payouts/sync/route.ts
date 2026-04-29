@@ -6,28 +6,15 @@ import {
   getTransferInstrumentLast4,
   getBalanceAccountSweepDescription,
 } from "@/lib/adyen-platform";
-import { linkTransactionsToPayout, determinePayoutType } from "@/lib/payout-utils";
+import {
+  linkTransactionsToPayout,
+  determinePayoutType,
+  mapTransferStatus,
+} from "@/lib/payout-utils";
 import { redis } from "@/lib/redis";
 
 const THROTTLE_KEY = (orgId: string) => `payout-sync:${orgId}`;
 const SYNC_THROTTLE_SECONDS = 30 * 60;
-
-const TRANSFER_STATUS_MAP: Record<string, "PAID" | "SCHEDULED" | "FAILED" | "PENDING"> = {
-  booked: "PAID",
-  pendingApproval: "SCHEDULED",
-  authorised: "SCHEDULED",
-  failed: "FAILED",
-  refused: "FAILED",
-  returned: "FAILED",
-  internallyDeclined: "FAILED",
-  validationFailed: "FAILED",
-};
-
-function mapTransferStatus(
-  status: string | undefined
-): "PAID" | "SCHEDULED" | "FAILED" | "PENDING" {
-  return TRANSFER_STATUS_MAP[status ?? ""] ?? "PENDING";
-}
 
 const SYNC_THROTTLE_MS = SYNC_THROTTLE_SECONDS * 1000;
 
@@ -122,8 +109,7 @@ export async function POST(request: NextRequest) {
       if (!transfer.id) continue;
 
       const transferId = transfer.id as string;
-      const rawStatus = transfer.status?.statusCode ?? transfer.status;
-      const payoutStatus = mapTransferStatus(rawStatus);
+      const payoutStatus = mapTransferStatus(transfer.status);
       const amount = transfer.amount?.value ? Number(transfer.amount.value) / 100 : 0;
       const currency = transfer.amount?.currency ?? "USD";
       // Use the transfer's own creation date, not the backfill time

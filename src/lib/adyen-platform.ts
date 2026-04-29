@@ -248,7 +248,14 @@ export async function getBalanceAccountBalance(
     const result: BalanceAccount =
       await getConfigApi().BalanceAccountsApi.getBalanceAccount(balanceAccountId);
     const balance = result.balances?.find((b: Balance) => b.currency === "USD");
-    if (!balance) return null;
+    if (!balance) {
+      console.warn("adyen-platform: getBalanceAccountBalance no USD balance entry", {
+        balanceAccountId,
+        availableCurrencies: result.balances?.map((b: Balance) => b.currency),
+        rawBalances: result.balances,
+      });
+      return null;
+    }
     return {
       available: balance.available / 100,
       pending: (balance.pending ?? 0) / 100,
@@ -363,6 +370,38 @@ function getTransfersApi() {
   return _transfersApi;
 }
 
+export async function initiateTransfer(
+  balanceAccountId: string,
+  transferInstrumentId: string,
+  amount: { value: number; currency: string },
+  reference: string,
+  idempotencyKey: string
+): Promise<{ id: string; status: string; [key: string]: any }> {
+  try {
+    return await getTransfersApi().TransfersApi.transferFunds(
+      {
+        balanceAccountId,
+        category: "bank",
+        priority: "regular",
+        counterparty: { transferInstrumentId },
+        amount,
+        reference,
+        description: "Manual payout",
+      },
+      { idempotencyKey }
+    );
+  } catch (error: any) {
+    console.error("adyen-platform: initiateTransfer failed", {
+      balanceAccountId,
+      transferInstrumentId,
+      amount,
+      status: error.statusCode,
+      body: error.responseBody,
+    });
+    throw error;
+  }
+}
+
 export async function getBalanceAccountSweepDescription(
   balanceAccountId: string,
   sweepId: string
@@ -371,6 +410,28 @@ export async function getBalanceAccountSweepDescription(
     const sweep = await getConfigApi().BalanceAccountsApi.getSweep(balanceAccountId, sweepId);
     return sweep?.description ?? null;
   } catch {
+    return null;
+  }
+}
+
+export async function getSweepSchedule(
+  balanceAccountId: string,
+  sweepId: string
+): Promise<"daily" | "weekly" | "monthly" | null> {
+  try {
+    const sweep = await getConfigApi().BalanceAccountsApi.getSweep(balanceAccountId, sweepId);
+    const type = sweep?.schedule?.type;
+    if (type === "daily" || type === "weekly" || type === "monthly") {
+      return type;
+    }
+    return null;
+  } catch (error: any) {
+    console.error("adyen-platform: getSweepSchedule failed", {
+      balanceAccountId,
+      sweepId,
+      status: error.statusCode,
+      body: error.responseBody,
+    });
     return null;
   }
 }

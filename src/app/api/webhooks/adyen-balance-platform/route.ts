@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, getScopedDb } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { logger } from "@/lib/logger";
 import crypto from "crypto";
@@ -10,7 +10,11 @@ import {
   setSweepStatus,
 } from "@/lib/adyen-platform";
 import { handleVerificationRecovery } from "@/lib/adyen-onboarding-recovery";
-import { linkTransactionsToPayout, determinePayoutType } from "@/lib/payout-utils";
+import {
+  linkTransactionsToPayout,
+  determinePayoutType,
+  mapTransferStatus,
+} from "@/lib/payout-utils";
 import { deriveOnboardingStatus, summarizeVerification } from "@/lib/adyen-onboarding-status";
 
 // ---------------------------------------------------------------------------
@@ -25,40 +29,57 @@ function getBpHmacKeys(): string[] {
   ].filter(Boolean) as string[];
 }
 
-function verifyHmac(rawBody: string, parsedBody: any): boolean {
+function verifyHmac(rawBody: string, parsedBody: any, signature: string): boolean {
   const hmacKeys = getBpHmacKeys();
   const isStandardNotification = !!parsedBody?.notificationItems;
   const { hmacValidator } = require("@adyen/api-library");
 
-  for (const hmacKey of hmacKeys) {
+  const attempts: Array<{ keyIndex: number; matched: boolean; error?: string }> = [];
+
+  for (let i = 0; i < hmacKeys.length; i++) {
+    const hmacKey = hmacKeys[i];
     try {
       if (isStandardNotification) {
         // Standard notification format: HMAC is computed over specific fields,
         // not the raw body. Use Adyen's library which knows the exact signing spec.
         const validator = new hmacValidator();
         const notificationItem = parsedBody.notificationItems[0]?.NotificationRequestItem;
-        if (notificationItem && validator.validateHMAC(notificationItem, hmacKey)) {
-          return true;
-        }
+        const matched = !!(notificationItem && validator.validateHMAC(notificationItem, hmacKey));
+        attempts.push({ keyIndex: i, matched });
+        if (matched) return true;
       } else {
         // Balance Platform event format: HMAC is over the raw body string.
-        const signature = parsedBody?.HmacSignature ?? "";
+        // Adyen delivers the signature in the `hmacsignature` request header
+        // (extractHmacSignature also accepts an in-body fallback).
         const expected = crypto
           .createHmac("sha256", Buffer.from(hmacKey, "hex"))
           .update(rawBody, "utf-8")
           .digest("base64");
 
-        if (
+        const matched =
+          signature.length > 0 &&
           signature.length === expected.length &&
-          crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
-        ) {
-          return true;
-        }
+          crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+
+        attempts.push({ keyIndex: i, matched });
+        if (matched) return true;
       }
-    } catch {
-      continue;
+    } catch (error) {
+      attempts.push({
+        keyIndex: i,
+        matched: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
+
+  logger.warn("[BP-WEBHOOK] HMAC mismatch — none of the configured keys matched", {
+    keysTried: hmacKeys.length,
+    isStandardNotification,
+    signaturePresent: signature.length > 0,
+    bodyLength: rawBody.length,
+    attempts,
+  });
   return false;
 }
 
@@ -92,6 +113,22 @@ export async function POST(request: NextRequest) {
     parsedBody = body;
   }
 
+  // Standard payment notification format (notificationItems) is handled by
+  // /api/webhooks/adyen — acknowledge and skip to avoid double-processing.
+  // This must run BEFORE the BP HMAC check, since standard notifications are
+  // signed with ADYEN_WEBHOOK_HMAC_KEY (not the BP-scoped keys) and would always
+  // 401 against verifyHmac's BP keyset.
+  if (parsedBody?.notificationItems) {
+    logger.info(
+      "[BP-WEBHOOK] Standard notification format received — delegated to /api/webhooks/adyen",
+      {
+        eventCode: parsedBody.notificationItems[0]?.NotificationRequestItem?.eventCode,
+        pspReference: parsedBody.notificationItems[0]?.NotificationRequestItem?.pspReference,
+      }
+    );
+    return NextResponse.json({ notificationResponse: "[accepted]" }, { status: 200 });
+  }
+
   const skipHmac =
     process.env.NODE_ENV !== "production" && process.env.SKIP_WEBHOOK_HMAC === "true";
 
@@ -109,21 +146,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing signature" }, { status: 401 });
     }
 
-    if (!verifyHmac(body, parsedBody)) {
+    if (!verifyHmac(body, parsedBody, hmacSignature)) {
       logger.warn("[BP-WEBHOOK] HMAC verification failed");
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
   } else {
     logger.warn("[BP-WEBHOOK] HMAC verification skipped (SKIP_WEBHOOK_HMAC=true)");
-  }
-
-  // Standard payment notification format (notificationItems) is handled by
-  // /api/webhooks/adyen — acknowledge and skip to avoid double-processing.
-  if (parsedBody?.notificationItems) {
-    logger.info(
-      "[BP-WEBHOOK] Standard notification format received — delegated to /api/webhooks/adyen"
-    );
-    return NextResponse.json({ notificationResponse: "[accepted]" }, { status: 200 });
   }
 
   try {
@@ -359,6 +387,7 @@ async function handleTransferEvent(data: any, eventType: string) {
 
 interface AdyenBankTransfer {
   id: string;
+  reference?: string;
   description?: string;
   createdAt?: string;
   balanceAccountId?: string;
@@ -399,35 +428,31 @@ async function handleBankTransfer(transfer: AdyenBankTransfer) {
     return;
   }
 
+  const scopedDb = getScopedDb(account.organizationId);
+
   const transferId = transfer.id;
   const amount = transfer.amount?.value ? Number(transfer.amount.value) / 100 : 0;
   const currency = transfer.amount?.currency || "USD";
-  const status =
-    typeof transfer.status === "object" ? transfer.status?.statusCode : transfer.status;
   const transferDate = transfer.createdAt ? new Date(transfer.createdAt) : new Date();
   const sweepDescription = account.sweepId
     ? await getBalanceAccountSweepDescription(balanceAccountId, account.sweepId)
     : null;
   const payoutType = determinePayoutType(transfer.description, sweepDescription);
 
-  const TRANSFER_STATUS_MAP: Record<string, "PAID" | "SCHEDULED" | "FAILED" | "PENDING"> = {
-    booked: "PAID",
-    pendingApproval: "SCHEDULED",
-    authorised: "SCHEDULED",
-    failed: "FAILED",
-    refused: "FAILED",
-    returned: "FAILED",
-    internallyDeclined: "FAILED",
-    validationFailed: "FAILED",
-  };
-  const payoutStatus: "PAID" | "SCHEDULED" | "FAILED" | "PENDING" =
-    TRANSFER_STATUS_MAP[status ?? ""] ?? "PENDING";
+  const payoutStatus = mapTransferStatus(transfer.status);
 
   const estimatedArrivalTime =
     transfer?.tracking?.estimatedArrivalTime || extractEstimatedArrival(transfer?.events);
 
-  const existingPayout = await db.payout.findFirst({
-    where: { reference: transferId },
+  // Match by Adyen transferId first; fall back to the Adyen-side reference we
+  // submitted (e.g. "manual-<uuid>" for manually-initiated payouts). The fallback
+  // catches pre-created Payout rows whose post-call reference→transferId update
+  // never landed, preventing a duplicate row from being created here.
+  const adyenReference = transfer.reference;
+  const existingPayout = await scopedDb.payout.findFirst({
+    where: adyenReference
+      ? { OR: [{ reference: transferId }, { reference: adyenReference }] }
+      : { reference: transferId },
   });
 
   // Resolve bank account last 4 digits (only on first creation or if missing)
@@ -449,9 +474,14 @@ async function handleBankTransfer(transfer: AdyenBankTransfer) {
   let payoutId: string;
 
   if (existingPayout) {
-    await db.payout.update({
+    await scopedDb.payout.update({
       where: { id: existingPayout.id },
-      data: updateData,
+      data: {
+        ...updateData,
+        // If matched via the placeholder reference, upgrade to the real Adyen
+        // transfer ID so subsequent webhooks for this transfer match directly.
+        ...(existingPayout.reference !== transferId ? { reference: transferId } : {}),
+      },
     });
     payoutId = existingPayout.id;
     logger.info("[BP-WEBHOOK] Payout updated", {
@@ -459,7 +489,7 @@ async function handleBankTransfer(transfer: AdyenBankTransfer) {
       status: payoutStatus,
     });
   } else {
-    const created = await db.payout.create({
+    const created = await scopedDb.payout.create({
       data: {
         organizationId: account.organizationId,
         reference: transferId,

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,8 +33,20 @@ import {
   AlertCircleIcon,
   RefreshCwIcon,
   Calendar as CalendarIcon,
+  BanknoteIcon,
+  LockIcon,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
@@ -119,15 +131,15 @@ export default function PayoutsPage() {
   const router = useRouter();
   const { data: session } = useSession();
   const orgId = session?.user?.organizationId ?? null;
-  const [payouts, setPayouts] = React.useState<Payout[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [backgroundRefreshing, setBackgroundRefreshing] = React.useState(false);
-  const [total, setTotal] = React.useState(0);
-  const [page, setPage] = React.useState(0);
-  const [statusFilter, setStatusFilter] = React.useState<string>("all");
-  const [startDate, setStartDate] = React.useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = React.useState<Date | undefined>(undefined);
-  const [stats, setStats] = React.useState<PayoutStats>({
+  const [payouts, setPayouts] = useState<Payout[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [backgroundRefreshing, setBackgroundRefreshing] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [stats, setStats] = useState<PayoutStats>({
     pendingAmount: 0,
     pendingCount: 0,
     paidYTD: 0,
@@ -138,11 +150,11 @@ export default function PayoutsPage() {
     unsettledCount: 0,
   });
 
-  const [payoutSchedule, setPayoutSchedule] = React.useState<string>("daily");
-  const [hasSweep, setHasSweep] = React.useState(false);
-  const [isVerified, setIsVerified] = React.useState(false);
-  const [wasVerified, setWasVerified] = React.useState(false);
-  const [scheduleLoading, setScheduleLoading] = React.useState(false);
+  const [payoutSchedule, setPayoutSchedule] = useState<string>("daily");
+  const [hasSweep, setHasSweep] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
+  const [wasVerified, setWasVerified] = useState(false);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
 
   useEffect(() => {
     async function fetchSchedule() {
@@ -162,9 +174,19 @@ export default function PayoutsPage() {
     }
     fetchSchedule();
   }, []);
-  const [syncLoading, setSyncLoading] = React.useState(false);
-  const skipFilterFetch = React.useRef(true);
-  const hasInitialized = React.useRef(false);
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [initiateDialogOpen, setInitiateDialogOpen] = useState(false);
+  const [initiateLoading, setInitiateLoading] = useState(false);
+  const skipFilterFetch = useRef(true);
+  const hasInitialized = useRef(false);
+  const payoutsLengthRef = useRef(payouts.length);
+  payoutsLengthRef.current = payouts.length;
+  // Synchronous re-entry guard for the Confirm Payout submission. The
+  // `disabled={initiateLoading}` on the dialog action handles the visual
+  // state, but React batches state updates, so a fast double-click can fire
+  // handleInitiatePayout twice before initiateLoading flips. A ref doesn't
+  // batch and closes that window.
+  const initiateInFlightRef = useRef(false);
 
   const handleScheduleChange = async (value: string) => {
     setScheduleLoading(true);
@@ -187,7 +209,7 @@ export default function PayoutsPage() {
     }
   };
 
-  const fetchPayouts = React.useCallback(
+  const fetchPayouts = useCallback(
     async ({ silent = false }: { silent?: boolean } = {}) => {
       const isDefaultView = page === 0 && statusFilter === "all" && !startDate && !endDate;
       if (silent) {
@@ -277,7 +299,7 @@ export default function PayoutsPage() {
     if (hasInitialized.current || !orgId) return;
     hasInitialized.current = true;
     init();
-  }, [orgId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [orgId, fetchPayouts]);
 
   // Re-fetch when filters or page change; skip the mount fire (handled by init above)
   useEffect(() => {
@@ -285,10 +307,52 @@ export default function PayoutsPage() {
       skipFilterFetch.current = false;
       return;
     }
-    fetchPayouts({ silent: payouts.length > 0 });
-  }, [fetchPayouts]); // eslint-disable-line react-hooks/exhaustive-deps
+    fetchPayouts({ silent: payoutsLengthRef.current > 0 });
+  }, [fetchPayouts]);
+
+  // Poll silently while any payout is mid-flight so webhook-driven status
+  // transitions (PENDING → SCHEDULED → PAID) surface without a manual refresh.
+  // Stops as soon as everything is in a terminal state.
+  // Disabled in staging/production — those environments rely on webhook-driven
+  // updates and don't need the extra polling load.
+  const env = process.env.NEXT_PUBLIC_APP_ENVIRONMENT;
+  const isPollingEnv = env !== "staging" && env !== "production";
+  const hasInFlightPayout = payouts.some(
+    (po) => po.status === "PENDING" || po.status === "SCHEDULED"
+  );
+  useEffect(() => {
+    if (!isPollingEnv || !hasInFlightPayout) return;
+    const interval = setInterval(() => {
+      fetchPayouts({ silent: true });
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [isPollingEnv, hasInFlightPayout, fetchPayouts]);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  const permissions = session?.user?.permissions ?? [];
+  const canInitiatePayout =
+    (permissions.includes("*") || permissions.includes("financials.admin")) && isVerified;
+  const hasAvailableBalance = stats.liveBalance != null && stats.liveBalance.available > 0;
+
+  const handleInitiatePayout = async () => {
+    if (initiateInFlightRef.current) return;
+    initiateInFlightRef.current = true;
+    setInitiateLoading(true);
+    try {
+      const res = await fetch("/api/payouts/initiate", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to initiate payout");
+      setInitiateDialogOpen(false);
+      toast.success("Payout initiated. It will appear in the list once processed.");
+      await fetchPayouts();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setInitiateLoading(false);
+      initiateInFlightRef.current = false;
+    }
+  };
 
   const handleManualSync = async () => {
     setSyncLoading(true);
@@ -390,7 +454,24 @@ export default function PayoutsPage() {
           </CardHeader>
           <CardContent>
             {!stats.isVerified ? (
-              <p className="text-sm opacity-80">Complete your onboarding to view your balance.</p>
+              <div className="space-y-3">
+                <div className="text-xl font-bold leading-tight">
+                  Get paid in as little as 1-2 days
+                </div>
+                <p className="text-xs opacity-80 leading-snug">
+                  Complete your onboarding to verify your identity and link a bank account.
+                  You&apos;ll start receiving automated payouts immediately.
+                </p>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="w-full"
+                  onClick={() => router.push("/dashboard/financials/onboarding")}
+                >
+                  Set up payments
+                  <ArrowUpRightIcon className="ml-1 h-3.5 w-3.5" />
+                </Button>
+              </div>
             ) : (
               <>
                 <div className="text-3xl font-bold">
@@ -438,10 +519,20 @@ export default function PayoutsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Payout Schedule</CardTitle>
-          <CardDescription>
-            Choose how often funds are swept from your balance account to your bank.
-          </CardDescription>
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <CardTitle>Payout Schedule</CardTitle>
+              <CardDescription>
+                Choose how often funds are swept from your balance account to your bank.
+              </CardDescription>
+            </div>
+            {!isVerified && (
+              <Badge variant="secondary" className="shrink-0 gap-1">
+                <LockIcon className="h-3 w-3" />
+                Locked until onboarded
+              </Badge>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-3">
@@ -478,6 +569,16 @@ export default function PayoutsPage() {
               )}
             </div>
             <div className="flex items-center gap-2">
+              {canInitiatePayout && (
+                <Button
+                  size="sm"
+                  onClick={() => setInitiateDialogOpen(true)}
+                  disabled={!hasAvailableBalance}
+                >
+                  <BanknoteIcon className="mr-2 h-4 w-4" />
+                  Initiate Payout
+                </Button>
+              )}
               {isVerified && (
                 <Button
                   variant="outline"
@@ -598,11 +699,36 @@ export default function PayoutsPage() {
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : payouts.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {hasActiveFilters
-                ? "No payouts match the current filters."
-                : "No payouts yet. Payouts will appear here once settlements are processed."}
-            </div>
+            hasActiveFilters ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No payouts match the current filters.
+              </div>
+            ) : !isVerified ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="mb-3 rounded-lg bg-primary/10 p-3">
+                  <BanknoteIcon className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="text-base font-semibold mb-1">No payouts yet</h3>
+                <p className="text-sm text-muted-foreground max-w-md mb-4">
+                  Once you complete onboarding and start processing transactions, your settled
+                  batches will appear here.
+                </p>
+                {permissions.includes("*") || permissions.includes("financials.admin") ? (
+                  <Button onClick={() => router.push("/dashboard/financials/onboarding")}>
+                    Set up payments
+                    <ArrowUpRightIcon className="ml-1 h-4 w-4" />
+                  </Button>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Contact your organization admin to complete payment onboarding.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No payouts yet. Payouts will appear here once settlements are processed.
+              </div>
+            )
           ) : (
             <>
               <Table>
@@ -700,6 +826,36 @@ export default function PayoutsPage() {
           )}
         </CardContent>
       </Card>
+      <AlertDialog open={initiateDialogOpen} onOpenChange={setInitiateDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Initiate Payout</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  This will transfer your current available balance to your linked bank account.
+                </p>
+                {stats.liveBalance != null && (
+                  <p className="text-foreground font-medium">
+                    Available balance:{" "}
+                    <span className="text-primary">
+                      ${Number(stats.liveBalance.available).toFixed(2)} {stats.liveBalance.currency}
+                    </span>
+                  </p>
+                )}
+                <p className="text-xs">Funds typically arrive within 1–2 business days.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={initiateLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleInitiatePayout} disabled={initiateLoading}>
+              {initiateLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Confirm Payout
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
