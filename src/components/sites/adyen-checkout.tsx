@@ -6,6 +6,7 @@ import { AdyenCheckout, Dropin, Card, GooglePay, ApplePay, Ach } from "@adyen/ad
 import type { CoreConfiguration } from "@adyen/adyen-web/auto";
 import "@adyen/adyen-web/styles/adyen.css";
 import { Loader2 } from "lucide-react";
+import { isWalletType } from "@/lib/payment-utils";
 
 interface AdyenCheckoutProps {
   sessionId: string;
@@ -93,10 +94,17 @@ export function AdyenCheckoutComponent({
         if (cancelled || !containerRef.current) return;
 
         const pmResponse = checkout.paymentMethodsResponse;
-        if (pmResponse?.paymentMethods) {
-          pmResponse.paymentMethods = pmResponse.paymentMethods.sort((a, b) =>
-            a.type === "ach" ? 1 : b.type === "ach" ? -1 : 0
-          );
+        if (pmResponse) {
+          if (pmResponse.paymentMethods) {
+            pmResponse.paymentMethods = pmResponse.paymentMethods.sort((a, b) =>
+              a.type === "ach" ? 1 : b.type === "ach" ? -1 : 0
+            );
+          }
+          if (pmResponse.storedPaymentMethods) {
+            pmResponse.storedPaymentMethods = pmResponse.storedPaymentMethods.filter(
+              (pm) => !isWalletType(pm)
+            );
+          }
         }
 
         if (mountedComponentRef.current) {
