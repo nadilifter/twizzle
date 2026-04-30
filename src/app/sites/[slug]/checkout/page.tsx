@@ -751,10 +751,8 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
 
   const handleUseSameAddressBilling = (checked: boolean) => {
     setUseSameAddressBilling(checked);
-    if (checked) {
-      setSelectedBillingAddressId("new");
-      setIsEditingBillingAddress(false);
-    }
+    setSelectedBillingAddressId("new");
+    setIsEditingBillingAddress(false);
     const shippingIsUS = shippingAddress.country !== "CA";
     if (checked && shippingIsUS) {
       setFormData((prev) => ({
