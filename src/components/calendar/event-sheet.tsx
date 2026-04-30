@@ -22,18 +22,12 @@ import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { EventWithRelations } from "@/types/events";
 import { useState } from "react";
 import { Kbd } from "@/components/ui/kbd";
+import { formatTime12h } from "@/lib/date-utils";
 
 interface EventSheetProps {
   event: EventWithRelations | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-function formatTime(time: string): string {
-  const [hour, minute] = time.split(":").map(Number);
-  const period = hour >= 12 ? "PM" : "AM";
-  const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-  return `${displayHour}:${minute.toString().padStart(2, "0")} ${period}`;
 }
 
 function formatDate(dateStr: string): string {
@@ -84,8 +78,8 @@ export function EventSheet({ event, open, onOpenChange }: EventSheetProps) {
   if (!event) return null;
 
   const dateStr = formatDate(event.date);
-  const startTimeStr = formatTime(event.startTime);
-  const endTimeStr = formatTime(event.endTime);
+  const startTimeStr = formatTime12h(event.startTime);
+  const endTimeStr = formatTime12h(event.endTime);
   const timezone = event.timezone || "GMT+7 Pontianak";
   const meetingCode = getMeetingCode(event.meetingLink ?? undefined);
 

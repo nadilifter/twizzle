@@ -15,6 +15,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ClipboardList, Calendar, MoreHorizontal, ChevronDown, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { formatTime12h } from "@/lib/date-utils";
 import { cn } from "@/lib/utils";
 
 interface InstanceRegistration {
@@ -298,7 +299,8 @@ export default function RegistrationsPage() {
                                     </span>
                                     {s.programInstance?.startTime && (
                                       <span className="text-xs">
-                                        {s.programInstance.startTime}–{s.programInstance.endTime}
+                                        {formatTime12h(s.programInstance.startTime)}–
+                                        {formatTime12h(s.programInstance.endTime)}
                                       </span>
                                     )}
                                   </div>

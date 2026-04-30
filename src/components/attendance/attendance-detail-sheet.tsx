@@ -11,6 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useAttendance } from "@/hooks/use-attendance";
 import { cn } from "@/lib/utils";
+import { formatTime12h } from "@/lib/date-utils";
 import type { AttendanceWithRelations, AttendanceStatus } from "@/types/attendance";
 
 interface AttendanceDetailSheetProps {
@@ -217,7 +218,8 @@ export function AttendanceDetailSheet({
                               <span>{format(new Date(attendance.event.date), "MMM d, yyyy")}</span>
                               <span>•</span>
                               <span>
-                                {attendance.event.startTime} - {attendance.event.endTime}
+                                {formatTime12h(attendance.event.startTime)} -{" "}
+                                {formatTime12h(attendance.event.endTime)}
                               </span>
                             </div>
                             {attendance.event.program && (

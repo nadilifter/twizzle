@@ -97,6 +97,7 @@ import { QUESTION_TYPE_LABELS } from "@/types/custom-information";
 import type { CustomInfoQuestionType } from "@/types/custom-information";
 import { RegistrationFilesSection } from "@/components/registration-files-section";
 import { WaiverViewerDialog } from "@/components/waiver-viewer-dialog";
+import { formatTime12h } from "@/lib/date-utils";
 
 interface RegistrationItem {
   id: string;
@@ -859,7 +860,7 @@ function AthleteProgramsTab({
           <div className="flex items-center gap-1 text-muted-foreground">
             <Clock className="h-3.5 w-3.5 shrink-0" />
             <span className="whitespace-nowrap">
-              {program.startTime} · {durationStr}
+              {formatTime12h(program.startTime)} · {durationStr}
             </span>
           </div>
         );
@@ -1503,7 +1504,7 @@ function AthleteEventsTab({
         <div className="flex items-center gap-1 text-muted-foreground">
           <Clock className="h-3.5 w-3.5 shrink-0" />
           <span className="whitespace-nowrap">
-            {row.original.startTime} – {row.original.endTime}
+            {formatTime12h(row.original.startTime)} – {formatTime12h(row.original.endTime)}
           </span>
         </div>
       ),

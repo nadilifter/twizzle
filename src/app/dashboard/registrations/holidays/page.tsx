@@ -31,6 +31,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { formatTime12h } from "@/lib/date-utils";
 import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import { toast } from "sonner";
 import {
@@ -464,7 +465,7 @@ function ConflictResolutionDialog({
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm">{instance.programName}</p>
                   <p className="text-sm text-muted-foreground">
-                    {instance.startTime} - {instance.endTime}
+                    {formatTime12h(instance.startTime)} - {formatTime12h(instance.endTime)}
                     {instance.registrationCount > 0 && (
                       <span className="ml-2 text-amber-600">
                         ({instance.registrationCount} registration
@@ -489,7 +490,9 @@ function ConflictResolutionDialog({
                 />
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm">{program.name}</p>
-                  <p className="text-sm text-muted-foreground">Session at {program.startTime}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Session at {formatTime12h(program.startTime)}
+                  </p>
                 </div>
               </label>
             ))}

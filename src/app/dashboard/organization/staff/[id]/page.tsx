@@ -66,6 +66,7 @@ import { useFeatures } from "@/components/feature-context";
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
 import { PERMISSION_GROUPS, PERMISSION_FEATURE_MAP, ROLE_PERMISSIONS } from "@/lib/permissions";
 import type { FeatureKey } from "@/lib/feature-toggles";
+import { formatTime12h } from "@/lib/date-utils";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -1085,7 +1086,7 @@ export default function StaffDetailPage() {
                             {format(new Date(shift.date), "EEE, MMM d")}
                           </span>
                           <span className="text-muted-foreground ml-2">
-                            {shift.startTime} - {shift.endTime}
+                            {formatTime12h(shift.startTime)} - {formatTime12h(shift.endTime)}
                           </span>
                           {shift.facility && (
                             <span className="text-muted-foreground ml-2">

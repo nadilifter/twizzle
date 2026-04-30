@@ -46,6 +46,7 @@ import { format, subDays, addDays, isToday, isBefore, startOfDay } from "date-fn
 import { DateRange } from "react-day-picker";
 import { api } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
+import { formatTime12h } from "@/lib/date-utils";
 import { toast } from "sonner";
 import type { EventWithRelations } from "@/types/events";
 
@@ -302,7 +303,7 @@ function CoachAttendanceContent() {
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5" />
-                {selectedEvent.startTime} - {selectedEvent.endTime}
+                {formatTime12h(selectedEvent.startTime)} - {formatTime12h(selectedEvent.endTime)}
               </span>
               {selectedEvent.program && (
                 <span className="flex items-center gap-1">
@@ -662,7 +663,7 @@ function CoachAttendanceContent() {
                               <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
                                 <span className="flex items-center gap-1">
                                   <Clock className="h-3.5 w-3.5" />
-                                  {event.startTime} - {event.endTime}
+                                  {formatTime12h(event.startTime)} - {formatTime12h(event.endTime)}
                                 </span>
                                 {event.program && (
                                   <span className="flex items-center gap-1">

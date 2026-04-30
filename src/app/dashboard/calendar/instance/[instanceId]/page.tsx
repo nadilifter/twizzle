@@ -75,6 +75,7 @@ import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
 import { toast } from "sonner";
+import { formatTime12h } from "@/lib/date-utils";
 
 interface EvaluationTemplateSkillInfo {
   id: string;
@@ -648,7 +649,8 @@ export default function InstanceDetailPage() {
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="h-4 w-4" />
-                {instance.startTime} - {instance.endTime} ({duration} min)
+                {formatTime12h(instance.startTime)} - {formatTime12h(instance.endTime)} ({duration}{" "}
+                min)
               </span>
               {instance.facility && (
                 <span className="flex items-center gap-1">

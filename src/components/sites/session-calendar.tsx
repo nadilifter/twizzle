@@ -18,6 +18,7 @@ import { ChevronLeft, ChevronRight, Clock, MapPin, Users, CalendarPlus } from "l
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatPrice } from "@/lib/format-utils";
+import { formatTime12h } from "@/lib/date-utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -397,8 +398,10 @@ export function SessionCalendar({
 
                     const chipContent = (
                       <span>
-                        {session.startTime}
-                        <span className="hidden md:inline">–{session.endTime}</span>
+                        {formatTime12h(session.startTime, true)}
+                        <span className="hidden md:inline">
+                          –{formatTime12h(session.endTime, true)}
+                        </span>
                       </span>
                     );
 
@@ -444,7 +447,7 @@ export function SessionCalendar({
                             </div>
                             <div className="flex items-center gap-1.5 text-muted-foreground">
                               <Clock className="h-3 w-3 shrink-0" />
-                              {session.startTime} – {session.endTime}
+                              {formatTime12h(session.startTime)} – {formatTime12h(session.endTime)}
                             </div>
                             {session.facility && (
                               <div className="flex items-center gap-1.5 text-muted-foreground">

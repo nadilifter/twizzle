@@ -39,6 +39,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { formatTime12h } from "@/lib/date-utils";
 import { WaiverViewerDialog } from "@/components/waiver-viewer-dialog";
 import type { AthleteWaiverSummary } from "@/types/athletes";
 
@@ -450,7 +451,8 @@ export default function ProgramAthleteDetailPage() {
                           </TableCell>
                           <TableCell>{r.programInstance.facility?.name ?? "-"}</TableCell>
                           <TableCell>
-                            {r.programInstance.startTime} &ndash; {r.programInstance.endTime}
+                            {formatTime12h(r.programInstance.startTime)} &ndash;{" "}
+                            {formatTime12h(r.programInstance.endTime)}
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">{r.status}</Badge>
@@ -531,7 +533,8 @@ export default function ProgramAthleteDetailPage() {
                           </Link>
                         </TableCell>
                         <TableCell>
-                          {a.programInstance.startTime} &ndash; {a.programInstance.endTime}
+                          {formatTime12h(a.programInstance.startTime)} &ndash;{" "}
+                          {formatTime12h(a.programInstance.endTime)}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className={cn(ATTENDANCE_STYLE[a.status] ?? "")}>

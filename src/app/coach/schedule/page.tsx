@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, isSameDay, parseISO } from "date-fns";
 import Link from "next/link";
+import { formatTime12h } from "@/lib/date-utils";
 
 type ViewMode = "week" | "list";
 
@@ -199,7 +200,7 @@ export default function CoachSchedulePage() {
                           <div className="font-medium truncate">{event.title}</div>
                           <div className="flex items-center gap-1 mt-1 opacity-80">
                             <Clock className="h-3 w-3" />
-                            {event.startTime}
+                            {formatTime12h(event.startTime)}
                           </div>
                           {event.organization && (
                             <div className="flex items-center gap-1 mt-0.5 opacity-70">
@@ -257,7 +258,7 @@ export default function CoachSchedulePage() {
                           <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Clock className="h-4 w-4" />
-                              {event.startTime} - {event.endTime}
+                              {formatTime12h(event.startTime)} - {formatTime12h(event.endTime)}
                             </span>
                             {event.program && (
                               <span className="flex items-center gap-1">

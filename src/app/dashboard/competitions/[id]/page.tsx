@@ -53,6 +53,7 @@ import { COMPETITION_TYPE_LABELS, getStatusLabel, getStatusStyle } from "../lib/
 import { AthletesTab } from "./athletes-tab";
 import { EventsTab, getCategoryLabel } from "./events-tab";
 import { TransactionsTab } from "./transactions-tab";
+import { formatTime12h } from "@/lib/date-utils";
 
 interface CompetitionCategory {
   id: string;
@@ -574,7 +575,8 @@ export default function CompetitionProfilePage() {
                           <> &ndash; {format(new Date(competition.endDate), "MMM d, yyyy")}</>
                         )}
                         {" · "}
-                        {competition.startTime} &ndash; {competition.endTime}
+                        {formatTime12h(competition.startTime)} &ndash;{" "}
+                        {formatTime12h(competition.endTime)}
                       </span>
                     </div>
                     <div className="flex items-start gap-2 text-muted-foreground col-span-2">

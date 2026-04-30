@@ -25,6 +25,7 @@ import {
 import { useEvents } from "@/hooks/use-events";
 import { format } from "date-fns";
 import { DashboardPageHeader } from "@/components/dashboard-page-header";
+import { formatTime12h } from "@/lib/date-utils";
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
   CLASS: "Class",
@@ -156,7 +157,7 @@ export default function EventsPage() {
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Clock className="h-3.5 w-3.5" />
                       <span>
-                        {event.startTime} - {event.endTime}
+                        {formatTime12h(event.startTime)} - {formatTime12h(event.endTime)}
                       </span>
                     </div>
 

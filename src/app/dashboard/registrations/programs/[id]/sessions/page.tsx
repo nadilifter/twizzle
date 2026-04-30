@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
+import { formatTime12h } from "@/lib/date-utils";
 
 interface Program {
   id: string;
@@ -184,7 +185,7 @@ export default function ProgramSessionsPage() {
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Clock className="h-3.5 w-3.5" />
-                          {instance.startTime} - {instance.endTime}
+                          {formatTime12h(instance.startTime)} - {formatTime12h(instance.endTime)}
                         </span>
                         {instance.facility && (
                           <span className="flex items-center gap-1">

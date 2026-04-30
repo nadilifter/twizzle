@@ -36,6 +36,7 @@ import {
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
+import { formatTime12h } from "@/lib/date-utils";
 
 interface ProgramSession {
   id: string;
@@ -122,7 +123,7 @@ export function SessionsTab({ programId }: SessionsTabProps) {
         header: ({ column }) => <DataTableColumnHeader column={column} title="Time" />,
         cell: ({ row }) => (
           <span className="text-sm">
-            {row.original.startTime} &ndash; {row.original.endTime}
+            {formatTime12h(row.original.startTime)} &ndash; {formatTime12h(row.original.endTime)}
           </span>
         ),
       },

@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
+import { formatTime12h } from "@/lib/date-utils";
 import { useEvent } from "@/hooks/use-events";
 import { useAttendance } from "@/hooks/use-attendance";
 import { toast } from "sonner";
@@ -160,7 +161,7 @@ export default function EventCheckinPage({ params }: EventCheckinPageProps) {
           </div>
           <div className="flex items-center gap-1">
             <Clock className="h-4 w-4" />
-            {event.startTime} - {event.endTime}
+            {formatTime12h(event.startTime)} - {formatTime12h(event.endTime)}
           </div>
           {event.location?.name && (
             <div className="flex items-center gap-1">

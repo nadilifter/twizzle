@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Clock, MapPin, Users, ArrowRight, ScanLine, Loader2, CalendarX } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
+import { formatTime12h } from "@/lib/date-utils";
 import { useEvents } from "@/hooks/use-events";
 import { useEffect, useMemo } from "react";
 
@@ -103,9 +104,11 @@ export default function EventsPortalPage() {
                   {/* Time Column */}
                   <div className="bg-primary/5 dark:bg-primary/10 p-4 md:p-6 md:w-32 flex flex-row md:flex-col items-center md:justify-center gap-2 md:gap-1 border-b md:border-b-0 md:border-r">
                     <Clock className="h-4 w-4 text-primary" />
-                    <span className="font-semibold text-lg">{event.startTime}</span>
+                    <span className="font-semibold text-lg">{formatTime12h(event.startTime)}</span>
                     {event.endTime && (
-                      <span className="text-xs text-muted-foreground">to {event.endTime}</span>
+                      <span className="text-xs text-muted-foreground">
+                        to {formatTime12h(event.endTime)}
+                      </span>
                     )}
                   </div>
 

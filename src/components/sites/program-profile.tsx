@@ -46,6 +46,7 @@ import { LocationMap } from "@/components/location-map";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import type { RegistrationWindowStatus } from "@/types/programs";
 import { isRegistrationClosed } from "@/lib/registration-utils";
+import { formatTime12h } from "@/lib/date-utils";
 import { type BulkDiscount } from "@/lib/bulk-discounts";
 
 const ROLE_ORDER: Record<string, number> = {
@@ -755,7 +756,7 @@ function buildDetailItems(
     items.push({
       icon: Clock,
       label: "Time",
-      value: `${program.startTime}${program.duration ? ` (${program.duration} min)` : ""}`,
+      value: `${formatTime12h(program.startTime)}${program.duration ? ` (${program.duration} min)` : ""}`,
     });
   }
   if (program.instanceCount > 0) {

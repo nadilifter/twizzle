@@ -10,6 +10,7 @@ import { CompetitionRegistrationFlow } from "@/components/sites/competition-regi
 import { LocationMap } from "@/components/location-map";
 import type { FileRequirementConfig } from "@/types/file-requirements";
 import { getHeroContrastStyles } from "@/lib/color-utils";
+import { formatTime12h } from "@/lib/date-utils";
 
 export default async function CompetitionDetailPage({
   params,
@@ -217,8 +218,8 @@ export default async function CompetitionDetailPage({
               <div className="flex items-center gap-1.5">
                 <Clock className="h-4 w-4" />
                 <span>
-                  {competition.startTime}
-                  {competition.endTime ? ` – ${competition.endTime}` : ""}
+                  {formatTime12h(competition.startTime)}
+                  {competition.endTime ? ` – ${formatTime12h(competition.endTime)}` : ""}
                 </span>
               </div>
             )}

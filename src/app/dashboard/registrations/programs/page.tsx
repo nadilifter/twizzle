@@ -49,6 +49,7 @@ import { useCategories } from "@/hooks/use-categories";
 import { useStaff } from "@/hooks/use-staff";
 import { useFeatures } from "@/components/feature-context";
 import { formatRRuleDays } from "@/lib/rrule-utils";
+import { formatTime12h } from "@/lib/date-utils";
 import { ProgramConfiguration } from "./program-configuration";
 import {
   PROGRAM_STATUS_CONFIG,
@@ -555,7 +556,7 @@ export default function ProgramsPage() {
                           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                             <Clock className="h-3.5 w-3.5" />
                             <span>
-                              {p.startTime}
+                              {formatTime12h(p.startTime)}
                               {p.duration ? ` (${p.duration} min)` : ""}
                             </span>
                           </div>

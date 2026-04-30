@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { MapPin, Clock, Phone, Mail, Building2 } from "lucide-react";
 import { LocationMap } from "@/components/location-map";
 import { getHeroContrastStyles } from "@/lib/color-utils";
+import { formatTime12h } from "@/lib/date-utils";
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
@@ -57,16 +58,6 @@ const getCachedFacilities = unstable_cache(
   { revalidate: 30 }
 );
 
-function formatTime(time: string): string {
-  const [hourStr, minuteStr] = time.split(":");
-  let hour = parseInt(hourStr, 10);
-  const minute = minuteStr || "00";
-  const ampm = hour >= 12 ? "PM" : "AM";
-  if (hour === 0) hour = 12;
-  else if (hour > 12) hour -= 12;
-  return `${hour}:${minute} ${ampm}`;
-}
-
 interface HoursSlot {
   dayOfWeek: number;
   openTime: string;
@@ -107,7 +98,9 @@ function groupOperatingHours(hours: HoursSlot[]) {
     }
 
     const dayRange = j - i > 1 ? `${DAY_NAMES[i]} - ${DAY_NAMES[j - 1]}` : DAY_NAMES[i];
-    const timeStr = slots.map((s) => `${formatTime(s.open)} - ${formatTime(s.close)}`).join(", ");
+    const timeStr = slots
+      .map((s) => `${formatTime12h(s.open)} - ${formatTime12h(s.close)}`)
+      .join(", ");
     groups.push({ days: dayRange, hours: timeStr });
     i = j;
   }

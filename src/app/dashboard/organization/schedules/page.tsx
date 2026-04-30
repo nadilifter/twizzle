@@ -81,6 +81,7 @@ import { useShifts } from "@/hooks/use-shifts";
 import { api } from "@/lib/api-client";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { formatTime12h } from "@/lib/date-utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type {
@@ -480,7 +481,7 @@ export default function SchedulesPage() {
                       <TableRow key={shift.id}>
                         <TableCell className="font-medium">{formatDate(shift.date)}</TableCell>
                         <TableCell>
-                          {shift.startTime} - {shift.endTime}
+                          {formatTime12h(shift.startTime)} - {formatTime12h(shift.endTime)}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">{shift.shiftType}</Badge>
@@ -692,7 +693,9 @@ function StaffAvailabilityCard({
                     />
                     <span>
                       {day.slice(0, 3)}:{" "}
-                      {dayAvail ? `${dayAvail.startTime}-${dayAvail.endTime}` : "Unavailable"}
+                      {dayAvail
+                        ? `${formatTime12h(dayAvail.startTime)}-${formatTime12h(dayAvail.endTime)}`
+                        : "Unavailable"}
                     </span>
                   </div>
                 );
@@ -864,7 +867,7 @@ function FacilityUsageCard({
                   </Badge>
                 </div>
                 <span className="text-sm text-muted-foreground">
-                  {shift.startTime} - {shift.endTime}
+                  {formatTime12h(shift.startTime)} - {formatTime12h(shift.endTime)}
                 </span>
               </div>
             ))}
@@ -1017,7 +1020,7 @@ function WeeklyCalendarView({
                       onClick={() => onEditShift(shift)}
                     >
                       <div className="font-medium truncate">
-                        {shift.startTime} - {shift.endTime}
+                        {formatTime12h(shift.startTime)} - {formatTime12h(shift.endTime)}
                       </div>
                       <div className="flex items-center gap-1 mt-1">
                         <Avatar className="h-4 w-4">

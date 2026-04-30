@@ -21,6 +21,7 @@ import { sanitizeHtml } from "@/lib/sanitize";
 import { formatRRuleDays } from "@/lib/rrule-utils";
 import type { RegistrationWindowStatus } from "@/types/programs";
 import { isRegistrationClosed } from "@/lib/registration-utils";
+import { formatTime12h } from "@/lib/date-utils";
 import { useParams, useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
@@ -310,7 +311,7 @@ export function ProgramCard({ program }: ProgramCardProps) {
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Clock className="h-3.5 w-3.5 shrink-0" />
                 <span>
-                  {program.startTime}
+                  {formatTime12h(program.startTime)}
                   {program.duration && ` (${program.duration} min)`}
                 </span>
               </div>

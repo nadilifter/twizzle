@@ -4,6 +4,7 @@ import { ExternalLink } from "lucide-react";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { EventWithRelations } from "@/types/events";
 import { getEventDuration } from "./calendar-utils";
+import { formatTime12h } from "@/lib/date-utils";
 
 interface EventCardProps {
   event: EventWithRelations;
@@ -15,7 +16,7 @@ export function EventCard({ event, style, onClick }: EventCardProps) {
   const duration = getEventDuration(event.startTime, event.endTime);
   const isVeryShortEvent = duration < 30;
   const isMediumEvent = duration >= 25 && duration < 60;
-  const timeStr = `${event.startTime} - ${event.endTime}${
+  const timeStr = `${formatTime12h(event.startTime)} - ${formatTime12h(event.endTime)}${
     event.timezone ? ` (${event.timezone})` : ""
   }`;
   const hasMultipleParticipants = event.participants.length > 3;
@@ -29,7 +30,9 @@ export function EventCard({ event, style, onClick }: EventCardProps) {
       >
         <div className="size-1.5 rounded-full bg-cyan-500 shrink-0" />
         <h4 className="text-[10px] font-semibold text-foreground truncate flex-1">{event.title}</h4>
-        <span className="text-[9px] text-muted-foreground shrink-0">{event.startTime}</span>
+        <span className="text-[9px] text-muted-foreground shrink-0">
+          {formatTime12h(event.startTime)}
+        </span>
       </div>
     );
   }

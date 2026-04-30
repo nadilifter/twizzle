@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, CalendarDays, MapPin, Users, UserCheck, Shield, Tag } from "lucide-react";
 import { getRegistrationStatus } from "@/lib/registration-utils";
+import { formatTime12h } from "@/lib/date-utils";
 
 interface CompetitionCardProps {
   competition: {
@@ -177,8 +178,8 @@ export function CompetitionCard({ competition, primaryColor }: CompetitionCardPr
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <CalendarDays className="h-3.5 w-3.5 shrink-0 opacity-0" />
               <span>
-                {competition.startTime}
-                {competition.endTime ? ` – ${competition.endTime}` : ""}
+                {formatTime12h(competition.startTime)}
+                {competition.endTime ? ` – ${formatTime12h(competition.endTime)}` : ""}
               </span>
             </div>
           )}

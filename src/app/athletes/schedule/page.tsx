@@ -22,6 +22,7 @@ import {
   Repeat,
 } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow, isThisWeek } from "date-fns";
+import { formatTime12h } from "@/lib/date-utils";
 
 interface ScheduleEvent {
   id: string;
@@ -261,8 +262,8 @@ export default function SchedulePage() {
                                 {event.startTime && (
                                   <span className="flex items-center gap-1">
                                     <Clock className="w-3 h-3" />
-                                    {event.startTime}
-                                    {event.endTime && ` - ${event.endTime}`}
+                                    {formatTime12h(event.startTime)}
+                                    {event.endTime && ` - ${formatTime12h(event.endTime)}`}
                                   </span>
                                 )}
                                 <span className="flex items-center gap-1">

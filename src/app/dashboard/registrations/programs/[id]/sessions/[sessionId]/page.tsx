@@ -37,6 +37,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { formatTime12h } from "@/lib/date-utils";
 
 interface SessionDetail {
   id: string;
@@ -228,7 +229,7 @@ export default function ProgramSessionDetailPage() {
           <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <Calendar className="h-3.5 w-3.5" />
-              {data.startTime} &ndash; {data.endTime}
+              {formatTime12h(data.startTime)} &ndash; {formatTime12h(data.endTime)}
             </span>
             {locationLabel && (
               <span className="flex items-center gap-1.5">

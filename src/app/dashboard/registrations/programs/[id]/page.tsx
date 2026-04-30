@@ -56,6 +56,7 @@ import { EvaluationsTab } from "./evaluations-tab";
 import { ProgramConfiguration } from "../program-configuration";
 import { SessionsTab } from "./sessions-tab";
 import { TransactionsTab, type ProgramLineItem } from "./transactions-tab";
+import { formatTime12h } from "@/lib/date-utils";
 
 interface ProgramDetail {
   id: string;
@@ -567,7 +568,7 @@ export default function ProgramProfilePage() {
                           {program.endDate && program.endDate !== program.startDate && (
                             <> &ndash; {format(new Date(program.endDate), "MMM d, yyyy")}</>
                           )}
-                          {program.startTime && <> · {program.startTime}</>}
+                          {program.startTime && <> · {formatTime12h(program.startTime)}</>}
                           {program.duration && <> ({program.duration} min)</>}
                         </span>
                       </div>
@@ -643,7 +644,7 @@ export default function ProgramProfilePage() {
                                     {format(new Date(s.date), "EEE, MMM d")}
                                   </p>
                                   <p className="text-xs text-muted-foreground">
-                                    {s.startTime} &ndash; {s.endTime}
+                                    {formatTime12h(s.startTime)} &ndash; {formatTime12h(s.endTime)}
                                   </p>
                                 </div>
                                 <Badge variant="secondary" className="shrink-0">
@@ -672,7 +673,7 @@ export default function ProgramProfilePage() {
                                     {format(new Date(s.date), "EEE, MMM d")}
                                   </p>
                                   <p className="text-xs text-muted-foreground">
-                                    {s.startTime} &ndash; {s.endTime}
+                                    {formatTime12h(s.startTime)} &ndash; {formatTime12h(s.endTime)}
                                   </p>
                                 </div>
                                 <Badge variant="outline" className="shrink-0">

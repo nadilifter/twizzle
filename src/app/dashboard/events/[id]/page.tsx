@@ -69,6 +69,7 @@ import { useAthletes } from "@/hooks/use-athletes";
 import { useAttendance } from "@/hooks/use-attendance";
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
 import { toast } from "sonner";
+import { formatTime12h } from "@/lib/date-utils";
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
   CLASS: "Class",
@@ -299,8 +300,8 @@ export default function EventDetailPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Time</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{event.startTime}</div>
-            <p className="text-xs text-muted-foreground">to {event.endTime}</p>
+            <div className="text-2xl font-bold">{formatTime12h(event.startTime)}</div>
+            <p className="text-xs text-muted-foreground">to {formatTime12h(event.endTime)}</p>
           </CardContent>
         </Card>
         <Card>
@@ -349,7 +350,7 @@ export default function EventDetailPage() {
               <div>
                 <div className="text-sm font-medium">Time</div>
                 <div className="text-sm text-muted-foreground">
-                  {event.startTime} - {event.endTime}
+                  {formatTime12h(event.startTime)} - {formatTime12h(event.endTime)}
                 </div>
               </div>
             </div>

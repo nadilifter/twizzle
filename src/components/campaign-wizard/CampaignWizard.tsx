@@ -53,6 +53,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { formatTime12h } from "@/lib/date-utils";
 import {
   TARGET_TYPE_LABELS,
   TARGET_TYPE_DESCRIPTIONS,
@@ -663,7 +664,8 @@ export const CampaignWizard = forwardRef<CampaignWizardHandle, Props>(function C
                       <SelectContent>
                         {programInstances.map((i) => (
                           <SelectItem key={i.id} value={i.id}>
-                            {new Date(i.date).toLocaleDateString()} {i.startTime} - {i.endTime}
+                            {new Date(i.date).toLocaleDateString()} {formatTime12h(i.startTime)} -{" "}
+                            {formatTime12h(i.endTime)}
                           </SelectItem>
                         ))}
                       </SelectContent>

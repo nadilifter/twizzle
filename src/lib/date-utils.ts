@@ -161,3 +161,24 @@ export function normalizeToNoonUTC(date: Date | null): Date | null {
   d.setUTCHours(12, 0, 0, 0);
   return d;
 }
+
+/**
+ * Convert a 24-hour time string ("HH:mm" or "HH:mm:ss") to 12-hour format with AM/PM.
+ * Returns an empty string for null/empty/invalid input.
+ *
+ * Examples:
+ *   formatTime12h("14:00")       → "2:00 PM"
+ *   formatTime12h("09:30")       → "9:30 AM"
+ *   formatTime12h("00:15")       → "12:15 AM"
+ *   formatTime12h("14:00", true) → "2:00p"
+ */
+export function formatTime12h(time24: string | null | undefined, compact: boolean = false): string {
+  if (!time24) return "";
+  const [hoursStr, minutesRaw = "00"] = time24.split(":");
+  const hours = parseInt(hoursStr, 10);
+  if (isNaN(hours)) return "";
+  const minutes = (minutesRaw ?? "00").padStart(2, "0").slice(0, 2);
+  const period = hours >= 12 ? (compact ? "p" : "PM") : compact ? "a" : "AM";
+  const hours12 = hours % 12 || 12;
+  return compact ? `${hours12}:${minutes}${period}` : `${hours12}:${minutes} ${period}`;
+}

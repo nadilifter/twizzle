@@ -12,21 +12,8 @@ import {
   getBadgeColorClasses,
   getBadgeStyles,
 } from "./color-utils";
+import { formatTime12h } from "@/lib/date-utils";
 import type { CalendarEvent } from "./types";
-
-/**
- * Convert 24-hour time string to 12-hour AM/PM format
- * @param time24 - Time in "HH:mm" format (e.g., "14:30")
- * @param compact - If true, uses compact format "9:30a" instead of "9:30 AM"
- * @returns Time in AM/PM format
- */
-function formatTime12h(time24: string, compact: boolean = false): string {
-  const [hoursStr, minutes] = time24.split(":");
-  const hours = parseInt(hoursStr, 10);
-  const period = hours >= 12 ? (compact ? "p" : "PM") : compact ? "a" : "AM";
-  const hours12 = hours % 12 || 12;
-  return compact ? `${hours12}:${minutes}${period}` : `${hours12}:${minutes} ${period}`;
-}
 
 interface EventPillProps {
   event: CalendarEvent;

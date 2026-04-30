@@ -32,6 +32,7 @@ import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api-client";
+import { formatTime12h } from "@/lib/date-utils";
 import type { AttendanceWithRelations, AttendanceStatus } from "@/types/attendance";
 
 interface Athlete {
@@ -399,7 +400,8 @@ export default function AthleteAttendancePage() {
                               <div className="text-sm text-muted-foreground">
                                 {format(parseISO(attendance.event.date), "EEEE, MMMM d, yyyy")}
                                 <span className="mx-1">•</span>
-                                {attendance.event.startTime} - {attendance.event.endTime}
+                                {formatTime12h(attendance.event.startTime)} -{" "}
+                                {formatTime12h(attendance.event.endTime)}
                               </div>
                               {attendance.event.program && (
                                 <div className="text-xs text-muted-foreground mt-1">

@@ -67,6 +67,7 @@ import {
   Ticket,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatTime12h } from "@/lib/date-utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SessionCalendar } from "@/components/sites/session-calendar";
@@ -1166,7 +1167,7 @@ export function ProgramRegistrationFlow({
             referenceId: instance.id,
             type: "program",
             name: `${program.name} – ${format(new Date(instance.date), "MMM d, yyyy")}`,
-            description: `${instance.startTime} – ${instance.endTime}`,
+            description: `${formatTime12h(instance.startTime)} – ${formatTime12h(instance.endTime)}`,
             price: program.perSessionPrice || 0,
             quantity: 1,
             athleteId: selectedAthlete.id,
@@ -2207,8 +2208,9 @@ export function ProgramRegistrationFlow({
                         >
                           <div className="min-w-0">
                             <span className="text-sm">
-                              {format(new Date(instance.date), "EEE, MMM d")} — {instance.startTime}{" "}
-                              – {instance.endTime}
+                              {format(new Date(instance.date), "EEE, MMM d")} —{" "}
+                              {formatTime12h(instance.startTime)} –{" "}
+                              {formatTime12h(instance.endTime)}
                             </span>
                           </div>
                           {program.perSessionPrice != null && program.perSessionPrice > 0 && (

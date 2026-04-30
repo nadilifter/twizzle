@@ -48,6 +48,7 @@ import { useSeasons } from "@/hooks/use-seasons";
 import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import { CompetitionConfiguration } from "./competition-configuration";
 import { COMPETITION_TYPE_LABELS, getStatusLabel, getStatusStyle } from "./lib/competition-status";
+import { formatTime12h } from "@/lib/date-utils";
 
 function formatPrice(price: number | string | null | undefined): string {
   if (price === null || price === undefined) return "Free";
@@ -339,7 +340,8 @@ export default function CompetitionsPage() {
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Clock className="h-4 w-4 shrink-0" />
                         <span>
-                          {competition.startTime} &ndash; {competition.endTime}
+                          {formatTime12h(competition.startTime)} &ndash;{" "}
+                          {formatTime12h(competition.endTime)}
                         </span>
                       </div>
 

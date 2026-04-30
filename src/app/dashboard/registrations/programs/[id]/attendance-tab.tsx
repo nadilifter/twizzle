@@ -5,6 +5,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { BarChart3, Users, Calendar } from "lucide-react";
 import { toast } from "sonner";
+import { formatTime12h } from "@/lib/date-utils";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -219,7 +220,7 @@ export function AttendanceTab({ programId }: AttendanceTabProps) {
                       </Link>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {r.startTime} &ndash; {r.endTime}
+                      {formatTime12h(r.startTime)} &ndash; {formatTime12h(r.endTime)}
                     </TableCell>
                     <TableCell className="text-right">{r.present}</TableCell>
                     <TableCell className="text-right">{r.absent}</TableCell>

@@ -21,6 +21,7 @@ import {
 import Link from "next/link";
 import { api } from "@/lib/api-client";
 import { format } from "date-fns";
+import { formatTime12h } from "@/lib/date-utils";
 
 interface OverviewEvent {
   id: string;
@@ -286,7 +287,7 @@ export default function CoachDashboard() {
                         <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Clock className="h-3.5 w-3.5" />
-                            {event.startTime} - {event.endTime}
+                            {formatTime12h(event.startTime)} - {formatTime12h(event.endTime)}
                           </span>
                           {event.program && (
                             <span className="flex items-center gap-1">

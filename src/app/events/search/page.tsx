@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, Check, Clock4, Loader2, UserSearch, Calendar, UserCheck } from "lucide-react";
 import { format } from "date-fns";
+import { formatTime12h } from "@/lib/date-utils";
 import { useAthletes } from "@/hooks/use-athletes";
 import { useEvents } from "@/hooks/use-events";
 import { useAttendance } from "@/hooks/use-attendance";
@@ -276,7 +277,7 @@ export default function AthleteSearchPage() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="font-medium text-sm text-muted-foreground">
-                                {event.startTime}
+                                {formatTime12h(event.startTime)}
                               </span>
                               {event.type && (
                                 <Badge variant="secondary" className="text-xs">
