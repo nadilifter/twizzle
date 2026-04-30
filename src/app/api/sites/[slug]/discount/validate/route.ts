@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { checkApiRateLimit } from "@/lib/rate-limit";
+import { getAuthSession } from "@/lib/auth";
+import { userHasUsedDiscount } from "@/lib/invoice-processing";
 
 const validateSchema = z.object({
   code: z.string().min(1, "Discount code is required").toUpperCase(),
@@ -65,6 +67,15 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
     if (discount.usageLimit && discount.usageCount >= discount.usageLimit) {
       return NextResponse.json(
         { valid: false, error: "This discount code has reached its usage limit" },
+        { status: 400 }
+      );
+    }
+
+    const authSession = await getAuthSession();
+    const userId = authSession?.user?.id ?? null;
+    if (await userHasUsedDiscount(discount.id, userId)) {
+      return NextResponse.json(
+        { valid: false, error: "You have already used this discount code" },
         { status: 400 }
       );
     }

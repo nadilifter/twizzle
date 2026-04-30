@@ -567,3 +567,42 @@ export async function processInvoiceRegistrations(
     }
   }
 }
+
+/**
+ * Returns true if the given user has already redeemed this promo code discount
+ * on a paid invoice. Abandoned draft checkouts are excluded.
+ */
+export async function userHasUsedDiscount(
+  discountId: string,
+  userId: string | null
+): Promise<boolean> {
+  if (!userId) return false;
+  const existing = await db.lineItem.findFirst({
+    where: { discountId, invoice: { userId, status: "PAID" } },
+    select: { id: true },
+  });
+  return existing !== null;
+}
+
+/**
+ * Returns the set of ProgramBulkDiscount IDs this guardian has already
+ * redeemed on a paid invoice. Used to filter out already-used discounts
+ * before sending bulkDiscounts to the client and before applying them
+ * in the checkout session.
+ */
+export async function getGuardianUsedBulkDiscountIds(
+  userId: string | null,
+  bulkDiscountIds: string[]
+): Promise<Set<string>> {
+  if (bulkDiscountIds.length === 0 || !userId) return new Set();
+  const lineItems = await db.lineItem.findMany({
+    where: {
+      bulkDiscountId: { in: bulkDiscountIds },
+      invoice: { userId, status: "PAID" },
+    },
+    select: { bulkDiscountId: true },
+  });
+  return new Set(
+    lineItems.map((li) => li.bulkDiscountId).filter((id): id is string => id !== null)
+  );
+}

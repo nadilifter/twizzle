@@ -10,6 +10,7 @@ import { resolveOrProvisionCheckoutUser } from "@/lib/checkout-user-provisioning
 import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { getRegistrationStatus } from "@/lib/registration-utils";
 import { calculateBulkDiscounts } from "@/lib/bulk-discounts";
+import { userHasUsedDiscount, getGuardianUsedBulkDiscountIds } from "@/lib/invoice-processing";
 import { z } from "zod";
 import { isValidPhoneNumber } from "libphonenumber-js";
 
@@ -1467,15 +1468,21 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
       ),
     ];
     let bulkDiscountLineAmount = 0;
+    let bulkDiscountBreakdown: Array<{ label: string; amount: number; discountId: string }> = [];
     if (bulkDiscountProgramIds.length > 0) {
       const programBulkDiscounts = await db.programBulkDiscount.findMany({
         where: { programId: { in: bulkDiscountProgramIds }, program: { organizationId } },
       });
+
+      // Filter out discounts this guardian already used on a prior paid invoice
+      const allDiscountIds = programBulkDiscounts.map((d) => d.id);
+      const usedDiscountIds = await getGuardianUsedBulkDiscountIds(authUserId, allDiscountIds);
+
       const bulkDiscountsByProgramId = new Map(
         bulkDiscountProgramIds.map((id) => [
           id,
           programBulkDiscounts
-            .filter((d) => d.programId === id)
+            .filter((d) => d.programId === id && !usedDiscountIds.has(d.id))
             .map((d) => ({
               id: d.id,
               type: d.type,
@@ -1485,13 +1492,14 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
             })),
         ])
       );
-      const { totalDiscount } = calculateBulkDiscounts(
+      const { totalDiscount, breakdown } = calculateBulkDiscounts(
         items,
         bulkDiscountsByProgramId,
         (index, item) =>
           serverPrices.has(index) ? serverPrices.get(index)! : Number(item.price) * item.quantity
       );
       bulkDiscountLineAmount = totalDiscount;
+      bulkDiscountBreakdown = breakdown;
     }
 
     // 3c. Validate and apply discount code
@@ -1508,7 +1516,10 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
         const validFrom = new Date(discount.validFrom);
         const validTo = discount.validTo ? new Date(discount.validTo) : null;
         const isValid =
-          discount.status !== "DRAFT" && validFrom <= now && (!validTo || validTo >= now);
+          discount.status !== "DRAFT" &&
+          validFrom <= now &&
+          (!validTo || validTo >= now) &&
+          !(await userHasUsedDiscount(discount.id, authUserId));
 
         if (isValid) {
           // Atomically claim a usage slot: increment only if under the limit
@@ -1938,19 +1949,21 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
       });
     }
 
-    // 7c. Create bulk discount line item
-    if (bulkDiscountLineAmount > 0) {
-      await db.lineItem.create({
-        data: {
-          invoiceId: invoice.id,
-          description: "Bulk Registration Discount",
-          quantity: 1,
-          unitPrice: -bulkDiscountLineAmount,
-          total: -bulkDiscountLineAmount,
-        },
-      });
-    }
-
+    // 7c. Create one line item per bulk discount that fired (tracked via bulkDiscountId)
+    await Promise.all(
+      bulkDiscountBreakdown.map((entry) =>
+        db.lineItem.create({
+          data: {
+            invoiceId: invoice.id,
+            description: entry.label,
+            quantity: 1,
+            unitPrice: -entry.amount,
+            total: -entry.amount,
+            bulkDiscountId: entry.discountId,
+          },
+        })
+      )
+    );
     // 7d. Create Order record if cart contains store products
     const productItems = items.filter((i: CartItem) => i.type === "item");
     if (productItems.length > 0) {

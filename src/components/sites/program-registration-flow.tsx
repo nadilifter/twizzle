@@ -1070,11 +1070,24 @@ export function ProgramRegistrationFlow({
     ? getBestDiscount(program.bulkDiscounts, "MULTI_SESSION", selectedInstanceIds.size)
     : null;
 
+  const activeFamilyDiscount = getBestDiscount(
+    program.bulkDiscounts.filter((d) => d.type === "FAMILY_SIBLING"),
+    "FAMILY_SIBLING",
+    1
+  );
+
   const multiSessionSavings = activeMultiSessionDiscount
     ? getDiscountAmount(totalPrice, activeMultiSessionDiscount)
     : 0;
 
-  const discountedTotalPrice = totalPrice - multiSessionSavings;
+  const familySavings = activeFamilyDiscount
+    ? getDiscountAmount(totalPrice, activeFamilyDiscount)
+    : 0;
+
+  // For PER_INSTANCE, only the better discount applies (never stacked); for ALL_INSTANCES, multiSessionSavings is always 0
+  const bestSavings = isPerInstance ? Math.max(multiSessionSavings, familySavings) : familySavings;
+  const bestSavingsLabel = familySavings > multiSessionSavings ? "family" : "multi-session";
+  const discountedTotalPrice = totalPrice - bestSavings;
 
   const membershipPrice =
     needsMembershipPurchase && selectedMembership ? selectedMembership.price : 0;
@@ -1735,9 +1748,9 @@ export function ProgramRegistrationFlow({
                       <span className="text-lg font-bold">{formatPrice(totalPrice)}</span>
                     )}
                   </div>
-                  {multiSessionSavings > 0 && (
+                  {bestSavings > 0 && (
                     <div className="text-xs font-medium text-green-600 dark:text-green-400 text-right">
-                      You save {formatPrice(multiSessionSavings)} with multi-session discount
+                      You save {formatPrice(bestSavings)} with {bestSavingsLabel} discount
                     </div>
                   )}
                 </div>
@@ -2268,10 +2281,10 @@ export function ProgramRegistrationFlow({
                     )}
                   </span>
                 </div>
-                {multiSessionSavings > 0 && (
+                {bestSavings > 0 && (
                   <div className="flex items-center justify-between text-xs text-green-600 dark:text-green-400">
-                    <span>Multi-session discount</span>
-                    <span>-{formatPrice(multiSessionSavings)}</span>
+                    <span className="capitalize">{bestSavingsLabel} discount</span>
+                    <span>-{formatPrice(bestSavings)}</span>
                   </div>
                 )}
                 {needsMembershipPurchase && selectedMembership && (

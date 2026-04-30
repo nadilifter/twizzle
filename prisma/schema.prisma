@@ -1092,7 +1092,8 @@ model ProgramBulkDiscount {
   updatedAt     DateTime         @updatedAt
 
   // Relations
-  program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+  program   Program    @relation(fields: [programId], references: [id], onDelete: Cascade)
+  lineItems LineItem[]
 
   @@index([programId])
 }
@@ -1606,7 +1607,8 @@ model LineItem {
   programId             String? // What program is this for?
   eventId               String? // What specific event?
   athleteId             String? // Which athlete?
-  discountId            String? // Applied discount
+  discountId            String? // Applied promo code discount
+  bulkDiscountId        String? // Applied program bulk discount
   membershipInstanceId  String? // What membership instance?
   passId                String? // What pass is this for?
   competitionId         String? // What competition is this for?
@@ -1622,6 +1624,7 @@ model LineItem {
   event               Event?               @relation(fields: [eventId], references: [id], onDelete: SetNull)
   athlete             Athlete?             @relation(fields: [athleteId], references: [id])
   discount            Discount?            @relation(fields: [discountId], references: [id])
+  bulkDiscount        ProgramBulkDiscount? @relation(fields: [bulkDiscountId], references: [id], onDelete: SetNull)
   membershipInstance  MembershipInstance?  @relation(fields: [membershipInstanceId], references: [id], onDelete: SetNull)
   pass                Pass?                @relation(fields: [passId], references: [id], onDelete: SetNull)
   competition         Competition?         @relation(fields: [competitionId], references: [id], onDelete: SetNull)

@@ -13,6 +13,8 @@ import {
   resolveRegistrationAccess,
   serializeInstances,
 } from "../shared";
+import { getAuthSession } from "@/lib/auth";
+import { getGuardianUsedBulkDiscountIds } from "@/lib/invoice-processing";
 
 /**
  * Register-specific program query: includes passes, gender restrictions on
@@ -117,10 +119,15 @@ export default async function ProgramRegisterPage({
   if (!program) return notFound();
 
   const primaryColor = config.primaryColor || "#000000";
-  const [{ enrolled, waitlistedCount }, instanceCounts] = await Promise.all([
+  const bulkDiscountIds = program.bulkDiscounts.map((d) => d.id);
+
+  const [{ enrolled, waitlistedCount }, instanceCounts, authSession] = await Promise.all([
     getEnrollmentCounts(program.id, program.waitlistEnabled),
     getInstanceRegistrationCounts(program.instances.map((i) => i.id)),
+    getAuthSession(),
   ]);
+  const userId = authSession?.user?.id ?? null;
+  const usedBulkDiscountIds = await getGuardianUsedBulkDiscountIds(userId, bulkDiscountIds);
   const { programStatus, hasValidEarlyAccess, canRegister } = resolveRegistrationAccess(
     program,
     earlyAccessCode
@@ -176,13 +183,15 @@ export default async function ProgramRegisterPage({
       hasGenderRestriction: p.hasGenderRestriction,
       allowedGenders: p.allowedGenders,
     })),
-    bulkDiscounts: program.bulkDiscounts.map((d) => ({
-      id: d.id,
-      type: d.type,
-      minQuantity: d.minQuantity,
-      discountType: d.discountType,
-      discountValue: Number(d.discountValue),
-    })),
+    bulkDiscounts: program.bulkDiscounts
+      .filter((d) => !usedBulkDiscountIds.has(d.id))
+      .map((d) => ({
+        id: d.id,
+        type: d.type,
+        minQuantity: d.minQuantity,
+        discountType: d.discountType,
+        discountValue: Number(d.discountValue),
+      })),
     waiverRequirements: program.waiverRequirements,
     status: program.status,
     registrationStartDate: program.registrationStartDate

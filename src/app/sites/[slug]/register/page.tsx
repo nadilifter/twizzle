@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import { isFeatureEnabled } from "@/lib/feature-resolver";
 import { QueueGateWrapper } from "@/components/sites/queue-gate-wrapper";
 import { FilterableProgramList } from "@/components/sites/filterable-program-list";
+import { getAuthSession } from "@/lib/auth";
+import { getGuardianUsedBulkDiscountIds } from "@/lib/invoice-processing";
 
 const getCachedRegisterCategories = unstable_cache(
   async (organizationId: string) => {
@@ -127,15 +129,21 @@ export default async function RegisterPage({
     seasonsEnabled,
     trainingEnabled,
     registerCategories,
+    authSession,
   ] = await Promise.all([
     getCachedRegisterPrograms(config.organizationId, programsVersion),
     isFeatureEnabled(config.organizationId, "seasons"),
     isFeatureEnabled(config.organizationId, "training"),
     getCachedRegisterCategories(config.organizationId),
+    getAuthSession(),
   ]);
 
   const seasons = seasonsEnabled ? await getCachedSeasons(config.organizationId) : [];
   const waitlistCountMap = new Map(waitlistedCounts.map((w) => [w.programId, w._count]));
+
+  const userId = authSession?.user?.id ?? null;
+  const allBulkDiscountIds = programs.flatMap((p) => p.bulkDiscounts.map((d) => d.id));
+  const usedBulkDiscountIds = await getGuardianUsedBulkDiscountIds(userId, allBulkDiscountIds);
 
   const serializedPrograms = programs.map((program) => ({
     ...program,
@@ -146,10 +154,12 @@ export default async function RegisterPage({
       ...program._count,
       waitlistedEnrollments: waitlistCountMap.get(program.id) || 0,
     },
-    bulkDiscounts: program.bulkDiscounts.map((discount) => ({
-      ...discount,
-      discountValue: Number(discount.discountValue),
-    })),
+    bulkDiscounts: program.bulkDiscounts
+      .filter((discount) => !usedBulkDiscountIds.has(discount.id))
+      .map((discount) => ({
+        ...discount,
+        discountValue: Number(discount.discountValue),
+      })),
     staffAssignments: program.staffAssignments.map((assignment) => ({
       id: assignment.id,
       role: assignment.role,
