@@ -502,6 +502,10 @@ export async function chargeSubscription(
         recurringProcessingModel: "Subscription" as any,
         ...(description && { metadata: { description } }),
         ...(storeReference && { store: storeReference }),
+        // Uncomment the block below to force all local charges to fail (useful for testing waitlist decline flow).
+        // ...(process.env.NEXT_PUBLIC_APP_ENVIRONMENT === "local" && {
+        //   additionalData: { RequestedTestAcquirerResponseCode: "2" },
+        // }),
       },
       { idempotencyKey: reference }
     );

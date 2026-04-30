@@ -108,6 +108,7 @@ export function AddPaymentMethodDialog({
       await handleOpenChange(false);
     } else {
       toast.error(`Failed to add payment method: ${result.resultCode}`);
+      setSession(null);
     }
   };
 

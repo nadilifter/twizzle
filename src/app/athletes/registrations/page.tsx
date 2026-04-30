@@ -12,7 +12,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ClipboardList, Calendar, MoreHorizontal, ChevronDown, Loader2 } from "lucide-react";
+import {
+  ClipboardList,
+  Calendar,
+  MoreHorizontal,
+  ChevronRight,
+  ChevronDown,
+  Loader2,
+} from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { formatTime12h } from "@/lib/date-utils";
@@ -73,6 +80,50 @@ export default function RegistrationsPage() {
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [openSessions, setOpenSessions] = useState<Set<string>>(new Set());
 
+  async function fetchData() {
+    setIsLoading(true);
+    try {
+      const meRes = await fetch("/api/athletes/me");
+      if (!meRes.ok) return;
+      const meData = await meRes.json();
+      const athleteList = meData.athletes || [];
+
+      const withRegistrations = await Promise.all(
+        athleteList.map(async (a: any) => {
+          try {
+            const regRes = await fetch(`/api/athletes/${a.id}/registrations`);
+            const regData = regRes.ok
+              ? await regRes.json()
+              : { instanceRegistrations: [], enrollments: [], competitionEntries: [] };
+            return {
+              id: a.id,
+              firstName: a.firstName,
+              lastName: a.lastName,
+              registrations: regData,
+            };
+          } catch {
+            return {
+              id: a.id,
+              firstName: a.firstName,
+              lastName: a.lastName,
+              registrations: {
+                instanceRegistrations: [],
+                enrollments: [],
+                competitionEntries: [],
+              },
+            };
+          }
+        })
+      );
+
+      setAthletes(withRegistrations);
+    } catch (error) {
+      console.error("Error fetching registrations:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   const handleCancelEnrollment = async (athleteId: string, enrollmentId: string) => {
     setCancellingId(enrollmentId);
     try {
@@ -80,20 +131,8 @@ export default function RegistrationsPage() {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to cancel");
-      setAthletes((prev) =>
-        prev.map((a) =>
-          a.id === athleteId
-            ? {
-                ...a,
-                registrations: {
-                  ...a.registrations,
-                  enrollments: a.registrations.enrollments.filter((e) => e.id !== enrollmentId),
-                },
-              }
-            : a
-        )
-      );
       toast.success("Enrollment cancelled");
+      await fetchData();
     } catch {
       toast.error("Failed to cancel enrollment");
     } finally {
@@ -102,49 +141,6 @@ export default function RegistrationsPage() {
   };
 
   useEffect(() => {
-    async function fetchData() {
-      setIsLoading(true);
-      try {
-        const meRes = await fetch("/api/athletes/me");
-        if (!meRes.ok) return;
-        const meData = await meRes.json();
-        const athleteList = meData.athletes || [];
-
-        const withRegistrations = await Promise.all(
-          athleteList.map(async (a: any) => {
-            try {
-              const regRes = await fetch(`/api/athletes/${a.id}/registrations`);
-              const regData = regRes.ok
-                ? await regRes.json()
-                : { instanceRegistrations: [], enrollments: [], competitionEntries: [] };
-              return {
-                id: a.id,
-                firstName: a.firstName,
-                lastName: a.lastName,
-                registrations: regData,
-              };
-            } catch {
-              return {
-                id: a.id,
-                firstName: a.firstName,
-                lastName: a.lastName,
-                registrations: {
-                  instanceRegistrations: [],
-                  enrollments: [],
-                  competitionEntries: [],
-                },
-              };
-            }
-          })
-        );
-
-        setAthletes(withRegistrations);
-      } catch (error) {
-        console.error("Error fetching registrations:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
     fetchData();
   }, []);
 
@@ -231,12 +227,11 @@ export default function RegistrationsPage() {
                             {sessions.length > 0 && (
                               <CollapsibleTrigger asChild>
                                 <button className="shrink-0 text-muted-foreground hover:text-foreground">
-                                  <ChevronDown
-                                    className={cn(
-                                      "h-4 w-4 transition-transform",
-                                      isOpen && "rotate-180"
-                                    )}
-                                  />
+                                  {isOpen ? (
+                                    <ChevronDown className="h-4 w-4" />
+                                  ) : (
+                                    <ChevronRight className="h-4 w-4" />
+                                  )}
                                 </button>
                               </CollapsibleTrigger>
                             )}

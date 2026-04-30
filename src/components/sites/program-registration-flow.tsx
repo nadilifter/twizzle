@@ -1102,7 +1102,6 @@ export function ProgramRegistrationFlow({
   // Waitlist direct-join state
   const [isJoiningWaitlist, setIsJoiningWaitlist] = useState(false);
   const [waitlistJoined, setWaitlistJoined] = useState(false);
-  const [showAddPaymentDialog, setShowAddPaymentDialog] = useState(false);
   // undefined = loading, null = none on file, SavedPaymentMethod = default card
   const [defaultPaymentMethod, setDefaultPaymentMethod] = useState<
     SavedPaymentMethod | null | undefined
@@ -2157,7 +2156,7 @@ export function ProgramRegistrationFlow({
           <CardContent>
             <div className="space-y-6">
               {/* Payment method on file — waitlist paid programs */}
-              {isWaitlistMode && price > 0 && (
+              {isWaitlistMode && price > 0 && defaultPaymentMethod !== null && (
                 <div className="p-3 rounded-lg border bg-muted/30 space-y-1">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Payment method on file
@@ -2168,13 +2167,13 @@ export function ProgramRegistrationFlow({
                       <span>Loading…</span>
                     </div>
                   ) : (
-                    <SavedPaymentMethodDisplay paymentMethod={defaultPaymentMethod} />
+                    <>
+                      <SavedPaymentMethodDisplay paymentMethod={defaultPaymentMethod} />
+                      <p className="text-xs text-muted-foreground">
+                        This card will be charged when a spot opens up.
+                      </p>
+                    </>
                   )}
-                  <p className="text-xs text-muted-foreground">
-                    {defaultPaymentMethod
-                      ? "This card will be charged when a spot opens up."
-                      : "Add a payment method before joining the waitlist."}
-                  </p>
                 </div>
               )}
               {/* Athlete */}
@@ -2301,6 +2300,45 @@ export function ProgramRegistrationFlow({
                 </div>
               </div>
 
+              {/* No payment method warning — waitlist paid programs */}
+              {isWaitlistMode && price > 0 && defaultPaymentMethod === null && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20 p-4 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                    <p className="text-sm text-amber-800 dark:text-amber-200">
+                      A payment method is required to hold your spot. You won&apos;t be charged
+                      until a spot becomes available.
+                    </p>
+                  </div>
+                  <AddPaymentMethodDialog
+                    sessionEndpoint="/api/user/payment-methods/session"
+                    description="A payment method is required to hold your spot. You won't be charged until a spot becomes available."
+                    onPaymentMethodAdded={async () => {
+                      try {
+                        const res = await fetch("/api/user/payment-methods");
+                        const data = await res.json();
+                        const methods: SavedPaymentMethod[] = data.paymentMethods ?? [];
+                        const newest = methods.sort(
+                          (a, b) =>
+                            new Date(b.createdAt ?? 0).getTime() -
+                            new Date(a.createdAt ?? 0).getTime()
+                        )[0];
+                        if (newest && !newest.isDefault) {
+                          await fetch(`/api/user/payment-methods/${newest.id}`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ isDefault: true }),
+                          });
+                        }
+                      } catch {
+                        // Non-fatal
+                      }
+                      setPmRefreshKey((k) => k + 1);
+                    }}
+                  />
+                </div>
+              )}
+
               {/* Duplicate warning for full-program enrollment */}
               {!isPerInstance && isAlreadyFullyRegistered && (
                 <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950 p-4 text-sm text-blue-800 dark:text-blue-200">
@@ -2361,36 +2399,6 @@ export function ProgramRegistrationFlow({
                             )}
                             {isJoiningWaitlist ? "Joining waitlist…" : "Join Waitlist"}
                           </Button>
-                          <AddPaymentMethodDialog
-                            sessionEndpoint="/api/user/payment-methods/session"
-                            description="A payment method is required to hold your spot. You won't be charged until a spot becomes available."
-                            open={showAddPaymentDialog}
-                            onOpenChange={setShowAddPaymentDialog}
-                            onPaymentMethodAdded={async () => {
-                              setShowAddPaymentDialog(false);
-                              // Fetch updated methods and set the newest as default
-                              try {
-                                const res = await fetch("/api/user/payment-methods");
-                                const data = await res.json();
-                                const methods: SavedPaymentMethod[] = data.paymentMethods ?? [];
-                                const newest = methods.sort(
-                                  (a, b) =>
-                                    new Date(b.createdAt ?? 0).getTime() -
-                                    new Date(a.createdAt ?? 0).getTime()
-                                )[0];
-                                if (newest && !newest.isDefault) {
-                                  await fetch(`/api/user/payment-methods/${newest.id}`, {
-                                    method: "PATCH",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ isDefault: true }),
-                                  });
-                                }
-                              } catch {
-                                // Non-fatal — pmRefreshKey will still re-fetch
-                              }
-                              setPmRefreshKey((k) => k + 1);
-                            }}
-                          />
                         </>
                       )
                     ) : (

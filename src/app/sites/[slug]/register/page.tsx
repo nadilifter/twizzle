@@ -49,7 +49,7 @@ const getCachedRegisterPrograms = unstable_cache(
           _count: {
             select: {
               instances: true,
-              enrollments: { where: { status: { not: "WAITLISTED" } } },
+              enrollments: { where: { status: { in: ["ACTIVE", "WAITLIST_PAYMENT_PENDING"] } } },
             },
           },
           staffAssignments: {
@@ -94,7 +94,7 @@ const getCachedRegisterPrograms = unstable_cache(
     return { programs, levels, waitlistedCounts };
   },
   ["site-programs-register"],
-  { revalidate: 3600 }
+  { revalidate: 60 }
 );
 
 const getCachedSeasons = unstable_cache(

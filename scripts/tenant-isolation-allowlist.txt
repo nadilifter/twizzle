@@ -214,6 +214,8 @@ src/app/api/user/payment-methods/route.ts
 src/app/api/user/payment-methods/[id]/route.ts
 src/app/api/user/payment-methods/session/route.ts
 src/app/api/user/recurring-charges/route.ts
+src/app/api/user/waitlist-pending-charge/route.ts
+src/app/api/user/waitlist-pending-charge/retry/route.ts
 src/app/api/payment-methods/route.ts
 src/app/api/payment-methods/session/route.ts
 src/app/api/payment-methods/[id]/route.ts
@@ -288,6 +290,7 @@ src/app/api/dev/trigger-trial-billing/route.ts
 
 # --- Subscription billing (platform-level models, system/superadmin managed) ---
 src/app/api/cron/recurring-billing/route.ts
+src/app/api/cron/waitlist-payment-check/route.ts
 src/app/api/cron/subscription-billing/route.ts
 src/app/api/cron/subscription-dunning/route.ts
 src/app/api/payment-methods/retry-billing/route.ts

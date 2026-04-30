@@ -266,7 +266,7 @@ export async function processInvoiceRegistrations(
           });
           if (prog?.hasCapacityRestriction && prog.capacity != null) {
             const currentEnrolled = await tx.enrollment.count({
-              where: { programId, status: { not: "WAITLISTED" } },
+              where: { programId, status: { in: ["ACTIVE", "WAITLIST_PAYMENT_PENDING"] } },
             });
             if (currentEnrolled >= prog.capacity) {
               enrollStatus = "WAITLISTED";
@@ -276,7 +276,13 @@ export async function processInvoiceRegistrations(
 
         const enrollment = await tx.enrollment.upsert({
           where: { programId_athleteId: { programId, athleteId } },
-          update: {},
+          update: {
+            status: enrollStatus,
+            startDate: new Date(),
+            createdAt: new Date(),
+            waitlistPaymentDeadline: null,
+            waitlistChargeAttempts: 0,
+          },
           create: {
             programId,
             athleteId,

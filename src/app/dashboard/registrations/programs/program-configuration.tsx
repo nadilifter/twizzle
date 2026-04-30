@@ -254,8 +254,10 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
       | null,
     registrationStartDate: program.registrationStartDate
       ? new Date(program.registrationStartDate).toISOString().split("T")[0]
-      : "",
-    registrationStartTime: program.registrationStartTime || "09:00",
+      : new Date().toISOString().split("T")[0],
+    registrationStartTime:
+      program.registrationStartTime ||
+      new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false }),
     registrationEndDate: program.registrationEndDate
       ? new Date(program.registrationEndDate).toISOString().split("T")[0]
       : "",

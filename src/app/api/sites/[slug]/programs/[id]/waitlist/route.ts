@@ -136,6 +136,7 @@ export async function POST(
           status: "WAITLISTED",
           userId: session.user.id,
           startDate: new Date(),
+          createdAt: new Date(), // reset queue position on re-join
           waitlistPaymentDeadline: null,
           waitlistChargeAttempts: 0,
         },

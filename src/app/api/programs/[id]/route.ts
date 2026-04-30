@@ -739,6 +739,31 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         }
       }
 
+      // Cancel all enrollments and their recurring charges when program is completed
+      if (validatedData.status === "COMPLETE") {
+        await tx.recurringCharge.updateMany({
+          where: {
+            enrollment: { programId: id },
+            status: { in: ["ACTIVE", "PAUSED", "FAILED"] },
+          },
+          data: { status: "CANCELLED" },
+        });
+        await tx.enrollment.updateMany({
+          where: {
+            programId: id,
+            status: { in: ["ACTIVE", "WAITLISTED", "WAITLIST_PAYMENT_PENDING", "PAUSED"] },
+          },
+          data: { status: "CANCELLED", waitlistPaymentDeadline: null },
+        });
+        await tx.instanceRegistration.updateMany({
+          where: {
+            programInstance: { programId: id },
+            status: { in: ["REGISTERED", "WAITLISTED"] },
+          },
+          data: { status: "CANCELLED" },
+        });
+      }
+
       // Fetch and return the updated program with all relations
       return tx.program.findUnique({
         where: { id },
@@ -877,7 +902,6 @@ export async function DELETE(
       return NextResponse.json({ error: "Program not found" }, { status: 404 });
     }
 
-    // Check if there are active enrollments
     if (existing._count.enrollments > 0) {
       return NextResponse.json(
         { error: "Cannot delete program with active enrollments. Archive it instead." },
@@ -885,8 +909,30 @@ export async function DELETE(
       );
     }
 
-    const scopedDb = getScopedDb(session.user.organizationId);
-    await scopedDb.program.delete({ where: { id } });
+    await db.$transaction(async (tx) => {
+      await tx.recurringCharge.updateMany({
+        where: {
+          enrollment: { programId: id },
+          status: { in: ["ACTIVE", "PAUSED", "FAILED"] },
+        },
+        data: { status: "CANCELLED" },
+      });
+      await tx.enrollment.updateMany({
+        where: {
+          programId: id,
+          status: { in: ["ACTIVE", "WAITLISTED", "WAITLIST_PAYMENT_PENDING", "PAUSED"] },
+        },
+        data: { status: "CANCELLED", waitlistPaymentDeadline: null },
+      });
+      await tx.instanceRegistration.updateMany({
+        where: {
+          programInstance: { programId: id },
+          status: { in: ["REGISTERED", "WAITLISTED"] },
+        },
+        data: { status: "CANCELLED" },
+      });
+      await tx.program.delete({ where: { id, organizationId: session.user.organizationId } });
+    });
 
     await bumpCacheVersion(session.user.organizationId, "programs");
 

@@ -69,6 +69,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const instanceRegistrations = await db.instanceRegistration.findMany({
       where: {
         athleteId,
+        status: { not: "CANCELLED" },
         OR: [{ userId: { in: Array.from(sharedGuardianUserIds) } }, { userId: null }],
       },
       include: {
@@ -80,7 +81,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         },
       },
       orderBy: {
-        programInstance: { date: "desc" },
+        programInstance: { date: "asc" },
       },
     });
 
@@ -88,6 +89,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const enrollments = await db.enrollment.findMany({
       where: {
         athleteId,
+        status: { not: "CANCELLED" },
         OR: [{ userId: { in: Array.from(sharedGuardianUserIds) } }, { userId: null }],
       },
       include: {

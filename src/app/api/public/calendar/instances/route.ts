@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
             by: ["programId"],
             where: {
               programId: { in: programIds },
-              status: { not: "WAITLISTED" },
+              status: { in: ["ACTIVE", "WAITLIST_PAYMENT_PENDING"] },
             },
             _count: true,
           })

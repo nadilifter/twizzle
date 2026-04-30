@@ -56,6 +56,14 @@ export async function DELETE(
         where: { id: enrollmentId },
         data: { status: "CANCELLED", waitlistPaymentDeadline: null },
       });
+      await tx.instanceRegistration.updateMany({
+        where: {
+          athleteId,
+          programInstance: { programId: enrollment.programId },
+          status: { in: ["REGISTERED", "WAITLISTED"] },
+        },
+        data: { status: "CANCELLED" },
+      });
       if (wasOccupyingSpot) {
         await tx.recurringCharge.updateMany({
           where: { enrollmentId, status: { in: ["ACTIVE", "PAUSED", "FAILED"] } },

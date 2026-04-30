@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { verifyWebhookSignature, extractHmacSignature, resolvePaymentType } from "@/lib/adyen";
+import { finalizeWaitlistEnrollment } from "@/lib/waitlist-promotion";
 import { processInvoiceRegistrations, buildRegistrationArgs } from "@/lib/invoice-processing";
 import { logger } from "@/lib/logger";
 import { Prisma } from "@prisma/client";
@@ -79,10 +80,48 @@ export async function POST(request: NextRequest) {
         success === "true" || success === true
       );
     } else if (eventCode === "AUTHORISATION" && isTokenizationSession) {
-      logger.info("Adyen webhook: skipping tokenization session authorisation", {
-        merchantReference,
-        pspReference,
-      });
+      if (success === "true" || success === true) {
+        const recurringDetailRef = additionalData?.["recurring.recurringDetailReference"];
+        const shopperRef = additionalData?.["recurring.shopperReference"];
+        if (recurringDetailRef && shopperRef?.startsWith("user-")) {
+          try {
+            await saveUserPaymentMethodFromToken({
+              shopperReference: shopperRef,
+              storedPaymentMethodId: recurringDetailRef,
+              paymentMethod: {
+                type: paymentMethodType,
+                brand:
+                  additionalData.cardPaymentMethod ||
+                  (paymentMethodType !== "scheme" ? paymentMethodType : undefined),
+                lastFour:
+                  additionalData.cardSummary ||
+                  additionalData.bankAccountNumber?.slice(-4) ||
+                  additionalData.iban?.slice(-4),
+                expiryMonth: additionalData.expiryDate?.split("/")[0],
+                expiryYear: additionalData.expiryDate?.split("/")[1]
+                  ? `20${additionalData.expiryDate.split("/")[1]}`
+                  : undefined,
+                holderName: additionalData.cardHolderName,
+              },
+            });
+            logger.info("Saved payment method from tokenization session", {
+              shopperRef,
+              recurringDetailRef,
+            });
+          } catch (err) {
+            logger.error("Failed to save payment method from tokenization session", {
+              err: err instanceof Error ? err.message : String(err),
+              shopperRef,
+              recurringDetailRef,
+            });
+          }
+        }
+      } else {
+        logger.info("Adyen webhook: tokenization session authorisation failed", {
+          merchantReference,
+          pspReference,
+        });
+      }
     } else if (eventCode === "AUTHORISATION" && (success === "true" || success === true)) {
       await handleAuthorisation(
         merchantReference,
@@ -263,10 +302,31 @@ async function handleAuthorisation(
 
   if (invoice.notes) {
     try {
-      const { metadata, items } = buildRegistrationArgs(invoice.lineItems, invoice.notes);
-      await processInvoiceRegistrations(metadata, items, invoice.userId, invoice.organizationId);
+      const notes = JSON.parse(invoice.notes);
+
+      if (notes.waitlistEnrollmentId) {
+        // Waitlist promotion fallback: inline db.$transaction in attemptWaitlistCharge may have
+        // failed after a successful charge. finalizeWaitlistEnrollment creates any missing records
+        // atomically and sets enrollment ACTIVE.
+        const enrollmentId = notes.waitlistEnrollmentId as string;
+        await finalizeWaitlistEnrollment({
+          invoiceId: invoice.id,
+          enrollmentId,
+          pspReference,
+          programName: notes.programName ?? "Program",
+          paymentMethod: resolvePaymentType(paymentMethodType),
+          amountCurrency: amount.currency,
+        });
+        logger.info("Waitlist enrollment finalized via webhook fallback", {
+          enrollmentId,
+          pspReference,
+        });
+      } else {
+        const { metadata, items } = buildRegistrationArgs(invoice.lineItems, invoice.notes);
+        await processInvoiceRegistrations(metadata, items, invoice.userId, invoice.organizationId);
+      }
     } catch (err) {
-      console.error(`Failed to process registrations for invoice ${invoiceId}:`, err);
+      console.error(`Failed to process notes for invoice ${invoiceId}:`, err);
     }
   }
 
@@ -425,10 +485,18 @@ async function handleFailedAuthorisation(invoiceId: string) {
           id: true,
           status: true,
           reference: true,
+          notes: true,
           user: { select: { email: true, name: true } },
         },
       });
       if (!inv || inv.status !== "DRAFT") return null;
+
+      if (inv.notes) {
+        try {
+          const parsed = JSON.parse(inv.notes);
+          if (parsed.waitlistEnrollmentId) return null;
+        } catch {} // malformed notes — proceed with cancellation
+      }
 
       await tx.invoice.update({
         where: { id: inv.id },
