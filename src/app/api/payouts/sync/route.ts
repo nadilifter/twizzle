@@ -153,7 +153,10 @@ export async function POST(request: NextRequest) {
       });
 
       if (payoutStatus === "PAID") {
-        await linkTransactionsToPayout(upserted.id, organizationId);
+        // Sync route: skip per-payout Adyen API call to avoid rate limiting at scale
+        // (N payouts × many orgs). TIME_WINDOW is used; reconciledVia = TIME_WINDOW
+        // flags these for future re-reconciliation if needed.
+        await linkTransactionsToPayout(upserted.id, organizationId, undefined);
       }
 
       synced++;

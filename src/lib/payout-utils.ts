@@ -1,5 +1,7 @@
 import { db, getScopedDb } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { ReconciledVia } from "@prisma/client";
+import type { AdyenPlatformPayment } from "@/lib/adyen-platform";
 
 export type PayoutStatus = "PAID" | "SCHEDULED" | "FAILED" | "PENDING";
 
@@ -76,36 +78,17 @@ export function determinePayoutType(
   return matchesSweepPrefix(desc, "EXT BAL SWEEP") ? "SWEEP" : "MANUAL";
 }
 
-export async function linkTransactionsToPayout(payoutId: string, organizationId: string) {
+export async function linkTransactionsToPayout(
+  payoutId: string,
+  organizationId: string,
+  adyenTransfers?: AdyenPlatformPayment[]
+): Promise<void> {
   try {
-    const scopedDb = getScopedDb(organizationId);
-
-    const payout = await scopedDb.payout.findUnique({
-      where: { id: payoutId },
-      select: { paidAt: true },
-    });
-    if (!payout) return;
-
-    // Use paidAt (actual transfer date) so synced payouts don't over-link
-    // transactions settled after the transfer went out
-    const cutoff = payout.paidAt ?? new Date();
-
-    const result = await scopedDb.transaction.updateMany({
-      where: {
-        status: "SETTLED",
-        payoutId: null,
-        settledAt: { lte: cutoff },
-      },
-      data: { payoutId },
-    });
-
-    if (result.count > 0) {
-      logger.info("[PAYOUT] Linked transactions to payout", {
-        payoutId,
-        transactionCount: result.count,
-      });
-
-      await calculatePayoutFees(payoutId, organizationId);
+    const hasTransfers = Array.isArray(adyenTransfers) && adyenTransfers.length > 0;
+    if (hasTransfers) {
+      await linkByReferences(payoutId, organizationId, adyenTransfers!);
+    } else {
+      await linkByTimeWindow(payoutId, organizationId);
     }
   } catch (error) {
     logger.error("[PAYOUT] Failed to link transactions to payout", {
@@ -113,6 +96,176 @@ export async function linkTransactionsToPayout(payoutId: string, organizationId:
       error: error instanceof Error ? error.message : String(error),
     });
   }
+}
+
+// Creates stub Transaction rows for any pspPaymentReference returned by Adyen
+// that has no corresponding record in our DB (e.g. missed Checkout webhook).
+// Stubs have no paymentId/invoiceId linkage — they carry the financial data
+// Adyen reported and are immediately available for payout reconciliation.
+export async function backfillMissingTransactions(
+  organizationId: string,
+  transfers: AdyenPlatformPayment[]
+): Promise<number> {
+  const scopedDb = getScopedDb(organizationId);
+  const refs = transfers.map((t) => t.pspReference);
+
+  const existing = await scopedDb.transaction.findMany({
+    where: { pspReference: { in: refs } },
+    select: { pspReference: true },
+  });
+
+  const existingRefs = new Set(existing.map((t) => t.pspReference));
+  const missing = transfers.filter((t) => !existingRefs.has(t.pspReference));
+  if (missing.length === 0) return 0;
+
+  await scopedDb.transaction.createMany({
+    data: missing.map((t) => {
+      // Sign convention: REFUND rows are stored as negative throughout the
+      // codebase (e.g. adyen webhook, financials overview abs-after-sum). Keep
+      // the sign of t.amount so backfilled rows match.
+      const sign = t.amount >= 0 ? 1 : -1;
+      const netAbs = Math.abs(t.amount);
+      // gross = net + commission. Per our split config
+      // (createPlatformSplitConfiguration), acquiringFees and adyenFees are
+      // "deductFromLiableAccount" — they come out of OUR commission, not the
+      // customer's payment. So the customer's gross is just what the org
+      // received + what we kept as commission.
+      const grossAbs = Math.round((netAbs + t.commissionAmount) * 100) / 100;
+
+      // Store the exact Adyen-recorded commission as feeFixed (rate=0) so
+      // calculatePayoutFees recovers `grossAmount * 0 + commission = commission`,
+      // matching what Adyen actually deducted. For refunds the platform refunds
+      // its commission too, so feeFixed must mirror amount's sign.
+      return {
+        organizationId,
+        pspReference: t.pspReference,
+        type: sign === 1 ? ("PAYMENT" as const) : ("REFUND" as const),
+        amount: sign * grossAbs,
+        currency: t.currency,
+        status: "SETTLED" as const,
+        method: t.method ?? null,
+        settledAt: t.settledAt,
+        description: "Adyen-synced",
+        merchantRef: t.merchantRef ?? null,
+        feeRate: 0,
+        feeFixed: sign * t.commissionAmount,
+      };
+    }),
+    skipDuplicates: true,
+  });
+
+  logger.info("[PAYOUT] Backfilled missing transactions from Adyen", {
+    organizationId,
+    count: missing.length,
+  });
+
+  return missing.length;
+}
+
+async function linkByReferences(
+  payoutId: string,
+  organizationId: string,
+  transfers: AdyenPlatformPayment[]
+): Promise<void> {
+  const scopedDb = getScopedDb(organizationId);
+
+  await backfillMissingTransactions(organizationId, transfers);
+
+  // Include both primary and modification PSP refs in the match set.
+  const refs = transfers.flatMap((t) =>
+    t.modificationPspReference ? [t.pspReference, t.modificationPspReference] : [t.pspReference]
+  );
+
+  const result = await scopedDb.transaction.updateMany({
+    where: {
+      status: "SETTLED",
+      payoutId: null,
+      pspReference: { in: refs },
+    },
+    data: { payoutId },
+  });
+
+  logger.info("[PAYOUT] Linked transactions via REFERENCE_MATCH", {
+    payoutId,
+    strategy: "REFERENCE_MATCH",
+    refsProvided: refs.length,
+    transactionCount: result.count,
+  });
+
+  if (result.count > 0) {
+    await scopedDb.payout.update({
+      where: { id: payoutId },
+      data: { reconciledVia: ReconciledVia.REFERENCE_MATCH },
+    });
+    await calculatePayoutFees(payoutId, organizationId);
+  } else {
+    logger.warn(
+      "[PAYOUT] REFERENCE_MATCH returned 0 transactions after backfill, falling back to TIME_WINDOW",
+      {
+        payoutId,
+        refsProvided: refs.length,
+      }
+    );
+    await linkByTimeWindow(payoutId, organizationId);
+  }
+}
+
+async function linkByTimeWindow(payoutId: string, organizationId: string): Promise<void> {
+  const scopedDb = getScopedDb(organizationId);
+
+  const payout = await scopedDb.payout.findUnique({
+    where: { id: payoutId },
+    select: { paidAt: true, reconciledVia: true },
+  });
+  if (!payout) return;
+
+  if (payout.reconciledVia === ReconciledVia.REFERENCE_MATCH) {
+    logger.info("[PAYOUT] Skipping TIME_WINDOW — already REFERENCE_MATCH", { payoutId });
+    return;
+  }
+
+  const cutoff = payout.paidAt ?? new Date();
+
+  const result = await scopedDb.transaction.updateMany({
+    where: {
+      status: "SETTLED",
+      payoutId: null,
+      settledAt: { lte: cutoff },
+    },
+    data: { payoutId },
+  });
+
+  logger.warn("[PAYOUT] Linked transactions via TIME_WINDOW heuristic", {
+    payoutId,
+    strategy: "TIME_WINDOW",
+    cutoff: cutoff.toISOString(),
+    transactionCount: result.count,
+  });
+
+  await scopedDb.payout.update({
+    where: { id: payoutId },
+    data: { reconciledVia: ReconciledVia.TIME_WINDOW },
+  });
+
+  if (result.count > 0) {
+    await calculatePayoutFees(payoutId, organizationId);
+  }
+}
+
+// Recompute amount/fees/net for payouts that contain at least one backfilled
+// transaction (description = "Adyen-synced"). Webhook-flow payouts are skipped
+// to avoid drift from approximate fee calculations on transactions whose stored
+// rates don't perfectly reproduce Adyen's actual commission.
+export async function recomputePayoutFinancials(organizationId: string): Promise<number> {
+  const scopedDb = getScopedDb(organizationId);
+  const payouts = await scopedDb.payout.findMany({
+    where: { transactions: { some: { description: "Adyen-synced" } } },
+    select: { id: true },
+  });
+  for (const payout of payouts) {
+    await calculatePayoutFees(payout.id, organizationId);
+  }
+  return payouts.length;
 }
 
 async function calculatePayoutFees(payoutId: string, organizationId: string) {
@@ -124,7 +277,7 @@ async function calculatePayoutFees(payoutId: string, organizationId: string) {
         where: { payoutId, status: "SETTLED" },
         select: { amount: true, feeRate: true, feeFixed: true },
       }),
-      // Organization is not a tenant model (its `id` IS the org id), so use raw db.
+      // Organization is not a tenant model — its id IS the org id, so use raw db.
       db.organization.findUnique({
         where: { id: organizationId },
         select: {
@@ -149,32 +302,31 @@ async function calculatePayoutFees(payoutId: string, organizationId: string) {
     const fallbackRate = Number(plan.transactionFee);
     const fallbackFixed = Number(plan.perTransactionFee);
 
+    let totalGrossMinor = 0;
     let totalFeesMinor = 0;
     for (const txn of transactions) {
       const amount = Number(txn.amount);
       const rate = txn.feeRate != null ? Number(txn.feeRate) : fallbackRate;
       const fixed = txn.feeFixed != null ? Number(txn.feeFixed) : fallbackFixed;
       const txnFee = Math.round((amount * rate + fixed) * 100);
+      totalGrossMinor += Math.round(amount * 100);
       totalFeesMinor += txnFee;
     }
+    const totalGross = totalGrossMinor / 100;
     const totalFees = totalFeesMinor / 100;
-
-    const payoutRecord = await scopedDb.payout.findUnique({
-      where: { id: payoutId },
-      select: { amount: true },
-    });
-    if (!payoutRecord) return;
-
-    const payoutAmount = Number(payoutRecord.amount);
-    const net = Math.round((payoutAmount - totalFees) * 100) / 100;
+    // payout.net is what actually arrived in the org's bank account; equal to the
+    // sum of net-per-transaction amounts (gross minus our commission), which is
+    // also what Adyen swept via the bank transfer.
+    const net = Math.round(totalGrossMinor - totalFeesMinor) / 100;
 
     await scopedDb.payout.update({
       where: { id: payoutId },
-      data: { fees: totalFees, net },
+      data: { amount: totalGross, fees: totalFees, net },
     });
 
     logger.info("[PAYOUT] Calculated platform fees for payout", {
       payoutId,
+      amount: totalGross,
       fees: totalFees,
       net,
       transactionCount: transactions.length,

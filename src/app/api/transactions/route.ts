@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: { settledAt: "desc" },
         take: limit,
         skip: offset,
       }),
@@ -98,8 +98,8 @@ export async function GET(request: NextRequest) {
       where: {
         organizationId: session.user.organizationId,
         status: "SETTLED",
-        createdAt: {
-          gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1), // This month
+        settledAt: {
+          gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
         },
       },
       _sum: {

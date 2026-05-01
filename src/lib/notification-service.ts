@@ -17,6 +17,7 @@ import {
   type TemplateContext,
 } from "@/lib/notification-template-service";
 import { getSubdomainUrl } from "@/lib/env-domains";
+import { Prisma } from "@prisma/client";
 import type {
   NotificationRule,
   NotificationTemplate,
@@ -99,10 +100,12 @@ const SYSTEM_RULES: Array<{
   name: string;
   description: string;
   timingValue: number;
-  timingUnit: "DAYS" | "WEEKS" | "MONTHS";
+  timingUnit: "MINUTES" | "HOURS" | "DAYS" | "WEEKS" | "MONTHS";
   timingDirection: "BEFORE" | "AFTER" | "AT";
   actionType: NotificationActionType;
   recipientType: NotificationRecipientType;
+  recipientFilters?: Record<string, unknown>;
+  isActive?: boolean;
 }> = [
   {
     triggerType: "PAYMENT_DUE",
@@ -154,6 +157,54 @@ const SYSTEM_RULES: Array<{
     actionType: "EMAIL",
     recipientType: "GUARDIANS",
   },
+  {
+    triggerType: "PAYOUT_PAID",
+    name: "Payout Deposited",
+    description: "Notification sent when a payout is successfully deposited",
+    timingValue: 0,
+    timingUnit: "MINUTES",
+    timingDirection: "AT",
+    actionType: "EMAIL",
+    recipientType: "INTERNAL_USERS",
+    recipientFilters: { userRoles: ["ADMIN"] },
+    isActive: true,
+  },
+  {
+    triggerType: "PAYOUT_FAILED",
+    name: "Payout Failed",
+    description: "Notification sent when a payout transfer fails",
+    timingValue: 0,
+    timingUnit: "MINUTES",
+    timingDirection: "AT",
+    actionType: "EMAIL",
+    recipientType: "INTERNAL_USERS",
+    recipientFilters: { userRoles: ["ADMIN"] },
+    isActive: true,
+  },
+  {
+    triggerType: "PAYOUT_SCHEDULED",
+    name: "Payout Scheduled",
+    description: "Notification sent when a payout sweep is scheduled",
+    timingValue: 0,
+    timingUnit: "MINUTES",
+    timingDirection: "AT",
+    actionType: "EMAIL",
+    recipientType: "INTERNAL_USERS",
+    recipientFilters: { userRoles: ["ADMIN"] },
+    isActive: false, // Defaulting off — can be noisy for daily-payout orgs
+  },
+  {
+    triggerType: "NEGATIVE_BALANCE_WARNING",
+    name: "Negative Balance Warning",
+    description: "Notification sent when the payment account balance goes negative",
+    timingValue: 0,
+    timingUnit: "MINUTES",
+    timingDirection: "AT",
+    actionType: "EMAIL",
+    recipientType: "INTERNAL_USERS",
+    recipientFilters: { userRoles: ["ADMIN"] },
+    isActive: true,
+  },
 ];
 
 /**
@@ -201,7 +252,7 @@ export async function createSystemRulesForOrganization(
         timingDirection: systemRule.timingDirection,
         actionType: systemRule.actionType,
         isSystem: true,
-        isActive: true,
+        isActive: systemRule.isActive ?? true,
         template: defaultTemplate
           ? {
               create: {
@@ -214,7 +265,7 @@ export async function createSystemRulesForOrganization(
         recipientConfig: {
           create: {
             recipientType: systemRule.recipientType,
-            filters: {},
+            filters: (systemRule.recipientFilters ?? {}) as Prisma.InputJsonValue,
           },
         },
       },

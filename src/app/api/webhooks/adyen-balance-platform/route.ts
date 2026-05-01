@@ -8,6 +8,8 @@ import {
   getTransferInstrumentLast4,
   getBalanceAccountSweepDescription,
   setSweepStatus,
+  fetchPlatformPaymentTransfers,
+  type AdyenPlatformPayment,
 } from "@/lib/adyen-platform";
 import { handleVerificationRecovery } from "@/lib/adyen-onboarding-recovery";
 import {
@@ -16,6 +18,7 @@ import {
   mapTransferStatus,
 } from "@/lib/payout-utils";
 import { deriveOnboardingStatus, summarizeVerification } from "@/lib/adyen-onboarding-status";
+import { executeNotificationByTrigger } from "@/lib/notification-service";
 
 // ---------------------------------------------------------------------------
 // HMAC verification (multi-key: one per webhook subscription)
@@ -394,9 +397,64 @@ interface AdyenBankTransfer {
   balanceAccount?: { id?: string };
   amount?: { value?: number; currency?: string };
   status?: { statusCode?: string } | string;
+  reason?: string;
+  reasonCode?: string;
   tracking?: { estimatedArrivalTime?: string };
   events?: { type?: string; trackingData?: { estimatedArrivalTime?: string } }[];
   counterparty?: { balanceAccountId?: string; transferInstrumentId?: string };
+}
+
+const PAYOUT_FAILURE_REASON_MAP: Record<string, string> = {
+  bankAccountDetailsInvalid:
+    "Your bank account details are invalid. Please update your bank account information.",
+  insufficientFunds: "Insufficient funds in the source account.",
+  returned:
+    "The bank rejected the transfer — likely due to incorrect account or routing number. Please update your bank account details.",
+  technicalFailure:
+    "A technical error occurred. Your next scheduled payout will retry automatically.",
+};
+
+function formatPayoutCurrency(amount: number, currency: string): string {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
+}
+
+function formatPayoutDate(date: Date | string | null | undefined): string {
+  if (!date) return "";
+  return new Date(date).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function buildPayoutNotificationContext(
+  payout: {
+    reference: string;
+    amount: number;
+    fees: number;
+    net: number;
+    currency: string;
+    bankAccount: string | null;
+    estimatedArrivalTime: Date | string | null | undefined;
+    status: string;
+  },
+  failureReason: string | null
+): Record<string, string> {
+  const humanFailureReason = failureReason
+    ? (PAYOUT_FAILURE_REASON_MAP[failureReason] ?? failureReason)
+    : "";
+
+  return {
+    payoutReference: payout.reference,
+    payoutAmount: formatPayoutCurrency(payout.amount, payout.currency),
+    payoutNet: formatPayoutCurrency(payout.net, payout.currency),
+    payoutFees: formatPayoutCurrency(payout.fees, payout.currency),
+    payoutBankAccount: payout.bankAccount ? `****${payout.bankAccount}` : "",
+    payoutScheduledDate: payout.status === "SCHEDULED" ? formatPayoutDate(new Date()) : "",
+    payoutPaidDate: payout.status === "PAID" ? formatPayoutDate(new Date()) : "",
+    payoutFailureReason: humanFailureReason,
+    payoutEstimatedArrivalTime: formatPayoutDate(payout.estimatedArrivalTime),
+  };
 }
 
 async function handleBankTransfer(transfer: AdyenBankTransfer) {
@@ -444,6 +502,9 @@ async function handleBankTransfer(transfer: AdyenBankTransfer) {
   const estimatedArrivalTime =
     transfer?.tracking?.estimatedArrivalTime || extractEstimatedArrival(transfer?.events);
 
+  const failureReason: string | null =
+    payoutStatus === "FAILED" ? (transfer?.reason ?? transfer?.reasonCode ?? null) : null;
+
   // Match by Adyen transferId first; fall back to the Adyen-side reference we
   // submitted (e.g. "manual-<uuid>" for manually-initiated payouts). The fallback
   // catches pre-created Payout rows whose post-call reference→transferId update
@@ -461,12 +522,29 @@ async function handleBankTransfer(transfer: AdyenBankTransfer) {
     bankAccount = await getTransferInstrumentLast4(transfer.counterparty.transferInstrumentId);
   }
 
+  // Adyen delivers lifecycle events out of order (e.g. transfer.created with
+  // "received" arrives after the initiate route already set the payout to
+  // SCHEDULED). Never downgrade to a lower-priority status.
+  const STATUS_PRIORITY: Record<string, number> = {
+    PENDING: 0,
+    SCHEDULED: 1,
+    PAID: 2,
+    FAILED: 2,
+  };
+  const incomingPriority = STATUS_PRIORITY[payoutStatus] ?? 0;
+  const existingPriority = STATUS_PRIORITY[existingPayout?.status ?? ""] ?? 0;
+  const shouldUpdateStatus = incomingPriority >= existingPriority;
+
+  const isStatusTransition =
+    shouldUpdateStatus && (!existingPayout || existingPayout.status !== payoutStatus);
+
   const updateData: Prisma.PayoutUpdateInput = {
-    status: payoutStatus,
+    ...(shouldUpdateStatus ? { status: payoutStatus } : {}),
     // Always overwrite so webhooks self-correct misclassified records; see determinePayoutType.
     payoutType,
     ...(payoutStatus === "PAID" ? { paidAt: transferDate } : {}),
     ...(payoutStatus === "SCHEDULED" ? { scheduledAt: transferDate } : {}),
+    ...(payoutStatus === "FAILED" ? { failureReason } : {}),
     ...(bankAccount ? { bankAccount } : {}),
     ...(estimatedArrivalTime ? { estimatedArrivalTime: new Date(estimatedArrivalTime) } : {}),
   };
@@ -502,6 +580,7 @@ async function handleBankTransfer(transfer: AdyenBankTransfer) {
         bankAccount,
         ...(payoutStatus === "PAID" ? { paidAt: transferDate } : {}),
         ...(payoutStatus === "SCHEDULED" ? { scheduledAt: transferDate } : {}),
+        ...(payoutStatus === "FAILED" ? { failureReason } : {}),
         ...(estimatedArrivalTime ? { estimatedArrivalTime: new Date(estimatedArrivalTime) } : {}),
       },
     });
@@ -513,9 +592,90 @@ async function handleBankTransfer(transfer: AdyenBankTransfer) {
     });
   }
 
-  // Link settled transactions to this payout when it reaches PAID status
   if (payoutStatus === "PAID") {
-    await linkTransactionsToPayout(payoutId, account.organizationId);
+    // Use transferDate (Adyen's actual settlement date) as the upper bound so the
+    // window precisely captures platformPayment transfers for this payout period.
+    // Constrain the previous-payout lookup to payouts settled before transferDate
+    // so out-of-order webhook delivery never picks a later payout as the boundary.
+    const previousPayout = await db.payout.findFirst({
+      where: {
+        organizationId: account.organizationId,
+        status: "PAID",
+        NOT: { id: payoutId },
+        paidAt: { lt: transferDate },
+      },
+      orderBy: { paidAt: "desc" },
+      select: { paidAt: true },
+    });
+    const since =
+      previousPayout?.paidAt ?? new Date(transferDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    let adyenTransfers: AdyenPlatformPayment[] | undefined;
+    try {
+      const transfers = await fetchPlatformPaymentTransfers(balanceAccountId, since, transferDate);
+      adyenTransfers = transfers.length > 0 ? transfers : undefined;
+    } catch (err) {
+      logger.warn(
+        "[BP-WEBHOOK] Failed to fetch platform payment transfers, falling back to time-window",
+        { payoutId, error: String(err) }
+      );
+    }
+
+    await linkTransactionsToPayout(payoutId, account.organizationId, adyenTransfers);
+  }
+
+  if (isStatusTransition) {
+    // After reconciliation, payout.amount/fees/net reflect the linked transaction
+    // set (gross sales / platform commission / wire amount). The webhook payload's
+    // `amount` is only the wire amount, so use the reconciled row when available
+    // and fall back to the webhook for non-PAID transitions where reconciliation
+    // didn't run.
+    const reconciled = await db.payout.findUnique({
+      where: { id: payoutId },
+      select: { amount: true, fees: true, net: true },
+    });
+
+    const payoutContext = buildPayoutNotificationContext(
+      {
+        reference: transferId,
+        amount: Number(reconciled?.amount ?? amount),
+        fees: Number(reconciled?.fees ?? 0),
+        net: Number(reconciled?.net ?? amount),
+        currency,
+        bankAccount,
+        estimatedArrivalTime,
+        status: payoutStatus,
+      },
+      failureReason
+    );
+
+    try {
+      if (payoutStatus === "PAID") {
+        await executeNotificationByTrigger({
+          organizationId: account.organizationId,
+          triggerType: "PAYOUT_PAID",
+          context: payoutContext,
+        });
+      } else if (payoutStatus === "FAILED") {
+        await executeNotificationByTrigger({
+          organizationId: account.organizationId,
+          triggerType: "PAYOUT_FAILED",
+          context: payoutContext,
+        });
+      } else if (payoutStatus === "SCHEDULED") {
+        await executeNotificationByTrigger({
+          organizationId: account.organizationId,
+          triggerType: "PAYOUT_SCHEDULED",
+          context: payoutContext,
+        });
+      }
+    } catch (err) {
+      logger.error("[BP-WEBHOOK] Failed to send payout notification", {
+        payoutId,
+        payoutStatus,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 }
 
@@ -558,6 +718,17 @@ async function handleNegativeBalanceWarning(data: any) {
       balanceAccountId,
       organizationId: account.organizationId,
     });
-    // Phase 7 will add: store negative balance state, trigger notifications
+
+    try {
+      await executeNotificationByTrigger({
+        organizationId: account.organizationId,
+        triggerType: "NEGATIVE_BALANCE_WARNING",
+      });
+    } catch (err) {
+      logger.error("[BP-WEBHOOK] Failed to send negative balance notification", {
+        organizationId: account.organizationId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 }

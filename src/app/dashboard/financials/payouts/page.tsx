@@ -447,6 +447,20 @@ export default function PayoutsPage() {
         </Alert>
       )}
 
+      {payouts.some((p) => p.status === "FAILED") && (
+        <Alert variant="destructive">
+          <AlertCircleIcon className="h-4 w-4" />
+          <AlertTitle>Payout failure detected</AlertTitle>
+          <AlertDescription>
+            One or more payouts have failed. Please verify your bank account details or{" "}
+            <a href="mailto:support@uplifterinc.com" className="underline font-medium">
+              contact support
+            </a>
+            . Click a failed payout below to see the reason and next steps.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card className="bg-primary text-primary-foreground">
           <CardHeader className="pb-2">

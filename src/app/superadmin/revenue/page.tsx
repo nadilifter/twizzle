@@ -30,6 +30,7 @@ import {
   Building2,
   Repeat,
   PieChart as PieChartIcon,
+  AlertCircle,
 } from "lucide-react";
 import {
   Bar,
@@ -67,6 +68,8 @@ interface RevenueData {
     revenueGrowth: number;
     totalTransactionVolume: number;
     transactionCount: number;
+    failedPayoutCount: number;
+    failedPayoutAmount: number;
   };
   revenueOverTime: Array<{
     period: string;
@@ -343,6 +346,25 @@ export default function SuperadminRevenuePage() {
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(data?.kpis.arpu || 0)}</div>
             <p className="text-xs text-muted-foreground">Avg revenue per user</p>
+          </CardContent>
+        </Card>
+
+        <Card className={data?.kpis.failedPayoutCount ? "border-destructive" : ""}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Failed Payouts</CardTitle>
+            <AlertCircle
+              className={`h-4 w-4 ${data?.kpis.failedPayoutCount ? "text-destructive" : "text-muted-foreground"}`}
+            />
+          </CardHeader>
+          <CardContent>
+            <div
+              className={`text-2xl font-bold ${data?.kpis.failedPayoutCount ? "text-destructive" : ""}`}
+            >
+              {data?.kpis.failedPayoutCount ?? 0}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {formatCurrencyCompact(data?.kpis.failedPayoutAmount || 0)} all-time
+            </p>
           </CardContent>
         </Card>
       </div>

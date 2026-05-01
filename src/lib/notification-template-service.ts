@@ -26,6 +26,7 @@ export type PlaceholderCategory =
   | "program"
   | "event"
   | "payment"
+  | "payout"
   | "organization"
   | "date";
 
@@ -74,6 +75,17 @@ export interface TemplateContext {
   dueDaysRemaining?: number;
   paymentUrl?: string;
   balanceDue?: string;
+
+  // Payout context (org admin notifications)
+  payoutAmount?: string;
+  payoutNet?: string;
+  payoutFees?: string;
+  payoutBankAccount?: string;
+  payoutScheduledDate?: string;
+  payoutPaidDate?: string;
+  payoutFailureReason?: string;
+  payoutReference?: string;
+  payoutEstimatedArrivalTime?: string;
 
   // Organization context
   organizationName?: string;
@@ -352,6 +364,71 @@ export const PLACEHOLDER_DEFINITIONS: PlaceholderDefinition[] = [
     category: "payment",
   },
 
+  // Payout placeholders (org admin)
+  {
+    key: "payoutAmount",
+    label: "Payout Gross Amount",
+    description: "Gross payout amount before fees",
+    example: "$1,250.00",
+    category: "payout",
+  },
+  {
+    key: "payoutNet",
+    label: "Payout Net Amount",
+    description: "Net payout amount after fees",
+    example: "$1,213.75",
+    category: "payout",
+  },
+  {
+    key: "payoutFees",
+    label: "Payout Fees",
+    description: "Fees deducted from the payout",
+    example: "$36.25",
+    category: "payout",
+  },
+  {
+    key: "payoutBankAccount",
+    label: "Bank Account",
+    description: "Masked bank account number (last 4 digits)",
+    example: "****4321",
+    category: "payout",
+  },
+  {
+    key: "payoutScheduledDate",
+    label: "Payout Scheduled Date",
+    description: "Date the payout sweep was scheduled",
+    example: "April 21, 2026",
+    category: "payout",
+  },
+  {
+    key: "payoutPaidDate",
+    label: "Payout Paid Date",
+    description: "Date the payout was deposited",
+    example: "April 21, 2026",
+    category: "payout",
+  },
+  {
+    key: "payoutFailureReason",
+    label: "Payout Failure Reason",
+    description: "Human-readable reason for the payout failure",
+    example: "The bank rejected the transfer — likely due to incorrect account or routing number.",
+    category: "payout",
+  },
+  {
+    key: "payoutReference",
+    label: "Payout Reference",
+    description: "Adyen payout reference ID",
+    example: "8515867000123456A",
+    category: "payout",
+  },
+  {
+    key: "payoutEstimatedArrivalTime",
+    label: "Estimated Arrival Time",
+    description: "Estimated date funds will arrive in the bank account",
+    example: "April 23, 2026",
+    category: "payout",
+  },
+
   // Organization placeholders
   {
     key: "organizationName",
@@ -476,6 +553,13 @@ export function getPlaceholdersForTrigger(
     case "RECURRING_CHARGE_FAILED":
     case "RECURRING_CHARGE_SUSPENDED":
       additionalCategories.push("guardian", "payment");
+      break;
+
+    case "PAYOUT_PAID":
+    case "PAYOUT_FAILED":
+    case "PAYOUT_SCHEDULED":
+    case "NEGATIVE_BALANCE_WARNING":
+      additionalCategories.push("payout");
       break;
 
     case "CUSTOM":
@@ -628,6 +712,7 @@ export function getTemplatePlaceholderSummary(
     program: [],
     event: [],
     payment: [],
+    payout: [],
     organization: [],
     date: [],
   };
@@ -822,6 +907,76 @@ If you need help, please contact us at {{organizationEmail}}.
 Thank you,
 {{organizationName}}`,
     smsBody: `URGENT from {{organizationName}}: {{chargeDescription}} suspended due to payment failure. Please update your payment method to reactivate.`,
+  },
+  {
+    triggerType: "PAYOUT_PAID",
+    name: "Payout Deposited",
+    subject: "Payout of {{payoutAmount}} deposited to your account",
+    body: `Hi,
+
+A payout of {{payoutNet}} (after {{payoutFees}} in fees) has been deposited to your bank account ({{payoutBankAccount}}).
+
+Payout Reference: {{payoutReference}}
+Gross Amount: {{payoutAmount}}
+Fees: {{payoutFees}}
+Net Deposited: {{payoutNet}}
+Paid Date: {{payoutPaidDate}}
+Estimated Arrival: {{payoutEstimatedArrivalTime}}
+
+If you have any questions, please contact Uplifter support.
+
+{{organizationName}}`,
+    smsBody: `{{organizationName}}: Payout of {{payoutNet}} deposited to {{payoutBankAccount}}. Ref: {{payoutReference}}.`,
+  },
+  {
+    triggerType: "PAYOUT_SCHEDULED",
+    name: "Payout Scheduled",
+    subject: "Payout scheduled for {{payoutScheduledDate}}",
+    body: `Hi,
+
+A payout of approximately {{payoutAmount}} has been scheduled and will be sent to your bank account ({{payoutBankAccount}}) on {{payoutScheduledDate}}.
+
+Payout Reference: {{payoutReference}}
+Scheduled Date: {{payoutScheduledDate}}
+Bank Account: {{payoutBankAccount}}
+
+You will receive another notification once the funds have been deposited.
+
+{{organizationName}}`,
+    smsBody: `{{organizationName}}: Payout of ~{{payoutAmount}} scheduled for {{payoutScheduledDate}} to {{payoutBankAccount}}.`,
+  },
+  {
+    triggerType: "PAYOUT_FAILED",
+    name: "Payout Failed",
+    subject: "Payout failed — action required",
+    body: `Hi,
+
+A payout of {{payoutAmount}} to your bank account ({{payoutBankAccount}}) was unsuccessful.
+
+Payout Reference: {{payoutReference}}
+Amount: {{payoutAmount}}
+Bank Account: {{payoutBankAccount}}
+Reason: {{payoutFailureReason}}
+
+Please log in to your Uplifter dashboard to review your payout details and verify your bank account information. If the issue persists, please contact Uplifter support.
+
+{{organizationName}}`,
+    smsBody: `URGENT from {{organizationName}}: Payout of {{payoutAmount}} to {{payoutBankAccount}} failed. Please check your dashboard.`,
+  },
+  {
+    triggerType: "NEGATIVE_BALANCE_WARNING",
+    name: "Negative Balance Warning",
+    subject: "Action required — negative balance on your account",
+    body: `Hi,
+
+Your Uplifter payment account currently has a negative balance. This may delay your next payout until the balance is resolved.
+
+Common causes include refunds, chargebacks, or fees that exceeded recent sales.
+
+Please log in to your Uplifter dashboard to review your balance and transaction history. Contact Uplifter support if you need assistance resolving this.
+
+{{organizationName}}`,
+    smsBody: `{{organizationName}}: Your Uplifter payment account has a negative balance. Please check your dashboard.`,
   },
 ];
 

@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
       amount,
       paymentMethod: paymentMethodType,
       additionalData,
+      eventDate,
     } = notificationItem;
 
     logger.info("Adyen payment webhook received", {
@@ -129,7 +130,8 @@ export async function POST(request: NextRequest) {
         amount,
         paymentMethodType,
         additionalData,
-        request
+        request,
+        eventDate
       );
     } else if (eventCode === "AUTHORISATION" && success !== "true" && success !== true) {
       logger.info("Adyen webhook: payment authorisation failed", {
@@ -140,7 +142,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (eventCode === "CAPTURE" && (success === "true" || success === true)) {
-      await handleCapture(pspReference);
+      await handleCapture(pspReference, eventDate);
     }
 
     if (eventCode === "REFUND" && (success === "true" || success === true)) {
@@ -170,7 +172,8 @@ async function handleAuthorisation(
   amount: { value: number; currency: string },
   paymentMethodType: string | undefined,
   additionalData: Record<string, string> | undefined,
-  _request: NextRequest
+  _request: NextRequest,
+  eventDate?: string
 ) {
   if (!invoiceId) {
     console.error("No merchantReference (invoiceId) in AUTHORISATION notification");
@@ -252,7 +255,7 @@ async function handleAuthorisation(
         status: "SETTLED",
         method: paymentMethodType || "card",
         description: `Online payment – ${inv.reference}`,
-        settledAt: new Date(),
+        settledAt: eventDate ? new Date(eventDate) : new Date(),
         feeRate: invPlan ? Number(invPlan.transactionFee) : null,
         feeFixed: invPlan ? Number(invPlan.perTransactionFee) : null,
       },
@@ -521,10 +524,10 @@ async function handleFailedAuthorisation(invoiceId: string) {
   }
 }
 
-async function handleCapture(pspReference: string) {
+async function handleCapture(pspReference: string, eventDate?: string) {
   const result = await db.transaction.updateMany({
     where: { pspReference, status: "AUTHORISED" },
-    data: { status: "CAPTURED", settledAt: new Date() },
+    data: { status: "CAPTURED", settledAt: eventDate ? new Date(eventDate) : new Date() },
   });
 
   if (result.count > 0) {
@@ -537,7 +540,8 @@ async function handleCapture(pspReference: string) {
 }
 
 async function handleRefund(notificationItem: any) {
-  const { pspReference, originalReference, amount, merchantReference } = notificationItem;
+  const { pspReference, originalReference, amount, merchantReference, eventDate } =
+    notificationItem;
 
   if (!originalReference) {
     console.error("[REFUND] Missing originalReference");
@@ -553,7 +557,7 @@ async function handleRefund(notificationItem: any) {
     if (existing.status === "PENDING") {
       await db.transaction.update({
         where: { id: existing.id },
-        data: { status: "SETTLED", settledAt: new Date() },
+        data: { status: "SETTLED", settledAt: eventDate ? new Date(eventDate) : new Date() },
       });
       logger.info("Refund: updated pending refund to settled", { pspReference });
     } else {
@@ -591,7 +595,7 @@ async function handleRefund(notificationItem: any) {
           method: originalTx.method,
           description: `Refund for ${originalTx.merchantRef || originalReference}`,
           metadata: { originalPspReference: originalReference },
-          settledAt: new Date(),
+          settledAt: eventDate ? new Date(eventDate) : new Date(),
         },
       });
 
@@ -617,7 +621,8 @@ async function handleRefund(notificationItem: any) {
 }
 
 async function handleChargeback(notificationItem: any) {
-  const { pspReference, originalReference, amount, merchantReference } = notificationItem;
+  const { pspReference, originalReference, amount, merchantReference, eventDate } =
+    notificationItem;
 
   try {
     await db.$transaction(async (tx) => {
@@ -654,7 +659,7 @@ async function handleChargeback(notificationItem: any) {
           status: "SETTLED",
           method: originalTx?.method,
           description: `Chargeback for ${originalTx?.merchantRef || originalReference}`,
-          settledAt: new Date(),
+          settledAt: eventDate ? new Date(eventDate) : new Date(),
         },
       });
 

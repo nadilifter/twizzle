@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { SearchIcon, DownloadIcon, FilterIcon, Loader2 } from "lucide-react";
+import { SearchIcon, DownloadIcon, FilterIcon, Loader2, RefreshCwIcon } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { getMethodLabel } from "@/lib/payment-utils";
@@ -67,9 +67,13 @@ const statusLabels: Record<string, string> = {
   PENDING: "Pending",
 };
 
+const env = process.env.NEXT_PUBLIC_APP_ENVIRONMENT;
+const isDevEnv = env !== "staging" && env !== "production";
+
 export default function TransactionsPage() {
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [syncing, setSyncing] = React.useState(false);
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("all");
   const [stats, setStats] = React.useState({
@@ -102,11 +106,35 @@ export default function TransactionsPage() {
     return () => clearTimeout(timeoutId);
   }, [fetchTransactions]);
 
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/transactions/sync", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Sync failed");
+        return;
+      }
+      if (data.synced === 0) {
+        toast.success("Transactions are up to date");
+      } else {
+        toast.success(
+          `Synced ${data.synced} missing transaction${data.synced === 1 ? "" : "s"} from Adyen`
+        );
+      }
+      await fetchTransactions();
+    } catch {
+      toast.error("Sync failed");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const handleExport = () => {
     // Generate CSV export
     const headers = ["Date", "PSP Reference", "Description", "Method", "Status", "Amount"];
     const rows = transactions.map((trx) => [
-      format(new Date(trx.createdAt), "yyyy-MM-dd HH:mm"),
+      format(new Date(trx.settledAt ?? trx.createdAt), "yyyy-MM-dd HH:mm"),
       trx.pspReference,
       trx.description || "",
       trx.method || "",
@@ -139,6 +167,16 @@ export default function TransactionsPage() {
           <div className="flex items-center justify-between">
             <CardTitle>Payment History</CardTitle>
             <div className="flex items-center gap-2">
+              {isDevEnv && (
+                <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing}>
+                  {syncing ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCwIcon className="mr-2 h-4 w-4" />
+                  )}
+                  Sync from Adyen
+                </Button>
+              )}
               <Button variant="outline" size="sm" onClick={handleExport}>
                 <DownloadIcon className="mr-2 h-4 w-4" />
                 Export
@@ -208,7 +246,14 @@ export default function TransactionsPage() {
                 {transactions.map((trx) => (
                   <TableRow key={trx.id}>
                     <TableCell className="whitespace-nowrap">
-                      {format(new Date(trx.createdAt), "MMM d, yyyy")}
+                      <div className="flex flex-col">
+                        <span>
+                          {format(new Date(trx.settledAt ?? trx.createdAt), "MMM d, yyyy")}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(trx.settledAt ?? trx.createdAt), "h:mm a")}
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell className="font-medium">
                       {trx.description || trx.payment?.user?.name || "Payment"}

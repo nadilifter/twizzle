@@ -11,6 +11,7 @@ import {
   addPaymentMethodsToStore,
   signPciForLegalEntity,
 } from "@/lib/adyen-platform";
+import { createSystemRulesForOrganization } from "@/lib/notification-service";
 
 export type FinalizeOnboardingResult = {
   storeId: string | null;
@@ -351,6 +352,17 @@ export async function finalizeOrgOnboarding(orgId: string): Promise<FinalizeOnbo
     await db.adyenPlatformAccount.update({
       where: { organizationId: orgId, id: account.id, accountStatus: "ACTIVE" },
       data: updates,
+    });
+  }
+
+  // Default payout notification rules for the verified org. Idempotent — skips rules
+  // that already exist. Failure must not break finalization, so we log and continue.
+  try {
+    await createSystemRulesForOrganization(orgId);
+  } catch (error) {
+    console.error("adyen-onboarding-finalize: failed to create system notification rules", {
+      orgId,
+      error,
     });
   }
 

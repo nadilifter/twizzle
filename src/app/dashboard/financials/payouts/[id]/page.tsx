@@ -20,7 +20,9 @@ import {
   CalendarIcon,
   ClockIcon,
   DollarSignIcon,
+  AlertCircleIcon,
 } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
@@ -50,8 +52,41 @@ interface PayoutDetail {
   scheduledAt: string | null;
   paidAt: string | null;
   estimatedArrivalTime: string | null;
+  failureReason: string | null;
   createdAt: string;
   transactions: Transaction[];
+}
+
+const FAILURE_REASON_MAP: Record<string, string> = {
+  bankAccountDetailsInvalid:
+    "Your bank account details are invalid. Please update your bank account information.",
+  insufficientFunds: "Insufficient funds in the source account.",
+  returned:
+    "The bank rejected the transfer — likely due to incorrect account or routing number. Please update your bank account details.",
+  technicalFailure:
+    "A technical error occurred. Your next scheduled payout will retry automatically.",
+};
+
+function getFailureGuidance(reason: string | null): { message: string; actionRequired: boolean } {
+  if (!reason) {
+    return {
+      message:
+        "This appears to be a temporary issue. Adyen will retry your payout automatically on the next scheduled sweep.",
+      actionRequired: false,
+    };
+  }
+  if (reason === "returned" || reason === "bankAccountDetailsInvalid") {
+    return {
+      message:
+        "Your bank rejected the transfer. Please update your bank account details via account settings. If you need help, contact support.",
+      actionRequired: true,
+    };
+  }
+  return {
+    message:
+      "This appears to be a temporary issue. Adyen will retry your payout automatically on the next scheduled sweep. Contact support if it persists.",
+    actionRequired: false,
+  };
 }
 
 const statusColors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -143,6 +178,11 @@ export default function PayoutDetailPage() {
           </Badge>
         </div>
         <p className="text-sm font-mono text-muted-foreground">{payout.reference}</p>
+        {payout.status === "FAILED" && payout.failureReason && (
+          <p className="text-sm text-destructive">
+            {FAILURE_REASON_MAP[payout.failureReason] ?? payout.failureReason}
+          </p>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -243,6 +283,20 @@ export default function PayoutDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {payout.status === "FAILED" &&
+        (() => {
+          const guidance = getFailureGuidance(payout.failureReason);
+          return (
+            <Alert variant="destructive">
+              <AlertCircleIcon className="h-4 w-4" />
+              <AlertTitle>
+                {guidance.actionRequired ? "Action required" : "What happens next?"}
+              </AlertTitle>
+              <AlertDescription>{guidance.message}</AlertDescription>
+            </Alert>
+          );
+        })()}
 
       <Card>
         <CardHeader>

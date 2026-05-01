@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
       settledTransactions,
       transactionsByOrg,
       subscriptionHistory,
+      failedPayoutsAgg,
     ] = await Promise.all([
       // Get all active subscriptions with their plans and organizations
       db.organizationSubscription.findMany({
@@ -99,6 +100,13 @@ export async function GET(request: NextRequest) {
           },
         },
         orderBy: { createdAt: "asc" },
+      }),
+
+      // Failed payout totals (all-time)
+      db.payout.aggregate({
+        where: { status: "FAILED" },
+        _count: { id: true },
+        _sum: { amount: true },
       }),
     ]);
 
@@ -285,6 +293,8 @@ export async function GET(request: NextRequest) {
         revenueGrowth: Number(revenueGrowth.toFixed(1)),
         totalTransactionVolume: settledTransactions.reduce((sum, t) => sum + Number(t.amount), 0),
         transactionCount: settledTransactions.length,
+        failedPayoutCount: failedPayoutsAgg._count.id,
+        failedPayoutAmount: Number(failedPayoutsAgg._sum.amount ?? 0),
       },
 
       // Chart data

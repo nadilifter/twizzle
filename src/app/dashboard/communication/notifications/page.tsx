@@ -95,6 +95,10 @@ type TriggerType =
   | "RECURRING_CHARGE_SUCCEEDED"
   | "RECURRING_CHARGE_FAILED"
   | "RECURRING_CHARGE_SUSPENDED"
+  | "PAYOUT_PAID"
+  | "PAYOUT_FAILED"
+  | "PAYOUT_SCHEDULED"
+  | "NEGATIVE_BALANCE_WARNING"
   | "CUSTOM";
 
 type LogStatus = "PENDING" | "SENT" | "DELIVERED" | "FAILED" | "SKIPPED";
@@ -179,8 +183,19 @@ const TRIGGER_TYPE_LABELS: Record<TriggerType, string> = {
   RECURRING_CHARGE_SUCCEEDED: "Recurring Charge Succeeded",
   RECURRING_CHARGE_FAILED: "Recurring Charge Failed",
   RECURRING_CHARGE_SUSPENDED: "Recurring Charge Suspended",
+  PAYOUT_PAID: "Payout Deposited",
+  PAYOUT_FAILED: "Payout Failed",
+  PAYOUT_SCHEDULED: "Payout Scheduled",
+  NEGATIVE_BALANCE_WARNING: "Negative Balance Warning",
   CUSTOM: "Custom",
 };
+
+const EVENT_DRIVEN_TRIGGERS = new Set<TriggerType>([
+  "PAYOUT_PAID",
+  "PAYOUT_FAILED",
+  "PAYOUT_SCHEDULED",
+  "NEGATIVE_BALANCE_WARNING",
+]);
 
 const LOG_STATUS_LABELS: Record<LogStatus, string> = {
   PENDING: "Pending",
@@ -693,6 +708,9 @@ export default function NotificationsPage() {
   };
 
   const formatTiming = (rule: NotificationRule) => {
+    if (EVENT_DRIVEN_TRIGGERS.has(rule.triggerType)) {
+      return "Immediately";
+    }
     if (rule.timingValue === 0 || rule.timingDirection === "AT") {
       return `At ${TRIGGER_TYPE_LABELS[rule.triggerType]}`;
     }
@@ -1007,60 +1025,68 @@ export default function NotificationsPage() {
 
                 <div className="grid gap-2">
                   <Label>Timing</Label>
-                  <p className="text-xs text-muted-foreground">
-                    When should this notification fire relative to the trigger event?
-                  </p>
-                  <div className="flex gap-2">
-                    <Input
-                      type="number"
-                      min="0"
-                      className="w-24"
-                      value={timingValue}
-                      onChange={(e) => {
-                        userChangedTimingRef.current = true;
-                        setTimingValue(parseInt(e.target.value) || 0);
-                      }}
-                      disabled={editingRule?.isSystem}
-                    />
-                    <Select
-                      value={timingUnit}
-                      onValueChange={(val) => {
-                        userChangedTimingRef.current = true;
-                        setTimingUnit(val as TimingUnit);
-                      }}
-                      disabled={editingRule?.isSystem}
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(TIMING_UNIT_LABELS).map(([key, label]) => (
-                          <SelectItem key={key} value={key}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select
-                      value={timingDirection}
-                      onValueChange={(val) => {
-                        userChangedTimingRef.current = true;
-                        setTimingDirection(val as TimingDirection);
-                      }}
-                      disabled={editingRule?.isSystem}
-                    >
-                      <SelectTrigger className="w-28">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(TIMING_DIRECTION_LABELS).map(([key, label]) => (
-                          <SelectItem key={key} value={key}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {EVENT_DRIVEN_TRIGGERS.has(triggerType) ? (
+                    <p className="text-sm text-muted-foreground">
+                      This notification fires immediately when the trigger occurs.
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-xs text-muted-foreground">
+                        When should this notification fire relative to the trigger event?
+                      </p>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          min="0"
+                          className="w-24"
+                          value={timingValue}
+                          onChange={(e) => {
+                            userChangedTimingRef.current = true;
+                            setTimingValue(parseInt(e.target.value) || 0);
+                          }}
+                          disabled={editingRule?.isSystem}
+                        />
+                        <Select
+                          value={timingUnit}
+                          onValueChange={(val) => {
+                            userChangedTimingRef.current = true;
+                            setTimingUnit(val as TimingUnit);
+                          }}
+                          disabled={editingRule?.isSystem}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(TIMING_UNIT_LABELS).map(([key, label]) => (
+                              <SelectItem key={key} value={key}>
+                                {label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select
+                          value={timingDirection}
+                          onValueChange={(val) => {
+                            userChangedTimingRef.current = true;
+                            setTimingDirection(val as TimingDirection);
+                          }}
+                          disabled={editingRule?.isSystem}
+                        >
+                          <SelectTrigger className="w-28">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(TIMING_DIRECTION_LABELS).map(([key, label]) => (
+                              <SelectItem key={key} value={key}>
+                                {label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -1264,9 +1290,11 @@ export default function NotificationsPage() {
                     </span>
                     <span className="text-sm font-medium text-muted-foreground">Timing</span>
                     <span className="text-sm">
-                      {timingValue === 0 || timingDirection === "AT"
+                      {EVENT_DRIVEN_TRIGGERS.has(triggerType)
                         ? "Immediately"
-                        : `${timingValue} ${timingValue === 1 ? timingUnit.toLowerCase().slice(0, -1) : timingUnit.toLowerCase()} ${timingDirection.toLowerCase()}`}
+                        : timingValue === 0 || timingDirection === "AT"
+                          ? "Immediately"
+                          : `${timingValue} ${timingValue === 1 ? timingUnit.toLowerCase().slice(0, -1) : timingUnit.toLowerCase()} ${timingDirection.toLowerCase()}`}
                     </span>
                   </div>
                   {actionType !== "ANNOUNCEMENT" && (

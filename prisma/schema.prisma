@@ -1871,6 +1871,8 @@ model Payout {
   scheduledAt    DateTime?
   paidAt         DateTime?
   estimatedArrivalTime DateTime?
+  reconciledVia  ReconciledVia?
+  failureReason  String?
   createdAt      DateTime     @default(now())
 
   // Relations
@@ -1890,6 +1892,11 @@ enum PayoutStatus {
 enum PayoutType {
   MANUAL
   SWEEP
+}
+
+enum ReconciledVia {
+  REFERENCE_MATCH
+  TIME_WINDOW
 }
 
 // ============================================
@@ -3911,6 +3918,12 @@ enum NotificationTriggerType {
   RECURRING_CHARGE_SUCCEEDED // Charge processed successfully
   RECURRING_CHARGE_FAILED // Charge attempt failed
   RECURRING_CHARGE_SUSPENDED // All retries exhausted, entitlement suspended
+
+  // Payout-related (org admin)
+  PAYOUT_SCHEDULED          // Payout sweep has been scheduled
+  PAYOUT_PAID               // Payout successfully deposited to bank account
+  PAYOUT_FAILED             // Payout transfer failed
+  NEGATIVE_BALANCE_WARNING  // Balance account has gone negative
 
   // Custom
   CUSTOM // Custom/manual trigger

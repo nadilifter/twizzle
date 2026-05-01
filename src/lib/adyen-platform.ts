@@ -482,6 +482,154 @@ export async function listBalanceAccountTransfers(
   }
 }
 
+export interface AdyenPlatformPayment {
+  pspReference: string;
+  modificationPspReference?: string;
+  amount: number; // net to org's balance account (settlement amount, in dollars)
+  currency: string;
+  settledAt: Date;
+  method?: string;
+  description?: string;
+  merchantRef?: string;
+  adyenFeeAmount: number; // Adyen processing fees deducted for this payment (in dollars, exact from Adyen)
+  commissionAmount: number; // our platform commission for this payment (in dollars, exact from Adyen)
+}
+
+// platformPaymentType values that represent the net settlement to the org's balance account.
+// Adyen returns separate transfers for each split (Commission, AdyenFees, BalanceAccount, etc.)
+// all sharing the same pspPaymentReference. We only want the settlement transfer.
+const BALANCE_ACCOUNT_PAYMENT_TYPES = new Set(["BalanceAccount", "Remainder", undefined, null]);
+
+export async function fetchPlatformPaymentTransfers(
+  balanceAccountId: string,
+  since: Date,
+  until: Date
+): Promise<AdyenPlatformPayment[]> {
+  // Query scoped to the balance platform (not the org's balanceAccountId) so we
+  // capture every split for each payment:
+  //   - BalanceAccount/Remainder split → org's balance account (net amount)
+  //   - Commission split → platform's balance account (our fee, exact)
+  //   - AdyenFees/AcquiringFees split → Adyen fees (exact)
+  // All splits for one payment share the same categoryData.pspPaymentReference,
+  // which lets us join them and recover the gross without any back-calculation.
+  // Adyen requires at least one scope parameter; balanceAccountId would exclude
+  // the platform-account splits, so we use balancePlatform instead.
+  const balancePlatform = process.env.ADYEN_BALANCE_PLATFORM;
+  if (!balancePlatform) {
+    throw new Error("ADYEN_BALANCE_PLATFORM env var is required for fetchPlatformPaymentTransfers");
+  }
+
+  type RawTransfer = any;
+  const grouped = new Map<string, RawTransfer[]>();
+  let cursor: string | undefined;
+
+  do {
+    const response = await getTransfersApi().TransfersApi.getAllTransfers(
+      since,
+      until,
+      balancePlatform,
+      undefined, // accountHolderId
+      undefined, // balanceAccountId — intentionally unfiltered to capture all splits
+      undefined, // paymentInstrumentId
+      undefined, // reference
+      "platformPayment",
+      "asc",
+      cursor,
+      100
+    );
+
+    for (const transfer of response.data ?? []) {
+      const cd = transfer.categoryData as any;
+      const pspRef: string | undefined = cd?.pspPaymentReference;
+      if (!pspRef) continue;
+      // pspPaymentReference is shared between an original payment and its
+      // modifications (capture / refund / chargeback); modificationPspReference
+      // distinguishes them. Group by both so reverse splits don't get folded
+      // into the original's bucket (which would drop the modification's
+      // settlement and double-count commission via the reversed Commission
+      // split).
+      const modRef: string | undefined = cd?.modificationPspReference;
+      const key = `${pspRef}::${modRef ?? ""}`;
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key)!.push(transfer);
+    }
+
+    const nextHref = response._links?.next?.href;
+    cursor = nextHref ? (new URL(nextHref).searchParams.get("cursor") ?? undefined) : undefined;
+  } while (cursor);
+
+  const transfers: AdyenPlatformPayment[] = [];
+  for (const group of grouped.values()) {
+    // Settlement: org's BalanceAccount/Remainder split landing on this org's balance account.
+    const settlement = group.find((t) => {
+      const cd = t.categoryData as any;
+      const ppt = cd?.platformPaymentType;
+      const ba = (t.balanceAccount as any)?.id;
+      return BALANCE_ACCOUNT_PAYMENT_TYPES.has(ppt) && ba === balanceAccountId;
+    });
+    if (!settlement) continue;
+
+    const cd = settlement.categoryData as any;
+    const pspRef: string = cd?.pspPaymentReference;
+
+    // Commission split (our platform fee). Lands on the platform's balance account.
+    const commissionSplits = group.filter(
+      (t) => (t.categoryData as any)?.platformPaymentType === "Commission"
+    );
+    // Adyen fees: typically reported via transfer.fees[] on the settlement transfer,
+    // but can also appear as separate AdyenFees/AcquiringFees split transfers.
+    const adyenFeeSplits = group.filter((t) => {
+      const ppt = (t.categoryData as any)?.platformPaymentType;
+      return ppt === "AdyenFees" || ppt === "AcquiringFees";
+    });
+
+    const sumAbs = (xs: RawTransfer[]) =>
+      xs.reduce((sum, t) => sum + Math.abs(Number(t.amount?.value ?? 0)), 0);
+
+    const settlementValue = Number(settlement.amount?.value ?? 0);
+    const netAmount = settlementValue / 100; // signed: negative for refunds
+    const commissionAmount = sumAbs(commissionSplits) / 100;
+
+    // Prefer the explicit AdyenFees split transfers; fall back to settlement.fees[].
+    let adyenFeeAmount = sumAbs(adyenFeeSplits) / 100;
+    if (adyenFeeAmount === 0) {
+      const fees = (settlement.fees ?? []) as Array<{ amount?: { value?: number } }>;
+      adyenFeeAmount = fees.reduce((sum, f) => sum + Math.abs(f.amount?.value ?? 0), 0) / 100;
+    }
+
+    transfers.push({
+      pspReference: pspRef,
+      ...(cd?.modificationPspReference
+        ? { modificationPspReference: cd.modificationPspReference as string }
+        : {}),
+      amount: netAmount,
+      currency: settlement.amount?.currency ?? "USD",
+      settledAt: settlement.createdAt ? new Date(settlement.createdAt) : new Date(),
+      adyenFeeAmount,
+      commissionAmount,
+      ...(cd?.paymentMethod ? { method: cd.paymentMethod as string } : {}),
+      ...(settlement.description ? { description: settlement.description as string } : {}),
+      ...(settlement.reference ? { merchantRef: settlement.reference as string } : {}),
+    });
+  }
+
+  return transfers;
+}
+
+export async function fetchSweepTransactionRefs(
+  balanceAccountId: string,
+  since: Date,
+  until: Date
+): Promise<string[]> {
+  const transfers = await fetchPlatformPaymentTransfers(balanceAccountId, since, until);
+  const refs = new Set<string>();
+  for (const t of transfers) {
+    refs.add(t.pspReference);
+    if (t.modificationPspReference) refs.add(t.modificationPspReference);
+  }
+  return [...refs];
+}
+
 // ---------------------------------------------------------------------------
 // Transfer Instruments (bank account lookup)
 // ---------------------------------------------------------------------------

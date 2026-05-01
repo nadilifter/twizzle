@@ -36,6 +36,7 @@ import {
   getBalanceAccountSweepDescription,
   isPlatformConfigured,
 } from "@/lib/adyen-platform";
+import { createSystemRulesForOrganization } from "@/lib/notification-service";
 
 const prisma = new PrismaClient();
 
@@ -9727,6 +9728,16 @@ See you at Metro Sports!
     await createNotificationRule(rule);
   }
   console.log(`  ✓ Created ${metroNotificationRules.length} notification rules for Metro Sports`);
+
+  // Ensure all seeded orgs have the full set of system rules (including payout
+  // trigger types added after initial seed data was written). Safe to re-run —
+  // createSystemRulesForOrganization skips rules that already exist.
+  for (const orgId of [ORG1_ID, ORG2_ID, ORG_DEMO_ID]) {
+    const result = await createSystemRulesForOrganization(orgId);
+    if (result.created > 0) {
+      console.log(`  ✓ Created ${result.created} missing system rules for ${orgId}`);
+    }
+  }
 
   // ============================================
   // WAIVERS & DIGITAL SIGNATURES
