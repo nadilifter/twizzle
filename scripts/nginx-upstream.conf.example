@@ -1,0 +1,6 @@
+# Upstream include for the zero-downtime blue/green rollover.
+# Installed on the EC2 host at: /etc/nginx/uplifter-upstream.conf
+# Rewritten atomically by scripts/deploy-rollover.sh on each deploy.
+#
+# Port 3001 = app-blue, port 3002 = app-green.
+server 127.0.0.1:3001;
