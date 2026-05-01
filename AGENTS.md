@@ -259,29 +259,30 @@ Wrap data tables in `<div className="overflow-x-auto rounded-md border">` so the
 
 ## Where Things Live
 
-| What                         | Where                                            |
-| ---------------------------- | ------------------------------------------------ |
-| All API routes               | `src/app/api/`                                   |
-| Tenant isolation logic       | `src/lib/db.ts` → `getScopedDb`, `TENANT_MODELS` |
-| Auth config + session        | `src/lib/auth.ts`                                |
-| Subdomain routing middleware | `src/middleware.ts`                              |
-| Email service                | `src/lib/email.ts`                               |
-| SMS service                  | `src/lib/sms-service.ts`, `src/lib/twilio.ts`    |
-| Payment processing           | `src/lib/adyen.ts`, `src/lib/adyen-platform.ts`  |
-| Adyen provisioning scripts   | `scripts/provision-adyen.ts`                     |
-| File storage                 | `src/lib/storage.ts`                             |
-| Shared Zod schemas           | `src/lib/schemas.ts`                             |
-| Image upload component       | `src/components/ui/image-upload.tsx`             |
-| Dashboard page header        | `src/components/dashboard-page-header.tsx`       |
-| Chat split-pane layout       | `src/components/chat/chat-panels.tsx`            |
-| Feature flags                | `src/lib/feature-toggles.ts`                     |
-| Accounting integrations      | `src/lib/qbo.ts`, `src/lib/xero.ts`              |
-| Prisma schema                | `prisma/schema.prisma`                           |
-| Custom React hooks           | `src/hooks/`                                     |
-| Shared UI components         | `src/components/`                                |
-| Type definitions             | `src/types/`                                     |
-| Public API org resolution    | `src/lib/public-api.ts`                          |
-| Zustand stores               | `src/store/`                                     |
+| What                                           | Where                                            |
+| ---------------------------------------------- | ------------------------------------------------ |
+| All API routes                                 | `src/app/api/`                                   |
+| Tenant isolation logic                         | `src/lib/db.ts` → `getScopedDb`, `TENANT_MODELS` |
+| Auth config + session                          | `src/lib/auth.ts`                                |
+| Subdomain routing middleware                   | `src/middleware.ts`                              |
+| Email service                                  | `src/lib/email.ts`                               |
+| SMS service                                    | `src/lib/sms-service.ts`, `src/lib/twilio.ts`    |
+| Payment processing                             | `src/lib/adyen.ts`, `src/lib/adyen-platform.ts`  |
+| Adyen provisioning scripts                     | `scripts/provision-adyen.ts`                     |
+| File storage                                   | `src/lib/storage.ts`                             |
+| Shared Zod schemas                             | `src/lib/schemas.ts`                             |
+| Image upload component                         | `src/components/ui/image-upload.tsx`             |
+| Dashboard page header                          | `src/components/dashboard-page-header.tsx`       |
+| Chat split-pane layout                         | `src/components/chat/chat-panels.tsx`            |
+| Feature flags                                  | `src/lib/feature-toggles.ts`                     |
+| Accounting integrations                        | `src/lib/qbo.ts`, `src/lib/xero.ts`              |
+| Prisma schema                                  | `prisma/schema.prisma`                           |
+| Custom React hooks                             | `src/hooks/`                                     |
+| Shared UI components                           | `src/components/`                                |
+| Type definitions                               | `src/types/`                                     |
+| Public API org resolution                      | `src/lib/public-api.ts`                          |
+| Zustand stores                                 | `src/store/`                                     |
+| Feature catalog (every feature, code-anchored) | `docs/FEATURES.md`                               |
 
 ---
 
@@ -300,6 +301,35 @@ Each portal is a subdomain. The middleware (`src/middleware.ts`) parses the subd
 | `login.`      | `/(auth)/`           | All unauthenticated users      |
 
 **Tenant site navigation rule:** Client-side `Link` hrefs and `router.push` calls inside `/sites/[slug]/` must use simple paths (`/checkout`, `/register`). Never include `/sites/{slug}/` — the middleware inserts that prefix automatically.
+
+---
+
+## Feature Catalog
+
+`docs/FEATURES.md` is the exhaustive, code-anchored inventory of every product feature, sub-feature, and behavior. Use it as the **first stop** when:
+
+- You need to know whether something already exists before building it
+- You want to find the code that backs a given user-facing feature
+- You're auditing what's documented vs. what actually ships
+
+Each section follows a fixed template (status, plan gate, portals, primary models, sub-feature checklist, user flows, permissions, data model, API routes, background jobs, external integrations, webhooks, notifications, configuration, lifecycle, business rules, known gaps, code references with `file:line` anchors). The doc is filled in by tranches — Foundations (Part 0) is complete; Parts 1–4 are stubs being filled progressively.
+
+### When to update FEATURES.md
+
+Update the catalog in the same PR that changes feature behavior:
+
+- **Behavior change** → update the affected sub-section in the smallest blast radius possible (one bullet, one line). Don't rewrite a whole section.
+- **New feature / sub-feature / user-facing behavior** → add it using the template. `Status: Live` only if it's shipped to customers; use `Hidden`, `Demo`, or `Planned` otherwise.
+- **Resolved a "Known limitations / gaps" entry** → remove the entry and fold the now-shipped behavior into the relevant sub-section.
+- **Moved or renamed a referenced file/function** → search FEATURES.md for `file:line` anchors and update the line numbers.
+
+### When NOT to update
+
+Internal refactors with no behavior change, test-only changes, dependency bumps, and bug fixes that don't alter documented behavior.
+
+### Drift policy
+
+Drift is worse than gaps. If you can't fully document a change, mark the affected section with `TODO: <what>` and open a follow-up. Every claim in FEATURES.md must be backed by a `file:line` reference — don't write speculative or unverified content.
 
 ---
 
@@ -423,6 +453,7 @@ Key MCP tools for Adyen troubleshooting:
 - **Don't add error handling for impossible states** — only validate at system boundaries
 - **Don't leave `$` unescaped in `.env` values** — use `\$` inside single quotes so `dotenv-expand` (used by `@next/env`) preserves the literal character; unescaped `$` is silently expanded to empty, corrupting API keys
 - **Don't use `.env.local` for Adyen keys** — Next.js loads `.env.local` with higher priority than `.env`, so changes to `.env` are silently ignored if both files set the same variable
+- **Don't ship a feature change without checking `docs/FEATURES.md`** — if the catalog already covers the feature, update the affected sub-section in the same PR. If the section is still a stub, leave a `TODO:` note rather than letting drift accumulate
 
 ---
 

@@ -1,0 +1,32 @@
+---
+description: Consider whether changes warrant an update to docs/FEATURES.md before committing
+alwaysApply: true
+---
+
+# Features Catalog Maintenance
+
+`docs/FEATURES.md` is the exhaustive, code-anchored inventory of every product feature, sub-feature, and behavior in the platform. Future engineers and AI agents rely on it for:
+
+- Understanding what already exists before building
+- Locating the code that backs a given feature
+- Tracking the gap between what's documented and what ships
+
+## Before committing, ask
+
+1. **Does this PR change a feature that's documented in FEATURES.md?** Update the affected sub-section in the smallest blast radius possible — one bullet, one line if that's all that changed. Don't rewrite a whole section.
+2. **Does this PR add a new feature, sub-feature, or user-facing behavior?** Add it to the matching section using the standard template at the top of FEATURES.md. Mark `Status: Live` only if it's actually shipped to customers; use `Hidden`, `Demo`, or `Planned` otherwise.
+3. **Does this PR resolve an entry in a "Known limitations / gaps" list?** Remove the entry and fold the now-implemented behavior into the relevant sub-section.
+4. **Did you move or rename a function/file referenced in FEATURES.md?** Search the doc for `file:line` links to that path and update the line numbers — broken anchors silently rot.
+
+## When NOT to update FEATURES.md
+
+- Internal refactors that don't change behavior or surface area
+- Test-only changes
+- Dependency bumps
+- Bug fixes that don't change the documented behavior or business rules
+
+## Drift policy
+
+Drift is worse than gaps. If you can't fully document a change in this PR, mark the affected section with `TODO: <what>` and open a follow-up. Don't write speculative or unverified content — every claim in FEATURES.md should be backed by a file:line reference.
+
+If your PR touches feature behavior but you intentionally aren't updating the catalog, mention it in the PR description so reviewers can confirm.

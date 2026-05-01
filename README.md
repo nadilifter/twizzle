@@ -524,6 +524,26 @@ When you add or change a secret in `.env`, run `pnpm secrets:encrypt` and commit
 
 ---
 
+## Documentation
+
+Key references for understanding the codebase:
+
+| Document                                                                     | What it covers                                                                                                                                                                                                                        |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`AGENTS.md`](AGENTS.md)                                                     | Critical rules and standard patterns for AI agents and humans editing this repo                                                                                                                                                       |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md)                                         | Deep dive: portal system, request lifecycle, financial flow, communications, infra                                                                                                                                                    |
+| [`docs/FEATURES.md`](docs/FEATURES.md)                                       | **Exhaustive, code-anchored catalog of every product feature, sub-feature, and behavior.** First stop when you need to know if something already exists or where the code lives. Update in the same PR that changes feature behavior. |
+| [`docs/BUSINESS-RULES.md`](docs/BUSINESS-RULES.md)                           | Decisions and behaviors not obvious from code alone (billing lifecycle, dunning, registration rules)                                                                                                                                  |
+| [`docs/ERD.md`](docs/ERD.md)                                                 | Domain-grouped Mermaid ERD with field-level annotations for every model                                                                                                                                                               |
+| [`docs/data-structure.md`](docs/data-structure.md)                           | High-level entity map, design patterns, cross-domain flows, enum reference                                                                                                                                                            |
+| [`docs/DATE-HANDLING.md`](docs/DATE-HANDLING.md)                             | `parseDateOnly()` pattern and timezone-safe date display                                                                                                                                                                              |
+| [`docs/adyen-platform/`](docs/adyen-platform/)                               | Adyen Balance Platform integration spec, broken into phases                                                                                                                                                                           |
+| [`docs/sms-toll-free-verification.md`](docs/sms-toll-free-verification.md)   | TFV submission workflow for Twilio numbers                                                                                                                                                                                            |
+| [`docs/platform-architecture.md`](docs/platform-architecture.md)             | Subdomain-portal diagram and routing flow                                                                                                                                                                                             |
+| [`docs/INFRASTRUCTURE_REQUIREMENTS.md`](docs/INFRASTRUCTURE_REQUIREMENTS.md) | Cloud infra requirements per environment                                                                                                                                                                                              |
+
+---
+
 ## Long-Term Vision
 
 - High-volume payments
