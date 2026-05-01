@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { checkFeatureGate } from "@/lib/feature-resolver";
+import { logger } from "@/lib/logger";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
@@ -216,6 +217,15 @@ export async function POST(request: NextRequest) {
               verifiedPrice = Number(variant.price);
             }
           }
+          const isDelivery = product.fulfillmentType === "DELIVERY_ONLY";
+          const pickupFacilityId = isDelivery ? undefined : (product.pickupFacilityId ?? undefined);
+          if (!isDelivery && !pickupFacilityId) {
+            logger.warn("checkout: pickup line item missing facility", {
+              organizationId: session.user.organizationId,
+              productId: product.id,
+              source: "pos",
+            });
+          }
           return tx.lineItem.create({
             data: {
               invoiceId: invoice.id,
@@ -226,6 +236,8 @@ export async function POST(request: NextRequest) {
               productId: product.id,
               productVariantId: variantId || undefined,
               glCodeId: product?.glCodeId ?? defaultProductGLCode?.id ?? undefined,
+              fulfillmentType: isDelivery ? "DELIVERY" : "PICKUP",
+              pickupFacilityId,
             },
           });
         })

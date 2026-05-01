@@ -5449,7 +5449,7 @@ async function main() {
   await Promise.all([
     prisma.product.upsert({
       where: { id: `${ORG1_ID}-prod-1` },
-      update: {},
+      update: { fulfillmentType: "PICKUP_ONLY", pickupFacilityId: org1Facility1.id },
       create: {
         id: `${ORG1_ID}-prod-1`,
         organizationId: ORG1_ID,
@@ -5461,11 +5461,13 @@ async function main() {
         maxInventory: 50,
         currentInventory: 35,
         isActive: true,
+        fulfillmentType: "PICKUP_ONLY",
+        pickupFacilityId: org1Facility1.id,
       },
     }),
     prisma.product.upsert({
       where: { id: `${ORG1_ID}-prod-2` },
-      update: {},
+      update: { fulfillmentType: "PICKUP_ONLY", pickupFacilityId: org1Facility1.id },
       create: {
         id: `${ORG1_ID}-prod-2`,
         organizationId: ORG1_ID,
@@ -5476,11 +5478,13 @@ async function main() {
         maxInventory: 100,
         currentInventory: 72,
         isActive: true,
+        fulfillmentType: "PICKUP_ONLY",
+        pickupFacilityId: org1Facility1.id,
       },
     }),
     prisma.product.upsert({
       where: { id: `${ORG1_ID}-prod-3` },
-      update: {},
+      update: { fulfillmentType: "PICKUP_ONLY", pickupFacilityId: org1Facility1.id },
       create: {
         id: `${ORG1_ID}-prod-3`,
         organizationId: ORG1_ID,
@@ -5491,11 +5495,13 @@ async function main() {
         maxInventory: 30,
         currentInventory: 18,
         isActive: true,
+        fulfillmentType: "PICKUP_ONLY",
+        pickupFacilityId: org1Facility1.id,
       },
     }),
     prisma.product.upsert({
       where: { id: `${ORG1_ID}-prod-4` },
-      update: {},
+      update: { fulfillmentType: "PICKUP_ONLY", pickupFacilityId: org1Facility1.id },
       create: {
         id: `${ORG1_ID}-prod-4`,
         organizationId: ORG1_ID,
@@ -5504,11 +5510,13 @@ async function main() {
         category: "Accessories",
         price: 12.0,
         isActive: true,
+        fulfillmentType: "PICKUP_ONLY",
+        pickupFacilityId: org1Facility1.id,
       },
     }),
     prisma.product.upsert({
       where: { id: `${ORG2_ID}-prod-1` },
-      update: {},
+      update: { fulfillmentType: "PICKUP_ONLY", pickupFacilityId: org2Facility.id },
       create: {
         id: `${ORG2_ID}-prod-1`,
         organizationId: ORG2_ID,
@@ -5519,11 +5527,13 @@ async function main() {
         maxInventory: 80,
         currentInventory: 52,
         isActive: true,
+        fulfillmentType: "PICKUP_ONLY",
+        pickupFacilityId: org2Facility.id,
       },
     }),
     prisma.product.upsert({
       where: { id: `${ORG2_ID}-prod-2` },
-      update: {},
+      update: { fulfillmentType: "PICKUP_ONLY", pickupFacilityId: org2Facility.id },
       create: {
         id: `${ORG2_ID}-prod-2`,
         organizationId: ORG2_ID,
@@ -5534,11 +5544,13 @@ async function main() {
         maxInventory: 100,
         currentInventory: 78,
         isActive: true,
+        fulfillmentType: "PICKUP_ONLY",
+        pickupFacilityId: org2Facility.id,
       },
     }),
     prisma.product.upsert({
       where: { id: `${ORG2_ID}-prod-3` },
-      update: {},
+      update: { fulfillmentType: "PICKUP_ONLY", pickupFacilityId: org2Facility.id },
       create: {
         id: `${ORG2_ID}-prod-3`,
         organizationId: ORG2_ID,
@@ -5549,6 +5561,8 @@ async function main() {
         maxInventory: 30,
         currentInventory: 22,
         isActive: true,
+        fulfillmentType: "PICKUP_ONLY",
+        pickupFacilityId: org2Facility.id,
       },
     }),
   ]);

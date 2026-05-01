@@ -10,6 +10,7 @@ import { resolveOrProvisionCheckoutUser } from "@/lib/checkout-user-provisioning
 import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { getRegistrationStatus } from "@/lib/registration-utils";
 import { calculateBulkDiscounts } from "@/lib/bulk-discounts";
+import { logger } from "@/lib/logger";
 import { userHasUsedDiscount, getGuardianUsedBulkDiscountIds } from "@/lib/invoice-processing";
 import { z } from "zod";
 import { isValidPhoneNumber } from "libphonenumber-js";
@@ -135,6 +136,8 @@ interface CartItem {
     variantId?: string;
     variantLabel?: string;
     typeName?: string;
+    fulfillmentType?: string;
+    pickupFacilityId?: string;
   };
 }
 
@@ -1854,7 +1857,14 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
         productItemIds.length > 0
           ? db.product.findMany({
               where: { id: { in: productItemIds }, organizationId },
-              select: { id: true, sku: true, imageUrl: true, glCodeId: true },
+              select: {
+                id: true,
+                sku: true,
+                imageUrl: true,
+                glCodeId: true,
+                fulfillmentType: true,
+                pickupFacilityId: true,
+              },
             })
           : [],
       ]);
@@ -1911,6 +1921,40 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
           if (entityType) glCodeId = entityTypeToDefault.get(entityType);
         }
 
+        // The Product is the authoritative source for fulfillment policy and facility.
+        // Client-supplied cart values only influence the PICKUP_OR_DELIVERY choice; facility
+        // is never taken from the client to prevent cross-org facility injection.
+        let fulfillmentType: "PICKUP" | "DELIVERY" | undefined;
+        let pickupFacilityId: string | undefined;
+        if (item.type === "item") {
+          const product = productMap.get(item.referenceId);
+          if (product) {
+            if (product.fulfillmentType === "PICKUP_ONLY") {
+              fulfillmentType = "PICKUP";
+            } else if (product.fulfillmentType === "DELIVERY_ONLY") {
+              fulfillmentType = "DELIVERY";
+            } else {
+              // PICKUP_OR_DELIVERY: honor client's resolved choice; default to PICKUP
+              // when absent or unrecognized (matches current single-option UX).
+              const cartFt =
+                typeof item.details?.fulfillmentType === "string"
+                  ? item.details.fulfillmentType.toUpperCase()
+                  : undefined;
+              fulfillmentType = cartFt === "DELIVERY" ? "DELIVERY" : "PICKUP";
+            }
+            if (fulfillmentType === "PICKUP") {
+              pickupFacilityId = product.pickupFacilityId ?? undefined;
+              if (!pickupFacilityId) {
+                logger.warn("checkout: pickup line item missing facility", {
+                  organizationId,
+                  productId: product.id,
+                  source: "checkout-session",
+                });
+              }
+            }
+          }
+        }
+
         return {
           invoiceId: invoice.id,
           description: item.name,
@@ -1931,6 +1975,8 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
           productVariantId: item.type === "item" ? item.details?.variantId || undefined : undefined,
           athleteId: item.athleteId || item.details?.athleteId || undefined,
           glCodeId,
+          fulfillmentType,
+          pickupFacilityId,
         };
       }),
     });

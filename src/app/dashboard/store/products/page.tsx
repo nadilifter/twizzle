@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import {
   ColumnDef,
@@ -72,6 +72,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { GLCodeSelector } from "@/components/gl-code-selector";
 import { ImageUpload } from "@/components/ui/image-upload";
+import {
+  FulfillmentTypePicker,
+  type FulfillmentType,
+} from "@/components/dashboard/fulfillment-type-picker";
+import { useFacilities } from "@/hooks/use-facilities";
 
 type ProductVariant = {
   id?: string;
@@ -97,6 +102,8 @@ type Product = {
   typeName: string | null;
   variants: ProductVariant[];
   isActive: boolean;
+  fulfillmentType: FulfillmentType;
+  pickupFacilityId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -125,6 +132,8 @@ type ProductFormData = {
   hasType: boolean;
   typeName: string;
   variants: VariantFormData[];
+  fulfillmentType: FulfillmentType;
+  pickupFacilityId: string | null;
 };
 
 const defaultVariant: VariantFormData = {
@@ -150,36 +159,51 @@ const defaultFormData: ProductFormData = {
   hasType: false,
   typeName: "",
   variants: [],
+  fulfillmentType: "PICKUP_ONLY",
+  pickupFacilityId: null,
 };
 
 const defaultCategories = ["General", "Drinks/Snacks", "Equipment", "Merchandise", "Services"];
 
 export default function StorePage() {
-  const [products, setProducts] = React.useState<Product[]>([]);
-  const [categories, setCategories] = React.useState<string[]>(defaultCategories);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<string[]>(defaultCategories);
+  const [isLoading, setIsLoading] = useState(true);
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([
     { id: "isActive", value: [true] },
   ]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = React.useState({});
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = useState({});
 
   // Dialog state
-  const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [restockDialogOpen, setRestockDialogOpen] = React.useState(false);
-  const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
-  const [restockingProduct, setRestockingProduct] = React.useState<Product | null>(null);
-  const [formData, setFormData] = React.useState<ProductFormData>(defaultFormData);
-  const [isSaving, setIsSaving] = React.useState(false);
-  const [restockQuantity, setRestockQuantity] = React.useState<number>(0);
-  const [restockType, setRestockType] = React.useState<"add" | "set" | "max">("add");
-  const [restockVariantStocks, setRestockVariantStocks] = React.useState<Record<string, string>>(
-    {}
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [restockDialogOpen, setRestockDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [restockingProduct, setRestockingProduct] = useState<Product | null>(null);
+  const [formData, setFormData] = useState<ProductFormData>(defaultFormData);
+  const [isSaving, setIsSaving] = useState(false);
+  const [restockQuantity, setRestockQuantity] = useState<number>(0);
+  const [restockType, setRestockType] = useState<"add" | "set" | "max">("add");
+  const [restockVariantStocks, setRestockVariantStocks] = useState<Record<string, string>>({});
+
+  const { facilities, isLoading: isLoadingFacilities } = useFacilities();
+  const facilityOptions = useMemo(
+    () =>
+      facilities
+        .filter((f) => f.status === "ACTIVE")
+        .map((f) => ({
+          id: f.id,
+          name: f.name,
+          city: f.city,
+          stateProvince: f.stateProvince,
+          isDefault: f.isDefault,
+        })),
+    [facilities]
   );
 
   // Fetch products
-  const fetchProducts = React.useCallback(async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await fetch("/api/products");
@@ -199,7 +223,7 @@ export default function StorePage() {
     }
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
 
@@ -274,6 +298,8 @@ export default function StorePage() {
         glCodeId: formData.glCodeId,
         typeName: formData.hasType ? formData.typeName : null,
         variants: formData.hasType ? variants : null,
+        fulfillmentType: formData.fulfillmentType,
+        pickupFacilityId: formData.pickupFacilityId,
       };
 
       let response: Response;
@@ -445,6 +471,8 @@ export default function StorePage() {
             currentInventory: v.currentInventory !== null ? String(v.currentInventory) : "",
           }))
         : [],
+      fulfillmentType: product.fulfillmentType,
+      pickupFacilityId: product.pickupFacilityId,
     });
     setDialogOpen(true);
   };
@@ -608,6 +636,21 @@ export default function StorePage() {
         const price = Number(row.getValue("price"));
         return <span className="font-medium">${price.toFixed(2)}</span>;
       },
+    },
+    {
+      accessorKey: "fulfillmentType",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Fulfillment" />,
+      cell: ({ row }) => {
+        const type = row.getValue("fulfillmentType") as FulfillmentType | undefined;
+        const label =
+          type === "DELIVERY_ONLY"
+            ? "Delivery"
+            : type === "PICKUP_OR_DELIVERY"
+              ? "Either"
+              : "Pickup";
+        return <Badge variant="secondary">{label}</Badge>;
+      },
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
     },
     {
       accessorKey: "inventory",
@@ -1042,6 +1085,15 @@ export default function StorePage() {
               value={formData.glCodeId}
               onChange={(v) => setFormData({ ...formData, glCodeId: v })}
               entityType="PRODUCT"
+            />
+
+            <FulfillmentTypePicker
+              value={formData.fulfillmentType}
+              onChange={(v) => setFormData({ ...formData, fulfillmentType: v })}
+              pickupFacilityId={formData.pickupFacilityId}
+              onPickupFacilityChange={(id) => setFormData({ ...formData, pickupFacilityId: id })}
+              facilities={facilityOptions}
+              isLoadingFacilities={isLoadingFacilities}
             />
 
             <div className="flex items-center justify-between">

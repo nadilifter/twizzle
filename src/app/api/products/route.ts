@@ -3,6 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { getScopedDb, db } from "@/lib/db";
 import { z } from "zod";
 import { imageUrlSchema } from "@/lib/schemas";
+import { resolveProductPickupFacility } from "@/lib/fulfillment";
 
 const variantSchema = z.object({
   label: z.string().min(1, "Variant label is required"),
@@ -12,6 +13,8 @@ const variantSchema = z.object({
   currentInventory: z.number().int().min(0).optional().nullable(),
   sortOrder: z.number().int().min(0).optional(),
 });
+
+const fulfillmentTypeSchema = z.enum(["PICKUP_ONLY", "DELIVERY_ONLY", "PICKUP_OR_DELIVERY"]);
 
 const createProductSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -26,6 +29,8 @@ const createProductSchema = z.object({
   glCodeId: z.string().optional().nullable(),
   typeName: z.string().optional().nullable(),
   variants: z.array(variantSchema).optional().nullable(),
+  fulfillmentType: fulfillmentTypeSchema.default("PICKUP_ONLY"),
+  pickupFacilityId: z.string().optional().nullable(),
 });
 
 // GET /api/products - List products
@@ -156,6 +161,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const facilityResolution = await resolveProductPickupFacility(
+      session.user.organizationId,
+      validatedData.fulfillmentType,
+      validatedData.pickupFacilityId
+    );
+    if (!facilityResolution.ok) {
+      return NextResponse.json({ error: facilityResolution.error }, { status: 400 });
+    }
+
     // When variants exist, inventory is managed at variant level
     const currentInventory = hasVariants
       ? null
@@ -177,6 +191,8 @@ export async function POST(request: NextRequest) {
           typeName: hasVariants ? validatedData.typeName : null,
           isActive: validatedData.isActive,
           glCodeId: validatedData.glCodeId,
+          fulfillmentType: validatedData.fulfillmentType,
+          pickupFacilityId: facilityResolution.facilityId,
         },
       });
 

@@ -3,6 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { getScopedDb, db } from "@/lib/db";
 import { z } from "zod";
 import { imageUrlSchema } from "@/lib/schemas";
+import { resolveProductPickupFacility } from "@/lib/fulfillment";
 
 const variantSchema = z.object({
   id: z.string().optional(), // present = update, absent = create
@@ -14,6 +15,8 @@ const variantSchema = z.object({
   sortOrder: z.number().int().min(0).optional(),
   isActive: z.boolean().optional(),
 });
+
+const fulfillmentTypeSchema = z.enum(["PICKUP_ONLY", "DELIVERY_ONLY", "PICKUP_OR_DELIVERY"]);
 
 const updateProductSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
@@ -28,6 +31,8 @@ const updateProductSchema = z.object({
   glCodeId: z.string().optional().nullable(),
   typeName: z.string().optional().nullable(),
   variants: z.array(variantSchema).optional().nullable(),
+  fulfillmentType: fulfillmentTypeSchema.optional(),
+  pickupFacilityId: z.string().optional().nullable(),
 });
 
 // GET /api/products/[id] - Get a single product
@@ -141,6 +146,32 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       );
     }
 
+    // Only re-resolve the facility when fulfillment actually changed. A PUT that re-sends
+    // the same fulfillmentType without a pickupFacilityId would otherwise fall into the
+    // resolver's default-lookup branch and silently snap the facility to the org default,
+    // overwriting a previously-chosen specific facility.
+    const fulfillmentTypeChanged =
+      validatedData.fulfillmentType !== undefined &&
+      validatedData.fulfillmentType !== existingProduct.fulfillmentType;
+    const pickupFacilityIdChanged =
+      validatedData.pickupFacilityId !== undefined &&
+      validatedData.pickupFacilityId !== existingProduct.pickupFacilityId;
+    const fulfillmentChanged = fulfillmentTypeChanged || pickupFacilityIdChanged;
+    let resolvedPickupFacilityId: string | null | undefined;
+    if (fulfillmentChanged) {
+      const effectiveFulfillmentType =
+        validatedData.fulfillmentType ?? existingProduct.fulfillmentType;
+      const facilityResolution = await resolveProductPickupFacility(
+        session.user.organizationId,
+        effectiveFulfillmentType,
+        validatedData.pickupFacilityId ?? null
+      );
+      if (!facilityResolution.ok) {
+        return NextResponse.json({ error: facilityResolution.error }, { status: 400 });
+      }
+      resolvedPickupFacilityId = facilityResolution.facilityId;
+    }
+
     const product = await db.$transaction(async (tx) => {
       // Verify ownership inside transaction
       const verified = await tx.product.findFirst({
@@ -163,6 +194,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
       if (validatedData.typeName !== undefined) {
         productUpdateData.typeName = validatedData.typeName || null;
+      }
+
+      if (validatedData.fulfillmentType !== undefined) {
+        productUpdateData.fulfillmentType = validatedData.fulfillmentType;
+      }
+      if (fulfillmentChanged) {
+        productUpdateData.pickupFacilityId = resolvedPickupFacilityId;
       }
 
       if (wantsVariants) {

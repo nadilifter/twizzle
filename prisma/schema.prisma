@@ -1616,6 +1616,8 @@ model LineItem {
   productId             String? // What product is this for?
   productVariantId      String? // What product variant (type option)?
   glCodeId              String? // GL code at time of sale
+  fulfillmentType       LineItemFulfillmentType? // Resolved fulfillment for store products (null for non-product items)
+  pickupFacilityId      String? // Facility for pickup (null for delivery or non-product items)
   createdAt             DateTime @default(now())
 
   // Relations
@@ -1632,8 +1634,10 @@ model LineItem {
   product             Product?             @relation(fields: [productId], references: [id], onDelete: SetNull)
   productVariant      ProductVariant?      @relation(fields: [productVariantId], references: [id], onDelete: SetNull)
   glCode              GLCode?              @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
+  pickupFacility      Facility?            @relation("LineItemPickupFacility", fields: [pickupFacilityId], references: [id], onDelete: SetNull)
 
   @@index([glCodeId])
+  @@index([pickupFacilityId])
 }
 
 model Payment {
@@ -2903,25 +2907,28 @@ model TeamMemberHighlight {
 // ============================================
 
 model Product {
-  id               String   @id @default(cuid())
+  id               String          @id @default(cuid())
   organizationId   String
   name             String
   description      String?
   sku              String?
-  category         String   @default("General")
-  price            Decimal  @db.Decimal(10, 2)
+  category         String          @default("General")
+  price            Decimal         @db.Decimal(10, 2)
   imageUrl         String?
   maxInventory     Int? // null = unlimited (or null when variants manage inventory)
   currentInventory Int? // null = unlimited (or null when variants manage inventory)
   typeName         String? // e.g., "Color", "Size" — null means no variants
-  isActive         Boolean  @default(true)
+  isActive         Boolean         @default(true)
   glCodeId         String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  fulfillmentType  FulfillmentType @default(PICKUP_ONLY)
+  pickupFacilityId String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
   // Relations
   organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   glCode         GLCode?          @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
+  pickupFacility Facility?        @relation("ProductPickupFacility", fields: [pickupFacilityId], references: [id], onDelete: SetNull)
   variants       ProductVariant[]
   stockMovements StockMovement[]
   lineItems      LineItem[]
@@ -2929,6 +2936,18 @@ model Product {
   @@unique([organizationId, sku])
   @@index([organizationId])
   @@index([glCodeId])
+  @@index([pickupFacilityId])
+}
+
+enum FulfillmentType {
+  PICKUP_ONLY
+  DELIVERY_ONLY
+  PICKUP_OR_DELIVERY
+}
+
+enum LineItemFulfillmentType {
+  PICKUP
+  DELIVERY
 }
 
 model ProductVariant {
@@ -3156,17 +3175,19 @@ model Facility {
   updatedAt DateTime @updatedAt
 
   // Relations
-  organization     Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  spaces           Space[]
-  equipment        Equipment[]
-  assignments      FacilityAssignment[]
-  events           Event[]
-  shifts           Shift[]
-  programs         Program[]
-  programInstances ProgramInstance[]
-  competitions     Competition[]
-  operatingHours   FacilityOperatingHours[]
-  notes            FacilityNote[]
+  organization       Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  spaces             Space[]
+  equipment          Equipment[]
+  assignments        FacilityAssignment[]
+  events             Event[]
+  shifts             Shift[]
+  programs           Program[]
+  programInstances   ProgramInstance[]
+  competitions       Competition[]
+  operatingHours     FacilityOperatingHours[]
+  notes              FacilityNote[]
+  productsForPickup  Product[]                @relation("ProductPickupFacility")
+  lineItemsForPickup LineItem[]               @relation("LineItemPickupFacility")
 
   @@index([organizationId])
 }
