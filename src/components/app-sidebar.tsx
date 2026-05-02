@@ -845,6 +845,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  const [isMac, setIsMac] = React.useState<boolean | null>(null);
+  React.useEffect(() => {
+    setIsMac(/Mac|iPhone|iPad|iPod/.test(navigator.userAgent));
+  }, []);
+
   // Filter navigation based on feature toggles
   const filteredNavMain = React.useMemo(
     () => filterNavByFeatures(data.navMain, features),
@@ -1070,9 +1075,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <span className="sr-only">Clear search</span>
                   </button>
                 ) : (
-                  <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 hidden h-5 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline-flex">
-                    <span className="text-xs">⌘</span>K
-                  </kbd>
+                  isMac !== null && (
+                    <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 hidden h-5 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline-flex">
+                      {isMac ? (
+                        <>
+                          <span className="text-[9px]">⌘</span>K
+                        </>
+                      ) : (
+                        "Ctrl+K"
+                      )}
+                    </kbd>
+                  )
                 )}
               </>
             )}
