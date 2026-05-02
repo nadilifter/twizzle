@@ -29,6 +29,21 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         currentInventory: true,
         maxInventory: true,
         typeName: true,
+        fulfillmentType: true,
+        pickupFacility: {
+          select: {
+            id: true,
+            name: true,
+            street: true,
+            city: true,
+            stateProvince: true,
+            postalCode: true,
+            operatingHours: {
+              select: { dayOfWeek: true, openTime: true, closeTime: true },
+              orderBy: [{ dayOfWeek: "asc" }, { openTime: "asc" }],
+            },
+          },
+        },
         variants: {
           where: { isActive: true },
           select: {
@@ -44,6 +59,17 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     });
 
     if (!product) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    // Orphan pickup-capable products (no facility) are not purchasable: customers
+    // would have nowhere to pick up. Until DELIVERY ships in PR 4, PICKUP_OR_DELIVERY
+    // products without a facility have no usable path either.
+    if (
+      (product.fulfillmentType === "PICKUP_ONLY" ||
+        product.fulfillmentType === "PICKUP_OR_DELIVERY") &&
+      !product.pickupFacility
+    ) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 

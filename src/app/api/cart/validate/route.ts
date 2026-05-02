@@ -34,6 +34,21 @@ export async function POST(request: NextRequest) {
     }
 
     const validIds = new Set<string>();
+    const productFulfillment: Record<
+      string,
+      {
+        fulfillmentType: "PICKUP_ONLY" | "DELIVERY_ONLY" | "PICKUP_OR_DELIVERY";
+        pickupFacility: {
+          id: string;
+          name: string;
+          street: string | null;
+          city: string | null;
+          stateProvince: string | null;
+          postalCode: string | null;
+          operatingHours: { dayOfWeek: number; openTime: string; closeTime: string }[];
+        } | null;
+      }
+    > = {};
 
     const checks: Promise<void>[] = [];
 
@@ -110,9 +125,34 @@ export async function POST(request: NextRequest) {
               isActive: true,
               ...(organizationId ? { organizationId } : {}),
             },
-            select: { id: true },
+            select: {
+              id: true,
+              fulfillmentType: true,
+              pickupFacility: {
+                select: {
+                  id: true,
+                  name: true,
+                  street: true,
+                  city: true,
+                  stateProvince: true,
+                  postalCode: true,
+                  operatingHours: {
+                    select: { dayOfWeek: true, openTime: true, closeTime: true },
+                    orderBy: [{ dayOfWeek: "asc" }, { openTime: "asc" }],
+                  },
+                },
+              },
+            },
           })
-          .then((rows) => rows.forEach((r) => validIds.add(r.id)))
+          .then((rows) =>
+            rows.forEach((r) => {
+              validIds.add(r.id);
+              productFulfillment[r.id] = {
+                fulfillmentType: r.fulfillmentType,
+                pickupFacility: r.pickupFacility,
+              };
+            })
+          )
       );
     }
 
@@ -120,7 +160,7 @@ export async function POST(request: NextRequest) {
 
     const valid = items.filter((i) => validIds.has(i.referenceId)).map((i) => i.referenceId);
 
-    return NextResponse.json({ valid });
+    return NextResponse.json({ valid, productFulfillment });
   } catch {
     return NextResponse.json({ error: "Validation failed" }, { status: 500 });
   }

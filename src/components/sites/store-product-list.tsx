@@ -6,11 +6,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Search, ShoppingBag, ShoppingCart, Package, Loader2, SearchX, X } from "lucide-react";
 import Link from "next/link";
 import { useCart } from "@/components/sites/cart-context";
 import { toast } from "sonner";
 import { getStockStatus, formatPrice } from "@/lib/stock-utils";
+import type { FulfillmentType } from "@/lib/fulfillment";
+import type { PickupFacilitySummary } from "@/components/sites/pickup-location-card";
 
 type ProductVariant = {
   id: string;
@@ -20,6 +29,8 @@ type ProductVariant = {
   currentInventory: number | null;
   maxInventory: number | null;
 };
+
+type FulfillmentFilter = "ANY" | "PICKUP" | "DELIVERY";
 
 type Product = {
   id: string;
@@ -32,6 +43,8 @@ type Product = {
   maxInventory: number | null;
   typeName: string | null;
   variants: ProductVariant[];
+  fulfillmentType: FulfillmentType;
+  pickupFacility: PickupFacilitySummary | null;
 };
 
 interface StoreProductListProps {
@@ -43,6 +56,7 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
   const [products, setProducts] = React.useState<Product[]>([]);
   const [categories, setCategories] = React.useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = React.useState("All");
+  const [fulfillmentFilter, setFulfillmentFilter] = React.useState<FulfillmentFilter>("ANY");
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(true);
   const [selectedVariants, setSelectedVariants] = React.useState<Record<string, string>>({});
@@ -72,7 +86,15 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
       searchQuery === "" ||
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+    const matchesFulfillment =
+      fulfillmentFilter === "ANY" ||
+      (fulfillmentFilter === "PICKUP" &&
+        (product.fulfillmentType === "PICKUP_ONLY" ||
+          product.fulfillmentType === "PICKUP_OR_DELIVERY")) ||
+      (fulfillmentFilter === "DELIVERY" &&
+        (product.fulfillmentType === "DELIVERY_ONLY" ||
+          product.fulfillmentType === "PICKUP_OR_DELIVERY"));
+    return matchesCategory && matchesSearch && matchesFulfillment;
   });
 
   const getEffectivePrice = (product: Product, variantId?: string) => {
@@ -123,6 +145,13 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
 
     const effectivePrice = getEffectivePrice(product, variantId);
 
+    // Resolve fulfillment at add-time. PICKUP_OR_DELIVERY products route to the detail
+    // page instead of quick-add, so we don't need to handle that here.
+    const resolvedFulfillment: "PICKUP" | "DELIVERY" =
+      product.fulfillmentType === "DELIVERY_ONLY" ? "DELIVERY" : "PICKUP";
+    const pickupFacility =
+      resolvedFulfillment === "PICKUP" ? (product.pickupFacility ?? null) : null;
+
     addItem({
       referenceId: product.id,
       type: "item",
@@ -133,6 +162,9 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
       athleteName: "Customer",
       details: {
         category: product.category,
+        fulfillmentType: resolvedFulfillment,
+        pickupFacilityId: pickupFacility?.id ?? null,
+        pickupFacility: pickupFacility ?? null,
         currentInventory: inventory,
         ...(variantId && variant
           ? { variantId, variantLabel: variant.label, typeName: product.typeName }
@@ -143,11 +175,13 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
     toast.success(`${product.name}${variant ? ` (${variant.label})` : ""} added to cart`);
   };
 
-  const hasActiveFilters = selectedCategory !== "All" || searchQuery !== "";
+  const hasActiveFilters =
+    selectedCategory !== "All" || searchQuery !== "" || fulfillmentFilter !== "ANY";
 
   const clearFilters = () => {
     setSelectedCategory("All");
     setSearchQuery("");
+    setFulfillmentFilter("ANY");
   };
 
   if (isLoading) {
@@ -192,30 +226,46 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
         </div>
       </div>
 
-      {/* Category chips */}
-      {categories.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          <Button
-            variant={selectedCategory === "All" ? "default" : "outline"}
-            size="sm"
-            className="shrink-0"
-            onClick={() => setSelectedCategory("All")}
-          >
-            All
-          </Button>
-          {categories.map((cat) => (
+      {/* Fulfilment + category chips */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        <Select
+          value={fulfillmentFilter}
+          onValueChange={(v) => setFulfillmentFilter(v as FulfillmentFilter)}
+        >
+          <SelectTrigger className="h-9 w-[120px] shrink-0">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ANY">Any</SelectItem>
+            <SelectItem value="PICKUP">Pickup</SelectItem>
+            <SelectItem value="DELIVERY">Delivery</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {categories.length > 1 && (
+          <>
             <Button
-              key={cat}
-              variant={selectedCategory === cat ? "default" : "outline"}
+              variant={selectedCategory === "All" ? "default" : "outline"}
               size="sm"
               className="shrink-0"
-              onClick={() => setSelectedCategory(cat)}
+              onClick={() => setSelectedCategory("All")}
             >
-              {cat}
+              All
             </Button>
-          ))}
-        </div>
-      )}
+            {categories.map((cat) => (
+              <Button
+                key={cat}
+                variant={selectedCategory === cat ? "default" : "outline"}
+                size="sm"
+                className="shrink-0"
+                onClick={() => setSelectedCategory(cat)}
+              >
+                {cat}
+              </Button>
+            ))}
+          </>
+        )}
+      </div>
 
       {/* Product Grid */}
       {filteredProducts.length > 0 ? (
@@ -275,6 +325,16 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
                       </h3>
                     </Link>
                     <div className="flex items-center gap-1">
+                      {product.fulfillmentType === "PICKUP_ONLY" && (
+                        <Badge variant="outline" className="shrink-0 text-[10px] px-1.5 py-0">
+                          Pickup
+                        </Badge>
+                      )}
+                      {product.fulfillmentType === "DELIVERY_ONLY" && (
+                        <Badge variant="outline" className="shrink-0 text-[10px] px-1.5 py-0">
+                          Delivery
+                        </Badge>
+                      )}
                       {stockBadge && (
                         <Badge
                           variant={stockBadge.variant}
@@ -352,14 +412,27 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
                     <span className="text-sm font-medium">Price</span>
                     <span className="font-bold">{formatPrice(effectivePrice)}</span>
                   </div>
-                  <Button
-                    onClick={() => handleAddToCart(product)}
-                    disabled={outOfStock}
-                    className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-transform active:scale-95"
-                  >
-                    <ShoppingCart className="h-4 w-4" />
-                    {outOfStock ? "Sold Out" : "Add to Cart"}
-                  </Button>
+                  {product.fulfillmentType === "PICKUP_OR_DELIVERY" ? (
+                    <Button
+                      asChild
+                      disabled={outOfStock}
+                      className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-transform active:scale-95"
+                    >
+                      <Link href={`/store/${product.id}`}>
+                        <ShoppingCart className="h-4 w-4" />
+                        {outOfStock ? "Sold Out" : "Choose Option"}
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => handleAddToCart(product)}
+                      disabled={outOfStock}
+                      className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-transform active:scale-95"
+                    >
+                      <ShoppingCart className="h-4 w-4" />
+                      {outOfStock ? "Sold Out" : "Add to Cart"}
+                    </Button>
+                  )}
                 </CardFooter>
               </Card>
             );

@@ -58,6 +58,46 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+type ProductFulfillmentMap = Record<
+  string,
+  {
+    fulfillmentType: "PICKUP_ONLY" | "DELIVERY_ONLY" | "PICKUP_OR_DELIVERY";
+    pickupFacility: {
+      id: string;
+      name: string;
+      street: string | null;
+      city: string | null;
+      stateProvince: string | null;
+      postalCode: string | null;
+      operatingHours: { dayOfWeek: number; openTime: string; closeTime: string }[];
+    } | null;
+  }
+>;
+
+function normalizeFulfillment(items: CartItem[], fulfillment: ProductFulfillmentMap): CartItem[] {
+  return items.map((item) => {
+    if (item.type !== "item") return item;
+    if (item.details?.fulfillmentType) return item;
+    const entry = fulfillment[item.referenceId];
+    if (!entry) return item;
+    // Pre-feature cart: stamp from server-authoritative product data.
+    // DELIVERY_ONLY resolves to DELIVERY with no facility; everything else resolves to PICKUP
+    // (PICKUP_OR_DELIVERY defaults here because the customer never made a choice in the old UI).
+    const resolved: "PICKUP" | "DELIVERY" =
+      entry.fulfillmentType === "DELIVERY_ONLY" ? "DELIVERY" : "PICKUP";
+    const pickupFacility = resolved === "PICKUP" ? entry.pickupFacility : null;
+    return {
+      ...item,
+      details: {
+        ...(item.details ?? {}),
+        fulfillmentType: resolved,
+        pickupFacilityId: pickupFacility?.id ?? null,
+        pickupFacility: pickupFacility ?? null,
+      },
+    };
+  });
+}
+
 async function validateCartItems(items: CartItem[], organizationId?: string): Promise<CartItem[]> {
   try {
     const payload = items.map((i) => ({ referenceId: i.referenceId, type: i.type }));
@@ -67,9 +107,13 @@ async function validateCartItems(items: CartItem[], organizationId?: string): Pr
       body: JSON.stringify({ items: payload, organizationId }),
     });
     if (!res.ok) return items;
-    const { valid } = (await res.json()) as { valid: string[] };
+    const { valid, productFulfillment } = (await res.json()) as {
+      valid: string[];
+      productFulfillment?: ProductFulfillmentMap;
+    };
     const validSet = new Set(valid);
-    return items.filter((i) => validSet.has(i.referenceId));
+    const validItems = items.filter((i) => validSet.has(i.referenceId));
+    return productFulfillment ? normalizeFulfillment(validItems, productFulfillment) : validItems;
   } catch {
     return items;
   }
@@ -153,10 +197,15 @@ export function CartProvider({ children, organizationId }: CartProviderProps) {
     setItems(parsed);
     setIsInitialized(true);
 
-    // Validate cart items against the server and remove any that reference deleted entities
+    // Validate cart items against the server and remove any that reference deleted entities.
+    // Also normalizes legacy item-type entries (pre-fulfillment-feature) with server-authoritative
+    // fulfillmentType + pickupFacility so downstream consumers don't need to branch on absence.
     if (parsed.length > 0) {
-      validateCartItems(parsed, organizationId).then((validItems) => {
-        if (validItems.length < parsed.length) {
+      const snapshot = parsed;
+      validateCartItems(snapshot, organizationId).then((validItems) => {
+        const changed =
+          validItems.length !== snapshot.length || validItems.some((v, i) => v !== snapshot[i]);
+        if (changed) {
           setItems(validItems);
         }
       });

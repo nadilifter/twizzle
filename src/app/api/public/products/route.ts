@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       where.category = category;
     }
 
-    const products = await db.product.findMany({
+    const rawProducts = await db.product.findMany({
       where,
       select: {
         id: true,
@@ -51,6 +51,21 @@ export async function GET(request: NextRequest) {
         currentInventory: true,
         maxInventory: true,
         typeName: true,
+        fulfillmentType: true,
+        pickupFacility: {
+          select: {
+            id: true,
+            name: true,
+            street: true,
+            city: true,
+            stateProvince: true,
+            postalCode: true,
+            operatingHours: {
+              select: { dayOfWeek: true, openTime: true, closeTime: true },
+              orderBy: [{ dayOfWeek: "asc" }, { openTime: "asc" }],
+            },
+          },
+        },
         variants: {
           where: { isActive: true },
           select: {
@@ -66,6 +81,14 @@ export async function GET(request: NextRequest) {
       },
       orderBy: [{ category: "asc" }, { name: "asc" }],
     });
+
+    // Hide orphan pickup-capable products (no facility) from the public catalog.
+    // Until DELIVERY ships in PR 4, PICKUP_OR_DELIVERY without a facility has no usable path.
+    const products = rawProducts.filter(
+      (p) =>
+        (p.fulfillmentType !== "PICKUP_ONLY" && p.fulfillmentType !== "PICKUP_OR_DELIVERY") ||
+        p.pickupFacility !== null
+    );
 
     const categories = [...new Set(products.map((p) => p.category))];
 

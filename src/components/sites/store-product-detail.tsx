@@ -6,11 +6,25 @@ import { ProgressiveImage } from "@/components/ui/progressive-image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ShoppingCart, Package, Minus, Plus, Check, AlertTriangle } from "lucide-react";
+import {
+  ArrowLeft,
+  ShoppingCart,
+  Package,
+  Minus,
+  Plus,
+  Check,
+  AlertTriangle,
+  MapPin,
+} from "lucide-react";
 import { useCart } from "@/components/sites/cart-context";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatPrice } from "@/lib/stock-utils";
+import { formatOperatingHours } from "@/lib/operating-hours";
+import type { FulfillmentType } from "@/lib/fulfillment";
+import type { PickupFacilitySummary } from "@/components/sites/pickup-location-card";
 
 type ProductVariant = {
   id: string;
@@ -32,6 +46,8 @@ type Product = {
   maxInventory: number | null;
   typeName: string | null;
   variants: ProductVariant[];
+  fulfillmentType: FulfillmentType;
+  pickupFacility: PickupFacilitySummary | null;
 };
 
 interface StoreProductDetailProps {
@@ -39,10 +55,27 @@ interface StoreProductDetailProps {
   primaryColor: string;
 }
 
+// Pre-select the radio when there's only one valid fulfillment path. Returns "" when
+// the customer must actively choose (PICKUP_OR_DELIVERY with both options available),
+// or when the only-pickup path is blocked by a missing facility (race window where
+// the facility was deleted after SSR; the API normally 404s these first).
+function initialChosenFulfillment(
+  type: FulfillmentType,
+  hasPickupFacility: boolean
+): "PICKUP" | "DELIVERY" | "" {
+  if (type === "DELIVERY_ONLY") return "DELIVERY";
+  if (type === "PICKUP_ONLY" && hasPickupFacility) return "PICKUP";
+  return "";
+}
+
 export function StoreProductDetail({ product, primaryColor }: StoreProductDetailProps) {
   const [selectedVariantId, setSelectedVariantId] = React.useState<string>("");
   const [quantity, setQuantity] = React.useState(1);
   const [activeImageUrl, setActiveImageUrl] = React.useState<string | null>(product.imageUrl);
+  const pickupAvailable = product.pickupFacility !== null;
+  const [chosenFulfillment, setChosenFulfillment] = React.useState<"PICKUP" | "DELIVERY" | "">(
+    initialChosenFulfillment(product.fulfillmentType, pickupAvailable)
+  );
   const { items, addItem } = useCart();
 
   const hasVariants = !!(product.typeName && product.variants.length > 0);
@@ -124,6 +157,11 @@ export function StoreProductDetail({ product, primaryColor }: StoreProductDetail
       return;
     }
 
+    if (product.fulfillmentType === "PICKUP_OR_DELIVERY" && !chosenFulfillment) {
+      toast.error("Please choose pickup or delivery");
+      return;
+    }
+
     if (isOutOfStock) {
       toast.error("This product is sold out");
       return;
@@ -131,6 +169,18 @@ export function StoreProductDetail({ product, primaryColor }: StoreProductDetail
 
     if (quantity > maxQuantity) {
       toast.error(`Only ${maxQuantity} more available`);
+      return;
+    }
+
+    const resolvedFulfillment: "PICKUP" | "DELIVERY" =
+      chosenFulfillment || (product.fulfillmentType === "DELIVERY_ONLY" ? "DELIVERY" : "PICKUP");
+    const pickupFacility = resolvedFulfillment === "PICKUP" ? product.pickupFacility : null;
+
+    // Defense-in-depth: the API 404s pickup-capable products without a facility, but
+    // a facility deletion after SSR could leave us here. Block before the cart gets
+    // an item with no pickup location.
+    if (resolvedFulfillment === "PICKUP" && !pickupFacility) {
+      toast.error("Pickup is currently unavailable for this product");
       return;
     }
 
@@ -144,6 +194,9 @@ export function StoreProductDetail({ product, primaryColor }: StoreProductDetail
       athleteName: "Customer",
       details: {
         category: product.category,
+        fulfillmentType: resolvedFulfillment,
+        pickupFacilityId: pickupFacility?.id ?? null,
+        pickupFacility: pickupFacility ?? null,
         currentInventory: effectiveInventory,
         ...(selectedVariantId && selectedVariant
           ? {
@@ -259,6 +312,80 @@ export function StoreProductDetail({ product, primaryColor }: StoreProductDetail
 
           {product.description && (
             <p className="text-muted-foreground leading-relaxed mb-6">{product.description}</p>
+          )}
+
+          {product.fulfillmentType === "PICKUP_ONLY" && product.pickupFacility && (
+            <TooltipProvider>
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1.5 text-sm">
+                <MapPin className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                <span>
+                  Pickup from <strong>{product.pickupFacility.name}</strong>
+                </span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Pickup location details"
+                      className="inline-flex h-5 w-5 items-center justify-center rounded-full border text-[10px] text-muted-foreground hover:text-foreground"
+                    >
+                      i
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    <p className="font-medium">{product.pickupFacility.name}</p>
+                    {(() => {
+                      const address = [
+                        product.pickupFacility.street,
+                        product.pickupFacility.city,
+                        product.pickupFacility.stateProvince,
+                        product.pickupFacility.postalCode,
+                      ]
+                        .filter(Boolean)
+                        .join(", ");
+                      return address ? (
+                        <p className="text-xs text-muted-foreground">{address}</p>
+                      ) : null;
+                    })()}
+                    <p className="text-xs text-muted-foreground">
+                      {formatOperatingHours(product.pickupFacility.operatingHours)}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
+          )}
+
+          {product.fulfillmentType === "PICKUP_OR_DELIVERY" && (
+            <div className="mb-6 space-y-2">
+              <p className="text-sm font-medium">
+                Fulfillment <span className="text-destructive">*</span>
+              </p>
+              <RadioGroup
+                value={chosenFulfillment}
+                onValueChange={(v) => setChosenFulfillment(v as "PICKUP" | "DELIVERY")}
+                className="grid gap-2 sm:grid-cols-2"
+              >
+                <label
+                  className={`flex items-center gap-2 rounded-lg border p-3 transition-colors ${
+                    pickupAvailable
+                      ? "cursor-pointer hover:bg-accent/50"
+                      : "opacity-60 cursor-not-allowed"
+                  }`}
+                  aria-disabled={!pickupAvailable}
+                >
+                  <RadioGroupItem value="PICKUP" disabled={!pickupAvailable} />
+                  <span className="text-sm">
+                    {pickupAvailable && product.pickupFacility
+                      ? `Pickup from ${product.pickupFacility.name}`
+                      : "Pickup currently unavailable"}
+                  </span>
+                </label>
+                <label className="flex items-center gap-2 rounded-lg border p-3 cursor-pointer hover:bg-accent/50 transition-colors">
+                  <RadioGroupItem value="DELIVERY" />
+                  <span className="text-sm">Delivery</span>
+                </label>
+              </RadioGroup>
+            </div>
           )}
 
           <Separator className="mb-6" />
@@ -423,17 +550,26 @@ export function StoreProductDetail({ product, primaryColor }: StoreProductDetail
 
               <Button
                 onClick={handleAddToCart}
-                disabled={hasVariants && !selectedVariantId}
+                disabled={
+                  (hasVariants && !selectedVariantId) ||
+                  (product.fulfillmentType === "PICKUP_OR_DELIVERY" && !chosenFulfillment)
+                }
                 size="lg"
                 className="flex-1 gap-2 transition-transform active:scale-[0.98]"
                 style={{
-                  backgroundColor: !hasVariants || selectedVariantId ? primaryColor : undefined,
+                  backgroundColor:
+                    (!hasVariants || selectedVariantId) &&
+                    (product.fulfillmentType !== "PICKUP_OR_DELIVERY" || chosenFulfillment)
+                      ? primaryColor
+                      : undefined,
                 }}
               >
                 <ShoppingCart className="h-4 w-4" />
                 {hasVariants && !selectedVariantId
                   ? `Select ${product.typeName || "Type"}`
-                  : `Add to Cart — ${formatPrice(effectivePrice * quantity)}`}
+                  : product.fulfillmentType === "PICKUP_OR_DELIVERY" && !chosenFulfillment
+                    ? "Choose Pickup or Delivery"
+                    : `Add to Cart — ${formatPrice(effectivePrice * quantity)}`}
               </Button>
             </div>
           )}
