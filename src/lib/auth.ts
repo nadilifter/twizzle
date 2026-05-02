@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { NextAuthOptions, getServerSession } from "next-auth";
 import type { Adapter, AdapterUser } from "next-auth/adapters";
 import CredentialsProvider from "next-auth/providers/credentials";
@@ -710,7 +711,7 @@ export const authOptions: NextAuthOptions = {
   },
 };
 
-export const getAuthSession = () => getServerSession(authOptions);
+export const getAuthSession = cache(() => getServerSession(authOptions));
 
 // Helper to check if user has a specific permission
 export function hasPermission(
