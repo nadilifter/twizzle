@@ -638,7 +638,7 @@ function PlatformAgreementStep({
         >
           I agree to the{" "}
           <a
-            href="#"
+            href="https://www.uplifterinc.com/terms-of-service"
             target="_blank"
             rel="noopener noreferrer"
             className="underline underline-offset-4"
