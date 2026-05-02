@@ -114,7 +114,7 @@ export default function OrganizationFeaturesPage() {
     return planDefault;
   };
 
-  const enabledCount = features ? FEATURE_KEYS.filter((k) => features[k]).length : 0;
+  const enabledCount = features ? FEATURE_KEYS.filter((k) => getResolvedValue(k)).length : 0;
 
   const sortedFeatureKeys = useMemo(() => {
     const planDefaults = superadminData?.planDefaults;
