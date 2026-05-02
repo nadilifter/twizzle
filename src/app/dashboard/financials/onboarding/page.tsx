@@ -339,8 +339,8 @@ function OnboardingLandingCTA({
             },
             {
               step: 4,
-              title: "Marketplace agreement",
-              desc: "Accept the Uplifter Marketplace Agreement.",
+              title: "Terms of Service",
+              desc: "Accept the Uplifter Terms of Service.",
             },
             {
               step: 5,

@@ -335,7 +335,7 @@ export async function POST(request: NextRequest) {
 
     if (!platformAgreementAccepted) {
       return NextResponse.json(
-        { error: "Platform agreement must be accepted before initiating onboarding." },
+        { error: "Terms of Service must be accepted before initiating onboarding." },
         { status: 400 }
       );
     }

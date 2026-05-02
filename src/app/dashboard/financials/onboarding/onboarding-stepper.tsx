@@ -57,7 +57,7 @@ const { useStepper } = defineStepper(
   { id: "org-details", title: "Organization" },
   { id: "legal-name", title: "Legal Name" },
   { id: "fee-disclosure", title: "Fees" },
-  { id: "platform-agreement", title: "Agreement" },
+  { id: "platform-agreement", title: "Terms of Service" },
   { id: "review", title: "Review" }
 );
 
@@ -588,7 +588,7 @@ function FeeDisclosureStep({
   );
 }
 
-// --- Step 4: Marketplace Agreement ---
+// --- Step 4: Terms of Service ---
 
 function PlatformAgreementStep({
   organization,
@@ -624,9 +624,9 @@ function PlatformAgreementStep({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Marketplace agreement</CardTitle>
+        <CardTitle>Terms of Service</CardTitle>
         <CardDescription>
-          Review and accept the Uplifter Marketplace Agreement before initiating verification.
+          Review and accept our Terms of Service before initiating verification.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -644,7 +644,7 @@ function PlatformAgreementStep({
             className="underline underline-offset-4"
             onClick={(e) => e.stopPropagation()}
           >
-            Uplifter Marketplace Agreement
+            Uplifter Terms of Service
           </a>
           .
         </AcknowledgementCard>
