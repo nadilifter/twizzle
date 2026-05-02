@@ -1,12 +1,18 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ImageUpload } from "@/components/ui/image-upload";
+
+const RichTextEditor = dynamic(() => import("@/components/ui/rich-text-editor"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-40 w-full" />,
+});
 import {
   Select,
   SelectContent,
@@ -93,11 +99,15 @@ import { CopySettingsDialog } from "@/components/copy-settings-dialog";
 import { ColorSelector } from "@/components/color-selector";
 import { GLCodeSelector } from "@/components/gl-code-selector";
 import {
-  RecurrencePicker,
   type RecurrenceConfig,
   configToRRule,
   parseRRule,
-} from "@/components/ui/recurrence-picker";
+} from "@/components/ui/recurrence-picker-utils";
+
+const RecurrencePicker = dynamic(() => import("@/components/ui/recurrence-picker"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-64 w-full" />,
+});
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";

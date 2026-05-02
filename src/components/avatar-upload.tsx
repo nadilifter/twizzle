@@ -1,11 +1,15 @@
 "use client";
 
 import { useRef, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { AvatarCropData } from "@/components/ui/avatar";
-import { ImageCropDialog } from "@/components/image-crop-dialog";
 import type { Area } from "react-easy-crop";
 import { Camera, Crop, Loader2, Trash2 } from "lucide-react";
+
+const ImageCropDialog = dynamic(() => import("@/components/image-crop-dialog"), {
+  ssr: false,
+});
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -347,3 +351,5 @@ export function AvatarUpload({
     </>
   );
 }
+
+export default AvatarUpload;

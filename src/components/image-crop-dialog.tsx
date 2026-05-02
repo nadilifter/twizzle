@@ -219,3 +219,5 @@ export function ImageCropDialog({
     </Dialog>
   );
 }
+
+export default ImageCropDialog;

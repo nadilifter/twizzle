@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, CreditCard, Loader2, MapPin, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -10,11 +11,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { StateProvinceCombobox } from "@/components/ui/state-province-combobox";
 import Link from "next/link";
 import { toast } from "sonner";
-import { AdyenCheckoutComponent } from "@/components/sites/adyen-checkout";
 import { FREE_TRIAL_DAYS } from "@/lib/billing-config";
+
+const AdyenCheckoutComponent = dynamic(() => import("@/components/sites/adyen-checkout"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-72 w-full" />,
+});
 
 interface SignupData {
   useExistingAccount?: boolean;

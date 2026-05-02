@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { Check, Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
@@ -24,7 +25,12 @@ import {
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { AdyenCheckoutComponent } from "@/components/sites/adyen-checkout";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const AdyenCheckoutComponent = dynamic(() => import("@/components/sites/adyen-checkout"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-72 w-full" />,
+});
 
 interface Plan {
   id: string;

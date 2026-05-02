@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -13,7 +14,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { AdyenCheckoutComponent } from "@/components/sites/adyen-checkout";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const AdyenCheckoutComponent = dynamic(() => import("@/components/sites/adyen-checkout"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-72 w-full" />,
+});
 
 interface AddPaymentMethodDialogProps {
   sessionEndpoint: string;

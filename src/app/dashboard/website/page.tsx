@@ -1,13 +1,19 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { ImageUpload } from "@/components/ui/image-upload";
-import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const RichTextEditor = dynamic(() => import("@/components/ui/rich-text-editor"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-40 w-full" />,
+});
 import { toast } from "sonner";
 import {
   Loader2,

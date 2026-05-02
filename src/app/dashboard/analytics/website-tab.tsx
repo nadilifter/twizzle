@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import dynamic from "next/dynamic";
 import {
   TrendingDownIcon,
   TrendingUpIcon,
@@ -11,12 +12,14 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  ChartAreaInteractive,
-  formatDate,
-  getDateRange,
-} from "@/components/chart-area-interactive";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatDate, getDateRange } from "@/components/chart-area-interactive-utils";
 import { useVisitorMetrics } from "@/hooks/use-visitor-metrics";
+
+const ChartAreaInteractive = dynamic(() => import("@/components/chart-area-interactive"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[330px] w-full" />,
+});
 
 function TodayVisitorsCard() {
   const { data, loading, error } = useVisitorMetrics();

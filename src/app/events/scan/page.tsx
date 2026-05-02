@@ -1,14 +1,20 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { CheckCircle2, XCircle, AlertCircle, Search, Loader2, ScanLine } from "lucide-react";
 import Link from "next/link";
-import { QRScanner } from "@/components/events/qr-scanner";
 import { parseQRPayload } from "@/components/events/qr-code-generator";
+
+const QRScanner = dynamic(() => import("@/components/events/qr-scanner"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[300px] w-[300px]" />,
+});
 import { useAttendance } from "@/hooks/use-attendance";
 import { format } from "date-fns";
 

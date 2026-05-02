@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,14 +13,17 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { MessagesTable, Message } from "@/components/messages-table";
 import { SmsStatsCards, SmsStatsProps } from "@/components/sms-stats-cards";
-import {
-  SmsChartAreaInteractive,
-  SmsChartDataPoint,
-} from "@/components/sms-chart-area-interactive";
+import { type SmsChartDataPoint } from "@/components/sms-chart-area-interactive";
 import { toast } from "sonner";
+
+const SmsChartAreaInteractive = dynamic(() => import("@/components/sms-chart-area-interactive"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[300px] w-full" />,
+});
 
 interface SmsMessage {
   id: string;

@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { getDateRange, getDaysFromRange } from "@/components/chart-area-interactive-utils";
 
 const chartConfig = {
   visitors: {
@@ -35,34 +36,6 @@ const chartConfig = {
     color: "hsl(var(--chart-analytics-3))",
   },
 } satisfies ChartConfig;
-
-export function formatDate(date: Date): string {
-  return date.toISOString().split("T")[0];
-}
-
-export function getDateRange(days: number): { startDate: string; endDate: string } {
-  const end = new Date();
-  const start = new Date();
-  start.setDate(start.getDate() - (days - 1));
-  return {
-    startDate: formatDate(start),
-    endDate: formatDate(end),
-  };
-}
-
-// Map time range to days
-function getDaysFromRange(timeRange: string): number {
-  switch (timeRange) {
-    case "7d":
-      return 7;
-    case "30d":
-      return 30;
-    case "90d":
-      return 90;
-    default:
-      return 30;
-  }
-}
 
 export function ChartAreaInteractive() {
   const isMobile = useIsMobile();
@@ -224,3 +197,5 @@ export function ChartAreaInteractive() {
     </Card>
   );
 }
+
+export default ChartAreaInteractive;

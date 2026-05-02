@@ -152,3 +152,5 @@ export const SignaturePad = React.forwardRef<SignaturePadRef, SignaturePadProps>
 );
 
 SignaturePad.displayName = "SignaturePad";
+
+export default SignaturePad;

@@ -1,12 +1,18 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useFeatures } from "@/components/feature-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ImageUpload } from "@/components/ui/image-upload";
+
+const RichTextEditor = dynamic(() => import("@/components/ui/rich-text-editor"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-40 w-full" />,
+});
 import {
   Select,
   SelectContent,
@@ -70,7 +76,12 @@ import type { SpaceWithAvailability } from "@/types/programs";
 import { cn } from "@/lib/utils";
 import { ColorSelector } from "@/components/color-selector";
 import { GLCodeSelector } from "@/components/gl-code-selector";
-import { RecurrencePicker, parseRRule } from "@/components/ui/recurrence-picker";
+import { parseRRule } from "@/components/ui/recurrence-picker-utils";
+
+const RecurrencePicker = dynamic(() => import("@/components/ui/recurrence-picker"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-64 w-full" />,
+});
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";

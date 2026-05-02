@@ -150,3 +150,5 @@ export function SmsChartAreaInteractive({ data = [] }: SmsChartAreaInteractivePr
     </Card>
   );
 }
+
+export default SmsChartAreaInteractive;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import dynamic from "next/dynamic";
 import { useSession, signIn } from "next-auth/react";
 import { toast } from "sonner";
 import { sanitizeHtml } from "@/lib/sanitize";
@@ -36,7 +37,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SignaturePad, type SignaturePadRef } from "@/components/ui/signature-pad";
+import { type SignaturePadRef } from "@/components/ui/signature-pad";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const SignaturePad = dynamic(() => import("@/components/ui/signature-pad"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-48 w-full" />,
+});
 import { CheckoutMedicalForm } from "@/components/sites/checkout-medical-form";
 import { FileUploadStep } from "@/components/sites/file-upload-step";
 import { CustomInformationForm } from "@/components/sites/custom-information-form";

@@ -1,14 +1,21 @@
 "use client";
 
 import React, { useState, useRef, useCallback, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { SignaturePad, type SignaturePadRef } from "@/components/ui/signature-pad";
+import { Skeleton } from "@/components/ui/skeleton";
+import { type SignaturePadRef } from "@/components/ui/signature-pad";
 import { Loader2, Upload, Check, FileIcon, X } from "lucide-react";
 import type { CustomInfoQuestion, CustomInfoResponse } from "@/types/custom-information";
+
+const SignaturePad = dynamic(() => import("@/components/ui/signature-pad"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-40 w-full" />,
+});
 
 interface CustomInformationFormProps {
   questions: CustomInfoQuestion[];

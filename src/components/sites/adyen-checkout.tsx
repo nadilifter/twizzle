@@ -187,3 +187,5 @@ export function AdyenCheckoutComponent({
     </div>
   );
 }
+
+export default AdyenCheckoutComponent;

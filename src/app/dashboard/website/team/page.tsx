@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import dynamic from "next/dynamic";
 import {
   DndContext,
   KeyboardSensor,
@@ -34,7 +35,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ImageCropDialog } from "@/components/image-crop-dialog";
+const ImageCropDialog = dynamic(() => import("@/components/image-crop-dialog"), {
+  ssr: false,
+});
 import { toast } from "sonner";
 import {
   Loader2,

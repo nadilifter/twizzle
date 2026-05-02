@@ -162,3 +162,5 @@ export function QRScanner({ onScan, onError, width = 300, height = 300 }: QRScan
     </div>
   );
 }
+
+export default QRScanner;
