@@ -27,6 +27,10 @@ const REGISTRATION_TYPES: CartItem["type"][] = [
   "pass",
 ];
 
+// Shared id so rapid cart actions replace the previous toast instead of stacking
+// — see USC-235 (snacks piling up over the marketing site toolbar).
+const CART_TOAST_ID = "cart-toast";
+
 export function isRegistrationType(type: CartItem["type"]): boolean {
   return REGISTRATION_TYPES.includes(type);
 }
@@ -234,7 +238,7 @@ export function CartProvider({ children, organizationId }: CartProviderProps) {
 
       if (existingItemIndex > -1) {
         if (registration) {
-          if (!silent) toast.info("This is already in your cart");
+          if (!silent) toast.info("This is already in your cart", { id: CART_TOAST_ID });
           return prev;
         }
         const newItems = [...prev];
@@ -242,15 +246,15 @@ export function CartProvider({ children, organizationId }: CartProviderProps) {
         const cap: number | null = existing.details?.currentInventory ?? null;
         const newQty = existing.quantity + normalizedItem.quantity;
         if (cap !== null && newQty > cap) {
-          if (!silent) toast.error(`Only ${cap} available in stock`);
+          if (!silent) toast.error(`Only ${cap} available in stock`, { id: CART_TOAST_ID });
           return prev;
         }
         newItems[existingItemIndex].quantity = newQty;
-        if (!silent) toast.success("Item quantity updated in cart");
+        if (!silent) toast.success("Item quantity updated in cart", { id: CART_TOAST_ID });
         return newItems;
       }
 
-      if (!silent) toast.success("Item added to cart");
+      if (!silent) toast.success("Item added to cart", { id: CART_TOAST_ID });
       return [...prev, { ...normalizedItem, id: Math.random().toString(36).substring(2, 9) }];
     });
     if (!silent) setIsOpen(true);
@@ -258,7 +262,7 @@ export function CartProvider({ children, organizationId }: CartProviderProps) {
 
   const removeItem = (id: string) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
-    toast.success("Item removed from cart");
+    toast.success("Item removed from cart", { id: CART_TOAST_ID });
   };
 
   const updateQuantity = (id: string, quantity: number) => {
@@ -309,9 +313,9 @@ export function CartProvider({ children, organizationId }: CartProviderProps) {
 
     const count = idsToRemove.size;
     if (count > 1) {
-      toast.success(`${count} items removed from cart`);
+      toast.success(`${count} items removed from cart`, { id: CART_TOAST_ID });
     } else {
-      toast.success("Item removed from cart");
+      toast.success("Item removed from cart", { id: CART_TOAST_ID });
     }
   };
 

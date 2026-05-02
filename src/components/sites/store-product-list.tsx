@@ -120,13 +120,15 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
     const variantId = hasVariants ? selectedVariants[product.id] : undefined;
 
     if (hasVariants && !variantId) {
-      toast.error(`Please select a ${product.typeName?.toLowerCase() || "type"}`);
+      toast.error(`Please select a ${product.typeName?.toLowerCase() || "type"}`, {
+        id: "cart-toast",
+      });
       return;
     }
 
     const inventory = getEffectiveInventory(product, variantId);
     if (inventory !== null && inventory <= 0) {
-      toast.error("This product is sold out");
+      toast.error("This product is sold out", { id: "cart-toast" });
       return;
     }
 
@@ -138,7 +140,7 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
     );
     if (inventory !== null && existingItem) {
       if (existingItem.quantity >= inventory) {
-        toast.error(`Only ${inventory} available in stock`);
+        toast.error(`Only ${inventory} available in stock`, { id: "cart-toast" });
         return;
       }
     }
@@ -152,27 +154,32 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
     const pickupFacility =
       resolvedFulfillment === "PICKUP" ? (product.pickupFacility ?? null) : null;
 
-    addItem({
-      referenceId: product.id,
-      type: "item",
-      name: product.name,
-      price: effectivePrice,
-      quantity: 1,
-      athleteId: "",
-      athleteName: "Customer",
-      details: {
-        category: product.category,
-        fulfillmentType: resolvedFulfillment,
-        pickupFacilityId: pickupFacility?.id ?? null,
-        pickupFacility: pickupFacility ?? null,
-        currentInventory: inventory,
-        ...(variantId && variant
-          ? { variantId, variantLabel: variant.label, typeName: product.typeName }
-          : {}),
+    addItem(
+      {
+        referenceId: product.id,
+        type: "item",
+        name: product.name,
+        price: effectivePrice,
+        quantity: 1,
+        athleteId: "",
+        athleteName: "Customer",
+        details: {
+          category: product.category,
+          fulfillmentType: resolvedFulfillment,
+          pickupFacilityId: pickupFacility?.id ?? null,
+          pickupFacility: pickupFacility ?? null,
+          currentInventory: inventory,
+          ...(variantId && variant
+            ? { variantId, variantLabel: variant.label, typeName: product.typeName }
+            : {}),
+        },
       },
-    });
+      { silent: true }
+    );
 
-    toast.success(`${product.name}${variant ? ` (${variant.label})` : ""} added to cart`);
+    toast.success(`${product.name}${variant ? ` (${variant.label})` : ""} added to cart`, {
+      id: "cart-toast",
+    });
   };
 
   const hasActiveFilters =

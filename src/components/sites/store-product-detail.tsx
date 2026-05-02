@@ -153,22 +153,24 @@ export function StoreProductDetail({ product, primaryColor }: StoreProductDetail
 
   const handleAddToCart = () => {
     if (hasVariants && !selectedVariantId) {
-      toast.error(`Please select a ${product.typeName?.toLowerCase() || "type"}`);
+      toast.error(`Please select a ${product.typeName?.toLowerCase() || "type"}`, {
+        id: "cart-toast",
+      });
       return;
     }
 
     if (product.fulfillmentType === "PICKUP_OR_DELIVERY" && !chosenFulfillment) {
-      toast.error("Please choose pickup or delivery");
+      toast.error("Please choose pickup or delivery", { id: "cart-toast" });
       return;
     }
 
     if (isOutOfStock) {
-      toast.error("This product is sold out");
+      toast.error("This product is sold out", { id: "cart-toast" });
       return;
     }
 
     if (quantity > maxQuantity) {
-      toast.error(`Only ${maxQuantity} more available`);
+      toast.error(`Only ${maxQuantity} more available`, { id: "cart-toast" });
       return;
     }
 
@@ -180,36 +182,40 @@ export function StoreProductDetail({ product, primaryColor }: StoreProductDetail
     // a facility deletion after SSR could leave us here. Block before the cart gets
     // an item with no pickup location.
     if (resolvedFulfillment === "PICKUP" && !pickupFacility) {
-      toast.error("Pickup is currently unavailable for this product");
+      toast.error("Pickup is currently unavailable for this product", { id: "cart-toast" });
       return;
     }
 
-    addItem({
-      referenceId: product.id,
-      type: "item",
-      name: product.name,
-      price: effectivePrice,
-      quantity,
-      athleteId: "",
-      athleteName: "Customer",
-      details: {
-        category: product.category,
-        fulfillmentType: resolvedFulfillment,
-        pickupFacilityId: pickupFacility?.id ?? null,
-        pickupFacility: pickupFacility ?? null,
-        currentInventory: effectiveInventory,
-        ...(selectedVariantId && selectedVariant
-          ? {
-              variantId: selectedVariantId,
-              variantLabel: selectedVariant.label,
-              typeName: product.typeName,
-            }
-          : {}),
+    addItem(
+      {
+        referenceId: product.id,
+        type: "item",
+        name: product.name,
+        price: effectivePrice,
+        quantity,
+        athleteId: "",
+        athleteName: "Customer",
+        details: {
+          category: product.category,
+          fulfillmentType: resolvedFulfillment,
+          pickupFacilityId: pickupFacility?.id ?? null,
+          pickupFacility: pickupFacility ?? null,
+          currentInventory: effectiveInventory,
+          ...(selectedVariantId && selectedVariant
+            ? {
+                variantId: selectedVariantId,
+                variantLabel: selectedVariant.label,
+                typeName: product.typeName,
+              }
+            : {}),
+        },
       },
-    });
+      { silent: true }
+    );
 
     toast.success(
-      `${quantity}x ${product.name}${selectedVariant ? ` (${selectedVariant.label})` : ""} added to cart`
+      `${quantity}x ${product.name}${selectedVariant ? ` (${selectedVariant.label})` : ""} added to cart`,
+      { id: "cart-toast" }
     );
     setQuantity(1);
   };
