@@ -2,6 +2,7 @@
 
 import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
+import { handleChunkLoadError, isChunkLoadError } from "@/lib/chunk-reload";
 
 interface ErrorPageProps {
   error: Error & { digest?: string };
@@ -17,6 +18,7 @@ export function ErrorPage({
   message = "An unexpected error occurred. Our team has been notified.",
 }: ErrorPageProps) {
   useEffect(() => {
+    if (isChunkLoadError(error) && handleChunkLoadError(error, "boundary")) return;
     Sentry.captureException(error);
   }, [error]);
 

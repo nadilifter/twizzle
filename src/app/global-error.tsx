@@ -2,6 +2,7 @@
 
 import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
+import { handleChunkLoadError, isChunkLoadError } from "@/lib/chunk-reload";
 
 export default function GlobalError({
   error,
@@ -11,6 +12,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
+    if (isChunkLoadError(error) && handleChunkLoadError(error, "boundary")) return;
     Sentry.captureException(error);
   }, [error]);
 
