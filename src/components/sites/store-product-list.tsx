@@ -275,7 +275,7 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
               product,
               selectedVariants[product.id]
             );
-            const hasVariants = product.typeName && product.variants.length > 0;
+            const hasVariants = !!(product.typeName && product.variants.length > 0);
             const currentVariantId = selectedVariants[product.id];
             const effectivePrice = getEffectivePrice(product, currentVariantId);
             const selectedVariantImage = currentVariantId
@@ -426,11 +426,15 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
                   ) : (
                     <Button
                       onClick={() => handleAddToCart(product)}
-                      disabled={outOfStock}
+                      disabled={outOfStock || (hasVariants && !currentVariantId)}
                       className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-transform active:scale-95"
                     >
                       <ShoppingCart className="h-4 w-4" />
-                      {outOfStock ? "Sold Out" : "Add to Cart"}
+                      {outOfStock
+                        ? "Sold Out"
+                        : hasVariants && !currentVariantId
+                          ? `Select ${product.typeName || "Type"}`
+                          : "Add to Cart"}
                     </Button>
                   )}
                 </CardFooter>
