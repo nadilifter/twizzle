@@ -21,12 +21,22 @@ Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
   enabled: !!process.env.NEXT_PUBLIC_SENTRY_DSN,
 
-  tracesSampleRate: environment === "production" ? 0.1 : 1.0,
+  tracesSampleRate: environment === "production" ? 0.1 : 0.25,
   replaysSessionSampleRate: 0,
   replaysOnErrorSampleRate: 1.0,
 
-  integrations: [Sentry.replayIntegration()],
-
   environment,
   release: process.env.NEXT_PUBLIC_APP_VERSION,
+
+  // Lazy-load the Replay integration (~50 KB gzipped) only after the first
+  // exception fires, so it stays out of the first-paint client bundle.
+  async beforeSend(event) {
+    if (event.exception) {
+      const replay = await Sentry.lazyLoadIntegration("replayIntegration");
+      Sentry.addIntegration(replay());
+    }
+    return event;
+  },
 });
+
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
