@@ -41,6 +41,7 @@ import {
 import { format } from "date-fns";
 import { toast } from "sonner";
 import Image from "next/image";
+import { athleteDisplayName } from "@/lib/athlete-name";
 
 export default function CoachMediaPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -317,7 +318,7 @@ export default function CoachMediaPage() {
                       {item.athlete && (
                         <div className="flex items-center gap-1 text-white/70 text-xs">
                           <User className="h-3 w-3" />
-                          <span>{item.athlete.name}</span>
+                          <span>{athleteDisplayName(item.athlete)}</span>
                         </div>
                       )}
                     </div>
@@ -377,7 +378,7 @@ export default function CoachMediaPage() {
                   <SelectItem value="">None</SelectItem>
                   {athletes.map((athlete) => (
                     <SelectItem key={athlete.id} value={athlete.id}>
-                      {athlete.name}
+                      {athleteDisplayName(athlete)}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -58,7 +58,7 @@ export async function GET(
       },
       include: {
         athlete: {
-          select: { id: true, name: true, avatar: true },
+          select: { id: true, firstName: true, lastName: true, avatar: true },
         },
         coach: {
           select: { id: true, name: true },
@@ -81,7 +81,7 @@ export async function GET(
           },
         },
       },
-      orderBy: { athlete: { name: "asc" } },
+      orderBy: [{ athlete: { firstName: "asc" } }, { athlete: { lastName: "asc" } }],
     });
 
     return NextResponse.json({ data: evaluations });

@@ -37,7 +37,7 @@ interface EmailCampaign {
   createdAt: string;
   startedAt?: string;
   completedAt?: string;
-  targetScope: string;
+  targetType: string;
   htmlBody: string;
 }
 
@@ -57,11 +57,15 @@ const statusColors: Record<string, string> = {
   CANCELLED: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300",
 };
 
-const targetScopeLabels: Record<string, string> = {
-  ALL: "All Members",
-  PROGRAM: "Program Participants",
-  EVENT: "Event Attendees",
-  GUARDIAN: "All Guardians",
+const targetTypeLabels: Record<string, string> = {
+  ALL_USERS: "All Users",
+  ALL_MEMBERS: "All Members",
+  ALL_PROGRAM_REGISTRANTS: "Program Registrants",
+  PROGRAM_ANY_INSTANCE: "Program Participants",
+  PROGRAM_SPECIFIC_INSTANCE: "Program Session Participants",
+  MEMBERSHIP_HOLDERS: "Membership Holders",
+  SPECIFIC_USERS: "Specific Users",
+  ALL_GUARDIANS: "All Guardians",
 };
 
 export default function EmailPage() {
@@ -225,7 +229,7 @@ export default function EmailPage() {
                         </div>
                         <p className="text-sm text-muted-foreground truncate">{campaign.subject}</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {targetScopeLabels[campaign.targetScope]} •{" "}
+                          {targetTypeLabels[campaign.targetType] ?? campaign.targetType} •{" "}
                           {new Date(campaign.createdAt).toLocaleDateString()}
                         </p>
                       </div>
@@ -285,7 +289,10 @@ export default function EmailPage() {
                   <h3 className="font-semibold text-lg">{selectedCampaign.name}</h3>
                   <p className="text-sm text-muted-foreground">{selectedCampaign.subject}</p>
                   <div className="flex justify-between text-xs text-muted-foreground pt-2 border-t">
-                    <span>To: {targetScopeLabels[selectedCampaign.targetScope]}</span>
+                    <span>
+                      To:{" "}
+                      {targetTypeLabels[selectedCampaign.targetType] ?? selectedCampaign.targetType}
+                    </span>
                     <span>{selectedCampaign.totalRecipients} Recipients</span>
                   </div>
                 </CardContent>

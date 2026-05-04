@@ -110,7 +110,7 @@ export async function PATCH(
       where: { id: entryId, competitionId: id },
       data: updateData,
       include: {
-        athlete: { select: { id: true, firstName: true, lastName: true, name: true } },
+        athlete: { select: { id: true, firstName: true, lastName: true } },
         category: true,
       },
     });

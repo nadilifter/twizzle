@@ -14,7 +14,6 @@ import {
 function makeAthlete(overrides: Partial<AthleteLite> = {}): AthleteLite {
   return {
     id: "athlete-1",
-    name: "Alice Smith",
     firstName: "Alice",
     lastName: "Smith",
     avatar: null,

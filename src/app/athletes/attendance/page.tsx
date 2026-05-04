@@ -33,6 +33,7 @@ import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api-client";
 import { formatTime12h } from "@/lib/date-utils";
+import { athleteDisplayName } from "@/lib/athlete-name";
 import type { AttendanceWithRelations, AttendanceStatus } from "@/types/attendance";
 
 interface Athlete {
@@ -107,7 +108,7 @@ export default function AthleteAttendancePage() {
         if (athleteList.length > 0) {
           const fetched: Athlete[] = athleteList.map((athlete: any) => ({
             id: athlete.id,
-            name: athlete.name,
+            name: athleteDisplayName(athlete),
             level: athlete.level,
             avatar: athlete.avatar,
             enrollments: athlete.enrollments,

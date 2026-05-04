@@ -8,7 +8,6 @@
 
 export interface AthleteLite {
   id: string;
-  name: string | null;
   firstName: string | null;
   lastName: string | null;
   avatar: string | null;
@@ -35,7 +34,6 @@ export interface InstanceRegistrationInput {
 export interface AthleteRow {
   id: string;
   enrollmentId: string | null;
-  name: string | null;
   firstName: string | null;
   lastName: string | null;
   avatar: string | null;
@@ -69,7 +67,6 @@ export function aggregateProgramAthletes(
       byAthlete.set(a.id, {
         id: a.id,
         enrollmentId: enr.id,
-        name: a.name,
         firstName: a.firstName,
         lastName: a.lastName,
         avatar: a.avatar,
@@ -98,7 +95,6 @@ export function aggregateProgramAthletes(
       byAthlete.set(a.id, {
         id: a.id,
         enrollmentId: null,
-        name: a.name,
         firstName: a.firstName,
         lastName: a.lastName,
         avatar: a.avatar,
@@ -177,8 +173,8 @@ export function applyMedicalCompliance(
 
 export function sortAthleteRows(rows: AthleteRow[]): AthleteRow[] {
   return [...rows].sort((a, b) => {
-    const aName = `${a.lastName ?? ""} ${a.firstName ?? a.name ?? ""}`.toLowerCase();
-    const bName = `${b.lastName ?? ""} ${b.firstName ?? b.name ?? ""}`.toLowerCase();
+    const aName = `${a.lastName ?? ""} ${a.firstName ?? ""}`.toLowerCase();
+    const bName = `${b.lastName ?? ""} ${b.firstName ?? ""}`.toLowerCase();
     return aName.localeCompare(bName);
   });
 }

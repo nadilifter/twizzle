@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { athleteDisplayName } from "@/lib/athlete-name";
 
 type StatusKey = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED" | "REGISTERED";
 
@@ -124,7 +125,8 @@ export async function GET(request: NextRequest) {
           where: { id: { in: athleteIds } },
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             avatar: true,
             organizationAthletes: {
               where: { organizationId: orgId },
@@ -141,7 +143,7 @@ export async function GET(request: NextRequest) {
             const athlete = athleteMap.get(id);
             return {
               id,
-              name: athlete?.name || "Unknown",
+              name: athlete ? athleteDisplayName(athlete) : "Unknown",
               avatar: athlete?.avatar || null,
               level: athlete?.organizationAthletes?.[0]?.level || null,
               ...s,

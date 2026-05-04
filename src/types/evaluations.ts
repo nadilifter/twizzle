@@ -270,7 +270,8 @@ export interface Evaluation {
 export interface EvaluationWithRelations extends Evaluation {
   athlete: {
     id: string;
-    name: string;
+    firstName: string;
+    lastName: string;
     level: string;
     avatar: string | null;
   };
@@ -392,7 +393,8 @@ export interface AthleteAchievementWithDetails extends AthleteAchievement {
   achievement: AchievementWithTemplate;
   athlete?: {
     id: string;
-    name: string;
+    firstName: string;
+    lastName: string;
     level: string;
     avatar: string | null;
   };
@@ -421,7 +423,8 @@ export interface AchievementsListResponse {
 export interface AthleteAchievementsResponse {
   athlete: {
     id: string;
-    name: string;
+    firstName: string;
+    lastName: string;
     level: string;
     avatar: string | null;
   };
@@ -486,7 +489,8 @@ export interface GenerateEvaluationsResponse {
     athleteId: string;
     athlete: {
       id: string;
-      name: string;
+      firstName: string;
+      lastName: string;
       level: string;
     };
   }>;

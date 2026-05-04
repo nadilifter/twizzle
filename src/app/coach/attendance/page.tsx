@@ -49,6 +49,7 @@ import { cn } from "@/lib/utils";
 import { formatTime12h } from "@/lib/date-utils";
 import { toast } from "sonner";
 import type { EventWithRelations } from "@/types/events";
+import { athleteDisplayName } from "@/lib/athlete-name";
 
 type AttendanceStatus = "REGISTERED" | "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
 
@@ -151,7 +152,7 @@ function CoachAttendanceContent() {
         setEnrolledAthletes(
           response.data.map((enrollment: any) => ({
             id: enrollment.athlete.id,
-            name: enrollment.athlete.name,
+            name: athleteDisplayName(enrollment.athlete),
             avatar: enrollment.athlete.avatar,
             level: enrollment.athlete.level,
           }))

@@ -888,8 +888,6 @@ async function main() {
         billingCycle: "YEARLY",
         currentPeriodStart: daysAgo(30),
         currentPeriodEnd: daysFromNow(335),
-        stripeCustomerId: "cus_seed_sunrise",
-        stripeSubscriptionId: "sub_seed_sunrise",
       },
     }),
     prisma.organizationSubscription.upsert({
@@ -902,8 +900,6 @@ async function main() {
         billingCycle: "MONTHLY",
         currentPeriodStart: daysAgo(15),
         currentPeriodEnd: daysFromNow(15),
-        stripeCustomerId: "cus_seed_metro",
-        stripeSubscriptionId: "sub_seed_metro",
       },
     }),
     prisma.organizationSubscription.upsert({
@@ -916,8 +912,6 @@ async function main() {
         billingCycle: "MONTHLY",
         currentPeriodStart: daysAgo(10),
         currentPeriodEnd: daysFromNow(20),
-        stripeCustomerId: "cus_seed_demo",
-        stripeSubscriptionId: "sub_seed_demo",
       },
     }),
     prisma.organizationSubscription.upsert({
@@ -930,8 +924,6 @@ async function main() {
         billingCycle: "YEARLY",
         currentPeriodStart: daysAgo(60),
         currentPeriodEnd: daysFromNow(305),
-        stripeCustomerId: "cus_seed_uplifter",
-        stripeSubscriptionId: "sub_seed_uplifter",
       },
     }),
   ]);
@@ -2899,15 +2891,9 @@ async function main() {
         id: `${ORG1_ID}-ath-1`,
         firstName: "Emily",
         lastName: "Anderson",
-        name: "Emily Anderson",
         email: "emily.a@email.com",
         birthDate: noonUTC("2016-03-15"),
         gender: "FEMALE",
-        medicalDetails: {
-          allergies: ["peanuts"],
-          conditions: [],
-          emergencyContact: { name: "Michelle Anderson", phone: "(555) 101-1001" },
-        },
       },
     }),
     prisma.athlete.upsert({
@@ -2917,7 +2903,6 @@ async function main() {
         id: `${ORG1_ID}-ath-2`,
         firstName: "Sophie",
         lastName: "Anderson",
-        name: "Sophie Anderson",
         email: "sophie.a@email.com",
         birthDate: noonUTC("2014-07-22"),
         gender: "FEMALE",
@@ -2930,7 +2915,6 @@ async function main() {
         id: `${ORG1_ID}-ath-3`,
         firstName: "Olivia",
         lastName: "Baker",
-        name: "Olivia Baker",
         birthDate: noonUTC("2013-11-08"),
         gender: "FEMALE",
       },
@@ -2942,7 +2926,6 @@ async function main() {
         id: `${ORG1_ID}-ath-4`,
         firstName: "Lily",
         lastName: "Chen",
-        name: "Lily Chen",
         birthDate: noonUTC("2017-01-30"),
         gender: "FEMALE",
       },
@@ -2954,7 +2937,6 @@ async function main() {
         id: `${ORG1_ID}-ath-5`,
         firstName: "Mia",
         lastName: "Chen",
-        name: "Mia Chen",
         birthDate: noonUTC("2012-09-14"),
         gender: "FEMALE",
       },
@@ -2966,7 +2948,6 @@ async function main() {
         id: `${ORG1_ID}-ath-6`,
         firstName: "Grace",
         lastName: "Davis",
-        name: "Grace Davis",
         birthDate: noonUTC("2011-05-20"),
         gender: "FEMALE",
       },
@@ -2978,7 +2959,6 @@ async function main() {
         id: `${ORG1_ID}-ath-7`,
         firstName: "Ava",
         lastName: "Evans",
-        name: "Ava Evans",
         birthDate: noonUTC("2015-12-03"),
         gender: "FEMALE",
       },
@@ -2990,7 +2970,6 @@ async function main() {
         id: `${ORG1_ID}-ath-8`,
         firstName: "Hannah",
         lastName: "Evans",
-        name: "Hannah Evans",
         birthDate: noonUTC("2019-08-11"),
         gender: "FEMALE",
       },
@@ -3002,7 +2981,6 @@ async function main() {
         id: `${ORG2_ID}-ath-1`,
         firstName: "Jake",
         lastName: "Foster",
-        name: "Jake Foster",
         email: "jake.f@email.com",
         birthDate: noonUTC("2014-04-18"),
         gender: "MALE",
@@ -3015,7 +2993,6 @@ async function main() {
         id: `${ORG2_ID}-ath-2`,
         firstName: "Ethan",
         lastName: "Foster",
-        name: "Ethan Foster",
         birthDate: noonUTC("2010-10-25"),
         gender: "MALE",
       },
@@ -3027,7 +3004,6 @@ async function main() {
         id: `${ORG2_ID}-ath-3`,
         firstName: "Sofia",
         lastName: "Garcia",
-        name: "Sofia Garcia",
         birthDate: noonUTC("2016-06-12"),
         gender: "FEMALE",
       },
@@ -3039,7 +3015,6 @@ async function main() {
         id: `${ORG2_ID}-ath-4`,
         firstName: "Lucas",
         lastName: "Garcia",
-        name: "Lucas Garcia",
         birthDate: noonUTC("2011-02-28"),
         gender: "MALE",
       },
@@ -3051,7 +3026,6 @@ async function main() {
         id: `${ORG2_ID}-ath-5`,
         firstName: "Chloe",
         lastName: "Harris",
-        name: "Chloe Harris",
         birthDate: noonUTC("2015-09-07"),
         gender: "FEMALE",
       },
@@ -3063,7 +3037,6 @@ async function main() {
         id: `${ORG2_ID}-ath-6`,
         firstName: "Noah",
         lastName: "Irving",
-        name: "Noah Irving",
         birthDate: noonUTC("2012-11-19"),
         gender: "MALE",
       },
@@ -5036,7 +5009,6 @@ async function main() {
       amount: 218,
       method: "CARD" as const,
       status: "COMPLETED" as const,
-      transactionId: "txn_seed_001",
       processedAt: daysAgo(20),
     },
     {
@@ -5046,7 +5018,6 @@ async function main() {
       amount: 294.3,
       method: "CARD" as const,
       status: "COMPLETED" as const,
-      transactionId: "txn_seed_002",
       processedAt: daysAgo(7),
     },
     {
@@ -5056,7 +5027,6 @@ async function main() {
       amount: 600,
       method: "BANK" as const,
       status: "COMPLETED" as const,
-      transactionId: "txn_seed_003",
       processedAt: daysAgo(3),
     },
   ];
@@ -5362,7 +5332,6 @@ async function main() {
       id: `${ORG1_ID}-skill-1`,
       name: "Forward Roll",
       category: "Floor",
-      level: "Bronze",
       minAge: 4,
       maxAge: 8,
       description:
@@ -5372,7 +5341,6 @@ async function main() {
       id: `${ORG1_ID}-skill-2`,
       name: "Backward Roll",
       category: "Floor",
-      level: "Bronze",
       minAge: 4,
       maxAge: 8,
       description:
@@ -5382,7 +5350,6 @@ async function main() {
       id: `${ORG1_ID}-skill-3`,
       name: "Cartwheel",
       category: "Floor",
-      level: "Bronze",
       minAge: 5,
       maxAge: 10,
       description:
@@ -5392,7 +5359,6 @@ async function main() {
       id: `${ORG1_ID}-skill-4`,
       name: "Handstand",
       category: "Floor",
-      level: "Silver",
       minAge: 5,
       maxAge: 10,
       description:
@@ -5402,7 +5368,6 @@ async function main() {
       id: `${ORG1_ID}-skill-5`,
       name: "Bridge",
       category: "Floor",
-      level: "Bronze",
       minAge: 4,
       maxAge: 8,
       description:
@@ -5414,7 +5379,6 @@ async function main() {
       id: `${ORG1_ID}-skill-6`,
       name: "Round-off",
       category: "Floor",
-      level: "Silver",
       minAge: 6,
       maxAge: 12,
       description:
@@ -5424,7 +5388,6 @@ async function main() {
       id: `${ORG1_ID}-skill-7`,
       name: "Back Walkover",
       category: "Floor",
-      level: "Silver",
       minAge: 6,
       maxAge: 12,
       description:
@@ -5434,7 +5397,6 @@ async function main() {
       id: `${ORG1_ID}-skill-8`,
       name: "Front Walkover",
       category: "Floor",
-      level: "Silver",
       minAge: 6,
       maxAge: 12,
       description:
@@ -5446,7 +5408,6 @@ async function main() {
       id: `${ORG1_ID}-skill-9`,
       name: "Back Handspring",
       category: "Floor",
-      level: "Gold",
       minAge: 8,
       maxAge: 18,
       description:
@@ -5456,7 +5417,6 @@ async function main() {
       id: `${ORG1_ID}-skill-10`,
       name: "Front Handspring",
       category: "Floor",
-      level: "Gold",
       minAge: 8,
       maxAge: 18,
       description:
@@ -5468,7 +5428,6 @@ async function main() {
       id: `${ORG1_ID}-skill-11`,
       name: "Squat On",
       category: "Vault",
-      level: "Bronze",
       minAge: 5,
       maxAge: 10,
       description:
@@ -5478,7 +5437,6 @@ async function main() {
       id: `${ORG1_ID}-skill-12`,
       name: "Straddle Over",
       category: "Vault",
-      level: "Bronze",
       minAge: 6,
       maxAge: 12,
       description:
@@ -5490,7 +5448,6 @@ async function main() {
       id: `${ORG1_ID}-skill-13`,
       name: "Handspring Vault",
       category: "Vault",
-      level: "Silver",
       minAge: 8,
       maxAge: 18,
       description:
@@ -5502,7 +5459,6 @@ async function main() {
       id: `${ORG1_ID}-skill-14`,
       name: "Pullover",
       category: "Bars",
-      level: "Bronze",
       minAge: 5,
       maxAge: 10,
       description:
@@ -5512,7 +5468,6 @@ async function main() {
       id: `${ORG1_ID}-skill-15`,
       name: "Back Hip Circle",
       category: "Bars",
-      level: "Bronze",
       minAge: 5,
       maxAge: 10,
       description:
@@ -5522,7 +5477,6 @@ async function main() {
       id: `${ORG1_ID}-skill-16`,
       name: "Glide Swing",
       category: "Bars",
-      level: "Bronze",
       minAge: 5,
       maxAge: 10,
       description:
@@ -5534,7 +5488,6 @@ async function main() {
       id: `${ORG1_ID}-skill-17`,
       name: "Cast",
       category: "Bars",
-      level: "Silver",
       minAge: 6,
       maxAge: 14,
       description:
@@ -5544,7 +5497,6 @@ async function main() {
       id: `${ORG1_ID}-skill-18`,
       name: "Kip",
       category: "Bars",
-      level: "Gold",
       minAge: 8,
       maxAge: 18,
       description:
@@ -5556,7 +5508,6 @@ async function main() {
       id: `${ORG1_ID}-skill-19`,
       name: "Beam Walk",
       category: "Beam",
-      level: "Bronze",
       minAge: 4,
       maxAge: 8,
       description:
@@ -5566,7 +5517,6 @@ async function main() {
       id: `${ORG1_ID}-skill-20`,
       name: "Dip Walk",
       category: "Beam",
-      level: "Bronze",
       minAge: 4,
       maxAge: 8,
       description:
@@ -5576,7 +5526,6 @@ async function main() {
       id: `${ORG1_ID}-skill-21`,
       name: "Relevé Turns",
       category: "Beam",
-      level: "Bronze",
       minAge: 5,
       maxAge: 10,
       description:
@@ -5586,7 +5535,6 @@ async function main() {
       id: `${ORG1_ID}-skill-22`,
       name: "Scale",
       category: "Beam",
-      level: "Bronze",
       minAge: 5,
       maxAge: 10,
       description:
@@ -5598,7 +5546,6 @@ async function main() {
       id: `${ORG1_ID}-skill-23`,
       name: "Cartwheel on Beam",
       category: "Beam",
-      level: "Silver",
       minAge: 7,
       maxAge: 14,
       description:
@@ -5608,7 +5555,6 @@ async function main() {
       id: `${ORG1_ID}-skill-24`,
       name: "Handstand on Beam",
       category: "Beam",
-      level: "Silver",
       minAge: 7,
       maxAge: 14,
       description:
@@ -5620,7 +5566,6 @@ async function main() {
       id: `${ORG1_ID}-skill-25`,
       name: "Straddle Stretch",
       category: "General",
-      level: "Bronze",
       minAge: 4,
       maxAge: 18,
       description:
@@ -5630,7 +5575,6 @@ async function main() {
       id: `${ORG1_ID}-skill-26`,
       name: "Pike Stretch",
       category: "General",
-      level: "Bronze",
       minAge: 4,
       maxAge: 18,
       description:
@@ -5640,7 +5584,6 @@ async function main() {
       id: `${ORG1_ID}-skill-27`,
       name: "Hollow Body Hold",
       category: "General",
-      level: "Bronze",
       minAge: 5,
       maxAge: 18,
       description:
@@ -5650,7 +5593,6 @@ async function main() {
       id: `${ORG1_ID}-skill-28`,
       name: "Arch Body Hold",
       category: "General",
-      level: "Bronze",
       minAge: 5,
       maxAge: 18,
       description:
@@ -5672,7 +5614,6 @@ async function main() {
       id: `${ORG2_ID}-skill-1`,
       name: "Dribbling",
       category: "Soccer",
-      level: "Beginner",
       minAge: 5,
       maxAge: 14,
       description:
@@ -5682,7 +5623,6 @@ async function main() {
       id: `${ORG2_ID}-skill-2`,
       name: "Passing",
       category: "Soccer",
-      level: "Beginner",
       minAge: 5,
       maxAge: 14,
       description:
@@ -5692,7 +5632,6 @@ async function main() {
       id: `${ORG2_ID}-skill-3`,
       name: "Layup",
       category: "Basketball",
-      level: "Beginner",
       minAge: 7,
       maxAge: 18,
       description:
@@ -5702,7 +5641,6 @@ async function main() {
       id: `${ORG2_ID}-skill-4`,
       name: "Freestyle Stroke",
       category: "Swimming",
-      level: "Beginner",
       minAge: 5,
       maxAge: 18,
       description:
@@ -5712,7 +5650,6 @@ async function main() {
       id: `${ORG2_ID}-skill-5`,
       name: "Shooting Form",
       category: "Basketball",
-      level: "Intermediate",
       minAge: 8,
       maxAge: 18,
       description:
@@ -5722,7 +5659,6 @@ async function main() {
       id: `${ORG2_ID}-skill-6`,
       name: "Backstroke",
       category: "Swimming",
-      level: "Intermediate",
       minAge: 6,
       maxAge: 18,
       description:
@@ -7070,7 +7006,6 @@ async function main() {
       title: "Spring Competition Registration Open",
       content:
         "<p>Registration for our <strong>Annual Spring Invitational</strong> is now open!</p><p>Don't miss out - spots fill up fast.</p>",
-      targetScope: "ALL" as const,
       priority: "HIGH" as const,
       status: "PUBLISHED" as const,
       publishedAt: daysAgo(3),
@@ -7081,7 +7016,6 @@ async function main() {
       title: "JO Team Meeting",
       content:
         "<p>Mandatory parent meeting for all <strong>JO team families</strong>.</p><ul><li>Date: This Saturday</li><li>Time: 10:00 AM</li><li>Location: Main Gym</li></ul>",
-      targetScope: "PROGRAM" as const,
       priority: "NORMAL" as const,
       targetProgramId: `${ORG1_ID}-prog-jo`,
       status: "PUBLISHED" as const,
@@ -7093,7 +7027,6 @@ async function main() {
       title: "Gym Closure Notice",
       content:
         "<p><strong>IMPORTANT:</strong> The gym will be closed next Monday for maintenance.</p>",
-      targetScope: "ALL" as const,
       priority: "URGENT" as const,
       status: "PUBLISHED" as const,
       publishedAt: daysAgo(0),
@@ -7104,7 +7037,6 @@ async function main() {
       title: "Swim Meet Carpool",
       content:
         "<p>We're organizing carpools for the upcoming swim meet.</p><p>Please sign up at the front desk if interested.</p>",
-      targetScope: "PROGRAM" as const,
       priority: "NORMAL" as const,
       targetProgramId: `${ORG2_ID}-prog-swim`,
       status: "PUBLISHED" as const,
@@ -7116,7 +7048,6 @@ async function main() {
       title: "Summer Camp Early Bird Registration",
       content:
         "<p>Summer camp registration opens next week!</p><p><em>Early bird discounts available through March 15th.</em></p>",
-      targetScope: "ALL" as const,
       priority: "LOW" as const,
       status: "PUBLISHED" as const,
       publishedAt: daysAgo(5),
@@ -9249,7 +9180,6 @@ async function main() {
 <p>See you at the gym!</p>`,
       textBody: "Happy New Year from Sunrise Gymnastics! Winter session begins January 13th.",
       classification: "NEWSLETTER" as const,
-      targetScope: "ALL" as const,
       status: "COMPLETED" as const,
       totalRecipients: 89,
       sentCount: 89,
@@ -9281,7 +9211,6 @@ async function main() {
       textBody:
         "Regional Competition - February 15th at Springfield Sports Center. Check-in at 7:30 AM.",
       classification: "EVENT_UPDATE" as const,
-      targetScope: "PROGRAM" as const,
       targetProgramId: `${ORG1_ID}-prog-jo`, // JO Competition Team
       status: "COMPLETED" as const,
       totalRecipients: 24,
@@ -9315,7 +9244,6 @@ async function main() {
       textBody:
         "Spring Session Registration is now open! March 10 - May 30. Register now to secure your spot.",
       classification: "PROGRAM_UPDATE" as const,
-      targetScope: "ALL" as const,
       status: "SCHEDULED" as const,
       totalRecipients: 89,
       sentCount: 0,
@@ -9345,7 +9273,6 @@ async function main() {
       textBody:
         "Your annual membership is expiring soon. Renew before the end of the month to lock in current rates.",
       classification: "MEMBERSHIP" as const,
-      targetScope: "ALL" as const,
       targetMembershipStatus: "EXPIRED",
       status: "DRAFT" as const,
       totalRecipients: 0,
@@ -9387,7 +9314,6 @@ async function main() {
       textBody:
         "New programs starting in February at Metro Sports. Youth Basketball, Adult Fitness, Family Swim Nights.",
       classification: "NEWSLETTER" as const,
-      targetScope: "ALL" as const,
       status: "COMPLETED" as const,
       totalRecipients: 67,
       sentCount: 67,
@@ -9417,7 +9343,6 @@ async function main() {
       textBody:
         "Updated swim team practice times starting next week. Monday/Wednesday now 4:00 PM - 5:30 PM.",
       classification: "PROGRAM_UPDATE" as const,
-      targetScope: "PROGRAM" as const,
       targetProgramId: `${ORG2_ID}-prog-swim`, // Swim Team
       status: "COMPLETED" as const,
       totalRecipients: 20,

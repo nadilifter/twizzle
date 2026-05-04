@@ -72,8 +72,21 @@ export default function AthleteWaiversPage() {
     async function fetchAthletes() {
       setIsLoadingAthletes(true);
       try {
-        const response = await api.get<{ athletes: Athlete[] }>("/api/athletes/me");
-        const athleteData = response.athletes || [];
+        const response = await api.get<{
+          athletes: Array<{
+            id: string;
+            firstName: string;
+            lastName: string;
+            avatar: string | null;
+            level: string;
+          }>;
+        }>("/api/athletes/me");
+        const athleteData = (response.athletes || []).map((a) => ({
+          id: a.id,
+          name: `${a.firstName} ${a.lastName}`.trim(),
+          avatar: a.avatar,
+          level: a.level,
+        }));
         setAthletes(athleteData);
         if (athleteData.length > 0) {
           setSelectedAthleteId(athleteData[0].id);

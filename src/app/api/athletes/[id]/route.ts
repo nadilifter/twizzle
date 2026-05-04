@@ -26,7 +26,6 @@ function getCategoryLabel(category: {
 }
 
 const updateAthleteSchema = z.object({
-  name: z.string().min(1).optional(),
   firstName: z.string().min(1).optional(),
   lastName: z.string().min(1).optional(),
   email: z.string().email().optional().nullable(),
@@ -588,15 +587,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const { birthDate, guardianUserId, level, status, firstName, lastName, gender, ...otherData } =
       validatedData;
 
-    // Auto-compose deprecated `name` field when firstName/lastName are provided
     const nameUpdate: Record<string, unknown> = {};
     if (firstName !== undefined) nameUpdate.firstName = firstName;
     if (lastName !== undefined) nameUpdate.lastName = lastName;
-    if (firstName !== undefined || lastName !== undefined) {
-      const newFirst = firstName ?? existing.firstName;
-      const newLast = lastName ?? existing.lastName;
-      nameUpdate.name = `${newFirst} ${newLast}`.trim();
-    }
     if (gender !== undefined) nameUpdate.gender = gender;
 
     // Update org-specific fields on OrganizationAthlete (staff only)

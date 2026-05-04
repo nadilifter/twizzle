@@ -10,13 +10,6 @@ export type ShiftStatus =
   | "NO_SHOW";
 export type EventStaffRole = "LEAD" | "ASSISTANT" | "VOLUNTEER" | "OBSERVER";
 
-// Certification structure
-export interface Certification {
-  name: string;
-  expiresAt?: string | null;
-  verified?: boolean;
-}
-
 // Emergency contact structure
 export interface EmergencyContact {
   name: string;
@@ -46,7 +39,6 @@ export interface MemberProfile {
   title: string | null;
   hourlyRate: number | null;
   hireDate: string | null;
-  certifications: Certification[] | null;
   phone: string | null;
   emergencyContact: EmergencyContact | null;
   createdAt: string;
@@ -171,7 +163,6 @@ export interface CreateMemberPayload {
   title?: string | null;
   hourlyRate?: number | null;
   hireDate?: string | null;
-  certifications?: Certification[] | null;
   phone?: string | null;
   emergencyContact?: EmergencyContact | null;
 }

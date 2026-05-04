@@ -16,16 +16,6 @@ const updateStaffSchema = z.object({
   title: z.string().optional().nullable(),
   hourlyRate: z.number().optional().nullable(),
   hireDate: z.string().optional().nullable(),
-  certifications: z
-    .array(
-      z.object({
-        name: z.string(),
-        expiresAt: z.string().optional().nullable(),
-        verified: z.boolean().optional(),
-      })
-    )
-    .optional()
-    .nullable(),
   phone: phoneOptional,
   emergencyContact: z
     .object({
@@ -132,8 +122,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (validatedData.hourlyRate !== undefined) updateData.hourlyRate = validatedData.hourlyRate;
     if (validatedData.hireDate !== undefined)
       updateData.hireDate = validatedData.hireDate ? parseDateOnly(validatedData.hireDate) : null;
-    if (validatedData.certifications !== undefined)
-      updateData.certifications = validatedData.certifications;
     if (validatedData.phone !== undefined) updateData.phone = validatedData.phone;
     if (validatedData.emergencyContact !== undefined)
       updateData.emergencyContact = validatedData.emergencyContact;

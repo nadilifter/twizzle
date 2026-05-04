@@ -46,7 +46,6 @@ export async function GET(
       where: { id: athleteId, organizationAthletes: { some: { organizationId } } },
       select: {
         id: true,
-        name: true,
         firstName: true,
         lastName: true,
         email: true,
@@ -477,7 +476,6 @@ export async function GET(
       registrationType: program.registrationType,
       athlete: {
         id: athlete.id,
-        name: athlete.name,
         firstName: athlete.firstName,
         lastName: athlete.lastName,
         email: athlete.email,

@@ -54,7 +54,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             id: true,
             firstName: true,
             lastName: true,
-            name: true,
             birthDate: true,
             gender: true,
           },
@@ -202,7 +201,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         seedMarkStatus: seedMarkStatus as any,
       },
       include: {
-        athlete: { select: { id: true, firstName: true, lastName: true, name: true } },
+        athlete: { select: { id: true, firstName: true, lastName: true } },
         category: true,
       },
     });

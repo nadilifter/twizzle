@@ -69,7 +69,8 @@ export async function GET(request: NextRequest) {
           athlete: {
             select: {
               id: true,
-              name: true,
+              firstName: true,
+              lastName: true,
               guardians: {
                 take: 1,
                 include: {

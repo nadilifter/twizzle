@@ -94,6 +94,7 @@ import { useAthletes } from "@/hooks/use-athletes";
 import { useGuardians } from "@/hooks/use-guardians";
 import { useLevels } from "@/hooks/use-levels";
 import { DashboardPageHeader } from "@/components/dashboard-page-header";
+import { athleteDisplayName } from "@/lib/athlete-name";
 import type {
   AthleteWithRelations,
   CreateAthletePayload,
@@ -204,7 +205,8 @@ export default function AthletesPage() {
     const guardianUser = athlete.guardians?.[0]?.user;
     const email = guardianUser?.email;
     if (email) {
-      window.location.href = `mailto:${email}?subject=Regarding ${athlete.name}`;
+      const displayName = athleteDisplayName(athlete);
+      window.location.href = `mailto:${email}?subject=Regarding ${displayName}`;
     } else {
       toast.error("No email address available for this guardian");
     }
@@ -244,36 +246,39 @@ export default function AthletesPage() {
         enableHiding: false,
       },
       {
-        accessorKey: "name",
+        id: "name",
+        accessorFn: (row: AthleteWithRelations) => athleteDisplayName(row),
         header: ({ column }) => <DataTableColumnHeader column={column} title="Athlete" />,
-        cell: ({ row }) => (
-          <div className="flex items-center gap-3">
-            <Avatar>
-              <AvatarImage
-                src={row.original.avatar ?? undefined}
-                alt={row.original.name}
-                crop={(row.original as any).avatarCrop ?? undefined}
-              />
-              <AvatarFallback>
-                {row.original.name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col">
-              <Link
-                href={`/dashboard/athletes/${row.original.id}`}
-                className="font-medium hover:underline"
-              >
-                {row.original.name}
-              </Link>
-              <span className="text-xs text-muted-foreground">
-                {row.original.email ?? "No email"}
-              </span>
+        cell: ({ row }) => {
+          const displayName = athleteDisplayName(row.original);
+          const initials = [row.original.firstName, row.original.lastName]
+            .filter(Boolean)
+            .map((n) => n[0])
+            .join("");
+          return (
+            <div className="flex items-center gap-3">
+              <Avatar>
+                <AvatarImage
+                  src={row.original.avatar ?? undefined}
+                  alt={displayName}
+                  crop={(row.original as any).avatarCrop ?? undefined}
+                />
+                <AvatarFallback>{initials || "?"}</AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col">
+                <Link
+                  href={`/dashboard/athletes/${row.original.id}`}
+                  className="font-medium hover:underline"
+                >
+                  {displayName}
+                </Link>
+                <span className="text-xs text-muted-foreground">
+                  {row.original.email ?? "No email"}
+                </span>
+              </div>
             </div>
-          </div>
-        ),
+          );
+        },
       },
       {
         accessorKey: "level",
@@ -1013,7 +1018,6 @@ export default function AthletesPage() {
             <AthleteConfiguration
               athlete={{
                 id: selectedAthlete.id,
-                name: selectedAthlete.name,
                 firstName: selectedAthlete.firstName,
                 lastName: selectedAthlete.lastName,
                 email: selectedAthlete.email,
@@ -1051,9 +1055,10 @@ export default function AthletesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Athlete</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete {selectedAthlete?.name}? This action cannot be undone.
-              All associated data including attendance records and evaluations will be permanently
-              removed.
+              Are you sure you want to delete{" "}
+              {selectedAthlete ? athleteDisplayName(selectedAthlete) : "this athlete"}? This action
+              cannot be undone. All associated data including attendance records and evaluations
+              will be permanently removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

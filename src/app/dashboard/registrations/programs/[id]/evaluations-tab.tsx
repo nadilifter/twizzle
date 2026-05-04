@@ -39,7 +39,12 @@ interface ProgramEvaluation {
   date: string;
   overallScore: string | number;
   status: string;
-  athlete: { id: string; name: string | null; avatar: string | null } | null;
+  athlete: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    avatar: string | null;
+  } | null;
   coach: { id: string; name: string | null } | null;
   template: { id: string; name: string } | null;
   programInstance: { id: string; date: string } | null;
@@ -92,17 +97,19 @@ export function EvaluationsTab({ programId }: EvaluationsTabProps) {
       },
       {
         id: "athlete",
-        accessorFn: (row) => row.athlete?.name ?? "",
+        accessorFn: (row) =>
+          row.athlete ? `${row.athlete.firstName ?? ""} ${row.athlete.lastName ?? ""}`.trim() : "",
         header: ({ column }) => <DataTableColumnHeader column={column} title="Athlete" />,
         cell: ({ row }) => {
           const a = row.original.athlete;
           if (!a) return <span className="text-muted-foreground">-</span>;
+          const display = `${a.firstName ?? ""} ${a.lastName ?? ""}`.trim();
           return (
             <Link
               href={`/dashboard/registrations/programs/${programId}/athletes/${a.id}`}
               className="text-primary hover:underline"
             >
-              {a.name ?? "Unknown"}
+              {display || "Unknown"}
             </Link>
           );
         },

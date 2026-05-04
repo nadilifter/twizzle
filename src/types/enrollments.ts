@@ -16,7 +16,8 @@ export interface Enrollment {
 export interface EnrollmentWithRelations extends Enrollment {
   athlete: {
     id: string;
-    name: string;
+    firstName: string;
+    lastName: string;
     level: string;
     guardians?: Array<{
       user?: {

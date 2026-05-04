@@ -293,7 +293,8 @@ export async function getConversation(conversationId: string, organizationId?: s
               athlete: {
                 select: {
                   id: true,
-                  name: true,
+                  firstName: true,
+                  lastName: true,
                   birthDate: true,
                 },
               },
@@ -1047,7 +1048,7 @@ export async function getCoachConversation(conversationId: string, coachId: stri
           athleteGuardians: {
             include: {
               athlete: {
-                select: { id: true, name: true },
+                select: { id: true, firstName: true, lastName: true },
               },
             },
             take: 5,

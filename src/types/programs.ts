@@ -224,7 +224,8 @@ export interface InstanceRegistration {
   programInstance?: ProgramInstance;
   athlete?: {
     id: string;
-    name: string;
+    firstName: string;
+    lastName: string;
     avatar: string | null;
   };
   user?: {

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { athleteDisplayName } from "@/lib/athlete-name";
 import { addYears, addMonths, subDays } from "date-fns";
 
 /**
@@ -267,9 +268,7 @@ export async function processAthleteRenewals() {
       },
     });
 
-    const athleteName =
-      `${membership.athlete.firstName || ""} ${membership.athlete.lastName || ""}`.trim() ||
-      membership.athlete.name;
+    const athleteName = athleteDisplayName(membership.athlete);
     renewals.push({
       athlete: athleteName,
       from: membership.instance.name,

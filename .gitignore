@@ -69,3 +69,6 @@ package-lock.json
 
 # personal VS Code / Cursor debug config
 .vscode/launch.json
+
+# Claude Code workspace state
+.claude/

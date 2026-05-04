@@ -42,7 +42,6 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
             athlete: {
               select: {
                 id: true,
-                name: true,
                 firstName: true,
                 lastName: true,
                 avatar: true,

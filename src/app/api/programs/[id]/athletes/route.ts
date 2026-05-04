@@ -54,7 +54,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const ROW_LIMIT = 5000;
     const athleteSelect = {
       id: true,
-      name: true,
       firstName: true,
       lastName: true,
       avatar: true,

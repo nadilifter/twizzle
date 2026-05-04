@@ -32,6 +32,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
+import { athleteDisplayName } from "@/lib/athlete-name";
 
 interface RecurringCharge {
   id: string;
@@ -52,7 +53,8 @@ interface RecurringCharge {
   };
   athlete?: {
     id: string;
-    name: string;
+    firstName: string;
+    lastName: string;
     level: string;
   } | null;
   paymentMethod?: {
@@ -277,7 +279,7 @@ export default function RecurringBillingPage() {
                         <span className="font-medium">{charge.user?.name ?? "—"}</span>
                         {charge.athlete && (
                           <span className="text-xs text-muted-foreground">
-                            {charge.athlete.name}
+                            {athleteDisplayName(charge.athlete)}
                           </span>
                         )}
                       </div>

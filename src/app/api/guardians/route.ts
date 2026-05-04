@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
               },
             },
             select: {
-              athlete: { select: { id: true, name: true } },
+              athlete: { select: { id: true, firstName: true, lastName: true } },
               isPrimary: true,
             },
           },

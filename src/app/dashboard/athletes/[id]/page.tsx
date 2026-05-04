@@ -97,6 +97,7 @@ import { QUESTION_TYPE_LABELS } from "@/types/custom-information";
 import type { CustomInfoQuestionType } from "@/types/custom-information";
 import { RegistrationFilesSection } from "@/components/registration-files-section";
 import { WaiverViewerDialog } from "@/components/waiver-viewer-dialog";
+import { athleteDisplayName } from "@/lib/athlete-name";
 import { formatTime12h } from "@/lib/date-utils";
 
 interface RegistrationItem {
@@ -235,7 +236,10 @@ export default function AthleteProfilePage() {
     [searchParams, router]
   );
 
-  useBreadcrumbOverride(athlete ? `/dashboard/athletes/${athleteId}` : undefined, athlete?.name);
+  useBreadcrumbOverride(
+    athlete ? `/dashboard/athletes/${athleteId}` : undefined,
+    athlete ? athleteDisplayName(athlete) : undefined
+  );
 
   if (isLoading) {
     return (
@@ -312,7 +316,7 @@ export default function AthleteProfilePage() {
           <AvatarUpload
             currentAvatar={athlete.avatar ?? undefined}
             currentAvatarCrop={(athlete as any).avatarCrop ?? undefined}
-            name={athlete.name}
+            name={athleteDisplayName(athlete)}
             uploadUrl={`/api/athletes/${athlete.id}/avatar`}
             deleteUrl={`/api/athletes/${athlete.id}/avatar`}
             onAvatarChange={() => fetchAthlete()}
@@ -320,7 +324,9 @@ export default function AthleteProfilePage() {
           />
           <div className="flex flex-col gap-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-semibold tracking-tight">{athlete.name}</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">
+                {athleteDisplayName(athlete)}
+              </h1>
               {levelInfo ? (
                 <Badge
                   variant="outline"
@@ -397,7 +403,6 @@ export default function AthleteProfilePage() {
           <AthleteConfiguration
             athlete={{
               id: athlete.id,
-              name: athlete.name,
               firstName: athlete.firstName,
               lastName: athlete.lastName,
               email: athlete.email,

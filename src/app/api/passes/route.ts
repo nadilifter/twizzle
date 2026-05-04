@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
           athletePasses: include.includes("athletes")
             ? {
                 include: {
-                  athlete: { select: { id: true, firstName: true, lastName: true, name: true } },
+                  athlete: { select: { id: true, firstName: true, lastName: true } },
                 },
               }
             : undefined,

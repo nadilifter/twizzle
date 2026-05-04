@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
+import { athleteDisplayName } from "@/lib/athlete-name";
 import { getOrganizationFeatures } from "@/lib/feature-resolver";
 
 const EMPTY_RESPONSE = {
@@ -76,9 +77,9 @@ export async function GET(request: NextRequest) {
     db.athlete.findMany({
       where: {
         organizationAthletes: { some: { organizationId } },
-        OR: [{ firstName: nameFilter }, { lastName: nameFilter }, { name: nameFilter }],
+        OR: [{ firstName: nameFilter }, { lastName: nameFilter }],
       },
-      select: { id: true, firstName: true, lastName: true, name: true },
+      select: { id: true, firstName: true, lastName: true },
       orderBy: { lastName: "asc" },
       take,
     }),
@@ -133,7 +134,7 @@ export async function GET(request: NextRequest) {
     guardians,
     athletes: athletes.map((a) => ({
       id: a.id,
-      name: [a.firstName, a.lastName].filter(Boolean).join(" ") || a.name,
+      name: athleteDisplayName(a),
     })),
     programs,
     events: events.map((e: { id: string; title: string }) => ({

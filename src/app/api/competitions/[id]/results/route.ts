@@ -42,7 +42,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       },
       include: {
         athlete: {
-          select: { id: true, firstName: true, lastName: true, name: true },
+          select: { id: true, firstName: true, lastName: true },
         },
         team: true,
         category: {
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             recordedBy: session.user.id,
           },
           include: {
-            athlete: { select: { id: true, firstName: true, lastName: true, name: true } },
+            athlete: { select: { id: true, firstName: true, lastName: true } },
             team: true,
             category: { select: { id: true, resultType: true, sortDirection: true } },
           },

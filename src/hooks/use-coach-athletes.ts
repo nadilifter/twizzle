@@ -5,7 +5,8 @@ import { api, ApiError } from "@/lib/api-client";
 
 interface CoachAthlete {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string | null;
   level: string;
   group: string;

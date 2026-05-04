@@ -27,7 +27,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       },
       select: {
         id: true,
-        name: true,
+        firstName: true,
+        lastName: true,
         avatar: true,
         organizationAthletes: {
           where: { organizationId: session.user.organizationId },

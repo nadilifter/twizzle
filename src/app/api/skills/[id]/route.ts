@@ -7,7 +7,6 @@ import { imageUrlSchema } from "@/lib/schemas";
 const updateSkillSchema = z.object({
   name: z.string().min(1).optional(),
   category: z.string().min(1).optional(),
-  level: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   levelId: z.string().optional().nullable(),
   minAge: z.number().int().min(0).max(100).optional().nullable(),

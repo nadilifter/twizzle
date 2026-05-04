@@ -88,7 +88,6 @@ interface MemberData {
   title: string | null;
   hourlyRate: number | null;
   hireDate: string | null;
-  certifications: Array<{ name: string; expiresAt?: string | null; verified?: boolean }> | null;
   phone: string | null;
   emergencyContact: { name: string; phone: string; relationship?: string } | null;
   user: {
@@ -205,11 +204,6 @@ export default function StaffDetailPage() {
     grantedAt: new Date().toISOString().split("T")[0],
   });
 
-  // Legacy certifications state (kept for backward compatibility during migration)
-  const [certifications, setCertifications] = React.useState<
-    Array<{ name: string; expiresAt: string; verified: boolean }>
-  >([]);
-
   // Permissions state
   const [selectedRole, setSelectedRole] = React.useState<string>("");
   const [selectedPermissions, setSelectedPermissions] = React.useState<string[]>([]);
@@ -323,13 +317,6 @@ export default function StaffDetailPage() {
     setEmergencyContactName(data.emergencyContact?.name || "");
     setEmergencyContactPhone(data.emergencyContact?.phone || "");
     setEmergencyContactRelationship(data.emergencyContact?.relationship || "");
-    setCertifications(
-      (data.certifications || []).map((c) => ({
-        name: c.name,
-        expiresAt: c.expiresAt || "",
-        verified: c.verified || false,
-      }))
-    );
     setSelectedRole(data.role.toLowerCase());
     setSelectedPermissions(data.permissions.map((p) => p.permission));
     setAvailability(
@@ -370,27 +357,6 @@ export default function StaffDetailPage() {
       toast.success("Employment details saved");
     } catch {
       toast.error("Failed to save employment details");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleSaveCertifications = async () => {
-    setIsSaving(true);
-    try {
-      const response = await fetch(`/api/organization/members/${memberId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          certifications: certifications.length > 0 ? certifications : null,
-        }),
-      });
-      if (!response.ok) throw new Error("Failed to save");
-      const updated = await response.json();
-      setMember(updated);
-      toast.success("Certifications saved");
-    } catch {
-      toast.error("Failed to save certifications");
     } finally {
       setIsSaving(false);
     }
@@ -450,16 +416,6 @@ export default function StaffDetailPage() {
     setSelectedPermissions((prev) =>
       prev.includes(permId) ? prev.filter((p) => p !== permId) : [...prev, permId]
     );
-  };
-
-  const toggleCertification = (certName: string) => {
-    setCertifications((prev) => {
-      const existing = prev.find((c) => c.name === certName);
-      if (existing) {
-        return prev.filter((c) => c.name !== certName);
-      }
-      return [...prev, { name: certName, expiresAt: "", verified: false }];
-    });
   };
 
   const updateAvailabilityDay = (dayOfWeek: number, field: string, value: string | boolean) => {

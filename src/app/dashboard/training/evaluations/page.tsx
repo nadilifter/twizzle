@@ -60,6 +60,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { athleteDisplayName } from "@/lib/athlete-name";
 import { api } from "@/lib/api-client";
 import type {
   Skill,
@@ -447,9 +448,10 @@ export default function EvaluationsPage() {
   const filteredEvaluations = evaluations.filter((evaluation) => {
     if (evaluationSearch) {
       const search = evaluationSearch.toLowerCase();
+      const athleteName =
+        `${evaluation.athlete.firstName} ${evaluation.athlete.lastName}`.toLowerCase();
       return (
-        evaluation.athlete.name.toLowerCase().includes(search) ||
-        evaluation.template?.name.toLowerCase().includes(search)
+        athleteName.includes(search) || evaluation.template?.name.toLowerCase().includes(search)
       );
     }
     return true;
@@ -664,7 +666,9 @@ export default function EvaluationsPage() {
                 <TableBody>
                   {filteredEvaluations.map((evaluation) => (
                     <TableRow key={evaluation.id}>
-                      <TableCell className="font-medium">{evaluation.athlete.name}</TableCell>
+                      <TableCell className="font-medium">
+                        {athleteDisplayName(evaluation.athlete)}
+                      </TableCell>
                       <TableCell>
                         {evaluation.template?.name || evaluation.level?.name || "—"}
                       </TableCell>

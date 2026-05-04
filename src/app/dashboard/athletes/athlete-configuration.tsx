@@ -21,10 +21,10 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { athleteDisplayName } from "@/lib/athlete-name";
 
 interface AthleteData {
   id: string;
-  name: string;
   firstName: string;
   lastName: string;
   email: string | null;
@@ -55,7 +55,8 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
   const [isSaving, setIsSaving] = useState(false);
 
   const [formData, setFormData] = useState(() => ({
-    name: athlete.name || "",
+    firstName: athlete.firstName || "",
+    lastName: athlete.lastName || "",
     email: athlete.email || "",
     level: athlete.level || "",
     status: athlete.status || ("ACTIVE" as AthleteStatus),
@@ -68,8 +69,8 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
   }, [configuredLevels, formData.level]);
 
   const handleSave = async () => {
-    if (!formData.name.trim()) {
-      toast.error("Athlete name is required");
+    if (!formData.firstName.trim()) {
+      toast.error("Athlete first name is required");
       return;
     }
     if (!formData.level) {
@@ -80,7 +81,8 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
     setIsSaving(true);
     try {
       const payload: UpdateAthletePayload = {
-        name: formData.name.trim(),
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
         email: formData.email.trim() || null,
         level: formData.level,
         status: formData.status,
@@ -109,7 +111,9 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
             <User className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold">{athlete.name || "Edit Athlete"}</h2>
+            <h2 className="text-xl font-semibold">
+              {athleteDisplayName(athlete) || "Edit Athlete"}
+            </h2>
             <p className="text-sm text-muted-foreground">Update athlete profile and details.</p>
           </div>
         </div>
@@ -118,14 +122,25 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
       <div className="flex-1 overflow-y-auto p-6">
         <div className="space-y-6 max-w-2xl">
           {/* Name */}
-          <div className="space-y-2">
-            <Label htmlFor="config-name">Name *</Label>
-            <Input
-              id="config-name"
-              value={formData.name}
-              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-              placeholder="Athlete name"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="config-first-name">First Name *</Label>
+              <Input
+                id="config-first-name"
+                value={formData.firstName}
+                onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))}
+                placeholder="First name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="config-last-name">Last Name</Label>
+              <Input
+                id="config-last-name"
+                value={formData.lastName}
+                onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))}
+                placeholder="Last name"
+              />
+            </div>
           </div>
 
           {/* Email */}

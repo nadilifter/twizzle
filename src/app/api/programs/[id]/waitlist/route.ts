@@ -42,7 +42,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       where: { programId, status: "WAITLISTED" },
       include: {
         athlete: {
-          select: { id: true, name: true, email: true, avatar: true },
+          select: { id: true, firstName: true, lastName: true, email: true, avatar: true },
         },
       },
       orderBy: { createdAt: "asc" },

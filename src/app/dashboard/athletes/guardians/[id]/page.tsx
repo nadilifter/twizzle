@@ -32,6 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
+import { athleteDisplayName } from "@/lib/athlete-name";
 
 interface GuardianAthlete {
   id: string;
@@ -325,15 +326,20 @@ export default function GuardianDetailPage() {
                     <CardContent className="p-0">
                       <div className="flex items-center gap-4 p-4">
                         <Avatar className="h-12 w-12">
-                          <AvatarImage src={athlete.avatar || undefined} alt={athlete.name} />
-                          <AvatarFallback>{(athlete.name || "?").charAt(0)}</AvatarFallback>
+                          <AvatarImage
+                            src={athlete.avatar || undefined}
+                            alt={athleteDisplayName(athlete)}
+                          />
+                          <AvatarFallback>{athlete.firstName?.charAt(0) || "?"}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <Link
                             href={`/dashboard/athletes/${athlete.id}`}
                             className="hover:underline"
                           >
-                            <h4 className="font-semibold truncate">{athlete.name}</h4>
+                            <h4 className="font-semibold truncate">
+                              {athleteDisplayName(athlete)}
+                            </h4>
                           </Link>
                           <p className="text-sm text-muted-foreground">
                             {athlete.level || "No level"}

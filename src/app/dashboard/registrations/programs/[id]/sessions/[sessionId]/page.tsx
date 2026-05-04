@@ -16,6 +16,7 @@ import {
   Users,
 } from "lucide-react";
 
+import { athleteDisplayName, athleteInitial } from "@/lib/athlete-name";
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -58,7 +59,7 @@ interface SessionDetail {
   registrations: {
     id: string;
     status: string;
-    athlete: { id: string; name: string | null; avatar: string | null };
+    athlete: { id: string; firstName: string; lastName: string; avatar: string | null };
     user: { id: string; name: string | null; email: string } | null;
   }[];
   attendances: {
@@ -71,7 +72,7 @@ interface SessionDetail {
     date: string;
     overallScore: string | number;
     status: string;
-    athlete: { id: string; name: string | null; avatar: string | null };
+    athlete: { id: string; firstName: string; lastName: string; avatar: string | null };
     coach: { id: string; name: string | null } | null;
     template: { id: string; name: string } | null;
   }[];
@@ -279,14 +280,14 @@ export default function ProgramSessionDetailPage() {
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={reg.athlete.avatar || undefined} />
                             <AvatarFallback className="text-xs">
-                              {getInitials(reg.athlete.name)}
+                              {athleteInitial(reg.athlete)}
                             </AvatarFallback>
                           </Avatar>
                           <Link
                             href={`/dashboard/registrations/programs/${programId}/athletes/${reg.athlete.id}`}
                             className="font-medium text-primary hover:underline"
                           >
-                            {reg.athlete.name ?? "Unknown"}
+                            {athleteDisplayName(reg.athlete) || "Unknown"}
                           </Link>
                         </div>
                       </TableCell>
@@ -410,7 +411,7 @@ export default function ProgramSessionDetailPage() {
                         href={`/dashboard/registrations/programs/${programId}/athletes/${e.athlete.id}`}
                         className="text-primary hover:underline"
                       >
-                        {e.athlete.name ?? "Unknown"}
+                        {athleteDisplayName(e.athlete) || "Unknown"}
                       </Link>
                     </TableCell>
                     <TableCell>{e.template?.name ?? "-"}</TableCell>

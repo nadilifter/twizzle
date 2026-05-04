@@ -108,7 +108,6 @@ interface CompetitionEntry {
     id: string;
     firstName: string;
     lastName: string;
-    name: string;
     level: string;
   };
   category: CompetitionCategory;
@@ -130,7 +129,7 @@ interface CompetitionResult {
   attemptNumber: number | null;
   isBestAttempt: boolean;
   notes: string | null;
-  athlete: { id: string; firstName: string; lastName: string; name: string } | null;
+  athlete: { id: string; firstName: string; lastName: string } | null;
   team: { id: string; name: string } | null;
   category: { id: string; resultType: string; sortDirection: string; precision: number };
 }
@@ -475,8 +474,7 @@ export default function ResultsPage() {
                               <div className="flex items-center gap-2 min-w-0">
                                 <div className="min-w-0">
                                   <p className="text-sm font-medium truncate">
-                                    {entry.athlete.firstName || entry.athlete.name}{" "}
-                                    {entry.athlete.lastName}
+                                    {entry.athlete.firstName} {entry.athlete.lastName}
                                   </p>
                                   <div className="flex items-center gap-1.5">
                                     <Badge
@@ -565,7 +563,7 @@ export default function ResultsPage() {
                                       <div>
                                         <p className="text-sm font-medium">
                                           {result.athlete
-                                            ? `${result.athlete.firstName || result.athlete.name} ${result.athlete.lastName}`
+                                            ? `${result.athlete.firstName} ${result.athlete.lastName}`
                                             : result.team?.name || "—"}
                                         </p>
                                         <div className="flex items-center gap-1.5">
@@ -639,8 +637,7 @@ export default function ResultsPage() {
                                     .filter((e) => e.status === "APPROVED")
                                     .map((entry) => (
                                       <SelectItem key={entry.athlete.id} value={entry.athlete.id}>
-                                        {entry.athlete.firstName || entry.athlete.name}{" "}
-                                        {entry.athlete.lastName}
+                                        {entry.athlete.firstName} {entry.athlete.lastName}
                                       </SelectItem>
                                     ))}
                                 </SelectContent>

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Shield, Check, X, User, Clock } from "lucide-react";
 import { toast } from "sonner";
+import { athleteDisplayName } from "@/lib/athlete-name";
 import { format } from "date-fns";
 
 interface ClaimRequest {
@@ -105,7 +106,7 @@ export default function GuardianRequestsPage() {
       ) : (
         <div className="space-y-4">
           {claims.map((claim) => {
-            const athleteName = `${claim.athlete.firstName} ${claim.athlete.lastName}`.trim();
+            const athleteName = athleteDisplayName(claim.athlete);
             const isProcessing = processingId === claim.id;
 
             return (

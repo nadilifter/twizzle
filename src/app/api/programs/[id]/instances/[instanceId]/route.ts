@@ -49,7 +49,8 @@ export async function GET(
             athlete: {
               select: {
                 id: true,
-                name: true,
+                firstName: true,
+                lastName: true,
                 avatar: true,
               },
             },
@@ -64,7 +65,8 @@ export async function GET(
             athlete: {
               select: {
                 id: true,
-                name: true,
+                firstName: true,
+                lastName: true,
                 avatar: true,
               },
             },
@@ -72,7 +74,7 @@ export async function GET(
         },
         evaluations: {
           include: {
-            athlete: { select: { id: true, name: true, avatar: true } },
+            athlete: { select: { id: true, firstName: true, lastName: true, avatar: true } },
             coach: { select: { id: true, name: true } },
             template: { select: { id: true, name: true } },
           },

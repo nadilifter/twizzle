@@ -17,6 +17,7 @@ import {
   type TemplateContext,
 } from "@/lib/notification-template-service";
 import { getSubdomainUrl } from "@/lib/env-domains";
+import { athleteDisplayName } from "@/lib/athlete-name";
 import { Prisma } from "@prisma/client";
 import type {
   NotificationRule,
@@ -556,10 +557,9 @@ export async function buildTemplateContext(
       },
     });
     if (athlete) {
-      context.athleteName = athlete.name;
-      const nameParts = athlete.name.split(" ");
-      context.athleteFirstName = nameParts[0];
-      context.athleteLastName = nameParts.slice(1).join(" ") || undefined;
+      context.athleteName = athleteDisplayName(athlete);
+      context.athleteFirstName = athlete.firstName;
+      context.athleteLastName = athlete.lastName || undefined;
       context.athleteEmail = athlete.email || undefined;
       const orgAthleteLevel = athlete.organizationAthletes[0]?.level;
       context.athleteLevel = orgAthleteLevel || undefined;

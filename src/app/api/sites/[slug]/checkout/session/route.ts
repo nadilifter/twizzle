@@ -13,6 +13,7 @@ import { calculateBulkDiscounts } from "@/lib/bulk-discounts";
 import { logger } from "@/lib/logger";
 import { userHasUsedDiscount, getGuardianUsedBulkDiscountIds } from "@/lib/invoice-processing";
 import { z } from "zod";
+import { athleteDisplayName } from "@/lib/athlete-name";
 import { isValidPhoneNumber } from "libphonenumber-js";
 
 const cartItemSchema = z.object({
@@ -2019,7 +2020,7 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
           organizationId,
           source: "ONLINE",
           fulfillmentStatus: "PENDING",
-          customerName: `${resolvedContact.firstName} ${resolvedContact.lastName}`.trim() || null,
+          customerName: athleteDisplayName(resolvedContact) || null,
           customerEmail: resolvedContact.email || null,
           customerPhone: resolvedContact.phone || null,
           shippingStreet: shippingAddress?.street || null,

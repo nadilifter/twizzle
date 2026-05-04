@@ -75,6 +75,7 @@ import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
 import { toast } from "sonner";
+import { athleteDisplayName } from "@/lib/athlete-name";
 import { formatTime12h } from "@/lib/date-utils";
 
 interface EvaluationTemplateSkillInfo {
@@ -105,7 +106,7 @@ interface InstanceEvaluation {
   status: string;
   overallScore: number;
   notes: string | null;
-  athlete: { id: string; name: string; avatar: string | null };
+  athlete: { id: string; firstName: string; lastName: string; avatar: string | null };
   template: EvaluationTemplateInfo | null;
   skillRatings: Array<{
     id: string;
@@ -154,7 +155,8 @@ interface Registration {
   createdAt: string;
   athlete: {
     id: string;
-    name: string;
+    firstName: string;
+    lastName: string;
     birthDate: string | null;
     avatar: string | null;
   };
@@ -171,7 +173,8 @@ interface Attendance {
   notes: string | null;
   athlete: {
     id: string;
-    name: string;
+    firstName: string;
+    lastName: string;
   };
 }
 
@@ -844,7 +847,9 @@ export default function InstanceDetailPage() {
                       );
                       return (
                         <TableRow key={reg.id}>
-                          <TableCell className="font-medium">{reg.athlete.name}</TableCell>
+                          <TableCell className="font-medium">
+                            {athleteDisplayName(reg.athlete)}
+                          </TableCell>
                           <TableCell>{reg.user?.name || "-"}</TableCell>
                           <TableCell>{getStatusBadge(reg.status)}</TableCell>
                           <TableCell>
@@ -1152,9 +1157,9 @@ export default function InstanceDetailPage() {
                                 <Avatar className="h-7 w-7">
                                   <AvatarImage src={evalItem.athlete.avatar || undefined} />
                                   <AvatarFallback className="text-xs">
-                                    {evalItem.athlete.name
-                                      .split(" ")
-                                      .map((n) => n[0])
+                                    {[evalItem.athlete.firstName, evalItem.athlete.lastName]
+                                      .filter(Boolean)
+                                      .map((n: string) => n[0])
                                       .join("")
                                       .slice(0, 2)}
                                   </AvatarFallback>
@@ -1163,7 +1168,7 @@ export default function InstanceDetailPage() {
                                   className="text-sm font-medium hover:underline text-left"
                                   onClick={() => openDetailSheet(evalItem)}
                                 >
-                                  {evalItem.athlete.name}
+                                  {athleteDisplayName(evalItem.athlete)}
                                 </button>
                               </div>
                             </TableCell>
@@ -1314,7 +1319,8 @@ export default function InstanceDetailPage() {
           <SheetHeader>
             <SheetTitle>Evaluation Details</SheetTitle>
             <SheetDescription>
-              {detailEvaluation?.athlete.name} — {evaluationTemplate?.name}
+              {detailEvaluation ? athleteDisplayName(detailEvaluation.athlete) : ""} —{" "}
+              {evaluationTemplate?.name}
             </SheetDescription>
           </SheetHeader>
           {detailEvaluation && (

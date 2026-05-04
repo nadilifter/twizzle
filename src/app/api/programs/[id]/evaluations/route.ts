@@ -61,7 +61,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           athlete: {
             select: {
               id: true,
-              name: true,
+              firstName: true,
+              lastName: true,
               avatar: true,
             },
           },
@@ -264,7 +265,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             athlete: {
               select: {
                 id: true,
-                name: true,
+                firstName: true,
+                lastName: true,
               },
             },
           },

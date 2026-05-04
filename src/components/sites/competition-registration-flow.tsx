@@ -72,6 +72,7 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { athleteDisplayName } from "@/lib/athlete-name";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 // ---------- Types ----------
@@ -996,7 +997,7 @@ export function CompetitionRegistrationFlow({
 
     setIsAddingToCart(true);
 
-    const athleteName = `${selectedAthlete.firstName} ${selectedAthlete.lastName}`.trim();
+    const athleteName = athleteDisplayName(selectedAthlete);
 
     // Add membership to cart first if required
     if (eligibilityResult?.requiresMembershipPurchase && selectedMembership) {
@@ -1381,7 +1382,7 @@ export function CompetitionRegistrationFlow({
                     {athletes.length > 0 && (
                       <div className="space-y-2 max-h-[300px] overflow-y-auto">
                         {eligibleAthletes.map((athlete) => {
-                          const displayName = `${athlete.firstName} ${athlete.lastName}`.trim();
+                          const displayName = athleteDisplayName(athlete);
                           const birthLabel = athlete.birthDate
                             ? new Date(athlete.birthDate).toLocaleDateString("en-US", {
                                 month: "short",
@@ -1427,7 +1428,7 @@ export function CompetitionRegistrationFlow({
                               </p>
                             </div>
                             {ineligibleAthletes.map((athlete) => {
-                              const displayName = `${athlete.firstName} ${athlete.lastName}`.trim();
+                              const displayName = athleteDisplayName(athlete);
                               const age = calculateAge(athlete.birthDate);
 
                               return (

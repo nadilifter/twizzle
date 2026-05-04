@@ -22,7 +22,7 @@ async function getOrgEnrollment(enrollmentId: string, organizationId: string) {
     },
     include: {
       athlete: {
-        select: { id: true, name: true },
+        select: { id: true, firstName: true, lastName: true },
       },
       program: true,
     },
@@ -89,7 +89,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       },
       include: {
         athlete: {
-          select: { id: true, name: true },
+          select: { id: true, firstName: true, lastName: true },
         },
         program: true,
       },

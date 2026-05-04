@@ -1,11 +1,11 @@
 import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
 import { isFeatureEnabled } from "@/lib/feature-resolver";
+import { athleteDisplayName } from "@/lib/athlete-name";
 import type {
   EmailClassification,
   EmailStatus,
   EmailCampaignStatus,
-  AnnouncementScope,
   EmailTargetType,
 } from "@prisma/client";
 
@@ -41,29 +41,6 @@ export interface SendSingleEmailResult {
   sesMessageId?: string;
   error?: string;
   errorCode?: string;
-}
-
-export interface CreateCampaignParams {
-  organizationId: string;
-  name: string;
-  subject: string;
-  htmlBody: string;
-  textBody?: string;
-  classification?: EmailClassification;
-  targetScope: AnnouncementScope;
-  targetProgramId?: string;
-  targetEventId?: string;
-  targetMembershipStatus?: "ACTIVE" | "EXPIRED";
-  createdById?: string;
-  scheduledAt?: Date;
-  sendImmediately?: boolean;
-}
-
-export interface CreateCampaignResult {
-  success: boolean;
-  campaignId?: string;
-  totalRecipients?: number;
-  error?: string;
 }
 
 export interface EmailUsageLimitResult {
@@ -354,33 +331,6 @@ export interface ExpandedTargetingParams {
   targetProgramInstanceId?: string;
   targetMembershipGroupIds?: string[];
   targetUserIds?: string[];
-}
-
-/**
- * Get email recipients for a campaign target (legacy - kept for backward compat)
- */
-export async function getCampaignRecipients(
-  organizationId: string,
-  targetScope: AnnouncementScope,
-  targetProgramId?: string,
-  targetEventId?: string,
-  targetMembershipStatus?: "ACTIVE" | "EXPIRED"
-): Promise<EmailRecipient[]> {
-  // Map legacy scope to new target type
-  const targetTypeMap: Record<string, EmailTargetType> = {
-    ALL: "ALL_MEMBERS",
-    PROGRAM: "PROGRAM_ANY_INSTANCE",
-    EVENT: "ALL_MEMBERS", // Events will be handled via legacy path
-    GUARDIAN: "ALL_GUARDIANS",
-  };
-
-  return getExpandedCampaignRecipients({
-    organizationId,
-    targetType: targetTypeMap[targetScope] || "ALL_MEMBERS",
-    targetProgramId,
-    targetEventId: targetScope === "EVENT" ? targetEventId : undefined,
-    targetMembershipStatus,
-  });
 }
 
 /**
@@ -947,86 +897,6 @@ export async function sendSingleEmail(
 }
 
 /**
- * Create and optionally send an email campaign
- */
-export async function createEmailCampaign(
-  params: CreateCampaignParams
-): Promise<CreateCampaignResult> {
-  const {
-    organizationId,
-    name,
-    subject,
-    htmlBody,
-    textBody,
-    classification = "GENERAL",
-    targetScope,
-    targetProgramId,
-    targetEventId,
-    targetMembershipStatus,
-    createdById,
-    scheduledAt,
-    sendImmediately = false,
-  } = params;
-
-  // Get recipients
-  const recipients = await getCampaignRecipients(
-    organizationId,
-    targetScope,
-    targetProgramId,
-    targetEventId,
-    targetMembershipStatus
-  );
-
-  if (recipients.length === 0) {
-    return {
-      success: false,
-      error: "No valid recipients found for this campaign",
-    };
-  }
-
-  // Check usage limits for all messages
-  const limits = await checkEmailUsageLimits(organizationId, recipients.length);
-  if (!limits.allowed) {
-    return {
-      success: false,
-      error: limits.error || "Email limit reached",
-    };
-  }
-
-  // Create campaign
-  const campaign = await db.emailCampaign.create({
-    data: {
-      organizationId,
-      name,
-      subject,
-      htmlBody,
-      textBody,
-      classification,
-      targetScope,
-      targetProgramId,
-      targetEventId,
-      targetMembershipStatus,
-      totalRecipients: recipients.length,
-      createdById,
-      status: scheduledAt ? "SCHEDULED" : "DRAFT",
-      scheduledAt,
-    },
-  });
-
-  // If sendImmediately, start sending
-  if (sendImmediately && !scheduledAt) {
-    // Execute in background (don't await to return quickly)
-    executeEmailCampaign(campaign.id).catch(console.error);
-  }
-
-  return {
-    success: true,
-    campaignId: campaign.id,
-    totalRecipients: recipients.length,
-  };
-}
-
-/**
  * Build template context for a specific recipient
  */
 async function buildRecipientContext(
@@ -1093,10 +963,9 @@ async function buildRecipientContext(
       context.guardianBalance = `$${Number(user.balance).toFixed(2)}`;
       const athlete = user.athleteGuardians[0]?.athlete;
       if (athlete) {
-        context.athleteName = athlete.name;
-        const nameParts = athlete.name.split(" ");
-        context.athleteFirstName = nameParts[0];
-        if (nameParts.length > 1) context.athleteLastName = nameParts.slice(1).join(" ");
+        context.athleteName = athleteDisplayName(athlete);
+        context.athleteFirstName = athlete.firstName;
+        if (athlete.lastName) context.athleteLastName = athlete.lastName;
         if (athlete.email) context.athleteEmail = athlete.email;
         const oaLevel = athlete.organizationAthletes?.[0]?.level;
         if (oaLevel) context.athleteLevel = oaLevel;

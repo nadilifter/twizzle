@@ -78,6 +78,7 @@ import { formatTime12h } from "@/lib/date-utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SessionCalendar } from "@/components/sites/session-calendar";
+import { athleteDisplayName } from "@/lib/athlete-name";
 import { AddPaymentMethodDialog } from "@/components/billing/add-payment-method-dialog";
 import {
   SavedPaymentMethodDisplay,
@@ -1118,7 +1119,7 @@ export function ProgramRegistrationFlow({
   const addCartItems = (silent: boolean) => {
     if (!selectedAthlete) return;
 
-    const athleteName = `${selectedAthlete.firstName} ${selectedAthlete.lastName}`.trim();
+    const athleteName = athleteDisplayName(selectedAthlete);
     const opts = silent ? ({ silent: true } as const) : undefined;
 
     if (needsMembershipPurchase && selectedMembership) {
@@ -1516,7 +1517,7 @@ export function ProgramRegistrationFlow({
                     {athletes.length > 0 && (
                       <div className="space-y-2 max-h-[300px] overflow-y-auto">
                         {eligibleAthletes.map((athlete) => {
-                          const displayName = `${athlete.firstName} ${athlete.lastName}`.trim();
+                          const displayName = athleteDisplayName(athlete);
                           const birthLabel = athlete.birthDate
                             ? new Date(athlete.birthDate).toLocaleDateString("en-US", {
                                 month: "short",
@@ -1575,7 +1576,7 @@ export function ProgramRegistrationFlow({
                               </p>
                             </div>
                             {ineligibleAthletes.map((athlete) => {
-                              const displayName = `${athlete.firstName} ${athlete.lastName}`.trim();
+                              const displayName = athleteDisplayName(athlete);
                               const age = calculateAge(athlete.birthDate);
                               const reasons: string[] = [];
                               if (

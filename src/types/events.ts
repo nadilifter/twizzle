@@ -59,7 +59,8 @@ export interface EventDetail extends EventWithRelations {
     checkedIn: string | null;
     athlete: {
       id: string;
-      name: string;
+      firstName: string;
+      lastName: string;
       avatar: string | null;
     };
   }[];

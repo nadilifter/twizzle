@@ -3,11 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
 import { checkFeatureGate } from "@/lib/feature-resolver";
 import { z } from "zod";
-import {
-  createEmailCampaign,
-  checkEmailUsageLimits,
-  getExpandedCampaignRecipients,
-} from "@/lib/email-campaign-service";
+import { checkEmailUsageLimits, getExpandedCampaignRecipients } from "@/lib/email-campaign-service";
 import { renderCampaignEmail, getOrganizationBranding } from "@/lib/email-template-renderer";
 import type { EmailTargetType } from "@prisma/client";
 
@@ -34,7 +30,6 @@ const createCampaignSchema = z.object({
     ])
     .default("ALL_MEMBERS"),
   // Legacy targeting (backward compat)
-  targetScope: z.enum(["ALL", "PROGRAM", "EVENT"]).optional(),
   targetProgramId: z.string().optional(),
   targetEventId: z.string().optional(),
   targetMembershipStatus: z.enum(["ACTIVE", "EXPIRED"]).optional(),
@@ -226,18 +221,6 @@ export async function POST(request: NextRequest) {
       branding,
     });
 
-    // Map targetType to legacy targetScope for backward compat
-    const targetScopeMap: Record<string, string> = {
-      ALL_USERS: "ALL",
-      ALL_MEMBERS: "ALL",
-      ALL_PROGRAM_REGISTRANTS: "ALL",
-      PROGRAM_ANY_INSTANCE: "PROGRAM",
-      PROGRAM_SPECIFIC_INSTANCE: "PROGRAM",
-      MEMBERSHIP_HOLDERS: "ALL",
-      SPECIFIC_USERS: "ALL",
-      ALL_GUARDIANS: "ALL",
-    };
-
     // Get recipients using expanded targeting
     const recipients = await getExpandedCampaignRecipients({
       organizationId: session.user.organizationId,
@@ -273,7 +256,6 @@ export async function POST(request: NextRequest) {
         rawBody: validatedData.htmlBody,
         textBody: validatedData.textBody || renderedText,
         classification: validatedData.classification,
-        targetScope: (targetScopeMap[validatedData.targetType] || "ALL") as any,
         targetType: validatedData.targetType as EmailTargetType,
         targetProgramId: validatedData.targetProgramId,
         targetEventId: validatedData.targetEventId,

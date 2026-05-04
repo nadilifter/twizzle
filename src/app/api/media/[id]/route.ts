@@ -29,7 +29,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         athlete: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
           },
         },
         event: {
@@ -136,7 +137,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         athlete: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
           },
         },
         event: {

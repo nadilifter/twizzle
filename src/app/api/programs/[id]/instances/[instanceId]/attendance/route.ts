@@ -60,7 +60,8 @@ export async function GET(
         athlete: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             email: true,
             avatar: true,
           },
@@ -79,7 +80,8 @@ export async function GET(
         athlete: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             email: true,
             avatar: true,
           },
@@ -233,7 +235,8 @@ export async function POST(
           athlete: {
             select: {
               id: true,
-              name: true,
+              firstName: true,
+              lastName: true,
               avatar: true,
             },
           },

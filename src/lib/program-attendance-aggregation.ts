@@ -1,3 +1,4 @@
+import { athleteDisplayName } from "@/lib/athlete-name";
 /**
  * Pure helpers for rolling up InstanceAttendance records into
  * per-athlete and per-session summaries. Kept free of Prisma / network
@@ -10,7 +11,7 @@ export interface AttendanceInput {
   athleteId: string;
   programInstanceId: string;
   status: string;
-  athlete: { id: string; name: string | null; avatar: string | null };
+  athlete: { id: string; firstName: string; lastName: string; avatar: string | null };
   programInstance: {
     id: string;
     date: Date;
@@ -95,7 +96,7 @@ export function summarizeAttendanceByAthlete(
     if (!row) {
       row = {
         athleteId: a.athleteId,
-        name: a.athlete.name,
+        name: athleteDisplayName(a.athlete) || null,
         avatar: a.athlete.avatar,
         present: 0,
         absent: 0,

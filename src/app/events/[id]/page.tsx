@@ -23,6 +23,7 @@ import { format } from "date-fns";
 import { formatTime12h } from "@/lib/date-utils";
 import { useEvent } from "@/hooks/use-events";
 import { useAttendance } from "@/hooks/use-attendance";
+import { athleteDisplayName } from "@/lib/athlete-name";
 import { toast } from "sonner";
 import {
   Select,
@@ -91,10 +92,13 @@ export default function EventCheckinPage({ params }: EventCheckinPageProps) {
       filtered = filtered.filter((a) => a.status === "REGISTERED" || a.status === "ABSENT");
     }
 
+    const athleteFullName = (a: { athlete: { firstName: string; lastName: string } }) =>
+      athleteDisplayName(a.athlete);
+
     // Apply search
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((a) => a.athlete.name.toLowerCase().includes(query));
+      filtered = filtered.filter((a) => athleteFullName(a).toLowerCase().includes(query));
     }
 
     // Sort: not checked in first, then alphabetically
@@ -104,7 +108,7 @@ export default function EventCheckinPage({ params }: EventCheckinPageProps) {
       if (aCheckedIn !== bCheckedIn) {
         return aCheckedIn ? 1 : -1;
       }
-      return a.athlete.name.localeCompare(b.athlete.name);
+      return athleteFullName(a).localeCompare(athleteFullName(b));
     });
 
     return filtered;
@@ -261,11 +265,13 @@ export default function EventCheckinPage({ params }: EventCheckinPageProps) {
                               : "bg-primary/10 text-primary"
                           }`}
                         >
-                          {getInitials(attendance.athlete.name)}
+                          {getInitials(athleteDisplayName(attendance.athlete))}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{attendance.athlete.name}</p>
+                        <p className="font-medium truncate">
+                          {athleteDisplayName(attendance.athlete)}
+                        </p>
                         <div className="flex items-center gap-2">
                           <Badge
                             variant={isCheckedIn ? "default" : "secondary"}

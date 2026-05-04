@@ -30,6 +30,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { api, ApiError } from "@/lib/api-client";
 import type { EvaluationWithRelations, EvaluationSkillRating, Level } from "@/types/evaluations";
+import { athleteDisplayName } from "@/lib/athlete-name";
 
 // ─── Status Config ──────────────────────────────────────────────────
 
@@ -100,7 +101,7 @@ export default function EvaluationDetailPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  const athleteName = evaluation?.athlete?.name;
+  const athleteName = evaluation?.athlete ? athleteDisplayName(evaluation.athlete) : undefined;
   const templateName = evaluation?.template?.name;
   const evalDate = evaluation ? format(new Date(evaluation.date), "MMM d, yyyy") : undefined;
   const breadcrumbLabel = templateName ? `${templateName} – ${evalDate}` : evalDate;

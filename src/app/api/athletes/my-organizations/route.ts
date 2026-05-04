@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 // tenant-isolation-ok: user-scoped athlete portal route, queries across orgs by user identity
 import { db } from "@/lib/db";
+import { athleteDisplayName } from "@/lib/athlete-name";
 import { getSubdomainUrl } from "@/lib/env-domains";
 
 interface OrgConnection {
@@ -155,7 +156,7 @@ export async function GET(request: NextRequest) {
 
     for (const link of guardianLinks) {
       const athlete = link.athlete;
-      const athleteName = `${athlete.firstName} ${athlete.lastName}`.trim();
+      const athleteName = athleteDisplayName(athlete);
       for (const oa of athlete.organizationAthletes) {
         upsertOrg(oa.organization, { type: "athlete", detail: athleteName }, false);
       }
@@ -177,7 +178,7 @@ export async function GET(request: NextRequest) {
     });
 
     for (const athlete of selfAthletes) {
-      const athleteName = `${athlete.firstName} ${athlete.lastName}`.trim();
+      const athleteName = athleteDisplayName(athlete);
       for (const oa of athlete.organizationAthletes) {
         upsertOrg(oa.organization, { type: "athlete", detail: athleteName }, false);
       }

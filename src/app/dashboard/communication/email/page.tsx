@@ -57,7 +57,6 @@ interface EmailCampaign {
   subject: string;
   status: string;
   targetType: string;
-  targetScope: string;
   totalRecipients: number;
   sentCount: number;
   deliveredCount: number;

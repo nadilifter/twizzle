@@ -8,7 +8,6 @@ import { imageUrlSchema } from "@/lib/schemas";
 const createSkillSchema = z.object({
   name: z.string().min(1, "Name is required"),
   category: z.string().min(1, "Category is required"),
-  level: z.string().optional(),
   description: z.string().optional(),
   levelId: z.string().optional().nullable(),
   minAge: z.number().int().min(0).max(100).optional().nullable(),
@@ -31,7 +30,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";
     const category = searchParams.get("category");
-    const level = searchParams.get("level");
     const levelId = searchParams.get("levelId");
     const minAge = searchParams.get("minAge");
     const maxAge = searchParams.get("maxAge");
@@ -47,7 +45,6 @@ export async function GET(request: NextRequest) {
         ],
       }),
       ...(category && { category }),
-      ...(level && { level }),
       ...(levelId && { levelId }),
       // Filter skills appropriate for an athlete's age
       ...(minAge && {

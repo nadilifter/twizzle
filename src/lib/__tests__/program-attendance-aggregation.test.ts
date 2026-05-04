@@ -10,7 +10,7 @@ function makeAttendance(overrides: Partial<AttendanceInput> = {}): AttendanceInp
     athleteId: "a1",
     programInstanceId: "s1",
     status: "PRESENT",
-    athlete: { id: "a1", name: "Alice", avatar: null },
+    athlete: { id: "a1", firstName: "Alice", lastName: "", avatar: null },
     programInstance: {
       id: "s1",
       date: new Date("2026-06-01T00:00:00Z"),
@@ -80,12 +80,12 @@ describe("summarizeAttendanceByAthlete", () => {
     const rows = summarizeAttendanceByAthlete([
       makeAttendance({
         athleteId: "a1",
-        athlete: { id: "a1", name: "Zara", avatar: null },
+        athlete: { id: "a1", firstName: "Zara", lastName: "", avatar: null },
         status: "PRESENT",
       }),
       makeAttendance({
         athleteId: "a2",
-        athlete: { id: "a2", name: "Alex", avatar: null },
+        athlete: { id: "a2", firstName: "Alex", lastName: "", avatar: null },
         status: "ABSENT",
       }),
     ]);

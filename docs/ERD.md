@@ -122,7 +122,6 @@ erDiagram
         string title "Job title"
         decimal hourlyRate
         datetime hireDate
-        json certifications "Legacy JSON; use MemberCertification"
         string phone "Per-org override of user phone"
         json emergencyContact
         datetime joinedAt
@@ -207,7 +206,6 @@ erDiagram
 
     Athlete {
         string id PK
-        string name "Legacy single-name field"
         string firstName
         string lastName
         string email "Athlete's own email (adults / teens)"
@@ -215,7 +213,6 @@ erDiagram
         json avatarCrop "Crop metadata {x,y,zoom,aspect}"
         datetime birthDate "For age gating"
         enum gender "MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY"
-        json medicalDetails "Legacy blob — prefer AthleteMedicalInfo"
         string userId FK_UK "Set only for self-athletes"
         boolean allowGuardianClaims "Can other guardians request to link?"
     }
@@ -759,14 +756,13 @@ erDiagram
         string id PK
         string name
         string category "Vault | Bars | Beam | Floor"
-        string level "Legacy text field"
         string description
         string organizationId FK
         int minAge
         int maxAge
         string videoUrl
         string imageUrl
-        string levelId FK "New system (Level model)"
+        string levelId FK
     }
 
     EvaluationTemplate {
@@ -1263,7 +1259,6 @@ erDiagram
         decimal amount
         enum method "CARD | BANK | CASH | CHECK"
         enum status "PENDING | COMPLETED | FAILED | REFUNDED"
-        string transactionId "Legacy string field"
         datetime processedAt
     }
 
@@ -1733,7 +1728,6 @@ erDiagram
         string name
         string body
         enum classification
-        enum targetScope "Legacy: ALL | PROGRAM | EVENT | GUARDIAN"
         enum targetType "ALL_USERS | ALL_MEMBERS | ALL_PROGRAM_REGISTRANTS | PROGRAM_ANY_INSTANCE | PROGRAM_SPECIFIC_INSTANCE | MEMBERSHIP_HOLDERS | SPECIFIC_USERS | ALL_GUARDIANS"
         string targetProgramId
         string targetEventId
@@ -2155,8 +2149,6 @@ erDiagram
         enum billingCycle "MONTHLY | YEARLY"
         datetime currentPeriodStart
         datetime currentPeriodEnd
-        string stripeCustomerId "Legacy"
-        string stripeSubscriptionId "Legacy"
         string adyenShopperReference UK
         string adyenRecurringDetailRef "Primary token"
         boolean isLocked "Org cannot change plan"

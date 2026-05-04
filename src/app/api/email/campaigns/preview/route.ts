@@ -2,11 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { checkFeatureGate } from "@/lib/feature-resolver";
 import { z } from "zod";
-import {
-  getCampaignRecipients,
-  getExpandedCampaignRecipients,
-  checkEmailUsageLimits,
-} from "@/lib/email-campaign-service";
+import { getExpandedCampaignRecipients, checkEmailUsageLimits } from "@/lib/email-campaign-service";
 import { renderCampaignEmail, getOrganizationBranding } from "@/lib/email-template-renderer";
 import { renderTemplatePreview } from "@/lib/notification-template-service";
 import type { EmailTargetType } from "@prisma/client";
@@ -14,9 +10,6 @@ import type { EmailTargetType } from "@prisma/client";
 const previewSchema = z.object({
   subject: z.string().min(1, "Subject is required"),
   htmlBody: z.string().min(1, "Email body is required"),
-  // Legacy targeting
-  targetScope: z.enum(["ALL", "PROGRAM", "EVENT"]).optional(),
-  // New expanded targeting
   targetType: z
     .enum([
       "ALL_USERS",
@@ -74,7 +67,7 @@ export async function POST(request: NextRequest) {
       unsubscribeUrl: "#unsubscribe",
     });
 
-    // Get recipient count using new or legacy targeting
+    // Get recipient count using expanded targeting
     let recipientCount = 0;
     if (validatedData.targetType) {
       const recipients = await getExpandedCampaignRecipients({
@@ -86,15 +79,6 @@ export async function POST(request: NextRequest) {
         targetProgramInstanceId: validatedData.targetProgramInstanceId,
         targetMembershipGroupIds: validatedData.targetMembershipGroupIds,
       });
-      recipientCount = recipients.length;
-    } else if (validatedData.targetScope) {
-      const recipients = await getCampaignRecipients(
-        session.user.organizationId,
-        validatedData.targetScope,
-        validatedData.targetProgramId,
-        validatedData.targetEventId,
-        validatedData.targetMembershipStatus
-      );
       recipientCount = recipients.length;
     }
 

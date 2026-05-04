@@ -38,7 +38,6 @@ export async function syncUserToSelfAthlete(userId: string): Promise<void> {
       data: {
         firstName,
         lastName,
-        name: user.name,
         email: user.email,
         avatar: user.avatar,
         avatarCrop: (user.avatarCrop as Prisma.InputJsonValue) ?? Prisma.DbNull,

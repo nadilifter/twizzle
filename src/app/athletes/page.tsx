@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AddAthleteDialog } from "@/components/add-athlete-dialog";
 import { User, Users, ChevronRight, Shield, Calendar, Plus } from "lucide-react";
+import { athleteDisplayName } from "@/lib/athlete-name";
 import { format } from "date-fns";
 
 interface AthleteWithGuardians {
@@ -164,7 +165,7 @@ export default function AthletesPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {athletes.map((athlete) => {
-            const displayName = `${athlete.firstName} ${athlete.lastName}`.trim() || athlete.name;
+            const displayName = athleteDisplayName(athlete);
             const initials =
               `${athlete.firstName?.[0] || ""}${athlete.lastName?.[0] || ""}`.toUpperCase();
 

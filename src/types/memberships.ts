@@ -114,7 +114,6 @@ export interface AthleteMembership {
     id: string;
     firstName: string;
     lastName: string;
-    name: string;
     customId: string | null;
   };
   instance?: MembershipInstance;

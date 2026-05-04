@@ -8,7 +8,6 @@ export type GenderDeclaration = "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY
 // level, status, customId come from OrganizationAthlete but are flattened into API responses
 export interface Athlete {
   id: string;
-  name: string; // Deprecated: use firstName + lastName
   firstName: string;
   lastName: string;
   email: string | null;
@@ -113,7 +112,7 @@ export interface Skill {
   id: string;
   name: string;
   category: string;
-  level: string | null;
+  levelId: string | null;
   description: string | null;
 }
 
@@ -309,7 +308,8 @@ export interface CreateAthletePayload {
 }
 
 export interface UpdateAthletePayload {
-  name?: string;
+  firstName?: string;
+  lastName?: string;
   email?: string | null;
   level?: string;
   status?: AthleteStatus;

@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { athleteDisplayName } from "@/lib/athlete-name";
 
 interface AddAthleteDialogProps {
   open: boolean;
@@ -90,7 +91,7 @@ export function AddAthleteDialog({
       }
 
       const created = data.athlete;
-      const displayName = `${created.firstName} ${created.lastName}`.trim() || created.name;
+      const displayName = athleteDisplayName(created);
       toast.success(`${displayName} added successfully`);
       onAthleteCreated();
       handleClose();

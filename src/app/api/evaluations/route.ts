@@ -185,7 +185,8 @@ export async function GET(request: NextRequest) {
           athlete: {
             select: {
               id: true,
-              name: true,
+              firstName: true,
+              lastName: true,
               avatar: true,
             },
           },
@@ -410,7 +411,8 @@ export async function POST(request: NextRequest) {
         athlete: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             avatar: true,
           },
         },
@@ -475,7 +477,8 @@ export async function POST(request: NextRequest) {
               athlete: {
                 select: {
                   id: true,
-                  name: true,
+                  firstName: true,
+                  lastName: true,
                   avatar: true,
                 },
               },

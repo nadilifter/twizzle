@@ -64,6 +64,7 @@ import type {
   ScoringType,
 } from "@/types/evaluations";
 import { Slider } from "@/components/ui/slider";
+import { athleteDisplayName } from "@/lib/athlete-name";
 
 const statusColors: Record<EvaluationStatus, string> = {
   PENDING: "bg-slate-500/10 text-slate-700 dark:text-slate-400",
@@ -182,7 +183,8 @@ function CoachEvaluationsContent() {
 
   // Filter evaluations
   const filteredEvaluations = evaluations.filter((evaluation) => {
-    const matchesSearch = evaluation.athlete.name.toLowerCase().includes(search.toLowerCase());
+    const fullName = athleteDisplayName(evaluation.athlete);
+    const matchesSearch = fullName.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === "all" || evaluation.status === statusFilter;
     const matchesTab =
       activeTab === "all" ||
@@ -494,17 +496,19 @@ function CoachEvaluationsContent() {
                               <Avatar className="h-8 w-8">
                                 <AvatarImage
                                   src={evaluation.athlete.avatar || undefined}
-                                  alt={evaluation.athlete.name}
+                                  alt={athleteDisplayName(evaluation.athlete)}
                                 />
                                 <AvatarFallback>
-                                  {evaluation.athlete.name
-                                    .split(" ")
-                                    .map((n) => n[0])
+                                  {[evaluation.athlete.firstName, evaluation.athlete.lastName]
+                                    .filter(Boolean)
+                                    .map((n: string) => n[0])
                                     .join("")
                                     .slice(0, 2)}
                                 </AvatarFallback>
                               </Avatar>
-                              <span className="font-medium">{evaluation.athlete.name}</span>
+                              <span className="font-medium">
+                                {athleteDisplayName(evaluation.athlete)}
+                              </span>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -587,7 +591,7 @@ function CoachEvaluationsContent() {
                   ) : (
                     athletes.map((athlete) => (
                       <SelectItem key={athlete.id} value={athlete.id}>
-                        {athlete.name} - {athlete.level}
+                        {athleteDisplayName(athlete)} - {athlete.level}
                       </SelectItem>
                     ))
                   )}
@@ -681,7 +685,7 @@ function CoachEvaluationsContent() {
           <SheetHeader>
             <SheetTitle>Record Evaluation Results</SheetTitle>
             <SheetDescription>
-              {selectedEvaluation?.athlete.name} -{" "}
+              {selectedEvaluation ? athleteDisplayName(selectedEvaluation.athlete) : ""} -{" "}
               {selectedEvaluation?.template?.name ||
                 (typeof selectedEvaluation?.level === "object"
                   ? selectedEvaluation?.level?.name
@@ -856,7 +860,7 @@ function CoachEvaluationsContent() {
           <SheetHeader>
             <SheetTitle>Evaluation Results</SheetTitle>
             <SheetDescription>
-              {viewEvaluation?.athlete.name} -{" "}
+              {viewEvaluation ? athleteDisplayName(viewEvaluation.athlete) : ""} -{" "}
               {viewEvaluation?.template?.name ||
                 (typeof viewEvaluation?.level === "object"
                   ? viewEvaluation?.level?.name

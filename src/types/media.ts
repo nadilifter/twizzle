@@ -15,7 +15,7 @@ export interface Media {
 }
 
 export interface MediaWithRelations extends Media {
-  athlete?: { id: string; name: string } | null;
+  athlete?: { id: string; firstName: string; lastName: string } | null;
   event?: { id: string; title: string } | null;
   uploadedBy: { id: string; name: string };
 }

@@ -13,6 +13,14 @@ const createAthleteSchema = z.object({
   guardianUserId: z.string().min(1, "Guardian is required"),
 });
 
+function splitName(name: string): { firstName: string; lastName: string } {
+  const parts = name.trim().split(/\s+/);
+  return {
+    firstName: parts[0] ?? "",
+    lastName: parts.slice(1).join(" "),
+  };
+}
+
 // GET /api/athletes - List athletes for the organization
 export async function GET(request: NextRequest) {
   try {
@@ -50,7 +58,8 @@ export async function GET(request: NextRequest) {
       },
       ...(search && {
         OR: [
-          { name: { contains: search, mode: "insensitive" as const } },
+          { firstName: { contains: search, mode: "insensitive" as const } },
+          { lastName: { contains: search, mode: "insensitive" as const } },
           { email: { contains: search, mode: "insensitive" as const } },
         ],
       }),
@@ -120,7 +129,7 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        orderBy: { name: "asc" },
+        orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
         take: limit,
         skip: offset,
       }),
@@ -219,9 +228,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Guardian user not found" }, { status: 404 });
     }
 
+    const { firstName, lastName } = splitName(validatedData.name);
+
     const athlete = await db.athlete.create({
       data: {
-        name: validatedData.name,
+        firstName,
+        lastName,
         email: validatedData.email ?? null,
         birthDate: parseDateOnly(validatedData.birthDate),
         guardians: {

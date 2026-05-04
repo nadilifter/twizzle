@@ -255,6 +255,21 @@ For search + filter/action button rows above a table, stack on mobile and switch
 
 Wrap data tables in `<div className="overflow-x-auto rounded-md border">` so they scroll horizontally on narrow screens instead of squishing columns.
 
+### Athlete Display Names
+
+`Athlete` has `firstName` + `lastName` only — no `name` column. Always render through the helper, never inline:
+
+```ts
+import { athleteDisplayName, athleteInitial } from "@/lib/athlete-name";
+
+athleteDisplayName(athlete); // "Emily Anderson" — handles null parts and trim
+athleteInitial(athlete); // "E" — first letter, "?" fallback
+```
+
+Don't write `${a.firstName} ${a.lastName}.trim()` inline — it leaks logic for null/empty handling and was the source of the second-source-of-truth drift that USC-289 cleaned up. The helper accepts any object with `firstName` / `lastName` (both optional/nullable).
+
+When you query Athletes, select `firstName` + `lastName` (not `name: true`, which no longer exists). Search/orderBy clauses use `OR: [{ firstName: { contains } }, { lastName: { contains } }]` and `[{ firstName: "asc" }, { lastName: "asc" }]`.
+
 ---
 
 ## Where Things Live
@@ -271,6 +286,7 @@ Wrap data tables in `<div className="overflow-x-auto rounded-md border">` so the
 | Adyen provisioning scripts                     | `scripts/provision-adyen.ts`                     |
 | File storage                                   | `src/lib/storage.ts`                             |
 | Shared Zod schemas                             | `src/lib/schemas.ts`                             |
+| Athlete display name helper                    | `src/lib/athlete-name.ts`                        |
 | Image upload component                         | `src/components/ui/image-upload.tsx`             |
 | Dashboard page header                          | `src/components/dashboard-page-header.tsx`       |
 | Chat split-pane layout                         | `src/components/chat/chat-panels.tsx`            |

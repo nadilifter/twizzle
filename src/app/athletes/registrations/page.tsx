@@ -23,6 +23,7 @@ import {
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { formatTime12h } from "@/lib/date-utils";
+import { athleteDisplayName } from "@/lib/athlete-name";
 import { cn } from "@/lib/utils";
 
 interface InstanceRegistration {
@@ -185,7 +186,7 @@ export default function RegistrationsPage() {
           const count = (regs.enrollments?.length || 0) + (regs.competitionEntries?.length || 0);
           if (count === 0) return null;
 
-          const displayName = `${athlete.firstName} ${athlete.lastName}`.trim();
+          const displayName = athleteDisplayName(athlete);
 
           // Group instance registrations by programId for nested display
           const sessionsByProgram = new Map<string, InstanceRegistration[]>();

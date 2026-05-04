@@ -46,7 +46,7 @@ interface Invoice {
     quantity: number;
     unitPrice: number;
     total: number;
-    athlete?: { id: string; name: string } | null;
+    athlete?: { id: string; firstName: string; lastName: string } | null;
   }>;
   status: "DRAFT" | "SENT" | "PAID" | "OVERDUE" | "CANCELLED" | "PARTIAL";
   dueDate: string;

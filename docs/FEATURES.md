@@ -979,7 +979,7 @@ Defines the identity model: a **global `User`** (the human) can have **many `Org
 | `status` | `ACTIVE | INVITED | INACTIVE` |
 | `joinedAt`, `updatedAt` | |
 | `employmentType`, `title`, `hourlyRate`, `hireDate` | HR fields (staff only) |
-| `certifications` (JSON) | Coaching certs |
+| `memberCertifications` (relation) | → `MemberCertification[]` join to `Certification` (granted, with `passed`, `score`, `expiresAt`) |
 | `phone` | Override of `User.phone` per org (TODO: confirm UX) |
 | `emergencyContact` (JSON) | |
 | `permissions` (relation) | → `OrgMemberPermission[]` (only populated for `CUSTOM` role) |
@@ -1615,7 +1615,7 @@ N/A.
 
 ### 1.1 Athletes
 
-**Sub-features:** profile (name/DOB/gender), medical info (cross-org shared), `OrganizationAthlete` join, athlete portal access, photo upload, custom info responses (when `customInformation` enabled).
+**Sub-features:** profile (firstName/lastName/DOB/gender), medical info via `AthleteMedicalInfo` (cross-org shared), `OrganizationAthlete` join, athlete portal access, photo upload, custom info responses (when `customInformation` enabled).
 
 ### 1.2 Guardians & guardian claims
 

@@ -48,7 +48,6 @@ export interface AthletePass {
     id: string;
     firstName: string;
     lastName: string;
-    name: string;
   };
   pass?: Pass;
 }

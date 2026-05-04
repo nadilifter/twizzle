@@ -39,7 +39,12 @@ export interface ProgramLineItem {
   description: string;
   total: string | number;
   createdAt: string;
-  athlete: { id: string; name: string | null; avatar: string | null } | null;
+  athlete: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    avatar: string | null;
+  } | null;
   invoice: {
     id: string;
     reference: string;
@@ -70,17 +75,19 @@ export function TransactionsTab({ lineItems, athleteHrefPrefix }: TransactionsTa
       },
       {
         id: "athlete",
-        accessorFn: (row) => row.athlete?.name ?? "",
+        accessorFn: (row) =>
+          row.athlete ? `${row.athlete.firstName ?? ""} ${row.athlete.lastName ?? ""}`.trim() : "",
         header: ({ column }) => <DataTableColumnHeader column={column} title="Athlete" />,
         cell: ({ row }) => {
           const a = row.original.athlete;
           if (!a) return <span className="text-muted-foreground">-</span>;
+          const display = `${a.firstName ?? ""} ${a.lastName ?? ""}`.trim();
           return (
             <Link
               href={`${athleteHrefPrefix}/${a.id}`}
               className="text-sm text-primary hover:underline"
             >
-              {a.name ?? "Unknown"}
+              {display || "Unknown"}
             </Link>
           );
         },

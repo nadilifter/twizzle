@@ -9,7 +9,8 @@ import {
 } from "@/lib/twilio";
 import { checkUsageLimits, recordUsage } from "@/lib/sms-service";
 import { getPoolNumberForSend } from "@/lib/sms-number-pool";
-import type { MessageClassification, SmsTargetType, AnnouncementScope } from "@prisma/client";
+import type { MessageClassification, SmsTargetType } from "@prisma/client";
+import { athleteDisplayName } from "@/lib/athlete-name";
 
 /**
  * SMS Campaign Service
@@ -621,10 +622,9 @@ async function buildRecipientContext(
       context.guardianBalance = `$${Number(user.balance).toFixed(2)}`;
       const athlete = user.athleteGuardians[0]?.athlete;
       if (athlete) {
-        context.athleteName = athlete.name;
-        const nameParts = athlete.name.split(" ");
-        context.athleteFirstName = nameParts[0];
-        if (nameParts.length > 1) context.athleteLastName = nameParts.slice(1).join(" ");
+        context.athleteName = athleteDisplayName(athlete);
+        context.athleteFirstName = athlete.firstName;
+        if (athlete.lastName) context.athleteLastName = athlete.lastName;
         if (athlete.email) context.athleteEmail = athlete.email;
         const oaLevel = athlete.organizationAthletes?.[0]?.level;
         if (oaLevel) context.athleteLevel = oaLevel;
@@ -775,11 +775,6 @@ export async function createSmsCampaign(
     };
   }
 
-  // Map targetType to legacy targetScope for backward compatibility
-  let targetScope: AnnouncementScope = "ALL";
-  if (targetProgramId) targetScope = "PROGRAM";
-  if (targetEventId) targetScope = "EVENT";
-
   // Create campaign
   const campaign = await db.smsCampaign.create({
     data: {
@@ -788,7 +783,6 @@ export async function createSmsCampaign(
       body,
       classification,
       targetType,
-      targetScope,
       targetProgramId,
       targetEventId,
       targetMembershipStatus,

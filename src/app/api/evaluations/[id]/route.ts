@@ -5,6 +5,7 @@ import { parseDateOnly } from "@/lib/date-utils";
 import { executeNotificationByTrigger } from "@/lib/notification-service";
 import { z } from "zod";
 import type { SkillAttemptStatus, ScoringType } from "@prisma/client";
+import { athleteDisplayName } from "@/lib/athlete-name";
 import { checkAndAwardAchievements } from "@/lib/services/achievement";
 
 const skillAttemptStatusEnum = z.enum(["NOT_ATTEMPTED", "ATTEMPTED", "SUCCEEDED"]);
@@ -144,7 +145,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         athlete: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             avatar: true,
             birthDate: true,
           },
@@ -342,7 +344,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           athlete: {
             select: {
               id: true,
-              name: true,
+              firstName: true,
+              lastName: true,
               avatar: true,
             },
           },
@@ -440,7 +443,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           context: {
             evaluationStatus: newStatus,
             programName: evaluation.program?.name ?? "",
-            athleteName: evaluation.athlete?.name ?? "",
+            athleteName: evaluation.athlete ? athleteDisplayName(evaluation.athlete) : "",
           },
         });
       } catch (err) {
@@ -456,7 +459,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             athlete: {
               select: {
                 id: true,
-                name: true,
+                firstName: true,
+                lastName: true,
                 avatar: true,
               },
             },

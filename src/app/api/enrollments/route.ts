@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
 import { executeNotificationByTrigger } from "@/lib/notification-service";
 import { z } from "zod";
+import { athleteDisplayName } from "@/lib/athlete-name";
 
 const createEnrollmentSchema = z.object({
   athleteId: z.string().min(1, "Athlete is required"),
@@ -55,7 +56,8 @@ export async function GET(request: NextRequest) {
           athlete: {
             select: {
               id: true,
-              name: true,
+              firstName: true,
+              lastName: true,
             },
           },
           program: {
@@ -170,7 +172,7 @@ export async function POST(request: NextRequest) {
           athleteId: enrollment.athleteId,
           context: {
             programName: enrollment.program.name,
-            athleteName: enrollment.athlete.name,
+            athleteName: athleteDisplayName(enrollment.athlete),
             enrollmentDate: enrollment.startDate.toISOString().split("T")[0],
           },
         });

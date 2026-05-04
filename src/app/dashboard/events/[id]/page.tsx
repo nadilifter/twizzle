@@ -69,6 +69,7 @@ import { useAthletes } from "@/hooks/use-athletes";
 import { useAttendance } from "@/hooks/use-attendance";
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
 import { toast } from "sonner";
+import { athleteDisplayName } from "@/lib/athlete-name";
 import { formatTime12h } from "@/lib/date-utils";
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
@@ -96,12 +97,9 @@ function getInitials(name: string | null | undefined) {
   return name.substring(0, 2).toUpperCase();
 }
 
-function getAthleteName(
-  athlete: { name?: string; firstName?: string; lastName?: string } | null | undefined
-) {
+function getAthleteName(athlete: { firstName?: string; lastName?: string } | null | undefined) {
   if (!athlete) return "Unknown";
-  const fullName = [athlete.firstName, athlete.lastName].filter(Boolean).join(" ");
-  return fullName || athlete.name || "Unknown";
+  return athleteDisplayName(athlete) || "Unknown";
 }
 
 export default function EventDetailPage() {
@@ -537,7 +535,7 @@ export default function EventDetailPage() {
                         ) : (
                           availableAthletes.map((athlete) => (
                             <SelectItem key={athlete.id} value={athlete.id}>
-                              {athlete.name}
+                              {getAthleteName(athlete)}
                             </SelectItem>
                           ))
                         )}

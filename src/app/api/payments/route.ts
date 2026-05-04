@@ -8,7 +8,6 @@ const createPaymentSchema = z.object({
   userId: z.string().min(1, "Guardian is required"),
   amount: z.number().min(0.01, "Amount must be greater than 0"),
   method: z.enum(["CARD", "BANK", "CASH", "CHECK"]),
-  transactionId: z.string().optional(),
 });
 
 // GET /api/payments - List payments/transactions
@@ -123,7 +122,6 @@ export async function POST(request: NextRequest) {
           amount: validatedData.amount,
           method: validatedData.method,
           status: "COMPLETED",
-          transactionId: validatedData.transactionId,
           processedAt: new Date(),
         },
         include: {

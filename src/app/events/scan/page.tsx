@@ -16,6 +16,7 @@ const QRScanner = dynamic(() => import("@/components/events/qr-scanner"), {
   loading: () => <Skeleton className="h-[300px] w-[300px]" />,
 });
 import { useAttendance } from "@/hooks/use-attendance";
+import { athleteDisplayName } from "@/lib/athlete-name";
 import { format } from "date-fns";
 
 interface ScanResult {
@@ -91,7 +92,9 @@ export default function ScanPage() {
           setLastResult({
             status: "success",
             message: "Check-in successful!",
-            athleteName: result.athlete?.name || "Athlete",
+            athleteName: result.athlete
+              ? athleteDisplayName(result.athlete) || "Athlete"
+              : "Athlete",
             eventTitle: result.event?.title,
             checkedInAt: format(new Date(), "h:mm a"),
           });

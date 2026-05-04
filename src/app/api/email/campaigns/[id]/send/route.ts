@@ -5,8 +5,9 @@ import { checkFeatureGate } from "@/lib/feature-resolver";
 import {
   executeEmailCampaign,
   checkEmailUsageLimits,
-  getCampaignRecipients,
+  getExpandedCampaignRecipients,
 } from "@/lib/email-campaign-service";
+import type { EmailTargetType } from "@prisma/client";
 
 // POST /api/email/campaigns/[id]/send - Send a campaign
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -61,13 +62,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     // Get recipients to check count
-    const recipients = await getCampaignRecipients(
-      campaign.organizationId,
-      campaign.targetScope,
-      campaign.targetProgramId ?? undefined,
-      campaign.targetEventId ?? undefined,
-      campaign.targetMembershipStatus as "ACTIVE" | "EXPIRED" | undefined
-    );
+    const recipients = await getExpandedCampaignRecipients({
+      organizationId: campaign.organizationId,
+      targetType: campaign.targetType as EmailTargetType,
+      targetProgramId: campaign.targetProgramId ?? undefined,
+      targetEventId: campaign.targetEventId ?? undefined,
+      targetMembershipStatus: campaign.targetMembershipStatus as "ACTIVE" | "EXPIRED" | undefined,
+      targetProgramInstanceId: campaign.targetProgramInstanceId ?? undefined,
+      targetMembershipGroupIds: campaign.targetMembershipGroupIds,
+      targetUserIds: campaign.targetUserIds,
+    });
 
     if (recipients.length === 0) {
       return NextResponse.json(

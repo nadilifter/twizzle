@@ -16,7 +16,8 @@ export interface Attendance {
 export interface AttendanceWithRelations extends Attendance {
   athlete: {
     id: string;
-    name: string;
+    firstName: string;
+    lastName: string;
     avatar?: string | null;
     level?: string;
     guardians?: Array<{

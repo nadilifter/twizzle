@@ -13,6 +13,7 @@ import { useAthletes } from "@/hooks/use-athletes";
 import { useEvents } from "@/hooks/use-events";
 import { useAttendance } from "@/hooks/use-attendance";
 import { toast } from "sonner";
+import { athleteDisplayName } from "@/lib/athlete-name";
 
 function getInitials(name: string) {
   const parts = name.split(" ");
@@ -190,11 +191,11 @@ export default function AthleteSearchPage() {
                   <Avatar className="h-12 w-12">
                     <AvatarImage src={athlete.avatar || undefined} />
                     <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                      {getInitials(athlete.name)}
+                      {getInitials(athleteDisplayName(athlete))}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <p className="font-medium">{athlete.name}</p>
+                    <p className="font-medium">{athleteDisplayName(athlete)}</p>
                     {athlete.email && (
                       <p className="text-sm text-muted-foreground">{athlete.email}</p>
                     )}
@@ -229,11 +230,11 @@ export default function AthleteSearchPage() {
                   <Avatar className="h-16 w-16">
                     <AvatarImage src={selectedAthlete.avatar || undefined} />
                     <AvatarFallback className="bg-primary text-primary-foreground text-xl font-bold">
-                      {getInitials(selectedAthlete.name)}
+                      {getInitials(athleteDisplayName(selectedAthlete))}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h2 className="text-xl font-bold">{selectedAthlete.name}</h2>
+                    <h2 className="text-xl font-bold">{athleteDisplayName(selectedAthlete)}</h2>
                     {selectedAthlete.email && (
                       <p className="text-sm text-muted-foreground">{selectedAthlete.email}</p>
                     )}

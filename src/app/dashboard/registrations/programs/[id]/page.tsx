@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { athleteDisplayName, athleteInitial } from "@/lib/athlete-name";
 import {
   ArrowLeft,
   ArrowRight,
@@ -95,7 +96,7 @@ interface ProgramDetail {
     id: string;
     status: string;
     createdAt: string;
-    athlete: { id: string; name: string; avatar: string | null };
+    athlete: { id: string; firstName: string; lastName: string; avatar: string | null };
   }[];
   instances: {
     id: string;
@@ -130,7 +131,13 @@ interface WaitlistEntry {
   id: string;
   position: number;
   athleteId: string;
-  athlete: { id: string; name: string; email: string | null; avatar: string | null };
+  athlete: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string | null;
+    avatar: string | null;
+  };
   joinedAt: string;
 }
 
@@ -785,7 +792,7 @@ export default function ProgramProfilePage() {
                               <Avatar className="h-8 w-8">
                                 <AvatarImage src={entry.athlete.avatar || undefined} />
                                 <AvatarFallback className="text-xs">
-                                  {entry.athlete.name?.charAt(0) || "?"}
+                                  {athleteInitial(entry.athlete)}
                                 </AvatarFallback>
                               </Avatar>
                               <div>
@@ -793,7 +800,7 @@ export default function ProgramProfilePage() {
                                   href={`/dashboard/registrations/programs/${programId}/athletes/${entry.athlete.id}`}
                                   className="font-medium text-sm text-primary hover:underline"
                                 >
-                                  {entry.athlete.name}
+                                  {athleteDisplayName(entry.athlete)}
                                 </Link>
                                 {entry.athlete.email && (
                                   <div className="text-xs text-muted-foreground">

@@ -48,7 +48,6 @@ interface AthleteDetail {
   registrationType: string;
   athlete: {
     id: string;
-    name: string | null;
     firstName: string | null;
     lastName: string | null;
     email: string | null;
@@ -163,9 +162,7 @@ export default function ProgramAthleteDetailPage() {
   const [viewingWaiver, setViewingWaiver] = React.useState<AthleteWaiverSummary | null>(null);
 
   const athleteName = data
-    ? [data.athlete.firstName, data.athlete.lastName].filter(Boolean).join(" ") ||
-      data.athlete.name ||
-      "Unknown Athlete"
+    ? [data.athlete.firstName, data.athlete.lastName].filter(Boolean).join(" ") || "Unknown Athlete"
     : undefined;
 
   useBreadcrumbOverride(
@@ -238,9 +235,7 @@ export default function ProgramAthleteDetailPage() {
   const age = calculateAge(athlete.birthDate);
   const primaryGuardian = athlete.guardians.find((g) => g.isPrimary) ?? athlete.guardians[0];
   const fullName =
-    [athlete.firstName, athlete.lastName].filter(Boolean).join(" ") ||
-    athlete.name ||
-    "Unknown Athlete";
+    [athlete.firstName, athlete.lastName].filter(Boolean).join(" ") || "Unknown Athlete";
   const isPerInstance = data.registrationType === "PER_INSTANCE";
 
   return (

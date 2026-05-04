@@ -46,7 +46,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         status: true,
         athleteId: true,
         programInstanceId: true,
-        athlete: { select: { id: true, name: true, avatar: true } },
+        athlete: { select: { id: true, firstName: true, lastName: true, avatar: true } },
         programInstance: {
           select: { id: true, date: true, startTime: true, endTime: true, status: true },
         },

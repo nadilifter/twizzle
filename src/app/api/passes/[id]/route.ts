@@ -50,7 +50,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         },
         athletePasses: {
           include: {
-            athlete: { select: { id: true, firstName: true, lastName: true, name: true } },
+            athlete: { select: { id: true, firstName: true, lastName: true } },
           },
         },
         _count: { select: { athletePasses: true, coveredPrograms: true } },
@@ -141,7 +141,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         },
         athletePasses: {
           include: {
-            athlete: { select: { id: true, firstName: true, lastName: true, name: true } },
+            athlete: { select: { id: true, firstName: true, lastName: true } },
           },
         },
         _count: { select: { athletePasses: true, coveredPrograms: true } },

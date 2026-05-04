@@ -140,7 +140,6 @@ interface CompetitionDetail {
       id: string;
       firstName: string | null;
       lastName: string | null;
-      name: string | null;
       avatar: string | null;
     };
   }[];
@@ -164,7 +163,6 @@ interface CompetitionResult {
     id: string;
     firstName: string | null;
     lastName: string | null;
-    name: string | null;
   } | null;
   team: {
     id: string;
@@ -193,9 +191,7 @@ function getLatestRegistrations(competition: CompetitionDetail): LatestRegistrat
     seen.set(athlete.id, {
       athleteId: athlete.id,
       athleteName:
-        [athlete.firstName, athlete.lastName].filter(Boolean).join(" ") ||
-        athlete.name ||
-        "Unknown athlete",
+        [athlete.firstName, athlete.lastName].filter(Boolean).join(" ") || "Unknown athlete",
       athleteAvatar: athlete.avatar,
       registeredAt: entry.createdAt,
     });
@@ -723,9 +719,7 @@ export default function CompetitionProfilePage() {
                       const name = result.athlete
                         ? [result.athlete.firstName, result.athlete.lastName]
                             .filter(Boolean)
-                            .join(" ") ||
-                          result.athlete.name ||
-                          "Unknown athlete"
+                            .join(" ") || "Unknown athlete"
                         : result.team?.name || "Unknown team";
 
                       return (

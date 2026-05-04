@@ -36,12 +36,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { athleteDisplayName } from "@/lib/athlete-name";
 
 interface AthleteOption {
   id: string;
   firstName: string;
   lastName: string;
-  name: string;
   birthDate: string | null;
   gender: string | null;
   allowGuardianClaims?: boolean;
@@ -142,7 +142,7 @@ export function AthleteSelectionDialog({
   };
 
   const handleSelectAthlete = (athlete: AthleteOption) => {
-    const displayName = `${athlete.firstName} ${athlete.lastName}`.trim() || athlete.name;
+    const displayName = athleteDisplayName(athlete);
     onAthleteSelected({ id: athlete.id, name: displayName });
     onOpenChange(false);
     resetForm();
@@ -183,8 +183,7 @@ export function AthleteSelectionDialog({
           return;
         }
         if (data.claimed) {
-          const displayName =
-            `${data.athlete.firstName} ${data.athlete.lastName}`.trim() || data.athlete.name;
+          const displayName = athleteDisplayName(data.athlete);
           toast.success(data.message || `${displayName} claimed successfully`);
           onAthleteSelected({ id: data.athlete.id, name: displayName });
           onOpenChange(false);
@@ -195,8 +194,7 @@ export function AthleteSelectionDialog({
       }
 
       if (data.claimed) {
-        const displayName =
-          `${data.athlete.firstName} ${data.athlete.lastName}`.trim() || data.athlete.name;
+        const displayName = athleteDisplayName(data.athlete);
         toast.success(data.message || `${displayName} claimed successfully`);
         onAthleteSelected({ id: data.athlete.id, name: displayName });
         onOpenChange(false);
@@ -205,7 +203,7 @@ export function AthleteSelectionDialog({
       }
 
       const created = data.athlete;
-      const displayName = `${created.firstName} ${created.lastName}`.trim() || created.name;
+      const displayName = athleteDisplayName(created);
       toast.success(`${displayName} added successfully`);
 
       if (ageRestrictionActive) {
@@ -456,8 +454,7 @@ export function AthleteSelectionDialog({
             {athletes.length > 0 && (
               <div className="space-y-2 max-h-[300px] overflow-y-auto">
                 {eligibleAthletes.map((athlete) => {
-                  const displayName =
-                    `${athlete.firstName} ${athlete.lastName}`.trim() || athlete.name;
+                  const displayName = athleteDisplayName(athlete);
                   const birthLabel = athlete.birthDate
                     ? new Date(athlete.birthDate).toLocaleDateString("en-US", {
                         month: "short",
@@ -510,8 +507,7 @@ export function AthleteSelectionDialog({
                       </p>
                     </div>
                     {ineligibleAthletes.map((athlete) => {
-                      const displayName =
-                        `${athlete.firstName} ${athlete.lastName}`.trim() || athlete.name;
+                      const displayName = athleteDisplayName(athlete);
                       const age = calculateAge(athlete.birthDate);
                       const birthLabel = athlete.birthDate
                         ? new Date(athlete.birthDate).toLocaleDateString("en-US", {

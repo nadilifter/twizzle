@@ -17,16 +17,6 @@ const createStaffSchema = z.object({
   title: z.string().optional().nullable(),
   hourlyRate: z.number().optional().nullable(),
   hireDate: z.string().optional().nullable(),
-  certifications: z
-    .array(
-      z.object({
-        name: z.string(),
-        expiresAt: z.string().optional().nullable(),
-        verified: z.boolean().optional(),
-      })
-    )
-    .optional()
-    .nullable(),
   phone: phoneOptional,
   emergencyContact: z
     .object({
@@ -142,8 +132,6 @@ export async function POST(request: NextRequest) {
           hireDate: validatedData.hireDate
             ? parseDateOnly(validatedData.hireDate)
             : existingMember.hireDate,
-          certifications:
-            validatedData.certifications ?? existingMember.certifications ?? undefined,
           phone: validatedData.phone ?? existingMember.phone,
           emergencyContact:
             validatedData.emergencyContact ?? existingMember.emergencyContact ?? undefined,
@@ -188,7 +176,6 @@ export async function POST(request: NextRequest) {
         title: validatedData.title ?? null,
         hourlyRate: validatedData.hourlyRate ?? null,
         hireDate: validatedData.hireDate ? parseDateOnly(validatedData.hireDate) : null,
-        certifications: validatedData.certifications ?? undefined,
         phone: validatedData.phone ?? null,
         emergencyContact: validatedData.emergencyContact ?? undefined,
       },

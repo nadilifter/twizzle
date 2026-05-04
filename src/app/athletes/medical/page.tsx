@@ -20,6 +20,7 @@ import { api } from "@/lib/api-client";
 import { useAthleteMedicalInfo } from "@/hooks/use-medical";
 import { MedicalDisplay } from "@/components/medical/medical-display";
 import { MedicalForm } from "@/components/medical/medical-form";
+import { athleteDisplayName } from "@/lib/athlete-name";
 
 interface Athlete {
   id: string;
@@ -48,8 +49,21 @@ export default function AthleteMedicalPage() {
     async function fetchAthletes() {
       setIsLoadingAthletes(true);
       try {
-        const response = await api.get<{ athletes: Athlete[] }>("/api/athletes/me");
-        const athleteData = response.athletes || [];
+        const response = await api.get<{
+          athletes: Array<{
+            id: string;
+            firstName: string;
+            lastName: string;
+            avatar: string | null;
+            level: string;
+          }>;
+        }>("/api/athletes/me");
+        const athleteData = (response.athletes || []).map((a) => ({
+          id: a.id,
+          name: athleteDisplayName(a),
+          avatar: a.avatar,
+          level: a.level,
+        }));
         setAthletes(athleteData);
 
         // Select first athlete by default

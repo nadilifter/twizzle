@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { athleteDisplayName } from "@/lib/athlete-name";
 
 /**
  * GET /api/athletes/me/custom-information
@@ -79,7 +80,7 @@ export async function GET() {
 
       return {
         athleteId: athlete.id,
-        athleteName: `${athlete.firstName} ${athlete.lastName}`.trim(),
+        athleteName: athleteDisplayName(athlete),
         organizations: [...byOrg.values()],
       };
     });

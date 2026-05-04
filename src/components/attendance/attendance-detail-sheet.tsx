@@ -13,6 +13,7 @@ import { useAttendance } from "@/hooks/use-attendance";
 import { cn } from "@/lib/utils";
 import { formatTime12h } from "@/lib/date-utils";
 import type { AttendanceWithRelations, AttendanceStatus } from "@/types/attendance";
+import { athleteDisplayName } from "@/lib/athlete-name";
 
 interface AttendanceDetailSheetProps {
   athleteId: string | null;
@@ -103,15 +104,17 @@ export function AttendanceDetailSheet({
                 <Avatar className="h-12 w-12">
                   <AvatarImage
                     src={athlete?.avatar || undefined}
-                    alt={athleteName || athlete?.name || "Athlete"}
+                    alt={athleteName || (athlete ? athleteDisplayName(athlete) : "Athlete")}
                   />
                   <AvatarFallback className="text-lg">
-                    {(athleteName || athlete?.name || "?").charAt(0)}
+                    {(athleteName || (athlete ? athleteDisplayName(athlete) : "?") || "?").charAt(
+                      0
+                    )}
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <SheetTitle className="text-lg font-semibold">
-                    {athleteName || athlete?.name || "Athlete"}
+                    {athleteName || (athlete ? athleteDisplayName(athlete) : "Athlete")}
                   </SheetTitle>
                   {athlete?.level && (
                     <p className="text-sm text-muted-foreground">{athlete.level}</p>

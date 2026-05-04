@@ -64,9 +64,9 @@ model Organization {
   certifications      Certification[]
 
   // Tax configuration
-  taxRate    Decimal?  @db.Decimal(5, 4) // e.g. 0.0600 = 6%; null = 0 (no tax)
-  taxEnabled Boolean   @default(true)
-  taxPaidBy           FeePayer @default(CUSTOMER)
+  taxRate    Decimal? @db.Decimal(5, 4) // e.g. 0.0600 = 6%; null = 0 (no tax)
+  taxEnabled Boolean  @default(true)
+  taxPaidBy  FeePayer @default(CUSTOMER)
 
   // Financials
   discounts        Discount[]
@@ -75,7 +75,6 @@ model Organization {
   transactions     Transaction[]
   payouts          Payout[]
   recurringCharges RecurringCharge[]
-
 
   // Platform Subscription
   subscription OrganizationSubscription?
@@ -186,7 +185,7 @@ model Organization {
   holidays OrganizationHoliday[]
 
   // Referral Program
-  referralCode  String?    @unique
+  referralCode      String?    @unique
   referralsMade     Referral[] @relation("ReferralsMade")
   referralsReceived Referral[] @relation("ReferralsReceived")
 }
@@ -203,9 +202,8 @@ model OrganizationMember {
   // Employment (optional, per-org profile data)
   employmentType   EmploymentType?
   title            String?
-  hourlyRate       Decimal?       @db.Decimal(10, 2)
+  hourlyRate       Decimal?        @db.Decimal(10, 2)
   hireDate         DateTime?
-  certifications   Json?
   phone            String?
   emergencyContact Json?
 
@@ -238,21 +236,21 @@ enum MemberStatus {
 }
 
 model User {
-  id           String     @id @default(cuid())
-  email        String     @unique
-  name         String
-  passwordHash String?
-  avatar       String?
-  avatarCrop   Json?
-  phone         String?
-  phoneVerified Boolean    @default(false)
-  role         Role       @default(COACH)
-  status       UserStatus @default(ACTIVE)
-  isSuperAdmin Boolean    @default(false)
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
-  lastActiveAt     DateTime?
-  termsAcceptedAt  DateTime?
+  id              String     @id @default(cuid())
+  email           String     @unique
+  name            String
+  passwordHash    String?
+  avatar          String?
+  avatarCrop      Json?
+  phone           String?
+  phoneVerified   Boolean    @default(false)
+  role            Role       @default(COACH)
+  status          UserStatus @default(ACTIVE)
+  isSuperAdmin    Boolean    @default(false)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  lastActiveAt    DateTime?
+  termsAcceptedAt DateTime?
 
   // SMS Preferences
   smsOptOut   Boolean   @default(false)
@@ -262,14 +260,14 @@ model User {
   // Explicit, unchecked-by-default opt-in captured at signup or in account settings.
   // Sends are gated on `smsConsentAt != null && smsOptOut == false` — the absence of
   // a timestamp is treated as no consent. STOP replies clear both fields.
-  smsConsentAt            DateTime?
-  smsConsentSource        SmsConsentSource?
-  smsConsentIp            String?
-  smsConsentVersion       String?
+  smsConsentAt           DateTime?
+  smsConsentSource       SmsConsentSource?
+  smsConsentIp           String?
+  smsConsentVersion      String?
   // Source of the most recent revocation. Distinguishes a user-initiated opt-out
   // through the UI from an inbound STOP keyword, which the Phase 5 webhook will
   // need to record separately for audit and analytics.
-  smsConsentRevokeSource  SmsConsentRevokeSource?
+  smsConsentRevokeSource SmsConsentRevokeSource?
 
   // Email Preferences
   emailOptOut   Boolean   @default(false)
@@ -286,7 +284,7 @@ model User {
   sessions            Session[]
   accounts            Account[]
   media               Media[]
-  registrationFiles   RegistrationFile[]  @relation("UserRegistrationFiles")
+  registrationFiles   RegistrationFile[]   @relation("UserRegistrationFiles")
   facilityAssignments FacilityAssignment[]
 
   // Guardian/Ward system
@@ -301,13 +299,13 @@ model User {
   userPayments         Payment[]         @relation("UserPayments")
   userEnrollments      Enrollment[]      @relation("UserEnrollments")
   userRecurringCharges RecurringCharge[] @relation("UserRecurringCharges")
-  userAthletePasses    AthletePass[]    @relation("UserAthletePasses")
+  userAthletePasses    AthletePass[]     @relation("UserAthletePasses")
 
   // Communication
-  userMessages         Message[]         @relation("UserMessages")
-  userConversations    Conversation[]    @relation("UserConversations")
-  coachConversations   Conversation[]    @relation("CoachConversation")
-  userEmailMessages    EmailMessage[]    @relation("UserEmailMessages")
+  userMessages       Message[]      @relation("UserMessages")
+  userConversations  Conversation[] @relation("UserConversations")
+  coachConversations Conversation[] @relation("CoachConversation")
+  userEmailMessages  EmailMessage[] @relation("UserEmailMessages")
 
   // Registration
   userInstanceRegistrations InstanceRegistration[] @relation("UserInstanceRegistrations")
@@ -470,15 +468,15 @@ enum UserStatus {
 }
 
 enum SmsConsentSource {
-  SIGNUP_SITE       // /sites/[slug]/signup
-  SIGNUP_ORG        // /org-signup
-  INVITATION        // /accept-invitation
-  ACCOUNT_SETTINGS  // /athletes/account, /dashboard settings
+  SIGNUP_SITE // /sites/[slug]/signup
+  SIGNUP_ORG // /org-signup
+  INVITATION // /accept-invitation
+  ACCOUNT_SETTINGS // /athletes/account, /dashboard settings
 }
 
 enum SmsConsentRevokeSource {
-  ACCOUNT_SETTINGS  // user toggled off the account-settings consent card
-  INBOUND_STOP      // inbound STOP/UNSUBSCRIBE keyword (Phase 5)
+  ACCOUNT_SETTINGS // user toggled off the account-settings consent card
+  INBOUND_STOP // inbound STOP/UNSUBSCRIBE keyword (Phase 5)
 }
 
 // ============================================
@@ -486,17 +484,14 @@ enum SmsConsentRevokeSource {
 // ============================================
 
 model Athlete {
-  id        String             @id @default(cuid())
-  name      String // Deprecated: use firstName + lastName
-  firstName String             @default("")
-  lastName  String             @default("")
-  email     String?
+  id         String             @id @default(cuid())
+  firstName  String             @default("")
+  lastName   String             @default("")
+  email      String?
   avatar     String?
   avatarCrop Json?
   birthDate  DateTime?
   gender     GenderDeclaration?
-
-  medicalDetails Json? // { allergies: [], conditions: [], emergencyContact: {} }
 
   // Guardian/Ward system
   userId              String? @unique // Self-athlete: the User who IS this athlete
@@ -506,18 +501,18 @@ model Athlete {
   updatedAt DateTime @updatedAt
 
   // Relations
-  selfUser         User?                  @relation("SelfAthlete", fields: [userId], references: [id], onDelete: SetNull)
-  enrollments      Enrollment[]
-  attendances      Attendance[]
-  evaluations      Evaluation[]
-  lineItems        LineItem[]
+  selfUser          User?                  @relation("SelfAthlete", fields: [userId], references: [id], onDelete: SetNull)
+  enrollments       Enrollment[]
+  attendances       Attendance[]
+  evaluations       Evaluation[]
+  lineItems         LineItem[]
   memberships       AthleteMembership[]
   passes            AthletePass[]
   media             Media[]
   registrationFiles RegistrationFile[]
   recurringCharges  RecurringCharge[]
-  skillProgress    AthleteSkillProgress[]
-  achievements     AthleteAchievement[]
+  skillProgress     AthleteSkillProgress[]
+  achievements      AthleteAchievement[]
 
   // Multi-family support / Guardian links
   guardians     AthleteGuardian[]
@@ -815,12 +810,12 @@ model CustomInfoQuestion {
   id             String @id @default(cuid())
   organizationId String
 
-  questionText  String
-  description   String?
-  questionType  CustomInfoQuestionType
-  required      Boolean @default(true)
-  displayOrder  Int     @default(0)
-  isActive      Boolean @default(true)
+  questionText String
+  description  String?
+  questionType CustomInfoQuestionType
+  required     Boolean                @default(true)
+  displayOrder Int                    @default(0)
+  isActive     Boolean                @default(true)
 
   valueMin              Float?
   valueMax              Float?
@@ -860,14 +855,14 @@ model CustomInfoResponse {
   organizationId String
   questionId     String
 
-  responseValue String?  @db.Text
-  signatureData String?  @db.Text
+  responseValue String? @db.Text
+  signatureData String? @db.Text
   fileUrl       String?
   storageKey    String?
   fileName      String?
   contentType   String?
 
-  respondedAt   DateTime  @default(now())
+  respondedAt   DateTime @default(now())
   respondedById String?
 
   createdAt DateTime @default(now())
@@ -1035,8 +1030,8 @@ model Program {
   lineItems           LineItem[]
   staffAssignments    ProgramStaff[]
   requiredMemberships MembershipInstance[]
-  coveredByPasses     Pass[]              @relation("PassCoveredPrograms")
-  requiredPasses      Pass[]              @relation("PassRequiredForPrograms")
+  coveredByPasses     Pass[]                      @relation("PassCoveredPrograms")
+  requiredPasses      Pass[]                      @relation("PassRequiredForPrograms")
   evaluations         Evaluation[]
   evaluationTemplates ProgramEvaluationTemplate[]
   bulkDiscounts       ProgramBulkDiscount[]
@@ -1120,7 +1115,7 @@ model ProgramLevelRequirement {
 
 // Membership Structure
 model MembershipGroup {
-  id             String   @id @default(cuid())
+  id             String  @id @default(cuid())
   organizationId String
   name           String // e.g., "Annual Membership"
   description    String?
@@ -1200,7 +1195,7 @@ model MembershipInstance {
   registrationStartTime String?
   registrationEndDate   DateTime?
   registrationEndTime   String?
-  registrationOpen      Boolean @default(true)
+  registrationOpen      Boolean   @default(true)
   earlyAccessCode       String?
 
   // Instance-level capacity override
@@ -1316,9 +1311,9 @@ model Season {
   status         SeasonStatus @default(DRAFT)
 
   // Recurrence / Auto-Renewal
-  isRecurring      Boolean @default(false)
-  renewalLeadDays  Int     @default(30)
-  isAutoGenerated  Boolean @default(false)
+  isRecurring     Boolean @default(false)
+  renewalLeadDays Int     @default(30)
+  isAutoGenerated Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1400,9 +1395,9 @@ model ProgramInstance {
   updatedAt      DateTime       @updatedAt
 
   // Relations
-  program       Program                        @relation(fields: [programId], references: [id], onDelete: Cascade)
-  facility      Facility?                      @relation(fields: [facilityId], references: [id], onDelete: SetNull)
-  organization  Organization                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  program       Program                @relation(fields: [programId], references: [id], onDelete: Cascade)
+  facility      Facility?              @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  organization  Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   registrations InstanceRegistration[]
   attendances   InstanceAttendance[]
   spaces        ProgramInstanceSpace[]
@@ -1478,40 +1473,40 @@ model InstanceAttendance {
 // ============================================
 
 model Event {
-  id                  String               @id @default(cuid())
-  title               String
-  color               String               @default("#3b82f6")
-  date                DateTime
-  startTime           String
-  endTime             String
-  type                EventType            @default(CLASS)
-  description         String?
-  meetingLink         String?
-  timezone            String?
-  capacity            Int?
-  location            Json? // { lat, lng, address, name } - for external/custom locations
-  details             Json? // { whatToBring, whatToExpect, requirements }
-  programId           String?
-  coachId             String?
-  facilityId          String? // Optional - links to a Facility for scheduling
-  requiredMemberships MembershipInstance[]
-  hasGenderRestriction Boolean              @default(false)
-  allowedGenders       GenderDeclaration[]
-  hasFileRequirement  Boolean              @default(false)
+  id                    String               @id @default(cuid())
+  title                 String
+  color                 String               @default("#3b82f6")
+  date                  DateTime
+  startTime             String
+  endTime               String
+  type                  EventType            @default(CLASS)
+  description           String?
+  meetingLink           String?
+  timezone              String?
+  capacity              Int?
+  location              Json? // { lat, lng, address, name } - for external/custom locations
+  details               Json? // { whatToBring, whatToExpect, requirements }
+  programId             String?
+  coachId               String?
+  facilityId            String? // Optional - links to a Facility for scheduling
+  requiredMemberships   MembershipInstance[]
+  hasGenderRestriction  Boolean              @default(false)
+  allowedGenders        GenderDeclaration[]
+  hasFileRequirement    Boolean              @default(false)
   fileRequirementConfig Json?
-  glCodeId            String?
-  categoryId          String?
-  organizationId      String
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  glCodeId              String?
+  categoryId            String?
+  organizationId        String
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
 
   // Relations
-  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  program           Program?     @relation(fields: [programId], references: [id])
-  coach             User?        @relation("EventCoach", fields: [coachId], references: [id])
-  facility          Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
-  glCode            GLCode?      @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
-  category          Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  program           Program?           @relation(fields: [programId], references: [id])
+  coach             User?              @relation("EventCoach", fields: [coachId], references: [id])
+  facility          Facility?          @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  glCode            GLCode?            @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
+  category          Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   attendances       Attendance[]
   lineItems         LineItem[]
   media             Media[]
@@ -1562,20 +1557,20 @@ enum AttendanceStatus {
 // ============================================
 
 model Invoice {
-  id             String        @id @default(cuid())
-  reference      String        @unique
-  userId         String? // The guardian billed for this invoice
-  status         InvoiceStatus @default(DRAFT)
-  dueDate        DateTime
-  subtotal       Decimal       @db.Decimal(10, 2)
-  tax            Decimal       @default(0) @db.Decimal(10, 2)
-  processingFee  Decimal       @default(0) @db.Decimal(10, 2)
-  total          Decimal       @db.Decimal(10, 2)
-  notes                    String?
-  organizationId           String
-  postPaymentProcessed     Boolean  @default(false)
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+  id                   String        @id @default(cuid())
+  reference            String        @unique
+  userId               String? // The guardian billed for this invoice
+  status               InvoiceStatus @default(DRAFT)
+  dueDate              DateTime
+  subtotal             Decimal       @db.Decimal(10, 2)
+  tax                  Decimal       @default(0) @db.Decimal(10, 2)
+  processingFee        Decimal       @default(0) @db.Decimal(10, 2)
+  total                Decimal       @db.Decimal(10, 2)
+  notes                String?
+  organizationId       String
+  postPaymentProcessed Boolean       @default(false)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
 
   // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -1598,12 +1593,12 @@ enum InvoiceStatus {
 }
 
 model LineItem {
-  id                    String   @id @default(cuid())
+  id                    String                   @id @default(cuid())
   invoiceId             String
   description           String
   quantity              Int
-  unitPrice             Decimal  @db.Decimal(10, 2)
-  total                 Decimal  @db.Decimal(10, 2)
+  unitPrice             Decimal                  @db.Decimal(10, 2)
+  total                 Decimal                  @db.Decimal(10, 2)
   programId             String? // What program is this for?
   eventId               String? // What specific event?
   athleteId             String? // Which athlete?
@@ -1618,7 +1613,7 @@ model LineItem {
   glCodeId              String? // GL code at time of sale
   fulfillmentType       LineItemFulfillmentType? // Resolved fulfillment for store products (null for non-product items)
   pickupFacilityId      String? // Facility for pickup (null for delivery or non-product items)
-  createdAt             DateTime @default(now())
+  createdAt             DateTime                 @default(now())
 
   // Relations
   invoice             Invoice              @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
@@ -1641,15 +1636,14 @@ model LineItem {
 }
 
 model Payment {
-  id            String        @id @default(cuid())
-  invoiceId     String?
-  userId        String? // The guardian who made this payment
-  amount        Decimal       @db.Decimal(10, 2)
-  method        PaymentType
-  status        PaymentStatus @default(PENDING)
-  transactionId String? // Legacy field, keeping for backwards compatibility
-  processedAt   DateTime?
-  createdAt     DateTime      @default(now())
+  id          String        @id @default(cuid())
+  invoiceId   String?
+  userId      String? // The guardian who made this payment
+  amount      Decimal       @db.Decimal(10, 2)
+  method      PaymentType
+  status      PaymentStatus @default(PENDING)
+  processedAt DateTime?
+  createdAt   DateTime      @default(now())
 
   // Relations
   invoice     Invoice?     @relation(fields: [invoiceId], references: [id])
@@ -1729,16 +1723,16 @@ enum DiscountStatus {
 }
 
 model GLCode {
-  id              String            @id @default(cuid())
-  code            String
-  description     String
-  type            GLCodeType
-  status          GLCodeStatus      @default(ACTIVE)
-  isDefault       Boolean           @default(false)
-  defaultForType  GLCodeEntityType?
-  organizationId  String
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  id             String            @id @default(cuid())
+  code           String
+  description    String
+  type           GLCodeType
+  status         GLCodeStatus      @default(ACTIVE)
+  isDefault      Boolean           @default(false)
+  defaultForType GLCodeEntityType?
+  organizationId String
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
   // Relations
   organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -1858,25 +1852,25 @@ enum TransactionStatus {
 // ============================================
 
 model Payout {
-  id             String       @id @default(cuid())
-  organizationId String
-  reference      String       @unique // Adyen payout reference
-  amount         Decimal      @db.Decimal(10, 2)
-  fees           Decimal      @default(0) @db.Decimal(10, 2)
-  net            Decimal      @db.Decimal(10, 2)
-  currency       String       @default("USD")
-  status         PayoutStatus
-  payoutType     PayoutType   @default(MANUAL)
-  bankAccount    String? // Last 4 digits
-  scheduledAt    DateTime?
-  paidAt         DateTime?
+  id                   String         @id @default(cuid())
+  organizationId       String
+  reference            String         @unique // Adyen payout reference
+  amount               Decimal        @db.Decimal(10, 2)
+  fees                 Decimal        @default(0) @db.Decimal(10, 2)
+  net                  Decimal        @db.Decimal(10, 2)
+  currency             String         @default("USD")
+  status               PayoutStatus
+  payoutType           PayoutType     @default(MANUAL)
+  bankAccount          String? // Last 4 digits
+  scheduledAt          DateTime?
+  paidAt               DateTime?
   estimatedArrivalTime DateTime?
-  reconciledVia  ReconciledVia?
-  failureReason  String?
-  createdAt      DateTime     @default(now())
+  reconciledVia        ReconciledVia?
+  failureReason        String?
+  createdAt            DateTime       @default(now())
 
   // Relations
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   transactions Transaction[]
 
   @@index([organizationId])
@@ -1955,7 +1949,6 @@ model Skill {
   id             String   @id @default(cuid())
   name           String
   category       String // e.g., "Vault", "Bars", "Beam", "Floor"
-  level          String? // Legacy field - kept for backwards compatibility
   description    String?  @db.Text
   organizationId String
   createdAt      DateTime @default(now())
@@ -1967,7 +1960,7 @@ model Skill {
   videoUrl String? // Demo video URL
   imageUrl String? // Demo image URL
 
-  // Level reference (new system)
+  // Level reference
   levelId String? // FK to Level model
 
   // Relations
@@ -2378,10 +2371,10 @@ model Message {
   channel MessageChannel @default(SMS)
 
   // Message details
-  to       String  @default("") // E.164 phone (SMS) or email address; empty for web-only
-  from     String  @default("") // Twilio number or sender email; empty for web-only
-  body     String  @db.Text
-  segments Int     @default(1) // SMS segment count
+  to       String @default("") // E.164 phone (SMS) or email address; empty for web-only
+  from     String @default("") // Twilio number or sender email; empty for web-only
+  body     String @db.Text
+  segments Int    @default(1) // SMS segment count
 
   // SMS tracking (Twilio)
   twilioSid    String?       @unique
@@ -2471,10 +2464,8 @@ model SmsCampaign {
   body           String                @db.Text
   classification MessageClassification @default(GENERAL)
 
-  // Targeting - legacy field kept for backward compatibility
-  targetScope              AnnouncementScope @default(ALL)
-  // Expanded targeting (matching EmailCampaign)
-  targetType               SmsTargetType     @default(ALL_MEMBERS)
+  // Targeting
+  targetType               SmsTargetType @default(ALL_MEMBERS)
   targetProgramId          String?
   targetEventId            String?
   targetMembershipStatus   String? // "ACTIVE", "EXPIRED", or null for all
@@ -2721,10 +2712,8 @@ model EmailCampaign {
   textBody       String?             @db.Text
   classification EmailClassification @default(GENERAL)
 
-  // Targeting - legacy field kept for backward compatibility
-  targetScope     AnnouncementScope @default(ALL)
-  // New expanded targeting
-  targetType      EmailTargetType   @default(ALL_MEMBERS)
+  // Targeting
+  targetType      EmailTargetType @default(ALL_MEMBERS)
   targetProgramId String?
   targetEventId   String?
 
@@ -2846,12 +2835,12 @@ model WebsiteConfig {
   heroLocation       String? // e.g., "Austin, TX"
 
   // Visibility
-  showCalendar     Boolean @default(true)
-  showRegistration Boolean @default(true)
-  showContact      Boolean @default(true)
-  showCompetitions Boolean @default(false)
-  showStore        Boolean @default(true)
-  showLocations    Boolean @default(false)
+  showCalendar           Boolean @default(true)
+  showRegistration       Boolean @default(true)
+  showContact            Boolean @default(true)
+  showCompetitions       Boolean @default(false)
+  showStore              Boolean @default(true)
+  showLocations          Boolean @default(false)
   showTeam               Boolean @default(false)
   showTeamCertifications Boolean @default(false)
 
@@ -2892,14 +2881,14 @@ model WebsiteConfig {
 }
 
 model TeamMemberHighlight {
-  id             String  @id @default(cuid())
+  id             String   @id @default(cuid())
   organizationId String
-  memberId       String  @unique
-  displayOrder   Int     @default(0)
+  memberId       String   @unique
+  displayOrder   Int      @default(0)
   overrideImage  String?
   title          String?
-  bio            String? @db.Text
-  isVisible      Boolean @default(true)
+  bio            String?  @db.Text
+  isVisible      Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -3007,13 +2996,13 @@ enum StockMovementType {
 }
 
 model Order {
-  id                String                 @id @default(cuid())
-  invoiceId         String                 @unique
-  organizationId    String
-  source            OrderSource
-  fulfillmentStatus OrderFulfillmentStatus @default(PENDING)
-  customerName      String?
-  customerEmail     String?
+  id                 String                 @id @default(cuid())
+  invoiceId          String                 @unique
+  organizationId     String
+  source             OrderSource
+  fulfillmentStatus  OrderFulfillmentStatus @default(PENDING)
+  customerName       String?
+  customerEmail      String?
   customerPhone      String?
   shippingStreet     String?
   shippingCity       String?
@@ -3021,10 +3010,10 @@ model Order {
   shippingPostalCode String?
   shippingCountry    String?
   fulfilledAt        DateTime?
-  fulfilledBy       String?
-  notes             String?
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
+  fulfilledBy        String?
+  notes              String?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
 
   // Relations
   invoice      Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
@@ -3229,7 +3218,7 @@ model Space {
   updatedAt DateTime @updatedAt
 
   // Relations
-  facility            Facility                @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  facility            Facility               @relation(fields: [facilityId], references: [id], onDelete: Cascade)
   equipment           Equipment[]
   programAssignments  ProgramSpace[]
   instanceAssignments ProgramInstanceSpace[]
@@ -3250,7 +3239,7 @@ enum SpaceCapacityMode {
 }
 
 model ProgramSpace {
-  id      String @id @default(cuid())
+  id        String @id @default(cuid())
   programId String
   spaceId   String
 
@@ -3276,8 +3265,8 @@ model ProgramInstanceSpace {
 }
 
 model SpaceAvailability {
-  id      String @id @default(cuid())
-  spaceId String
+  id        String @id @default(cuid())
+  spaceId   String
   dayOfWeek Int // 0=Sunday, 1=Monday, ..., 6=Saturday
   openTime  String // e.g., "08:00"
   closeTime String // e.g., "18:00"
@@ -3451,10 +3440,6 @@ model OrganizationSubscription {
   currentPeriodStart DateTime
   currentPeriodEnd   DateTime
 
-  // Payment info (stored tokens, not actual card data)
-  stripeCustomerId     String?
-  stripeSubscriptionId String?
-
   // Adyen Payment Info
   adyenShopperReference   String? @unique // Unique ID for this org in Adyen
   adyenRecurringDetailRef String? // Primary payment method token ID
@@ -3533,7 +3518,7 @@ model OrganizationPaymentMethod {
   updatedAt DateTime @updatedAt
 
   // Relations
-  organization    Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization    Organization                 @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   paymentAttempts SubscriptionPaymentAttempt[]
 
   @@index([organizationId])
@@ -3549,17 +3534,17 @@ model AdyenPlatformAccount {
   organizationId String @unique
 
   // Adyen entity IDs (populated progressively during onboarding)
-  legalEntityId    String  @unique
-  businessLineId   String?
-  accountHolderId  String? @unique
-  balanceAccountId String? @unique
+  legalEntityId        String  @unique
+  businessLineId       String?
+  accountHolderId      String? @unique
+  balanceAccountId     String? @unique
   storeId              String?
   storeReference       String?
   splitConfigurationId String?
 
   // Onboarding
-  onboardingStatus   AdyenOnboardingStatus  @default(PENDING_HOSTED)
-  accountStatus      AdyenAccountStatus     @default(ACTIVE)
+  onboardingStatus   AdyenOnboardingStatus @default(PENDING_HOSTED)
+  accountStatus      AdyenAccountStatus    @default(ACTIVE)
   verificationStatus String?
   capabilities       Json?
 
@@ -3571,14 +3556,14 @@ model AdyenPlatformAccount {
   regressionErrors Json?
 
   // Pre-onboarding gate acceptance timestamps
-  legalNameConfirmedAt         DateTime?
-  platformFeeAcknowledgedAt    DateTime?
-  platformAgreementAcceptedAt  DateTime?
+  legalNameConfirmedAt        DateTime?
+  platformFeeAcknowledgedAt   DateTime?
+  platformAgreementAcceptedAt DateTime?
 
   // Sweep
   sweepId              String?
   transferInstrumentId String?
-  payoutSchedule       String    @default("daily")
+  payoutSchedule       String  @default("daily")
 
   // Sync
   lastPayoutSyncAt DateTime?
@@ -3730,10 +3715,10 @@ model ScheduleTemplateEntry {
   id         String @id @default(cuid())
   templateId String
 
-  dayOfWeek  Int     // 0=Sunday, 1=Monday, ... 6=Saturday
-  startTime  String  // "09:00"
-  endTime    String  // "17:00"
-  shiftType  String  // Role/position type
+  dayOfWeek  Int // 0=Sunday, 1=Monday, ... 6=Saturday
+  startTime  String // "09:00"
+  endTime    String // "17:00"
+  shiftType  String // Role/position type
   memberId   String? // Optional - can be unassigned
   facilityId String?
 
@@ -3750,9 +3735,9 @@ model MemberAvailability {
   id       String @id @default(cuid())
   memberId String
 
-  dayOfWeek   Int     // 0=Sunday, 1=Monday, ... 6=Saturday
-  startTime   String  // "09:00"
-  endTime     String  // "17:00"
+  dayOfWeek   Int // 0=Sunday, 1=Monday, ... 6=Saturday
+  startTime   String // "09:00"
+  endTime     String // "17:00"
   isAvailable Boolean @default(true)
 
   createdAt DateTime @default(now())
@@ -3811,7 +3796,7 @@ model QueueEntry {
   sessionToken  String @unique // Browser session identifier
 
   // User info (may be anonymous until they identify)
-  email    String?
+  email String?
 
   // Queue status
   position Int // Current position in queue
@@ -3920,10 +3905,10 @@ enum NotificationTriggerType {
   RECURRING_CHARGE_SUSPENDED // All retries exhausted, entitlement suspended
 
   // Payout-related (org admin)
-  PAYOUT_SCHEDULED          // Payout sweep has been scheduled
-  PAYOUT_PAID               // Payout successfully deposited to bank account
-  PAYOUT_FAILED             // Payout transfer failed
-  NEGATIVE_BALANCE_WARNING  // Balance account has gone negative
+  PAYOUT_SCHEDULED // Payout sweep has been scheduled
+  PAYOUT_PAID // Payout successfully deposited to bank account
+  PAYOUT_FAILED // Payout transfer failed
+  NEGATIVE_BALANCE_WARNING // Balance account has gone negative
 
   // Custom
   CUSTOM // Custom/manual trigger
@@ -4593,7 +4578,7 @@ model Competition {
   registrationStartTime String?
   registrationEndDate   DateTime?
   registrationEndTime   String?
-  registrationOpen      Boolean @default(true)
+  registrationOpen      Boolean   @default(true)
   earlyAccessCode       String?
 
   // Season
@@ -4611,11 +4596,11 @@ model Competition {
   updatedAt DateTime @updatedAt
 
   // Relations
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  facility     Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
-  glCode       GLCode?      @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
-  season       Season?      @relation(fields: [seasonId], references: [id], onDelete: SetNull)
-  programCategory  Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  facility        Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  glCode          GLCode?      @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
+  season          Season?      @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  programCategory Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   categories        CompetitionCategory[]
   entries           CompetitionEntry[]
@@ -4812,7 +4797,7 @@ model CompetitionResult {
 model OrganizationStatusLog {
   id             String   @id @default(cuid())
   organizationId String
-  action         String   // "DEACTIVATED" | "REACTIVATED"
+  action         String // "DEACTIVATED" | "REACTIVATED"
   reason         String?
   notes          String?
   performedBy    String? // Null for system-automated actions (cron, billing)
@@ -4860,7 +4845,7 @@ model RegistrationFile {
 // ─── Certifications ──────────────────────────────────────────────────────────
 
 model Certification {
-  id             String @id @default(cuid())
+  id             String  @id @default(cuid())
   organizationId String
   name           String
   description    String?
@@ -4903,8 +4888,8 @@ model MemberCertification {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  certification Certification      @relation(fields: [certificationId], references: [id], onDelete: Cascade)
-  member        OrganizationMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  certification Certification       @relation(fields: [certificationId], references: [id], onDelete: Cascade)
+  member        OrganizationMember  @relation(fields: [memberId], references: [id], onDelete: Cascade)
   grantedBy     OrganizationMember? @relation("CertGrantedBy", fields: [grantedById], references: [id], onDelete: SetNull)
 
   @@unique([certificationId, memberId])
@@ -4934,27 +4919,27 @@ enum PassStatus {
 }
 
 model Pass {
-  id                String          @id @default(cuid())
-  name              String
-  description       String?
-  price             Decimal         @db.Decimal(10, 2)
-  billingInterval   BillingInterval @default(MONTHLY)
-  sessionLimit      Int
-  limitPeriod       PassLimitPeriod @default(WEEKLY)
-  coversAllPrograms    Boolean              @default(false)
-  hasGenderRestriction Boolean              @default(false)
+  id                   String              @id @default(cuid())
+  name                 String
+  description          String?
+  price                Decimal             @db.Decimal(10, 2)
+  billingInterval      BillingInterval     @default(MONTHLY)
+  sessionLimit         Int
+  limitPeriod          PassLimitPeriod     @default(WEEKLY)
+  coversAllPrograms    Boolean             @default(false)
+  hasGenderRestriction Boolean             @default(false)
   allowedGenders       GenderDeclaration[]
-  status               PassStatus           @default(ACTIVE)
+  status               PassStatus          @default(ACTIVE)
   glCodeId             String?
   organizationId       String
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
 
   // Relations
-  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  glCode              GLCode?      @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
-  coveredPrograms     Program[]    @relation("PassCoveredPrograms")
-  requiredForPrograms Program[]    @relation("PassRequiredForPrograms")
+  organization        Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  glCode              GLCode?       @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
+  coveredPrograms     Program[]     @relation("PassCoveredPrograms")
+  requiredForPrograms Program[]     @relation("PassRequiredForPrograms")
   athletePasses       AthletePass[]
   lineItems           LineItem[]
 
@@ -5009,7 +4994,7 @@ model AccountingConnection {
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 
-  organization    Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization    Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   accountMappings AccountingAccountMapping[]
   syncMappings    AccountingSyncMapping[]
   syncQueue       AccountingSyncQueue[]
@@ -5020,14 +5005,14 @@ model AccountingConnection {
 }
 
 model AccountingAccountMapping {
-  id                  String               @id @default(cuid())
+  id                  String                @id @default(cuid())
   connectionId        String
   mappingType         AccountingMappingType
   uplifterEntityId    String?
   externalAccountId   String
   externalAccountName String
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
 
   connection AccountingConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
@@ -5144,10 +5129,10 @@ model SubscriptionInvoice {
   failedAt DateTime?
 
   // Support / remediation fields
-  notes          String? @db.Text // Internal support notes
+  notes          String?   @db.Text // Internal support notes
   voidedBy       String? // Superadmin user ID who voided
   voidedAt       DateTime?
-  adjustedFrom   Decimal? @db.Decimal(10, 2) // Original amount before adjustment
+  adjustedFrom   Decimal?  @db.Decimal(10, 2) // Original amount before adjustment
   markedPaidBy   String? // Superadmin user ID who manually marked paid
   markedPaidNote String? // Reason for manual payment marking
 
@@ -5187,7 +5172,7 @@ model SubscriptionPaymentAttempt {
   attemptNumber Int
   attemptedAt   DateTime @default(now())
 
-  subscriptionInvoice SubscriptionInvoice    @relation(fields: [subscriptionInvoiceId], references: [id], onDelete: Cascade)
+  subscriptionInvoice SubscriptionInvoice       @relation(fields: [subscriptionInvoiceId], references: [id], onDelete: Cascade)
   paymentMethod       OrganizationPaymentMethod @relation(fields: [paymentMethodId], references: [id])
 
   @@index([subscriptionInvoiceId])
@@ -5228,15 +5213,15 @@ enum HolidayType {
 }
 
 model OrganizationHoliday {
-  id             String      @id @default(cuid())
-  organizationId String
-  date           DateTime
-  name           String
-  type           HolidayType
-  isEnabled      Boolean     @default(true)
-  year           Int
-  countryCode    String?
-  stateCode      String?
+  id                  String      @id @default(cuid())
+  organizationId      String
+  date                DateTime
+  name                String
+  type                HolidayType
+  isEnabled           Boolean     @default(true)
+  year                Int
+  countryCode         String?
+  stateCode           String?
   announcementId      String?
   reminderEmailSentAt DateTime?
 

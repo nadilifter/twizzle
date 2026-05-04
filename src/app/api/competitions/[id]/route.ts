@@ -51,7 +51,6 @@ const competitionInclude = {
           id: true,
           firstName: true,
           lastName: true,
-          name: true,
           avatar: true,
         },
       },

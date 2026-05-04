@@ -50,7 +50,8 @@ export async function GET(request: NextRequest) {
     if (search) {
       where.OR = [
         { description: { contains: search, mode: "insensitive" } },
-        { athlete: { name: { contains: search, mode: "insensitive" } } },
+        { athlete: { firstName: { contains: search, mode: "insensitive" } } },
+        { athlete: { lastName: { contains: search, mode: "insensitive" } } },
       ];
     }
 
@@ -76,7 +77,8 @@ export async function GET(request: NextRequest) {
           athlete: {
             select: {
               id: true,
-              name: true,
+              firstName: true,
+              lastName: true,
             },
           },
           paymentMethod: {

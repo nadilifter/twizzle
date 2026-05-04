@@ -66,7 +66,8 @@ export async function GET(request: NextRequest) {
           organizationAthletes: { some: { organizationId: { in: orgIds } } },
           ...(search && {
             OR: [
-              { name: { contains: search, mode: "insensitive" as const } },
+              { firstName: { contains: search, mode: "insensitive" as const } },
+              { lastName: { contains: search, mode: "insensitive" as const } },
               { email: { contains: search, mode: "insensitive" as const } },
             ],
           }),
@@ -76,7 +77,8 @@ export async function GET(request: NextRequest) {
         athlete: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             email: true,
             avatar: true,
           },
@@ -99,7 +101,8 @@ export async function GET(request: NextRequest) {
       string,
       {
         id: string;
-        name: string;
+        firstName: string;
+        lastName: string;
         email: string | null;
         avatar: string | null;
         programs: Array<{
@@ -140,7 +143,8 @@ export async function GET(request: NextRequest) {
           organizationAthletes: { some: { organizationId: { in: orgIds } } },
           ...(search && {
             OR: [
-              { name: { contains: search, mode: "insensitive" as const } },
+              { firstName: { contains: search, mode: "insensitive" as const } },
+              { lastName: { contains: search, mode: "insensitive" as const } },
               { email: { contains: search, mode: "insensitive" as const } },
             ],
           }),

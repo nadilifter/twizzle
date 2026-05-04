@@ -70,11 +70,7 @@ interface AthletesTabProps {
 }
 
 function getAthleteName(athlete: ProgramAthlete): string {
-  return (
-    [athlete.firstName, athlete.lastName].filter(Boolean).join(" ") ||
-    athlete.name ||
-    "Unknown athlete"
-  );
+  return [athlete.firstName, athlete.lastName].filter(Boolean).join(" ") || "Unknown athlete";
 }
 
 function ComplianceBadge({

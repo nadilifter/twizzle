@@ -34,7 +34,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       include: {
         athletePasses: {
           include: {
-            athlete: { select: { id: true, firstName: true, lastName: true, name: true } },
+            athlete: { select: { id: true, firstName: true, lastName: true } },
           },
           orderBy: { createdAt: "desc" },
         },
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         autoRenew: validatedData.autoRenew,
       },
       include: {
-        athlete: { select: { id: true, firstName: true, lastName: true, name: true } },
+        athlete: { select: { id: true, firstName: true, lastName: true } },
       },
     });
 

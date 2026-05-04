@@ -46,6 +46,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { RegistrationFilesSection } from "@/components/registration-files-section";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { athleteDisplayName } from "@/lib/athlete-name";
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
 
 interface Guardian {
@@ -253,10 +254,8 @@ export default function AthleteDetailPage() {
     return Array.from(groups.values());
   }, [registrations?.instanceRegistrations]);
 
-  const athleteDisplayName = athlete
-    ? `${athlete.firstName} ${athlete.lastName}`.trim() || athlete.name
-    : undefined;
-  useBreadcrumbOverride(athlete ? `/athletes/${athleteId}` : undefined, athleteDisplayName);
+  const athleteName = athlete ? athleteDisplayName(athlete) : undefined;
+  useBreadcrumbOverride(athlete ? `/athletes/${athleteId}` : undefined, athleteName);
 
   if (isLoading) {
     return (
@@ -270,7 +269,7 @@ export default function AthleteDetailPage() {
 
   if (!athlete) return null;
 
-  const displayName = athleteDisplayName!;
+  const displayName = athleteName!;
   const initials = `${athlete.firstName?.[0] || ""}${athlete.lastName?.[0] || ""}`.toUpperCase();
   const totalRegistrations =
     (registrations?.instanceRegistrations?.length || 0) +
