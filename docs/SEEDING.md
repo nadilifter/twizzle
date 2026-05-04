@@ -1,35 +1,67 @@
 # Database Seeding Guide
 
-This document describes how to seed the database with development data for testing and local development.
+The repo has two seed scripts with deliberately different scopes:
+
+- **`prisma/seed.ts`** — bootstrap seed. The minimum data the app needs to boot
+  and let an admin log in: subscription plans, one organization, one admin user.
+  Safe to run in production or any new environment.
+- **`prisma/seed-dev.ts`** — comprehensive dev seed. Multi-tenant fixtures with
+  realistic athletes, programs, events, payments, Adyen account replay, and
+  more. **Local development only — never run in prod.**
+
+Reserved-domain data lives in `prisma/seed-reserved.ts` and is unrelated to
+either script.
 
 ## Quick Start
 
 ```bash
-# Run the development seed script
-pnpm db:seed:dev
-
-# Or reset the database and seed in one command
+# Reset the database and run the dev seed (most common during local dev)
 pnpm db:reset
+
+# Or run the dev seed without resetting
+pnpm db:seed:dev
 ```
 
 ## Available Scripts
 
-| Script             | Description                                            |
-| ------------------ | ------------------------------------------------------ |
-| `pnpm db:seed`     | Run the default Prisma seed (minimal production data)  |
-| `pnpm db:seed:dev` | Run the comprehensive development seed with dummy data |
-| `pnpm db:reset`    | Reset the database and run the development seed        |
+| Script             | Runs                                 | When to use                         |
+| ------------------ | ------------------------------------ | ----------------------------------- |
+| `pnpm db:seed`     | `prisma/seed.ts` (bootstrap)         | New env / prod first-boot only      |
+| `pnpm db:seed:dev` | `prisma/seed-dev.ts` (comprehensive) | Local dev — refresh fixtures        |
+| `pnpm db:reset`    | `migrate reset --force` + dev seed   | Local dev — start over from scratch |
 
-## What Gets Created
+`db:reset` runs the dev seed because the `prisma.seed` field in `package.json`
+points `prisma db seed` (which `migrate reset` calls under the hood) at
+`seed-dev.ts`. `db:seed` invokes the bootstrap directly via `tsx` to bypass
+that config.
 
-The development seed (`seed-dev.ts`) creates two complete organizations with realistic data:
+## Bootstrap seed contents
+
+`pnpm db:seed` creates exactly:
+
+- All four platform subscription plans (Free / Starter / Gold / Platinum) — the
+  plan-picker UI references these by slug
+- One organization (`Bootstrap Organization`, slug `bootstrap`) on the Free plan
+- One admin user (`admin@bootstrap.local`) — email-only login, no password
+
+That's it. No fixtures, no demo data, no Adyen replay. Log in at `/login` with
+`admin@bootstrap.local` to begin configuring the org.
+
+## Dev seed contents
+
+The dev seed (`seed-dev.ts`) creates four organizations:
 
 ### Organizations
 
-| Organization               | Slug                 | Focus                 | Subscription      |
-| -------------------------- | -------------------- | --------------------- | ----------------- |
-| Sunrise Gymnastics Academy | `sunrise-gymnastics` | Youth gymnastics club | Gold (yearly)     |
-| Metro Sports Complex       | `metro-sports`       | Multi-sport facility  | Starter (monthly) |
+| Organization               | Slug                 | Focus                                | Subscription      |
+| -------------------------- | -------------------- | ------------------------------------ | ----------------- |
+| Sunrise Gymnastics Academy | `sunrise-gymnastics` | Youth gymnastics club (full data)    | Gold (yearly)     |
+| Metro Sports Complex       | `metro-sports`       | Multi-sport facility (full data)     | Starter (monthly) |
+| Demo Gymnastics Club       | `demo-gym`           | Lightweight demo / testing org       | Gold (monthly)    |
+| Uplifter                   | `uplifter`           | Platform-owner org (Andrew, Drew, …) | Platinum (yearly) |
+
+Sunrise and Metro carry the bulk of the realistic fixture data (athletes,
+programs, payments, etc.); Demo and Uplifter are intentionally lighter.
 
 ### Data Summary
 
@@ -177,8 +209,8 @@ The seed script uses `Promise.all()` where possible for parallel operations. If 
 ```
 prisma/
 ├── schema.prisma       # Database schema
-├── seed.ts             # Default/production seed (minimal)
-├── seed-dev.ts         # Development seed (comprehensive)
+├── seed.ts             # Bootstrap seed (prod-safe, login-only)
+├── seed-dev.ts         # Comprehensive dev seed (local only)
 ├── seed-reserved.ts    # Reserved domains seed
 └── migrations/         # Migration history
 ```

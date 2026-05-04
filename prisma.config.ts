@@ -6,6 +6,9 @@ export default defineConfig({
   schema: path.join("prisma", "schema.prisma"),
   migrations: {
     path: path.join("prisma", "migrations"),
-    seed: "tsx prisma/seed.ts",
+    // Comprehensive dev seed — used by `prisma db seed` and `prisma migrate reset`.
+    // The `db:seed` npm script bypasses this and runs the bootstrap (seed.ts) directly.
+    // See docs/SEEDING.md for the full split.
+    seed: "tsx prisma/seed-dev.ts",
   },
 });

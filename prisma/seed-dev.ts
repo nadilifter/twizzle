@@ -1,10 +1,14 @@
 /**
- * Main Seed Script
- * ================
+ * Development Seed Script (seed-dev.ts)
+ * =====================================
  *
- * This script populates the database with comprehensive data for development
- * and testing purposes. It creates multiple organizations with different data
- * to test multi-tenancy and various features.
+ * Comprehensive fixtures for **local development only**. Creates multiple
+ * organizations with realistic multi-tenant data so we can exercise features
+ * end-to-end without hand-crafting DB state.
+ *
+ * Run with:
+ *   pnpm db:seed:dev      (run dev seed only)
+ *   pnpm db:reset         (reset schema + run dev seed)
  *
  * Organizations:
  * 1. Sunrise Gymnastics Academy - Youth gymnastics club (comprehensive data)
@@ -12,24 +16,35 @@
  * 3. Demo Gymnastics Club - Demo/testing organization
  * 4. Uplifter - Platform owner organization
  *
- * Usage:
- *   pnpm db:seed
+ * Scope boundary — what belongs in this file:
+ *   ✓ Realistic fixture data for every model in schema.prisma
+ *   ✓ Edge-case shapes (refunds, partial payments, varied enrollment states, etc.)
+ *   ✓ Adyen TEST-environment account replay so the financials dashboard has data
+ *   ✓ Multi-tenant variety (different lifecycle stages, plan tiers, sports mixes)
  *
- * To reset and reseed:
- *   pnpm db:reset
+ * What does NOT belong here:
+ *   ✗ Anything that needs to run in production or new envs — that goes in seed.ts
+ *     (the bootstrap seed: minimal data needed for the app to boot and log in).
+ *   ✗ Reserved-domain data — that lives in seed-reserved.ts and is unrelated.
  *
- * Last Updated: 2026-01-29
- *
- * MAINTENANCE NOTES:
- * - When adding new models to schema.prisma, add seed data in the corresponding section
+ * Maintenance:
  * - Use deterministic IDs (prefixed with org slug) for idempotent seeding
- * - Use upsert pattern to allow re-running without errors
- * - Keep realistic data that exercises edge cases
+ * - Use upsert pattern so re-running doesn't fail on existing data
+ * - When adding a new model to schema.prisma, add seed data in the matching section
+ *
+ * See also: docs/SEEDING.md for the full seed-script contract and Adyen test setup.
  */
 
 import { PrismaClient, Prisma } from "@prisma/client";
 
 import { Redis } from "@upstash/redis";
+import {
+  listBalanceAccountTransfers,
+  getTransferInstrumentLast4,
+  getBalanceAccountSweepDescription,
+  isPlatformConfigured,
+} from "@/lib/adyen-platform";
+import { createSystemRulesForOrganization } from "@/lib/notification-service";
 
 const prisma = new PrismaClient();
 
@@ -60,6 +75,235 @@ function noonUTC(dateStr: string): Date {
   const [year, month, day] = dateStr.split("-").map(Number);
   return new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
 }
+// ---------------------------------------------------------------------------
+// Adyen sync helpers
+// ---------------------------------------------------------------------------
+
+// Inlined from payout-utils to avoid pulling @/lib/db into the seed process.
+const ADYEN_SWEEP_REF_RE = /^SWPE\w+$/;
+function seedDeterminePayoutType(
+  desc: string | null | undefined,
+  sweepDesc: string | null | undefined
+): "SWEEP" | "MANUAL" {
+  const d = (desc ?? "").toUpperCase();
+  const s = sweepDesc?.toUpperCase();
+  const matchesPrefix = (str: string, prefix: string) =>
+    str === prefix ||
+    (str.startsWith(prefix + " ") && ADYEN_SWEEP_REF_RE.test(str.slice(prefix.length + 1)));
+  if (s) return matchesPrefix(d, s) ? "SWEEP" : "MANUAL";
+  return matchesPrefix(d, "EXT BAL SWEEP") ? "SWEEP" : "MANUAL";
+}
+
+function mapTransferTypeToTxnType(
+  type: string
+): "PAYMENT" | "REFUND" | "CHARGEBACK" | "CAPTURE" | "CANCEL" | null {
+  const map: Record<string, "PAYMENT" | "REFUND" | "CHARGEBACK" | "CAPTURE" | "CANCEL"> = {
+    payment: "PAYMENT",
+    capture: "CAPTURE",
+    captureReversal: "CANCEL",
+    refund: "REFUND",
+    refundReversal: "REFUND",
+    chargeback: "CHARGEBACK",
+    chargebackReversal: "CHARGEBACK",
+    chargebackCorrection: "CHARGEBACK",
+    secondChargeback: "CHARGEBACK",
+    secondChargebackCorrection: "CHARGEBACK",
+  };
+  return map[type] ?? null;
+}
+
+function mapTransferStatusToTxnStatus(
+  status: string
+): "AUTHORISED" | "CAPTURED" | "SETTLED" | "REFUSED" | "CANCELLED" | "ERROR" | "PENDING" {
+  const map: Record<
+    string,
+    "AUTHORISED" | "CAPTURED" | "SETTLED" | "REFUSED" | "CANCELLED" | "ERROR" | "PENDING"
+  > = {
+    booked: "SETTLED",
+    captured: "CAPTURED",
+    capturePending: "CAPTURED",
+    authorised: "AUTHORISED",
+    received: "AUTHORISED",
+    merchantPayin: "AUTHORISED",
+    merchantPayinPending: "PENDING",
+    pendingExecution: "PENDING",
+    bankTransferPending: "PENDING",
+    refunded: "SETTLED",
+    cancelled: "CANCELLED",
+    failed: "ERROR",
+    refused: "REFUSED",
+    rejected: "ERROR",
+    error: "ERROR",
+    returned: "ERROR",
+  };
+  return map[status] ?? "PENDING";
+}
+
+const PAYOUT_STATUS_MAP: Record<string, "PAID" | "SCHEDULED" | "FAILED" | "PENDING"> = {
+  booked: "PAID",
+  pendingApproval: "SCHEDULED",
+  authorised: "SCHEDULED",
+  failed: "FAILED",
+  refused: "FAILED",
+  returned: "FAILED",
+  internallyDeclined: "FAILED",
+  validationFailed: "FAILED",
+};
+
+/**
+ * Pulls real payout and transaction history from Adyen for a seeded org
+ * and upserts it into the local DB so the financials dashboard shows accurate
+ * data without requiring live webhook events.
+ *
+ * Requires ADYEN_PLATFORM_API_KEY to have "Balance Platform Transfers read"
+ * permission — see docs/SEEDING.md § "Adyen Test Accounts".
+ */
+async function syncAdyenDataForOrg(
+  orgId: string,
+  balanceAccountId: string,
+  sweepId: string
+): Promise<{ transactions: number; payouts: number }> {
+  let txnCount = 0;
+  let payoutCount = 0;
+
+  // ---- 1. platformPayment transfers → Transaction records ----
+  // Wrapped independently so a permission error here does not block payout sync below.
+  try {
+    const platPayTransfers = await listBalanceAccountTransfers(balanceAccountId, {
+      category: "platformPayment",
+      createdSince: new Date("2020-01-01"),
+    });
+
+    for (const transfer of platPayTransfers) {
+      const catData = transfer.categoryData as any;
+
+      // Only sync net amounts credited to the org — skip fee/commission split entries
+      if (catData?.platformPaymentType !== "BalanceAccount") continue;
+
+      // Use modification PSP ref for captures/refunds/chargebacks; original PSP ref for payments
+      const transferType = transfer.type as string;
+      const pspReference: string | undefined =
+        transferType === "payment"
+          ? (catData?.pspPaymentReference ?? undefined)
+          : (catData?.modificationPspReference ?? catData?.pspPaymentReference ?? undefined);
+
+      if (!pspReference) continue;
+
+      const txnType = mapTransferTypeToTxnType(transferType);
+      if (!txnType) continue;
+
+      const txnStatus = mapTransferStatusToTxnStatus(transfer.status as string);
+      const amount = (transfer.amount?.value ?? 0) / 100;
+      const currency = transfer.amount?.currency ?? "USD";
+      const settledAt =
+        txnStatus === "SETTLED" && transfer.createdAt ? new Date(transfer.createdAt) : null;
+
+      await prisma.transaction.upsert({
+        where: { pspReference },
+        update: {
+          status: txnStatus,
+          ...(settledAt ? { settledAt } : {}),
+        },
+        create: {
+          organizationId: orgId,
+          pspReference,
+          merchantRef: catData?.paymentMerchantReference ?? null,
+          type: txnType,
+          amount,
+          currency,
+          status: txnStatus,
+          settledAt,
+          // method (card brand) is not available from the Balance Platform Transfers API;
+          // it is only present in the standard payment webhook notification.
+        },
+      });
+      txnCount++;
+    }
+  } catch (err: any) {
+    const status = err?.statusCode ?? err?.status;
+    if (status === 401 || status === 403) {
+      console.warn(
+        `  ⚠ transactions skipped — ADYEN_PLATFORM_API_KEY may need` +
+          ` "Balance Platform Transfers read" permission. See docs/SEEDING.md.`
+      );
+    } else {
+      console.warn(`  ⚠ transaction sync failed — ${err?.message ?? err}`);
+    }
+  }
+
+  // ---- 2. bank transfers → Payout records ----
+  const bankTransfers = await listBalanceAccountTransfers(balanceAccountId, {
+    category: "bank",
+    createdSince: new Date("2020-01-01"),
+  });
+
+  const sweepDescription = await getBalanceAccountSweepDescription(balanceAccountId, sweepId).catch(
+    () => null
+  );
+
+  // Cache TI → last4 to avoid redundant API calls per org
+  const tiLast4Cache = new Map<string, string | null>();
+
+  for (const transfer of bankTransfers) {
+    const statusStr = (
+      typeof transfer.status === "object" ? transfer.status?.statusCode : transfer.status
+    ) as string;
+    const payoutStatus = PAYOUT_STATUS_MAP[statusStr ?? ""] ?? "PENDING";
+    const amount = (transfer.amount?.value ?? 0) / 100;
+    const currency = transfer.amount?.currency ?? "USD";
+    const payoutType = seedDeterminePayoutType(transfer.description, sweepDescription);
+    const transferDate = transfer.createdAt ? new Date(transfer.createdAt) : new Date();
+
+    let bankAccount: string | null = null;
+    const tiId: string | undefined = transfer.counterparty?.transferInstrumentId;
+    if (tiId) {
+      if (!tiLast4Cache.has(tiId)) {
+        tiLast4Cache.set(tiId, await getTransferInstrumentLast4(tiId).catch(() => null));
+      }
+      bankAccount = tiLast4Cache.get(tiId) ?? null;
+    }
+
+    const updateFields = {
+      status: payoutStatus,
+      payoutType,
+      ...(bankAccount ? { bankAccount } : {}),
+      ...(payoutStatus === "PAID" ? { paidAt: transferDate } : {}),
+      ...(payoutStatus === "SCHEDULED" ? { scheduledAt: transferDate } : {}),
+    };
+
+    const payout = await prisma.payout.upsert({
+      where: { reference: transfer.id },
+      update: updateFields,
+      create: {
+        organizationId: orgId,
+        reference: transfer.id,
+        amount,
+        fees: 0,
+        net: amount,
+        currency,
+        ...updateFields,
+      },
+    });
+    payoutCount++;
+
+    // Link settled transactions to PAID payouts using paidAt as the cutoff
+    if (payoutStatus === "PAID" && payout.paidAt) {
+      await prisma.transaction.updateMany({
+        where: {
+          organizationId: orgId,
+          status: "SETTLED",
+          payoutId: null,
+          settledAt: { lte: payout.paidAt },
+        },
+        data: { payoutId: payout.id },
+      });
+    }
+  }
+
+  return { transactions: txnCount, payouts: payoutCount };
+}
+
+// ---------------------------------------------------------------------------
 
 async function main() {
   console.log("🌱 Starting development seed...\n");
@@ -72,7 +316,29 @@ async function main() {
   // Use slug for where clause to be idempotent regardless of IDs
   const freePlan = await prisma.subscriptionPlan.upsert({
     where: { slug: "free" },
-    update: {},
+    update: {
+      // Update existing plans with email limits
+      emailIncluded: null, // No email campaigns on free plan
+      emailOverageRate: null,
+      maxStorageMB: 500, // 500 MB
+      maxMembershipTypes: 2,
+      featureToggles: {
+        events: false,
+        sms: false,
+        emailCampaigns: false,
+        customDomains: false,
+        accountingIntegrations: false,
+        training: false,
+        store: false,
+        memberships: false,
+        waitlists: false,
+        passes: false,
+        seasons: false,
+        liveSupport: false,
+        customInformation: true,
+        analytics: false,
+      },
+    },
     create: {
       name: "Free",
       slug: "free",
@@ -83,8 +349,31 @@ async function main() {
       perTransactionFee: 0.5,
       maxAthletes: 25,
       maxUsers: 2,
+      maxPrograms: 3,
       maxEvents: 10,
-      features: ["Basic scheduling", "Up to 25 athletes", "Email support"],
+      smsIncluded: null,
+      smsOverageRate: null,
+      emailIncluded: null,
+      emailOverageRate: null, // No email campaigns on free plan
+      maxStorageMB: 500, // 500 MB
+      maxMembershipTypes: 2,
+      features: ["Basic scheduling", "Up to 25 athletes", "Email support", "500 MB storage"],
+      featureToggles: {
+        events: false,
+        sms: false,
+        emailCampaigns: false,
+        customDomains: false,
+        accountingIntegrations: false,
+        training: false,
+        store: false,
+        memberships: false,
+        waitlists: false,
+        passes: false,
+        seasons: false,
+        liveSupport: false,
+        customInformation: true,
+        analytics: false,
+      },
       isPopular: false,
       displayOrder: 0,
       isActive: true,
@@ -93,7 +382,28 @@ async function main() {
   });
   const starterPlan = await prisma.subscriptionPlan.upsert({
     where: { slug: "starter" },
-    update: {},
+    update: {
+      emailIncluded: 500, // 500 emails/month
+      emailOverageRate: 0.005, // $0.005 per email over limit
+      maxStorageMB: 2000, // 2 GB
+      maxMembershipTypes: 5,
+      featureToggles: {
+        events: true,
+        sms: true,
+        emailCampaigns: true,
+        customDomains: false,
+        accountingIntegrations: false,
+        training: false,
+        store: true,
+        memberships: false,
+        waitlists: true,
+        passes: false,
+        seasons: false,
+        liveSupport: false,
+        customInformation: true,
+        analytics: false,
+      },
+    },
     create: {
       name: "Starter",
       slug: "starter",
@@ -104,13 +414,38 @@ async function main() {
       perTransactionFee: 0.35,
       maxAthletes: 100,
       maxUsers: 5,
+      maxPrograms: 10,
       maxEvents: 50,
+      smsIncluded: 100,
+      smsOverageRate: 0.05,
+      emailIncluded: 500,
+      emailOverageRate: 0.005, // 500 emails/month, $0.005 per extra
+      maxStorageMB: 2000, // 2 GB
+      maxMembershipTypes: 5,
       features: [
         "Advanced scheduling",
         "Up to 100 athletes",
         "Priority email support",
         "Basic reporting",
+        "500 email campaigns/month",
+        "2 GB storage",
       ],
+      featureToggles: {
+        events: true,
+        sms: true,
+        emailCampaigns: true,
+        customDomains: false,
+        accountingIntegrations: false,
+        training: false,
+        store: true,
+        memberships: false,
+        waitlists: true,
+        passes: false,
+        seasons: false,
+        liveSupport: false,
+        customInformation: true,
+        analytics: false,
+      },
       isPopular: false,
       displayOrder: 1,
       isActive: true,
@@ -119,7 +454,28 @@ async function main() {
   });
   const goldPlan = await prisma.subscriptionPlan.upsert({
     where: { slug: "gold" },
-    update: {},
+    update: {
+      emailIncluded: 2500, // 2500 emails/month
+      emailOverageRate: 0.003, // $0.003 per email over limit
+      maxStorageMB: 10000, // 10 GB
+      maxMembershipTypes: 15,
+      featureToggles: {
+        events: true,
+        sms: true,
+        emailCampaigns: true,
+        customDomains: true,
+        accountingIntegrations: false,
+        training: true,
+        store: true,
+        memberships: false,
+        waitlists: true,
+        passes: true,
+        seasons: false,
+        liveSupport: true,
+        customInformation: true,
+        analytics: false,
+      },
+    },
     create: {
       name: "Gold",
       slug: "gold",
@@ -130,14 +486,39 @@ async function main() {
       perTransactionFee: 0.3,
       maxAthletes: 500,
       maxUsers: 15,
+      maxPrograms: 50,
       maxEvents: null,
+      smsIncluded: 500,
+      smsOverageRate: 0.04,
+      emailIncluded: 2500,
+      emailOverageRate: 0.003, // 2500 emails/month, $0.003 per extra
+      maxStorageMB: 10000, // 10 GB
+      maxMembershipTypes: 15,
       features: [
         "Unlimited events",
         "Up to 500 athletes",
         "Phone support",
         "Advanced reporting",
         "Custom branding",
+        "2,500 email campaigns/month",
+        "10 GB storage",
       ],
+      featureToggles: {
+        events: true,
+        sms: true,
+        emailCampaigns: true,
+        customDomains: true,
+        accountingIntegrations: false,
+        training: true,
+        store: true,
+        memberships: false,
+        waitlists: true,
+        passes: true,
+        seasons: false,
+        liveSupport: true,
+        customInformation: true,
+        analytics: false,
+      },
       isPopular: true,
       displayOrder: 2,
       isActive: true,
@@ -146,7 +527,28 @@ async function main() {
   });
   const platinumPlan = await prisma.subscriptionPlan.upsert({
     where: { slug: "platinum" },
-    update: {},
+    update: {
+      emailIncluded: 10000, // 10000 emails/month
+      emailOverageRate: 0.002, // $0.002 per email over limit
+      maxStorageMB: null, // Unlimited
+      maxMembershipTypes: null, // Unlimited
+      featureToggles: {
+        events: true,
+        sms: true,
+        emailCampaigns: true,
+        customDomains: true,
+        accountingIntegrations: true,
+        training: true,
+        store: true,
+        memberships: false,
+        waitlists: true,
+        passes: true,
+        seasons: false,
+        liveSupport: true,
+        customInformation: true,
+        analytics: false,
+      },
+    },
     create: {
       name: "Platinum",
       slug: "platinum",
@@ -157,14 +559,39 @@ async function main() {
       perTransactionFee: 0.25,
       maxAthletes: null,
       maxUsers: null,
+      maxPrograms: null,
       maxEvents: null,
+      smsIncluded: 2000,
+      smsOverageRate: 0.03,
+      emailIncluded: 10000,
+      emailOverageRate: 0.002, // 10000 emails/month, $0.002 per extra
+      maxStorageMB: null, // Unlimited
+      maxMembershipTypes: null, // Unlimited
       features: [
         "Unlimited everything",
         "Dedicated support",
         "Custom integrations",
         "White-label options",
         "SLA guarantee",
+        "10,000 email campaigns/month",
+        "Unlimited storage",
       ],
+      featureToggles: {
+        events: true,
+        sms: true,
+        emailCampaigns: true,
+        customDomains: true,
+        accountingIntegrations: true,
+        training: true,
+        store: true,
+        memberships: false,
+        waitlists: true,
+        passes: true,
+        seasons: false,
+        liveSupport: true,
+        customInformation: true,
+        analytics: false,
+      },
       isPopular: false,
       displayOrder: 3,
       isActive: true,
@@ -249,6 +676,204 @@ async function main() {
   console.log(`  ✓ Created: ${orgUplifter.name}`);
 
   // ============================================
+  // ADYEN PLATFORM ACCOUNTS
+  // ============================================
+  // Both orgs map to real accounts in the Adyen TEST environment (KirraCapital_Leapfrog_LOCAL_TEST).
+  // See docs/SEEDING.md § "Adyen Test Accounts" for Customer Area links and verification steps.
+  console.log("\n🏦 Creating Adyen platform accounts...");
+
+  const sunriseAdyenData = {
+    legalEntityId: "LE329CB223227L5P8Z836B2C3",
+    businessLineId: "SE329CB223227L5P8Z836B2GP",
+    accountHolderId: "AH3292V22322BK5P8Z8364KJM",
+    balanceAccountId: "BA3292V22322BK5P8Z8374KKP",
+    storeId: "ST32CSW223229T5P7L2K9547D",
+    storeReference: "store-sunrise-gymnastics",
+    splitConfigurationId: "SCNF42988223225J5P8Z8HP2HM2624",
+    sweepId: "SWPC4299322322445P8Z8GSFFB4BNG",
+    transferInstrumentId: "SE329CB223227L5P8Z878B73G",
+    onboardingStatus: "VERIFIED" as const,
+    verificationStatus: "All capabilities verified",
+    verifiedAt: new Date(),
+    legalNameConfirmedAt: new Date(),
+    platformFeeAcknowledgedAt: new Date(),
+    platformAgreementAcceptedAt: new Date(),
+    payoutSchedule: "weekly",
+    capabilities: {
+      receivePayments: {
+        requested: true,
+        allowed: true,
+        enabled: true,
+        verificationStatus: "valid",
+      },
+      sendToBalanceAccount: {
+        requested: true,
+        allowed: true,
+        enabled: true,
+        verificationStatus: "valid",
+      },
+      sendToTransferInstrument: {
+        requested: true,
+        allowed: true,
+        enabled: true,
+        verificationStatus: "valid",
+        transferInstruments: [
+          {
+            id: "SE329CB223227L5P8Z878B73G",
+            allowed: true,
+            enabled: true,
+            requested: true,
+            verificationStatus: "valid",
+          },
+        ],
+      },
+      receiveFromBalanceAccount: {
+        requested: true,
+        allowed: true,
+        enabled: true,
+        verificationStatus: "valid",
+      },
+      receiveFromPlatformPayments: {
+        requested: true,
+        allowed: true,
+        enabled: true,
+        verificationStatus: "valid",
+      },
+    },
+  };
+
+  await prisma.adyenPlatformAccount.upsert({
+    where: { organizationId: ORG1_ID },
+    update: sunriseAdyenData,
+    create: { organizationId: ORG1_ID, ...sunriseAdyenData },
+  });
+
+  const metroAdyenData = {
+    legalEntityId: "LE3295Z223227J5P8Z5ZF8SD6",
+    businessLineId: "SE3295Z223227J5P8Z5ZF8SHS",
+    accountHolderId: "AH3292V22322BK5P8Z5ZF4DWF",
+    balanceAccountId: "BA3297R22322BK5P8Z5ZG2LCQ",
+    storeId: "ST3299M223229T5P7KV9K3SHW",
+    storeReference: "store-metro-sports",
+    splitConfigurationId: "SCNF42CQT223225K5P95MZD88D6H28",
+    sweepId: "SWPC4292W22322435P8Z6KZCSK2V2K",
+    transferInstrumentId: "SE3295Z223227J5P8Z6J695MW",
+    onboardingStatus: "VERIFIED" as const,
+    verificationStatus: "All capabilities verified",
+    verifiedAt: new Date(),
+    legalNameConfirmedAt: new Date(),
+    platformFeeAcknowledgedAt: new Date(),
+    platformAgreementAcceptedAt: new Date(),
+    payoutSchedule: "daily",
+    capabilities: {
+      receivePayments: {
+        requested: true,
+        allowed: true,
+        enabled: true,
+        verificationStatus: "valid",
+      },
+      sendToBalanceAccount: {
+        requested: true,
+        allowed: true,
+        enabled: true,
+        verificationStatus: "valid",
+      },
+      sendToTransferInstrument: {
+        requested: true,
+        allowed: true,
+        enabled: true,
+        verificationStatus: "valid",
+        transferInstruments: [
+          {
+            id: "SE3295Z223227J5P8Z6J695MW",
+            allowed: true,
+            enabled: true,
+            requested: true,
+            verificationStatus: "valid",
+          },
+        ],
+      },
+      receiveFromBalanceAccount: {
+        requested: true,
+        allowed: true,
+        enabled: true,
+        verificationStatus: "valid",
+      },
+      receiveFromPlatformPayments: {
+        requested: true,
+        allowed: true,
+        enabled: true,
+        verificationStatus: "valid",
+      },
+    },
+  };
+
+  await prisma.adyenPlatformAccount.upsert({
+    where: { organizationId: ORG2_ID },
+    update: metroAdyenData,
+    create: { organizationId: ORG2_ID, ...metroAdyenData },
+  });
+
+  // Demo Gym and Uplifter: no Adyen accounts
+  await prisma.adyenPlatformAccount.deleteMany({
+    where: { organizationId: { in: [ORG_DEMO_ID, ORG_UPLIFTER_ID] } },
+  });
+
+  console.log("  ✓ Sunrise Gymnastics: VERIFIED (AH3292V22322BK5P8Z8364KJM, weekly sweep)");
+  console.log("  ✓ Metro Sports: VERIFIED (AH3292V22322BK5P8Z5ZF4DWF, daily sweep)");
+  console.log("  ✓ Demo Gym / Uplifter: no account");
+
+  // ============================================
+  // ADYEN DATA SYNC (transactions + payouts)
+  // ============================================
+  // Pulls real history from Adyen's Transfers API so the financials dashboard
+  // shows accurate data without requiring live webhook events after seeding.
+  // Requires ADYEN_PLATFORM_API_KEY to have "Balance Platform Transfers read"
+  // permission. If missing, this section is skipped gracefully.
+  console.log("\n📡 Syncing Adyen transaction and payout history...");
+
+  if (!isPlatformConfigured()) {
+    console.log("  ⚠ Adyen platform not fully configured — skipping sync");
+  } else {
+    const orgsToSync = [
+      {
+        orgId: ORG1_ID,
+        balanceAccountId: "BA3292V22322BK5P8Z8374KKP",
+        sweepId: "SWPC4299322322445P8Z8GSFFB4BNG",
+        label: "Sunrise",
+      },
+      {
+        orgId: ORG2_ID,
+        balanceAccountId: "BA3297R22322BK5P8Z5ZG2LCQ",
+        sweepId: "SWPC4292W22322435P8Z6KZCSK2V2K",
+        label: "Metro",
+      },
+    ] as const;
+
+    let totalTxns = 0;
+    let totalPayouts = 0;
+
+    for (const { orgId, balanceAccountId, sweepId, label } of orgsToSync) {
+      try {
+        const { transactions, payouts } = await syncAdyenDataForOrg(
+          orgId,
+          balanceAccountId,
+          sweepId
+        );
+        console.log(`  ✓ ${label}: synced ${transactions} transactions, ${payouts} payouts`);
+        totalTxns += transactions;
+        totalPayouts += payouts;
+      } catch (err: any) {
+        console.warn(`  ⚠ ${label}: payout sync failed — ${err?.message ?? err}`);
+      }
+    }
+
+    if (totalTxns > 0 || totalPayouts > 0) {
+      console.log(`  ✓ Total synced: ${totalTxns} transactions, ${totalPayouts} payouts`);
+    }
+  }
+
+  // ============================================
   // ORGANIZATION SUBSCRIPTIONS
   // ============================================
   console.log("\n💳 Creating organization subscriptions...");
@@ -313,70 +938,6 @@ async function main() {
   console.log("  ✓ Created subscriptions for all organizations");
 
   // ============================================
-  // ADYEN PLATFORM ACCOUNTS (seed various onboarding states)
-  // ============================================
-  console.log("\n🏦 Creating Adyen platform accounts...");
-
-  // Sunrise: fully verified with store and sweep
-  await prisma.adyenPlatformAccount.upsert({
-    where: { organizationId: ORG1_ID },
-    update: {},
-    create: {
-      organizationId: ORG1_ID,
-      legalEntityId: "LE_SEED_SUNRISE_001",
-      businessLineId: "BL_SEED_SUNRISE_001",
-      accountHolderId: "AH_SEED_SUNRISE_001",
-      balanceAccountId: "BA_SEED_SUNRISE_001",
-      storeId: "ST_SEED_SUNRISE_001",
-      storeReference: "store-sunrise-gymnastics",
-      onboardingStatus: "VERIFIED",
-      verificationStatus: "All checks passed",
-      capabilities: {
-        receivePayments: { requested: true, allowed: true, verificationStatus: "valid" },
-        sendToTransferInstrument: { requested: true, allowed: true, verificationStatus: "valid" },
-        receiveFromBalanceAccount: { requested: true, allowed: true, verificationStatus: "valid" },
-      },
-      sweepId: "SWEEP_SEED_SUNRISE_001",
-      transferInstrumentId: "TI_SEED_SUNRISE_001",
-    },
-  });
-
-  // Metro: in-progress (started onboarding but not yet verified)
-  await prisma.adyenPlatformAccount.upsert({
-    where: { organizationId: ORG2_ID },
-    update: {},
-    create: {
-      organizationId: ORG2_ID,
-      legalEntityId: "LE_SEED_METRO_001",
-      businessLineId: "BL_SEED_METRO_001",
-      accountHolderId: "AH_SEED_METRO_001",
-      balanceAccountId: "BA_SEED_METRO_001",
-      onboardingStatus: "IN_PROGRESS",
-      verificationStatus: "Awaiting identity verification",
-      capabilities: {
-        receivePayments: { requested: true, allowed: false, verificationStatus: "pending" },
-        sendToTransferInstrument: {
-          requested: true,
-          allowed: false,
-          verificationStatus: "pending",
-        },
-        receiveFromBalanceAccount: {
-          requested: true,
-          allowed: false,
-          verificationStatus: "pending",
-        },
-      },
-    },
-  });
-
-  // Demo Gym: no Adyen account (can test "Begin Verification" flow)
-  // Uplifter: no Adyen account (platform owner, doesn't need marketplace onboarding)
-
-  console.log("  ✓ Sunrise Gymnastics: VERIFIED (fully onboarded)");
-  console.log("  ✓ Metro Sports: IN_PROGRESS (awaiting verification)");
-  console.log("  ✓ Demo Gym: no account (ready to test initiation)");
-
-  // ============================================
   // SPORTS
   // ============================================
   console.log("\n🏅 Creating sports...");
@@ -396,39 +957,39 @@ async function main() {
       displayOrder: 1,
     },
     {
-      id: "sport-track-and-field",
-      name: "Track & Field",
-      slug: "track-and-field",
-      description:
-        "Competitive track and field events including sprints, distance, hurdles, and field events",
-      displayOrder: 2,
-    },
-    {
       id: "sport-swimming",
       name: "Swimming",
       slug: "swimming",
       description: "Competitive and recreational swimming across all strokes and distances",
-      displayOrder: 3,
+      displayOrder: 2,
     },
     {
       id: "sport-skiing",
       name: "Skiing",
       slug: "skiing",
       description: "Alpine and cross-country skiing disciplines",
-      displayOrder: 4,
+      displayOrder: 3,
     },
     {
       id: "sport-diving",
       name: "Diving",
       slug: "diving",
       description: "Springboard and platform diving competitions",
-      displayOrder: 5,
+      displayOrder: 4,
     },
     {
       id: "sport-basketball",
       name: "Basketball",
       slug: "basketball",
       description: "Team basketball programs and competitions",
+      displayOrder: 5,
+    },
+    {
+      id: "sport-track-and-field",
+      name: "Track & Field",
+      slug: "track-and-field",
+      description:
+        "Competitive track and field events including sprints, distance, hurdles, and field events",
       displayOrder: 6,
     },
   ];
@@ -467,6 +1028,673 @@ async function main() {
     });
   }
   console.log("  ✓ Associated sports with organizations");
+
+  // ============================================
+  // COMPETITION CATEGORY TEMPLATES
+  // ============================================
+  console.log("\n🏷️  Creating competition category templates...");
+
+  // --- Gymnastics: Age Group x Apparatus (COMBINATION) ---
+  const gymTemplate = await prisma.competitionCategoryTemplate.upsert({
+    where: { id: "cat-tmpl-gymnastics-age-apparatus" },
+    update: {},
+    create: {
+      id: "cat-tmpl-gymnastics-age-apparatus",
+      sportId: sports["gymnastics"].id,
+      name: "Age Group x Apparatus",
+      description:
+        "Standard gymnastics competition categories organized by age group and apparatus",
+      type: "COMBINATION",
+      isActive: true,
+      displayOrder: 0,
+      rowAxisLabel: "Age Group",
+      columnAxisLabel: "Apparatus",
+      restrictionAxis: "ROW",
+    },
+  });
+
+  const gymRowData = [
+    {
+      id: "cav-gym-u8",
+      name: "Under 8",
+      axis: "ROW" as const,
+      displayOrder: 0,
+      minAge: 0,
+      maxAge: 7,
+    },
+    {
+      id: "cav-gym-u10",
+      name: "Under 10",
+      axis: "ROW" as const,
+      displayOrder: 1,
+      minAge: 8,
+      maxAge: 9,
+    },
+    {
+      id: "cav-gym-u12",
+      name: "Under 12",
+      axis: "ROW" as const,
+      displayOrder: 2,
+      minAge: 10,
+      maxAge: 11,
+    },
+    {
+      id: "cav-gym-u14",
+      name: "Under 14",
+      axis: "ROW" as const,
+      displayOrder: 3,
+      minAge: 12,
+      maxAge: 13,
+    },
+    {
+      id: "cav-gym-open",
+      name: "Open",
+      axis: "ROW" as const,
+      displayOrder: 4,
+      minAge: 14,
+      maxAge: null,
+    },
+  ];
+  const gymColData = [
+    {
+      id: "cav-gym-floor",
+      name: "Floor",
+      axis: "COLUMN" as const,
+      displayOrder: 0,
+      resultType: "SCORE" as const,
+      sortDirection: "DESC" as const,
+    },
+    {
+      id: "cav-gym-vault",
+      name: "Vault",
+      axis: "COLUMN" as const,
+      displayOrder: 1,
+      resultType: "SCORE" as const,
+      sortDirection: "DESC" as const,
+    },
+    {
+      id: "cav-gym-bars",
+      name: "Bars",
+      axis: "COLUMN" as const,
+      displayOrder: 2,
+      resultType: "SCORE" as const,
+      sortDirection: "DESC" as const,
+    },
+    {
+      id: "cav-gym-beam",
+      name: "Beam",
+      axis: "COLUMN" as const,
+      displayOrder: 3,
+      resultType: "SCORE" as const,
+      sortDirection: "DESC" as const,
+    },
+  ];
+
+  for (const row of gymRowData) {
+    await prisma.categoryAxisValue.upsert({
+      where: { id: row.id },
+      update: {},
+      create: { ...row, templateId: gymTemplate.id },
+    });
+  }
+  for (const col of gymColData) {
+    await prisma.categoryAxisValue.upsert({
+      where: { id: col.id },
+      update: {},
+      create: { ...col, templateId: gymTemplate.id },
+    });
+  }
+
+  // Generate combination entries (disable Under 8 - Bars as an example)
+  const gymDisabled = new Set(["cav-gym-u8:cav-gym-bars"]);
+  for (const row of gymRowData) {
+    for (const col of gymColData) {
+      const comboId = `combo-gym-${row.id}-${col.id}`;
+      const key = `${row.id}:${col.id}`;
+      await prisma.categoryCombinationEntry.upsert({
+        where: { id: comboId },
+        update: {},
+        create: {
+          id: comboId,
+          templateId: gymTemplate.id,
+          rowValueId: row.id,
+          colValueId: col.id,
+          isActive: !gymDisabled.has(key),
+          name: `${row.name} - ${col.name}`,
+        },
+      });
+    }
+  }
+  console.log("  ✓ Created Gymnastics: Age Group x Apparatus template");
+
+  // --- Athletics: Sport-Specific Events & Age Categories ---
+  console.log("\n🏃 Creating Athletics sport-specific data...");
+  const athleticsSportId = sports["athletics"].id;
+
+  const athleticsEventsData = [
+    {
+      id: "athl-evt-100M",
+      code: "100M",
+      name: "100m",
+      eventGroup: "sprints",
+      eventType: "track",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      defaultPrecision: 3,
+      displayOrder: 0,
+    },
+    {
+      id: "athl-evt-200M",
+      code: "200M",
+      name: "200m",
+      eventGroup: "sprints",
+      eventType: "track",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      defaultPrecision: 3,
+      displayOrder: 1,
+    },
+    {
+      id: "athl-evt-400M",
+      code: "400M",
+      name: "400m",
+      eventGroup: "sprints",
+      eventType: "track",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      defaultPrecision: 3,
+      displayOrder: 2,
+    },
+    {
+      id: "athl-evt-100H",
+      code: "100H",
+      name: "100m Hurdles",
+      eventGroup: "hurdles",
+      eventType: "track",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      defaultPrecision: 3,
+      displayOrder: 3,
+    },
+    {
+      id: "athl-evt-110H",
+      code: "110H",
+      name: "110m Hurdles",
+      eventGroup: "hurdles",
+      eventType: "track",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      defaultPrecision: 3,
+      displayOrder: 4,
+    },
+    {
+      id: "athl-evt-400H",
+      code: "400H",
+      name: "400m Hurdles",
+      eventGroup: "hurdles",
+      eventType: "track",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      defaultPrecision: 3,
+      displayOrder: 5,
+    },
+    {
+      id: "athl-evt-800M",
+      code: "800M",
+      name: "800m",
+      eventGroup: "middle_distance",
+      eventType: "track",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      defaultPrecision: 3,
+      displayOrder: 6,
+    },
+    {
+      id: "athl-evt-1500M",
+      code: "1500M",
+      name: "1500m",
+      eventGroup: "middle_distance",
+      eventType: "track",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      defaultPrecision: 3,
+      displayOrder: 7,
+    },
+    {
+      id: "athl-evt-3000M",
+      code: "3000M",
+      name: "3000m",
+      eventGroup: "distance",
+      eventType: "track",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      defaultPrecision: 3,
+      displayOrder: 8,
+    },
+    {
+      id: "athl-evt-STEEPLE",
+      code: "STEEPLE",
+      name: "3000m Steeplechase",
+      eventGroup: "distance",
+      eventType: "track",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      defaultPrecision: 3,
+      displayOrder: 9,
+    },
+    {
+      id: "athl-evt-5000M",
+      code: "5000M",
+      name: "5000m",
+      eventGroup: "distance",
+      eventType: "track",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      defaultPrecision: 3,
+      displayOrder: 10,
+    },
+    {
+      id: "athl-evt-10000M",
+      code: "10000M",
+      name: "10000m",
+      eventGroup: "distance",
+      eventType: "track",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      defaultPrecision: 3,
+      displayOrder: 11,
+    },
+    {
+      id: "athl-evt-4X100",
+      code: "4X100",
+      name: "4x100 Relay",
+      eventGroup: "relays",
+      eventType: "relay",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      defaultPrecision: 3,
+      displayOrder: 12,
+    },
+    {
+      id: "athl-evt-4X400",
+      code: "4X400",
+      name: "4x400 Relay",
+      eventGroup: "relays",
+      eventType: "relay",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      defaultPrecision: 3,
+      displayOrder: 13,
+    },
+    {
+      id: "athl-evt-4X400MX",
+      code: "4X400MX",
+      name: "4x400 Mixed Relay",
+      eventGroup: "relays",
+      eventType: "relay",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      defaultPrecision: 3,
+      displayOrder: 14,
+    },
+    {
+      id: "athl-evt-HJ",
+      code: "HJ",
+      name: "High Jump",
+      eventGroup: "jumps",
+      eventType: "field",
+      resultType: "HEIGHT" as const,
+      sortDirection: "DESC" as const,
+      defaultPrecision: 2,
+      displayOrder: 15,
+    },
+    {
+      id: "athl-evt-LJ",
+      code: "LJ",
+      name: "Long Jump",
+      eventGroup: "jumps",
+      eventType: "field",
+      resultType: "DISTANCE" as const,
+      sortDirection: "DESC" as const,
+      defaultPrecision: 2,
+      displayOrder: 16,
+    },
+    {
+      id: "athl-evt-TJ",
+      code: "TJ",
+      name: "Triple Jump",
+      eventGroup: "jumps",
+      eventType: "field",
+      resultType: "DISTANCE" as const,
+      sortDirection: "DESC" as const,
+      defaultPrecision: 2,
+      displayOrder: 17,
+    },
+    {
+      id: "athl-evt-PV",
+      code: "PV",
+      name: "Pole Vault",
+      eventGroup: "jumps",
+      eventType: "field",
+      resultType: "HEIGHT" as const,
+      sortDirection: "DESC" as const,
+      defaultPrecision: 2,
+      displayOrder: 18,
+    },
+    {
+      id: "athl-evt-SP",
+      code: "SP",
+      name: "Shot Put",
+      eventGroup: "throws",
+      eventType: "field",
+      resultType: "DISTANCE" as const,
+      sortDirection: "DESC" as const,
+      defaultPrecision: 2,
+      displayOrder: 19,
+    },
+    {
+      id: "athl-evt-DT",
+      code: "DT",
+      name: "Discus",
+      eventGroup: "throws",
+      eventType: "field",
+      resultType: "DISTANCE" as const,
+      sortDirection: "DESC" as const,
+      defaultPrecision: 2,
+      displayOrder: 20,
+    },
+    {
+      id: "athl-evt-HT",
+      code: "HT",
+      name: "Hammer Throw",
+      eventGroup: "throws",
+      eventType: "field",
+      resultType: "DISTANCE" as const,
+      sortDirection: "DESC" as const,
+      defaultPrecision: 2,
+      displayOrder: 21,
+    },
+    {
+      id: "athl-evt-JT",
+      code: "JT",
+      name: "Javelin",
+      eventGroup: "throws",
+      eventType: "field",
+      resultType: "DISTANCE" as const,
+      sortDirection: "DESC" as const,
+      defaultPrecision: 2,
+      displayOrder: 22,
+    },
+    {
+      id: "athl-evt-HEPT",
+      code: "HEPT",
+      name: "Heptathlon",
+      eventGroup: "combined",
+      eventType: "combined",
+      resultType: "SCORE" as const,
+      sortDirection: "DESC" as const,
+      defaultPrecision: 0,
+      displayOrder: 23,
+    },
+    {
+      id: "athl-evt-DECA",
+      code: "DECA",
+      name: "Decathlon",
+      eventGroup: "combined",
+      eventType: "combined",
+      resultType: "SCORE" as const,
+      sortDirection: "DESC" as const,
+      defaultPrecision: 0,
+      displayOrder: 24,
+    },
+    {
+      id: "athl-evt-RW5K",
+      code: "RW5K",
+      name: "5000m Race Walk",
+      eventGroup: "racewalk",
+      eventType: "racewalk",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      defaultPrecision: 3,
+      displayOrder: 25,
+    },
+    {
+      id: "athl-evt-RW10K",
+      code: "RW10K",
+      name: "10000m Race Walk",
+      eventGroup: "racewalk",
+      eventType: "racewalk",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      defaultPrecision: 3,
+      displayOrder: 26,
+    },
+    {
+      id: "athl-evt-RW20K",
+      code: "RW20K",
+      name: "20km Race Walk",
+      eventGroup: "racewalk",
+      eventType: "racewalk",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      defaultPrecision: 3,
+      displayOrder: 27,
+    },
+    {
+      id: "athl-evt-RW35K",
+      code: "RW35K",
+      name: "35km Race Walk",
+      eventGroup: "racewalk",
+      eventType: "racewalk",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      defaultPrecision: 3,
+      displayOrder: 28,
+    },
+    {
+      id: "athl-evt-ROAD5K",
+      code: "ROAD5K",
+      name: "5km Road",
+      eventGroup: "road",
+      eventType: "road",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      defaultPrecision: 3,
+      displayOrder: 29,
+    },
+    {
+      id: "athl-evt-ROAD10K",
+      code: "ROAD10K",
+      name: "10km Road",
+      eventGroup: "road",
+      eventType: "road",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      defaultPrecision: 3,
+      displayOrder: 30,
+    },
+    {
+      id: "athl-evt-HALF",
+      code: "HALF",
+      name: "Half Marathon",
+      eventGroup: "road",
+      eventType: "road",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      defaultPrecision: 3,
+      displayOrder: 31,
+    },
+    {
+      id: "athl-evt-MAR",
+      code: "MAR",
+      name: "Marathon",
+      eventGroup: "road",
+      eventType: "road",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      defaultPrecision: 3,
+      displayOrder: 32,
+    },
+  ];
+
+  for (const evt of athleticsEventsData) {
+    await prisma.sportEvent.upsert({
+      where: { id: evt.id },
+      update: {},
+      create: { ...evt, sportId: athleticsSportId },
+    });
+  }
+  console.log(`  ✓ Created ${athleticsEventsData.length} athletics events`);
+
+  const athleticsAgeCatsData = [
+    { id: "athl-age-U10", code: "U10", name: "Under 10", minAge: 8, maxAge: 9, displayOrder: 0 },
+    { id: "athl-age-U12", code: "U12", name: "Under 12", minAge: 10, maxAge: 11, displayOrder: 1 },
+    { id: "athl-age-U14", code: "U14", name: "Under 14", minAge: 12, maxAge: 13, displayOrder: 2 },
+    { id: "athl-age-U16", code: "U16", name: "Under 16", minAge: 14, maxAge: 15, displayOrder: 3 },
+    { id: "athl-age-U18", code: "U18", name: "Under 18", minAge: 16, maxAge: 17, displayOrder: 4 },
+    { id: "athl-age-U20", code: "U20", name: "Under 20", minAge: 18, maxAge: 19, displayOrder: 5 },
+    { id: "athl-age-SEN", code: "SEN", name: "Senior", minAge: 20, maxAge: 34, displayOrder: 6 },
+    { id: "athl-age-MAS", code: "MAS", name: "Masters", minAge: 35, maxAge: null, displayOrder: 7 },
+  ];
+
+  for (const cat of athleticsAgeCatsData) {
+    await prisma.sportAgeCategory.upsert({
+      where: { id: cat.id },
+      update: {},
+      create: { ...cat, sportId: athleticsSportId },
+    });
+  }
+  console.log(`  ✓ Created ${athleticsAgeCatsData.length} athletics age categories`);
+
+  // Eligibility matrix: which event+age combos are allowed
+  const athleticsEligibility: Record<string, string[]> = {
+    "100M": ["U10", "U12", "U14", "U16", "U18", "U20", "SEN", "MAS"],
+    "200M": ["U10", "U12", "U14", "U16", "U18", "U20", "SEN", "MAS"],
+    "400M": ["U12", "U14", "U16", "U18", "U20", "SEN", "MAS"],
+    "100H": ["U14", "U16", "U18", "U20", "SEN", "MAS"],
+    "110H": ["U16", "U18", "U20", "SEN", "MAS"],
+    "400H": ["U16", "U18", "U20", "SEN", "MAS"],
+    "800M": ["U10", "U12", "U14", "U16", "U18", "U20", "SEN", "MAS"],
+    "1500M": ["U10", "U12", "U14", "U16", "U18", "U20", "SEN", "MAS"],
+    "3000M": ["U12", "U14", "U16", "U18", "U20", "SEN", "MAS"],
+    STEEPLE: ["U16", "U18", "U20", "SEN", "MAS"],
+    "5000M": ["U16", "U18", "U20", "SEN", "MAS"],
+    "10000M": ["U18", "U20", "SEN", "MAS"],
+    "4X100": ["U10", "U12", "U14", "U16", "U18", "U20", "SEN", "MAS"],
+    "4X400": ["U14", "U16", "U18", "U20", "SEN", "MAS"],
+    "4X400MX": ["U18", "U20", "SEN", "MAS"],
+    HJ: ["U10", "U12", "U14", "U16", "U18", "U20", "SEN", "MAS"],
+    LJ: ["U10", "U12", "U14", "U16", "U18", "U20", "SEN", "MAS"],
+    TJ: ["U14", "U16", "U18", "U20", "SEN", "MAS"],
+    PV: ["U14", "U16", "U18", "U20", "SEN", "MAS"],
+    SP: ["U10", "U12", "U14", "U16", "U18", "U20", "SEN", "MAS"],
+    DT: ["U12", "U14", "U16", "U18", "U20", "SEN", "MAS"],
+    JT: ["U12", "U14", "U16", "U18", "U20", "SEN", "MAS"],
+    HT: ["U14", "U16", "U18", "U20", "SEN", "MAS"],
+    HEPT: ["U14", "U16", "U18", "U20", "SEN", "MAS"],
+    DECA: ["U16", "U18", "U20", "SEN", "MAS"],
+    RW5K: ["U14", "U16", "U18", "U20", "SEN", "MAS"],
+    RW10K: ["U16", "U18", "U20", "SEN", "MAS"],
+    RW20K: ["U20", "SEN", "MAS"],
+    RW35K: ["SEN", "MAS"],
+    ROAD5K: ["U12", "U14", "U16", "U18", "U20", "SEN", "MAS"],
+    ROAD10K: ["U14", "U16", "U18", "U20", "SEN", "MAS"],
+    HALF: ["U20", "SEN", "MAS"],
+    MAR: ["SEN", "MAS"],
+  };
+
+  let eligibilityCount = 0;
+  for (const [eventCode, ageCodes] of Object.entries(athleticsEligibility)) {
+    const eventId = `athl-evt-${eventCode}`;
+    for (const ageCode of ageCodes) {
+      const ageCatId = `athl-age-${ageCode}`;
+      const eligId = `athl-elig-${eventCode}-${ageCode}`;
+      await prisma.sportEventEligibility.upsert({
+        where: { id: eligId },
+        update: {},
+        create: {
+          id: eligId,
+          sportEventId: eventId,
+          ageCategoryId: ageCatId,
+          isEnabled: true,
+        },
+      });
+      eligibilityCount++;
+    }
+  }
+  console.log(`  ✓ Created ${eligibilityCount} athletics eligibility entries`);
+
+  // --- Swimming: Open Events (INDIVIDUAL) ---
+  const swimTemplate = await prisma.competitionCategoryTemplate.upsert({
+    where: { id: "cat-tmpl-swimming-open-events" },
+    update: {},
+    create: {
+      id: "cat-tmpl-swimming-open-events",
+      sportId: sports["swimming"].id,
+      name: "Open Events",
+      description: "Standard open swimming events with age-based restrictions",
+      type: "INDIVIDUAL",
+      isActive: true,
+      displayOrder: 0,
+    },
+  });
+
+  const swimEntries = [
+    {
+      id: "cie-swim-50free",
+      name: "50m Freestyle",
+      displayOrder: 0,
+      hasAgeRestriction: false,
+      minAge: null,
+      maxAge: null,
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+    },
+    {
+      id: "cie-swim-100back",
+      name: "100m Backstroke",
+      displayOrder: 1,
+      hasAgeRestriction: true,
+      minAge: 8,
+      maxAge: null,
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+    },
+    {
+      id: "cie-swim-200medley",
+      name: "200m Medley",
+      displayOrder: 2,
+      hasAgeRestriction: true,
+      minAge: 10,
+      maxAge: null,
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+    },
+    {
+      id: "cie-swim-4x50relay",
+      name: "4x50m Relay",
+      displayOrder: 3,
+      hasAgeRestriction: false,
+      minAge: null,
+      maxAge: null,
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+    },
+  ];
+
+  for (const entry of swimEntries) {
+    await prisma.categoryIndividualEntry.upsert({
+      where: { id: entry.id },
+      update: {},
+      create: {
+        ...entry,
+        templateId: swimTemplate.id,
+        hasGenderRestriction: false,
+        hasCapacityRestriction: false,
+      },
+    });
+  }
+  console.log("  ✓ Created Swimming: Open Events template");
 
   // ============================================
   // USERS
@@ -1074,6 +2302,97 @@ async function main() {
   console.log(`  ✓ Created ${spaceData.length} spaces`);
 
   // ============================================
+  // SPACE AVAILABILITY
+  // ============================================
+  console.log("\n🕐 Creating space availability hours...");
+  const spaceAvailabilityData = [
+    // Org1 Main Facility - Main Floor: Mon-Fri 7am-9pm, Sat 8am-5pm
+    ...[1, 2, 3, 4, 5].map((day) => ({
+      spaceId: `${ORG1_ID}-space-1`,
+      dayOfWeek: day,
+      openTime: "07:00",
+      closeTime: "21:00",
+    })),
+    { spaceId: `${ORG1_ID}-space-1`, dayOfWeek: 6, openTime: "08:00", closeTime: "17:00" },
+    // Vault Runway: Mon-Fri 8am-8pm
+    ...[1, 2, 3, 4, 5].map((day) => ({
+      spaceId: `${ORG1_ID}-space-2`,
+      dayOfWeek: day,
+      openTime: "08:00",
+      closeTime: "20:00",
+    })),
+    // Beam Area: Mon-Sat 7am-9pm
+    ...[1, 2, 3, 4, 5, 6].map((day) => ({
+      spaceId: `${ORG1_ID}-space-4`,
+      dayOfWeek: day,
+      openTime: "07:00",
+      closeTime: "21:00",
+    })),
+    // Tumble Track: Mon-Fri 9am-6pm
+    ...[1, 2, 3, 4, 5].map((day) => ({
+      spaceId: `${ORG1_ID}-space-5`,
+      dayOfWeek: day,
+      openTime: "09:00",
+      closeTime: "18:00",
+    })),
+    // Org1 Satellite - Preschool Area: Mon-Fri 8am-4pm
+    ...[1, 2, 3, 4, 5].map((day) => ({
+      spaceId: `${ORG1_ID}-space-6`,
+      dayOfWeek: day,
+      openTime: "08:00",
+      closeTime: "16:00",
+    })),
+    // Recreational Floor: Mon-Sat 7am-9pm
+    ...[1, 2, 3, 4, 5, 6].map((day) => ({
+      spaceId: `${ORG1_ID}-space-7`,
+      dayOfWeek: day,
+      openTime: "07:00",
+      closeTime: "21:00",
+    })),
+    // Org2 - Basketball Court A: Mon-Sun 6am-10pm
+    ...[0, 1, 2, 3, 4, 5, 6].map((day) => ({
+      spaceId: `${ORG2_ID}-space-1`,
+      dayOfWeek: day,
+      openTime: "06:00",
+      closeTime: "22:00",
+    })),
+    // Basketball Court B: Mon-Sun 6am-10pm
+    ...[0, 1, 2, 3, 4, 5, 6].map((day) => ({
+      spaceId: `${ORG2_ID}-space-2`,
+      dayOfWeek: day,
+      openTime: "06:00",
+      closeTime: "22:00",
+    })),
+    // Soccer Field: Mon-Sun 7am-8pm
+    ...[0, 1, 2, 3, 4, 5, 6].map((day) => ({
+      spaceId: `${ORG2_ID}-space-3`,
+      dayOfWeek: day,
+      openTime: "07:00",
+      closeTime: "20:00",
+    })),
+    // Swimming Pool: Mon-Sat 6am-9pm
+    ...[1, 2, 3, 4, 5, 6].map((day) => ({
+      spaceId: `${ORG2_ID}-space-4`,
+      dayOfWeek: day,
+      openTime: "06:00",
+      closeTime: "21:00",
+    })),
+  ];
+  for (const slot of spaceAvailabilityData) {
+    await prisma.spaceAvailability.upsert({
+      where: {
+        spaceId_dayOfWeek: {
+          spaceId: slot.spaceId,
+          dayOfWeek: slot.dayOfWeek,
+        },
+      },
+      update: { openTime: slot.openTime, closeTime: slot.closeTime },
+      create: slot,
+    });
+  }
+  console.log(`  ✓ Created ${spaceAvailabilityData.length} availability slots`);
+
+  // ============================================
   // EQUIPMENT
   // ============================================
   console.log("\n🎯 Creating equipment...");
@@ -1578,9 +2897,12 @@ async function main() {
       update: {},
       create: {
         id: `${ORG1_ID}-ath-1`,
+        firstName: "Emily",
+        lastName: "Anderson",
         name: "Emily Anderson",
         email: "emily.a@email.com",
         birthDate: noonUTC("2016-03-15"),
+        gender: "FEMALE",
         medicalDetails: {
           allergies: ["peanuts"],
           conditions: [],
@@ -1593,75 +2915,158 @@ async function main() {
       update: {},
       create: {
         id: `${ORG1_ID}-ath-2`,
+        firstName: "Sophie",
+        lastName: "Anderson",
         name: "Sophie Anderson",
         email: "sophie.a@email.com",
         birthDate: noonUTC("2014-07-22"),
+        gender: "FEMALE",
       },
     }),
     prisma.athlete.upsert({
       where: { id: `${ORG1_ID}-ath-3` },
       update: {},
-      create: { id: `${ORG1_ID}-ath-3`, name: "Olivia Baker", birthDate: noonUTC("2013-11-08") },
+      create: {
+        id: `${ORG1_ID}-ath-3`,
+        firstName: "Olivia",
+        lastName: "Baker",
+        name: "Olivia Baker",
+        birthDate: noonUTC("2013-11-08"),
+        gender: "FEMALE",
+      },
     }),
     prisma.athlete.upsert({
       where: { id: `${ORG1_ID}-ath-4` },
       update: {},
-      create: { id: `${ORG1_ID}-ath-4`, name: "Lily Chen", birthDate: noonUTC("2017-01-30") },
+      create: {
+        id: `${ORG1_ID}-ath-4`,
+        firstName: "Lily",
+        lastName: "Chen",
+        name: "Lily Chen",
+        birthDate: noonUTC("2017-01-30"),
+        gender: "FEMALE",
+      },
     }),
     prisma.athlete.upsert({
       where: { id: `${ORG1_ID}-ath-5` },
       update: {},
-      create: { id: `${ORG1_ID}-ath-5`, name: "Mia Chen", birthDate: noonUTC("2012-09-14") },
+      create: {
+        id: `${ORG1_ID}-ath-5`,
+        firstName: "Mia",
+        lastName: "Chen",
+        name: "Mia Chen",
+        birthDate: noonUTC("2012-09-14"),
+        gender: "FEMALE",
+      },
     }),
     prisma.athlete.upsert({
       where: { id: `${ORG1_ID}-ath-6` },
       update: {},
-      create: { id: `${ORG1_ID}-ath-6`, name: "Grace Davis", birthDate: noonUTC("2011-05-20") },
+      create: {
+        id: `${ORG1_ID}-ath-6`,
+        firstName: "Grace",
+        lastName: "Davis",
+        name: "Grace Davis",
+        birthDate: noonUTC("2011-05-20"),
+        gender: "FEMALE",
+      },
     }),
     prisma.athlete.upsert({
       where: { id: `${ORG1_ID}-ath-7` },
       update: {},
-      create: { id: `${ORG1_ID}-ath-7`, name: "Ava Evans", birthDate: noonUTC("2015-12-03") },
+      create: {
+        id: `${ORG1_ID}-ath-7`,
+        firstName: "Ava",
+        lastName: "Evans",
+        name: "Ava Evans",
+        birthDate: noonUTC("2015-12-03"),
+        gender: "FEMALE",
+      },
     }),
     prisma.athlete.upsert({
       where: { id: `${ORG1_ID}-ath-8` },
       update: {},
-      create: { id: `${ORG1_ID}-ath-8`, name: "Hannah Evans", birthDate: noonUTC("2019-08-11") },
+      create: {
+        id: `${ORG1_ID}-ath-8`,
+        firstName: "Hannah",
+        lastName: "Evans",
+        name: "Hannah Evans",
+        birthDate: noonUTC("2019-08-11"),
+        gender: "FEMALE",
+      },
     }),
     prisma.athlete.upsert({
       where: { id: `${ORG2_ID}-ath-1` },
       update: {},
       create: {
         id: `${ORG2_ID}-ath-1`,
+        firstName: "Jake",
+        lastName: "Foster",
         name: "Jake Foster",
         email: "jake.f@email.com",
         birthDate: noonUTC("2014-04-18"),
+        gender: "MALE",
       },
     }),
     prisma.athlete.upsert({
       where: { id: `${ORG2_ID}-ath-2` },
       update: {},
-      create: { id: `${ORG2_ID}-ath-2`, name: "Ethan Foster", birthDate: noonUTC("2010-10-25") },
+      create: {
+        id: `${ORG2_ID}-ath-2`,
+        firstName: "Ethan",
+        lastName: "Foster",
+        name: "Ethan Foster",
+        birthDate: noonUTC("2010-10-25"),
+        gender: "MALE",
+      },
     }),
     prisma.athlete.upsert({
       where: { id: `${ORG2_ID}-ath-3` },
       update: {},
-      create: { id: `${ORG2_ID}-ath-3`, name: "Sofia Garcia", birthDate: noonUTC("2016-06-12") },
+      create: {
+        id: `${ORG2_ID}-ath-3`,
+        firstName: "Sofia",
+        lastName: "Garcia",
+        name: "Sofia Garcia",
+        birthDate: noonUTC("2016-06-12"),
+        gender: "FEMALE",
+      },
     }),
     prisma.athlete.upsert({
       where: { id: `${ORG2_ID}-ath-4` },
       update: {},
-      create: { id: `${ORG2_ID}-ath-4`, name: "Lucas Garcia", birthDate: noonUTC("2011-02-28") },
+      create: {
+        id: `${ORG2_ID}-ath-4`,
+        firstName: "Lucas",
+        lastName: "Garcia",
+        name: "Lucas Garcia",
+        birthDate: noonUTC("2011-02-28"),
+        gender: "MALE",
+      },
     }),
     prisma.athlete.upsert({
       where: { id: `${ORG2_ID}-ath-5` },
       update: {},
-      create: { id: `${ORG2_ID}-ath-5`, name: "Chloe Harris", birthDate: noonUTC("2015-09-07") },
+      create: {
+        id: `${ORG2_ID}-ath-5`,
+        firstName: "Chloe",
+        lastName: "Harris",
+        name: "Chloe Harris",
+        birthDate: noonUTC("2015-09-07"),
+        gender: "FEMALE",
+      },
     }),
     prisma.athlete.upsert({
       where: { id: `${ORG2_ID}-ath-6` },
       update: {},
-      create: { id: `${ORG2_ID}-ath-6`, name: "Noah Irving", birthDate: noonUTC("2012-11-19") },
+      create: {
+        id: `${ORG2_ID}-ath-6`,
+        firstName: "Noah",
+        lastName: "Irving",
+        name: "Noah Irving",
+        birthDate: noonUTC("2012-11-19"),
+        gender: "MALE",
+      },
     }),
   ]);
   console.log("  ✓ Created 14 athletes");
@@ -1670,57 +3075,105 @@ async function main() {
   // ORGANIZATION-ATHLETE LINKS (with org-specific level, status, customId)
   // ============================================
   console.log("\n🔗 Creating organization-athlete links...");
-  const org1Levels = [
-    "Bronze",
-    "Silver",
-    "Competitive",
-    "Bronze",
-    "Gold",
-    "Competitive",
-    "Silver",
-    "Preschool",
-  ];
-  const org1Statuses: ("ACTIVE" | "TRIAL")[] = [
-    "ACTIVE",
-    "ACTIVE",
-    "ACTIVE",
-    "ACTIVE",
-    "ACTIVE",
-    "ACTIVE",
-    "TRIAL",
-    "ACTIVE",
-  ];
-  const org2Levels = [
-    "Beginner",
-    "Intermediate",
-    "Beginner",
-    "Advanced",
-    "Beginner",
-    "Intermediate",
-  ];
-  const org2Statuses: ("ACTIVE" | "INACTIVE")[] = [
-    "ACTIVE",
-    "ACTIVE",
-    "ACTIVE",
-    "ACTIVE",
-    "INACTIVE",
-    "ACTIVE",
-  ];
   const orgAthleteData = [
-    ...Array.from({ length: 8 }, (_, i) => ({
+    {
       organizationId: ORG1_ID,
-      athleteId: `${ORG1_ID}-ath-${i + 1}`,
-      level: org1Levels[i],
-      status: org1Statuses[i],
-      customId: `SGA-00${i + 1}`,
-    })),
-    ...Array.from({ length: 6 }, (_, i) => ({
+      athleteId: `${ORG1_ID}-ath-1`,
+      level: "Bronze",
+      status: "ACTIVE" as const,
+      customId: "SGA-001",
+    },
+    {
+      organizationId: ORG1_ID,
+      athleteId: `${ORG1_ID}-ath-2`,
+      level: "Silver",
+      status: "ACTIVE" as const,
+      customId: "SGA-002",
+    },
+    {
+      organizationId: ORG1_ID,
+      athleteId: `${ORG1_ID}-ath-3`,
+      level: "Competitive",
+      status: "ACTIVE" as const,
+      customId: "SGA-003",
+    },
+    {
+      organizationId: ORG1_ID,
+      athleteId: `${ORG1_ID}-ath-4`,
+      level: "Bronze",
+      status: "ACTIVE" as const,
+      customId: "SGA-004",
+    },
+    {
+      organizationId: ORG1_ID,
+      athleteId: `${ORG1_ID}-ath-5`,
+      level: "Gold",
+      status: "ACTIVE" as const,
+      customId: "SGA-005",
+    },
+    {
+      organizationId: ORG1_ID,
+      athleteId: `${ORG1_ID}-ath-6`,
+      level: "Competitive",
+      status: "ACTIVE" as const,
+      customId: "SGA-006",
+    },
+    {
+      organizationId: ORG1_ID,
+      athleteId: `${ORG1_ID}-ath-7`,
+      level: "Silver",
+      status: "TRIAL" as const,
+      customId: "SGA-007",
+    },
+    {
+      organizationId: ORG1_ID,
+      athleteId: `${ORG1_ID}-ath-8`,
+      level: "Preschool",
+      status: "ACTIVE" as const,
+      customId: "SGA-008",
+    },
+    {
       organizationId: ORG2_ID,
-      athleteId: `${ORG2_ID}-ath-${i + 1}`,
-      level: org2Levels[i],
-      status: org2Statuses[i],
-      customId: `MSC-00${i + 1}`,
-    })),
+      athleteId: `${ORG2_ID}-ath-1`,
+      level: "Beginner",
+      status: "ACTIVE" as const,
+      customId: "MSC-001",
+    },
+    {
+      organizationId: ORG2_ID,
+      athleteId: `${ORG2_ID}-ath-2`,
+      level: "Intermediate",
+      status: "ACTIVE" as const,
+      customId: "MSC-002",
+    },
+    {
+      organizationId: ORG2_ID,
+      athleteId: `${ORG2_ID}-ath-3`,
+      level: "Beginner",
+      status: "ACTIVE" as const,
+      customId: "MSC-003",
+    },
+    {
+      organizationId: ORG2_ID,
+      athleteId: `${ORG2_ID}-ath-4`,
+      level: "Advanced",
+      status: "ACTIVE" as const,
+      customId: "MSC-004",
+    },
+    {
+      organizationId: ORG2_ID,
+      athleteId: `${ORG2_ID}-ath-5`,
+      level: "Beginner",
+      status: "INACTIVE" as const,
+      customId: "MSC-005",
+    },
+    {
+      organizationId: ORG2_ID,
+      athleteId: `${ORG2_ID}-ath-6`,
+      level: "Intermediate",
+      status: "ACTIVE" as const,
+      customId: "MSC-006",
+    },
   ];
   for (const oa of orgAthleteData) {
     await prisma.organizationAthlete.upsert({
@@ -1992,10 +3445,98 @@ async function main() {
   console.log(`  ✓ Created ${levelData.length} levels`);
 
   // ============================================
+  // CATEGORIES
+  // ============================================
+  console.log("\n🏷️ Creating categories...");
+  await Promise.all([
+    prisma.category.upsert({
+      where: { id: `${ORG1_ID}-cat-recreational` },
+      update: {},
+      create: {
+        id: `${ORG1_ID}-cat-recreational`,
+        name: "Recreational Gymnastics",
+        description: "Fun, fitness-focused programs for all ages and skill levels",
+        organizationId: ORG1_ID,
+      },
+    }),
+    prisma.category.upsert({
+      where: { id: `${ORG1_ID}-cat-competitive` },
+      update: {},
+      create: {
+        id: `${ORG1_ID}-cat-competitive`,
+        name: "Competitive Team",
+        description: "Structured training programs for competitive athletes",
+        organizationId: ORG1_ID,
+      },
+    }),
+    prisma.category.upsert({
+      where: { id: `${ORG1_ID}-cat-camps` },
+      update: {},
+      create: {
+        id: `${ORG1_ID}-cat-camps`,
+        name: "Camps & Clinics",
+        description: "Short-term intensive programs and seasonal camps",
+        organizationId: ORG1_ID,
+      },
+    }),
+    prisma.category.upsert({
+      where: { id: `${ORG1_ID}-cat-preschool` },
+      update: {},
+      create: {
+        id: `${ORG1_ID}-cat-preschool`,
+        name: "Preschool & Toddler",
+        description: "Age-appropriate movement classes for our youngest athletes",
+        organizationId: ORG1_ID,
+      },
+    }),
+    prisma.category.upsert({
+      where: { id: `${ORG2_ID}-cat-fitness` },
+      update: {},
+      create: {
+        id: `${ORG2_ID}-cat-fitness`,
+        name: "Group Fitness",
+        description: "High-energy group fitness classes for all levels",
+        organizationId: ORG2_ID,
+      },
+    }),
+    prisma.category.upsert({
+      where: { id: `${ORG2_ID}-cat-training` },
+      update: {},
+      create: {
+        id: `${ORG2_ID}-cat-training`,
+        name: "Personal Training",
+        description: "One-on-one and small group training sessions",
+        organizationId: ORG2_ID,
+      },
+    }),
+    prisma.category.upsert({
+      where: { id: `${ORG2_ID}-cat-youth` },
+      update: {},
+      create: {
+        id: `${ORG2_ID}-cat-youth`,
+        name: "Youth Sports",
+        description: "Sports programs designed for kids and teens",
+        organizationId: ORG2_ID,
+      },
+    }),
+    prisma.category.upsert({
+      where: { id: `${ORG2_ID}-cat-aquatics` },
+      update: {},
+      create: {
+        id: `${ORG2_ID}-cat-aquatics`,
+        name: "Aquatics",
+        description: "Swimming and water sports programs",
+        organizationId: ORG2_ID,
+      },
+    }),
+  ]);
+
+  // ============================================
   // PROGRAMS
   // ============================================
   console.log("\n📚 Creating programs...");
   await Promise.all([
+    // Recurring program with all-instance registration (traditional subscription)
     prisma.program.upsert({
       where: { id: `${ORG1_ID}-prog-rec-bronze` },
       update: {},
@@ -2007,11 +3548,24 @@ async function main() {
         registrationStatus: "OPEN",
         organizationId: ORG1_ID,
         color: "#cd7f32",
+        categoryId: `${ORG1_ID}-cat-recreational`,
         pricingModel: "FLAT_RATE",
         basePrice: 85,
         showCoachOnSite: true,
         startDate: daysAgo(30),
         endDate: daysFromNow(335),
+        registrationType: "ALL_INSTANCES",
+        startTime: "16:00",
+        duration: 60,
+        facilityId: `${ORG1_ID}-facility-main`,
+        rrule: "FREQ=WEEKLY;BYDAY=TU,TH",
+        // Availability restrictions
+        hasAgeRestriction: true,
+        minAge: 5,
+        maxAge: 7,
+        hasLevelRestriction: true,
+        hasCapacityRestriction: false,
+        hasMembershipRestriction: false,
       },
     }),
     prisma.program.upsert({
@@ -2025,11 +3579,24 @@ async function main() {
         registrationStatus: "OPEN",
         organizationId: ORG1_ID,
         color: "#64748b",
+        categoryId: `${ORG1_ID}-cat-recreational`,
         pricingModel: "FLAT_RATE",
         basePrice: 115,
         showCoachOnSite: true,
         startDate: daysAgo(30),
         endDate: daysFromNow(335),
+        registrationType: "ALL_INSTANCES",
+        startTime: "17:00",
+        duration: 75,
+        facilityId: `${ORG1_ID}-facility-main`,
+        rrule: "FREQ=WEEKLY;BYDAY=MO,WE,FR",
+        // Availability restrictions: requires Bronze level, ages 7-10
+        hasAgeRestriction: true,
+        minAge: 7,
+        maxAge: 10,
+        hasLevelRestriction: true,
+        hasCapacityRestriction: false,
+        hasMembershipRestriction: false,
       },
     }),
     prisma.program.upsert({
@@ -2043,11 +3610,17 @@ async function main() {
         registrationStatus: "OPEN",
         organizationId: ORG1_ID,
         color: "#f59e0b",
+        categoryId: `${ORG1_ID}-cat-recreational`,
         pricingModel: "FLAT_RATE",
         basePrice: 145,
         showCoachOnSite: true,
         startDate: daysAgo(30),
         endDate: daysFromNow(335),
+        registrationType: "ALL_INSTANCES",
+        startTime: "18:30",
+        duration: 90,
+        facilityId: `${ORG1_ID}-facility-main`,
+        rrule: "FREQ=WEEKLY;BYDAY=TU,TH,SA",
       },
     }),
     prisma.program.upsert({
@@ -2061,14 +3634,28 @@ async function main() {
         registrationStatus: "OPEN",
         organizationId: ORG1_ID,
         color: "#8b5cf6",
+        categoryId: `${ORG1_ID}-cat-competitive`,
         pricingModel: "FLAT_RATE",
         basePrice: 2400,
         showCoachOnSite: true,
         startDate: daysAgo(60),
         endDate: daysFromNow(305),
         capacity: 30,
+        registrationType: "ALL_INSTANCES",
+        startTime: "15:30",
+        duration: 180,
+        facilityId: `${ORG1_ID}-facility-main`,
+        rrule: "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR",
+        // Availability restrictions: capacity limited, requires competitive level, minimum age 6
+        hasAgeRestriction: true,
+        minAge: 6,
+        maxAge: null,
+        hasLevelRestriction: true,
+        hasCapacityRestriction: true,
+        hasMembershipRestriction: true,
       },
     }),
+    // Drop-in program with per-instance registration
     prisma.program.upsert({
       where: { id: `${ORG1_ID}-prog-preschool` },
       update: {},
@@ -2080,12 +3667,21 @@ async function main() {
         registrationStatus: "OPEN",
         organizationId: ORG1_ID,
         color: "#ec4899",
+        categoryId: `${ORG1_ID}-cat-preschool`,
         pricingModel: "PER_SESSION",
         perSessionPrice: 25,
         showCoachOnSite: false,
         capacity: 12,
+        startDate: daysAgo(7),
+        endDate: daysFromNow(90),
+        registrationType: "PER_INSTANCE",
+        startTime: "09:30",
+        duration: 45,
+        facilityId: `${ORG1_ID}-facility-satellite`,
+        rrule: "FREQ=WEEKLY;BYDAY=SA",
       },
     }),
+    // Metro Sports programs
     prisma.program.upsert({
       where: { id: `${ORG2_ID}-prog-soccer` },
       update: {},
@@ -2097,11 +3693,17 @@ async function main() {
         registrationStatus: "OPEN",
         organizationId: ORG2_ID,
         color: "#22c55e",
+        categoryId: `${ORG2_ID}-cat-youth`,
         pricingModel: "FLAT_RATE",
         basePrice: 175,
         showCoachOnSite: true,
         startDate: daysAgo(15),
         endDate: daysFromNow(90),
+        registrationType: "ALL_INSTANCES",
+        startTime: "10:00",
+        duration: 90,
+        facilityId: `${ORG2_ID}-facility-main`,
+        rrule: "FREQ=WEEKLY;BYDAY=SA",
       },
     }),
     prisma.program.upsert({
@@ -2115,11 +3717,17 @@ async function main() {
         registrationStatus: "OPEN",
         organizationId: ORG2_ID,
         color: "#f97316",
+        categoryId: `${ORG2_ID}-cat-youth`,
         pricingModel: "FLAT_RATE",
         basePrice: 95,
         showCoachOnSite: true,
         startDate: daysAgo(30),
         endDate: daysFromNow(60),
+        registrationType: "ALL_INSTANCES",
+        startTime: "18:00",
+        duration: 90,
+        facilityId: `${ORG2_ID}-facility-main`,
+        rrule: "FREQ=WEEKLY;BYDAY=TU,TH",
       },
     }),
     prisma.program.upsert({
@@ -2133,14 +3741,21 @@ async function main() {
         registrationStatus: "OPEN",
         organizationId: ORG2_ID,
         color: "#06b6d4",
+        categoryId: `${ORG2_ID}-cat-aquatics`,
         pricingModel: "FLAT_RATE",
         basePrice: 1200,
         showCoachOnSite: true,
         startDate: daysAgo(60),
         endDate: daysFromNow(305),
         capacity: 40,
+        registrationType: "ALL_INSTANCES",
+        startTime: "06:00",
+        duration: 120,
+        facilityId: `${ORG2_ID}-facility-main`,
+        rrule: "FREQ=WEEKLY;BYDAY=MO,WE,FR,SA",
       },
     }),
+    // Drop-in fitness with per-instance registration
     prisma.program.upsert({
       where: { id: `${ORG2_ID}-prog-fitness` },
       update: {},
@@ -2152,14 +3767,321 @@ async function main() {
         registrationStatus: "OPEN",
         organizationId: ORG2_ID,
         color: "#ef4444",
+        categoryId: `${ORG2_ID}-cat-fitness`,
         pricingModel: "PER_SESSION",
         perSessionPrice: 15,
         showCoachOnSite: false,
         capacity: 20,
+        startDate: daysAgo(7),
+        endDate: daysFromNow(60),
+        registrationType: "PER_INSTANCE",
+        startTime: "14:00",
+        duration: 45,
+        facilityId: `${ORG2_ID}-facility-main`,
+        rrule: "FREQ=WEEKLY;BYDAY=MO,WE,FR",
       },
     }),
   ]);
   console.log("  ✓ Created 9 base programs");
+
+  // ============================================
+  // PROGRAM INSTANCES
+  // ============================================
+  console.log("\n📅 Creating program instances...");
+
+  // Helper function to generate weekly dates
+  const generateWeeklyDates = (startDate: Date, endDate: Date, weekdays: number[]): Date[] => {
+    const dates: Date[] = [];
+    const current = new Date(startDate);
+    while (current <= endDate) {
+      if (weekdays.includes(current.getDay())) {
+        dates.push(new Date(current));
+      }
+      current.setDate(current.getDate() + 1);
+    }
+    return dates;
+  };
+
+  // Helper to calculate end time
+  const calculateEndTime = (startTime: string, durationMinutes: number): string => {
+    const [hours, minutes] = startTime.split(":").map(Number);
+    const totalMinutes = hours * 60 + minutes + durationMinutes;
+    const endHours = Math.floor(totalMinutes / 60) % 24;
+    const endMins = totalMinutes % 60;
+    return `${endHours.toString().padStart(2, "0")}:${endMins.toString().padStart(2, "0")}`;
+  };
+
+  // Generate instances for select programs
+  const programInstanceData: Array<{
+    id: string;
+    programId: string;
+    organizationId: string;
+    date: Date;
+    startTime: string;
+    endTime: string;
+    facilityId: string | null;
+    capacity: number | null;
+    status: string;
+  }> = [];
+
+  // Recreational Bronze - Tuesday/Thursday 4:00 PM, 60 min
+  const bronzeDates = generateWeeklyDates(daysAgo(30), daysFromNow(60), [2, 4]); // Tue, Thu
+  bronzeDates.forEach((date, i) => {
+    programInstanceData.push({
+      id: `${ORG1_ID}-prog-rec-bronze-inst-${i}`,
+      programId: `${ORG1_ID}-prog-rec-bronze`,
+      organizationId: ORG1_ID,
+      date,
+      startTime: "16:00",
+      endTime: calculateEndTime("16:00", 60),
+      facilityId: `${ORG1_ID}-facility-main`,
+      capacity: null,
+      status: date < new Date() ? "COMPLETED" : "SCHEDULED",
+    });
+  });
+
+  // Tiny Tumblers - Saturday 9:30 AM (per-instance drop-in)
+  const tinyTumblersDates = generateWeeklyDates(daysAgo(7), daysFromNow(60), [6]); // Saturday
+  tinyTumblersDates.forEach((date, i) => {
+    programInstanceData.push({
+      id: `${ORG1_ID}-prog-preschool-inst-${i}`,
+      programId: `${ORG1_ID}-prog-preschool`,
+      organizationId: ORG1_ID,
+      date,
+      startTime: "09:30",
+      endTime: calculateEndTime("09:30", 45),
+      facilityId: `${ORG1_ID}-facility-satellite`,
+      capacity: 12,
+      status: date < new Date() ? "COMPLETED" : "SCHEDULED",
+    });
+  });
+
+  // Kids Fitness - Mon/Wed/Fri 2:00 PM (per-instance drop-in)
+  const fitnessDates = generateWeeklyDates(daysAgo(7), daysFromNow(30), [1, 3, 5]); // Mon, Wed, Fri
+  fitnessDates.forEach((date, i) => {
+    programInstanceData.push({
+      id: `${ORG2_ID}-prog-fitness-inst-${i}`,
+      programId: `${ORG2_ID}-prog-fitness`,
+      organizationId: ORG2_ID,
+      date,
+      startTime: "14:00",
+      endTime: calculateEndTime("14:00", 45),
+      facilityId: `${ORG2_ID}-facility-main`,
+      capacity: 20,
+      status: date < new Date() ? "COMPLETED" : "SCHEDULED",
+    });
+  });
+
+  // Youth Soccer - Saturday 10:00 AM
+  const soccerDates = generateWeeklyDates(daysAgo(14), daysFromNow(60), [6]); // Saturday
+  soccerDates.forEach((date, i) => {
+    programInstanceData.push({
+      id: `${ORG2_ID}-prog-soccer-inst-${i}`,
+      programId: `${ORG2_ID}-prog-soccer`,
+      organizationId: ORG2_ID,
+      date,
+      startTime: "10:00",
+      endTime: calculateEndTime("10:00", 90),
+      facilityId: `${ORG2_ID}-facility-main`,
+      capacity: null,
+      status: date < new Date() ? "COMPLETED" : "SCHEDULED",
+    });
+  });
+
+  // Swim Team - Mon/Wed/Fri/Sat 6:00 AM, 120 min
+  const swimDates = generateWeeklyDates(daysAgo(60), daysFromNow(90), [1, 3, 5, 6]); // Mon, Wed, Fri, Sat
+  swimDates.forEach((date, i) => {
+    programInstanceData.push({
+      id: `${ORG2_ID}-prog-swim-inst-${i}`,
+      programId: `${ORG2_ID}-prog-swim`,
+      organizationId: ORG2_ID,
+      date,
+      startTime: "06:00",
+      endTime: calculateEndTime("06:00", 120),
+      facilityId: `${ORG2_ID}-facility-main`,
+      capacity: null,
+      status: date < new Date() ? "COMPLETED" : "SCHEDULED",
+    });
+  });
+
+  // Create all instances (using createMany for efficiency, but handling potential duplicates)
+  let instancesCreated = 0;
+  for (const instance of programInstanceData) {
+    try {
+      await prisma.programInstance.upsert({
+        where: { id: instance.id },
+        update: {},
+        create: instance as any,
+      });
+      instancesCreated++;
+    } catch (e) {
+      // Skip duplicates silently
+    }
+  }
+  console.log(`  ✓ Created ${instancesCreated} program instances`);
+
+  // Add sample instance registrations for drop-in programs
+  console.log("  📝 Creating sample instance registrations...");
+
+  // Get upcoming Tiny Tumblers and Kids Fitness instances
+  const upcomingTinyTumblers = programInstanceData
+    .filter((i) => i.programId === `${ORG1_ID}-prog-preschool` && i.status === "SCHEDULED")
+    .slice(0, 3);
+
+  const upcomingFitness = programInstanceData
+    .filter((i) => i.programId === `${ORG2_ID}-prog-fitness` && i.status === "SCHEDULED")
+    .slice(0, 5);
+
+  const org1ParentIds = [
+    org1Parent1.id,
+    org1Parent1.id,
+    org1Parent2.id,
+    org1Parent3.id,
+    org1Parent3.id,
+    org1Parent4.id,
+    org1Parent5.id,
+    org1Parent5.id,
+  ];
+  const org2ParentIds = [
+    org2Parent1.id,
+    org2Parent1.id,
+    org2Parent2.id,
+    org2Parent2.id,
+    org2Parent3.id,
+    org2Parent4.id,
+  ];
+  const instanceRegistrations: Array<{
+    id: string;
+    programInstanceId: string;
+    athleteId: string;
+    userId: string | null;
+    status: string;
+  }> = [];
+
+  // Add registrations for Tiny Tumblers
+  upcomingTinyTumblers.forEach((instance, idx) => {
+    // 3-5 athletes per session
+    const numAthletes = 3 + (idx % 3);
+    for (let a = 0; a < numAthletes; a++) {
+      const athleteIndex = a + 1;
+      instanceRegistrations.push({
+        id: `${instance.id}-reg-${a}`,
+        programInstanceId: instance.id,
+        athleteId: `${ORG1_ID}-ath-${athleteIndex}`,
+        userId: org1ParentIds[athleteIndex - 1] ?? org1Parent1.id,
+        status: "REGISTERED",
+      });
+    }
+  });
+
+  // Add registrations for Kids Fitness
+  upcomingFitness.forEach((instance, idx) => {
+    // 5-10 athletes per session
+    const numAthletes = 5 + (idx % 6);
+    for (let a = 0; a < numAthletes; a++) {
+      const athleteIndex = a + 1;
+      instanceRegistrations.push({
+        id: `${instance.id}-reg-${a}`,
+        programInstanceId: instance.id,
+        athleteId: `${ORG2_ID}-ath-${athleteIndex}`,
+        userId: org2ParentIds[athleteIndex - 1] ?? org2Parent1.id,
+        status: "REGISTERED",
+      });
+    }
+  });
+
+  let regsCreated = 0;
+  for (const reg of instanceRegistrations) {
+    try {
+      await prisma.instanceRegistration.upsert({
+        where: { id: reg.id },
+        update: {},
+        create: reg as any,
+      });
+      regsCreated++;
+    } catch (e) {
+      // Skip if athlete/user doesn't exist or duplicates
+    }
+  }
+  console.log(`  ✓ Created ${regsCreated} instance registrations`);
+
+  await Promise.all(
+    [ORG1_ID, ORG2_ID, ORG_DEMO_ID].map((orgId) =>
+      prisma.cacheVersion.upsert({
+        where: { organizationId_entityType: { organizationId: orgId, entityType: "programs" } },
+        update: { version: { increment: 1 } },
+        create: { organizationId: orgId, entityType: "programs", version: 1 },
+      })
+    )
+  );
+  console.log("  ✓ Bumped program cache versions");
+
+  // ============================================
+  // PROGRAM LEVEL REQUIREMENTS (many-to-many)
+  // ============================================
+  console.log("\n📊 Creating program level requirements...");
+  try {
+    // Silver program requires Bronze level
+    await prisma.programLevelRequirement.upsert({
+      where: {
+        programId_levelId: {
+          programId: `${ORG1_ID}-prog-rec-silver`,
+          levelId: `${ORG1_ID}-level-bronze`,
+        },
+      },
+      update: {},
+      create: {
+        id: `${ORG1_ID}-levelreq-silver-bronze`,
+        programId: `${ORG1_ID}-prog-rec-silver`,
+        levelId: `${ORG1_ID}-level-bronze`,
+      },
+    });
+    // JO Team requires multiple levels (any of Gold, Platinum, or Competitive)
+    await Promise.all([
+      prisma.programLevelRequirement.upsert({
+        where: {
+          programId_levelId: { programId: `${ORG1_ID}-prog-jo`, levelId: `${ORG1_ID}-level-gold` },
+        },
+        update: {},
+        create: {
+          id: `${ORG1_ID}-levelreq-jo-gold`,
+          programId: `${ORG1_ID}-prog-jo`,
+          levelId: `${ORG1_ID}-level-gold`,
+        },
+      }),
+      prisma.programLevelRequirement.upsert({
+        where: {
+          programId_levelId: {
+            programId: `${ORG1_ID}-prog-jo`,
+            levelId: `${ORG1_ID}-level-platinum`,
+          },
+        },
+        update: {},
+        create: {
+          id: `${ORG1_ID}-levelreq-jo-platinum`,
+          programId: `${ORG1_ID}-prog-jo`,
+          levelId: `${ORG1_ID}-level-platinum`,
+        },
+      }),
+      prisma.programLevelRequirement.upsert({
+        where: {
+          programId_levelId: {
+            programId: `${ORG1_ID}-prog-jo`,
+            levelId: `${ORG1_ID}-level-competitive`,
+          },
+        },
+        update: {},
+        create: {
+          id: `${ORG1_ID}-levelreq-jo-competitive`,
+          programId: `${ORG1_ID}-prog-jo`,
+          levelId: `${ORG1_ID}-level-competitive`,
+        },
+      }),
+    ]);
+    console.log("  ✓ Created 4 program level requirements");
+  } catch (e) {
+    console.log("  ⚠ Skipped program level requirements (missing dependencies)");
+  }
 
   // ============================================
   // PROGRAM BULK DISCOUNTS
@@ -2245,6 +4167,7 @@ async function main() {
   // MEMBERSHIP GROUPS & INSTANCES
   // ============================================
   console.log("\n📋 Creating membership groups and instances...");
+  // Org1: Recurring annual membership with age restriction
   const org1MembershipGroup = await prisma.membershipGroup.upsert({
     where: { id: `${ORG1_ID}-mg-annual` },
     update: {},
@@ -2252,7 +4175,8 @@ async function main() {
       id: `${ORG1_ID}-mg-annual`,
       organizationId: ORG1_ID,
       name: "Annual Club Membership",
-      description: "Required annual membership for all club athletes.",
+      description:
+        "Required annual membership for all club athletes. Grants access to recreational and competitive programs.",
       isRecurring: true,
       allowAutoRenew: true,
       defaultPrice: 75,
@@ -2262,8 +4186,10 @@ async function main() {
       hasAgeRestriction: true,
       minAge: 5,
       maxAge: 18,
+      hasCapacityRestriction: false,
     },
   });
+  // Org2: Non-recurring one-time membership (auto-instance created by API, but seed manually for deterministic IDs)
   const org2MembershipGroup = await prisma.membershipGroup.upsert({
     where: { id: `${ORG2_ID}-mg-seasonal` },
     update: {},
@@ -2271,7 +4197,7 @@ async function main() {
       id: `${ORG2_ID}-mg-seasonal`,
       organizationId: ORG2_ID,
       name: "Seasonal Pass",
-      description: "Access to all programs for one season.",
+      description: "Access to all programs for one season. Purchase once per season.",
       isRecurring: true,
       allowAutoRenew: false,
       defaultPrice: 150,
@@ -2327,7 +4253,7 @@ async function main() {
       },
     }),
   ]);
-  console.log("  ✓ Created 2 membership groups and 3 instances");
+  console.log("  ✓ Created 2 membership groups and 3 instances (1 draft)");
 
   // ============================================
   // ATHLETE MEMBERSHIPS
@@ -2552,6 +4478,7 @@ async function main() {
         description: "One-day tumbling and floor skills clinic",
         organizationId: ORG1_ID,
         capacity: 40,
+        categoryId: `${ORG1_ID}-cat-camps`,
       },
     }),
     prisma.event.upsert({
@@ -3825,14 +5752,14 @@ async function main() {
       name: "Preschool Basics",
       description:
         "Fundamental skills assessment for preschool-aged gymnasts (ages 4-5). Focus on body awareness, basic movements, and fun!",
-      levelId: `${ORG1_ID}-level-preschool`,
+      levelId: `${ORG1_ID}-level-bronze`,
       minAge: 4,
       maxAge: 5,
       organizationId: ORG1_ID,
       // New evaluation enhancement fields
       autoSyncEnabled: false,
-      autoSyncLevels: [],
-      autoSyncCategories: [],
+      autoSyncLevels: [] as string[],
+      autoSyncCategories: [] as string[],
       scoringType: "PASS_FAIL" as const,
       pointScaleMin: 1,
       pointScaleMax: 10,
@@ -3845,7 +5772,7 @@ async function main() {
         `${ORG1_ID}-skill-5`,
         `${ORG1_ID}-skill-19`,
         `${ORG1_ID}-skill-25`,
-      ], // Forward roll, cartwheel, bridge, beam walk, straddle stretch
+      ],
     },
     {
       id: `${ORG1_ID}-template-rec-level1`,
@@ -3858,8 +5785,8 @@ async function main() {
       organizationId: ORG1_ID,
       // Pass/Fail scoring with 75% completion requirement
       autoSyncEnabled: false,
-      autoSyncLevels: [],
-      autoSyncCategories: [],
+      autoSyncLevels: [] as string[],
+      autoSyncCategories: [] as string[],
       scoringType: "PASS_FAIL" as const,
       pointScaleMin: 1,
       pointScaleMax: 10,
@@ -3887,8 +5814,8 @@ async function main() {
       organizationId: ORG1_ID,
       // Point scale scoring (1-10) with pass threshold of 7
       autoSyncEnabled: false,
-      autoSyncLevels: [],
-      autoSyncCategories: [],
+      autoSyncLevels: [] as string[],
+      autoSyncCategories: [] as string[],
       scoringType: "POINT_SCALE" as const,
       pointScaleMin: 1,
       pointScaleMax: 10,
@@ -3917,8 +5844,8 @@ async function main() {
       organizationId: ORG1_ID,
       // All skills must pass for pre-team readiness
       autoSyncEnabled: false,
-      autoSyncLevels: [],
-      autoSyncCategories: [],
+      autoSyncLevels: [] as string[],
+      autoSyncCategories: [] as string[],
       scoringType: "PASS_FAIL" as const,
       pointScaleMin: 1,
       pointScaleMax: 10,
@@ -3947,8 +5874,8 @@ async function main() {
       organizationId: ORG1_ID,
       // Point scale scoring (1-10) with strict 8+ threshold and 90% completion
       autoSyncEnabled: false,
-      autoSyncLevels: [],
-      autoSyncCategories: [],
+      autoSyncLevels: [] as string[],
+      autoSyncCategories: [] as string[],
       scoringType: "POINT_SCALE" as const,
       pointScaleMin: 1,
       pointScaleMax: 10,
@@ -3975,15 +5902,15 @@ async function main() {
       organizationId: ORG1_ID,
       // Auto-sync enabled - will automatically include all beginner skills
       autoSyncEnabled: true,
-      autoSyncLevels: ["BEGINNER"],
-      autoSyncCategories: [], // Empty means all categories
+      autoSyncLevels: ["BEGINNER"] as string[],
+      autoSyncCategories: [] as string[], // Empty means all categories
       scoringType: "PASS_FAIL" as const,
       pointScaleMin: 1,
       pointScaleMax: 10,
       pointScalePassThreshold: 7,
       completionType: "COUNT" as const,
       completionThreshold: 10, // Must pass at least 10 skills
-      skillIds: [], // Will be populated by auto-sync
+      skillIds: [] as string[], // Will be populated by auto-sync
     },
     // Org2 - Metro Sports evaluation templates
     {
@@ -3996,8 +5923,8 @@ async function main() {
       maxAge: 14,
       organizationId: ORG2_ID,
       autoSyncEnabled: false,
-      autoSyncLevels: [],
-      autoSyncCategories: [],
+      autoSyncLevels: [] as string[],
+      autoSyncCategories: [] as string[],
       scoringType: "PASS_FAIL" as const,
       pointScaleMin: 1,
       pointScaleMax: 10,
@@ -4016,8 +5943,8 @@ async function main() {
       maxAge: 18,
       organizationId: ORG2_ID,
       autoSyncEnabled: false,
-      autoSyncLevels: [],
-      autoSyncCategories: [],
+      autoSyncLevels: [] as string[],
+      autoSyncCategories: [] as string[],
       scoringType: "POINT_SCALE" as const,
       pointScaleMin: 1,
       pointScaleMax: 10,
@@ -4036,8 +5963,8 @@ async function main() {
       maxAge: 18,
       organizationId: ORG2_ID,
       autoSyncEnabled: false,
-      autoSyncLevels: [],
-      autoSyncCategories: [],
+      autoSyncLevels: [] as string[],
+      autoSyncCategories: [] as string[],
       scoringType: "PASS_FAIL" as const,
       pointScaleMin: 1,
       pointScaleMax: 10,
@@ -4193,16 +6120,16 @@ async function main() {
       isRequired: true,
       dueDate: null,
     },
-    // JO Level 3 program uses Pre-Team and JO Level 3 templates
+    // JO program uses Pre-Team and JO Level 3 templates
     {
-      id: `${ORG1_ID}-pet-jo3-preteam`,
+      id: `${ORG1_ID}-pet-jo-preteam`,
       programId: `${ORG1_ID}-prog-jo`,
       templateId: `${ORG1_ID}-template-preteam`,
       isRequired: false,
       dueDate: null,
     },
     {
-      id: `${ORG1_ID}-pet-jo3-jo3`,
+      id: `${ORG1_ID}-pet-jo-jo3`,
       programId: `${ORG1_ID}-prog-jo`,
       templateId: `${ORG1_ID}-template-jo-level3`,
       isRequired: true,
@@ -4242,7 +6169,12 @@ async function main() {
 
   for (const assignment of programTemplateAssignments) {
     await prisma.programEvaluationTemplate.upsert({
-      where: { id: assignment.id },
+      where: {
+        programId_templateId: {
+          programId: assignment.programId,
+          templateId: assignment.templateId,
+        },
+      },
       update: {},
       create: assignment,
     });
@@ -4485,7 +6417,7 @@ async function main() {
       athleteId: `${ORG1_ID}-ath-3`,
       coachId: org1Coach2.id,
       templateId: `${ORG1_ID}-template-preteam`,
-      programId: `${ORG1_ID}-prog-jo`, // Link to JO Level 3 program
+      programId: `${ORG1_ID}-prog-jo`, // Link to JO program
       date: daysAgo(45),
       levelId: `${ORG1_ID}-level-silver`,
       overallScore: 8.0,
@@ -6029,6 +7961,7 @@ async function main() {
   console.log(`  ✓ Created ${certDefs.length} certification definitions`);
 
   const memberCerts = [
+    // Org1 staff-1 (Head Coach): USAG, CPR, SafeSport
     {
       certId: `${ORG1_ID}-cert-usag`,
       memberId: `${ORG1_ID}-staff-1`,
@@ -6047,6 +7980,7 @@ async function main() {
       grantedAt: daysAgo(90),
       expiresAt: daysFromNow(730),
     },
+    // Org1 staff-2 (JO Team Coach): USAG, SafeSport
     {
       certId: `${ORG1_ID}-cert-usag`,
       memberId: `${ORG1_ID}-staff-2`,
@@ -6059,12 +7993,14 @@ async function main() {
       grantedAt: daysAgo(60),
       expiresAt: daysFromNow(500),
     },
+    // Org1 staff-3 (Finance): Background Check (no expiry)
     {
       certId: `${ORG1_ID}-cert-bgcheck`,
       memberId: `${ORG1_ID}-staff-3`,
       grantedAt: daysAgo(90),
       expiresAt: null,
     },
+    // Org2 staff-1 (Multi-Sport Coach): CPR, SafeSport
     {
       certId: `${ORG2_ID}-cert-cpr`,
       memberId: `${ORG2_ID}-staff-1`,
@@ -6077,6 +8013,7 @@ async function main() {
       grantedAt: daysAgo(60),
       expiresAt: daysFromNow(400),
     },
+    // Org2 staff-2 (Assistant Coach): Background Check (no expiry)
     {
       certId: `${ORG2_ID}-cert-bgcheck`,
       memberId: `${ORG2_ID}-staff-2`,
@@ -7234,6 +9171,279 @@ async function main() {
   console.log(`  ✓ Created ${reservedDomainData.length} reserved domains`);
 
   // ============================================
+  // EMAIL CAMPAIGNS & USAGE
+  // ============================================
+  console.log("\n📧 Creating email campaigns and usage...");
+
+  // Get the current billing period
+  const now = new Date();
+  const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+  // Create email usage records for both orgs
+  await prisma.emailUsage.upsert({
+    where: {
+      organizationId_periodStart: {
+        organizationId: ORG1_ID,
+        periodStart: periodStart,
+      },
+    },
+    update: {},
+    create: {
+      organizationId: ORG1_ID,
+      periodStart: periodStart,
+      periodEnd: periodEnd,
+      emailsSent: 156,
+      emailsDelivered: 152,
+      emailsOpened: 89,
+      emailsClicked: 34,
+      emailsBounced: 3,
+      emailsComplained: 0,
+      emailsFailed: 1,
+      includedEmails: 2500,
+      overageEmails: 0,
+      overageCost: 0,
+    },
+  });
+
+  await prisma.emailUsage.upsert({
+    where: {
+      organizationId_periodStart: {
+        organizationId: ORG2_ID,
+        periodStart: periodStart,
+      },
+    },
+    update: {},
+    create: {
+      organizationId: ORG2_ID,
+      periodStart: periodStart,
+      periodEnd: periodEnd,
+      emailsSent: 87,
+      emailsDelivered: 85,
+      emailsOpened: 52,
+      emailsClicked: 18,
+      emailsBounced: 1,
+      emailsComplained: 0,
+      emailsFailed: 1,
+      includedEmails: 500,
+      overageEmails: 0,
+      overageCost: 0,
+    },
+  });
+
+  // Sample email campaigns for Sunrise Gymnastics
+  const sunriseCampaigns = [
+    {
+      id: "seed-email-campaign-1",
+      organizationId: ORG1_ID,
+      name: "January Newsletter",
+      subject: "Happy New Year from Sunrise Gymnastics! 🎉",
+      htmlBody: `<h2>Happy New Year, Sunrise Family!</h2>
+<p>We hope you had a wonderful holiday season. As we kick off 2026, we're excited to share what's coming up:</p>
+<ul>
+<li><strong>Winter Session</strong> begins January 13th</li>
+<li><strong>Open Gym</strong> every Saturday 2-4pm</li>
+<li><strong>Competition Team tryouts</strong> February 1st</li>
+</ul>
+<p>Don't forget to register early - spots fill up fast!</p>
+<p>See you at the gym!</p>`,
+      textBody: "Happy New Year from Sunrise Gymnastics! Winter session begins January 13th.",
+      classification: "NEWSLETTER" as const,
+      targetScope: "ALL" as const,
+      status: "COMPLETED" as const,
+      totalRecipients: 89,
+      sentCount: 89,
+      deliveredCount: 87,
+      openedCount: 54,
+      clickedCount: 23,
+      bouncedCount: 2,
+      complainedCount: 0,
+      failedCount: 0,
+      startedAt: daysAgo(15),
+      completedAt: daysAgo(15),
+      createdAt: daysAgo(16),
+    },
+    {
+      id: "seed-email-campaign-2",
+      organizationId: ORG1_ID,
+      name: "Competition Team Update",
+      subject: "Important: Regional Competition Details",
+      htmlBody: `<h2>Regional Competition - February 15th</h2>
+<p>Dear Competition Team Families,</p>
+<p>Here are the details for the upcoming regional competition:</p>
+<ul>
+<li><strong>Date:</strong> Saturday, February 15th</li>
+<li><strong>Location:</strong> Springfield Sports Center</li>
+<li><strong>Check-in:</strong> 7:30 AM</li>
+<li><strong>Competition starts:</strong> 9:00 AM</li>
+</ul>
+<p>Please make sure your athlete's competition leotard is ready. Let us know if you have any questions!</p>`,
+      textBody:
+        "Regional Competition - February 15th at Springfield Sports Center. Check-in at 7:30 AM.",
+      classification: "EVENT_UPDATE" as const,
+      targetScope: "PROGRAM" as const,
+      targetProgramId: `${ORG1_ID}-prog-jo`, // JO Competition Team
+      status: "COMPLETED" as const,
+      totalRecipients: 24,
+      sentCount: 24,
+      deliveredCount: 24,
+      openedCount: 22,
+      clickedCount: 8,
+      bouncedCount: 0,
+      complainedCount: 0,
+      failedCount: 0,
+      startedAt: daysAgo(5),
+      completedAt: daysAgo(5),
+      createdAt: daysAgo(6),
+    },
+    {
+      id: "seed-email-campaign-3",
+      organizationId: ORG1_ID,
+      name: "Spring Registration Reminder",
+      subject: "Spring Session Registration Now Open!",
+      htmlBody: `<h2>Spring Session Registration</h2>
+<p>Registration for our Spring session is now open!</p>
+<p><strong>Spring Session Dates:</strong> March 10 - May 30</p>
+<p>Current families get priority registration through February 1st. After that, registration opens to the public.</p>
+<p>New this spring:</p>
+<ul>
+<li>Tumbling & Trampoline class (Ages 8-12)</li>
+<li>Parent & Tot sessions on Wednesdays</li>
+<li>Extended summer camp options</li>
+</ul>
+<p>Register now to secure your spot!</p>`,
+      textBody:
+        "Spring Session Registration is now open! March 10 - May 30. Register now to secure your spot.",
+      classification: "PROGRAM_UPDATE" as const,
+      targetScope: "ALL" as const,
+      status: "SCHEDULED" as const,
+      totalRecipients: 89,
+      sentCount: 0,
+      deliveredCount: 0,
+      openedCount: 0,
+      clickedCount: 0,
+      bouncedCount: 0,
+      complainedCount: 0,
+      failedCount: 0,
+      scheduledAt: daysFromNow(2),
+      createdAt: daysAgo(1),
+    },
+    {
+      id: "seed-email-campaign-4",
+      organizationId: ORG1_ID,
+      name: "Membership Renewal",
+      subject: "Your Annual Membership is Expiring Soon",
+      htmlBody: `<h2>Membership Renewal Reminder</h2>
+<p>Your annual membership at Sunrise Gymnastics is expiring soon.</p>
+<p>Renew before the end of the month to:</p>
+<ul>
+<li>Lock in current rates</li>
+<li>Get priority class registration</li>
+<li>Receive 10% off summer camps</li>
+</ul>
+<p>Thank you for being part of our gymnastics family!</p>`,
+      textBody:
+        "Your annual membership is expiring soon. Renew before the end of the month to lock in current rates.",
+      classification: "MEMBERSHIP" as const,
+      targetScope: "ALL" as const,
+      targetMembershipStatus: "EXPIRED",
+      status: "DRAFT" as const,
+      totalRecipients: 0,
+      sentCount: 0,
+      deliveredCount: 0,
+      openedCount: 0,
+      clickedCount: 0,
+      bouncedCount: 0,
+      complainedCount: 0,
+      failedCount: 0,
+      createdAt: daysAgo(1),
+    },
+  ];
+
+  for (const campaign of sunriseCampaigns) {
+    await prisma.emailCampaign.upsert({
+      where: { id: campaign.id },
+      update: {},
+      create: campaign,
+    });
+  }
+  console.log(`  ✓ Created ${sunriseCampaigns.length} email campaigns for Sunrise Gymnastics`);
+
+  // Sample email campaigns for Metro Sports
+  const metroCampaigns = [
+    {
+      id: "seed-email-campaign-5",
+      organizationId: ORG2_ID,
+      name: "February Programs",
+      subject: "New Programs Starting in February",
+      htmlBody: `<h2>Exciting New Programs at Metro Sports!</h2>
+<p>Check out what's new this February:</p>
+<ul>
+<li><strong>Youth Basketball League</strong> - Saturdays 9am-12pm</li>
+<li><strong>Adult Fitness Bootcamp</strong> - Mon/Wed/Fri 6am</li>
+<li><strong>Family Swim Nights</strong> - Fridays 6-8pm</li>
+</ul>
+<p>Early bird pricing available through January 31st!</p>`,
+      textBody:
+        "New programs starting in February at Metro Sports. Youth Basketball, Adult Fitness, Family Swim Nights.",
+      classification: "NEWSLETTER" as const,
+      targetScope: "ALL" as const,
+      status: "COMPLETED" as const,
+      totalRecipients: 67,
+      sentCount: 67,
+      deliveredCount: 65,
+      openedCount: 38,
+      clickedCount: 12,
+      bouncedCount: 1,
+      complainedCount: 0,
+      failedCount: 1,
+      startedAt: daysAgo(10),
+      completedAt: daysAgo(10),
+      createdAt: daysAgo(11),
+    },
+    {
+      id: "seed-email-campaign-6",
+      organizationId: ORG2_ID,
+      name: "Swim Team Practice Update",
+      subject: "Updated Practice Schedule - Swim Team",
+      htmlBody: `<h2>Swim Team Practice Schedule Update</h2>
+<p>Starting next week, we're adjusting practice times:</p>
+<ul>
+<li><strong>Monday/Wednesday:</strong> 4:00 PM - 5:30 PM (was 4:30 PM)</li>
+<li><strong>Friday:</strong> 3:30 PM - 5:00 PM (no change)</li>
+<li><strong>Saturday:</strong> 8:00 AM - 10:00 AM (no change)</li>
+</ul>
+<p>Please update your calendars accordingly. See you at the pool!</p>`,
+      textBody:
+        "Updated swim team practice times starting next week. Monday/Wednesday now 4:00 PM - 5:30 PM.",
+      classification: "PROGRAM_UPDATE" as const,
+      targetScope: "PROGRAM" as const,
+      targetProgramId: `${ORG2_ID}-prog-swim`, // Swim Team
+      status: "COMPLETED" as const,
+      totalRecipients: 20,
+      sentCount: 20,
+      deliveredCount: 20,
+      openedCount: 14,
+      clickedCount: 6,
+      bouncedCount: 0,
+      complainedCount: 0,
+      failedCount: 0,
+      startedAt: daysAgo(3),
+      completedAt: daysAgo(3),
+      createdAt: daysAgo(4),
+    },
+  ];
+
+  for (const campaign of metroCampaigns) {
+    await prisma.emailCampaign.upsert({
+      where: { id: campaign.id },
+      update: {},
+      create: campaign,
+    });
+  }
+  console.log(`  ✓ Created ${metroCampaigns.length} email campaigns for Metro Sports`);
+
+  // ============================================
   // NOTIFICATION RULES
   // ============================================
   console.log("\n🔔 Creating notification rules...");
@@ -7644,6 +9854,16 @@ See you at Metro Sports!
   }
   console.log(`  ✓ Created ${metroNotificationRules.length} notification rules for Metro Sports`);
 
+  // Ensure all seeded orgs have the full set of system rules (including payout
+  // trigger types added after initial seed data was written). Safe to re-run —
+  // createSystemRulesForOrganization skips rules that already exist.
+  for (const orgId of [ORG1_ID, ORG2_ID, ORG_DEMO_ID]) {
+    const result = await createSystemRulesForOrganization(orgId);
+    if (result.created > 0) {
+      console.log(`  ✓ Created ${result.created} missing system rules for ${orgId}`);
+    }
+  }
+
   // ============================================
   // WAIVERS & DIGITAL SIGNATURES
   // ============================================
@@ -7799,6 +10019,7 @@ See you at Metro Sports!
   });
 
   // Attach waivers as program requirements
+  // Sunrise: General Liability Waiver on the Bronze program
   await prisma.programWaiverRequirement.upsert({
     where: {
       programId_waiverId: {
@@ -7813,11 +10034,13 @@ See you at Metro Sports!
     },
   });
 
+  // Update the program to have the waiver restriction flag
   await prisma.program.update({
     where: { id: `${ORG1_ID}-prog-rec-bronze` },
     data: { hasWaiverRestriction: true },
   });
 
+  // Metro: Participant Waiver on the soccer program
   await prisma.programWaiverRequirement.upsert({
     where: {
       programId_waiverId: {
@@ -7841,93 +10064,390 @@ See you at Metro Sports!
   console.log("  ✓ Attached waiver requirements to Bronze Gymnastics and Youth Soccer");
 
   // ============================================
-  // PROGRAM INSTANCES
+  // COMPETITIONS (Full examples with entries and results)
   // ============================================
-  console.log("\n📆 Creating program instances...");
+  console.log("\n🏆 Creating competitions...");
 
-  function buildInstances(
-    prefix: string,
-    programId: string,
-    orgId: string,
-    facilityId: string,
-    daysOfWeek: number[],
-    startTime: string,
-    endTime: string,
-    fromDaysAgo: number,
-    toDaysFromNow: number
-  ) {
-    const rows: {
-      id: string;
-      programId: string;
-      organizationId: string;
-      facilityId: string;
-      date: Date;
-      startTime: string;
-      endTime: string;
-      status: "SCHEDULED";
-    }[] = [];
-    let counter = 1;
-    const now = Date.now();
-    const from = now - fromDaysAgo * 86400000;
-    const to = now + toDaysFromNow * 86400000;
-    for (let t = from; t <= to; t += 86400000) {
-      const d = new Date(t);
-      if (daysOfWeek.includes(d.getDay())) {
-        const noon = new Date(d);
-        noon.setUTCHours(12, 0, 0, 0);
-        rows.push({
-          id: `${prefix}-${String(counter).padStart(3, "0")}`,
-          programId,
-          organizationId: orgId,
-          facilityId,
-          date: noon,
-          startTime,
-          endTime,
-          status: "SCHEDULED",
-        });
-        counter++;
-      }
-    }
-    return rows;
+  // --- Sunrise Gymnastics: Spring Invitational (REGISTRATION_OPEN) ---
+  const gymCompetition = await prisma.competition.upsert({
+    where: { id: `${ORG1_ID}-comp-spring-inv` },
+    update: {},
+    create: {
+      id: `${ORG1_ID}-comp-spring-inv`,
+      organizationId: ORG1_ID,
+      name: "Spring Invitational 2026",
+      color: "#d946ef",
+      competitionType: "GYMNASTICS",
+      categoryId: `${ORG1_ID}-cat-competitive`,
+      status: "REGISTRATION_OPEN",
+      facilityId: `${ORG1_ID}-facility-main`,
+      country: "US",
+      stateProvince: "CA",
+      city: "San Mateo",
+      streetAddress: "100 Gymnastics Way",
+      startDate: daysFromNow(45),
+      endDate: daysFromNow(46),
+      startTime: "08:00",
+      endTime: "18:00",
+      categoryMode: "SPECIFIC",
+      hasAgeRestriction: true,
+      minAge: 6,
+      maxAge: 18,
+      hasMembershipRestriction: true,
+      membershipRequirementIds: [`${ORG1_ID}-mi-2026`],
+      publishStatus: "LIVE",
+    },
+  });
+
+  // Competition categories for gym: Floor (U10), Vault (U10), Bars (U12)
+  const gymCompCats = [
+    {
+      id: `${ORG1_ID}-compcat-floor-u10`,
+      competitionId: gymCompetition.id,
+      combinationEntryId: "combo-gym-cav-gym-u10-cav-gym-floor",
+      resultType: "SCORE" as const,
+      sortDirection: "DESC" as const,
+      precision: 3,
+      seedMarkRequired: true,
+      submissionMode: "MANUAL_ENTRY" as const,
+      qualifyingMark: 7.0,
+      displayOrder: 0,
+    },
+    {
+      id: `${ORG1_ID}-compcat-vault-u10`,
+      competitionId: gymCompetition.id,
+      combinationEntryId: "combo-gym-cav-gym-u10-cav-gym-vault",
+      resultType: "SCORE" as const,
+      sortDirection: "DESC" as const,
+      precision: 3,
+      seedMarkRequired: false,
+      submissionMode: "NONE" as const,
+      displayOrder: 1,
+    },
+    {
+      id: `${ORG1_ID}-compcat-bars-u12`,
+      competitionId: gymCompetition.id,
+      combinationEntryId: "combo-gym-cav-gym-u12-cav-gym-bars",
+      resultType: "SCORE" as const,
+      sortDirection: "DESC" as const,
+      precision: 3,
+      seedMarkRequired: true,
+      submissionMode: "MANUAL_ENTRY" as const,
+      qualifyingMark: 6.5,
+      displayOrder: 2,
+    },
+  ];
+
+  for (const cat of gymCompCats) {
+    await prisma.competitionCategory.upsert({
+      where: { id: cat.id },
+      update: {},
+      create: cat,
+    });
   }
 
-  // Delete stale instances so re-seeding refreshes dates
-  await prisma.programInstance.deleteMany({
-    where: { programId: { in: [`${ORG2_ID}-prog-swim`, `${ORG2_ID}-prog-fitness`] } },
+  // Entries for gym competition
+  const gymCompEntries = [
+    {
+      id: `${ORG1_ID}-compentry-1`,
+      competitionId: gymCompetition.id,
+      competitionCategoryId: `${ORG1_ID}-compcat-floor-u10`,
+      athleteId: `${ORG1_ID}-ath-1`,
+      status: "APPROVED" as const,
+      seedPoints: 8.25,
+      seedMarkSubmittedAt: daysAgo(10),
+      seedMarkStatus: "APPROVED" as const,
+    },
+    {
+      id: `${ORG1_ID}-compentry-2`,
+      competitionId: gymCompetition.id,
+      competitionCategoryId: `${ORG1_ID}-compcat-floor-u10`,
+      athleteId: `${ORG1_ID}-ath-2`,
+      status: "PENDING_REVIEW" as const,
+      seedPoints: 7.1,
+      seedMarkSubmittedAt: daysAgo(5),
+      seedMarkStatus: "PENDING" as const,
+    },
+    {
+      id: `${ORG1_ID}-compentry-3`,
+      competitionId: gymCompetition.id,
+      competitionCategoryId: `${ORG1_ID}-compcat-vault-u10`,
+      athleteId: `${ORG1_ID}-ath-1`,
+      status: "APPROVED" as const,
+    },
+    {
+      id: `${ORG1_ID}-compentry-4`,
+      competitionId: gymCompetition.id,
+      competitionCategoryId: `${ORG1_ID}-compcat-bars-u12`,
+      athleteId: `${ORG1_ID}-ath-3`,
+      status: "PENDING_SEED" as const,
+    },
+  ];
+
+  for (const entry of gymCompEntries) {
+    await prisma.competitionEntry.upsert({
+      where: { id: entry.id },
+      update: {},
+      create: entry,
+    });
+  }
+  console.log("  ✓ Created Sunrise Gymnastics 'Spring Invitational 2026' (REGISTRATION_OPEN)");
+
+  // --- Metro Sports: Regional Athletics Meet (COMPLETED) ---
+  const tfCompetition = await prisma.competition.upsert({
+    where: { id: `${ORG2_ID}-comp-regional-track` },
+    update: {},
+    create: {
+      id: `${ORG2_ID}-comp-regional-track`,
+      organizationId: ORG2_ID,
+      name: "Regional Athletics Meet 2026",
+      color: "#6366f1",
+      competitionType: "ATHLETICS",
+      categoryId: `${ORG2_ID}-cat-youth`,
+      status: "COMPLETED",
+      facilityId: `${ORG2_ID}-facility-main`,
+      country: "US",
+      stateProvince: "CA",
+      city: "Oakland",
+      streetAddress: "200 Stadium Drive",
+      startDate: daysAgo(14),
+      endDate: daysAgo(14),
+      startTime: "08:00",
+      endTime: "17:00",
+      categoryMode: "SPECIFIC",
+      pricingMode: "TIERED",
+      publishStatus: "LIVE",
+    },
   });
 
-  // Swim Team: Mon/Wed/Fri/Sat, 06:00–08:00, 60 days past → 90 days future
-  const swimInstances = buildInstances(
-    `${ORG2_ID}-swim-inst`,
-    `${ORG2_ID}-prog-swim`,
-    ORG2_ID,
-    `${ORG2_ID}-facility-main`,
-    [1, 3, 5, 6],
-    "06:00",
-    "08:00",
-    60,
-    90
-  );
+  // Pricing tiers for tiered mode
+  const tfPricingTiers = [
+    {
+      id: `${ORG2_ID}-tier-1`,
+      competitionId: tfCompetition.id,
+      minEvents: 1,
+      maxEvents: 2,
+      pricePerEvent: 25.0,
+      displayOrder: 0,
+    },
+    {
+      id: `${ORG2_ID}-tier-2`,
+      competitionId: tfCompetition.id,
+      minEvents: 3,
+      maxEvents: 5,
+      pricePerEvent: 20.0,
+      displayOrder: 1,
+    },
+    {
+      id: `${ORG2_ID}-tier-3`,
+      competitionId: tfCompetition.id,
+      minEvents: 6,
+      maxEvents: null,
+      pricePerEvent: 15.0,
+      displayOrder: 2,
+    },
+  ];
+  for (const tier of tfPricingTiers) {
+    await prisma.competitionPricingTier.upsert({
+      where: { id: tier.id },
+      update: {},
+      create: tier,
+    });
+  }
+  console.log(`  ✓ Created ${tfPricingTiers.length} pricing tiers for Regional Athletics Meet`);
 
-  // Kids Fitness: Tue/Thu, 10:00–11:00, 30 days past → 60 days future
-  const fitnessInstances = buildInstances(
-    `${ORG2_ID}-fitness-inst`,
-    `${ORG2_ID}-prog-fitness`,
-    ORG2_ID,
-    `${ORG2_ID}-facility-main`,
-    [2, 4],
-    "10:00",
-    "11:00",
-    30,
-    60
-  );
+  // Competition categories using sport-specific refs: 100m (U10), Long Jump (U12), 4x100 Relay (U10, team)
+  const tfCompCats = [
+    {
+      id: `${ORG2_ID}-compcat-100m-u10`,
+      competitionId: tfCompetition.id,
+      sportEventId: "athl-evt-100M",
+      ageCategoryId: "athl-age-U10",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      precision: 3,
+      seedMarkRequired: true,
+      submissionMode: "VERIFIED_RESULT" as const,
+      qualifyingMark: 16000,
+      displayOrder: 0,
+    },
+    {
+      id: `${ORG2_ID}-compcat-longjump-u12`,
+      competitionId: tfCompetition.id,
+      sportEventId: "athl-evt-LJ",
+      ageCategoryId: "athl-age-U12",
+      resultType: "DISTANCE" as const,
+      sortDirection: "DESC" as const,
+      precision: 2,
+      seedMarkRequired: false,
+      submissionMode: "NONE" as const,
+      displayOrder: 1,
+    },
+    {
+      id: `${ORG2_ID}-compcat-4x100-relay`,
+      competitionId: tfCompetition.id,
+      sportEventId: "athl-evt-4X100",
+      ageCategoryId: "athl-age-U10",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      precision: 3,
+      isTeamEvent: true,
+      teamSize: 4,
+      seedMarkRequired: false,
+      submissionMode: "NONE" as const,
+      displayOrder: 2,
+    },
+  ];
 
-  await prisma.programInstance.createMany({
-    data: [...swimInstances, ...fitnessInstances],
+  for (const cat of tfCompCats) {
+    await prisma.competitionCategory.upsert({
+      where: { id: cat.id },
+      update: {},
+      create: cat,
+    });
+  }
+
+  // Team for the relay
+  await prisma.competitionTeam.upsert({
+    where: { id: `${ORG2_ID}-team-relay-1` },
+    update: {},
+    create: {
+      id: `${ORG2_ID}-team-relay-1`,
+      competitionId: tfCompetition.id,
+      competitionCategoryId: `${ORG2_ID}-compcat-4x100-relay`,
+      name: "Metro A Team",
+      organizationId: ORG2_ID,
+    },
   });
-  console.log(
-    `  ✓ Created ${swimInstances.length} swim instances, ${fitnessInstances.length} fitness instances`
-  );
+
+  // Entries for track meet
+  const tfCompEntries = [
+    {
+      id: `${ORG2_ID}-compentry-1`,
+      competitionId: tfCompetition.id,
+      competitionCategoryId: `${ORG2_ID}-compcat-100m-u10`,
+      athleteId: `${ORG2_ID}-ath-1`,
+      status: "APPROVED" as const,
+      seedHours: 0,
+      seedMinutes: 0,
+      seedSeconds: 14,
+      seedMs: 500,
+      seedHandTimed: false,
+      seedMarkSubmittedAt: daysAgo(30),
+      seedMarkStatus: "APPROVED" as const,
+    },
+    {
+      id: `${ORG2_ID}-compentry-2`,
+      competitionId: tfCompetition.id,
+      competitionCategoryId: `${ORG2_ID}-compcat-100m-u10`,
+      athleteId: `${ORG2_ID}-ath-2`,
+      status: "APPROVED" as const,
+      seedHours: 0,
+      seedMinutes: 0,
+      seedSeconds: 15,
+      seedMs: 200,
+      seedHandTimed: true,
+      seedMarkSubmittedAt: daysAgo(28),
+      seedMarkStatus: "APPROVED" as const,
+    },
+    {
+      id: `${ORG2_ID}-compentry-3`,
+      competitionId: tfCompetition.id,
+      competitionCategoryId: `${ORG2_ID}-compcat-longjump-u12`,
+      athleteId: `${ORG2_ID}-ath-3`,
+      status: "APPROVED" as const,
+    },
+    {
+      id: `${ORG2_ID}-compentry-4`,
+      competitionId: tfCompetition.id,
+      competitionCategoryId: `${ORG2_ID}-compcat-4x100-relay`,
+      athleteId: `${ORG2_ID}-ath-1`,
+      teamId: `${ORG2_ID}-team-relay-1`,
+      status: "APPROVED" as const,
+    },
+    {
+      id: `${ORG2_ID}-compentry-5`,
+      competitionId: tfCompetition.id,
+      competitionCategoryId: `${ORG2_ID}-compcat-4x100-relay`,
+      athleteId: `${ORG2_ID}-ath-2`,
+      teamId: `${ORG2_ID}-team-relay-1`,
+      status: "APPROVED" as const,
+    },
+  ];
+
+  for (const entry of tfCompEntries) {
+    await prisma.competitionEntry.upsert({
+      where: { id: entry.id },
+      update: {},
+      create: entry,
+    });
+  }
+
+  // Results for completed track meet
+  const tfResults = [
+    {
+      id: `${ORG2_ID}-result-1`,
+      competitionId: tfCompetition.id,
+      competitionCategoryId: `${ORG2_ID}-compcat-100m-u10`,
+      athleteId: `${ORG2_ID}-ath-1`,
+      value: 13850,
+      displayValue: "13.85",
+      placement: 1,
+      heat: 1,
+      isHandTimed: false,
+      isPersonalBest: true,
+    },
+    {
+      id: `${ORG2_ID}-result-2`,
+      competitionId: tfCompetition.id,
+      competitionCategoryId: `${ORG2_ID}-compcat-100m-u10`,
+      athleteId: `${ORG2_ID}-ath-2`,
+      value: 14300,
+      displayValue: "14.3h",
+      placement: 2,
+      heat: 1,
+      isHandTimed: true,
+      isPersonalBest: true,
+    },
+    {
+      id: `${ORG2_ID}-result-3`,
+      competitionId: tfCompetition.id,
+      competitionCategoryId: `${ORG2_ID}-compcat-longjump-u12`,
+      athleteId: `${ORG2_ID}-ath-3`,
+      value: 3750,
+      displayValue: "3.75m",
+      placement: 1,
+      isPersonalBest: false,
+    },
+    {
+      id: `${ORG2_ID}-result-4`,
+      competitionId: tfCompetition.id,
+      competitionCategoryId: `${ORG2_ID}-compcat-longjump-u12`,
+      athleteId: `${ORG2_ID}-ath-3`,
+      value: 3500,
+      displayValue: "3.50m",
+      attemptNumber: 2,
+      isBestAttempt: false,
+    },
+    {
+      id: `${ORG2_ID}-result-5`,
+      competitionId: tfCompetition.id,
+      competitionCategoryId: `${ORG2_ID}-compcat-4x100-relay`,
+      teamId: `${ORG2_ID}-team-relay-1`,
+      value: 58200,
+      displayValue: "58.200s",
+      placement: 1,
+    },
+  ];
+
+  for (const result of tfResults) {
+    await prisma.competitionResult.upsert({
+      where: { id: result.id },
+      update: {},
+      create: result,
+    });
+  }
+  console.log("  ✓ Created Metro Sports 'Regional Athletics Meet 2026' (COMPLETED)");
 
   // ============================================
   // COMPLETE
@@ -7939,7 +10459,8 @@ See you at Metro Sports!
   console.log("  • 4 organizations (Sunrise Gymnastics, Metro Sports, Demo Gym, Uplifter)");
   console.log("  • 4 subscription plans");
   console.log("  • 7 sports with organization associations");
-  console.log("  • 10 users with permissions");
+  console.log("  • 32 athletics events, 8 age categories, ~210 eligibility entries");
+  console.log("  • 11 users with permissions");
   console.log("  • 9 families with payment methods");
   console.log("  • 14 athletes with guardian relationships");
   console.log("  • 9 programs with membership tiers");
@@ -7947,11 +10468,10 @@ See you at Metro Sports!
   console.log("  • 3 programs with membership requirements");
   console.log("  • 33+ events with 64+ attendance records (historical + current)");
   console.log("  • 5 invoices with line items and payments");
-  console.log("  • 9 transactions (Adyen)");
-  console.log("  • 5 payouts (settlements)");
+  console.log("  • Adyen transactions + payouts synced from live TEST environment (if configured)");
   console.log("  • 7 recurring charges");
   console.log("  • 34 gymnastics skills with difficulty levels and age ranges");
-  console.log("  • 8 evaluation templates with skill groupings (5 Sunrise + 3 Metro)");
+  console.log("  • 9 evaluation templates with skill groupings (6 Sunrise + 3 Metro)");
   console.log("  • 9 evaluations with skill attempt statuses (5 Sunrise + 4 Metro)");
   console.log("  • 17 athlete skill progress records");
   console.log("  • Lesson plans and rotations");
@@ -7964,7 +10484,15 @@ See you at Metro Sports!
   console.log("  • 2 medical form configs with custom questions");
   console.log("  • 6 athlete medical info records with responses");
   console.log("  • 14 reserved domains");
+  console.log("  • 6 email campaigns (newsletters, program updates, scheduled)");
+  console.log("  • Email usage tracking for both organizations");
   console.log("  • 12 notification rules (system + custom for both orgs)");
+  console.log("  • 3 waivers with pages (2 Sunrise, 1 Metro) + program requirements");
+  console.log("  • 2 competitions (1 gymnastics REGISTRATION_OPEN, 1 athletics COMPLETED)");
+  console.log("  • 6 competition categories with result type/seed mark config");
+  console.log("  • 9 competition entries (approved, pending review, pending seed)");
+  console.log("  • 5 competition results with placements and personal bests");
+  console.log("  • 1 relay team with team results");
   console.log("  • 90 days of visitor analytics (if Redis configured)");
   console.log("\nTest accounts (use email-based login — no passwords set):");
   console.log("  Sunrise Gym Admin: admin@sunrise-gymnastics.com");

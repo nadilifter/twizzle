@@ -90,8 +90,9 @@ clubs/
 ├── prisma/
 │   ├── schema.prisma           # 5,200+ line database schema
 │   ├── migrations/             # ~120 migration files
-│   ├── seed.ts                 # Production seed data
-│   └── seed-dev.ts             # Development seed data
+│   ├── seed.ts                 # Bootstrap seed (prod-safe, login-only)
+│   ├── seed-dev.ts             # Comprehensive dev seed (local only)
+│   └── seed-reserved.ts        # Reserved domains seed
 ├── docs/                       # Supplementary documentation
 ├── infrastructure/             # Terraform modules
 ├── charts/                     # Helm charts (EKS)
@@ -556,7 +557,9 @@ pnpm lint             # ESLint + Next.js linting
 pnpm prisma studio    # Open Prisma Studio (DB GUI)
 pnpm prisma migrate dev --name <name>   # Create a new migration
 pnpm prisma migrate deploy              # Apply pending migrations
-pnpm prisma db seed                     # Run seed.ts
+pnpm db:seed                            # Run bootstrap seed (prod-safe)
+pnpm db:seed:dev                        # Run comprehensive dev seed
+pnpm db:reset                           # Reset DB + run dev seed
 ```
 
 ### Code Quality Tools

@@ -2152,7 +2152,7 @@ Cross-link: README § Schema Management.
 
 ### 4.14 Dev tooling
 
-**Sub-features:** local docker-compose stack, local subdomain hosts file, OAuth localhost workaround, MailHog email viewer, MinIO console, Prisma Studio, seeding (`pnpm db:seed`).
+**Sub-features:** local docker-compose stack, local subdomain hosts file, OAuth localhost workaround, MailHog email viewer, MinIO console, Prisma Studio, seeding (`pnpm db:seed:dev` for fixtures, `pnpm db:seed` for prod-safe bootstrap).
 
 ---
 

@@ -241,8 +241,8 @@ docker compose up -d db redis minio mailhog && pnpm dev
 # Run database migrations
 pnpm db:migrate
 
-# Seed the database (optional)
-pnpm db:seed
+# Seed the database with comprehensive dev fixtures (optional but recommended)
+pnpm db:seed:dev
 
 # Run in development mode
 pnpm dev
@@ -264,8 +264,9 @@ pnpm build
 pnpm db:migrate   # Run migrations (use this, not db:push)
 pnpm db:check     # Detect schema drift (schema.prisma vs migrations)
 pnpm db:studio    # Open Prisma Studio
-pnpm db:seed      # Seed database
-pnpm db:reset     # Reset database
+pnpm db:seed      # Bootstrap seed (prod-safe: 4 plans + 1 org + 1 admin)
+pnpm db:seed:dev  # Comprehensive dev seed (local-only fixtures)
+pnpm db:reset     # Reset database + run dev seed
 pnpm db:push      # Push schema directly (local experimentation only)
 ```
 
