@@ -215,6 +215,38 @@ describe("getScopedDb proxy behavior", () => {
     expect(raw.program.update).toHaveBeenCalled();
   });
 
+  it("update strips organizationId from data payload to prevent tenant reassignment", async () => {
+    raw.program.findFirst.mockResolvedValueOnce({ id: "prog-1" });
+    raw.program.update.mockResolvedValueOnce({ id: "prog-1", name: "Renamed" });
+    const scoped = getScopedDb("org-1");
+
+    await scoped.program.update({
+      where: { id: "prog-1" },
+      data: { name: "Renamed", organizationId: "org-2" },
+    });
+
+    expect(raw.program.update).toHaveBeenCalledWith({
+      where: { id: "prog-1" },
+      data: { name: "Renamed" },
+    });
+    const forwarded = raw.program.update.mock.calls[0][0];
+    expect(forwarded.data).not.toHaveProperty("organizationId");
+  });
+
+  it("update data payload becomes empty when caller supplies only organizationId", async () => {
+    raw.program.findFirst.mockResolvedValueOnce({ id: "prog-1" });
+    raw.program.update.mockResolvedValueOnce({ id: "prog-1" });
+    const scoped = getScopedDb("org-1");
+
+    await scoped.program.update({
+      where: { id: "prog-1" },
+      data: { organizationId: "org-2" },
+    });
+
+    const forwarded = raw.program.update.mock.calls[0][0];
+    expect(forwarded.data).toEqual({});
+  });
+
   it("delete throws TenantIsolationError when record belongs to a different org", async () => {
     raw.program.findFirst.mockResolvedValueOnce(null);
     const scoped = getScopedDb("org-1");
@@ -264,6 +296,36 @@ describe("getScopedDb proxy behavior", () => {
       data: { status: "PUBLISHED" },
     });
     expect(raw.program.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("updateMany strips organizationId from data payload to prevent bulk tenant reassignment", async () => {
+    raw.program.updateMany.mockResolvedValueOnce({ count: 3 });
+    const scoped = getScopedDb("org-1");
+
+    await scoped.program.updateMany({
+      where: { status: "DRAFT" },
+      data: { status: "PUBLISHED", organizationId: "org-2" },
+    });
+
+    expect(raw.program.updateMany).toHaveBeenCalledWith({
+      where: { status: "DRAFT", organizationId: "org-1" },
+      data: { status: "PUBLISHED" },
+    });
+    const forwarded = raw.program.updateMany.mock.calls[0][0];
+    expect(forwarded.data).not.toHaveProperty("organizationId");
+  });
+
+  it("updateMany data payload becomes empty when caller supplies only organizationId", async () => {
+    raw.program.updateMany.mockResolvedValueOnce({ count: 0 });
+    const scoped = getScopedDb("org-1");
+
+    await scoped.program.updateMany({
+      where: { status: "DRAFT" },
+      data: { organizationId: "org-2" },
+    });
+
+    const forwarded = raw.program.updateMany.mock.calls[0][0];
+    expect(forwarded.data).toEqual({});
   });
 
   it("deleteMany injects organizationId into where instead of doing an ownership check", async () => {
@@ -334,6 +396,72 @@ describe("getScopedDb proxy behavior", () => {
 
     expect(result).toEqual({ id: "prog-1", name: "Updated" });
     expect(raw.program.upsert).toHaveBeenCalled();
+  });
+
+  it("upsert strips organizationId from update payload to prevent tenant reassignment", async () => {
+    raw.program.findFirst.mockResolvedValueOnce({ id: "prog-1", organizationId: "org-1" });
+    raw.program.upsert.mockResolvedValueOnce({ id: "prog-1", name: "Updated" });
+    const scoped = getScopedDb("org-1");
+
+    await scoped.program.upsert({
+      where: { id: "prog-1" },
+      create: { name: "New" },
+      update: { name: "Updated", organizationId: "org-2" },
+    });
+
+    expect(raw.program.upsert).toHaveBeenCalledWith({
+      where: { id: "prog-1" },
+      create: { name: "New", organizationId: "org-1" },
+      update: { name: "Updated" },
+    });
+    const forwarded = raw.program.upsert.mock.calls[0][0];
+    expect(forwarded.update).not.toHaveProperty("organizationId");
+  });
+
+  it("upsert strips organizationId from update payload even when no existing record (create path)", async () => {
+    raw.program.findFirst.mockResolvedValueOnce(null);
+    raw.program.upsert.mockResolvedValueOnce({ id: "new-1", organizationId: "org-1" });
+    const scoped = getScopedDb("org-1");
+
+    await scoped.program.upsert({
+      where: { id: "nonexistent" },
+      create: { name: "New" },
+      update: { name: "Updated", organizationId: "org-2" },
+    });
+
+    const forwarded = raw.program.upsert.mock.calls[0][0];
+    expect(forwarded.update).not.toHaveProperty("organizationId");
+    expect(forwarded.update).toEqual({ name: "Updated" });
+  });
+
+  it("upsert update payload becomes empty when caller supplies only organizationId", async () => {
+    raw.program.findFirst.mockResolvedValueOnce({ id: "prog-1", organizationId: "org-1" });
+    raw.program.upsert.mockResolvedValueOnce({ id: "prog-1" });
+    const scoped = getScopedDb("org-1");
+
+    await scoped.program.upsert({
+      where: { id: "prog-1" },
+      create: { name: "New" },
+      update: { organizationId: "org-2" },
+    });
+
+    const forwarded = raw.program.upsert.mock.calls[0][0];
+    expect(forwarded.update).toEqual({});
+  });
+
+  it("upsert overrides caller-supplied organizationId in create payload with the scoped org", async () => {
+    raw.program.findFirst.mockResolvedValueOnce(null);
+    raw.program.upsert.mockResolvedValueOnce({ id: "new-1", organizationId: "org-1" });
+    const scoped = getScopedDb("org-1");
+
+    await scoped.program.upsert({
+      where: { id: "nonexistent" },
+      create: { name: "New", organizationId: "org-2" },
+      update: { name: "Updated" },
+    });
+
+    const forwarded = raw.program.upsert.mock.calls[0][0];
+    expect(forwarded.create).toEqual({ name: "New", organizationId: "org-1" });
   });
 
   // --- non-tenant model passthrough -----------------------------------------

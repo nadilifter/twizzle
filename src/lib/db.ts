@@ -337,11 +337,29 @@ export function getScopedDb(organizationId: string) {
           return scopedQuery(() => query(args));
         },
         async update({ model, args, query }) {
-          if (_TENANT_SET.has(model)) await verifyOwnership(model, args, "update");
+          if (_TENANT_SET.has(model)) {
+            await verifyOwnership(model, args, "update");
+            // Defense-in-depth: strip organizationId from the data payload so
+            // a caller cannot reassign an existing record to a different org.
+            if ((args as any).data) {
+              const safeData = { ...((args as any).data as Record<string, unknown>) };
+              delete safeData.organizationId;
+              (args as any).data = safeData;
+            }
+          }
           return scopedQuery(() => query(args));
         },
         async updateMany({ model, args, query }) {
-          if (_TENANT_SET.has(model)) injectWhereScope(args);
+          if (_TENANT_SET.has(model)) {
+            injectWhereScope(args);
+            // Defense-in-depth: strip organizationId from the data payload so
+            // a caller cannot bulk-reassign records to a different org.
+            if ((args as any).data) {
+              const safeData = { ...((args as any).data as Record<string, unknown>) };
+              delete safeData.organizationId;
+              (args as any).data = safeData;
+            }
+          }
           return scopedQuery(() => query(args));
         },
         async delete({ model, args, query }) {
@@ -367,6 +385,13 @@ export function getScopedDb(organizationId: string) {
               );
             }
             (args as any).create = { ...((args as any).create || {}), organizationId };
+            // Defense-in-depth: strip organizationId from the update payload so
+            // a caller cannot reassign an existing record to a different org.
+            if ((args as any).update) {
+              const safeUpdate = { ...((args as any).update as Record<string, unknown>) };
+              delete safeUpdate.organizationId;
+              (args as any).update = safeUpdate;
+            }
           }
           return scopedQuery(() => query(args));
         },
