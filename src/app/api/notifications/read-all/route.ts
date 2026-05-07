@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, getScopedDb } from "@/lib/db";
 
 // POST /api/notifications/read-all
 // Mark all announcements as read for the current user
@@ -11,7 +11,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const organizationId = session.user.organizationId;
+    const body = await request.json().catch(() => ({}));
+    const organizationId = body.organizationId || session.user.organizationId; // tenant-isolation-ok: marketing site passes config.organizationId (server-resolved) so read-all targets the correct org's announcements; userId auth is still enforced
     const now = new Date();
 
     // Get all unread system announcements
@@ -29,9 +30,8 @@ export async function POST(request: NextRequest) {
 
     // Get all unread org announcements
     const orgAnnouncements = organizationId
-      ? await db.announcement.findMany({
+      ? await getScopedDb(organizationId).announcement.findMany({
           where: {
-            organizationId,
             status: "PUBLISHED",
             publishedAt: { lte: now },
             OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],

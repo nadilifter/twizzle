@@ -61,7 +61,7 @@ export function AnnouncementsTray({
       await fetch("/api/notifications/read", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ announcementId: id, type }),
+        body: JSON.stringify({ announcementId: id, type, organizationId }),
       });
       setAnnouncements((prev) => prev.map((a) => (a.id === id ? { ...a, isRead: true } : a)));
     } catch (error) {

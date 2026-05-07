@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db, getScopedDb } from "@/lib/db";
+import { getScopedDb } from "@/lib/db";
 import { z } from "zod";
 
 const updateAnnouncementSchema = z.object({
@@ -21,13 +21,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await params;
+    const organizationId = session.user.organizationId;
+    if (!organizationId) {
+      return NextResponse.json({ error: "No organization selected" }, { status: 400 });
+    }
 
-    const announcement = await db.announcement.findFirst({
-      where: {
-        id,
-        organizationId: session.user.organizationId,
-      },
+    const { id } = await params;
+    const scopedDb = getScopedDb(organizationId);
+
+    const announcement = await scopedDb.announcement.findFirst({
+      where: { id },
     });
 
     if (!announcement) {
@@ -56,16 +59,19 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    const organizationId = session.user.organizationId;
+    if (!organizationId) {
+      return NextResponse.json({ error: "No organization selected" }, { status: 400 });
+    }
+
     const { id } = await params;
     const body = await request.json();
     const validatedData = updateAnnouncementSchema.parse(body);
 
-    // Verify announcement belongs to user's organization
-    const existing = await db.announcement.findFirst({
-      where: {
-        id,
-        organizationId: session.user.organizationId,
-      },
+    const scopedDb = getScopedDb(organizationId);
+
+    const existing = await scopedDb.announcement.findFirst({
+      where: { id },
     });
 
     if (!existing) {
@@ -78,7 +84,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       publishedAt = new Date();
     }
 
-    const scopedDb = getScopedDb(session.user.organizationId);
     const announcement = await scopedDb.announcement.update({
       where: { id },
       data: {
@@ -125,21 +130,22 @@ export async function DELETE(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { id } = await params;
+    const organizationId = session.user.organizationId;
+    if (!organizationId) {
+      return NextResponse.json({ error: "No organization selected" }, { status: 400 });
+    }
 
-    // Verify announcement belongs to user's organization
-    const existing = await db.announcement.findFirst({
-      where: {
-        id,
-        organizationId: session.user.organizationId,
-      },
+    const { id } = await params;
+    const scopedDb = getScopedDb(organizationId);
+
+    const existing = await scopedDb.announcement.findFirst({
+      where: { id },
     });
 
     if (!existing) {
       return NextResponse.json({ error: "Announcement not found" }, { status: 404 });
     }
 
-    const scopedDb = getScopedDb(session.user.organizationId);
     await scopedDb.announcement.delete({
       where: { id },
     });

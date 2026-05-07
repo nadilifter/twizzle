@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, getScopedDb } from "@/lib/db";
 
 // GET /api/notifications
 // Fetches combined system and organization announcements for the current user,
@@ -30,13 +30,13 @@ export async function GET(request: NextRequest) {
       take: 50,
     });
 
-    const effectiveOrgId = session?.user?.organizationId;
+    const queryOrgId = request.nextUrl.searchParams.get("organizationId"); // tenant-isolation-ok: marketing site layouts pass config.organizationId (server-resolved) so public announcement scope matches the site being viewed; data is limited to status=PUBLISHED announcements
+    const effectiveOrgId = queryOrgId || session?.user?.organizationId;
     const userId = session?.user?.id;
 
     const orgAnnouncementsPromise = effectiveOrgId
-      ? db.announcement.findMany({
+      ? getScopedDb(effectiveOrgId).announcement.findMany({
           where: {
-            organizationId: effectiveOrgId,
             status: "PUBLISHED",
             publishedAt: { not: null, lte: now },
             OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],

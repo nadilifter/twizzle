@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { getScopedDb } from "@/lib/db";
 import { z } from "zod";
 
 const createAnnouncementSchema = z.object({
@@ -21,6 +21,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const organizationId = session.user.organizationId;
+    if (!organizationId) {
+      return NextResponse.json({ error: "No organization selected" }, { status: 400 });
+    }
+
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status");
@@ -28,8 +33,9 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "50");
     const offset = parseInt(searchParams.get("offset") || "0");
 
+    const scopedDb = getScopedDb(organizationId);
+
     const where = {
-      organizationId: session.user.organizationId,
       ...(search && {
         OR: [
           { title: { contains: search, mode: "insensitive" as const } },
@@ -41,13 +47,13 @@ export async function GET(request: NextRequest) {
     };
 
     const [announcements, total] = await Promise.all([
-      db.announcement.findMany({
+      scopedDb.announcement.findMany({
         where,
         orderBy: { createdAt: "desc" },
         take: limit,
         skip: offset,
       }),
-      db.announcement.count({ where }),
+      scopedDb.announcement.count({ where }),
     ]);
 
     // Resolve program and event names for display
@@ -60,13 +66,16 @@ export async function GET(request: NextRequest) {
 
     const [programs, events] = await Promise.all([
       programIds.length > 0
-        ? db.program.findMany({
+        ? scopedDb.program.findMany({
             where: { id: { in: programIds } },
             select: { id: true, name: true },
           })
         : Promise.resolve([]),
       eventIds.length > 0
-        ? db.event.findMany({ where: { id: { in: eventIds } }, select: { id: true, title: true } })
+        ? scopedDb.event.findMany({
+            where: { id: { in: eventIds } },
+            select: { id: true, title: true },
+          })
         : Promise.resolve([]),
     ]);
 
@@ -106,16 +115,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    const organizationId = session.user.organizationId;
+    if (!organizationId) {
+      return NextResponse.json({ error: "No organization selected" }, { status: 400 });
+    }
+
     const body = await request.json();
     const validatedData = createAnnouncementSchema.parse(body);
 
+    const scopedDb = getScopedDb(organizationId);
+
     // Validate target references
     if (validatedData.targetScope === "PROGRAM" && validatedData.targetProgramId) {
-      const program = await db.program.findFirst({
-        where: {
-          id: validatedData.targetProgramId,
-          organizationId: session.user.organizationId,
-        },
+      const program = await scopedDb.program.findFirst({
+        where: { id: validatedData.targetProgramId },
       });
       if (!program) {
         return NextResponse.json({ error: "Program not found" }, { status: 404 });
@@ -123,18 +136,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (validatedData.targetScope === "EVENT" && validatedData.targetEventId) {
-      const event = await db.event.findFirst({
-        where: {
-          id: validatedData.targetEventId,
-          organizationId: session.user.organizationId,
-        },
+      const event = await scopedDb.event.findFirst({
+        where: { id: validatedData.targetEventId },
       });
       if (!event) {
         return NextResponse.json({ error: "Event not found" }, { status: 404 });
       }
     }
 
-    const announcement = await db.announcement.create({
+    const announcement = await scopedDb.announcement.create({
       data: {
         title: validatedData.title,
         content: validatedData.content,
@@ -144,7 +154,7 @@ export async function POST(request: NextRequest) {
         priority: validatedData.priority,
         status: validatedData.status,
         publishedAt: validatedData.status === "PUBLISHED" ? new Date() : null,
-        organizationId: session.user.organizationId,
+        organizationId,
       },
     });
 

@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, getScopedDb } from "@/lib/db";
 import { z } from "zod";
 
 const markReadSchema = z.object({
   announcementId: z.string().min(1, "Announcement ID is required"),
   type: z.enum(["system", "org"]),
+  organizationId: z.string().optional(),
 });
 
 // POST /api/notifications/read
@@ -18,7 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { announcementId, type } = markReadSchema.parse(body);
+    const { announcementId, type, organizationId } = markReadSchema.parse(body);
 
     if (type === "system") {
       // Mark system announcement as read
@@ -36,10 +37,13 @@ export async function POST(request: NextRequest) {
         update: {},
       });
     } else {
-      const announcement = await db.announcement.findFirst({
-        where: { id: announcementId, organizationId: session.user.organizationId },
-        select: { id: true },
-      });
+      const orgId = organizationId || session.user.organizationId;
+      const announcement = orgId
+        ? await getScopedDb(orgId).announcement.findFirst({
+            where: { id: announcementId },
+            select: { id: true },
+          })
+        : null;
       if (!announcement) {
         return NextResponse.json({ error: "Announcement not found" }, { status: 404 });
       }
