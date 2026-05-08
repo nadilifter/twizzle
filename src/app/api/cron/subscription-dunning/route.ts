@@ -5,6 +5,8 @@ import {
   recoverAndRetryStaleInvoices,
 } from "@/lib/subscription-billing";
 import { verifyCronSecret, startCronMonitoring, endCronMonitoring } from "@/lib/cron-utils";
+import * as Sentry from "@sentry/nextjs";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -78,7 +80,16 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     await endCronMonitoring("subscription-dunning", checkInId, "error");
-    console.error("Error in subscription-dunning cron:", error);
+    logger.error("Subscription dunning cron failed", {
+      err: error instanceof Error ? error.message : String(error),
+    });
+    Sentry.captureMessage(
+      "Subscription dunning cron crashed — stale invoices not retried, orgs not deactivated",
+      {
+        level: "fatal",
+        extra: { reason: error instanceof Error ? error.message : String(error) },
+      }
+    );
     return NextResponse.json(
       {
         success: false,

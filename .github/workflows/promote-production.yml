@@ -7,6 +7,10 @@ on:
         description: "Staging image tag to promote (e.g. staging-abc12345). Copy from the staging deployment summary."
         required: true
         type: string
+      version_tag:
+        description: "Version tag for this release (e.g. v1.2.3). Used as NEXT_PUBLIC_APP_VERSION and Sentry release name. Defaults to git SHA if omitted."
+        required: false
+        type: string
       release_notes:
         description: "Brief description of what is being released"
         required: false
@@ -19,7 +23,7 @@ concurrency:
 
 jobs:
   promote:
-    name: Promote to Production
+    name: Build and Push Production Image
     runs-on: ubuntu-latest
     # GitHub Environment with required reviewers enforces the approval gate.
     # Configure reviewers at: Settings → Environments → production
@@ -28,9 +32,18 @@ jobs:
       id-token: write
       contents: read
     outputs:
-      prod_tag: ${{ steps.promote.outputs.prod_tag }}
+      prod_tag: ${{ steps.build.outputs.prod_tag }}
 
     steps:
+      - name: Extract git SHA from staging tag
+        id: sha
+        env:
+          STAGING_TAG: ${{ inputs.staging_image_tag }}
+        run: |
+          SHORT_SHA="${STAGING_TAG#staging-}"
+          echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "Extracted SHA: ${SHORT_SHA}"
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -55,37 +68,89 @@ jobs:
           fi
           echo "Validated: ${STAGING_TAG} exists in ECR"
 
-      - name: Retag staging image as production
-        id: promote
+      - name: Checkout repo at ${{ steps.sha.outputs.short_sha }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.sha.outputs.short_sha }}
+
+      - name: Fetch build-time secrets from AWS Secrets Manager
+        run: |
+          SECRET_VAL=$(aws secretsmanager get-secret-value \
+            --region us-east-1 \
+            --secret-id uplifter/production \
+            --query SecretString \
+            --output text 2>/dev/null) || {
+            echo "ERROR: Failed to retrieve secrets from AWS Secrets Manager"
+            exit 1
+          }
+
+          parse_secret() {
+            printf '%s' "$SECRET_VAL" | sed 's/^[[:space:]]*//' | grep "^${1}=" | head -1 | cut -d= -f2- || true
+          }
+
+          NEXT_PUBLIC_ADYEN_CLIENT_KEY=$(parse_secret "NEXT_PUBLIC_ADYEN_CLIENT_KEY")
+          NEXT_PUBLIC_ADYEN_ENVIRONMENT=$(parse_secret "NEXT_PUBLIC_ADYEN_ENVIRONMENT")
+          NEXT_PUBLIC_SENTRY_DSN=$(parse_secret "NEXT_PUBLIC_SENTRY_DSN")
+
+          [ -n "$NEXT_PUBLIC_ADYEN_CLIENT_KEY" ] || { echo "ERROR: NEXT_PUBLIC_ADYEN_CLIENT_KEY not found in secrets"; exit 1; }
+          [ -n "$NEXT_PUBLIC_ADYEN_ENVIRONMENT" ] || { echo "ERROR: NEXT_PUBLIC_ADYEN_ENVIRONMENT not found in secrets"; exit 1; }
+          [ -n "$NEXT_PUBLIC_SENTRY_DSN" ] || { echo "ERROR: NEXT_PUBLIC_SENTRY_DSN not found in secrets"; exit 1; }
+
+          echo "::add-mask::$NEXT_PUBLIC_ADYEN_CLIENT_KEY"
+          echo "::add-mask::$NEXT_PUBLIC_SENTRY_DSN"
+
+          {
+            echo "NEXT_PUBLIC_ADYEN_CLIENT_KEY=$NEXT_PUBLIC_ADYEN_CLIENT_KEY"
+            echo "NEXT_PUBLIC_ADYEN_ENVIRONMENT=$NEXT_PUBLIC_ADYEN_ENVIRONMENT"
+            echo "NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN"
+          } >> "$GITHUB_ENV"
+
+      - name: Build and push production Docker image
+        id: build
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPO: ${{ secrets.ECR_REPOSITORY }}
-          STAGING_TAG: ${{ inputs.staging_image_tag }}
+          SHORT_SHA: ${{ steps.sha.outputs.short_sha }}
+          VERSION_INPUT: ${{ inputs.version_tag }}
         run: |
-          # Derive prod tag from staging tag: staging-<sha> → prod-<sha>
-          SHORT_SHA="${STAGING_TAG#staging-}"
           PROD_TAG="prod-${SHORT_SHA}"
+          APP_VERSION="${VERSION_INPUT:-${SHORT_SHA}}"
+          IMAGE_URI="${ECR_REGISTRY}/${ECR_REPO}:${PROD_TAG}"
 
-          docker pull "${ECR_REGISTRY}/${ECR_REPO}:${STAGING_TAG}"
-          docker tag  "${ECR_REGISTRY}/${ECR_REPO}:${STAGING_TAG}" \
-                      "${ECR_REGISTRY}/${ECR_REPO}:${PROD_TAG}"
-          docker tag  "${ECR_REGISTRY}/${ECR_REPO}:${STAGING_TAG}" \
-                      "${ECR_REGISTRY}/${ECR_REPO}:prod-latest"
+          DOCKER_BUILDKIT=1 docker build \
+            --build-arg APP_ENVIRONMENT=production \
+            --build-arg NEXT_PUBLIC_APP_ENVIRONMENT=production \
+            --build-arg NEXT_PUBLIC_APP_VERSION="${APP_VERSION}" \
+            --build-arg NEXT_PUBLIC_ADYEN_CLIENT_KEY="${NEXT_PUBLIC_ADYEN_CLIENT_KEY}" \
+            --build-arg NEXT_PUBLIC_ADYEN_ENVIRONMENT="${NEXT_PUBLIC_ADYEN_ENVIRONMENT}" \
+            --build-arg NEXT_PUBLIC_SENTRY_DSN="${NEXT_PUBLIC_SENTRY_DSN}" \
+            --build-arg SENTRY_RELEASE="${APP_VERSION}" \
+            --build-arg SENTRY_AUTH_TOKEN="${{ secrets.SENTRY_AUTH_TOKEN }}" \
+            -t "${IMAGE_URI}" \
+            .
 
-          docker push "${ECR_REGISTRY}/${ECR_REPO}:${PROD_TAG}"
+          docker tag "${IMAGE_URI}" "${ECR_REGISTRY}/${ECR_REPO}:prod-latest"
+
+          docker push "${IMAGE_URI}"
           docker push "${ECR_REGISTRY}/${ECR_REPO}:prod-latest"
 
           echo "prod_tag=${PROD_TAG}" >> "$GITHUB_OUTPUT"
           echo "Promoted ${STAGING_TAG} → ${PROD_TAG}"
 
       - name: Post promotion summary
+        env:
+          SHORT_SHA: ${{ steps.sha.outputs.short_sha }}
+          VERSION_INPUT: ${{ inputs.version_tag }}
         run: |
+          APP_VERSION="${VERSION_INPUT:-${SHORT_SHA}}"
           echo "### Production Promotion" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
           echo "| --- | --- |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Promoted From | \`${{ inputs.staging_image_tag }}\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Production Tag | \`${{ steps.promote.outputs.prod_tag }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Production Tag | \`${{ steps.build.outputs.prod_tag }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| App Version / Sentry Release | \`${APP_VERSION}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Sentry Project | \`uplifter-us-prod\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Approved By | @${{ github.actor }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Release Notes | ${{ inputs.release_notes || 'N/A' }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"

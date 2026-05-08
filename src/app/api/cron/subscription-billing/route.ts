@@ -6,6 +6,7 @@ import {
 } from "@/lib/subscription-billing";
 import { db } from "@/lib/db";
 import * as Sentry from "@sentry/nextjs";
+import { logger } from "@/lib/logger";
 import { verifyCronSecret, startCronMonitoring, endCronMonitoring } from "@/lib/cron-utils";
 
 export const dynamic = "force-dynamic";
@@ -103,10 +104,11 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // If payment failures exceed 0% of invoices attempted, fire a critical alert. To start, will just always fire if any fail
-    if (totalPaymentsAttempted > 0 && errorRate > 0) {
+    // Fire a fatal alert when the failure rate indicates a system problem, not just normal card declines.
+    // 20% threshold: natural decline rates are 5–15%, so ≥20% means something is likely broken.
+    if (totalPaymentsAttempted > 0 && errorRate >= 0.2) {
       Sentry.captureMessage(
-        `CRITICAL: Subscription billing failure rate is ${errorRatePct}% — immediate action required`,
+        `Subscription billing failure rate is ${errorRatePct}% — investigate immediately`,
         {
           level: "fatal",
           extra: {
@@ -131,7 +133,16 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     await endCronMonitoring("subscription-billing", checkInId, "error");
-    console.error("Error in subscription-billing cron:", error);
+    logger.error("Subscription billing cron failed", {
+      err: error instanceof Error ? error.message : String(error),
+    });
+    Sentry.captureMessage(
+      "Subscription billing cron crashed — no invoices generated or payments processed",
+      {
+        level: "fatal",
+        extra: { reason: error instanceof Error ? error.message : String(error) },
+      }
+    );
     return NextResponse.json(
       {
         success: false,

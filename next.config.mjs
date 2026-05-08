@@ -300,7 +300,7 @@ const nextConfig = {
 
 export default withSentryConfig(nextConfig, {
   org: "uplifter-us-llc",
-  project: "uplifter-nextjs",
+  project: process.env.APP_ENVIRONMENT === "production" ? "uplifter-us-prod" : "uplifter-nextjs",
   silent: !process.env.CI,
   telemetry: false,
   widenClientFileUpload: true,

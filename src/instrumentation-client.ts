@@ -34,6 +34,19 @@ Sentry.init({
     if (event.exception) {
       const replay = await Sentry.lazyLoadIntegration("replayIntegration");
       Sentry.addIntegration(replay());
+
+      // Normalize UUIDs and numeric IDs in error messages before fingerprinting.
+      // Without this, "User <uuid-A> not found" and "User <uuid-B> not found" each
+      // become a separate Sentry issue. With it, both collapse into one.
+      const message = event.exception.values?.[0]?.value;
+      if (message) {
+        const sanitized = message
+          .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "<id>")
+          .replace(/\b\d+\b/g, "<id>");
+        if (sanitized !== message) {
+          event.fingerprint = [event.exception.values![0].type ?? "Error", sanitized];
+        }
+      }
     }
     return event;
   },
