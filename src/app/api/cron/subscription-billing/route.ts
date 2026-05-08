@@ -6,7 +6,7 @@ import {
 } from "@/lib/subscription-billing";
 import { db } from "@/lib/db";
 import * as Sentry from "@sentry/nextjs";
-import { verifyCronSecret } from "@/lib/cron-utils";
+import { verifyCronSecret, startCronMonitoring, endCronMonitoring } from "@/lib/cron-utils";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -25,6 +25,7 @@ export const maxDuration = 300;
  */
 
 export async function GET(request: NextRequest) {
+  let checkInId: string | undefined;
   try {
     if (!process.env.CRON_SECRET) {
       console.error("CRON_SECRET is not configured");
@@ -46,6 +47,8 @@ export async function GET(request: NextRequest) {
         timestamp: new Date().toISOString(),
       });
     }
+
+    checkInId = startCronMonitoring("subscription-billing");
 
     const trialResult = await transitionExpiredTrials();
     const invoiceResult = await generateDueInvoices();
@@ -118,6 +121,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    await endCronMonitoring("subscription-billing", checkInId, "ok");
+
     return NextResponse.json({
       success: true,
       summary,
@@ -125,6 +130,7 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
+    await endCronMonitoring("subscription-billing", checkInId, "error");
     console.error("Error in subscription-billing cron:", error);
     return NextResponse.json(
       {

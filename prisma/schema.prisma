@@ -5265,3 +5265,13 @@ model CacheVersion {
 
   @@id([organizationId, entityType])
 }
+
+// USC-517: Forensic record of cron-run timing. Each cron upserts lastSuccessAt
+// at the end of a successful run so we can answer "when did <cron> last
+// succeed?" without depending on Sentry. Active alerting on missed runs is
+// handled by Sentry cron monitoring (Sentry.captureCheckIn in cron-utils.ts).
+model CronHeartbeat {
+  cronName      String    @id
+  lastSuccessAt DateTime?
+  updatedAt     DateTime  @updatedAt
+}

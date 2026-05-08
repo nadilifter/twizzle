@@ -4,7 +4,7 @@ import {
   deactivateExpiredOrgs,
   recoverAndRetryStaleInvoices,
 } from "@/lib/subscription-billing";
-import { verifyCronSecret } from "@/lib/cron-utils";
+import { verifyCronSecret, startCronMonitoring, endCronMonitoring } from "@/lib/cron-utils";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -27,6 +27,7 @@ export const maxDuration = 300;
  */
 
 export async function GET(request: NextRequest) {
+  let checkInId: string | undefined;
   try {
     if (!process.env.CRON_SECRET) {
       console.error("CRON_SECRET is not configured");
@@ -49,6 +50,8 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    checkInId = startCronMonitoring("subscription-dunning");
+
     const recoveryResult = await recoverAndRetryStaleInvoices();
     const dunningResult = await processDunningEmails();
     const deactivationResult = await deactivateExpiredOrgs();
@@ -58,6 +61,8 @@ export async function GET(request: NextRequest) {
       ...dunningResult.errors,
       ...deactivationResult.errors,
     ];
+
+    await endCronMonitoring("subscription-dunning", checkInId, "ok");
 
     return NextResponse.json({
       success: true,
@@ -72,6 +77,7 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
+    await endCronMonitoring("subscription-dunning", checkInId, "error");
     console.error("Error in subscription-dunning cron:", error);
     return NextResponse.json(
       {

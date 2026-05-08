@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { admitNextInQueue, lockQueueConfig } from "@/lib/queue-utils";
+import { startCronMonitoring, endCronMonitoring } from "@/lib/cron-utils";
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
 export async function GET(request: NextRequest) {
+  let checkInId: string | undefined;
   try {
     if (!CRON_SECRET) {
       console.error("CRON_SECRET is not configured");
@@ -15,6 +17,8 @@ export async function GET(request: NextRequest) {
     if (authHeader !== `Bearer ${CRON_SECRET}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    checkInId = startCronMonitoring("expire-reservations");
 
     const now = new Date();
     let expiredCount = 0;
@@ -82,6 +86,8 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    await endCronMonitoring("expire-reservations", checkInId, "ok");
+
     return NextResponse.json({
       success: true,
       expired: expiredCount,
@@ -90,6 +96,7 @@ export async function GET(request: NextRequest) {
       timestamp: now.toISOString(),
     });
   } catch (error) {
+    await endCronMonitoring("expire-reservations", checkInId, "error");
     console.error("Error in expire-reservations cron:", error);
     return NextResponse.json({ error: "Failed to process expired reservations" }, { status: 500 });
   }

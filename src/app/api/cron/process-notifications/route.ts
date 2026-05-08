@@ -4,12 +4,13 @@ import {
   cleanupOldDeduplicationRecords,
 } from "@/lib/notification-scheduler";
 import { logger } from "@/lib/logger";
-import { verifyCronSecret } from "@/lib/cron-utils";
+import { verifyCronSecret, startCronMonitoring, endCronMonitoring } from "@/lib/cron-utils";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 export async function GET(request: NextRequest) {
+  let checkInId: string | undefined;
   try {
     if (!process.env.CRON_SECRET) {
       logger.error("CRON_SECRET is not configured");
@@ -34,6 +35,8 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    checkInId = startCronMonitoring("process-notifications");
+
     // Process all organizations' notification rules
     const result = await processAllOrganizations();
 
@@ -46,6 +49,8 @@ export async function GET(request: NextRequest) {
     if (cleanup || isFirstRunOfDay) {
       cleanedUp = await cleanupOldDeduplicationRecords();
     }
+
+    await endCronMonitoring("process-notifications", checkInId, "ok");
 
     return NextResponse.json({
       success: result.success,
@@ -62,6 +67,7 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
+    await endCronMonitoring("process-notifications", checkInId, "error");
     logger.error("Error in process-notifications cron", {
       error: error instanceof Error ? error.message : String(error),
     });

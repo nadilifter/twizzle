@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { db } from "@/lib/db";
-import { verifyCronSecret } from "@/lib/cron-utils";
+import { verifyCronSecret, startCronMonitoring, endCronMonitoring } from "@/lib/cron-utils";
 import { logger } from "@/lib/logger";
 import { executeNotificationByTrigger } from "@/lib/notification-service";
 import {
@@ -19,6 +19,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 export async function GET(request: NextRequest) {
+  let checkInId: string | undefined;
   try {
     if (!process.env.CRON_SECRET) {
       logger.error("CRON_SECRET is not configured");
@@ -28,6 +29,8 @@ export async function GET(request: NextRequest) {
     if (!verifyCronSecret(request.headers.get("authorization"))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    checkInId = startCronMonitoring("waitlist-payment-check");
 
     const now = new Date();
 
@@ -209,8 +212,10 @@ export async function GET(request: NextRequest) {
     }
 
     logger.info("waitlist-payment-check cron complete", summary);
+    await endCronMonitoring("waitlist-payment-check", checkInId, "ok");
     return NextResponse.json(summary);
   } catch (error) {
+    await endCronMonitoring("waitlist-payment-check", checkInId, "error");
     logger.error("waitlist-payment-check cron failed", {
       error: error instanceof Error ? error.message : String(error),
     });

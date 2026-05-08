@@ -3,6 +3,7 @@ import {
   generateHolidayAnnouncements,
   archiveExpiredHolidayAnnouncements,
 } from "@/lib/services/holiday-announcements";
+import { startCronMonitoring, endCronMonitoring } from "@/lib/cron-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ export const dynamic = "force-dynamic";
 const CRON_SECRET = process.env.CRON_SECRET;
 
 export async function GET(request: NextRequest) {
+  let checkInId: string | undefined;
   try {
     if (!CRON_SECRET) {
       console.error("CRON_SECRET is not configured");
@@ -34,8 +36,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    checkInId = startCronMonitoring("holiday-announcements");
+
     const generated = await generateHolidayAnnouncements();
     const archived = await archiveExpiredHolidayAnnouncements();
+
+    await endCronMonitoring("holiday-announcements", checkInId, "ok");
 
     return NextResponse.json({
       success: true,
@@ -47,6 +53,7 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
+    await endCronMonitoring("holiday-announcements", checkInId, "error");
     console.error("Error in holiday-announcements cron:", error);
     return NextResponse.json(
       {

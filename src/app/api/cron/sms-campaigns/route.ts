@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { isTwilioConfigured } from "@/lib/twilio";
 import { executeSmsCampaign } from "@/lib/sms-campaign-service";
 import { logger } from "@/lib/logger";
+import { startCronMonitoring, endCronMonitoring } from "@/lib/cron-utils";
 
 /**
  * SMS Scheduled Campaign Cron Endpoint
@@ -16,6 +17,7 @@ import { logger } from "@/lib/logger";
 const CRON_SECRET = process.env.CRON_SECRET;
 
 export async function GET(request: NextRequest) {
+  let checkInId: string | undefined;
   try {
     if (!CRON_SECRET) {
       console.error("CRON_SECRET is not configured");
@@ -27,7 +29,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    checkInId = startCronMonitoring("sms-campaigns");
+
     if (!isTwilioConfigured()) {
+      await endCronMonitoring("sms-campaigns", checkInId, "ok");
       return NextResponse.json({
         success: true,
         message: "Twilio not configured — skipping",
@@ -48,6 +53,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (dueCampaigns.length === 0) {
+      await endCronMonitoring("sms-campaigns", checkInId, "ok");
       return NextResponse.json({
         success: true,
         campaignsSent: 0,
@@ -81,6 +87,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    await endCronMonitoring("sms-campaigns", checkInId, "ok");
+
     return NextResponse.json({
       success: true,
       campaignsSent: results.filter((r) => r.status === "sent").length,
@@ -89,6 +97,7 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
+    await endCronMonitoring("sms-campaigns", checkInId, "error");
     console.error("Error in sms-campaigns cron:", error);
     return NextResponse.json(
       {

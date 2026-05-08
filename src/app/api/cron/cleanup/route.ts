@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { verifyCronSecret } from "@/lib/cron-utils";
+import { verifyCronSecret, startCronMonitoring, endCronMonitoring } from "@/lib/cron-utils";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -18,6 +18,7 @@ export const maxDuration = 60;
  * Schedule: Weekly on Sunday at 3:00 AM UTC ("0 3 * * 0")
  */
 export async function GET(request: NextRequest) {
+  let checkInId: string | undefined;
   try {
     if (!process.env.CRON_SECRET) {
       logger.error("CRON_SECRET is not configured");
@@ -27,6 +28,8 @@ export async function GET(request: NextRequest) {
     if (!verifyCronSecret(request.headers.get("authorization"))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    checkInId = startCronMonitoring("cleanup");
 
     const now = new Date();
 
@@ -58,8 +61,10 @@ export async function GET(request: NextRequest) {
     };
 
     logger.info("Cleanup cron completed", summary);
+    await endCronMonitoring("cleanup", checkInId, "ok");
     return NextResponse.json({ success: true, summary, timestamp: now.toISOString() });
   } catch (error) {
+    await endCronMonitoring("cleanup", checkInId, "error");
     logger.error("Cleanup cron failed", {
       error: error instanceof Error ? error.message : String(error),
     });

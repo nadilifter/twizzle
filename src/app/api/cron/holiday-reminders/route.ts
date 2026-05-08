@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendHolidayReminderEmails } from "@/lib/services/holiday-announcements";
+import { startCronMonitoring, endCronMonitoring } from "@/lib/cron-utils";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -21,6 +22,7 @@ export const maxDuration = 300;
 const CRON_SECRET = process.env.CRON_SECRET;
 
 export async function GET(request: NextRequest) {
+  let checkInId: string | undefined;
   try {
     if (!CRON_SECRET) {
       console.error("CRON_SECRET is not configured");
@@ -32,7 +34,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    checkInId = startCronMonitoring("holiday-reminders");
+
     const result = await sendHolidayReminderEmails();
+
+    await endCronMonitoring("holiday-reminders", checkInId, "ok");
 
     return NextResponse.json({
       success: true,
@@ -42,6 +48,7 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
+    await endCronMonitoring("holiday-reminders", checkInId, "error");
     console.error("Error in holiday-reminders cron:", error);
     return NextResponse.json(
       {

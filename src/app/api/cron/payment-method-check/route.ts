@@ -5,7 +5,7 @@ import { syncPaymentMethodsFromAdyen } from "@/lib/payment-method-sync";
 import { isPaymentMethodExpired, isPaymentMethodExpiringSoon } from "@/lib/payment-utils";
 import { sendTemplatedEmail } from "@/lib/email";
 import { logger } from "@/lib/logger";
-import { verifyCronSecret } from "@/lib/cron-utils";
+import { verifyCronSecret, startCronMonitoring, endCronMonitoring } from "@/lib/cron-utils";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -21,6 +21,7 @@ export const maxDuration = 300;
  * Schedule: Weekly on Monday at 2:00 PM UTC ("0 14 * * 1")
  */
 export async function GET(request: NextRequest) {
+  let checkInId: string | undefined;
   try {
     if (!process.env.CRON_SECRET) {
       logger.error("CRON_SECRET is not configured");
@@ -31,7 +32,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    checkInId = startCronMonitoring("payment-method-check");
+
     if (!isAdyenConfigured()) {
+      await endCronMonitoring("payment-method-check", checkInId, "ok");
       return NextResponse.json({
         success: true,
         skipped: true,
@@ -118,8 +122,10 @@ export async function GET(request: NextRequest) {
     }
 
     logger.info("Payment method check cron completed", summary);
+    await endCronMonitoring("payment-method-check", checkInId, "ok");
     return NextResponse.json({ success: true, summary, timestamp: new Date().toISOString() });
   } catch (error) {
+    await endCronMonitoring("payment-method-check", checkInId, "error");
     logger.error("Payment method check cron failed", {
       error: error instanceof Error ? error.message : String(error),
     });

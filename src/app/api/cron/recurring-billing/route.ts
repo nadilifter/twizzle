@@ -10,7 +10,7 @@ import {
 } from "@/lib/recurring-billing-service";
 import { executeNotificationByTrigger } from "@/lib/notification-service";
 import { logger } from "@/lib/logger";
-import { verifyCronSecret } from "@/lib/cron-utils";
+import { verifyCronSecret, startCronMonitoring, endCronMonitoring } from "@/lib/cron-utils";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -20,6 +20,7 @@ const REMINDER_DAYS_AHEAD = 3;
 const MIN_RETRY_INTERVAL_MS = 20 * 60 * 60 * 1000; // 20 hours
 
 export async function GET(request: NextRequest) {
+  let checkInId: string | undefined;
   try {
     if (!process.env.CRON_SECRET) {
       logger.error("CRON_SECRET is not configured");
@@ -29,6 +30,8 @@ export async function GET(request: NextRequest) {
     if (!verifyCronSecret(request.headers.get("authorization"))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    checkInId = startCronMonitoring("recurring-billing");
 
     const now = new Date();
     const todayEnd = new Date(now);
@@ -265,12 +268,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    await endCronMonitoring("recurring-billing", checkInId, "ok");
+
     return NextResponse.json({
       success: true,
       summary,
       timestamp: now.toISOString(),
     });
   } catch (error) {
+    await endCronMonitoring("recurring-billing", checkInId, "error");
     logger.error("Error in recurring-billing cron:", {
       error: error instanceof Error ? error.message : String(error),
     });

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { verifyCronSecret } from "@/lib/cron-utils";
+import { verifyCronSecret, startCronMonitoring, endCronMonitoring } from "@/lib/cron-utils";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -19,6 +19,7 @@ export const maxDuration = 300;
  * Schedule: Daily at 8:00 AM UTC ("0 8 * * *")
  */
 export async function GET(request: NextRequest) {
+  let checkInId: string | undefined;
   try {
     if (!process.env.CRON_SECRET) {
       logger.error("CRON_SECRET is not configured");
@@ -28,6 +29,8 @@ export async function GET(request: NextRequest) {
     if (!verifyCronSecret(request.headers.get("authorization"))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    checkInId = startCronMonitoring("registration-transitions");
 
     const now = new Date();
 
@@ -76,6 +79,8 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    await endCronMonitoring("registration-transitions", checkInId, "ok");
+
     return NextResponse.json({
       success: true,
       opened: opened.count,
@@ -83,6 +88,7 @@ export async function GET(request: NextRequest) {
       programCompleted: programCompleted.count,
     });
   } catch (error) {
+    await endCronMonitoring("registration-transitions", checkInId, "error");
     logger.error("registration-transitions cron failed", { error: String(error) });
     Sentry.captureMessage(
       "CRITICAL: Registration transitions cron failed — programs may not have opened or closed correctly",

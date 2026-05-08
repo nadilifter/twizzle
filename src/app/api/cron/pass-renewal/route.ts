@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { processAthletePassRenewals, expireAthletePasses } from "@/lib/services/pass-renewal";
 import { logger } from "@/lib/logger";
-import { verifyCronSecret } from "@/lib/cron-utils";
+import { verifyCronSecret, startCronMonitoring, endCronMonitoring } from "@/lib/cron-utils";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -16,6 +16,7 @@ export const maxDuration = 300;
  * Schedule: Daily at 6:00 AM UTC ("0 6 * * *")
  */
 export async function GET(request: NextRequest) {
+  let checkInId: string | undefined;
   try {
     if (!process.env.CRON_SECRET) {
       logger.error("CRON_SECRET is not configured");
@@ -25,6 +26,8 @@ export async function GET(request: NextRequest) {
     if (!verifyCronSecret(request.headers.get("authorization"))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    checkInId = startCronMonitoring("pass-renewal");
 
     const [renewals, expired] = await Promise.all([
       processAthletePassRenewals(),
@@ -37,8 +40,10 @@ export async function GET(request: NextRequest) {
     };
 
     logger.info("Pass renewal cron completed", summary);
+    await endCronMonitoring("pass-renewal", checkInId, "ok");
     return NextResponse.json({ success: true, summary, timestamp: new Date().toISOString() });
   } catch (error) {
+    await endCronMonitoring("pass-renewal", checkInId, "error");
     logger.error("Pass renewal cron failed", {
       error: error instanceof Error ? error.message : String(error),
     });

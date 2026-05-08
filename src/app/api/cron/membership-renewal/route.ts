@@ -6,7 +6,7 @@ import {
   expireInstances,
 } from "@/lib/services/membership-renewal";
 import { logger } from "@/lib/logger";
-import { verifyCronSecret } from "@/lib/cron-utils";
+import { verifyCronSecret, startCronMonitoring, endCronMonitoring } from "@/lib/cron-utils";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -23,6 +23,7 @@ export const maxDuration = 300;
  * Schedule: Daily at 6:00 AM UTC ("0 6 * * *")
  */
 export async function GET(request: NextRequest) {
+  let checkInId: string | undefined;
   try {
     if (!process.env.CRON_SECRET) {
       logger.error("CRON_SECRET is not configured");
@@ -32,6 +33,8 @@ export async function GET(request: NextRequest) {
     if (!verifyCronSecret(request.headers.get("authorization"))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    checkInId = startCronMonitoring("membership-renewal");
 
     // Sequential: generate instances before renewals check for them,
     // renew athletes before expiring instances they need to find.
@@ -48,8 +51,10 @@ export async function GET(request: NextRequest) {
     };
 
     logger.info("Membership renewal cron completed", summary);
+    await endCronMonitoring("membership-renewal", checkInId, "ok");
     return NextResponse.json({ success: true, summary, timestamp: new Date().toISOString() });
   } catch (error) {
+    await endCronMonitoring("membership-renewal", checkInId, "error");
     logger.error("Membership renewal cron failed", {
       error: error instanceof Error ? error.message : String(error),
     });
