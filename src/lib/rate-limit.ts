@@ -62,7 +62,7 @@ export async function checkRateLimit(
   { failClosed = false }: { failClosed?: boolean } = {}
 ): Promise<RateLimitResult> {
   if (!isRedisAvailable() || !redis) {
-    if (failClosed) {
+    if (failClosed && !isDev) {
       console.warn(
         "Rate limiting: Redis unavailable, failing closed for security-critical endpoint"
       );
