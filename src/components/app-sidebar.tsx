@@ -829,6 +829,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // Search state
   const [searchQuery, setSearchQuery] = React.useState("");
   const [highlightedIndex, setHighlightedIndex] = React.useState(0);
+  // Accordion state: only one section can be expanded at a time. null = all collapsed.
+  const [openSection, setOpenSection] = React.useState<string | null>(null);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const highlightedItemRef = React.useRef<HTMLLIElement>(null);
   const { results: entityResults, isLoading: isEntitySearchLoading } =
@@ -1109,14 +1111,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <Collapsible
                       key={item.title}
                       asChild
-                      defaultOpen={
-                        searchQuery
-                          ? true
-                          : isMobile
-                            ? pathname.startsWith(item.url) ||
-                              item.items?.some((sub) => pathname.startsWith(sub.url))
-                            : true
-                      }
+                      open={searchQuery ? true : openSection === item.title}
+                      onOpenChange={(isOpen) => {
+                        if (searchQuery) return;
+                        setOpenSection(isOpen ? item.title : null);
+                      }}
                       className="group/collapsible"
                     >
                       <SidebarMenuItem>
