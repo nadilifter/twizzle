@@ -112,7 +112,7 @@ export function useQueueConfig(params?: UseQueueConfigParams): UseQueueConfigRet
     } finally {
       setIsLoading(false);
     }
-  }, [params?.includeProgram, params?.includeStats, params]);
+  }, [params]);
 
   useEffect(() => {
     const key = paramsKey(params);
