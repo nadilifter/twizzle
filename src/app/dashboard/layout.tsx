@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
@@ -10,47 +11,50 @@ import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getSubdomainUrl } from "@/lib/env-domains";
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const session = await getAuthSession();
-
-  let scheduledDeactivationDate: Date | null = null;
-
-  if (session?.user?.organizationId && !session.user.isSuperAdmin) {
-    const org = await db.organization.findUnique({
-      where: { id: session.user.organizationId },
-      select: {
-        isActive: true,
-        name: true,
-        deactivationReason: true,
-        scheduledDeactivationDate: true,
-      },
-    });
-
-    if (org && !org.isActive) {
-      const params = new URLSearchParams({
-        reason: org.deactivationReason || "Unknown",
-        org: org.name,
-        orgId: session.user.organizationId,
-      });
-      const loginBase = getSubdomainUrl("login");
-      redirect(`${loginBase}/organization-deactivated?${params.toString()}`);
-    }
-
-    scheduledDeactivationDate = org?.scheduledDeactivationDate ?? null;
-  }
-
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <BreadcrumbOverrideProvider>
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset>
           <SiteHeader />
-          <BillingGracePeriodBanner scheduledDeactivationDate={scheduledDeactivationDate} />
+          <Suspense fallback={null}>
+            <DeactivationGuard />
+          </Suspense>
           <div className="flex flex-1 flex-col">{children}</div>
           <DemoDataBanner />
         </SidebarInset>
       </SidebarProvider>
       <ZendeskWidget />
     </BreadcrumbOverrideProvider>
+  );
+}
+
+async function DeactivationGuard() {
+  const session = await getAuthSession();
+  if (!session?.user?.organizationId || session.user.isSuperAdmin) return null;
+
+  const org = await db.organization.findUnique({
+    where: { id: session.user.organizationId },
+    select: {
+      isActive: true,
+      name: true,
+      deactivationReason: true,
+      scheduledDeactivationDate: true,
+    },
+  });
+
+  if (org && !org.isActive) {
+    const params = new URLSearchParams({
+      reason: org.deactivationReason || "Unknown",
+      org: org.name,
+      orgId: session.user.organizationId,
+    });
+    const loginBase = getSubdomainUrl("login");
+    redirect(`${loginBase}/organization-deactivated?${params.toString()}`);
+  }
+
+  return (
+    <BillingGracePeriodBanner scheduledDeactivationDate={org?.scheduledDeactivationDate ?? null} />
   );
 }

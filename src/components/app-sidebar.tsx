@@ -858,6 +858,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     [features]
   );
 
+  // Eagerly prefetch every sidebar sub-item so first-click navigation is instant.
+  // Sections are collapsed by default, so the <Link> components inside CollapsibleContent
+  // don't mount and Next.js's viewport-triggered prefetch never fires. Trigger it manually.
+  React.useEffect(() => {
+    if (!isFeaturesLoaded) return;
+    for (const section of filteredNavMain) {
+      for (const subItem of section.items ?? []) {
+        router.prefetch(subItem.url);
+      }
+    }
+  }, [isFeaturesLoaded, filteredNavMain, router]);
+
   // Instant frontend filtering of nav items based on search query
   const searchFilteredNav = React.useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
