@@ -76,25 +76,50 @@ interface UseHolidaysReturn {
   clearError: () => void;
 }
 
+// Module-level stale-while-revalidate cache for the list query keyed by year.
+const LIST_CACHE_TTL_MS = 60_000;
+type ListCacheEntry = {
+  data: OrganizationHoliday[];
+  fetchedAt: number;
+};
+const listCache = new Map<string, ListCacheEntry>();
+
+function paramsKey(year: number): string {
+  return JSON.stringify({ year });
+}
+
+function invalidateLists() {
+  listCache.clear();
+}
+
 export function useHolidays(options: UseHolidaysOptions = {}): UseHolidaysReturn {
   const { autoFetch = true, initialYear = new Date().getFullYear() } = options;
   const { data: session } = useSession();
 
-  const [holidays, setHolidays] = useState<OrganizationHoliday[]>([]);
-  const [isLoading, setIsLoading] = useState(autoFetch);
+  // Seed state from cache so revisits render instantly with no spinner.
+  const initialKey = paramsKey(initialYear);
+  const initialCached = listCache.get(initialKey);
+
+  const [holidays, setHolidays] = useState<OrganizationHoliday[]>(() => initialCached?.data ?? []);
+  const [isLoading, setIsLoading] = useState(() => autoFetch && !initialCached);
   const [error, setError] = useState<string | null>(null);
   const [year, setYear] = useState(initialYear);
 
   const fetchHolidays = useCallback(
     async (fetchYear?: number) => {
       const targetYear = fetchYear ?? year;
-      setIsLoading(true);
+      const key = paramsKey(targetYear);
+      const cached = listCache.get(key);
+      if (!cached) {
+        setIsLoading(true);
+        setHolidays([]);
+      }
       setError(null);
-      setHolidays([]);
 
       try {
         const response = await api.get<HolidaysListResponse>("/api/holidays", { year: targetYear });
         setHolidays(response.data);
+        listCache.set(key, { data: response.data, fetchedAt: Date.now() });
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to fetch holidays";
         setError(message);
@@ -121,6 +146,7 @@ export function useHolidays(options: UseHolidaysOptions = {}): UseHolidaysReturn
           createInstancesForProgramIds,
         });
         setHolidays((prev) => prev.map((h) => (h.id === id ? updated : h)));
+        invalidateLists();
         return updated;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to update holiday";
@@ -142,6 +168,7 @@ export function useHolidays(options: UseHolidaysOptions = {}): UseHolidaysReturn
           updated.sort((a, b) => a.date.localeCompare(b.date));
           return updated;
         });
+        invalidateLists();
         return newHoliday;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to add closure";
@@ -158,6 +185,7 @@ export function useHolidays(options: UseHolidaysOptions = {}): UseHolidaysReturn
     try {
       await api.delete(`/api/holidays/${id}`);
       setHolidays((prev) => prev.filter((h) => h.id !== id));
+      invalidateLists();
       return true;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to delete holiday";
@@ -188,9 +216,15 @@ export function useHolidays(options: UseHolidaysOptions = {}): UseHolidaysReturn
   }, []);
 
   useEffect(() => {
-    if (autoFetch && session?.user?.organizationId) {
-      fetchHolidays(year);
+    if (!autoFetch || !session?.user?.organizationId) return;
+    const key = paramsKey(year);
+    const cached = listCache.get(key);
+    const isFresh = cached && Date.now() - cached.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) {
+      setHolidays(cached.data);
+      return;
     }
+    fetchHolidays(year);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.organizationId, year]);
 

@@ -29,23 +29,47 @@ interface UseGuardiansReturn {
   clearError: () => void;
 }
 
+// Module-level stale-while-revalidate cache for the list query.
+const LIST_CACHE_TTL_MS = 60_000;
+type ListCacheEntry = {
+  data: GuardianUser[];
+  total: number;
+  fetchedAt: number;
+};
+const listCache = new Map<string, ListCacheEntry>();
+
+function paramsKey(params: { search?: string } | undefined): string {
+  return JSON.stringify(params ?? {});
+}
+
 export function useGuardians(options: { autoFetch?: boolean } = {}): UseGuardiansReturn {
   const { autoFetch = true } = options;
 
-  const [guardians, setGuardians] = useState<GuardianUser[]>([]);
-  const [total, setTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+  // Seed state from cache so revisits render instantly with no spinner.
+  const initialKey = paramsKey(undefined);
+  const initialCached = listCache.get(initialKey);
+
+  const [guardians, setGuardians] = useState<GuardianUser[]>(() => initialCached?.data ?? []);
+  const [total, setTotal] = useState(() => initialCached?.total ?? 0);
+  const [isLoading, setIsLoading] = useState(() => autoFetch && !initialCached);
   const [error, setError] = useState<string | null>(null);
   const fetchedRef = useRef(false);
 
   const fetchGuardians = useCallback(async (params?: { search?: string }) => {
-    setIsLoading(true);
+    const key = paramsKey(params);
+    const cached = listCache.get(key);
+    if (!cached) setIsLoading(true);
     setError(null);
 
     try {
       const response = await api.get<GuardiansListResponse>("/api/guardians", params);
       setGuardians(response.data);
       setTotal(response.total);
+      listCache.set(key, {
+        data: response.data,
+        total: response.total,
+        fetchedAt: Date.now(),
+      });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch guardians";
       setError(message);
@@ -59,10 +83,13 @@ export function useGuardians(options: { autoFetch?: boolean } = {}): UseGuardian
   }, []);
 
   useEffect(() => {
-    if (autoFetch && !fetchedRef.current) {
-      fetchedRef.current = true;
-      fetchGuardians();
-    }
+    if (!autoFetch || fetchedRef.current) return;
+    fetchedRef.current = true;
+    const key = paramsKey(undefined);
+    const cached = listCache.get(key);
+    const isFresh = cached && Date.now() - cached.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) return;
+    fetchGuardians();
   }, [autoFetch, fetchGuardians]);
 
   return {

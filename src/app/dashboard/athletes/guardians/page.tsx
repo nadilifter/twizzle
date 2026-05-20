@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface GuardianAthlete {
   id: string;
@@ -157,10 +158,28 @@ export default function GuardiansPage() {
       </div>
 
       {isLoading && guardians.length === 0 && (
-        <div className="flex items-center justify-center h-64">
-          <div className="flex flex-col items-center gap-2">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            <p className="text-muted-foreground">Loading guardians...</p>
+        <div className="rounded-md border">
+          <div className="border-b px-4 py-3">
+            <div className="grid grid-cols-12 gap-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="col-span-2 h-4" />
+              ))}
+            </div>
+          </div>
+          <div className="divide-y">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="grid grid-cols-12 items-center gap-4 px-4 py-3">
+                <div className="col-span-2 flex items-center gap-3">
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                  <Skeleton className="h-4 flex-1" />
+                </div>
+                <Skeleton className="col-span-2 h-4" />
+                <Skeleton className="col-span-2 h-4" />
+                <Skeleton className="col-span-2 h-4" />
+                <Skeleton className="col-span-2 h-4" />
+                <Skeleton className="col-span-2 h-4" />
+              </div>
+            ))}
           </div>
         </div>
       )}

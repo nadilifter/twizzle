@@ -36,6 +36,23 @@ interface UseMembershipsReturn {
   clearError: () => void;
 }
 
+// Module-level stale-while-revalidate cache for the list query.
+const LIST_CACHE_TTL_MS = 60_000;
+type ListCacheEntry = {
+  data: MembershipGroup[];
+  total: number;
+  fetchedAt: number;
+};
+const listCache = new Map<string, ListCacheEntry>();
+
+function paramsKey(params: MembershipsQueryParams): string {
+  return JSON.stringify(params ?? {});
+}
+
+function invalidateLists() {
+  listCache.clear();
+}
+
 /**
  * Hook for managing memberships list data and CRUD operations
  */
@@ -43,10 +60,16 @@ export function useMemberships(options: UseMembershipsOptions = {}): UseMembersh
   const { autoFetch = true, initialParams = {} } = options;
   const { data: session } = useSession();
 
+  // Seed state from cache so revisits render instantly with no spinner.
+  const initialKey = paramsKey(initialParams);
+  const initialCached = listCache.get(initialKey);
+
   // State
-  const [memberships, setMemberships] = useState<MembershipGroup[]>([]);
-  const [total, setTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+  const [memberships, setMemberships] = useState<MembershipGroup[]>(
+    () => initialCached?.data ?? []
+  );
+  const [total, setTotal] = useState(() => initialCached?.total ?? 0);
+  const [isLoading, setIsLoading] = useState(() => autoFetch && !initialCached);
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,13 +78,21 @@ export function useMemberships(options: UseMembershipsOptions = {}): UseMembersh
   const fetchMemberships = useCallback(async (params?: MembershipsQueryParams) => {
     const queryParams = params ?? currentParamsRef.current;
     currentParamsRef.current = queryParams;
-    setIsLoading(true);
+
+    const key = paramsKey(queryParams);
+    const cached = listCache.get(key);
+    if (!cached) setIsLoading(true);
     setError(null);
 
     try {
       const response = await api.get<MembershipGroupsListResponse>("/api/memberships", queryParams);
       setMemberships(response.data);
       setTotal(response.total);
+      listCache.set(key, {
+        data: response.data,
+        total: response.total,
+        fetchedAt: Date.now(),
+      });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch memberships";
       setError(message);
@@ -82,6 +113,7 @@ export function useMemberships(options: UseMembershipsOptions = {}): UseMembersh
         // Add to local state
         setMemberships((prev) => [...prev, newMembership]);
         setTotal((prev) => prev + 1);
+        invalidateLists();
         return newMembership;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to create membership group";
@@ -105,6 +137,7 @@ export function useMemberships(options: UseMembershipsOptions = {}): UseMembersh
       // Remove from local state
       setMemberships((prev) => prev.filter((membership) => membership.id !== id));
       setTotal((prev) => prev - 1);
+      invalidateLists();
       return true;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to delete membership group";
@@ -127,9 +160,12 @@ export function useMemberships(options: UseMembershipsOptions = {}): UseMembersh
 
   // Auto-fetch on mount if enabled
   useEffect(() => {
-    if (autoFetch && session?.user?.organizationId) {
-      fetchMemberships(initialParams);
-    }
+    if (!autoFetch || !session?.user?.organizationId) return;
+    const key = paramsKey(initialParams);
+    const cached = listCache.get(key);
+    const isFresh = cached && Date.now() - cached.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) return;
+    fetchMemberships(initialParams);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.organizationId]);
 

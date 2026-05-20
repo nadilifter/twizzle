@@ -14,6 +14,29 @@ import type {
   GenerateShiftsResponse,
 } from "@/types/staff";
 
+// Module-level stale-while-revalidate caches.
+const LIST_CACHE_TTL_MS = 60_000;
+type ShiftsListCacheEntry = { data: ShiftWithRelations[]; fetchedAt: number };
+const shiftsListCache = new Map<string, ShiftsListCacheEntry>();
+type TemplatesListCacheEntry = { data: ScheduleTemplateWithEntries[]; fetchedAt: number };
+const templatesListCache = new Map<string, TemplatesListCacheEntry>();
+
+function shiftsKey(params: ShiftsQueryParams): string {
+  return JSON.stringify(params ?? {});
+}
+
+function templatesKey(isActive?: boolean): string {
+  return JSON.stringify({ isActive });
+}
+
+function invalidateShifts() {
+  shiftsListCache.clear();
+}
+
+function invalidateTemplates() {
+  templatesListCache.clear();
+}
+
 // ============================================
 // Shifts Hook
 // ============================================
@@ -41,8 +64,12 @@ interface UseShiftsReturn {
 export function useShifts(options: UseShiftsOptions = {}): UseShiftsReturn {
   const { autoFetch = true, initialParams = {} } = options;
 
-  const [shifts, setShifts] = useState<ShiftWithRelations[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  // Seed state from cache so revisits render instantly with no spinner.
+  const initialKey = shiftsKey(initialParams);
+  const initialCached = shiftsListCache.get(initialKey);
+
+  const [shifts, setShifts] = useState<ShiftWithRelations[]>(() => initialCached?.data ?? []);
+  const [isLoading, setIsLoading] = useState(() => autoFetch && !initialCached);
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -64,7 +91,9 @@ export function useShifts(options: UseShiftsOptions = {}): UseShiftsReturn {
       }
       currentParamsRef.current = queryParams;
 
-      setIsLoading(true);
+      const key = shiftsKey(queryParams);
+      const cached = shiftsListCache.get(key);
+      if (!cached) setIsLoading(true);
       setError(null);
 
       try {
@@ -73,6 +102,7 @@ export function useShifts(options: UseShiftsOptions = {}): UseShiftsReturn {
           queryParams
         );
         setShifts(response);
+        shiftsListCache.set(key, { data: response, fetchedAt: Date.now() });
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to fetch shifts";
         setError(message);
@@ -98,6 +128,7 @@ export function useShifts(options: UseShiftsOptions = {}): UseShiftsReturn {
               a.startTime.localeCompare(b.startTime)
           )
         );
+        invalidateShifts();
         return newShift;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to create shift";
@@ -122,6 +153,7 @@ export function useShifts(options: UseShiftsOptions = {}): UseShiftsReturn {
           data
         );
         setShifts((prev) => prev.map((s) => (s.id === id ? updatedShift : s)));
+        invalidateShifts();
         return updatedShift;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to update shift";
@@ -142,6 +174,7 @@ export function useShifts(options: UseShiftsOptions = {}): UseShiftsReturn {
     try {
       await api.delete(`/api/organization/shifts/${id}`);
       setShifts((prev) => prev.filter((s) => s.id !== id));
+      invalidateShifts();
       return true;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to delete shift";
@@ -162,9 +195,12 @@ export function useShifts(options: UseShiftsOptions = {}): UseShiftsReturn {
   }, []);
 
   useEffect(() => {
-    if (autoFetch) {
-      fetchShifts(initialParams);
-    }
+    if (!autoFetch) return;
+    const key = shiftsKey(initialParams);
+    const cached = shiftsListCache.get(key);
+    const isFresh = cached && Date.now() - cached.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) return;
+    fetchShifts(initialParams);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -223,8 +259,14 @@ export function useScheduleTemplates(
 ): UseScheduleTemplatesReturn {
   const { autoFetch = true, isActive } = options;
 
-  const [templates, setTemplates] = useState<ScheduleTemplateWithEntries[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  // Seed state from cache so revisits render instantly with no spinner.
+  const initialKey = templatesKey(isActive);
+  const initialCached = templatesListCache.get(initialKey);
+
+  const [templates, setTemplates] = useState<ScheduleTemplateWithEntries[]>(
+    () => initialCached?.data ?? []
+  );
+  const [isLoading, setIsLoading] = useState(() => autoFetch && !initialCached);
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -232,7 +274,9 @@ export function useScheduleTemplates(
   const [error, setError] = useState<string | null>(null);
 
   const fetchTemplates = useCallback(async (activeFilter?: boolean) => {
-    setIsLoading(true);
+    const key = templatesKey(activeFilter);
+    const cached = templatesListCache.get(key);
+    if (!cached) setIsLoading(true);
     setError(null);
 
     try {
@@ -242,6 +286,7 @@ export function useScheduleTemplates(
         params
       );
       setTemplates(response);
+      templatesListCache.set(key, { data: response, fetchedAt: Date.now() });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch schedule templates";
       setError(message);
@@ -262,6 +307,7 @@ export function useScheduleTemplates(
           data
         );
         setTemplates((prev) => [...prev, newTemplate]);
+        invalidateTemplates();
         return newTemplate;
       } catch (err) {
         const message =
@@ -290,6 +336,7 @@ export function useScheduleTemplates(
           data
         );
         setTemplates((prev) => prev.map((t) => (t.id === id ? updatedTemplate : t)));
+        invalidateTemplates();
         return updatedTemplate;
       } catch (err) {
         const message =
@@ -311,6 +358,7 @@ export function useScheduleTemplates(
     try {
       await api.delete(`/api/organization/schedule-templates/${id}`);
       setTemplates((prev) => prev.filter((t) => t.id !== id));
+      invalidateTemplates();
       return true;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to delete schedule template";
@@ -335,6 +383,7 @@ export function useScheduleTemplates(
           `/api/organization/schedule-templates/${templateId}/generate`,
           data
         );
+        invalidateShifts();
         return response;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to generate shifts";
@@ -357,9 +406,12 @@ export function useScheduleTemplates(
   }, []);
 
   useEffect(() => {
-    if (autoFetch) {
-      fetchTemplates(isActive);
-    }
+    if (!autoFetch) return;
+    const key = templatesKey(isActive);
+    const cached = templatesListCache.get(key);
+    const isFresh = cached && Date.now() - cached.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) return;
+    fetchTemplates(isActive);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

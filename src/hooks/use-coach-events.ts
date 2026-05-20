@@ -20,6 +20,19 @@ interface UseCoachEventsReturn {
   clearError: () => void;
 }
 
+// Module-level stale-while-revalidate cache for the list query.
+const LIST_CACHE_TTL_MS = 60_000;
+type ListCacheEntry = {
+  data: EventWithRelations[];
+  total: number;
+  fetchedAt: number;
+};
+const listCache = new Map<string, ListCacheEntry>();
+
+function paramsKey(params: Omit<EventsQueryParams, "coachId">): string {
+  return JSON.stringify(params ?? {});
+}
+
 /**
  * Hook for fetching events assigned to the current coach across all coaching organizations.
  * Uses the dedicated coach events endpoint for multi-org support.
@@ -36,9 +49,13 @@ export function useCoachEvents(options: UseCoachEventsOptions = {}): UseCoachEve
     return session.user.id;
   }, [session?.user]);
 
-  const [events, setEvents] = useState<EventWithRelations[]>([]);
-  const [total, setTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+  // Seed state from cache so revisits render instantly with no spinner.
+  const initialKey = paramsKey(initialParams);
+  const initialCached = listCache.get(initialKey);
+
+  const [events, setEvents] = useState<EventWithRelations[]>(() => initialCached?.data ?? []);
+  const [total, setTotal] = useState(() => initialCached?.total ?? 0);
+  const [isLoading, setIsLoading] = useState(() => autoFetch && !initialCached);
   const [error, setError] = useState<string | null>(null);
   const [currentParams, setCurrentParamsState] =
     useState<Omit<EventsQueryParams, "coachId">>(initialParams);
@@ -63,13 +80,20 @@ export function useCoachEvents(options: UseCoachEventsOptions = {}): UseCoachEve
       }
       currentParamsRef.current = queryParams;
 
-      setIsLoading(true);
+      const key = paramsKey(queryParams);
+      const cached = listCache.get(key);
+      if (!cached) setIsLoading(true);
       setError(null);
 
       try {
         const response = await api.get<EventsListResponse>("/api/coach/events", queryParams);
         setEvents(response.data);
         setTotal(response.total);
+        listCache.set(key, {
+          data: response.data,
+          total: response.total,
+          fetchedAt: Date.now(),
+        });
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to fetch events";
         setError(message);
@@ -90,9 +114,12 @@ export function useCoachEvents(options: UseCoachEventsOptions = {}): UseCoachEve
   }, []);
 
   useEffect(() => {
-    if (autoFetch && effectiveCoachId) {
-      fetchEvents(initialParams);
-    }
+    if (!autoFetch || !effectiveCoachId) return;
+    const key = paramsKey(initialParams);
+    const cached = listCache.get(key);
+    const isFresh = cached && Date.now() - cached.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) return;
+    fetchEvents(initialParams);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveCoachId]);
 

@@ -30,30 +30,56 @@ interface UseAttendanceReturn {
   deleteAttendance: (id: string) => Promise<boolean>;
 }
 
+// Module-level stale-while-revalidate cache for the list query.
+const LIST_CACHE_TTL_MS = 60_000;
+type ListCacheEntry = {
+  data: AttendanceWithRelations[];
+  fetchedAt: number;
+};
+const listCache = new Map<string, ListCacheEntry>();
+
+function paramsKey(params: AttendanceQueryParams | undefined): string {
+  return JSON.stringify(params ?? {});
+}
+
+function invalidateLists() {
+  listCache.clear();
+}
+
 export function useAttendance(options: UseAttendanceOptions = {}): UseAttendanceReturn {
   const { autoFetch = false, initialParams } = options;
   const initialParamsRef = useRef(initialParams);
   initialParamsRef.current = initialParams;
 
-  const [attendances, setAttendances] = useState<AttendanceWithRelations[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  // Seed state from cache so revisits render instantly with no spinner.
+  const initialKey = paramsKey(initialParams);
+  const initialCached = listCache.get(initialKey);
+
+  const [attendances, setAttendances] = useState<AttendanceWithRelations[]>(
+    () => initialCached?.data ?? []
+  );
+  const [isLoading, setIsLoading] = useState(() => autoFetch && !initialCached);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchAttendance = useCallback(async (params?: AttendanceQueryParams) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const queryParams = { ...initialParamsRef.current, ...params };
-      const cleanParams = Object.fromEntries(
-        Object.entries(queryParams).filter(([_, v]) => v !== undefined)
-      );
+    const queryParams = { ...initialParamsRef.current, ...params };
+    const cleanParams = Object.fromEntries(
+      Object.entries(queryParams).filter(([_, v]) => v !== undefined)
+    ) as AttendanceQueryParams;
 
+    const key = paramsKey(cleanParams);
+    const cached = listCache.get(key);
+    if (!cached) setIsLoading(true);
+    setError(null);
+
+    try {
       const response = await api.get<{ data: AttendanceWithRelations[] }>(
         "/api/attendance",
         cleanParams
       );
       setAttendances(response.data);
+      listCache.set(key, { data: response.data, fetchedAt: Date.now() });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch attendance";
       setError(message);
@@ -78,6 +104,7 @@ export function useAttendance(options: UseAttendanceOptions = {}): UseAttendance
         }
         return [...prev, result];
       });
+      invalidateLists();
       return result;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to mark attendance";
@@ -94,6 +121,7 @@ export function useAttendance(options: UseAttendanceOptions = {}): UseAttendance
     try {
       const result = await api.patch<AttendanceWithRelations>(`/api/attendance/${id}`, data);
       setAttendances((prev) => prev.map((a) => (a.id === id ? result : a)));
+      invalidateLists();
       return result;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to update attendance";
@@ -114,6 +142,7 @@ export function useAttendance(options: UseAttendanceOptions = {}): UseAttendance
           eventId: data.eventId,
           attendances: data.records,
         });
+        invalidateLists();
         // Refresh after bulk update
         await fetchAttendance({ eventId: data.eventId });
         return true;
@@ -134,6 +163,7 @@ export function useAttendance(options: UseAttendanceOptions = {}): UseAttendance
     try {
       await api.delete(`/api/attendance/${id}`);
       setAttendances((prev) => prev.filter((a) => a.id !== id));
+      invalidateLists();
       return true;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to delete attendance";
@@ -145,9 +175,12 @@ export function useAttendance(options: UseAttendanceOptions = {}): UseAttendance
   }, []);
 
   useEffect(() => {
-    if (autoFetch) {
-      fetchAttendance();
-    }
+    if (!autoFetch) return;
+    const key = paramsKey(initialParamsRef.current);
+    const cached = listCache.get(key);
+    const isFresh = cached && Date.now() - cached.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) return;
+    fetchAttendance();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -69,6 +69,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sheet,
   SheetContent,
@@ -2297,10 +2298,19 @@ export default function FacilityDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full p-6">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          <p className="text-muted-foreground">Loading facility...</p>
+      <div className="flex flex-col gap-6 p-6">
+        <div className="space-y-2">
+          <Skeleton className="h-7 w-64" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-xl border bg-card p-5 space-y-3">
+              <Skeleton className="h-5 w-48" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
+          ))}
         </div>
       </div>
     );

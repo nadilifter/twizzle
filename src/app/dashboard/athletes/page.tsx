@@ -94,6 +94,7 @@ import { useAthletes } from "@/hooks/use-athletes";
 import { useGuardians } from "@/hooks/use-guardians";
 import { useLevels } from "@/hooks/use-levels";
 import { DashboardPageHeader } from "@/components/dashboard-page-header";
+import { Skeleton } from "@/components/ui/skeleton";
 import { athleteDisplayName } from "@/lib/athlete-name";
 import type {
   AthleteWithRelations,
@@ -944,10 +945,28 @@ export default function AthletesPage() {
 
       {/* Loading State */}
       {isLoading && athletes.length === 0 && (
-        <div className="flex items-center justify-center h-64">
-          <div className="flex flex-col items-center gap-2">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            <p className="text-muted-foreground">Loading athletes...</p>
+        <div className="rounded-md border">
+          <div className="border-b px-4 py-3">
+            <div className="grid grid-cols-12 gap-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="col-span-2 h-4" />
+              ))}
+            </div>
+          </div>
+          <div className="divide-y">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="grid grid-cols-12 items-center gap-4 px-4 py-3">
+                <div className="col-span-2 flex items-center gap-3">
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                  <Skeleton className="h-4 flex-1" />
+                </div>
+                <Skeleton className="col-span-2 h-4" />
+                <Skeleton className="col-span-2 h-4" />
+                <Skeleton className="col-span-2 h-4" />
+                <Skeleton className="col-span-2 h-4" />
+                <Skeleton className="col-span-2 h-4" />
+              </div>
+            ))}
           </div>
         </div>
       )}

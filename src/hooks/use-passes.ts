@@ -32,13 +32,39 @@ interface UsePassesReturn {
   clearError: () => void;
 }
 
+// Module-level stale-while-revalidate caches.
+const LIST_CACHE_TTL_MS = 60_000;
+type ListCacheEntry = {
+  data: Pass[];
+  total: number;
+  fetchedAt: number;
+};
+const listCache = new Map<string, ListCacheEntry>();
+const detailCache = new Map<string, { data: Pass; fetchedAt: number }>();
+
+function paramsKey(params: PassesQueryParams): string {
+  return JSON.stringify(params ?? {});
+}
+
+function invalidateLists() {
+  listCache.clear();
+}
+
+function invalidateDetail(id: string) {
+  detailCache.delete(id);
+}
+
 export function usePasses(options: UsePassesOptions = {}): UsePassesReturn {
   const { autoFetch = true, initialParams = {} } = options;
   const { data: session } = useSession();
 
-  const [passes, setPasses] = useState<Pass[]>([]);
-  const [total, setTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+  // Seed state from cache so revisits render instantly with no spinner.
+  const initialKey = paramsKey(initialParams);
+  const initialCached = listCache.get(initialKey);
+
+  const [passes, setPasses] = useState<Pass[]>(() => initialCached?.data ?? []);
+  const [total, setTotal] = useState(() => initialCached?.total ?? 0);
+  const [isLoading, setIsLoading] = useState(() => autoFetch && !initialCached);
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,13 +74,21 @@ export function usePasses(options: UsePassesOptions = {}): UsePassesReturn {
     async (params?: PassesQueryParams) => {
       const queryParams = params ?? currentParams;
       setCurrentParams(queryParams);
-      setIsLoading(true);
+
+      const key = paramsKey(queryParams);
+      const cached = listCache.get(key);
+      if (!cached) setIsLoading(true);
       setError(null);
 
       try {
         const response = await api.get<PassesListResponse>("/api/passes", queryParams);
         setPasses(response.data);
         setTotal(response.total);
+        listCache.set(key, {
+          data: response.data,
+          total: response.total,
+          fetchedAt: Date.now(),
+        });
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to fetch passes";
         setError(message);
@@ -73,6 +107,7 @@ export function usePasses(options: UsePassesOptions = {}): UsePassesReturn {
       const newPass = await api.post<Pass>("/api/passes", data);
       setPasses((prev) => [...prev, newPass]);
       setTotal((prev) => prev + 1);
+      invalidateLists();
       return newPass;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to create pass";
@@ -91,6 +126,8 @@ export function usePasses(options: UsePassesOptions = {}): UsePassesReturn {
       await api.delete(`/api/passes/${id}`);
       setPasses((prev) => prev.filter((p) => p.id !== id));
       setTotal((prev) => prev - 1);
+      invalidateLists();
+      invalidateDetail(id);
       return true;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to delete pass";
@@ -110,9 +147,12 @@ export function usePasses(options: UsePassesOptions = {}): UsePassesReturn {
   }, []);
 
   useEffect(() => {
-    if (autoFetch && session?.user?.organizationId) {
-      fetchPasses(initialParams);
-    }
+    if (!autoFetch || !session?.user?.organizationId) return;
+    const key = paramsKey(initialParams);
+    const cached = listCache.get(key);
+    const isFresh = cached && Date.now() - cached.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) return;
+    fetchPasses(initialParams);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.organizationId]);
 
@@ -157,19 +197,23 @@ export function usePass(passId: string | null, options: UsePassOptions = {}): Us
   const { autoFetch = true } = options;
   const { data: session } = useSession();
 
-  const [pass, setPass] = useState<Pass | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const cached = passId ? detailCache.get(passId) : undefined;
+
+  const [pass, setPass] = useState<Pass | null>(() => cached?.data ?? null);
+  const [isLoading, setIsLoading] = useState(() => !!passId && !cached);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchPass = useCallback(async () => {
     if (!passId) return;
-    setIsLoading(true);
+    const existing = detailCache.get(passId);
+    if (!existing) setIsLoading(true);
     setError(null);
 
     try {
       const data = await api.get<Pass>(`/api/passes/${passId}`);
       setPass(data);
+      detailCache.set(passId, { data, fetchedAt: Date.now() });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch pass";
       setError(message);
@@ -187,6 +231,8 @@ export function usePass(passId: string | null, options: UsePassOptions = {}): Us
       try {
         const updated = await api.patch<Pass>(`/api/passes/${passId}`, data);
         setPass(updated);
+        detailCache.set(passId, { data: updated, fetchedAt: Date.now() });
+        invalidateLists();
         return updated;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to update pass";
@@ -206,6 +252,7 @@ export function usePass(passId: string | null, options: UsePassOptions = {}): Us
 
       try {
         await api.post(`/api/passes/${passId}/programs`, { programId });
+        invalidateDetail(passId);
         await fetchPass();
         return true;
       } catch (err) {
@@ -224,6 +271,7 @@ export function usePass(passId: string | null, options: UsePassOptions = {}): Us
 
       try {
         await api.delete(`/api/passes/${passId}/programs`, { programId });
+        invalidateDetail(passId);
         await fetchPass();
         return true;
       } catch (err) {
@@ -245,6 +293,7 @@ export function usePass(passId: string | null, options: UsePassOptions = {}): Us
 
       try {
         await api.post(`/api/passes/${passId}/athletes`, { athleteId, ...data });
+        invalidateDetail(passId);
         await fetchPass();
         return true;
       } catch (err) {
@@ -263,6 +312,7 @@ export function usePass(passId: string | null, options: UsePassOptions = {}): Us
 
       try {
         await api.delete(`/api/passes/${passId}/athletes`, { athleteId });
+        invalidateDetail(passId);
         await fetchPass();
         return true;
       } catch (err) {
@@ -279,9 +329,14 @@ export function usePass(passId: string | null, options: UsePassOptions = {}): Us
   }, []);
 
   useEffect(() => {
-    if (autoFetch && passId && session?.user?.organizationId) {
-      fetchPass();
+    if (!autoFetch || !passId || !session?.user?.organizationId) return;
+    const existing = detailCache.get(passId);
+    const isFresh = existing && Date.now() - existing.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) {
+      setPass(existing.data);
+      return;
     }
+    fetchPass();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [passId, session?.user?.organizationId]);
 

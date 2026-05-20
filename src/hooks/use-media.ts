@@ -38,12 +38,33 @@ interface UseMediaReturn {
   clearError: () => void;
 }
 
+// Module-level stale-while-revalidate cache for the list query.
+const LIST_CACHE_TTL_MS = 60_000;
+type ListCacheEntry = {
+  data: MediaWithRelations[];
+  total: number;
+  fetchedAt: number;
+};
+const listCache = new Map<string, ListCacheEntry>();
+
+function paramsKey(params: MediaQueryParams): string {
+  return JSON.stringify(params ?? {});
+}
+
+function invalidateLists() {
+  listCache.clear();
+}
+
 export function useMedia(options: UseMediaOptions = {}): UseMediaReturn {
   const { autoFetch = true, initialParams = {} } = options;
 
-  const [media, setMedia] = useState<MediaWithRelations[]>([]);
-  const [total, setTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+  // Seed state from cache so revisits render instantly with no spinner.
+  const initialKey = paramsKey(initialParams);
+  const initialCached = listCache.get(initialKey);
+
+  const [media, setMedia] = useState<MediaWithRelations[]>(() => initialCached?.data ?? []);
+  const [total, setTotal] = useState(() => initialCached?.total ?? 0);
+  const [isLoading, setIsLoading] = useState(() => autoFetch && !initialCached);
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -65,13 +86,20 @@ export function useMedia(options: UseMediaOptions = {}): UseMediaReturn {
       }
       currentParamsRef.current = queryParams;
 
-      setIsLoading(true);
+      const key = paramsKey(queryParams);
+      const cached = listCache.get(key);
+      if (!cached) setIsLoading(true);
       setError(null);
 
       try {
         const response = await api.get<MediaListResponse>("/api/media", queryParams);
         setMedia(response.data);
         setTotal(response.total);
+        listCache.set(key, {
+          data: response.data,
+          total: response.total,
+          fetchedAt: Date.now(),
+        });
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to fetch media";
         setError(message);
@@ -92,6 +120,7 @@ export function useMedia(options: UseMediaOptions = {}): UseMediaReturn {
         const newMedia = await api.post<MediaWithRelations>("/api/media", data);
         setMedia((prev) => [newMedia, ...prev]);
         setTotal((prev) => prev + 1);
+        invalidateLists();
         return newMedia;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to create media";
@@ -113,6 +142,7 @@ export function useMedia(options: UseMediaOptions = {}): UseMediaReturn {
       try {
         const updatedMedia = await api.patch<MediaWithRelations>(`/api/media/${id}`, data);
         setMedia((prev) => prev.map((item) => (item.id === id ? updatedMedia : item)));
+        invalidateLists();
         return updatedMedia;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to update media";
@@ -134,6 +164,7 @@ export function useMedia(options: UseMediaOptions = {}): UseMediaReturn {
       await api.delete(`/api/media/${id}`);
       setMedia((prev) => prev.filter((item) => item.id !== id));
       setTotal((prev) => prev - 1);
+      invalidateLists();
       return true;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to delete media";
@@ -154,9 +185,12 @@ export function useMedia(options: UseMediaOptions = {}): UseMediaReturn {
   }, []);
 
   useEffect(() => {
-    if (autoFetch) {
-      fetchMedia(initialParams);
-    }
+    if (!autoFetch) return;
+    const key = paramsKey(initialParams);
+    const cached = listCache.get(key);
+    const isFresh = cached && Date.now() - cached.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) return;
+    fetchMedia(initialParams);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

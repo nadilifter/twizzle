@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -817,8 +818,21 @@ export default function QuestionsPage() {
 
   if (questionsLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="flex flex-col gap-6 p-6">
+        <div className="space-y-2">
+          <Skeleton className="h-7 w-72" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="rounded-xl border bg-card p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-5 w-48" />
+              <Skeleton className="h-8 w-24 rounded-md" />
+            </div>
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+          </div>
+        ))}
       </div>
     );
   }

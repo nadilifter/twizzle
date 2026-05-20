@@ -28,6 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -185,8 +186,25 @@ export default function HolidaysPage() {
         {[currentYear, nextYear].map((tabYear) => (
           <TabsContent key={tabYear} value={String(tabYear)}>
             {isLoading && holidays.length === 0 ? (
-              <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <div className="rounded-md border">
+                <div className="border-b px-4 py-3">
+                  <div className="grid grid-cols-12 gap-4">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Skeleton key={i} className="col-span-2 h-4" />
+                    ))}
+                  </div>
+                </div>
+                <div className="divide-y">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="grid grid-cols-12 items-center gap-4 px-4 py-3">
+                      <Skeleton className="col-span-3 h-4" />
+                      <Skeleton className="col-span-5 h-4" />
+                      <Skeleton className="col-span-2 h-4" />
+                      <Skeleton className="col-span-1 h-4" />
+                      <Skeleton className="col-span-1 h-4" />
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : error ? (
               <div className="flex items-center justify-center h-64 text-destructive">

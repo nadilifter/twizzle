@@ -10,6 +10,22 @@ import type {
   UpdateCustomInfoQuestionPayload,
 } from "@/types/custom-information";
 
+// Module-level stale-while-revalidate caches.
+const LIST_CACHE_TTL_MS = 60_000;
+const CONFIG_CACHE_KEY = "config";
+const configCache = new Map<string, { data: CustomInfoConfig; fetchedAt: number }>();
+
+type QuestionsCacheEntry = { data: CustomInfoQuestion[]; fetchedAt: number };
+const questionsCache = new Map<string, QuestionsCacheEntry>();
+
+function questionsKey(includeInactive: boolean): string {
+  return JSON.stringify({ includeInactive });
+}
+
+function invalidateQuestions() {
+  questionsCache.clear();
+}
+
 // ============================================
 // Organization Custom Info Config Hook
 // ============================================
@@ -25,13 +41,16 @@ interface UseCustomInfoConfigReturn {
 }
 
 export function useCustomInfoConfig(): UseCustomInfoConfigReturn {
-  const [config, setConfig] = useState<CustomInfoConfig | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const initialCached = configCache.get(CONFIG_CACHE_KEY);
+
+  const [config, setConfig] = useState<CustomInfoConfig | null>(() => initialCached?.data ?? null);
+  const [isLoading, setIsLoading] = useState(() => !initialCached);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchConfig = useCallback(async () => {
-    setIsLoading(true);
+    const cached = configCache.get(CONFIG_CACHE_KEY);
+    if (!cached) setIsLoading(true);
     setError(null);
 
     try {
@@ -39,6 +58,7 @@ export function useCustomInfoConfig(): UseCustomInfoConfigReturn {
         "/api/organization/custom-information/config"
       );
       setConfig(response);
+      configCache.set(CONFIG_CACHE_KEY, { data: response, fetchedAt: Date.now() });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch config";
       setError(message);
@@ -59,6 +79,7 @@ export function useCustomInfoConfig(): UseCustomInfoConfigReturn {
           data
         );
         setConfig(response);
+        configCache.set(CONFIG_CACHE_KEY, { data: response, fetchedAt: Date.now() });
         return true;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to update config";
@@ -75,6 +96,9 @@ export function useCustomInfoConfig(): UseCustomInfoConfigReturn {
   const clearError = useCallback(() => setError(null), []);
 
   useEffect(() => {
+    const cached = configCache.get(CONFIG_CACHE_KEY);
+    const isFresh = cached && Date.now() - cached.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) return;
     fetchConfig();
   }, [fetchConfig]);
 
@@ -102,13 +126,17 @@ interface UseCustomInfoQuestionsReturn {
 }
 
 export function useCustomInfoQuestions(): UseCustomInfoQuestionsReturn {
-  const [questions, setQuestions] = useState<CustomInfoQuestion[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const initialCached = questionsCache.get(questionsKey(false));
+
+  const [questions, setQuestions] = useState<CustomInfoQuestion[]>(() => initialCached?.data ?? []);
+  const [isLoading, setIsLoading] = useState(() => !initialCached);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchQuestions = useCallback(async (includeInactive = false) => {
-    setIsLoading(true);
+    const key = questionsKey(includeInactive);
+    const cached = questionsCache.get(key);
+    if (!cached) setIsLoading(true);
     setError(null);
 
     try {
@@ -119,6 +147,7 @@ export function useCustomInfoQuestions(): UseCustomInfoQuestionsReturn {
         }
       );
       setQuestions(response);
+      questionsCache.set(key, { data: response, fetchedAt: Date.now() });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch questions";
       setError(message);
@@ -139,6 +168,7 @@ export function useCustomInfoQuestions(): UseCustomInfoQuestionsReturn {
           data
         );
         setQuestions((prev) => [...prev, response].sort((a, b) => a.displayOrder - b.displayOrder));
+        invalidateQuestions();
         return response;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to create question";
@@ -170,6 +200,7 @@ export function useCustomInfoQuestions(): UseCustomInfoQuestionsReturn {
             .map((q) => (q.id === id ? response : q))
             .sort((a, b) => a.displayOrder - b.displayOrder)
         );
+        invalidateQuestions();
         return response;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to update question";
@@ -190,6 +221,7 @@ export function useCustomInfoQuestions(): UseCustomInfoQuestionsReturn {
     try {
       await api.delete(`/api/organization/custom-information/questions?id=${id}`);
       setQuestions((prev) => prev.filter((q) => q.id !== id));
+      invalidateQuestions();
       return true;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to delete question";
@@ -214,6 +246,7 @@ export function useCustomInfoQuestions(): UseCustomInfoQuestionsReturn {
           }
         );
         setQuestions(response);
+        invalidateQuestions();
         return true;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to reorder questions";
@@ -230,6 +263,10 @@ export function useCustomInfoQuestions(): UseCustomInfoQuestionsReturn {
   const clearError = useCallback(() => setError(null), []);
 
   useEffect(() => {
+    const key = questionsKey(false);
+    const cached = questionsCache.get(key);
+    const isFresh = cached && Date.now() - cached.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) return;
     fetchQuestions();
   }, [fetchQuestions]);
 

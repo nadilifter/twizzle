@@ -69,12 +69,35 @@ interface UseCategoriesReturn {
   clearError: () => void;
 }
 
+// Module-level stale-while-revalidate cache for the list query.
+const LIST_CACHE_TTL_MS = 60_000;
+type ListCacheEntry = {
+  categories: Category[];
+  allPrograms: AllProgramsMeta | null;
+  fetchedAt: number;
+};
+const listCache = new Map<string, ListCacheEntry>();
+
+function paramsKey(params: CategoriesQueryParams): string {
+  return JSON.stringify(params ?? {});
+}
+
+function invalidateLists() {
+  listCache.clear();
+}
+
 export function useCategories(options: UseCategoriesOptions = {}): UseCategoriesReturn {
   const { autoFetch = true, initialParams = {} } = options;
 
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [allPrograms, setAllPrograms] = useState<AllProgramsMeta | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  // Seed state from cache so revisits render instantly with no spinner.
+  const initialKey = paramsKey(initialParams);
+  const initialCached = listCache.get(initialKey);
+
+  const [categories, setCategories] = useState<Category[]>(() => initialCached?.categories ?? []);
+  const [allPrograms, setAllPrograms] = useState<AllProgramsMeta | null>(
+    () => initialCached?.allPrograms ?? null
+  );
+  const [isLoading, setIsLoading] = useState(() => autoFetch && !initialCached);
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -94,13 +117,20 @@ export function useCategories(options: UseCategoriesOptions = {}): UseCategories
       setCurrentParams(queryParams);
     }
 
-    setIsLoading(true);
+    const key = paramsKey(queryParams);
+    const cached = listCache.get(key);
+    if (!cached) setIsLoading(true);
     setError(null);
 
     try {
       const response = await api.get<CategoriesListResponse>("/api/categories", queryParams);
       setCategories(response.data);
       setAllPrograms(response.allPrograms ?? null);
+      listCache.set(key, {
+        categories: response.data,
+        allPrograms: response.allPrograms ?? null,
+        fetchedAt: Date.now(),
+      });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch categories";
       setError(message);
@@ -118,6 +148,7 @@ export function useCategories(options: UseCategoriesOptions = {}): UseCategories
       try {
         const newCategory = await api.post<Category>("/api/categories", data);
         setCategories((prev) => [...prev, newCategory]);
+        invalidateLists();
         return newCategory;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to create category";
@@ -139,6 +170,7 @@ export function useCategories(options: UseCategoriesOptions = {}): UseCategories
       try {
         const updatedCategory = await api.patch<Category>(`/api/categories/${id}`, data);
         setCategories((prev) => prev.map((cat) => (cat.id === id ? updatedCategory : cat)));
+        invalidateLists();
         return updatedCategory;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to update category";
@@ -159,6 +191,7 @@ export function useCategories(options: UseCategoriesOptions = {}): UseCategories
     try {
       await api.delete(`/api/categories/${id}`);
       setCategories((prev) => prev.filter((cat) => cat.id !== id));
+      invalidateLists();
       return true;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to delete category";
@@ -179,9 +212,12 @@ export function useCategories(options: UseCategoriesOptions = {}): UseCategories
   }, []);
 
   useEffect(() => {
-    if (autoFetch) {
-      fetchCategories(initialParams);
-    }
+    if (!autoFetch) return;
+    const key = paramsKey(initialParams);
+    const cached = listCache.get(key);
+    const isFresh = cached && Date.now() - cached.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) return;
+    fetchCategories(initialParams);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

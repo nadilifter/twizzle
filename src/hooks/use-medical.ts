@@ -13,6 +13,36 @@ import type {
   AthleteMedicalInfoWithResponses,
 } from "@/types/medical";
 
+// Module-level stale-while-revalidate caches.
+const LIST_CACHE_TTL_MS = 60_000;
+const CONFIG_CACHE_KEY = "config";
+const configCache = new Map<string, { data: MedicalFormConfig; fetchedAt: number }>();
+
+type QuestionsCacheEntry = { data: CustomMedicalQuestion[]; fetchedAt: number };
+const questionsCache = new Map<string, QuestionsCacheEntry>();
+
+interface AthleteMedicalCacheEntry {
+  data: {
+    medicalInfo: AthleteMedicalInfoWithResponses;
+    customQuestions: CustomMedicalQuestion[];
+    config: MedicalFormConfig;
+  };
+  fetchedAt: number;
+}
+const athleteMedicalCache = new Map<string, AthleteMedicalCacheEntry>();
+
+function questionsKey(includeInactive: boolean): string {
+  return JSON.stringify({ includeInactive });
+}
+
+function invalidateQuestions() {
+  questionsCache.clear();
+}
+
+function invalidateAthleteMedical(athleteId: string) {
+  athleteMedicalCache.delete(athleteId);
+}
+
 // ============================================
 // Organization Medical Config Hook
 // ============================================
@@ -28,18 +58,22 @@ interface UseMedicalConfigReturn {
 }
 
 export function useMedicalConfig(): UseMedicalConfigReturn {
-  const [config, setConfig] = useState<MedicalFormConfig | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const initialCached = configCache.get(CONFIG_CACHE_KEY);
+
+  const [config, setConfig] = useState<MedicalFormConfig | null>(() => initialCached?.data ?? null);
+  const [isLoading, setIsLoading] = useState(() => !initialCached);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchConfig = useCallback(async () => {
-    setIsLoading(true);
+    const cached = configCache.get(CONFIG_CACHE_KEY);
+    if (!cached) setIsLoading(true);
     setError(null);
 
     try {
       const response = await api.get<MedicalFormConfig>("/api/organization/medical-config");
       setConfig(response);
+      configCache.set(CONFIG_CACHE_KEY, { data: response, fetchedAt: Date.now() });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch medical config";
       setError(message);
@@ -57,6 +91,7 @@ export function useMedicalConfig(): UseMedicalConfigReturn {
       try {
         const response = await api.put<MedicalFormConfig>("/api/organization/medical-config", data);
         setConfig(response);
+        configCache.set(CONFIG_CACHE_KEY, { data: response, fetchedAt: Date.now() });
         return true;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to update medical config";
@@ -73,6 +108,9 @@ export function useMedicalConfig(): UseMedicalConfigReturn {
   const clearError = useCallback(() => setError(null), []);
 
   useEffect(() => {
+    const cached = configCache.get(CONFIG_CACHE_KEY);
+    const isFresh = cached && Date.now() - cached.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) return;
     fetchConfig();
   }, [fetchConfig]);
 
@@ -110,13 +148,19 @@ interface UseMedicalQuestionsReturn {
 }
 
 export function useMedicalQuestions(): UseMedicalQuestionsReturn {
-  const [questions, setQuestions] = useState<CustomMedicalQuestion[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const initialCached = questionsCache.get(questionsKey(false));
+
+  const [questions, setQuestions] = useState<CustomMedicalQuestion[]>(
+    () => initialCached?.data ?? []
+  );
+  const [isLoading, setIsLoading] = useState(() => !initialCached);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchQuestions = useCallback(async (includeInactive = false) => {
-    setIsLoading(true);
+    const key = questionsKey(includeInactive);
+    const cached = questionsCache.get(key);
+    if (!cached) setIsLoading(true);
     setError(null);
 
     try {
@@ -127,6 +171,7 @@ export function useMedicalQuestions(): UseMedicalQuestionsReturn {
         }
       );
       setQuestions(response);
+      questionsCache.set(key, { data: response, fetchedAt: Date.now() });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch medical questions";
       setError(message);
@@ -147,6 +192,7 @@ export function useMedicalQuestions(): UseMedicalQuestionsReturn {
           data
         );
         setQuestions((prev) => [...prev, response].sort((a, b) => a.displayOrder - b.displayOrder));
+        invalidateQuestions();
         return response;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to create question";
@@ -178,6 +224,7 @@ export function useMedicalQuestions(): UseMedicalQuestionsReturn {
             .map((q) => (q.id === id ? response : q))
             .sort((a, b) => a.displayOrder - b.displayOrder)
         );
+        invalidateQuestions();
         return response;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to update question";
@@ -198,6 +245,7 @@ export function useMedicalQuestions(): UseMedicalQuestionsReturn {
     try {
       await api.delete(`/api/organization/medical-questions?id=${id}`);
       setQuestions((prev) => prev.filter((q) => q.id !== id));
+      invalidateQuestions();
       return true;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to delete question";
@@ -222,6 +270,7 @@ export function useMedicalQuestions(): UseMedicalQuestionsReturn {
           }
         );
         setQuestions(response);
+        invalidateQuestions();
         return true;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to reorder questions";
@@ -238,6 +287,10 @@ export function useMedicalQuestions(): UseMedicalQuestionsReturn {
   const clearError = useCallback(() => setError(null), []);
 
   useEffect(() => {
+    const key = questionsKey(false);
+    const cached = questionsCache.get(key);
+    const isFresh = cached && Date.now() - cached.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) return;
     fetchQuestions();
   }, [fetchQuestions]);
 
@@ -278,17 +331,24 @@ interface UseAthleteMedicalInfoReturn {
 }
 
 export function useAthleteMedicalInfo(athleteId: string | null): UseAthleteMedicalInfoReturn {
-  const [medicalInfo, setMedicalInfo] = useState<AthleteMedicalInfoWithResponses | null>(null);
-  const [customQuestions, setCustomQuestions] = useState<CustomMedicalQuestion[]>([]);
-  const [config, setConfig] = useState<MedicalFormConfig | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const cached = athleteId ? athleteMedicalCache.get(athleteId) : undefined;
+
+  const [medicalInfo, setMedicalInfo] = useState<AthleteMedicalInfoWithResponses | null>(
+    () => cached?.data.medicalInfo ?? null
+  );
+  const [customQuestions, setCustomQuestions] = useState<CustomMedicalQuestion[]>(
+    () => cached?.data.customQuestions ?? []
+  );
+  const [config, setConfig] = useState<MedicalFormConfig | null>(() => cached?.data.config ?? null);
+  const [isLoading, setIsLoading] = useState(() => !!athleteId && !cached);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchMedicalInfo = useCallback(async () => {
     if (!athleteId) return;
 
-    setIsLoading(true);
+    const existing = athleteMedicalCache.get(athleteId);
+    if (!existing) setIsLoading(true);
     setError(null);
 
     try {
@@ -296,6 +356,7 @@ export function useAthleteMedicalInfo(athleteId: string | null): UseAthleteMedic
       setMedicalInfo(response.medicalInfo);
       setCustomQuestions(response.customQuestions);
       setConfig(response.config);
+      athleteMedicalCache.set(athleteId, { data: response, fetchedAt: Date.now() });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch medical info";
       setError(message);
@@ -318,6 +379,7 @@ export function useAthleteMedicalInfo(athleteId: string | null): UseAthleteMedic
           data
         );
         setMedicalInfo(response);
+        invalidateAthleteMedical(athleteId);
         return true;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to save medical info";
@@ -334,9 +396,16 @@ export function useAthleteMedicalInfo(athleteId: string | null): UseAthleteMedic
   const clearError = useCallback(() => setError(null), []);
 
   useEffect(() => {
-    if (athleteId) {
-      fetchMedicalInfo();
+    if (!athleteId) return;
+    const existing = athleteMedicalCache.get(athleteId);
+    const isFresh = existing && Date.now() - existing.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) {
+      setMedicalInfo(existing.data.medicalInfo);
+      setCustomQuestions(existing.data.customQuestions);
+      setConfig(existing.data.config);
+      return;
     }
+    fetchMedicalInfo();
   }, [athleteId, fetchMedicalInfo]);
 
   return {

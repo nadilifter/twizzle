@@ -64,6 +64,14 @@ interface UseMembershipGroupReturn {
   clearError: () => void;
 }
 
+// Module-level stale-while-revalidate cache for the detail fetch.
+const LIST_CACHE_TTL_MS = 60_000;
+const detailCache = new Map<string, { data: MembershipGroup; fetchedAt: number }>();
+
+function invalidateDetail(id: string) {
+  detailCache.delete(id);
+}
+
 export function useMembershipGroup(): UseMembershipGroupReturn {
   const [group, setGroup] = useState<MembershipGroup | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -71,11 +79,18 @@ export function useMembershipGroup(): UseMembershipGroupReturn {
   const [error, setError] = useState<string | null>(null);
 
   const fetchGroup = useCallback(async (id: string) => {
-    setIsLoading(true);
+    const existing = detailCache.get(id);
+    const isFresh = existing && Date.now() - existing.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) {
+      setGroup(existing.data);
+      return;
+    }
+    if (!existing) setIsLoading(true);
     setError(null);
     try {
       const data = await api.get<MembershipGroup>(`/api/memberships/${id}`);
       setGroup(data);
+      detailCache.set(id, { data, fetchedAt: Date.now() });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch membership group";
       setError(message);
@@ -91,6 +106,7 @@ export function useMembershipGroup(): UseMembershipGroupReturn {
     try {
       const updated = await api.patch<MembershipGroup>(`/api/memberships/${id}`, data);
       setGroup(updated);
+      detailCache.set(id, { data: updated, fetchedAt: Date.now() });
       return updated;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to update membership group";
@@ -116,6 +132,7 @@ export function useMembershipGroup(): UseMembershipGroupReturn {
             instances: [newInstance, ...(group.instances || [])],
           });
         }
+        invalidateDetail(groupId);
         return newInstance;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to create instance";
@@ -147,6 +164,7 @@ export function useMembershipGroup(): UseMembershipGroupReturn {
             ),
           });
         }
+        invalidateDetail(groupId);
         return updated;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to update instance";
@@ -169,6 +187,7 @@ export function useMembershipGroup(): UseMembershipGroupReturn {
             instances: (group.instances || []).filter((inst) => inst.id !== instanceId),
           });
         }
+        invalidateDetail(groupId);
         return true;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to delete instance";
@@ -213,6 +232,7 @@ export function useMembershipGroup(): UseMembershipGroupReturn {
             levelRequirements: [...(group.levelRequirements || []), requirement],
           });
         }
+        invalidateDetail(groupId);
         return requirement;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to add level requirement";
@@ -238,6 +258,7 @@ export function useMembershipGroup(): UseMembershipGroupReturn {
             waiverRequirements: [...(group.waiverRequirements || []), requirement],
           });
         }
+        invalidateDetail(groupId);
         return requirement;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to add waiver requirement";
@@ -273,6 +294,7 @@ export function useMembershipGroup(): UseMembershipGroupReturn {
             });
           }
         }
+        invalidateDetail(groupId);
         return true;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to remove requirement";

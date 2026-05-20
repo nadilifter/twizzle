@@ -16,22 +16,37 @@ interface UseUsersOptions {
   autoFetch?: boolean;
 }
 
+// Module-level stale-while-revalidate cache for the users list.
+// Cache the raw unfiltered list so role filters can apply locally.
+const LIST_CACHE_TTL_MS = 60_000;
+const LIST_CACHE_KEY = "users";
+type ListCacheEntry = { data: User[]; fetchedAt: number };
+const listCache = new Map<string, ListCacheEntry>();
+
+function applyRoleFilter(list: User[], role?: string): User[] {
+  if (!role) return list;
+  return list.filter((u) => u.role.toLowerCase() === role.toLowerCase());
+}
+
 export function useUsers(options: UseUsersOptions = {}) {
   const { role, autoFetch = true } = options;
-  const [users, setUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+
+  const initialCached = listCache.get(LIST_CACHE_KEY);
+
+  const [users, setUsers] = useState<User[]>(() =>
+    initialCached ? applyRoleFilter(initialCached.data, role) : []
+  );
+  const [isLoading, setIsLoading] = useState(() => autoFetch && !initialCached);
   const [error, setError] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
-    setIsLoading(true);
+    const cached = listCache.get(LIST_CACHE_KEY);
+    if (!cached) setIsLoading(true);
     setError(null);
     try {
       const data = await api.get<User[]>("/api/users");
-      if (role) {
-        setUsers(data.filter((u) => u.role.toLowerCase() === role.toLowerCase()));
-      } else {
-        setUsers(data);
-      }
+      listCache.set(LIST_CACHE_KEY, { data, fetchedAt: Date.now() });
+      setUsers(applyRoleFilter(data, role));
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch users";
       setError(message);
@@ -42,10 +57,15 @@ export function useUsers(options: UseUsersOptions = {}) {
   }, [role]);
 
   useEffect(() => {
-    if (autoFetch) {
-      fetchUsers();
+    if (!autoFetch) return;
+    const cached = listCache.get(LIST_CACHE_KEY);
+    const isFresh = cached && Date.now() - cached.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) {
+      setUsers(applyRoleFilter(cached.data, role));
+      return;
     }
-  }, [autoFetch, fetchUsers]);
+    fetchUsers();
+  }, [autoFetch, fetchUsers, role]);
 
   return { users, isLoading, error, fetchUsers };
 }

@@ -26,24 +26,44 @@ interface UseAttendanceMetricsReturn {
   refetch: () => Promise<void>;
 }
 
+// Module-level stale-while-revalidate cache keyed by serialized filters.
+const LIST_CACHE_TTL_MS = 60_000;
+type ListCacheEntry = {
+  data: AttendanceMetricsResponse;
+  fetchedAt: number;
+};
+const listCache = new Map<string, ListCacheEntry>();
+
+function paramsKey(filters: UseAttendanceMetricsFilters): string {
+  return JSON.stringify(filters ?? {});
+}
+
 export function useAttendanceMetrics(
   options: UseAttendanceMetricsOptions = {}
 ): UseAttendanceMetricsReturn {
   const { autoFetch = false, initialFilters = {} } = options;
 
-  const [metrics, setMetrics] = useState<AttendanceMetricsResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  // Seed state from cache so revisits render instantly with no spinner.
+  const initialKey = paramsKey(initialFilters);
+  const initialCached = listCache.get(initialKey);
+
+  const [metrics, setMetrics] = useState<AttendanceMetricsResponse | null>(
+    () => initialCached?.data ?? null
+  );
+  const [isLoading, setIsLoading] = useState(() => autoFetch && !initialCached);
   const [error, setError] = useState<string | null>(null);
   // Use a ref instead of state to avoid re-creating fetchMetrics on filter changes
   const currentFiltersRef = useRef<UseAttendanceMetricsFilters>(initialFilters);
 
   const fetchMetrics = useCallback(async (filters?: UseAttendanceMetricsFilters) => {
-    setIsLoading(true);
-    setError(null);
-
     // Merge and store filters in ref (doesn't trigger re-render)
     const mergedFilters = { ...currentFiltersRef.current, ...filters };
     currentFiltersRef.current = mergedFilters;
+
+    const key = paramsKey(mergedFilters);
+    const cached = listCache.get(key);
+    if (!cached) setIsLoading(true);
+    setError(null);
 
     try {
       // Build query params, filtering out undefined/null values
@@ -56,6 +76,7 @@ export function useAttendanceMetrics(
         queryParams
       );
       setMetrics(response);
+      listCache.set(key, { data: response, fetchedAt: Date.now() });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch attendance metrics";
       setError(message);
@@ -70,9 +91,12 @@ export function useAttendanceMetrics(
   }, [fetchMetrics]);
 
   useEffect(() => {
-    if (autoFetch) {
-      fetchMetrics();
-    }
+    if (!autoFetch) return;
+    const key = paramsKey(currentFiltersRef.current);
+    const cached = listCache.get(key);
+    const isFresh = cached && Date.now() - cached.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) return;
+    fetchMetrics();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

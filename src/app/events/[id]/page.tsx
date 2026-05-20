@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Calendar,
   Clock,
@@ -129,8 +130,41 @@ export default function EventCheckinPage({ params }: EventCheckinPageProps) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="p-4 md:p-6 lg:px-8 space-y-4">
+        <div className="space-y-2">
+          <Skeleton className="h-7 w-64" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="rounded-xl border bg-card p-5 space-y-3">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-8 w-16" />
+            </div>
+          ))}
+        </div>
+        <div className="rounded-md border">
+          <div className="border-b px-4 py-3">
+            <div className="grid grid-cols-12 gap-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="col-span-2 h-4" />
+              ))}
+            </div>
+          </div>
+          <div className="divide-y">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="grid grid-cols-12 items-center gap-4 px-4 py-3">
+                <div className="col-span-3 flex items-center gap-3">
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                  <Skeleton className="h-4 flex-1" />
+                </div>
+                <Skeleton className="col-span-3 h-4" />
+                <Skeleton className="col-span-3 h-4" />
+                <Skeleton className="col-span-3 h-4" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

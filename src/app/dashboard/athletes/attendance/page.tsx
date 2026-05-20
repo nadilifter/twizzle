@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Check,
   X,
@@ -190,8 +191,41 @@ export default function AttendancePage() {
 
   if (isLoading && !metrics) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="flex flex-col gap-6 p-6">
+        <div className="space-y-2">
+          <Skeleton className="h-7 w-64" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex flex-col gap-3 rounded-xl border bg-card p-5">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-8 w-16" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+          ))}
+        </div>
+        <div className="rounded-md border">
+          <div className="border-b px-4 py-3">
+            <div className="grid grid-cols-12 gap-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="col-span-2 h-4" />
+              ))}
+            </div>
+          </div>
+          <div className="divide-y">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="grid grid-cols-12 items-center gap-4 px-4 py-3">
+                <Skeleton className="col-span-2 h-4" />
+                <Skeleton className="col-span-2 h-4" />
+                <Skeleton className="col-span-2 h-4" />
+                <Skeleton className="col-span-2 h-4" />
+                <Skeleton className="col-span-2 h-4" />
+                <Skeleton className="col-span-2 h-4" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

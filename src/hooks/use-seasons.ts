@@ -82,13 +82,34 @@ interface UseSeasonsReturn {
   clearError: () => void;
 }
 
+// Module-level stale-while-revalidate cache for the list query.
+const LIST_CACHE_TTL_MS = 60_000;
+type ListCacheEntry = {
+  data: Season[];
+  total: number;
+  fetchedAt: number;
+};
+const listCache = new Map<string, ListCacheEntry>();
+
+function paramsKey(params: SeasonsQueryParams): string {
+  return JSON.stringify(params ?? {});
+}
+
+function invalidateLists() {
+  listCache.clear();
+}
+
 export function useSeasons(options: UseSeasonsOptions = {}): UseSeasonsReturn {
   const { autoFetch = true, initialParams = {} } = options;
   const { data: session } = useSession();
 
-  const [seasons, setSeasons] = useState<Season[]>([]);
-  const [total, setTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(autoFetch);
+  // Seed state from cache so revisits render instantly with no spinner.
+  const initialKey = paramsKey(initialParams);
+  const initialCached = listCache.get(initialKey);
+
+  const [seasons, setSeasons] = useState<Season[]>(() => initialCached?.data ?? []);
+  const [total, setTotal] = useState(() => initialCached?.total ?? 0);
+  const [isLoading, setIsLoading] = useState(() => autoFetch && !initialCached);
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isFeatureGated, setIsFeatureGated] = useState(false);
@@ -99,13 +120,21 @@ export function useSeasons(options: UseSeasonsOptions = {}): UseSeasonsReturn {
     async (params?: SeasonsQueryParams) => {
       const queryParams = params ?? currentParams;
       setCurrentParams(queryParams);
-      setIsLoading(true);
+
+      const key = paramsKey(queryParams);
+      const cached = listCache.get(key);
+      if (!cached) setIsLoading(true);
       setError(null);
 
       try {
         const response = await api.get<SeasonsListResponse>("/api/seasons", queryParams);
         setSeasons(response.data);
         setTotal(response.total);
+        listCache.set(key, {
+          data: response.data,
+          total: response.total,
+          fetchedAt: Date.now(),
+        });
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to fetch seasons";
         setError(message);
@@ -126,6 +155,7 @@ export function useSeasons(options: UseSeasonsOptions = {}): UseSeasonsReturn {
       const newSeason = await api.post<Season>("/api/seasons", data);
       setSeasons((prev) => [newSeason, ...prev]);
       setTotal((prev) => prev + 1);
+      invalidateLists();
       return newSeason;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to create season";
@@ -144,6 +174,7 @@ export function useSeasons(options: UseSeasonsOptions = {}): UseSeasonsReturn {
       try {
         const updated = await api.patch<Season>(`/api/seasons/${id}`, data);
         setSeasons((prev) => prev.map((s) => (s.id === id ? updated : s)));
+        invalidateLists();
         return updated;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to update season";
@@ -163,6 +194,7 @@ export function useSeasons(options: UseSeasonsOptions = {}): UseSeasonsReturn {
       await api.delete(`/api/seasons/${id}`);
       setSeasons((prev) => prev.filter((s) => s.id !== id));
       setTotal((prev) => prev - 1);
+      invalidateLists();
       return true;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to delete season";
@@ -183,9 +215,12 @@ export function useSeasons(options: UseSeasonsOptions = {}): UseSeasonsReturn {
   }, []);
 
   useEffect(() => {
-    if (autoFetch && session?.user?.organizationId) {
-      fetchSeasons(initialParams);
-    }
+    if (!autoFetch || !session?.user?.organizationId) return;
+    const key = paramsKey(initialParams);
+    const cached = listCache.get(key);
+    const isFresh = cached && Date.now() - cached.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) return;
+    fetchSeasons(initialParams);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.organizationId]);
 

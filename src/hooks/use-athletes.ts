@@ -39,34 +39,69 @@ interface UseAthletesReturn {
   clearError: () => void;
 }
 
+// Module-level stale-while-revalidate cache for the list query.
+// Keyed by serialized query params so different filters cache independently.
+const LIST_CACHE_TTL_MS = 60_000;
+type ListCacheEntry = {
+  data: AthleteWithRelations[];
+  total: number;
+  fetchedAt: number;
+};
+const listCache = new Map<string, ListCacheEntry>();
+const detailCache = new Map<string, { data: AthleteDetail; fetchedAt: number }>();
+
+function paramsKey(params: AthletesQueryParams): string {
+  return JSON.stringify(params ?? {});
+}
+
+function invalidateLists() {
+  listCache.clear();
+}
+
+function invalidateDetail(id: string) {
+  detailCache.delete(id);
+}
+
 /**
  * Hook for managing athletes list data and CRUD operations
  */
 export function useAthletes(options: UseAthletesOptions = {}): UseAthletesReturn {
   const { autoFetch = true, initialParams = {} } = options;
 
-  // State
-  const [athletes, setAthletes] = useState<AthleteWithRelations[]>([]);
-  const [total, setTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+  const [currentParams, setCurrentParams] = useState<AthletesQueryParams>(initialParams);
+
+  // Seed state from cache so revisits render instantly with no spinner.
+  const initialKey = paramsKey(initialParams);
+  const initialCached = listCache.get(initialKey);
+
+  const [athletes, setAthletes] = useState<AthleteWithRelations[]>(() => initialCached?.data ?? []);
+  const [total, setTotal] = useState(() => initialCached?.total ?? 0);
+  const [isLoading, setIsLoading] = useState(() => !initialCached);
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentParams, setCurrentParams] = useState<AthletesQueryParams>(initialParams);
 
-  // Fetch athletes list
+  // Fetch athletes list. If cached data exists, skip the loading state and refresh in background.
   const fetchAthletes = useCallback(
     async (params?: AthletesQueryParams) => {
       const queryParams = params ?? currentParams;
+      const key = paramsKey(queryParams);
       setCurrentParams(queryParams);
-      setIsLoading(true);
+
+      const cached = listCache.get(key);
+      if (!cached) setIsLoading(true);
       setError(null);
 
       try {
         const response = await api.get<AthletesListResponse>("/api/athletes", queryParams);
         setAthletes(response.data);
         setTotal(response.total);
+        listCache.set(key, {
+          data: response.data,
+          total: response.total,
+          fetchedAt: Date.now(),
+        });
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to fetch athletes";
         setError(message);
@@ -86,9 +121,9 @@ export function useAthletes(options: UseAthletesOptions = {}): UseAthletesReturn
 
       try {
         const newAthlete = await api.post<AthleteWithRelations>("/api/athletes", data);
-        // Add to local state
         setAthletes((prev) => [...prev, newAthlete]);
         setTotal((prev) => prev + 1);
+        invalidateLists();
         return newAthlete;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to create athlete";
@@ -110,10 +145,11 @@ export function useAthletes(options: UseAthletesOptions = {}): UseAthletesReturn
 
       try {
         const updatedAthlete = await api.patch<AthleteWithRelations>(`/api/athletes/${id}`, data);
-        // Update local state
         setAthletes((prev) =>
           prev.map((athlete) => (athlete.id === id ? updatedAthlete : athlete))
         );
+        invalidateLists();
+        invalidateDetail(id);
         return updatedAthlete;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to update athlete";
@@ -134,9 +170,10 @@ export function useAthletes(options: UseAthletesOptions = {}): UseAthletesReturn
 
     try {
       await api.delete(`/api/athletes/${id}`);
-      // Remove from local state
       setAthletes((prev) => prev.filter((athlete) => athlete.id !== id));
       setTotal((prev) => prev - 1);
+      invalidateLists();
+      invalidateDetail(id);
       return true;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to delete athlete";
@@ -158,11 +195,15 @@ export function useAthletes(options: UseAthletesOptions = {}): UseAthletesReturn
     setError(null);
   }, []);
 
-  // Auto-fetch on mount if enabled
+  // Auto-fetch on mount. Skip the network call entirely when cache is fresh;
+  // refetch in the background when stale so cached data is replaced silently.
   useEffect(() => {
-    if (autoFetch) {
-      fetchAthletes(initialParams);
-    }
+    if (!autoFetch) return;
+    const key = paramsKey(initialParams);
+    const cached = listCache.get(key);
+    const isFresh = cached && Date.now() - cached.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) return;
+    fetchAthletes(initialParams);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -199,8 +240,10 @@ interface UseAthleteReturn {
  * Hook for managing a single athlete's data
  */
 export function useAthlete(athleteId: string | null): UseAthleteReturn {
-  const [athlete, setAthlete] = useState<AthleteDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const cached = athleteId ? detailCache.get(athleteId) : undefined;
+
+  const [athlete, setAthlete] = useState<AthleteDetail | null>(() => cached?.data ?? null);
+  const [isLoading, setIsLoading] = useState(() => !!athleteId && !cached);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -209,12 +252,14 @@ export function useAthlete(athleteId: string | null): UseAthleteReturn {
   const fetchAthlete = useCallback(async () => {
     if (!athleteId) return;
 
-    setIsLoading(true);
+    const existing = detailCache.get(athleteId);
+    if (!existing) setIsLoading(true);
     setError(null);
 
     try {
       const data = await api.get<AthleteDetail>(`/api/athletes/${athleteId}`);
       setAthlete(data);
+      detailCache.set(athleteId, { data, fetchedAt: Date.now() });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch athlete";
       setError(message);
@@ -235,6 +280,8 @@ export function useAthlete(athleteId: string | null): UseAthleteReturn {
       try {
         const updated = await api.patch<AthleteDetail>(`/api/athletes/${athleteId}`, data);
         setAthlete(updated);
+        detailCache.set(athleteId, { data: updated, fetchedAt: Date.now() });
+        invalidateLists();
         return updated;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to update athlete";
@@ -258,6 +305,8 @@ export function useAthlete(athleteId: string | null): UseAthleteReturn {
     try {
       await api.delete(`/api/athletes/${athleteId}`);
       setAthlete(null);
+      invalidateDetail(athleteId);
+      invalidateLists();
       return true;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to delete athlete";
@@ -274,13 +323,19 @@ export function useAthlete(athleteId: string | null): UseAthleteReturn {
     setError(null);
   }, []);
 
-  // Fetch on mount and when ID changes
+  // Fetch on mount and when ID changes. Skip the network when cache is fresh.
   useEffect(() => {
-    if (athleteId) {
-      fetchAthlete();
-    } else {
+    if (!athleteId) {
       setAthlete(null);
+      return;
     }
+    const existing = detailCache.get(athleteId);
+    const isFresh = existing && Date.now() - existing.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) {
+      setAthlete(existing.data);
+      return;
+    }
+    fetchAthlete();
   }, [athleteId, fetchAthlete]);
 
   return {

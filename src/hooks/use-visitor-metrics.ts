@@ -34,6 +34,15 @@ interface UseVisitorMetricsReturn {
   refetch: () => Promise<void>;
 }
 
+// Module-level stale-while-revalidate cache keyed by date range.
+const LIST_CACHE_TTL_MS = 60_000;
+type ListCacheEntry = { data: VisitorMetrics; fetchedAt: number };
+const listCache = new Map<string, ListCacheEntry>();
+
+function paramsKey(startDate?: string, endDate?: string): string {
+  return JSON.stringify({ startDate, endDate });
+}
+
 /**
  * Hook to fetch visitor metrics from the analytics API
  * Returns daily breakdown by device type (mobile vs desktop)
@@ -41,12 +50,17 @@ interface UseVisitorMetricsReturn {
 export function useVisitorMetrics(options: UseVisitorMetricsOptions = {}): UseVisitorMetricsReturn {
   const { startDate, endDate, autoFetch = true } = options;
 
-  const [data, setData] = useState<VisitorMetrics | null>(null);
-  const [loading, setLoading] = useState(autoFetch);
+  const initialKey = paramsKey(startDate, endDate);
+  const initialCached = listCache.get(initialKey);
+
+  const [data, setData] = useState<VisitorMetrics | null>(() => initialCached?.data ?? null);
+  const [loading, setLoading] = useState(() => autoFetch && !initialCached);
   const [error, setError] = useState<string | null>(null);
 
   const fetchMetrics = useCallback(async () => {
-    setLoading(true);
+    const key = paramsKey(startDate, endDate);
+    const cached = listCache.get(key);
+    if (!cached) setLoading(true);
     setError(null);
 
     try {
@@ -64,6 +78,7 @@ export function useVisitorMetrics(options: UseVisitorMetricsOptions = {}): UseVi
 
       const metrics: VisitorMetrics = await response.json();
       setData(metrics);
+      listCache.set(key, { data: metrics, fetchedAt: Date.now() });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
       setError(message);
@@ -85,10 +100,16 @@ export function useVisitorMetrics(options: UseVisitorMetricsOptions = {}): UseVi
   }, [startDate, endDate]);
 
   useEffect(() => {
-    if (autoFetch) {
-      fetchMetrics();
+    if (!autoFetch) return;
+    const key = paramsKey(startDate, endDate);
+    const cached = listCache.get(key);
+    const isFresh = cached && Date.now() - cached.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) {
+      setData(cached.data);
+      return;
     }
-  }, [autoFetch, fetchMetrics]);
+    fetchMetrics();
+  }, [autoFetch, fetchMetrics, startDate, endDate]);
 
   return {
     data,

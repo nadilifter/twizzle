@@ -53,14 +53,37 @@ interface UseQueueConfigReturn {
   toggleConfig: (id: string, enabled: boolean) => Promise<boolean>;
 }
 
+// Module-level stale-while-revalidate cache for the list query.
+const LIST_CACHE_TTL_MS = 60_000;
+type ListCacheEntry = {
+  configs: QueueConfig[];
+  stats: Record<string, QueueStats>;
+  fetchedAt: number;
+};
+const listCache = new Map<string, ListCacheEntry>();
+
+function paramsKey(params: UseQueueConfigParams | undefined): string {
+  return JSON.stringify(params ?? {});
+}
+
+function invalidateLists() {
+  listCache.clear();
+}
+
 export function useQueueConfig(params?: UseQueueConfigParams): UseQueueConfigReturn {
-  const [configs, setConfigs] = useState<QueueConfig[]>([]);
-  const [stats, setStats] = useState<Record<string, QueueStats>>({});
-  const [isLoading, setIsLoading] = useState(true);
+  // Seed state from cache so revisits render instantly with no spinner.
+  const initialKey = paramsKey(params);
+  const initialCached = listCache.get(initialKey);
+
+  const [configs, setConfigs] = useState<QueueConfig[]>(() => initialCached?.configs ?? []);
+  const [stats, setStats] = useState<Record<string, QueueStats>>(() => initialCached?.stats ?? {});
+  const [isLoading, setIsLoading] = useState(() => !initialCached);
   const [error, setError] = useState<string | null>(null);
 
   const fetchConfigs = useCallback(async () => {
-    setIsLoading(true);
+    const key = paramsKey(params);
+    const cached = listCache.get(key);
+    if (!cached) setIsLoading(true);
     setError(null);
     try {
       const queryParams = new URLSearchParams();
@@ -71,21 +94,33 @@ export function useQueueConfig(params?: UseQueueConfigParams): UseQueueConfigRet
         throw new Error("Failed to fetch queue configs");
       }
       const data = await response.json();
-      setConfigs(data.configs || data);
+      const nextConfigs: QueueConfig[] = data.configs || data;
+      const nextStats: Record<string, QueueStats> =
+        params?.includeStats && data.stats ? data.stats : {};
 
+      setConfigs(nextConfigs);
       if (params?.includeStats && data.stats) {
-        setStats(data.stats);
+        setStats(nextStats);
       }
+      listCache.set(key, {
+        configs: nextConfigs,
+        stats: nextStats,
+        fetchedAt: Date.now(),
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setIsLoading(false);
     }
-  }, [params?.includeProgram, params?.includeStats]);
+  }, [params?.includeProgram, params?.includeStats, params]);
 
   useEffect(() => {
+    const key = paramsKey(params);
+    const cached = listCache.get(key);
+    const isFresh = cached && Date.now() - cached.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) return;
     fetchConfigs();
-  }, [fetchConfigs]);
+  }, [fetchConfigs, params]);
 
   const createConfig = async (data: Partial<QueueConfig>): Promise<QueueConfig | null> => {
     try {
@@ -100,6 +135,7 @@ export function useQueueConfig(params?: UseQueueConfigParams): UseQueueConfigRet
       }
       const newConfig = await response.json();
       setConfigs((prev) => [...prev, newConfig]);
+      invalidateLists();
       return newConfig;
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -123,6 +159,7 @@ export function useQueueConfig(params?: UseQueueConfigParams): UseQueueConfigRet
       }
       const updatedConfig = await response.json();
       setConfigs((prev) => prev.map((c) => (c.id === id ? updatedConfig : c)));
+      invalidateLists();
       return updatedConfig;
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -139,6 +176,7 @@ export function useQueueConfig(params?: UseQueueConfigParams): UseQueueConfigRet
         throw new Error("Failed to delete config");
       }
       setConfigs((prev) => prev.filter((c) => c.id !== id));
+      invalidateLists();
       return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");

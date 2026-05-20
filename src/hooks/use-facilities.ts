@@ -15,6 +15,27 @@ import type {
 
 const BASE = "/api/organization/facilities";
 
+// Module-level stale-while-revalidate caches.
+const LIST_CACHE_TTL_MS = 60_000;
+const LIST_CACHE_KEY = "facilities";
+type ListCacheEntry = { data: FacilityListItem[]; fetchedAt: number };
+const listCache = new Map<string, ListCacheEntry>();
+
+const detailCache = new Map<string, { data: FacilityDetail; fetchedAt: number }>();
+const notesCache = new Map<string, { data: FacilityNote[]; fetchedAt: number }>();
+
+function invalidateLists() {
+  listCache.clear();
+}
+
+function invalidateDetail(id: string) {
+  detailCache.delete(id);
+}
+
+function invalidateNotes(id: string) {
+  notesCache.delete(id);
+}
+
 // ---------------------------------------------------------------------------
 // useFacilities — list hook
 // ---------------------------------------------------------------------------
@@ -32,17 +53,21 @@ interface UseFacilitiesReturn {
 }
 
 export function useFacilities(): UseFacilitiesReturn {
-  const [facilities, setFacilities] = useState<FacilityListItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const initialCached = listCache.get(LIST_CACHE_KEY);
+
+  const [facilities, setFacilities] = useState<FacilityListItem[]>(() => initialCached?.data ?? []);
+  const [isLoading, setIsLoading] = useState(() => !initialCached);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchFacilities = useCallback(async () => {
-    setIsLoading(true);
+    const cached = listCache.get(LIST_CACHE_KEY);
+    if (!cached) setIsLoading(true);
     setError(null);
     try {
       const data = await api.get<FacilityListItem[]>(BASE);
       setFacilities(data);
+      listCache.set(LIST_CACHE_KEY, { data, fetchedAt: Date.now() });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch facilities";
       setError(message);
@@ -58,6 +83,7 @@ export function useFacilities(): UseFacilitiesReturn {
       try {
         const created = await api.post<FacilityListItem>(BASE, data);
         setFacilities((prev) => [...prev, created]);
+        invalidateLists();
         return created;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to create facility";
@@ -75,6 +101,8 @@ export function useFacilities(): UseFacilitiesReturn {
     try {
       await api.delete(`${BASE}/${id}`);
       setFacilities((prev) => prev.filter((f) => f.id !== id));
+      invalidateLists();
+      invalidateDetail(id);
       return true;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to delete facility";
@@ -87,6 +115,9 @@ export function useFacilities(): UseFacilitiesReturn {
   const clearError = useCallback(() => setError(null), []);
 
   useEffect(() => {
+    const cached = listCache.get(LIST_CACHE_KEY);
+    const isFresh = cached && Date.now() - cached.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) return;
     fetchFacilities();
   }, [fetchFacilities]);
 
@@ -118,18 +149,22 @@ interface UseFacilityReturn {
 }
 
 export function useFacility(facilityId: string | null): UseFacilityReturn {
-  const [facility, setFacility] = useState<FacilityDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const cached = facilityId ? detailCache.get(facilityId) : undefined;
+
+  const [facility, setFacility] = useState<FacilityDetail | null>(() => cached?.data ?? null);
+  const [isLoading, setIsLoading] = useState(() => !!facilityId && !cached);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchFacility = useCallback(async () => {
     if (!facilityId) return;
-    setIsLoading(true);
+    const existing = detailCache.get(facilityId);
+    if (!existing) setIsLoading(true);
     setError(null);
     try {
       const data = await api.get<FacilityDetail>(`${BASE}/${facilityId}`);
       setFacility(data);
+      detailCache.set(facilityId, { data, fetchedAt: Date.now() });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch facility";
       setError(message);
@@ -146,6 +181,8 @@ export function useFacility(facilityId: string | null): UseFacilityReturn {
       try {
         const updated = await api.patch<FacilityDetail>(`${BASE}/${facilityId}`, data);
         setFacility(updated);
+        detailCache.set(facilityId, { data: updated, fetchedAt: Date.now() });
+        invalidateLists();
         return updated;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to update facility";
@@ -161,11 +198,17 @@ export function useFacility(facilityId: string | null): UseFacilityReturn {
   const clearError = useCallback(() => setError(null), []);
 
   useEffect(() => {
-    if (facilityId) {
-      fetchFacility();
-    } else {
+    if (!facilityId) {
       setFacility(null);
+      return;
     }
+    const existing = detailCache.get(facilityId);
+    const isFresh = existing && Date.now() - existing.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) {
+      setFacility(existing.data);
+      return;
+    }
+    fetchFacility();
   }, [facilityId, fetchFacility]);
 
   return { facility, isLoading, isUpdating, error, fetchFacility, updateFacility, clearError };
@@ -186,16 +229,20 @@ interface UseFacilityNotesReturn {
 }
 
 export function useFacilityNotes(facilityId: string | null): UseFacilityNotesReturn {
-  const [notes, setNotes] = useState<FacilityNote[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const cached = facilityId ? notesCache.get(facilityId) : undefined;
+
+  const [notes, setNotes] = useState<FacilityNote[]>(() => cached?.data ?? []);
+  const [isLoading, setIsLoading] = useState(() => !!facilityId && !cached);
   const [isCreating, setIsCreating] = useState(false);
 
   const fetchNotes = useCallback(async () => {
     if (!facilityId) return;
-    setIsLoading(true);
+    const existing = notesCache.get(facilityId);
+    if (!existing) setIsLoading(true);
     try {
       const data = await api.get<FacilityNote[]>(`${BASE}/${facilityId}/notes`);
       setNotes(data);
+      notesCache.set(facilityId, { data, fetchedAt: Date.now() });
     } catch {
       // Silently fail — notes are non-critical
     } finally {
@@ -210,6 +257,7 @@ export function useFacilityNotes(facilityId: string | null): UseFacilityNotesRet
       try {
         const note = await api.post<FacilityNote>(`${BASE}/${facilityId}/notes`, { content });
         setNotes((prev) => [note, ...prev]);
+        invalidateNotes(facilityId);
         return note;
       } catch {
         return null;
@@ -228,6 +276,7 @@ export function useFacilityNotes(facilityId: string | null): UseFacilityNotesRet
           content,
         });
         setNotes((prev) => prev.map((n) => (n.id === noteId ? updated : n)));
+        invalidateNotes(facilityId);
         return updated;
       } catch {
         return null;
@@ -242,6 +291,7 @@ export function useFacilityNotes(facilityId: string | null): UseFacilityNotesRet
       try {
         await api.delete(`${BASE}/${facilityId}/notes/${noteId}`);
         setNotes((prev) => prev.filter((n) => n.id !== noteId));
+        invalidateNotes(facilityId);
         return true;
       } catch {
         return false;
@@ -251,7 +301,14 @@ export function useFacilityNotes(facilityId: string | null): UseFacilityNotesRet
   );
 
   useEffect(() => {
-    if (facilityId) fetchNotes();
+    if (!facilityId) return;
+    const existing = notesCache.get(facilityId);
+    const isFresh = existing && Date.now() - existing.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) {
+      setNotes(existing.data);
+      return;
+    }
+    fetchNotes();
   }, [facilityId, fetchNotes]);
 
   return { notes, isLoading, isCreating, fetchNotes, createNote, updateNote, deleteNote };

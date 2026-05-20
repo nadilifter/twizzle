@@ -18,16 +18,28 @@ interface StaffCertStatus {
   memberStatus: Record<string, CertCheckResult>;
 }
 
+// Module-level stale-while-revalidate cache keyed by scope.
+const LIST_CACHE_TTL_MS = 60_000;
+type ListCacheEntry = { data: StaffCertStatus; fetchedAt: number };
+const listCache = new Map<string, ListCacheEntry>();
+
+const EMPTY: StaffCertStatus = { requiredCertNames: [], memberStatus: {} };
+
 export function useStaffCertStatus(scope: "programs" | "events" | "competitions") {
-  const [data, setData] = useState<StaffCertStatus>({ requiredCertNames: [], memberStatus: {} });
-  const [isLoading, setIsLoading] = useState(true);
+  const initialCached = listCache.get(scope);
+
+  const [data, setData] = useState<StaffCertStatus>(() => initialCached?.data ?? EMPTY);
+  const [isLoading, setIsLoading] = useState(() => !initialCached);
 
   const fetch_ = useCallback(async () => {
-    setIsLoading(true);
+    const cached = listCache.get(scope);
+    if (!cached) setIsLoading(true);
     try {
       const res = await fetch(`/api/organization/staff/certification-status?scope=${scope}`);
       if (res.ok) {
-        setData(await res.json());
+        const json: StaffCertStatus = await res.json();
+        setData(json);
+        listCache.set(scope, { data: json, fetchedAt: Date.now() });
       }
     } catch {
       // Non-critical — staff can still be selected
@@ -37,8 +49,14 @@ export function useStaffCertStatus(scope: "programs" | "events" | "competitions"
   }, [scope]);
 
   useEffect(() => {
+    const cached = listCache.get(scope);
+    const isFresh = cached && Date.now() - cached.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) {
+      setData(cached.data);
+      return;
+    }
     fetch_();
-  }, [fetch_]);
+  }, [scope, fetch_]);
 
   const getMemberStatus = useCallback(
     (memberId: string): CertCheckResult => {

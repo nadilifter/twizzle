@@ -11,6 +11,25 @@ import type {
   AvailabilityEntry,
 } from "@/types/staff";
 
+// Module-level stale-while-revalidate caches.
+const LIST_CACHE_TTL_MS = 60_000;
+type ListCacheEntry = { data: MemberWithUser[]; fetchedAt: number };
+const listCache = new Map<string, ListCacheEntry>();
+const profileCache = new Map<string, { data: MemberWithAvailability; fetchedAt: number }>();
+const availabilityCache = new Map<string, { data: MemberAvailability[]; fetchedAt: number }>();
+
+function staffKey(search: string): string {
+  return JSON.stringify({ search });
+}
+
+function invalidateLists() {
+  listCache.clear();
+}
+
+function invalidateProfile(id: string) {
+  profileCache.delete(id);
+}
+
 interface UseStaffOptions {
   autoFetch?: boolean;
   search?: string;
@@ -34,8 +53,12 @@ interface UseStaffReturn {
 export function useStaff(options: UseStaffOptions = {}): UseStaffReturn {
   const { autoFetch = true, search: initialSearch = "" } = options;
 
-  const [staff, setStaff] = useState<MemberWithUser[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  // Seed state from cache so revisits render instantly with no spinner.
+  const initialKey = staffKey(initialSearch);
+  const initialCached = listCache.get(initialKey);
+
+  const [staff, setStaff] = useState<MemberWithUser[]>(() => initialCached?.data ?? []);
+  const [isLoading, setIsLoading] = useState(() => autoFetch && !initialCached);
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -50,13 +73,16 @@ export function useStaff(options: UseStaffOptions = {}): UseStaffReturn {
     }
     currentSearchRef.current = searchQuery;
 
-    setIsLoading(true);
+    const key = staffKey(searchQuery);
+    const cached = listCache.get(key);
+    if (!cached) setIsLoading(true);
     setError(null);
 
     try {
       const params = searchQuery ? { search: searchQuery } : {};
       const response = await api.get<MemberWithUser[]>("/api/organization/staff", params);
       setStaff(response);
+      listCache.set(key, { data: response, fetchedAt: Date.now() });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch staff";
       setError(message);
@@ -74,6 +100,7 @@ export function useStaff(options: UseStaffOptions = {}): UseStaffReturn {
       try {
         const newStaff = await api.post<MemberWithUser>("/api/organization/staff", data);
         setStaff((prev) => [...prev, newStaff]);
+        invalidateLists();
         return newStaff;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to create staff";
@@ -95,6 +122,8 @@ export function useStaff(options: UseStaffOptions = {}): UseStaffReturn {
       try {
         const updatedStaff = await api.patch<MemberWithUser>(`/api/organization/staff/${id}`, data);
         setStaff((prev) => prev.map((s) => (s.id === id ? updatedStaff : s)));
+        invalidateLists();
+        invalidateProfile(id);
         return updatedStaff;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to update staff";
@@ -115,6 +144,8 @@ export function useStaff(options: UseStaffOptions = {}): UseStaffReturn {
     try {
       await api.delete(`/api/organization/staff/${id}`);
       setStaff((prev) => prev.filter((s) => s.id !== id));
+      invalidateLists();
+      invalidateProfile(id);
       return true;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to delete staff";
@@ -135,9 +166,12 @@ export function useStaff(options: UseStaffOptions = {}): UseStaffReturn {
   }, []);
 
   useEffect(() => {
-    if (autoFetch) {
-      fetchStaff(initialSearch);
-    }
+    if (!autoFetch) return;
+    const key = staffKey(initialSearch);
+    const cached = listCache.get(key);
+    const isFresh = cached && Date.now() - cached.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) return;
+    fetchStaff(initialSearch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -159,17 +193,23 @@ export function useStaff(options: UseStaffOptions = {}): UseStaffReturn {
 
 // Hook for single member profile with availability
 export function useMemberProfile(id: string | null) {
-  const [memberProfile, setMemberProfile] = useState<MemberWithAvailability | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const cached = id ? profileCache.get(id) : undefined;
+
+  const [memberProfile, setMemberProfile] = useState<MemberWithAvailability | null>(
+    () => cached?.data ?? null
+  );
+  const [isLoading, setIsLoading] = useState(() => !!id && !cached);
   const [error, setError] = useState<string | null>(null);
 
   const fetchMemberProfile = useCallback(async () => {
     if (!id) return;
-    setIsLoading(true);
+    const existing = profileCache.get(id);
+    if (!existing) setIsLoading(true);
     setError(null);
     try {
       const data = await api.get<MemberWithAvailability>(`/api/organization/staff/${id}`);
       setMemberProfile(data);
+      profileCache.set(id, { data, fetchedAt: Date.now() });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch member profile";
       setError(message);
@@ -180,8 +220,18 @@ export function useMemberProfile(id: string | null) {
   }, [id]);
 
   useEffect(() => {
+    if (!id) {
+      setMemberProfile(null);
+      return;
+    }
+    const existing = profileCache.get(id);
+    const isFresh = existing && Date.now() - existing.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) {
+      setMemberProfile(existing.data);
+      return;
+    }
     fetchMemberProfile();
-  }, [fetchMemberProfile]);
+  }, [id, fetchMemberProfile]);
 
   return {
     memberProfile,
@@ -196,20 +246,24 @@ export const useStaffProfile = useMemberProfile;
 
 // Hook for member availability
 export function useMemberAvailability(memberId: string | null) {
-  const [availability, setAvailability] = useState<MemberAvailability[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const cached = memberId ? availabilityCache.get(memberId) : undefined;
+
+  const [availability, setAvailability] = useState<MemberAvailability[]>(() => cached?.data ?? []);
+  const [isLoading, setIsLoading] = useState(() => !!memberId && !cached);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchAvailability = useCallback(async () => {
     if (!memberId) return;
-    setIsLoading(true);
+    const existing = availabilityCache.get(memberId);
+    if (!existing) setIsLoading(true);
     setError(null);
     try {
       const data = await api.get<MemberAvailability[]>(
         `/api/organization/staff/${memberId}/availability`
       );
       setAvailability(data);
+      availabilityCache.set(memberId, { data, fetchedAt: Date.now() });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch availability";
       setError(message);
@@ -230,6 +284,7 @@ export function useMemberAvailability(memberId: string | null) {
           entries
         );
         setAvailability(data);
+        availabilityCache.set(memberId, { data, fetchedAt: Date.now() });
         return true;
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Failed to save availability";
@@ -244,8 +299,15 @@ export function useMemberAvailability(memberId: string | null) {
   );
 
   useEffect(() => {
+    if (!memberId) return;
+    const existing = availabilityCache.get(memberId);
+    const isFresh = existing && Date.now() - existing.fetchedAt < LIST_CACHE_TTL_MS;
+    if (isFresh) {
+      setAvailability(existing.data);
+      return;
+    }
     fetchAvailability();
-  }, [fetchAvailability]);
+  }, [memberId, fetchAvailability]);
 
   return {
     availability,

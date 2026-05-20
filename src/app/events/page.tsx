@@ -3,6 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Clock, MapPin, Users, ArrowRight, ScanLine, Loader2, CalendarX } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -39,8 +40,17 @@ export default function EventsPortalPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="p-4 md:p-6 lg:px-8 space-y-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="rounded-xl border bg-card p-5 space-y-3">
+            <div className="flex items-start justify-between gap-2">
+              <Skeleton className="h-5 w-48" />
+              <Skeleton className="h-5 w-14 rounded-full" />
+            </div>
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+          </div>
+        ))}
       </div>
     );
   }
