@@ -1,12 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { logger } from "@/lib/logger";
+import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 
 export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getAuthSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Staff-only route: PARENT-role callers must not be able to fetch another
+    // parent's profile, contacts, billing addresses, or athletes by id. Gate on
+    // the families.view permission so access stays scoped to roles explicitly
+    // granted family access (rather than every non-PARENT role); superadmins
+    // carry the "*" permission and pass.
+    if (!hasPermission(session.user.permissions, PERMISSIONS.FAMILIES_VIEW)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const organizationId = session.user.organizationId;
@@ -109,7 +120,7 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
       }),
     });
   } catch (error) {
-    console.error("Error fetching guardian:", error);
+    logger.exception("Error fetching guardian:", error as Error);
     return NextResponse.json({ error: "Failed to fetch guardian" }, { status: 500 });
   }
 }
