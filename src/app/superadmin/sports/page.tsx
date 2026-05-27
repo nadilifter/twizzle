@@ -517,7 +517,7 @@ export default function SuperadminSportsPage() {
                 id="sport-name"
                 value={formData.name}
                 onChange={(e) => handleNameChange(e.target.value)}
-                placeholder="e.g., Gymnastics"
+                placeholder="e.g., Figure Skating"
               />
             </div>
             <div className="space-y-2">
@@ -526,7 +526,7 @@ export default function SuperadminSportsPage() {
                 id="sport-slug"
                 value={formData.slug}
                 onChange={(e) => setFormData((prev) => ({ ...prev, slug: e.target.value }))}
-                placeholder="e.g., gymnastics"
+                placeholder="e.g., figure-skating"
                 className="font-mono"
               />
               <p className="text-xs text-muted-foreground">

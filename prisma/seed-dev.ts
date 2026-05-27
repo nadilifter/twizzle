@@ -11,9 +11,9 @@
  *   pnpm db:reset         (reset schema + run dev seed)
  *
  * Organizations:
- * 1. Sunrise Gymnastics Academy - Youth gymnastics club (comprehensive data)
+ * 1. Sunrise Skating Club - Youth figure skating club (comprehensive data)
  * 2. Metro Sports Complex - Multi-sport community facility (comprehensive data)
- * 3. Demo Gymnastics Club - Demo/testing organization
+ * 3. Demo Skating Club - Demo/testing organization
  * 4. Uplifter - Platform owner organization
  *
  * Scope boundary — what belongs in this file:
@@ -45,6 +45,7 @@ import {
   isPlatformConfigured,
 } from "@/lib/adyen-platform";
 import { createSystemRulesForOrganization } from "@/lib/notification-service";
+import { seedSkatingTaxonomy, SKATE_SEED_COUNTS } from "./skate-seed";
 
 const prisma = new PrismaClient();
 
@@ -609,9 +610,9 @@ async function main() {
     update: {},
     create: {
       id: ORG1_ID,
-      name: "Sunrise Gymnastics Academy",
-      slug: "sunrise-gymnastics",
-      email: "info@sunrisegymnastics.com",
+      name: "Sunrise Skating Club",
+      slug: "sunrise-skating",
+      email: "info@sunriseskating.com",
       phone: "+15551234567",
       street: "100 Sunrise Blvd",
       city: "Austin",
@@ -639,13 +640,13 @@ async function main() {
   console.log(`  ✓ Created: ${org1.name}`);
   console.log(`  ✓ Created: ${org2.name}`);
 
-  // Demo Gym and Uplifter (from original seed.ts)
+  // Demo Skating and Uplifter (from original seed.ts)
   const orgDemo = await prisma.organization.upsert({
     where: { slug: "demo-gym" },
     update: {},
     create: {
       id: ORG_DEMO_ID,
-      name: "Demo Gymnastics Club",
+      name: "Demo Skating Club",
       slug: "demo-gym",
       email: "demo@demogym.com",
       phone: "+15550001111",
@@ -688,7 +689,7 @@ async function main() {
     accountHolderId: "AH3292V22322BK5P8Z8364KJM",
     balanceAccountId: "BA3292V22322BK5P8Z8374KKP",
     storeId: "ST32CSW223229T5P7L2K9547D",
-    storeReference: "store-sunrise-gymnastics",
+    storeReference: "store-sunrise-skating",
     splitConfigurationId: "SCNF42988223225J5P8Z8HP2HM2624",
     sweepId: "SWPC4299322322445P8Z8GSFFB4BNG",
     transferInstrumentId: "SE329CB223227L5P8Z878B73G",
@@ -814,14 +815,14 @@ async function main() {
     create: { organizationId: ORG2_ID, ...metroAdyenData },
   });
 
-  // Demo Gym and Uplifter: no Adyen accounts
+  // Demo Skating and Uplifter: no Adyen accounts
   await prisma.adyenPlatformAccount.deleteMany({
     where: { organizationId: { in: [ORG_DEMO_ID, ORG_UPLIFTER_ID] } },
   });
 
-  console.log("  ✓ Sunrise Gymnastics: VERIFIED (AH3292V22322BK5P8Z8364KJM, weekly sweep)");
+  console.log("  ✓ Sunrise Skating: VERIFIED (AH3292V22322BK5P8Z8364KJM, weekly sweep)");
   console.log("  ✓ Metro Sports: VERIFIED (AH3292V22322BK5P8Z5ZF4DWF, daily sweep)");
-  console.log("  ✓ Demo Gym / Uplifter: no account");
+  console.log("  ✓ Demo Skating / Uplifter: no account");
 
   // ============================================
   // ADYEN DATA SYNC (transactions + payouts)
@@ -942,10 +943,10 @@ async function main() {
       displayOrder: 0,
     },
     {
-      id: "sport-gymnastics",
-      name: "Gymnastics",
-      slug: "gymnastics",
-      description: "Artistic and rhythmic gymnastics with apparatus events and floor exercises",
+      id: "sport-figure-skating",
+      name: "Figure Skating",
+      slug: "figure-skating",
+      description: "Singles, pairs, and ice dance figure skating across all levels",
       displayOrder: 1,
     },
     {
@@ -1000,11 +1001,11 @@ async function main() {
   // Organization-Sport associations
   console.log("\n🔗 Associating sports with organizations...");
   const orgSportAssociations = [
-    { organizationId: ORG1_ID, sportId: sports["gymnastics"].id },
+    { organizationId: ORG1_ID, sportId: sports["figure-skating"].id },
     { organizationId: ORG2_ID, sportId: sports["basketball"].id },
     { organizationId: ORG2_ID, sportId: sports["swimming"].id },
     { organizationId: ORG2_ID, sportId: sports["athletics"].id },
-    { organizationId: ORG_DEMO_ID, sportId: sports["gymnastics"].id },
+    { organizationId: ORG_DEMO_ID, sportId: sports["figure-skating"].id },
   ];
 
   for (const assoc of orgSportAssociations) {
@@ -1026,28 +1027,28 @@ async function main() {
   // ============================================
   console.log("\n🏷️  Creating competition category templates...");
 
-  // --- Gymnastics: Age Group x Apparatus (COMBINATION) ---
-  const gymTemplate = await prisma.competitionCategoryTemplate.upsert({
-    where: { id: "cat-tmpl-gymnastics-age-apparatus" },
+  // --- Figure Skating: Age Group x Discipline (COMBINATION) ---
+  const skatingTemplate = await prisma.competitionCategoryTemplate.upsert({
+    where: { id: "cat-tmpl-skating-age-discipline" },
     update: {},
     create: {
-      id: "cat-tmpl-gymnastics-age-apparatus",
-      sportId: sports["gymnastics"].id,
-      name: "Age Group x Apparatus",
+      id: "cat-tmpl-skating-age-discipline",
+      sportId: sports["figure-skating"].id,
+      name: "Age Group x Discipline",
       description:
-        "Standard gymnastics competition categories organized by age group and apparatus",
+        "Standard figure skating competition categories organized by age group and discipline",
       type: "COMBINATION",
       isActive: true,
       displayOrder: 0,
       rowAxisLabel: "Age Group",
-      columnAxisLabel: "Apparatus",
+      columnAxisLabel: "Discipline",
       restrictionAxis: "ROW",
     },
   });
 
-  const gymRowData = [
+  const skatingRowData = [
     {
-      id: "cav-gym-u8",
+      id: "cav-skate-u8",
       name: "Under 8",
       axis: "ROW" as const,
       displayOrder: 0,
@@ -1055,7 +1056,7 @@ async function main() {
       maxAge: 7,
     },
     {
-      id: "cav-gym-u10",
+      id: "cav-skate-u10",
       name: "Under 10",
       axis: "ROW" as const,
       displayOrder: 1,
@@ -1063,7 +1064,7 @@ async function main() {
       maxAge: 9,
     },
     {
-      id: "cav-gym-u12",
+      id: "cav-skate-u12",
       name: "Under 12",
       axis: "ROW" as const,
       displayOrder: 2,
@@ -1071,7 +1072,7 @@ async function main() {
       maxAge: 11,
     },
     {
-      id: "cav-gym-u14",
+      id: "cav-skate-u14",
       name: "Under 14",
       axis: "ROW" as const,
       displayOrder: 3,
@@ -1079,7 +1080,7 @@ async function main() {
       maxAge: 13,
     },
     {
-      id: "cav-gym-open",
+      id: "cav-skate-open",
       name: "Open",
       axis: "ROW" as const,
       displayOrder: 4,
@@ -1087,34 +1088,34 @@ async function main() {
       maxAge: null,
     },
   ];
-  const gymColData = [
+  const skatingColData = [
     {
-      id: "cav-gym-floor",
-      name: "Floor",
+      id: "cav-skate-free-skate",
+      name: "Free Skate",
       axis: "COLUMN" as const,
       displayOrder: 0,
       resultType: "SCORE" as const,
       sortDirection: "DESC" as const,
     },
     {
-      id: "cav-gym-vault",
-      name: "Vault",
+      id: "cav-skate-short-program",
+      name: "Short Program",
       axis: "COLUMN" as const,
       displayOrder: 1,
       resultType: "SCORE" as const,
       sortDirection: "DESC" as const,
     },
     {
-      id: "cav-gym-bars",
-      name: "Bars",
+      id: "cav-skate-moves",
+      name: "Moves in the Field",
       axis: "COLUMN" as const,
       displayOrder: 2,
       resultType: "SCORE" as const,
       sortDirection: "DESC" as const,
     },
     {
-      id: "cav-gym-beam",
-      name: "Beam",
+      id: "cav-skate-showcase",
+      name: "Showcase",
       axis: "COLUMN" as const,
       displayOrder: 3,
       resultType: "SCORE" as const,
@@ -1122,42 +1123,42 @@ async function main() {
     },
   ];
 
-  for (const row of gymRowData) {
+  for (const row of skatingRowData) {
     await prisma.categoryAxisValue.upsert({
       where: { id: row.id },
       update: {},
-      create: { ...row, templateId: gymTemplate.id },
+      create: { ...row, templateId: skatingTemplate.id },
     });
   }
-  for (const col of gymColData) {
+  for (const col of skatingColData) {
     await prisma.categoryAxisValue.upsert({
       where: { id: col.id },
       update: {},
-      create: { ...col, templateId: gymTemplate.id },
+      create: { ...col, templateId: skatingTemplate.id },
     });
   }
 
-  // Generate combination entries (disable Under 8 - Bars as an example)
-  const gymDisabled = new Set(["cav-gym-u8:cav-gym-bars"]);
-  for (const row of gymRowData) {
-    for (const col of gymColData) {
-      const comboId = `combo-gym-${row.id}-${col.id}`;
+  // Generate combination entries (disable Under 8 - Short Program — too young for separate SP/FS)
+  const skatingDisabled = new Set(["cav-skate-u8:cav-skate-short-program"]);
+  for (const row of skatingRowData) {
+    for (const col of skatingColData) {
+      const comboId = `combo-skate-${row.id}-${col.id}`;
       const key = `${row.id}:${col.id}`;
       await prisma.categoryCombinationEntry.upsert({
         where: { id: comboId },
         update: {},
         create: {
           id: comboId,
-          templateId: gymTemplate.id,
+          templateId: skatingTemplate.id,
           rowValueId: row.id,
           colValueId: col.id,
-          isActive: !gymDisabled.has(key),
+          isActive: !skatingDisabled.has(key),
           name: `${row.name} - ${col.name}`,
         },
       });
     }
   }
-  console.log("  ✓ Created Gymnastics: Age Group x Apparatus template");
+  console.log("  ✓ Created Figure Skating: Age Group x Discipline template");
 
   // --- Athletics: Sport-Specific Events & Age Categories ---
   console.log("\n🏃 Creating Athletics sport-specific data...");
@@ -1693,10 +1694,10 @@ async function main() {
   // ============================================
   console.log("\n👤 Creating users...");
   const org1Admin = await prisma.user.upsert({
-    where: { email: "admin@sunrise-gymnastics.com" },
+    where: { email: "admin@sunrise-skating.com" },
     update: {},
     create: {
-      email: "admin@sunrise-gymnastics.com",
+      email: "admin@sunrise-skating.com",
       name: "Jennifer Walsh",
       passwordHash: null,
       role: "ADMIN",
@@ -1704,10 +1705,10 @@ async function main() {
     },
   });
   const org1Coach1 = await prisma.user.upsert({
-    where: { email: "coach.maria@sunrise-gymnastics.com" },
+    where: { email: "coach.maria@sunrise-skating.com" },
     update: {},
     create: {
-      email: "coach.maria@sunrise-gymnastics.com",
+      email: "coach.maria@sunrise-skating.com",
       name: "Maria Rodriguez",
       passwordHash: null,
       role: "COACH",
@@ -1715,10 +1716,10 @@ async function main() {
     },
   });
   const org1Coach2 = await prisma.user.upsert({
-    where: { email: "coach.james@sunrise-gymnastics.com" },
+    where: { email: "coach.james@sunrise-skating.com" },
     update: {},
     create: {
-      email: "coach.james@sunrise-gymnastics.com",
+      email: "coach.james@sunrise-skating.com",
       name: "James Chen",
       passwordHash: null,
       role: "COACH",
@@ -1726,10 +1727,10 @@ async function main() {
     },
   });
   const org1Accountant = await prisma.user.upsert({
-    where: { email: "finance@sunrise-gymnastics.com" },
+    where: { email: "finance@sunrise-skating.com" },
     update: {},
     create: {
-      email: "finance@sunrise-gymnastics.com",
+      email: "finance@sunrise-skating.com",
       name: "Robert Kim",
       passwordHash: null,
       role: "ACCOUNTANT",
@@ -1737,10 +1738,10 @@ async function main() {
     },
   });
   const org1Coach3 = await prisma.user.upsert({
-    where: { email: "coach.ava@sunrise-gymnastics.com" },
+    where: { email: "coach.ava@sunrise-skating.com" },
     update: {},
     create: {
-      email: "coach.ava@sunrise-gymnastics.com",
+      email: "coach.ava@sunrise-skating.com",
       name: "Ava Patel",
       passwordHash: null,
       role: "COACH",
@@ -1781,7 +1782,7 @@ async function main() {
     },
   });
 
-  // Demo Gym and Uplifter users (from original seed.ts)
+  // Demo Skating and Uplifter users (from original seed.ts)
   const andrewUser = await prisma.user.upsert({
     where: { email: "andrewkarzel@uplifterinc.com" },
     update: { isSuperAdmin: true },
@@ -1946,7 +1947,7 @@ async function main() {
       status: "ACTIVE",
     },
   });
-  // Demo Gym and Uplifter memberships
+  // Demo Skating and Uplifter memberships
   const uplifterAndrewMember = await prisma.organizationMember.upsert({
     where: { organizationId_userId: { organizationId: orgUplifter.id, userId: andrewUser.id } },
     update: { role: "ADMIN", status: "ACTIVE" },
@@ -2089,7 +2090,7 @@ async function main() {
     { memberId: org1AccountantMember.id, permission: "invoices.create" },
     { memberId: org2VolunteerMember.id, permission: "dashboard.view" },
     { memberId: org2VolunteerMember.id, permission: "events.view" },
-    // Demo Gym and Uplifter permissions
+    // Demo Skating and Uplifter permissions
     { memberId: uplifterAndrewMember.id, permission: "*" },
     { memberId: demoAndrewMember.id, permission: "*" },
     { memberId: uplifterDrewMember.id, permission: "*" },
@@ -2131,18 +2132,18 @@ async function main() {
       id: `${ORG1_ID}-facility-main`,
       organizationId: ORG1_ID,
       name: "Sunrise Main Gym",
-      street: "123 Gymnastics Way",
+      street: "123 Ice Rink Way",
       city: "Sunnyvale",
       stateProvince: "CA",
       postalCode: "94086",
       country: "USA",
       phone: "(555) 100-1000",
-      email: "info@sunrise-gymnastics.com",
+      email: "info@sunrise-skating.com",
       status: "ACTIVE",
       isDefault: true,
       squareFootage: 15000,
       maxCapacity: 200,
-      description: "Our main training facility with full apparatus setup",
+      description: "Our main training rink with full ice surface and off-ice training area",
     },
   });
   const org1Facility2 = await prisma.facility.upsert({
@@ -2158,7 +2159,7 @@ async function main() {
       postalCode: "94040",
       country: "USA",
       phone: "(555) 100-2000",
-      email: "satellite@sunrise-gymnastics.com",
+      email: "satellite@sunrise-skating.com",
       status: "ACTIVE",
       isDefault: false,
       squareFootage: 5000,
@@ -3328,7 +3329,7 @@ async function main() {
   // ============================================
   console.log("\n🏅 Creating levels...");
   const levelData = [
-    // Org1 Levels (Gymnastics)
+    // Org1 Levels (Figure Skating)
     {
       id: `${ORG1_ID}-level-preschool`,
       organizationId: ORG1_ID,
@@ -3427,7 +3428,7 @@ async function main() {
       update: {},
       create: {
         id: `${ORG1_ID}-cat-recreational`,
-        name: "Recreational Gymnastics",
+        name: "Learn to Skate",
         description: "Fun, fitness-focused programs for all ages and skill levels",
         organizationId: ORG1_ID,
       },
@@ -3516,7 +3517,7 @@ async function main() {
       create: {
         id: `${ORG1_ID}-prog-rec-bronze`,
         name: "Recreational Bronze",
-        description: "Introduction to gymnastics for beginners ages 5-7",
+        description: "Introduction to figure skating for beginners ages 5-7",
         status: "ACTIVE",
         registrationStatus: "OPEN",
         organizationId: ORG1_ID,
@@ -3602,7 +3603,7 @@ async function main() {
       create: {
         id: `${ORG1_ID}-prog-jo`,
         name: "Junior Olympics Team",
-        description: "Competitive gymnastics program - Levels 4-10",
+        description: "Competitive figure skating program - Pre-Juvenile through Senior",
         status: "ACTIVE",
         registrationStatus: "OPEN",
         organizationId: ORG1_ID,
@@ -3635,7 +3636,7 @@ async function main() {
       create: {
         id: `${ORG1_ID}-prog-preschool`,
         name: "Tiny Tumblers",
-        description: "Parent-child gymnastics for ages 2-4",
+        description: "Parent-child Snowplow Sam classes for ages 2-4",
         status: "ACTIVE",
         registrationStatus: "OPEN",
         organizationId: ORG1_ID,
@@ -5325,278 +5326,278 @@ async function main() {
   // ============================================
   console.log("\n🎯 Creating skills...");
 
-  // Org1 - Gymnastics skills organized by apparatus and difficulty
+  // Org1 - Figure skating skills organized by category and difficulty
   const org1SkillsData = [
-    // Floor - Beginner (ages 4-7)
+    // Edges - Beginner (ages 4-8)
     {
       id: `${ORG1_ID}-skill-1`,
-      name: "Forward Roll",
-      category: "Floor",
+      name: "Forward Swizzles",
+      category: "Edges",
       minAge: 4,
       maxAge: 8,
       description:
-        "Start standing, tuck chin to chest, push off feet, roll smoothly onto back, and stand up. Key points: tight tuck, hands push floor, smooth momentum.",
+        "Two-foot forward swizzles in a continuous pattern. Key points: knees bend, push out and in with both feet, blades stay on the ice.",
     },
     {
       id: `${ORG1_ID}-skill-2`,
-      name: "Backward Roll",
-      category: "Floor",
+      name: "Backward Swizzles",
+      category: "Edges",
       minAge: 4,
       maxAge: 8,
       description:
-        "From standing, squat down, roll backward keeping chin tucked, push through hands by ears, stand up. Key points: hands by ears, push hard to clear head.",
+        "Two-foot backward swizzles maintaining momentum. Key points: weight over balls of feet, push out and in evenly, look over shoulder.",
     },
     {
       id: `${ORG1_ID}-skill-3`,
-      name: "Cartwheel",
-      category: "Floor",
+      name: "One-Foot Glide",
+      category: "Edges",
       minAge: 5,
       maxAge: 10,
       description:
-        "Hand-hand-foot-foot pattern with straight legs passing through handstand position. Key points: straight legs, T-position arms, look at hands.",
+        "Glide on one foot in a straight line, free leg extended. Key points: bent skating knee, hips square, free leg pointed.",
     },
     {
       id: `${ORG1_ID}-skill-4`,
-      name: "Handstand",
-      category: "Floor",
+      name: "Snowplow Stop",
+      category: "Edges",
       minAge: 5,
       maxAge: 10,
       description:
-        "Kick up to inverted position with body in straight line from wrists to toes. Key points: tight core, shoulder shrug, look at hands.",
+        "Controlled stop by pushing both feet outward into a snowplow shape. Key points: bent knees, blades scrape, shoulders square.",
     },
     {
       id: `${ORG1_ID}-skill-5`,
-      name: "Bridge",
-      category: "Floor",
+      name: "Forward Stroking",
+      category: "Edges",
       minAge: 4,
       maxAge: 8,
       description:
-        "Arched position with hands and feet on floor, stomach facing ceiling. Key points: push shoulders over hands, straight arms.",
+        "Continuous forward stroking with full extension on each push. Key points: full knee bend, pointed free leg, alternating arms.",
     },
 
-    // Floor - Intermediate (ages 6-10)
+    // Footwork - Intermediate (ages 6-12)
     {
       id: `${ORG1_ID}-skill-6`,
-      name: "Round-off",
-      category: "Floor",
+      name: "Forward Crossovers",
+      category: "Footwork",
       minAge: 6,
       maxAge: 12,
       description:
-        "Running entry, cartwheel with 1/4 turn to land with both feet together facing start direction. Key points: fast snap-down, arms by ears.",
+        "Forward crossovers in a circle, alternating left and right. Key points: cross over (not behind), bent knees, edges throughout.",
     },
     {
       id: `${ORG1_ID}-skill-7`,
-      name: "Back Walkover",
-      category: "Floor",
+      name: "Backward Stroking",
+      category: "Footwork",
       minAge: 6,
       maxAge: 12,
       description:
-        "Standing back arch through bridge, split legs, and stand up one leg at a time. Key points: controlled arch back, split legs.",
+        "Continuous backward stroking with control. Key points: weight over balls of feet, push from inside edge, look over shoulder.",
     },
     {
       id: `${ORG1_ID}-skill-8`,
-      name: "Front Walkover",
-      category: "Floor",
+      name: "Backward Crossovers",
+      category: "Footwork",
       minAge: 6,
       maxAge: 12,
       description:
-        "Standing forward through handstand with split legs, arch over to standing. Key points: strong lunge, split in handstand.",
+        "Backward crossovers in a circle. Key points: cross over in front, bent knees, controlled edges, eyes on direction of travel.",
     },
 
-    // Floor - Advanced (ages 8+)
+    // Jumps - Advanced (ages 8+)
     {
       id: `${ORG1_ID}-skill-9`,
-      name: "Back Handspring",
-      category: "Floor",
+      name: "Waltz Jump",
+      category: "Jumps",
       minAge: 8,
       maxAge: 18,
       description:
-        "Jump backward through handstand, snap down to feet. Key points: sit back, big arm swing, tight arch.",
+        "Half-rotation jump from a forward outside edge to a backward outside edge. Key points: knee bend on takeoff, free leg swing through, check on landing.",
     },
     {
       id: `${ORG1_ID}-skill-10`,
-      name: "Front Handspring",
-      category: "Floor",
+      name: "Salchow Jump",
+      category: "Jumps",
       minAge: 8,
       maxAge: 18,
       description:
-        "Running hurdle to handstand with powerful push through shoulders, snap down to feet. Key points: block through shoulders, tight body.",
+        "Single-rotation edge jump taking off from a back inside edge. Key points: deep bent knee, free leg swing, tight rotation, clean back outside edge landing.",
     },
 
-    // Vault - Beginner
+    // Jumps - Beginner
     {
       id: `${ORG1_ID}-skill-11`,
-      name: "Squat On",
-      category: "Vault",
+      name: "Bunny Hop",
+      category: "Jumps",
       minAge: 5,
       maxAge: 10,
       description:
-        "Run to springboard, jump to squat position on vault, stand, and jump off. Key points: strong punch off board, knees to chest.",
+        "Small forward jump from one foot to the other with a toe assist. Key points: bent knees, free leg kicks through, toe tap on landing.",
     },
     {
       id: `${ORG1_ID}-skill-12`,
-      name: "Straddle Over",
-      category: "Vault",
+      name: "Mazurka",
+      category: "Jumps",
       minAge: 6,
       maxAge: 12,
       description:
-        "Run, punch off board, place hands on vault and straddle legs over, land on feet. Key points: straight arms, push through shoulders.",
+        "Half-rotation toe-assisted jump in a crossed-leg position in the air. Key points: cross legs in air, point free toe, controlled landing.",
     },
 
-    // Vault - Intermediate/Advanced
+    // Jumps - Intermediate/Advanced
     {
       id: `${ORG1_ID}-skill-13`,
-      name: "Handspring Vault",
-      category: "Vault",
+      name: "Toe Loop",
+      category: "Jumps",
       minAge: 8,
       maxAge: 18,
       description:
-        "Run, punch off board, front handspring over vault table. Key points: block through shoulders, tight body, stick landing.",
+        "Single-rotation toe jump taking off from a back outside edge with a toe pick assist. Key points: strong toe pick, tight rotation, clean back outside edge landing.",
     },
 
-    // Bars - Beginner
+    // Spirals - Beginner
     {
       id: `${ORG1_ID}-skill-14`,
-      name: "Pullover",
-      category: "Bars",
+      name: "Forward Spiral",
+      category: "Spirals",
       minAge: 5,
       maxAge: 10,
       description:
-        "From hang, pull body up and over bar to front support. Key points: pull close to bar, chin tucked, hips to bar.",
+        "Glide on one foot with the free leg extended behind at or above hip level. Key points: pointed free toe, lifted back, square hips.",
     },
     {
       id: `${ORG1_ID}-skill-15`,
-      name: "Back Hip Circle",
-      category: "Bars",
+      name: "Backward Spiral",
+      category: "Spirals",
       minAge: 5,
       maxAge: 10,
       description:
-        "From front support, fall backward around bar keeping hips close. Key points: hollow body, hips stay on bar.",
+        "Glide backward on one foot with the free leg extended behind. Key points: weight on ball of foot, lifted back, controlled edge.",
     },
     {
       id: `${ORG1_ID}-skill-16`,
-      name: "Glide Swing",
-      category: "Bars",
+      name: "Lunge",
+      category: "Spirals",
       minAge: 5,
       maxAge: 10,
       description:
-        "From hang, extend body forward then pull legs in to swing under bar. Key points: extend legs forward, pike at end.",
+        "Deep lunge glide on one foot with free leg extended back along the ice. Key points: deep skating knee bend, straight free leg, arms extended.",
     },
 
-    // Bars - Intermediate
+    // Spirals - Intermediate
     {
       id: `${ORG1_ID}-skill-17`,
-      name: "Cast",
-      category: "Bars",
+      name: "Spread Eagle",
+      category: "Spirals",
       minAge: 6,
       maxAge: 14,
       description:
-        "From front support, push hips away from bar while maintaining hollow shape. Key points: push through shoulders, tight hollow body.",
+        "Glide on two feet pointing in opposite directions, hips and shoulders open. Key points: open hips, straight legs, even weight on both feet.",
     },
     {
       id: `${ORG1_ID}-skill-18`,
-      name: "Kip",
-      category: "Bars",
+      name: "Loop Jump",
+      category: "Jumps",
       minAge: 8,
       maxAge: 18,
       description:
-        "From glide, bring toes to bar, then slide legs down bar while pulling to front support. Key points: toes to bar, aggressive pull.",
+        "Single-rotation edge jump taking off and landing on the same back outside edge. Key points: crossed legs on takeoff, tight rotation, clean landing edge.",
     },
 
-    // Beam - Beginner
+    // Spins - Beginner
     {
       id: `${ORG1_ID}-skill-19`,
-      name: "Beam Walk",
-      category: "Beam",
+      name: "Two-Foot Spin",
+      category: "Spins",
       minAge: 4,
       maxAge: 8,
       description:
-        "Walk forward on beam with good posture, arms out for balance. Key points: eyes up, small steps, pointed toes.",
+        "Centered two-foot spin with multiple rotations. Key points: bent knees, weight over balls of feet, arms in tight on rotation.",
     },
     {
       id: `${ORG1_ID}-skill-20`,
-      name: "Dip Walk",
-      category: "Beam",
+      name: "One-Foot Spin",
+      category: "Spins",
       minAge: 4,
       maxAge: 8,
       description:
-        "Walk with a plie (dip) on each step. Key points: deep plie, straight supporting leg, pointed toe.",
+        "Centered upright spin on one foot. Key points: tight free leg crossed, arms in, weight over ball of foot.",
     },
     {
       id: `${ORG1_ID}-skill-21`,
-      name: "Relevé Turns",
-      category: "Beam",
+      name: "Three Turn",
+      category: "Footwork",
       minAge: 5,
       maxAge: 10,
       description:
-        "Turn on balls of feet (relevé) with controlled rotation. Key points: high relevé, spot head, arms help balance.",
+        "One-foot turn from forward outside edge to backward inside edge that traces a '3' on the ice. Key points: shoulder check, controlled edge, no scratch.",
     },
     {
       id: `${ORG1_ID}-skill-22`,
-      name: "Scale",
-      category: "Beam",
+      name: "Sit Spin",
+      category: "Spins",
       minAge: 5,
       maxAge: 10,
       description:
-        "Stand on one leg, other leg extended behind, torso parallel to beam. Key points: straight legs, square hips, arms extended.",
+        "Spin in a low sitting position with thigh parallel to the ice. Key points: deep knee bend, free leg extended forward, back straight.",
     },
 
-    // Beam - Intermediate
+    // Spins - Intermediate
     {
       id: `${ORG1_ID}-skill-23`,
-      name: "Cartwheel on Beam",
-      category: "Beam",
+      name: "Camel Spin",
+      category: "Spins",
       minAge: 7,
       maxAge: 14,
       description:
-        "Cartwheel performed on the balance beam with control. Key points: stay in line, control speed, look at hands.",
+        "Spin in spiral position — skating leg straight, free leg extended back at hip level. Key points: parallel back and free leg, square hips, strong core.",
     },
     {
       id: `${ORG1_ID}-skill-24`,
-      name: "Handstand on Beam",
-      category: "Beam",
+      name: "Layback Spin",
+      category: "Spins",
       minAge: 7,
       maxAge: 14,
       description:
-        "Controlled handstand on beam with proper alignment. Key points: controlled kick, tight body, balance through shoulders.",
+        "Upright spin with the head and shoulders dropped back, free leg behind. Key points: controlled drop, arched back, free leg lifted, smooth entry.",
     },
 
-    // General/Conditioning - Beginner
+    // Conditioning - General
     {
       id: `${ORG1_ID}-skill-25`,
-      name: "Straddle Stretch",
-      category: "General",
+      name: "Forward Edges",
+      category: "Conditioning",
       minAge: 4,
       maxAge: 18,
       description:
-        "Seated straddle position with chest reaching toward floor. Key points: straight legs, pointed toes, flat back.",
+        "Forward outside and inside edges traced down the rink. Key points: deep edges, controlled lean, free leg pointed.",
     },
     {
       id: `${ORG1_ID}-skill-26`,
-      name: "Pike Stretch",
-      category: "General",
+      name: "Backward Edges",
+      category: "Conditioning",
       minAge: 4,
       maxAge: 18,
       description:
-        "Seated pike position reaching for toes. Key points: straight legs, flexed feet, nose to knees.",
+        "Backward outside and inside edges down the rink. Key points: weight over ball of foot, controlled lean, look over shoulder.",
     },
     {
       id: `${ORG1_ID}-skill-27`,
-      name: "Hollow Body Hold",
-      category: "General",
+      name: "Off-Ice Core Conditioning",
+      category: "Conditioning",
       minAge: 5,
       maxAge: 18,
       description:
-        "Lying on back with arms overhead, lift shoulders and legs off ground maintaining curved spine. Key points: lower back pressed to floor, tight core.",
+        "Plank, hollow holds, and rotational core work that supports jump rotation and spin position. Key points: tight core, neutral spine, controlled breathing.",
     },
     {
       id: `${ORG1_ID}-skill-28`,
-      name: "Arch Body Hold",
-      category: "General",
+      name: "Off-Ice Flexibility",
+      category: "Conditioning",
       minAge: 5,
       maxAge: 18,
       description:
-        "Lying face down, lift arms and legs off ground in arched position. Key points: squeeze glutes, lift chest, arms by ears.",
+        "Hip openers, splits, and back flexibility work that supports spirals, spins, and Biellmann positions. Key points: warm up first, hold each stretch with control.",
     },
   ];
 
@@ -5682,12 +5683,12 @@ async function main() {
   console.log("\n📋 Creating evaluation templates...");
 
   const evaluationTemplatesData = [
-    // Org1 - Gymnastics evaluation templates
+    // Org1 - Figure skating evaluation templates
     {
       id: `${ORG1_ID}-template-preschool`,
       name: "Preschool Basics",
       description:
-        "Fundamental skills assessment for preschool-aged gymnasts (ages 4-5). Focus on body awareness, basic movements, and fun!",
+        "Fundamental skills assessment for preschool-aged skaters (ages 4-5). Focus on ice familiarity, basic movement, and fun!",
       levelId: `${ORG1_ID}-level-bronze`,
       minAge: 4,
       maxAge: 5,
@@ -5714,7 +5715,7 @@ async function main() {
       id: `${ORG1_ID}-template-rec-level1`,
       name: "Recreational Level 1",
       description:
-        "Entry-level recreational assessment covering basic skills across all apparatus (ages 5-7).",
+        "Entry-level recreational assessment covering edges, footwork, and basic spins (ages 5-7).",
       levelId: `${ORG1_ID}-level-bronze`,
       minAge: 5,
       maxAge: 7,
@@ -5801,9 +5802,9 @@ async function main() {
     },
     {
       id: `${ORG1_ID}-template-jo-level3`,
-      name: "JO Level 3 Readiness",
+      name: "Pre-Juvenile Readiness",
       description:
-        "Assessment for USAG Junior Olympics Level 3 readiness (ages 8-12). Advanced beginner skills required.",
+        "Assessment for U.S. Figure Skating Pre-Juvenile competition readiness (ages 8-12). Advanced beginner skills required.",
       levelId: `${ORG1_ID}-level-gold`,
       minAge: 8,
       maxAge: 12,
@@ -5965,7 +5966,7 @@ async function main() {
       id: `${ORG1_ID}-achievement-rec-level1`,
       templateId: `${ORG1_ID}-template-rec-level1`,
       name: "Rec Level 1 Champion",
-      description: "Mastered all foundational gymnastics skills in Recreational Level 1.",
+      description: "Mastered all foundational skating skills in Recreational Level 1.",
       badgeImageUrl: null,
       organizationId: ORG1_ID,
     },
@@ -5973,7 +5974,7 @@ async function main() {
       id: `${ORG1_ID}-achievement-rec-level2`,
       templateId: `${ORG1_ID}-template-rec-level2`,
       name: "Rec Level 2 Star",
-      description: "Achieved excellence in intermediate recreational gymnastics skills.",
+      description: "Achieved excellence in intermediate recreational skating skills.",
       badgeImageUrl: null,
       organizationId: ORG1_ID,
     },
@@ -5989,8 +5990,9 @@ async function main() {
     {
       id: `${ORG1_ID}-achievement-jo-level3`,
       templateId: `${ORG1_ID}-template-jo-level3`,
-      name: "JO Level 3 Qualifier",
-      description: "Qualified for USAG Junior Olympics Level 3. An impressive achievement!",
+      name: "Pre-Juvenile Qualifier",
+      description:
+        "Qualified for U.S. Figure Skating Pre-Juvenile competition. An impressive achievement!",
       badgeImageUrl: null,
       organizationId: ORG1_ID,
     },
@@ -6056,7 +6058,7 @@ async function main() {
       isRequired: true,
       dueDate: null,
     },
-    // JO program uses Pre-Team and JO Level 3 templates
+    // Competitive program uses Pre-Team and Pre-Juvenile templates
     {
       id: `${ORG1_ID}-pet-jo-preteam`,
       programId: `${ORG1_ID}-prog-jo`,
@@ -6122,57 +6124,21 @@ async function main() {
   // LESSON PLANS
   // ============================================
   console.log("\n📖 Creating lesson plans...");
-  const lessonPlan1 = await prisma.lessonPlan.upsert({
+  await prisma.lessonPlan.upsert({
     where: { id: `${ORG1_ID}-lp-1` },
     update: {},
     create: {
       id: `${ORG1_ID}-lp-1`,
-      name: "Bronze Week 1 - Basics",
+      name: "Bronze Week 1 - Edge Fundamentals",
       programId: `${ORG1_ID}-prog-rec-bronze`,
       date: today,
       authorId: org1Coach1.id,
       status: "ACTIVE",
-      theme: "Introduction to Fundamentals",
+      theme: "Edge Development Week",
       organizationId: ORG1_ID,
     },
   });
-  const rotation1 = await prisma.rotation.upsert({
-    where: { id: `${ORG1_ID}-rot-1` },
-    update: {},
-    create: {
-      id: `${ORG1_ID}-rot-1`,
-      lessonPlanId: lessonPlan1.id,
-      name: "Warm-up",
-      description: "Dynamic stretching",
-      order: 1,
-      media: [],
-    },
-  });
-  const rotation2 = await prisma.rotation.upsert({
-    where: { id: `${ORG1_ID}-rot-2` },
-    update: {},
-    create: {
-      id: `${ORG1_ID}-rot-2`,
-      lessonPlanId: lessonPlan1.id,
-      name: "Floor Skills",
-      description: "Practice forward and backward rolls",
-      order: 2,
-      media: [],
-    },
-  });
-  await Promise.all([
-    prisma.rotationSkill.upsert({
-      where: { rotationId_skillId: { rotationId: rotation2.id, skillId: `${ORG1_ID}-skill-1` } },
-      update: {},
-      create: { rotationId: rotation2.id, skillId: `${ORG1_ID}-skill-1` },
-    }),
-    prisma.rotationSkill.upsert({
-      where: { rotationId_skillId: { rotationId: rotation2.id, skillId: `${ORG1_ID}-skill-2` } },
-      update: {},
-      create: { rotationId: rotation2.id, skillId: `${ORG1_ID}-skill-2` },
-    }),
-  ]);
-  console.log("  ✓ Created 1 lesson plan with rotations");
+  console.log("  ✓ Created 1 lesson plan");
 
   // ============================================
   // EVALUATIONS (Enhanced with templates and skill attempt statuses)
@@ -7142,11 +7108,11 @@ async function main() {
       update: { showTeam: true },
       create: {
         organizationId: ORG1_ID,
-        subdomain: "sunrise-gymnastics",
+        subdomain: "sunrise-skating",
         primaryColor: "#FF6B35",
         secondaryColor: "#004E89",
         heroHeadline: "Where Champions Begin",
-        heroSubheadline: "Building confidence through gymnastics",
+        heroSubheadline: "Building confidence through figure skating",
         heroAgeRange: "Ages 3-18",
         heroProgramPeriods: "Year-Round Programs",
         heroLocation: "Sunnyvale, CA",
@@ -7196,8 +7162,8 @@ async function main() {
         subdomain: "demo-gym",
         primaryColor: "#3B82F6",
         secondaryColor: "#10B981",
-        heroHeadline: "Welcome to Demo Gym",
-        heroSubheadline: "Your gymnastics journey starts here",
+        heroHeadline: "Welcome to Demo Skating",
+        heroSubheadline: "Your figure skating journey starts here",
         heroAgeRange: "All Ages Welcome",
         heroProgramPeriods: "Year-Round Programs",
         heroLocation: "Anytown, USA",
@@ -7240,10 +7206,10 @@ async function main() {
   console.log("  ✓ Created 4 website configurations");
 
   // ============================================
-  // TEAM MEMBER HIGHLIGHTS (Sunrise Gymnastics)
+  // TEAM MEMBER HIGHLIGHTS (Sunrise Skating)
   // ============================================
   // Seeded so the public team page has 5 visible staffers, exercising the 2-column desktop layout (USC-350).
-  console.log("\n🌟 Creating team member highlights for sunrise-gymnastics...");
+  console.log("\n🌟 Creating team member highlights for sunrise-skating...");
   const sunriseTeamHighlights: Array<{
     memberId: string;
     title: string;
@@ -7252,17 +7218,17 @@ async function main() {
     {
       memberId: org1AdminMember.id,
       title: "Club Director",
-      bio: "Jennifer leads Sunrise with 20+ years of gymnastics coaching and program design. She founded the club to build a home where kids of every level can find their fit and stay in love with the sport.",
+      bio: "Jennifer leads Sunrise with 20+ years of figure skating coaching and program design. She founded the club to build a home where kids of every level can find their fit and stay in love with the sport.",
     },
     {
       memberId: org1Coach1Member.id,
       title: "Head Coach, Competitive Team",
-      bio: "Maria guides our competitive athletes from first beam routine to state finals. A former collegiate gymnast, she brings a calm, technical eye and a relentless belief in steady, confident progress.",
+      bio: "Maria guides our competitive athletes from first program to regional finals. A former national-level competitor, she brings a calm, technical eye and a relentless belief in steady, confident progress.",
     },
     {
       memberId: org1Coach2Member.id,
       title: "Recreational Program Lead",
-      bio: "James runs our recreational program and parent-and-tot classes. He specializes in making the first day of gymnastics feel safe and fun — and in giving every family a clear path for what comes next.",
+      bio: "James runs our recreational program and parent-and-tot Snowplow Sam classes. He specializes in making the first day on the ice feel safe and fun — and in giving every family a clear path for what comes next.",
     },
     {
       memberId: org1Coach3Member.id,
@@ -7303,7 +7269,7 @@ async function main() {
       })
     )
   );
-  console.log(`  ✓ Created ${sunriseTeamHighlights.length} team highlights for sunrise-gymnastics`);
+  console.log(`  ✓ Created ${sunriseTeamHighlights.length} team highlights for sunrise-skating`);
 
   // ============================================
   // PRODUCTS (POS)
@@ -7351,8 +7317,8 @@ async function main() {
       create: {
         id: `${ORG1_ID}-prod-3`,
         organizationId: ORG1_ID,
-        name: "Gymnastics Grips",
-        sku: "GRIP-001",
+        name: "Skate Guards",
+        sku: "GUARD-001",
         category: "Equipment",
         price: 65.0,
         maxInventory: 30,
@@ -7667,7 +7633,7 @@ async function main() {
   // ============================================
   console.log("\n📷 Creating media...");
   const mediaData = [
-    // Sunrise Gymnastics - Coach uploaded media
+    // Sunrise Skating - Coach uploaded media
     {
       id: `${ORG1_ID}-media-1`,
       url: "/defaults/hero-default.ico",
@@ -7824,8 +7790,8 @@ async function main() {
     {
       id: `${ORG1_ID}-cert-usag`,
       orgId: ORG1_ID,
-      name: "USAG Safety Certification",
-      criteria: "Complete USAG Safety & Risk Management course",
+      name: "PSA Coach Certification",
+      criteria: "Complete Professional Skaters Association coach certification course",
       renewalPeriodMonths: 12,
     },
     {
@@ -7892,7 +7858,7 @@ async function main() {
   console.log(`  ✓ Created ${certDefs.length} certification definitions`);
 
   const memberCerts = [
-    // Org1 staff-1 (Head Coach): USAG, CPR, SafeSport
+    // Org1 staff-1 (Head Coach): PSA, CPR, SafeSport
     {
       certId: `${ORG1_ID}-cert-usag`,
       memberId: `${ORG1_ID}-staff-1`,
@@ -7911,7 +7877,7 @@ async function main() {
       grantedAt: daysAgo(90),
       expiresAt: daysFromNow(730),
     },
-    // Org1 staff-2 (JO Team Coach): USAG, SafeSport
+    // Org1 staff-2 (Competitive Team Coach): PSA, SafeSport
     {
       certId: `${ORG1_ID}-cert-usag`,
       memberId: `${ORG1_ID}-staff-2`,
@@ -8749,7 +8715,7 @@ async function main() {
   // Custom Medical Questions
   console.log("📝 Creating custom medical questions...");
   await Promise.all([
-    // Sunrise Gymnastics custom questions
+    // Sunrise Skating custom questions
     prisma.customMedicalQuestion.upsert({
       where: { id: `${ORG1_ID}-mq-1` },
       update: {},
@@ -8769,7 +8735,7 @@ async function main() {
       create: {
         id: `${ORG1_ID}-mq-2`,
         organizationId: ORG1_ID,
-        questionText: "What is your child's experience level with gymnastics?",
+        questionText: "What is your child's experience level with figure skating?",
         questionType: "MULTIPLE_CHOICE",
         options: [
           "Beginner - No experience",
@@ -8816,7 +8782,7 @@ async function main() {
         organizationId: ORG2_ID,
         questionText: "Which sports has your child participated in previously?",
         questionType: "CHECKBOX",
-        options: ["Soccer", "Basketball", "Swimming", "Gymnastics", "Track & Field", "None"],
+        options: ["Soccer", "Basketball", "Swimming", "Figure Skating", "Track & Field", "None"],
         required: false,
         displayOrder: 2,
         isActive: true,
@@ -9162,13 +9128,13 @@ async function main() {
     },
   });
 
-  // Sample email campaigns for Sunrise Gymnastics
+  // Sample email campaigns for Sunrise Skating
   const sunriseCampaigns = [
     {
       id: "seed-email-campaign-1",
       organizationId: ORG1_ID,
       name: "January Newsletter",
-      subject: "Happy New Year from Sunrise Gymnastics! 🎉",
+      subject: "Happy New Year from Sunrise Skating! 🎉",
       htmlBody: `<h2>Happy New Year, Sunrise Family!</h2>
 <p>We hope you had a wonderful holiday season. As we kick off 2026, we're excited to share what's coming up:</p>
 <ul>
@@ -9178,7 +9144,7 @@ async function main() {
 </ul>
 <p>Don't forget to register early - spots fill up fast!</p>
 <p>See you at the gym!</p>`,
-      textBody: "Happy New Year from Sunrise Gymnastics! Winter session begins January 13th.",
+      textBody: "Happy New Year from Sunrise Skating! Winter session begins January 13th.",
       classification: "NEWSLETTER" as const,
       status: "COMPLETED" as const,
       totalRecipients: 89,
@@ -9262,14 +9228,14 @@ async function main() {
       name: "Membership Renewal",
       subject: "Your Annual Membership is Expiring Soon",
       htmlBody: `<h2>Membership Renewal Reminder</h2>
-<p>Your annual membership at Sunrise Gymnastics is expiring soon.</p>
+<p>Your annual membership at Sunrise Skating is expiring soon.</p>
 <p>Renew before the end of the month to:</p>
 <ul>
 <li>Lock in current rates</li>
 <li>Get priority class registration</li>
 <li>Receive 10% off summer camps</li>
 </ul>
-<p>Thank you for being part of our gymnastics family!</p>`,
+<p>Thank you for being part of our skating family!</p>`,
       textBody:
         "Your annual membership is expiring soon. Renew before the end of the month to lock in current rates.",
       classification: "MEMBERSHIP" as const,
@@ -9294,7 +9260,7 @@ async function main() {
       create: campaign,
     });
   }
-  console.log(`  ✓ Created ${sunriseCampaigns.length} email campaigns for Sunrise Gymnastics`);
+  console.log(`  ✓ Created ${sunriseCampaigns.length} email campaigns for Sunrise Skating`);
 
   // Sample email campaigns for Metro Sports
   const metroCampaigns = [
@@ -9434,7 +9400,7 @@ async function main() {
     return rule;
   };
 
-  // System notification rules for Sunrise Gymnastics
+  // System notification rules for Sunrise Skating
   const sunriseNotificationRules = [
     {
       id: `${ORG1_ID}-notif-payment-reminder`,
@@ -9519,7 +9485,7 @@ To ensure uninterrupted participation in classes and events, please renew the me
 
 If you have any questions, please contact us at {{organizationEmail}}.
 
-Thank you for being part of the Sunrise Gymnastics family!
+Thank you for being part of the Sunrise Skating family!
 {{organizationName}}`,
       smsBody: `{{organizationName}}: {{athleteName}}'s {{membershipName}} expires {{membershipEndDate}}. Please renew to continue participation.`,
       recipientType: "MEMBERSHIP_HOLDERS",
@@ -9598,12 +9564,12 @@ See you at the gym!
 
 Happy Birthday to {{athleteName}}! 🎉
 
-Everyone at Sunrise Gymnastics wishes {{athleteFirstName}} a wonderful birthday filled with flips, tumbles, and lots of fun!
+Everyone at Sunrise Skating wishes {{athleteFirstName}} a wonderful birthday filled with flips, tumbles, and lots of fun!
 
 As a special birthday treat, {{athleteFirstName}} will receive a small gift at their next class.
 
 Best wishes,
-The Sunrise Gymnastics Team
+The Sunrise Skating Team
 {{organizationName}}`,
       smsBody: `🎂 Happy Birthday, {{athleteFirstName}}! From your friends at {{organizationName}}!`,
       recipientType: "GUARDIANS",
@@ -9614,7 +9580,7 @@ The Sunrise Gymnastics Team
     await createNotificationRule(rule);
   }
   console.log(
-    `  ✓ Created ${sunriseNotificationRules.length} notification rules for Sunrise Gymnastics`
+    `  ✓ Created ${sunriseNotificationRules.length} notification rules for Sunrise Skating`
   );
 
   // System notification rules for Metro Sports
@@ -9794,7 +9760,7 @@ See you at Metro Sports!
   // ============================================
   console.log("\n📝 Creating waivers...");
 
-  // Sunrise Gymnastics Academy - General Liability Waiver (2 pages)
+  // Sunrise Skating Club - General Liability Waiver (2 pages)
   await prisma.waiver.upsert({
     where: { id: `${ORG1_ID}-waiver-liability` },
     update: {},
@@ -9817,11 +9783,11 @@ See you at Metro Sports!
       content: `<h2>Assumption of Risk & Release of Liability</h2>
 <p>I, the undersigned participant (or parent/guardian of a minor participant), acknowledge and agree to the following:</p>
 <h3>1. Assumption of Risk</h3>
-<p>I understand that participation in gymnastics and related activities involves inherent risks of physical injury, including but not limited to sprains, fractures, concussions, paralysis, and in rare cases, death. I voluntarily assume all risks associated with participation in programs offered by Sunrise Gymnastics Academy.</p>
+<p>I understand that participation in figure skating and related activities involves inherent risks of physical injury, including but not limited to sprains, fractures, concussions, paralysis, and in rare cases, death. I voluntarily assume all risks associated with participation in programs offered by Sunrise Skating Club.</p>
 <h3>2. Release of Liability</h3>
-<p>In consideration of being permitted to participate in programs, I hereby release, waive, and discharge Sunrise Gymnastics Academy, its owners, officers, employees, coaches, volunteers, and agents from any and all liability, claims, demands, actions, or causes of action arising out of or related to any loss, damage, or injury that may be sustained during participation.</p>
+<p>In consideration of being permitted to participate in programs, I hereby release, waive, and discharge Sunrise Skating Club, its owners, officers, employees, coaches, volunteers, and agents from any and all liability, claims, demands, actions, or causes of action arising out of or related to any loss, damage, or injury that may be sustained during participation.</p>
 <h3>3. Indemnification</h3>
-<p>I agree to indemnify and hold harmless Sunrise Gymnastics Academy from any loss, liability, damage, or cost it may incur due to my (or my child's) participation in programs, whether caused by negligence or otherwise.</p>
+<p>I agree to indemnify and hold harmless Sunrise Skating Club from any loss, liability, damage, or cost it may incur due to my (or my child's) participation in programs, whether caused by negligence or otherwise.</p>
 <p><strong>I have read this Assumption of Risk & Release of Liability, fully understand its terms, and sign it freely and voluntarily.</strong></p>`,
     },
   });
@@ -9836,8 +9802,8 @@ See you at Metro Sports!
       title: "Medical Authorization & Emergency Contact",
       content: `<h2>Medical Authorization & Emergency Contact Consent</h2>
 <h3>4. Medical Authorization</h3>
-<p>In the event of an emergency, I authorize Sunrise Gymnastics Academy staff to seek and obtain emergency medical treatment for the participant. I understand that I will be responsible for the cost of any such treatment.</p>
-<p>I certify that the participant is in good physical health and has no conditions that would prevent safe participation in gymnastics activities, unless otherwise disclosed in writing to the Academy.</p>
+<p>In the event of an emergency, I authorize Sunrise Skating Club staff to seek and obtain emergency medical treatment for the participant. I understand that I will be responsible for the cost of any such treatment.</p>
+<p>I certify that the participant is in good physical health and has no conditions that would prevent safe participation in figure skating activities, unless otherwise disclosed in writing to the Club.</p>
 <h3>5. Emergency Contact Consent</h3>
 <p>I consent to being contacted at the phone number and email address provided on my registration form in case of emergency. I understand that the Academy will make reasonable efforts to contact me before seeking emergency medical treatment.</p>
 <h3>6. Photo/Video for Safety Documentation</h3>
@@ -9846,7 +9812,7 @@ See you at Metro Sports!
     },
   });
 
-  // Sunrise Gymnastics Academy - Photo & Video Release (1 page)
+  // Sunrise Skating Club - Photo & Video Release (1 page)
   await prisma.waiver.upsert({
     where: { id: `${ORG1_ID}-waiver-photo` },
     update: {},
@@ -9867,7 +9833,7 @@ See you at Metro Sports!
       pageNumber: 1,
       title: "Photo & Video Consent",
       content: `<h2>Photo & Video Release Consent</h2>
-<p>I, the undersigned (or parent/guardian of a minor participant), hereby grant Sunrise Gymnastics Academy permission to:</p>
+<p>I, the undersigned (or parent/guardian of a minor participant), hereby grant Sunrise Skating Club permission to:</p>
 <ul>
 <li>Take photographs and/or video recordings of the participant during programs, events, competitions, and activities.</li>
 <li>Use such photographs and recordings for promotional purposes including but not limited to the Academy's website, social media channels, printed marketing materials, newsletters, and press releases.</li>
@@ -9878,7 +9844,7 @@ See you at Metro Sports!
 <li>No compensation will be provided for the use of these images or recordings.</li>
 <li>The Academy will not use images in a manner that is harmful or defamatory.</li>
 <li>I may revoke this consent at any time by providing written notice to the Academy, though images already published may not be retrievable.</li>
-<li>This release is valid for the duration of the participant's enrollment at Sunrise Gymnastics Academy.</li>
+<li>This release is valid for the duration of the participant's enrollment at Sunrise Skating Club.</li>
 </ul>
 <p><strong>I have read this Photo & Video Release, fully understand its terms, and sign it freely and voluntarily.</strong></p>`,
     },
@@ -9986,15 +9952,15 @@ See you at Metro Sports!
   });
 
   console.log("  ✓ Created 3 waivers (2 Sunrise, 1 Metro) with pages");
-  console.log("  ✓ Attached waiver requirements to Bronze Gymnastics and Youth Soccer");
+  console.log("  ✓ Attached waiver requirements to Bronze Learn to Skate and Youth Soccer");
 
   // ============================================
   // COMPETITIONS (Full examples with entries and results)
   // ============================================
   console.log("\n🏆 Creating competitions...");
 
-  // --- Sunrise Gymnastics: Spring Invitational (REGISTRATION_OPEN) ---
-  const gymCompetition = await prisma.competition.upsert({
+  // --- Sunrise Skating: Spring Invitational (REGISTRATION_OPEN) ---
+  const skatingCompetition = await prisma.competition.upsert({
     where: { id: `${ORG1_ID}-comp-spring-inv` },
     update: {},
     create: {
@@ -10002,14 +9968,14 @@ See you at Metro Sports!
       organizationId: ORG1_ID,
       name: "Spring Invitational 2026",
       color: "#d946ef",
-      competitionType: "GYMNASTICS",
+      competitionType: "FIGURE_SKATING",
       categoryId: `${ORG1_ID}-cat-competitive`,
       status: "REGISTRATION_OPEN",
       facilityId: `${ORG1_ID}-facility-main`,
       country: "US",
       stateProvince: "CA",
       city: "San Mateo",
-      streetAddress: "100 Gymnastics Way",
+      streetAddress: "100 Ice Rink Way",
       startDate: daysFromNow(45),
       endDate: daysFromNow(46),
       startTime: "08:00",
@@ -10024,12 +9990,12 @@ See you at Metro Sports!
     },
   });
 
-  // Competition categories for gym: Floor (U10), Vault (U10), Bars (U12)
-  const gymCompCats = [
+  // Competition categories for skating: Free Skate (U10), Moves (U10), Short Program (U12)
+  const skatingCompCats = [
     {
-      id: `${ORG1_ID}-compcat-floor-u10`,
-      competitionId: gymCompetition.id,
-      combinationEntryId: "combo-gym-cav-gym-u10-cav-gym-floor",
+      id: `${ORG1_ID}-compcat-free-skate-u10`,
+      competitionId: skatingCompetition.id,
+      combinationEntryId: "combo-skate-cav-skate-u10-cav-skate-free-skate",
       resultType: "SCORE" as const,
       sortDirection: "DESC" as const,
       precision: 3,
@@ -10039,9 +10005,9 @@ See you at Metro Sports!
       displayOrder: 0,
     },
     {
-      id: `${ORG1_ID}-compcat-vault-u10`,
-      competitionId: gymCompetition.id,
-      combinationEntryId: "combo-gym-cav-gym-u10-cav-gym-vault",
+      id: `${ORG1_ID}-compcat-moves-u10`,
+      competitionId: skatingCompetition.id,
+      combinationEntryId: "combo-skate-cav-skate-u10-cav-skate-moves",
       resultType: "SCORE" as const,
       sortDirection: "DESC" as const,
       precision: 3,
@@ -10050,9 +10016,9 @@ See you at Metro Sports!
       displayOrder: 1,
     },
     {
-      id: `${ORG1_ID}-compcat-bars-u12`,
-      competitionId: gymCompetition.id,
-      combinationEntryId: "combo-gym-cav-gym-u12-cav-gym-bars",
+      id: `${ORG1_ID}-compcat-short-program-u12`,
+      competitionId: skatingCompetition.id,
+      combinationEntryId: "combo-skate-cav-skate-u12-cav-skate-short-program",
       resultType: "SCORE" as const,
       sortDirection: "DESC" as const,
       precision: 3,
@@ -10063,7 +10029,7 @@ See you at Metro Sports!
     },
   ];
 
-  for (const cat of gymCompCats) {
+  for (const cat of skatingCompCats) {
     await prisma.competitionCategory.upsert({
       where: { id: cat.id },
       update: {},
@@ -10071,12 +10037,12 @@ See you at Metro Sports!
     });
   }
 
-  // Entries for gym competition
-  const gymCompEntries = [
+  // Entries for skating competition
+  const skatingCompEntries = [
     {
       id: `${ORG1_ID}-compentry-1`,
-      competitionId: gymCompetition.id,
-      competitionCategoryId: `${ORG1_ID}-compcat-floor-u10`,
+      competitionId: skatingCompetition.id,
+      competitionCategoryId: `${ORG1_ID}-compcat-free-skate-u10`,
       athleteId: `${ORG1_ID}-ath-1`,
       status: "APPROVED" as const,
       seedPoints: 8.25,
@@ -10085,8 +10051,8 @@ See you at Metro Sports!
     },
     {
       id: `${ORG1_ID}-compentry-2`,
-      competitionId: gymCompetition.id,
-      competitionCategoryId: `${ORG1_ID}-compcat-floor-u10`,
+      competitionId: skatingCompetition.id,
+      competitionCategoryId: `${ORG1_ID}-compcat-free-skate-u10`,
       athleteId: `${ORG1_ID}-ath-2`,
       status: "PENDING_REVIEW" as const,
       seedPoints: 7.1,
@@ -10095,28 +10061,36 @@ See you at Metro Sports!
     },
     {
       id: `${ORG1_ID}-compentry-3`,
-      competitionId: gymCompetition.id,
-      competitionCategoryId: `${ORG1_ID}-compcat-vault-u10`,
+      competitionId: skatingCompetition.id,
+      competitionCategoryId: `${ORG1_ID}-compcat-moves-u10`,
       athleteId: `${ORG1_ID}-ath-1`,
       status: "APPROVED" as const,
     },
     {
       id: `${ORG1_ID}-compentry-4`,
-      competitionId: gymCompetition.id,
-      competitionCategoryId: `${ORG1_ID}-compcat-bars-u12`,
+      competitionId: skatingCompetition.id,
+      competitionCategoryId: `${ORG1_ID}-compcat-short-program-u12`,
       athleteId: `${ORG1_ID}-ath-3`,
       status: "PENDING_SEED" as const,
     },
   ];
 
-  for (const entry of gymCompEntries) {
+  for (const entry of skatingCompEntries) {
     await prisma.competitionEntry.upsert({
       where: { id: entry.id },
       update: {},
       create: entry,
     });
   }
-  console.log("  ✓ Created Sunrise Gymnastics 'Spring Invitational 2026' (REGISTRATION_OPEN)");
+  console.log("  ✓ Created Sunrise Skating 'Spring Invitational 2026' (REGISTRATION_OPEN)");
+
+  // --- Canonical skating taxonomy (CanSkate / STARSkate / Adult / Synchro) ---
+  console.log("\n⛸️  Seeding skating taxonomy for Sunrise Skating and Demo Skating Club...");
+  await seedSkatingTaxonomy(prisma, ORG1_ID);
+  await seedSkatingTaxonomy(prisma, ORG_DEMO_ID);
+  console.log(
+    `  ✓ Created ${SKATE_SEED_COUNTS.categories} categories, ${SKATE_SEED_COUNTS.levels} levels, ${SKATE_SEED_COUNTS.skills} skills, ${SKATE_SEED_COUNTS.testTemplates} test templates per org`
+  );
 
   // --- Metro Sports: Regional Athletics Meet (COMPLETED) ---
   const tfCompetition = await prisma.competition.upsert({
@@ -10381,7 +10355,7 @@ See you at Metro Sports!
   console.log("🎉 Development seed completed successfully!");
   console.log("=".repeat(50));
   console.log("\nCreated data summary:");
-  console.log("  • 4 organizations (Sunrise Gymnastics, Metro Sports, Demo Gym, Uplifter)");
+  console.log("  • 4 organizations (Sunrise Skating, Metro Sports, Demo Skating, Uplifter)");
   console.log("  • 4 subscription plans");
   console.log("  • 7 sports with organization associations");
   console.log("  • 32 athletics events, 8 age categories, ~210 eligibility entries");
@@ -10395,11 +10369,11 @@ See you at Metro Sports!
   console.log("  • 5 invoices with line items and payments");
   console.log("  • Adyen transactions + payouts synced from live TEST environment (if configured)");
   console.log("  • 7 recurring charges");
-  console.log("  • 34 gymnastics skills with difficulty levels and age ranges");
+  console.log("  • 34 figure skating skills with difficulty levels and age ranges");
   console.log("  • 9 evaluation templates with skill groupings (6 Sunrise + 3 Metro)");
   console.log("  • 9 evaluations with skill attempt statuses (5 Sunrise + 4 Metro)");
   console.log("  • 17 athlete skill progress records");
-  console.log("  • Lesson plans and rotations");
+  console.log("  • Lesson plans");
   console.log("  • 7 POS products with stock movements");
   console.log("  • 6 media items (photos/videos)");
   console.log("  • 5 staff profiles with availability");
@@ -10413,17 +10387,17 @@ See you at Metro Sports!
   console.log("  • Email usage tracking for both organizations");
   console.log("  • 12 notification rules (system + custom for both orgs)");
   console.log("  • 3 waivers with pages (2 Sunrise, 1 Metro) + program requirements");
-  console.log("  • 2 competitions (1 gymnastics REGISTRATION_OPEN, 1 athletics COMPLETED)");
+  console.log("  • 2 competitions (1 figure skating REGISTRATION_OPEN, 1 athletics COMPLETED)");
   console.log("  • 6 competition categories with result type/seed mark config");
   console.log("  • 9 competition entries (approved, pending review, pending seed)");
   console.log("  • 5 competition results with placements and personal bests");
   console.log("  • 1 relay team with team results");
   console.log("  • 90 days of visitor analytics (if Redis configured)");
   console.log("\nTest accounts (use email-based login — no passwords set):");
-  console.log("  Sunrise Gym Admin: admin@sunrise-gymnastics.com");
+  console.log("  Sunrise Skating Admin: admin@sunrise-skating.com");
   console.log("  Metro Sports Admin: admin@metro-sports.com");
-  console.log("  Demo Gym Admin: admin@demo.com");
-  console.log("  Demo Gym Coach: coach@demo.com");
+  console.log("  Demo Skating Admin: admin@demo.com");
+  console.log("  Demo Skating Coach: coach@demo.com");
   console.log("  Superadmin: andrewkarzel@uplifterinc.com");
   console.log("  Superadmin: drew.williams@uplifterinc.com");
   console.log("  Superadmin: okechi.onyeje@uplifterinc.com");

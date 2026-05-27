@@ -973,7 +973,7 @@ export default function SignupPage() {
                         <Input
                           id="orgName"
                           name="orgName"
-                          placeholder="Your Gymnastics Club"
+                          placeholder="Your Figure Skating Club"
                           value={formData.orgName}
                           onChange={handleOrgNameChange}
                           className={cn(

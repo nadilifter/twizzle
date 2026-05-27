@@ -145,10 +145,10 @@ export default function WhyPage() {
             transition={{ duration: 1, ease: "easeOut" }}
             className="md:text-7xl text-3xl lg:text-6xl font-bold text-center text-white mb-8"
           >
-            The future of gymnastics management
+            The future of figure skating management
           </motion.h2>
           <TextGenerateEffect
-            words="One platform to run your entire gym. Registration, training, competitions, payments, and parent communication — unified, modern, and built to scale."
+            words="One platform to run your entire club. Registration, training, competitions, payments, and parent communication — unified, modern, and built to scale."
             className="text-center text-white/80"
             duration={0.3}
           />
@@ -168,14 +168,14 @@ export default function WhyPage() {
             className="flex flex-col items-center"
           >
             <h2 className="mt-8 bg-gradient-to-br from-slate-300 to-slate-500 py-4 bg-clip-text text-center text-4xl font-medium tracking-tight text-transparent md:text-7xl">
-              Everything your gym needs.
+              Everything your club needs.
               <br />
               Nothing it doesn&apos;t.
             </h2>
             <p className="mt-6 max-w-2xl text-center text-base md:text-lg text-slate-400 leading-relaxed">
-              Uplifter replaces the patchwork of disconnected tools gyms rely on today. A single,
-              white-labeled platform gives every stakeholder&mdash;owners, coaches, parents, and
-              athletes&mdash;exactly the experience they need, under your brand.
+              Uplifter replaces the patchwork of disconnected tools skating clubs rely on today. A
+              single, white-labeled platform gives every stakeholder&mdash;owners, coaches, parents,
+              and skaters&mdash;exactly the experience they need, under your brand.
             </p>
           </motion.div>
         </LampContainer>
@@ -198,7 +198,7 @@ export default function WhyPage() {
             transition={{ duration: 0.8, delay: 0.15, ease: "easeOut" }}
             className="text-center text-slate-400 mb-12 max-w-xl mx-auto text-lg"
           >
-            From local meets to international competitions, Uplifter brings gyms, athletes, and
+            From local meets to international competitions, Uplifter brings clubs, skaters, and
             families together no matter where they are.
           </motion.p>
 
@@ -221,7 +221,7 @@ export default function WhyPage() {
             transition={{ duration: 0.8, ease: "easeOut" }}
             className="text-3xl md:text-5xl font-bold text-center text-white mb-4"
           >
-            Built for the way gyms actually work
+            Built for the way skating clubs actually work
           </motion.h2>
           <motion.p
             {...fadeUp}
@@ -229,7 +229,7 @@ export default function WhyPage() {
             className="text-center text-slate-400 mb-16 max-w-xl mx-auto"
           >
             Six core pillars, one seamless experience. Every feature designed for the unique demands
-            of gymnastics organizations.
+            of figure skating organizations.
           </motion.p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -269,15 +269,15 @@ export default function WhyPage() {
             transition={{ duration: 1, ease: "easeOut" }}
             className="text-3xl md:text-6xl font-bold text-white mb-6"
           >
-            Ready to transform your gym?
+            Ready to transform your club?
           </motion.h2>
           <motion.p
             {...fadeUp}
             transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
             className="text-lg text-slate-300 mb-10"
           >
-            Join the next generation of gymnastics management. Start your {FREE_TRIAL_DAYS}-day free
-            trial today.
+            Join the next generation of figure skating management. Start your {FREE_TRIAL_DAYS}-day
+            free trial today.
           </motion.p>
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}

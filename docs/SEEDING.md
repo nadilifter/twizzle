@@ -53,19 +53,19 @@ The dev seed (`seed-dev.ts`) creates four organizations:
 
 ### Organizations
 
-| Organization               | Slug                 | Focus                                | Subscription      |
-| -------------------------- | -------------------- | ------------------------------------ | ----------------- |
-| Sunrise Gymnastics Academy | `sunrise-gymnastics` | Youth gymnastics club (full data)    | Gold (yearly)     |
-| Metro Sports Complex       | `metro-sports`       | Multi-sport facility (full data)     | Starter (monthly) |
-| Demo Gymnastics Club       | `demo-gym`           | Lightweight demo / testing org       | Gold (monthly)    |
-| Uplifter                   | `uplifter`           | Platform-owner org (Andrew, Drew, …) | Platinum (yearly) |
+| Organization         | Slug              | Focus                                 | Subscription      |
+| -------------------- | ----------------- | ------------------------------------- | ----------------- |
+| Sunrise Skating Club | `sunrise-skating` | Youth figure skating club (full data) | Gold (yearly)     |
+| Metro Sports Complex | `metro-sports`    | Multi-sport facility (full data)      | Starter (monthly) |
+| Demo Skating Club    | `demo-gym`        | Lightweight demo / testing org        | Gold (monthly)    |
+| Uplifter             | `uplifter`        | Platform-owner org (Andrew, Drew, …)  | Platinum (yearly) |
 
 Sunrise and Metro carry the bulk of the realistic fixture data (athletes,
 programs, payments, etc.); Demo and Uplifter are intentionally lighter.
 
 ### Data Summary
 
-| Model          | Sunrise Gym                      | Metro Sports                |
+| Model          | Sunrise Skating                  | Metro Sports                |
 | -------------- | -------------------------------- | --------------------------- |
 | Users          | 5 (admin, 3 coaches, accountant) | 3 (admin, coach, volunteer) |
 | Families       | 5                                | 4                           |
@@ -80,25 +80,25 @@ programs, payments, etc.); Demo and Uplifter are intentionally lighter.
 
 Seed accounts are created **without passwords**. Use email-based login (magic link / login code) to sign in during local development.
 
-| Email                                | Role       | Organization       |
-| ------------------------------------ | ---------- | ------------------ |
-| `admin@sunrise-gymnastics.com`       | Admin      | Sunrise Gymnastics |
-| `coach.maria@sunrise-gymnastics.com` | Coach      | Sunrise Gymnastics |
-| `coach.james@sunrise-gymnastics.com` | Coach      | Sunrise Gymnastics |
-| `coach.ava@sunrise-gymnastics.com`   | Coach      | Sunrise Gymnastics |
-| `finance@sunrise-gymnastics.com`     | Accountant | Sunrise Gymnastics |
-| `admin@metro-sports.com`             | Admin      | Metro Sports       |
-| `coach.sarah@metro-sports.com`       | Coach      | Metro Sports       |
-| `volunteer@metro-sports.com`         | Volunteer  | Metro Sports       |
+| Email                             | Role       | Organization    |
+| --------------------------------- | ---------- | --------------- |
+| `admin@sunrise-skating.com`       | Admin      | Sunrise Skating |
+| `coach.maria@sunrise-skating.com` | Coach      | Sunrise Skating |
+| `coach.james@sunrise-skating.com` | Coach      | Sunrise Skating |
+| `coach.ava@sunrise-skating.com`   | Coach      | Sunrise Skating |
+| `finance@sunrise-skating.com`     | Accountant | Sunrise Skating |
+| `admin@metro-sports.com`          | Admin      | Metro Sports    |
+| `coach.sarah@metro-sports.com`    | Coach      | Metro Sports    |
+| `volunteer@metro-sports.com`      | Volunteer  | Metro Sports    |
 
 ## Adyen Test Accounts
 
 Both seeded organizations are fully onboarded with Adyen (VERIFIED, all capabilities enabled) and map to real accounts in the **Adyen TEST environment** (`UplifterLLC` balance platform).
 
-| Organization       | Account Holder ID           | Balance Account ID          | Payout Schedule |
-| ------------------ | --------------------------- | --------------------------- | --------------- |
-| Sunrise Gymnastics | `AH3292V22322BK5P8Z8364KJM` | `BA3292V22322BK5P8Z8374KKP` | weekly          |
-| Metro Sports       | `AH3292V22322BK5P8Z5ZF4DWF` | `BA3297R22322BK5P8Z5ZG2LCQ` | daily           |
+| Organization    | Account Holder ID           | Balance Account ID          | Payout Schedule |
+| --------------- | --------------------------- | --------------------------- | --------------- |
+| Sunrise Skating | `AH3292V22322BK5P8Z8364KJM` | `BA3292V22322BK5P8Z8374KKP` | weekly          |
+| Metro Sports    | `AH3292V22322BK5P8Z5ZF4DWF` | `BA3297R22322BK5P8Z5ZG2LCQ` | daily           |
 
 Both orgs have a store, split configuration, sweep, and linked transfer instrument — all required for B2C payments with platform fee splits and manual payout initiation.
 

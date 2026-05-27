@@ -124,14 +124,14 @@ export const EMAIL_PLACEHOLDER_DEFS: PlaceholderDefinition[] = [
     key: "organizationName",
     label: "Organization Name",
     description: "Name of your organization",
-    example: "Sunrise Gymnastics",
+    example: "Sunrise Skating",
     category: "organization",
   },
   {
     key: "organizationEmail",
     label: "Organization Email",
     description: "Contact email",
-    example: "info@sunrise-gymnastics.com",
+    example: "info@sunrise-skating.com",
     category: "organization",
   },
   {

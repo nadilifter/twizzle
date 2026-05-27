@@ -922,12 +922,7 @@ function SpacesTab({
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
                   <Label htmlFor="space-name">Space Name *</Label>
-                  <Input
-                    id="space-name"
-                    name="name"
-                    placeholder="e.g. Balance Beam Area"
-                    required
-                  />
+                  <Input id="space-name" name="name" placeholder="e.g. Rink A" required />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
@@ -1323,7 +1318,7 @@ function EquipmentTab({
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
                   <Label htmlFor="equip-name">Name/ID *</Label>
-                  <Input id="equip-name" name="name" placeholder="e.g. Beam #3" required />
+                  <Input id="equip-name" name="name" placeholder="e.g. Harness #2" required />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="equip-serial">Serial Number</Label>

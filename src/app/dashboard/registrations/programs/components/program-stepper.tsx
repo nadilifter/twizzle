@@ -1294,7 +1294,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                 <Label htmlFor="name">Program Name *</Label>
                 <Input
                   id="name"
-                  placeholder="e.g., Recreational Gymnastics - Bronze"
+                  placeholder="e.g., Learn to Skate - Bronze"
                   value={formData.name}
                   onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                 />

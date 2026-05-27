@@ -704,7 +704,7 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
               <Label htmlFor="config-name">Program Name *</Label>
               <Input
                 id="config-name"
-                placeholder="e.g., Recreational Gymnastics - Bronze"
+                placeholder="e.g., Learn to Skate - Bronze"
                 value={formData.name}
                 onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
               />

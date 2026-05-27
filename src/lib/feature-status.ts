@@ -109,10 +109,6 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     description: "Programs management with coach assignments and membership requirements",
     apiRoutes: ["/api/programs", "/api/programs/[id]/staff", "/api/programs/[id]/requirements"],
   },
-  "/dashboard/training/rotations": {
-    status: "demo",
-    description: "Rotation scheduling uses mock data",
-  },
   "/dashboard/training/skills": {
     status: "live",
     description: "Skills database with difficulty levels and age ranges",

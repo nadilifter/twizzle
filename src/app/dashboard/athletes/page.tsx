@@ -626,7 +626,7 @@ export default function AthletesPage() {
     <div className="flex flex-col gap-6 p-6">
       <DashboardPageHeader
         title="Athlete Directory"
-        description="Manage your club's gymnasts, levels, and group assignments."
+        description="Manage your club's skaters, levels, and group assignments."
         actions={
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>

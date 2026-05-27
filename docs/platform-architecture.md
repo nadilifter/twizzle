@@ -2,7 +2,7 @@
 
 ## Overview
 
-Uplifter is a multi-tenant SaaS platform for sports/gymnastics organizations. It uses a subdomain-based access point system where different user roles access different portals.
+Uplifter is a multi-tenant SaaS platform for figure skating organizations. It uses a subdomain-based access point system where different user roles access different portals.
 
 ## Platform Diagram
 

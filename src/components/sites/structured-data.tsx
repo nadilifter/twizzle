@@ -2,7 +2,7 @@
  * Structured Data (JSON-LD) Components for SEO
  *
  * These components generate schema.org structured data to help search engines
- * better understand gymnastics organization websites.
+ * better understand figure skating organization websites.
  */
 
 function safeJsonLd(data: Record<string, unknown>): string {
@@ -56,7 +56,7 @@ export function OrganizationStructuredData({
       },
     }),
     // Sports-specific properties
-    sport: "Gymnastics",
+    sport: "Figure Skating",
   };
 
   return (
@@ -77,8 +77,8 @@ export function LocalBusinessStructuredData({
 }: OrganizationSchemaProps) {
   const locationDescription =
     organization.city && organization.stateProvince
-      ? `Gymnastics programs and classes in ${organization.city}, ${organization.stateProvince}`
-      : `Gymnastics programs and classes for all ages and skill levels`;
+      ? `Figure skating programs and classes in ${organization.city}, ${organization.stateProvince}`
+      : `Figure skating programs and classes for all ages and skill levels`;
 
   const schema = {
     "@context": "https://schema.org",
@@ -133,7 +133,7 @@ export function WebSiteStructuredData({
 /**
  * Combined Structured Data Component
  *
- * Renders all relevant structured data schemas for a gymnastics organization site.
+ * Renders all relevant structured data schemas for a figure skating organization site.
  */
 export function SiteStructuredData(props: OrganizationSchemaProps) {
   return (

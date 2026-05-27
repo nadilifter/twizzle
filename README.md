@@ -2,13 +2,13 @@
 
 ## Overview
 
-This repository is for our app focused on US gymnastics. It is intentionally opinionated, modern by default, and designed to scale from early-stage experimentation to serious production workloads.
+This repository is for our app focused on figure skating. It is intentionally opinionated, modern by default, and designed to scale from early-stage experimentation to serious production workloads.
 
 ---
 
 ## What This Repo Is
 
-- A long-lived **monorepo foundation** for our vertical SaaS business focused on US gymnastics
+- A long-lived **monorepo foundation** for our vertical SaaS business focused on figure skating
 - Designed based on standard B2B software practices
 - Built to handle high transaction volume, burst traffic, and evolving product needs
 

@@ -434,14 +434,14 @@ export const PLACEHOLDER_DEFINITIONS: PlaceholderDefinition[] = [
     key: "organizationName",
     label: "Organization Name",
     description: "Name of the organization",
-    example: "Sunrise Gymnastics Academy",
+    example: "Sunrise Skating Club",
     category: "organization",
   },
   {
     key: "organizationEmail",
     label: "Organization Email",
     description: "Contact email for the organization",
-    example: "info@sunrise-gymnastics.com",
+    example: "info@sunrise-skating.com",
     category: "organization",
   },
   {
@@ -455,14 +455,14 @@ export const PLACEHOLDER_DEFINITIONS: PlaceholderDefinition[] = [
     key: "organizationAddress",
     label: "Organization Address",
     description: "Physical address of the organization",
-    example: "123 Gym Street, Sunnyvale, CA 94086",
+    example: "123 Ice Rink Way, Sunnyvale, CA 94086",
     category: "organization",
   },
   {
     key: "websiteUrl",
     label: "Website URL",
     description: "Organization's website URL",
-    example: "https://sunrise-gymnastics.uplifter.app",
+    example: "https://sunrise-skating.uplifter.app",
     category: "organization",
   },
 

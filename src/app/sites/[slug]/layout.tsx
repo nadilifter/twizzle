@@ -129,12 +129,12 @@ export async function generateMetadata({
   // Generate description: use custom SEO description, or hero content, or default
   const locationText = org.city && org.stateProvince ? `in ${org.city}, ${org.stateProvince}` : "";
   const defaultDescription =
-    `${org.name} - Gymnastics programs ${locationText}. Classes for all ages and skill levels.`
+    `${org.name} - Figure skating programs ${locationText}. Classes for all ages and skill levels.`
       .trim()
       .replace(/\s+/g, " ");
   const description = config.seoDescription || config.heroSubheadline || defaultDescription;
 
-  // Build keywords array: use custom keywords or generate defaults for gymnastics
+  // Build keywords array: use custom keywords or generate defaults for figure skating
   const customKeywords = config.seoKeywords
     ? config.seoKeywords
         .split(",")
@@ -143,17 +143,18 @@ export async function generateMetadata({
     : [];
 
   const defaultKeywords = [
-    "gymnastics",
-    "gymnastics classes",
-    "gymnastics programs",
-    "youth gymnastics",
-    "kids gymnastics",
+    "figure skating",
+    "figure skating classes",
+    "figure skating programs",
+    "youth figure skating",
+    "kids figure skating",
+    "learn to skate",
     org.city,
     org.stateProvince,
-    `gymnastics ${org.city}`,
-    "tumbling",
-    "recreational gymnastics",
-    "competitive gymnastics",
+    `figure skating ${org.city}`,
+    "ice skating",
+    "recreational skating",
+    "competitive figure skating",
   ].filter(Boolean) as string[];
 
   // Merge custom keywords with defaults, removing duplicates
@@ -193,7 +194,7 @@ export async function generateMetadata({
         ? [
             {
               url: config.heroImage,
-              alt: `${org.name} - Gymnastics`,
+              alt: `${org.name} - Figure Skating`,
               width: 1200,
               height: 630,
             },

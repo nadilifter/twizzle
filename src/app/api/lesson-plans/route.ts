@@ -1,16 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db, getScopedDb } from "@/lib/db";
+import { db } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
-
-const rotationSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  description: z.string().optional(),
-  order: z.number().int().default(0),
-  media: z.array(z.string()).optional(),
-  skillIds: z.array(z.string()).optional(),
-});
 
 const createLessonPlanSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -19,7 +11,6 @@ const createLessonPlanSchema = z.object({
   status: z.enum(["ACTIVE", "DRAFT", "ARCHIVED"]).default("DRAFT"),
   theme: z.string().optional(),
   notes: z.string().optional(),
-  rotations: z.array(rotationSchema).optional(),
 });
 
 // GET /api/lesson-plans
@@ -67,16 +58,6 @@ export async function GET(request: NextRequest) {
               name: true,
               avatar: true,
             },
-          },
-          rotations: {
-            include: {
-              skills: {
-                include: {
-                  skill: true,
-                },
-              },
-            },
-            orderBy: { order: "asc" },
           },
         },
         orderBy: { createdAt: "desc" },
@@ -128,21 +109,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Program not found" }, { status: 404 });
     }
 
-    const scopedDb = getScopedDb(session.user.organizationId);
-    if (validatedData.rotations?.length) {
-      const allSkillIds = validatedData.rotations.flatMap((r) => r.skillIds || []);
-      if (allSkillIds.length > 0) {
-        const uniqueSkillIds = [...new Set(allSkillIds)];
-        const validSkills = await scopedDb.skill.findMany({
-          where: { id: { in: uniqueSkillIds } },
-          select: { id: true },
-        });
-        if (validSkills.length !== uniqueSkillIds.length) {
-          return NextResponse.json({ error: "One or more skills not found" }, { status: 404 });
-        }
-      }
-    }
-
     const lessonPlan = await db.lessonPlan.create({
       data: {
         name: validatedData.name,
@@ -153,36 +119,10 @@ export async function POST(request: NextRequest) {
         theme: validatedData.theme,
         notes: validatedData.notes,
         organizationId: session.user.organizationId,
-        rotations: validatedData.rotations
-          ? {
-              create: validatedData.rotations.map((rotation, index) => ({
-                name: rotation.name,
-                description: rotation.description,
-                order: rotation.order ?? index,
-                media: rotation.media || [],
-                skills: rotation.skillIds
-                  ? {
-                      create: rotation.skillIds.map((skillId) => ({
-                        skillId,
-                      })),
-                    }
-                  : undefined,
-              })),
-            }
-          : undefined,
       },
       include: {
         program: true,
         author: true,
-        rotations: {
-          include: {
-            skills: {
-              include: {
-                skill: true,
-              },
-            },
-          },
-        },
       },
     });
 

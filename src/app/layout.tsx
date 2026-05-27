@@ -22,7 +22,7 @@ const isProduction = process.env.APP_ENVIRONMENT === "production";
 
 export const metadata: Metadata = {
   title: "Uplifter",
-  description: "Sports management platform for gymnasts",
+  description: "Sports management platform for figure skaters",
   icons: {
     icon: "/favicon.ico",
   },

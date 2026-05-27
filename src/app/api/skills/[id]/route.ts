@@ -34,7 +34,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         _count: {
           select: {
             evaluationSkills: true,
-            rotationSkills: true,
             templateSkills: true,
           },
         },

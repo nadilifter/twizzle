@@ -82,7 +82,7 @@ export const SMS_PLACEHOLDER_DEFS: PlaceholderDefinition[] = [
     key: "organizationName",
     label: "Organization Name",
     description: "Name of your organization",
-    example: "Sunrise Gymnastics",
+    example: "Sunrise Skating",
     category: "organization",
   },
   {

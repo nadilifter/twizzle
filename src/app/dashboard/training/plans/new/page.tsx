@@ -53,11 +53,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 const MOCK_SKILLS = [
-  { id: "s1", name: "Forward Roll", level: "Beginner", event: "Floor" },
-  { id: "s2", name: "Cartwheel", level: "Beginner", event: "Floor" },
-  { id: "s3", name: "Handstand", level: "Intermediate", event: "Floor" },
-  { id: "s4", name: "Bridge", level: "Beginner", event: "Floor" },
-  { id: "s5", name: "Pullover", level: "Beginner", event: "Bars" },
+  { id: "s1", name: "Forward Swizzles", level: "Beginner", event: "Edges" },
+  { id: "s2", name: "Forward Crossovers", level: "Intermediate", event: "Footwork" },
+  { id: "s3", name: "Waltz Jump", level: "Intermediate", event: "Jumps" },
+  { id: "s4", name: "Two-Foot Spin", level: "Beginner", event: "Spins" },
+  { id: "s5", name: "Three Turn", level: "Intermediate", event: "Footwork" },
 ];
 
 export default function NewPlanPage() {
@@ -70,15 +70,15 @@ export default function NewPlanPage() {
   const [notes, setNotes] = useState("");
 
   const [rotations, setRotations] = useState<Rotation[]>([
-    { id: 1, name: "Warmup", description: "", skills: [] },
-    { id: 2, name: "Vault", description: "", skills: [] },
-    { id: 3, name: "Bars", description: "", skills: [] },
-    { id: 4, name: "Beam", description: "", skills: [] },
-    { id: 5, name: "Floor", description: "", skills: [] },
-    { id: 6, name: "Conditioning", description: "", skills: [] },
+    { id: 1, name: "Warm-up", description: "", skills: [] },
+    { id: 2, name: "Stroking & Edges", description: "", skills: [] },
+    { id: 3, name: "Footwork", description: "", skills: [] },
+    { id: 4, name: "Jumps", description: "", skills: [] },
+    { id: 5, name: "Spins", description: "", skills: [] },
+    { id: 6, name: "Cool-down", description: "", skills: [] },
   ]);
 
-  const [activeTab, setActiveTab] = useState("Warmup");
+  const [activeTab, setActiveTab] = useState("Warm-up");
   const [newRotationName, setNewRotationName] = useState("");
   const [isAddRotationOpen, setIsAddRotationOpen] = useState(false);
   const [isSkillSheetOpen, setIsSkillSheetOpen] = useState(false);
@@ -98,7 +98,7 @@ export default function NewPlanPage() {
       setNewRotationName("");
       setIsAddRotationOpen(false);
       setActiveTab(newRotationName);
-      toast.success("Rotation added successfully");
+      toast.success("Block added successfully");
     }
   };
 
@@ -199,10 +199,11 @@ export default function NewPlanPage() {
                     <SelectValue placeholder="Select program" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Recreational - Bronze">Recreational - Bronze</SelectItem>
-                    <SelectItem value="Recreational - Silver">Recreational - Silver</SelectItem>
-                    <SelectItem value="JO - Level 4">JO Level 4</SelectItem>
-                    <SelectItem value="Preschool">Preschool</SelectItem>
+                    <SelectItem value="CanSkate - Stage 2">CanSkate - Stage 2</SelectItem>
+                    <SelectItem value="CanSkate - Stage 4">CanSkate - Stage 4</SelectItem>
+                    <SelectItem value="STARSkate - STAR 1">STARSkate - STAR 1</SelectItem>
+                    <SelectItem value="STARSkate - STAR 4">STARSkate - STAR 4</SelectItem>
+                    <SelectItem value="Pre-CanSkate">Pre-CanSkate</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -238,7 +239,7 @@ export default function NewPlanPage() {
                 <Label htmlFor="theme">Theme (Optional)</Label>
                 <Input
                   id="theme"
-                  placeholder="e.g. Handstands, Safety"
+                  placeholder="e.g. Edge Development Week, Jump Technique"
                   value={theme}
                   onChange={(e) => setTheme(e.target.value)}
                 />
@@ -258,8 +259,8 @@ export default function NewPlanPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Rotations</CardTitle>
-              <CardDescription>Configure the stations.</CardDescription>
+              <CardTitle>Session Blocks</CardTitle>
+              <CardDescription>Configure the on-ice blocks.</CardDescription>
             </CardHeader>
             <CardContent>
               {/* List of rotations to jump to */}
@@ -277,14 +278,14 @@ export default function NewPlanPage() {
                 <Dialog open={isAddRotationOpen} onOpenChange={setIsAddRotationOpen}>
                   <DialogTrigger asChild>
                     <Button variant="ghost" className="justify-start text-muted-foreground w-full">
-                      <Plus className="mr-2 h-4 w-4" /> Add Rotation
+                      <Plus className="mr-2 h-4 w-4" /> Add Block
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Add New Rotation</DialogTitle>
+                      <DialogTitle>Add New Block</DialogTitle>
                       <DialogDescription>
-                        Create a new station or rotation block for this lesson plan.
+                        Create a new on-ice block for this lesson plan.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
@@ -292,14 +293,14 @@ export default function NewPlanPage() {
                         <Label htmlFor="rotation-name">Name</Label>
                         <Input
                           id="rotation-name"
-                          placeholder="e.g. Trampoline, Dance"
+                          placeholder="e.g. Choreography, Off-ice"
                           value={newRotationName}
                           onChange={(e) => setNewRotationName(e.target.value)}
                         />
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button onClick={handleAddRotation}>Add Rotation</Button>
+                      <Button onClick={handleAddRotation}>Add Block</Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
@@ -326,7 +327,7 @@ export default function NewPlanPage() {
                       <SheetHeader>
                         <SheetTitle>Add Skills to {activeRotation.name}</SheetTitle>
                         <SheetDescription>
-                          Search and select skills to track in this rotation.
+                          Search and select skills to track in this block.
                         </SheetDescription>
                       </SheetHeader>
                       <div className="grid gap-4 py-4">
@@ -372,7 +373,7 @@ export default function NewPlanPage() {
                   <Label>Description / Setup</Label>
                   <Textarea
                     className="min-h-[150px]"
-                    placeholder={`Describe the station setup and drills for ${activeRotation.name}...`}
+                    placeholder={`Describe the setup and drills for ${activeRotation.name}...`}
                     value={activeRotation.description}
                     onChange={handleDescriptionChange}
                   />
@@ -421,9 +422,7 @@ export default function NewPlanPage() {
                       <DialogContent>
                         <DialogHeader>
                           <DialogTitle>Upload Media</DialogTitle>
-                          <DialogDescription>
-                            Add photos or videos to this rotation card.
-                          </DialogDescription>
+                          <DialogDescription>Add photos or videos to this block.</DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
                           <div className="grid w-full max-w-sm items-center gap-1.5">
@@ -442,7 +441,7 @@ export default function NewPlanPage() {
             </Card>
           ) : (
             <div className="h-full flex items-center justify-center text-muted-foreground">
-              Select a rotation to edit
+              Select a block to edit
             </div>
           )}
         </div>

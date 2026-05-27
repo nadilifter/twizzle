@@ -8,7 +8,7 @@ export interface CompetitionStatusFields {
 }
 
 export const COMPETITION_TYPE_LABELS: Record<string, string> = {
-  GYMNASTICS: "Gymnastics",
+  FIGURE_SKATING: "Figure Skating",
   TRACK_AND_FIELD: "Track & Field",
 };
 

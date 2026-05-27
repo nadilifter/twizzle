@@ -65,8 +65,8 @@ export default async function AdminDashboardPage() {
                 </span>
               </li>
               <li>
-                <span className="font-medium">Training Overview, Plans, Rotations</span>{" "}
-                (/dashboard/training, /dashboard/training/plans, /dashboard/training/rotations) -
+                <span className="font-medium">Training Overview, Plans</span> (/dashboard/training,
+                /dashboard/training/plans) -
                 <span className="text-muted-foreground ml-2">
                   Hidden from Training section. Only Skills and Evaluations shown.
                 </span>

@@ -1948,7 +1948,7 @@ enum RecurringStatus {
 model Skill {
   id             String   @id @default(cuid())
   name           String
-  category       String // e.g., "Vault", "Bars", "Beam", "Floor"
+  category       String // e.g., "Jumps", "Spins", "Footwork", "Edges"
   description    String?  @db.Text
   organizationId String
   createdAt      DateTime @default(now())
@@ -1967,7 +1967,6 @@ model Skill {
   organization     Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   skillLevel       Level?                    @relation("SkillLevel", fields: [levelId], references: [id], onDelete: SetNull)
   evaluationSkills EvaluationSkill[]
-  rotationSkills   RotationSkill[]
   templateSkills   EvaluationTemplateSkill[]
   athleteProgress  AthleteSkillProgress[]
 
@@ -2071,7 +2070,6 @@ model LessonPlan {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   program      Program      @relation(fields: [programId], references: [id])
   author       User         @relation(fields: [authorId], references: [id])
-  rotations    Rotation[]
 
   @@index([organizationId])
 }
@@ -2080,33 +2078,6 @@ enum LessonPlanStatus {
   ACTIVE
   DRAFT
   ARCHIVED
-}
-
-model Rotation {
-  id           String   @id @default(cuid())
-  lessonPlanId String
-  name         String
-  description  String?
-  order        Int      @default(0)
-  media        String[] // Array of media URLs
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  // Relations
-  lessonPlan LessonPlan      @relation(fields: [lessonPlanId], references: [id], onDelete: Cascade)
-  skills     RotationSkill[]
-}
-
-model RotationSkill {
-  id         String @id @default(cuid())
-  rotationId String
-  skillId    String
-
-  // Relations
-  rotation Rotation @relation(fields: [rotationId], references: [id], onDelete: Cascade)
-  skill    Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
-
-  @@unique([rotationId, skillId])
 }
 
 model Evaluation {
