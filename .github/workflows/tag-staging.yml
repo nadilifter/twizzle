@@ -70,7 +70,7 @@ jobs:
           NEW_TAG: ${{ steps.bump.outputs.new_tag }}
         run: |
           gh workflow run deploy-staging.yml \
-            --repo uplifterinc/us-clubs \
+            --repo nadilifter/twizzle \
             --ref main \
             --field deploy_tag="${NEW_TAG}"
 

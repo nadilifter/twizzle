@@ -49,8 +49,7 @@ const STAGING_DB_USER = "uplifter";
 const STAGING_DB_NAME = "uplifter";
 
 const LOCAL_DB_URL =
-  process.env.DATABASE_URL ||
-  "postgresql://postgres:postgres@localhost:5434/leapfrog?schema=public";
+  process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5434/twizzle?schema=public";
 
 // Tables that hold global identity records shared across orgs.
 // These are upserted (ON CONFLICT DO NOTHING) rather than overwritten.

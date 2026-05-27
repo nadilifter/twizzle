@@ -1,12 +1,12 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: leapfrog-db
+    container_name: twizzle-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: leapfrog
+      POSTGRES_DB: twizzle
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -20,7 +20,7 @@ services:
   # Redis for caching and rate limiting (local development)
   redis:
     image: redis:7-alpine
-    container_name: leapfrog-redis
+    container_name: twizzle-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -35,7 +35,7 @@ services:
   # MinIO for S3-compatible local storage
   minio:
     image: minio/minio
-    container_name: leapfrog-minio
+    container_name: twizzle-minio
     restart: unless-stopped
     ports:
       - "9000:9000" # S3 API
@@ -55,7 +55,7 @@ services:
   # MailHog for catching emails locally
   mailhog:
     image: mailhog/mailhog
-    container_name: leapfrog-mailhog
+    container_name: twizzle-mailhog
     restart: unless-stopped
     ports:
       - "1025:1025" # SMTP server
@@ -68,7 +68,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    container_name: leapfrog-dev
+    container_name: twizzle-dev
     ports:
       - "3000:3000"
     volumes:
@@ -78,7 +78,7 @@ services:
     environment:
       - NODE_ENV=development
       - APP_ENVIRONMENT=local
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/leapfrog?schema=public
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/twizzle?schema=public
       - NEXTAUTH_URL=http://localhost:3000
       - NEXTAUTH_SECRET=dev-secret-change-in-production
       # Redis configuration
@@ -118,12 +118,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: leapfrog-app
+    container_name: twizzle-app
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/leapfrog?schema=public
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/twizzle?schema=public
       - NEXTAUTH_URL=http://localhost:3000
       - NEXTAUTH_SECRET=dev-secret-change-in-production
     depends_on:

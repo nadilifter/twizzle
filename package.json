@@ -1,6 +1,6 @@
 {
-  "name": "uplifter",
-  "version": "0.1.0",
+  "name": "twizzle",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "concurrently -n next,tsc -c blue,yellow \"NODE_OPTIONS='--max-old-space-size=8192' next dev --turbo\" \"tsc --noEmit --watch --preserveWatchOutput -p tsconfig.dev.json\"",
