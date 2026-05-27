@@ -70,5 +70,8 @@ package-lock.json
 # personal VS Code / Cursor debug config
 .vscode/launch.json
 
+# JetBrains IDE workspace state
+.idea/
+
 # Claude Code workspace state
 .claude/
