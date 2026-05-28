@@ -475,6 +475,8 @@ async function main() {
         liveSupport: true,
         customInformation: true,
         analytics: false,
+        competitions: true,
+        reports: true,
       },
     },
     create: {
@@ -519,6 +521,8 @@ async function main() {
         liveSupport: true,
         customInformation: true,
         analytics: false,
+        competitions: true,
+        reports: true,
       },
       isPopular: true,
       displayOrder: 2,
@@ -619,6 +623,8 @@ async function main() {
       stateProvince: "TX",
       postalCode: "78701",
       country: "US",
+      // Skate Canada section code, used for CSS competition exports
+      federationSection: "ON",
     },
   });
   const org2 = await prisma.organization.upsert({

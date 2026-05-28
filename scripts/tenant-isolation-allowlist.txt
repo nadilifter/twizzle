@@ -308,3 +308,9 @@ src/app/api/organization/taxes-and-fees/report/route.ts
 # athleteId after a visibility check that requires the athlete to belong to the
 # caller's org (or be linked as a guardian / self-athlete).
 src/app/api/athletes/[id]/canskate-ribbons/route.ts
+
+# Skate Canada CSS competition export: every fetchCssExportInput query is
+# filtered by { competitionId, organizationId: session.user.organizationId };
+# nested athlete data is scoped through the competition relation.
+src/app/api/competitions/[id]/css-export/route.ts
+src/app/api/competitions/[id]/css-export/validate/route.ts

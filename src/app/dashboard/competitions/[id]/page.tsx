@@ -19,6 +19,7 @@ import {
   Flag,
   Receipt,
   ArrowRight,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +50,7 @@ import { TransactionHistoryCard } from "@/components/transaction-history-card";
 import { LatestRegistrationsCard } from "@/components/latest-registrations-card";
 import { formatPrice } from "@/lib/format-utils";
 import { CompetitionConfiguration } from "../competition-configuration";
+import { CssExportDialog } from "./css-export-dialog";
 import { COMPETITION_TYPE_LABELS, getStatusLabel, getStatusStyle } from "../lib/competition-status";
 import { AthletesTab } from "./athletes-tab";
 import { EventsTab, getCategoryLabel } from "./events-tab";
@@ -314,6 +316,7 @@ export default function CompetitionProfilePage() {
   const [loading, setLoading] = React.useState(true);
   const [resultsLoading, setResultsLoading] = React.useState(false);
   const [isEditOpen, setIsEditOpen] = React.useState(false);
+  const [isCssExportOpen, setIsCssExportOpen] = React.useState(false);
   const [activeTab, setActiveTabState] = React.useState(searchParams.get("tab") ?? "overview");
 
   const setActiveTab = React.useCallback(
@@ -479,11 +482,24 @@ export default function CompetitionProfilePage() {
             {getStatusLabel(competition)}
           </Badge>
         </div>
-        <Button onClick={() => setIsEditOpen(true)}>
-          <Settings className="mr-2 h-4 w-4" />
-          Settings
-        </Button>
+        <div className="flex items-center gap-2">
+          {competition.competitionType === "FIGURE_SKATING" && (
+            <Button variant="outline" onClick={() => setIsCssExportOpen(true)}>
+              <Download className="mr-2 h-4 w-4" />
+              Export to CSS
+            </Button>
+          )}
+          <Button onClick={() => setIsEditOpen(true)}>
+            <Settings className="mr-2 h-4 w-4" />
+            Settings
+          </Button>
+        </div>
       </div>
+      <CssExportDialog
+        competitionId={competitionId}
+        open={isCssExportOpen}
+        onOpenChange={setIsCssExportOpen}
+      />
 
       <Sheet open={isEditOpen} onOpenChange={setIsEditOpen}>
         <SheetContent className="sm:max-w-2xl p-0">

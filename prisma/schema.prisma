@@ -33,6 +33,12 @@ model Organization {
   latitude      Float?
   longitude     Float?
 
+  // Skate Canada section code used in CSS competition exports.
+  // E.g. "ON" (Ontario), "BC" (British Columbia), "AB" (Alberta), or
+  // U.S. Figure Skating region for USFS clubs. Optional; only used when
+  // exporting competition entries to Skate Canada's CSS tool.
+  federationSection String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
