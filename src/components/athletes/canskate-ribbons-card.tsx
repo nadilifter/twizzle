@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Award, Ribbon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface Ribbon {
+interface RibbonItem {
   id: string;
   name: string;
   description: string | null;
@@ -22,7 +22,7 @@ interface Ribbon {
 }
 
 interface ApiResponse {
-  ribbons: Ribbon[];
+  ribbons: RibbonItem[];
   summary: { total: number; earned: number };
 }
 
@@ -81,7 +81,7 @@ export function CanSkateRibbonsCard({ athleteId }: CanSkateRibbonsCardProps) {
 
   // Group ribbons by stage for the grid layout
   const byStage = useMemo(() => {
-    const map = new Map<number, Ribbon[]>();
+    const map = new Map<number, RibbonItem[]>();
     for (const r of data?.ribbons ?? []) {
       const list = map.get(r.stage) ?? [];
       list.push(r);
