@@ -14,14 +14,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
-  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { RIBBON_DIMENSION_STYLE } from "@/lib/canskate-ribbons";
+import { TemplatePicker } from "@/components/evaluations/template-picker";
 import {
   Sheet,
   SheetContent,
@@ -168,10 +166,16 @@ function CoachEvaluationsContent() {
   const fetchTemplates = async () => {
     setIsLoadingTemplates(true);
     try {
+      // The full Skate Canada catalog seeds ~96 templates per org (19 CanSkate
+      // ribbons + 71 STAR test sheets + program/membership templates). The
+      // endpoint defaults to limit=50, which would silently truncate the
+      // alphabetical list and hide STAR-prefixed templates. Request the full
+      // set so the searchable combobox can match every template.
       const response = await api.get<{ data: EvaluationTemplateWithSkills[] }>(
         "/api/evaluation-templates",
         {
           isActive: "true",
+          limit: "500",
         }
       );
       setTemplates(response.data);
@@ -622,90 +626,12 @@ function CoachEvaluationsContent() {
 
             <div className="space-y-2">
               <Label htmlFor="template">Evaluation Template *</Label>
-              <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a template..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {isLoadingTemplates ? (
-                    <SelectItem value="loading" disabled>
-                      Loading...
-                    </SelectItem>
-                  ) : templates.length === 0 ? (
-                    <SelectItem value="none" disabled>
-                      No templates found
-                    </SelectItem>
-                  ) : (
-                    (() => {
-                      const ribbonTemplates = templates.filter((t) => t.ribbonMeta);
-                      const regularTemplates = templates.filter((t) => !t.ribbonMeta);
-                      // Ribbon templates sorted by stage then dimension
-                      const dimOrder: Record<string, number> = {
-                        Balance: 0,
-                        Control: 1,
-                        Agility: 2,
-                        Achievement: 0,
-                      };
-                      const sortedRibbons = [...ribbonTemplates].sort((a, b) => {
-                        const sa = a.ribbonMeta!.stage;
-                        const sb = b.ribbonMeta!.stage;
-                        if (sa !== sb) return sa - sb;
-                        return (
-                          (dimOrder[a.ribbonMeta!.dimension] ?? 99) -
-                          (dimOrder[b.ribbonMeta!.dimension] ?? 99)
-                        );
-                      });
-                      return (
-                        <>
-                          {sortedRibbons.length > 0 && (
-                            <SelectGroup>
-                              <SelectLabel className="flex items-center gap-1.5">
-                                <Award className="h-3.5 w-3.5" />
-                                CanSkate Ribbons ({sortedRibbons.length})
-                              </SelectLabel>
-                              {sortedRibbons.map((template) => {
-                                const meta = template.ribbonMeta!;
-                                const style = RIBBON_DIMENSION_STYLE[meta.dimension];
-                                return (
-                                  <SelectItem key={template.id} value={template.id}>
-                                    <span className="flex items-center gap-2">
-                                      <span
-                                        className={cn(
-                                          "inline-block h-2 w-2 rounded-full shrink-0",
-                                          style.dot
-                                        )}
-                                      />
-                                      <span className="font-medium">{meta.label}</span>
-                                      <span className="text-muted-foreground text-xs">
-                                        ({template.skills.length} goals)
-                                      </span>
-                                    </span>
-                                  </SelectItem>
-                                );
-                              })}
-                            </SelectGroup>
-                          )}
-                          {sortedRibbons.length > 0 && regularTemplates.length > 0 && (
-                            <SelectSeparator />
-                          )}
-                          {regularTemplates.length > 0 && (
-                            <SelectGroup>
-                              {sortedRibbons.length > 0 && (
-                                <SelectLabel>Other templates</SelectLabel>
-                              )}
-                              {regularTemplates.map((template) => (
-                                <SelectItem key={template.id} value={template.id}>
-                                  {template.name} ({template.skills.length} skills)
-                                </SelectItem>
-                              ))}
-                            </SelectGroup>
-                          )}
-                        </>
-                      );
-                    })()
-                  )}
-                </SelectContent>
-              </Select>
+              <TemplatePicker
+                templates={templates}
+                value={selectedTemplateId}
+                onValueChange={setSelectedTemplateId}
+                loading={isLoadingTemplates}
+              />
             </div>
 
             <div className="space-y-2">

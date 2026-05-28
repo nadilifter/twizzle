@@ -23,8 +23,10 @@
 
 import { PrismaClient } from "@prisma/client";
 import { seedCanSkateRibbons } from "./canskate-ribbons";
+import { seedStarAssessments, STAR_ASSESSMENT_COUNTS } from "./star-assessments";
 
 export { seedCanSkateRibbons } from "./canskate-ribbons";
+export { seedStarAssessments, STAR_ASSESSMENT_COUNTS } from "./star-assessments";
 
 const CATEGORIES = [
   {
@@ -177,6 +179,51 @@ const LEVELS = [
     description: "Highest skill, free skate, dances, and field moves test level.",
     order: 21,
     color: "#fbbf24",
+  },
+  // Skate Canada Competition Program categories — used alongside STAR for the
+  // qualifying / podium pathway. Referenced from STAR 6+ Freeskate
+  // assessments in competition contexts.
+  {
+    key: "level-pre-juvenile",
+    name: "Pre-Juvenile",
+    description: "Pre-Juvenile Singles competition category; entry-level competitive stream.",
+    order: 30,
+    color: "#a855f7",
+  },
+  {
+    key: "level-juvenile",
+    name: "Juvenile",
+    description: "Juvenile Singles competition category.",
+    order: 31,
+    color: "#a855f7",
+  },
+  {
+    key: "level-pre-novice",
+    name: "Pre-Novice",
+    description: "Pre-Novice Singles competition category.",
+    order: 32,
+    color: "#a855f7",
+  },
+  {
+    key: "level-novice",
+    name: "Novice",
+    description: "Novice Singles competition category.",
+    order: 33,
+    color: "#a855f7",
+  },
+  {
+    key: "level-junior",
+    name: "Junior",
+    description: "Junior Singles competition category; ISU age-eligible.",
+    order: 34,
+    color: "#a855f7",
+  },
+  {
+    key: "level-senior",
+    name: "Senior",
+    description: "Senior Singles competition category; ISU age-eligible.",
+    order: 35,
+    color: "#a855f7",
   },
 ];
 
@@ -553,66 +600,13 @@ const SKILLS = [
   },
 ];
 
-// Representative test sheets: each maps to a Level and lists the required skill keys.
-const TEST_TEMPLATES = [
-  {
-    key: "test-canskate-stage-2",
-    name: "CanSkate Stage 2 Test",
-    description: "Stage 2 assessment: forward swizzles, two-foot jumps, snowplow stops.",
-    levelKey: "level-canskate-stage-2",
-    minAge: 4,
-    maxAge: 8,
-    skillKeys: ["skill-fwd-swizzles", "skill-two-foot-spin"],
-  },
-  {
-    key: "test-canskate-stage-5",
-    name: "CanSkate Stage 5 Test",
-    description: "Stage 5 assessment: crossovers, t-stops, basic spirals, waltz jump prep.",
-    levelKey: "level-canskate-stage-5",
-    minAge: 5,
-    maxAge: 10,
-    skillKeys: ["skill-fwd-crossovers", "skill-bwd-crossovers", "skill-lunge", "skill-bunny-hop"],
-  },
-  {
-    key: "test-star-1",
-    name: "STAR 1 Free Skate Test",
-    description: "First competitive test: waltz jump, two-foot spin, basic skating skills.",
-    levelKey: "level-star-1",
-    minAge: 6,
-    maxAge: null,
-    skillKeys: [
-      "skill-waltz-jump",
-      "skill-two-foot-spin",
-      "skill-three-turn",
-      "skill-fwd-outside-edge",
-      "skill-fwd-inside-edge",
-    ],
-  },
-  {
-    key: "test-star-4",
-    name: "STAR 4 Free Skate Test",
-    description: "Lutz, axel, camel spin, combination spin, and step sequence elements.",
-    levelKey: "level-star-4",
-    minAge: 9,
-    maxAge: null,
-    skillKeys: [
-      "skill-axel",
-      "skill-lutz",
-      "skill-camel-spin",
-      "skill-combination-spin",
-      "skill-bracket",
-    ],
-  },
-  {
-    key: "test-star-6",
-    name: "STAR 6 Free Skate Test",
-    description: "Full set of double jumps, layback spin, and full short program element list.",
-    levelKey: "level-star-6",
-    minAge: 11,
-    maxAge: null,
-    skillKeys: ["skill-axel", "skill-layback-spin", "skill-flying-camel", "skill-ina-bauer"],
-  },
-];
+// The illustrative TEST_TEMPLATES that used to live here have been removed
+// in favour of two purpose-built seeders:
+//   - canskate-ribbons.ts → Pre-CanSkate + CanSkate Stages 1-6 ribbons
+//     (Balance/Control/Agility) sourced from official Skate Canada CSVs.
+//   - star-assessments.ts → STAR 1-Gold test sheets across five disciplines
+//     (Freeskate Elements, Freeskate Programs, Skills, Dance, Artistic,
+//     Synchro). See those modules for the data tables.
 
 export async function seedSkatingTaxonomy(
   prisma: PrismaClient,
@@ -674,55 +668,21 @@ export async function seedSkatingTaxonomy(
     skillIdByKey.set(skill.key, id);
   }
 
-  // Evaluation templates (test sheets)
-  for (const tmpl of TEST_TEMPLATES) {
-    const id = `${organizationId}-${tmpl.key}`;
-    const levelId = levelIdByKey.get(tmpl.levelKey);
-    if (!levelId) continue;
-
-    await prisma.evaluationTemplate.upsert({
-      where: { id },
-      update: {},
-      create: {
-        id,
-        organizationId,
-        name: tmpl.name,
-        description: tmpl.description,
-        levelId,
-        minAge: tmpl.minAge,
-        maxAge: tmpl.maxAge,
-        scoringType: "PASS_FAIL",
-        pointScaleMin: 1,
-        pointScaleMax: 10,
-        pointScalePassThreshold: 7,
-        completionType: "ALL",
-        completionThreshold: 100,
-        autoSyncEnabled: false,
-        autoSyncLevels: [],
-        autoSyncCategories: [],
-        skills: {
-          create: tmpl.skillKeys
-            .map((key) => skillIdByKey.get(key))
-            .filter((sid): sid is string => Boolean(sid))
-            .map((skillId, index) => ({
-              skillId,
-              order: index,
-              isRequired: true,
-            })),
-        },
-      },
-    });
-  }
-
   // Official Skate Canada CanSkate ribbon catalog (Balance/Control/Agility
   // ribbons × Stages 1-6, plus Pre-CanSkate). Imported from the Uplifter
   // ecosystem CSVs in prisma/canskate-ribbons/.
   await seedCanSkateRibbons(prisma, organizationId);
+
+  // Official Skate Canada STAR 1-Gold assessment catalog across Freeskate
+  // Elements/Programs, Skills, Dance Step Elements, Pattern Dances,
+  // Artistic Programs, and Synchro. ~70 elements + ~40 test sheets.
+  await seedStarAssessments(prisma, organizationId);
 }
 
 export const SKATE_SEED_COUNTS = {
   categories: CATEGORIES.length,
   levels: LEVELS.length,
   skills: SKILLS.length,
-  testTemplates: TEST_TEMPLATES.length,
+  starSkills: STAR_ASSESSMENT_COUNTS.skills,
+  starTemplates: STAR_ASSESSMENT_COUNTS.templates,
 };

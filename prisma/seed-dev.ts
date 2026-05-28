@@ -10117,7 +10117,7 @@ See you at Metro Sports!
   await seedSkatingTaxonomy(prisma, ORG1_ID);
   await seedSkatingTaxonomy(prisma, ORG_DEMO_ID);
   console.log(
-    `  ✓ Created ${SKATE_SEED_COUNTS.categories} categories, ${SKATE_SEED_COUNTS.levels} levels, ${SKATE_SEED_COUNTS.skills} skills, ${SKATE_SEED_COUNTS.testTemplates} test templates per org`
+    `  ✓ Created ${SKATE_SEED_COUNTS.categories} categories, ${SKATE_SEED_COUNTS.levels} levels, ${SKATE_SEED_COUNTS.skills} skating skills, ${SKATE_SEED_COUNTS.starSkills} STAR elements, ${SKATE_SEED_COUNTS.starTemplates} STAR test sheets per org`
   );
 
   // --- Sample earned CanSkate ribbons for demo ---
