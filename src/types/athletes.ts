@@ -17,6 +17,9 @@ export interface Athlete {
   birthDate: string | null;
   gender: GenderDeclaration | null;
   customId: string | null;
+  federationName: string | null;
+  federationMemberNumber: string | null;
+  federationMemberExpiresAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -315,6 +318,9 @@ export interface UpdateAthletePayload {
   status?: AthleteStatus;
   birthDate?: string | null;
   guardianUserId?: string;
+  federationName?: string | null;
+  federationMemberNumber?: string | null;
+  federationMemberExpiresAt?: string | null;
 }
 
 // Query parameters for filtering athletes

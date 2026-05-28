@@ -73,7 +73,14 @@ export async function GET(request: NextRequest) {
         include: {
           organizationAthletes: {
             where: { organizationId: orgId },
-            select: { level: true, status: true, customId: true },
+            select: {
+              level: true,
+              status: true,
+              customId: true,
+              federationName: true,
+              federationMemberNumber: true,
+              federationMemberExpiresAt: true,
+            },
           },
           guardians: {
             include: {
@@ -175,6 +182,11 @@ export async function GET(request: NextRequest) {
         level: orgAthlete?.level ?? "Unassigned",
         status: orgAthlete?.status ?? "ACTIVE",
         customId: orgAthlete?.customId ?? null,
+        federationName: orgAthlete?.federationName ?? null,
+        federationMemberNumber: orgAthlete?.federationMemberNumber ?? null,
+        federationMemberExpiresAt: orgAthlete?.federationMemberExpiresAt
+          ? orgAthlete.federationMemberExpiresAt.toISOString()
+          : null,
         parent: guardianUser?.name ?? "Unknown",
         activePrograms: programsWithFutureInstances.size,
         activeProgramList,
@@ -254,7 +266,14 @@ export async function POST(request: NextRequest) {
       include: {
         organizationAthletes: {
           where: { organizationId: session.user.organizationId },
-          select: { level: true, status: true, customId: true },
+          select: {
+            level: true,
+            status: true,
+            customId: true,
+            federationName: true,
+            federationMemberNumber: true,
+            federationMemberExpiresAt: true,
+          },
         },
         guardians: {
           include: {
@@ -297,6 +316,11 @@ export async function POST(request: NextRequest) {
       level: orgAthlete?.level ?? "Unassigned",
       status: orgAthlete?.status ?? "ACTIVE",
       customId: orgAthlete?.customId ?? null,
+      federationName: orgAthlete?.federationName ?? null,
+      federationMemberNumber: orgAthlete?.federationMemberNumber ?? null,
+      federationMemberExpiresAt: orgAthlete?.federationMemberExpiresAt
+        ? orgAthlete.federationMemberExpiresAt.toISOString()
+        : null,
       parent: guardianUserData?.name ?? "Unknown",
       activePrograms: 0,
       activeProgramList: [],

@@ -314,6 +314,31 @@ export default function AthletesPage() {
         },
       },
       {
+        id: "federationMember",
+        accessorFn: (row) => row.federationMemberNumber ?? "",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Member #" />,
+        cell: ({ row }) => {
+          const num = row.original.federationMemberNumber;
+          if (!num) return <span className="text-muted-foreground">—</span>;
+          const fed = row.original.federationName;
+          const prefix =
+            fed === "SKATE_CANADA" ? "SC" : fed === "USFS" ? "USFS" : fed === "ISU" ? "ISU" : "ID";
+          const expires = row.original.federationMemberExpiresAt;
+          const isExpired = expires ? new Date(expires) < new Date() : false;
+          return (
+            <div className="flex items-center gap-1.5 text-sm">
+              <span className="text-muted-foreground text-xs">{prefix}</span>
+              <span className="font-medium">{num}</span>
+              {isExpired && (
+                <Badge variant="destructive" className="h-4 px-1 text-[10px]">
+                  Expired
+                </Badge>
+              )}
+            </div>
+          );
+        },
+      },
+      {
         id: "programIds",
         accessorFn: (row) => (row.activeProgramList ?? []).map((p) => p.id),
         enableHiding: false,

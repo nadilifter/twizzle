@@ -33,7 +33,18 @@ interface AthleteData {
   birthDate: string | null;
   gender: string | null;
   guardian?: { id: string; name: string | null; email: string } | null;
+  federationName?: string | null;
+  federationMemberNumber?: string | null;
+  federationMemberExpiresAt?: string | null;
 }
+
+const FEDERATION_OPTIONS: { value: string; label: string }[] = [
+  { value: "SKATE_CANADA", label: "Skate Canada" },
+  { value: "USFS", label: "U.S. Figure Skating" },
+  { value: "ISU", label: "ISU" },
+];
+
+const FEDERATION_NONE = "__none__";
 
 interface AthleteConfigurationProps {
   athlete: AthleteData;
@@ -62,6 +73,11 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
     status: athlete.status || ("ACTIVE" as AthleteStatus),
     birthDate: athlete.birthDate ? new Date(athlete.birthDate).toISOString().split("T")[0] : "",
     guardianUserId: athlete.guardian?.id || "",
+    federationName: athlete.federationName || "",
+    federationMemberNumber: athlete.federationMemberNumber || "",
+    federationMemberExpiresAt: athlete.federationMemberExpiresAt
+      ? new Date(athlete.federationMemberExpiresAt).toISOString().split("T")[0]
+      : "",
   }));
 
   const levelColor = useMemo(() => {
@@ -88,6 +104,9 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
         status: formData.status,
         birthDate: formData.birthDate || null,
         guardianUserId: formData.guardianUserId || undefined,
+        federationName: formData.federationName || null,
+        federationMemberNumber: formData.federationMemberNumber.trim() || null,
+        federationMemberExpiresAt: formData.federationMemberExpiresAt || null,
       };
 
       if (onUpdated) {
@@ -276,6 +295,99 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Federation Membership */}
+          <div className="space-y-4 pt-2 border-t">
+            <div className="space-y-1">
+              <h3 className="text-sm font-medium">Federation Membership</h3>
+              <p className="text-xs text-muted-foreground">
+                Skate Canada / U.S. Figure Skating membership tracking. Required for competition
+                eligibility and insurance.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="config-federation-name">Federation</Label>
+                <Select
+                  value={formData.federationName || FEDERATION_NONE}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      federationName: value === FEDERATION_NONE ? "" : value,
+                    }))
+                  }
+                >
+                  <SelectTrigger id="config-federation-name">
+                    <SelectValue placeholder="None" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={FEDERATION_NONE}>None</SelectItem>
+                    {FEDERATION_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="config-federation-number">Member Number</Label>
+                <Input
+                  id="config-federation-number"
+                  value={formData.federationMemberNumber}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      federationMemberNumber: e.target.value,
+                    }))
+                  }
+                  placeholder="e.g. 12345678"
+                  disabled={!formData.federationName}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Membership Expires</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !formData.federationMemberExpiresAt && "text-muted-foreground"
+                    )}
+                    disabled={!formData.federationName}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.federationMemberExpiresAt
+                      ? format(new Date(formData.federationMemberExpiresAt + "T12:00:00Z"), "PPP")
+                      : "No expiry set"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={
+                      formData.federationMemberExpiresAt
+                        ? new Date(formData.federationMemberExpiresAt + "T12:00:00Z")
+                        : undefined
+                    }
+                    onSelect={(date) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        federationMemberExpiresAt: date ? format(date, "yyyy-MM-dd") : "",
+                      }))
+                    }
+                    captionLayout="dropdown"
+                    fromYear={new Date().getFullYear() - 2}
+                    toYear={new Date().getFullYear() + 5}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
 
           {/* Save */}

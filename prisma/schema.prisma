@@ -567,6 +567,12 @@ model OrganizationAthlete {
   level          String        @default("Unassigned")
   status         AthleteStatus @default(ACTIVE)
   customId       String?
+  // Federation membership (e.g., Skate Canada, U.S. Figure Skating).
+  // Tracked per-org because the same person can compete for different clubs
+  // under different federations.
+  federationName             String? // e.g., "SKATE_CANADA", "USFS", "ISU"
+  federationMemberNumber     String?
+  federationMemberExpiresAt  DateTime?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
@@ -576,6 +582,7 @@ model OrganizationAthlete {
   @@unique([organizationId, athleteId])
   @@index([organizationId])
   @@index([athleteId])
+  @@index([federationMemberNumber])
 }
 
 model GuardianClaimRequest {

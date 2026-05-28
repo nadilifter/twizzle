@@ -3056,6 +3056,9 @@ async function main() {
       level: "Bronze",
       status: "ACTIVE" as const,
       customId: "SGA-001",
+      federationName: "SKATE_CANADA",
+      federationMemberNumber: "SC-20410001",
+      federationMemberExpiresAt: daysFromNow(180),
     },
     {
       organizationId: ORG1_ID,
@@ -3063,6 +3066,9 @@ async function main() {
       level: "Silver",
       status: "ACTIVE" as const,
       customId: "SGA-002",
+      federationName: "SKATE_CANADA",
+      federationMemberNumber: "SC-20410002",
+      federationMemberExpiresAt: daysFromNow(220),
     },
     {
       organizationId: ORG1_ID,
@@ -3070,6 +3076,9 @@ async function main() {
       level: "Competitive",
       status: "ACTIVE" as const,
       customId: "SGA-003",
+      federationName: "SKATE_CANADA",
+      federationMemberNumber: "SC-20410003",
+      federationMemberExpiresAt: daysFromNow(310),
     },
     {
       organizationId: ORG1_ID,
@@ -3077,6 +3086,9 @@ async function main() {
       level: "Bronze",
       status: "ACTIVE" as const,
       customId: "SGA-004",
+      federationName: "SKATE_CANADA",
+      federationMemberNumber: "SC-20410004",
+      federationMemberExpiresAt: daysAgo(15), // sample expired membership
     },
     {
       organizationId: ORG1_ID,
@@ -3084,6 +3096,9 @@ async function main() {
       level: "Gold",
       status: "ACTIVE" as const,
       customId: "SGA-005",
+      federationName: "SKATE_CANADA",
+      federationMemberNumber: "SC-20410005",
+      federationMemberExpiresAt: daysFromNow(60),
     },
     {
       organizationId: ORG1_ID,
@@ -3091,6 +3106,9 @@ async function main() {
       level: "Competitive",
       status: "ACTIVE" as const,
       customId: "SGA-006",
+      federationName: "USFS",
+      federationMemberNumber: "USFS-789123",
+      federationMemberExpiresAt: daysFromNow(400),
     },
     {
       organizationId: ORG1_ID,

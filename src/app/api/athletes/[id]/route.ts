@@ -34,9 +34,19 @@ const updateAthleteSchema = z.object({
   birthDate: z.string().optional().nullable(),
   gender: z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]).optional().nullable(),
   guardianUserId: z.string().optional(),
+  federationName: z.string().max(64).optional().nullable(),
+  federationMemberNumber: z.string().max(64).optional().nullable(),
+  federationMemberExpiresAt: z.string().optional().nullable(),
 });
 
-const STAFF_ONLY_FIELDS = ["level", "status", "guardianUserId"] as const;
+const STAFF_ONLY_FIELDS = [
+  "level",
+  "status",
+  "guardianUserId",
+  "federationName",
+  "federationMemberNumber",
+  "federationMemberExpiresAt",
+] as const;
 
 // GET /api/athletes/[id]
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -72,7 +82,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       include: {
         organizationAthletes: {
           where: { organizationId: session.user.organizationId },
-          select: { level: true, status: true, customId: true },
+          select: {
+            level: true,
+            status: true,
+            customId: true,
+            federationName: true,
+            federationMemberNumber: true,
+            federationMemberExpiresAt: true,
+          },
         },
         guardians: {
           include: {
@@ -439,6 +456,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       level: orgAthlete?.level ?? "Unassigned",
       status: orgAthlete?.status ?? "ACTIVE",
       customId: orgAthlete?.customId ?? null,
+      federationName: orgAthlete?.federationName ?? null,
+      federationMemberNumber: orgAthlete?.federationMemberNumber ?? null,
+      federationMemberExpiresAt: orgAthlete?.federationMemberExpiresAt
+        ? orgAthlete.federationMemberExpiresAt.toISOString()
+        : null,
       levelInfo,
       memberships,
       waivers,
@@ -584,8 +606,19 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       }
     }
 
-    const { birthDate, guardianUserId, level, status, firstName, lastName, gender, ...otherData } =
-      validatedData;
+    const {
+      birthDate,
+      guardianUserId,
+      level,
+      status,
+      firstName,
+      lastName,
+      gender,
+      federationName,
+      federationMemberNumber,
+      federationMemberExpiresAt,
+      ...otherData
+    } = validatedData;
 
     const nameUpdate: Record<string, unknown> = {};
     if (firstName !== undefined) nameUpdate.firstName = firstName;
@@ -597,6 +630,13 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       const orgAthleteUpdate: Record<string, unknown> = {};
       if (level !== undefined) orgAthleteUpdate.level = level;
       if (status !== undefined) orgAthleteUpdate.status = status;
+      if (federationName !== undefined) orgAthleteUpdate.federationName = federationName;
+      if (federationMemberNumber !== undefined)
+        orgAthleteUpdate.federationMemberNumber = federationMemberNumber;
+      if (federationMemberExpiresAt !== undefined) {
+        orgAthleteUpdate.federationMemberExpiresAt =
+          federationMemberExpiresAt === null ? null : parseDateOnly(federationMemberExpiresAt);
+      }
 
       if (Object.keys(orgAthleteUpdate).length > 0 && session.user.organizationId) {
         await db.organizationAthlete.updateMany({
@@ -618,7 +658,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       include: {
         organizationAthletes: {
           where: { organizationId: session.user.organizationId },
-          select: { level: true, status: true, customId: true },
+          select: {
+            level: true,
+            status: true,
+            customId: true,
+            federationName: true,
+            federationMemberNumber: true,
+            federationMemberExpiresAt: true,
+          },
         },
         guardians: {
           include: {
@@ -648,6 +695,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       level: updatedOrgAthlete?.level ?? "Unassigned",
       status: updatedOrgAthlete?.status ?? "ACTIVE",
       customId: updatedOrgAthlete?.customId ?? null,
+      federationName: updatedOrgAthlete?.federationName ?? null,
+      federationMemberNumber: updatedOrgAthlete?.federationMemberNumber ?? null,
+      federationMemberExpiresAt: updatedOrgAthlete?.federationMemberExpiresAt
+        ? updatedOrgAthlete.federationMemberExpiresAt.toISOString()
+        : null,
       parent: primaryGuardian?.user?.name ?? "Unknown",
     });
   } catch (error) {

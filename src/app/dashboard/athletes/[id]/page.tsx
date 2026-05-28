@@ -38,6 +38,7 @@ import {
   UserCheck,
   UserX,
   Users,
+  BadgeCheck,
 } from "lucide-react";
 import { calculateAge } from "@/lib/age-utils";
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
@@ -402,6 +403,25 @@ export default function AthleteProfilePage() {
                   {primaryGuardianUser.name ?? primaryGuardianUser.email}
                 </span>
               ) : null}
+              {(athlete as any).federationMemberNumber ? (
+                <>
+                  <span className="text-border">·</span>
+                  <span className="truncate">
+                    {(athlete as any).federationName === "SKATE_CANADA"
+                      ? "SC#"
+                      : (athlete as any).federationName === "USFS"
+                        ? "USFS#"
+                        : "Member#"}{" "}
+                    <span className="text-foreground font-medium">
+                      {(athlete as any).federationMemberNumber}
+                    </span>
+                    {(athlete as any).federationMemberExpiresAt &&
+                    new Date((athlete as any).federationMemberExpiresAt) < new Date() ? (
+                      <span className="ml-1 text-destructive">(expired)</span>
+                    ) : null}
+                  </span>
+                </>
+              ) : null}
             </div>
           </div>
         </div>
@@ -430,6 +450,9 @@ export default function AthleteProfilePage() {
                     email: primaryGuardianUser.email,
                   }
                 : null,
+              federationName: (athlete as any).federationName ?? null,
+              federationMemberNumber: (athlete as any).federationMemberNumber ?? null,
+              federationMemberExpiresAt: (athlete as any).federationMemberExpiresAt ?? null,
             }}
             onClose={() => setIsEditOpen(false)}
             onUpdated={async (data) => {
@@ -544,6 +567,85 @@ export default function AthleteProfilePage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Federation Membership */}
+            {(() => {
+              const fedName = (athlete as any).federationName as string | null | undefined;
+              const fedNum = (athlete as any).federationMemberNumber as string | null | undefined;
+              const fedExpiresAt = (athlete as any).federationMemberExpiresAt as
+                | string
+                | null
+                | undefined;
+              const fedLabel =
+                fedName === "SKATE_CANADA"
+                  ? "Skate Canada"
+                  : fedName === "USFS"
+                    ? "U.S. Figure Skating"
+                    : fedName === "ISU"
+                      ? "ISU"
+                      : null;
+              const isExpired = fedExpiresAt ? new Date(fedExpiresAt) < new Date() : false;
+              return (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <BadgeCheck className="h-5 w-5" />
+                      Federation Membership
+                      {fedNum && !isExpired && (
+                        <Badge
+                          variant="outline"
+                          className="ml-auto bg-green-50 text-green-700 border-green-200"
+                        >
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Active
+                        </Badge>
+                      )}
+                      {fedNum && isExpired && (
+                        <Badge variant="destructive" className="ml-auto">
+                          Expired
+                        </Badge>
+                      )}
+                    </CardTitle>
+                    <CardDescription>
+                      Skate Canada / U.S. Figure Skating membership for competition eligibility and
+                      insurance.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {fedNum ? (
+                      <div className="grid gap-4 sm:grid-cols-3 text-sm">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Federation</p>
+                          <p className="font-medium">{fedLabel ?? fedName ?? "—"}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Member Number</p>
+                          <p className="font-medium font-mono">{fedNum}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Expires</p>
+                          <p className={cn("font-medium", isExpired && "text-destructive")}>
+                            {fedExpiresAt
+                              ? format(new Date(fedExpiresAt), "MMM d, yyyy")
+                              : "No expiry"}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-muted-foreground">
+                          No federation membership on file.
+                        </p>
+                        <Button variant="outline" size="sm" onClick={() => setIsEditOpen(true)}>
+                          <Plus className="h-3.5 w-3.5 mr-1" />
+                          Add Membership
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
             {/* Medical + Memberships + Waivers row */}
             <div className="grid gap-6 lg:grid-cols-3">
