@@ -1,17 +1,11 @@
-/**
- * Structured Logging Utility
- *
- * Provides consistent, structured logging for the application.
- * In production, logs are formatted as JSON for easy parsing by log aggregation services.
- * In development, logs are formatted for human readability.
- *
- * Usage:
- *   import { logger } from "@/lib/logger";
- *
- *   logger.info("User logged in", { userId: "123", method: "google" });
- *   logger.error("Payment failed", { orderId: "456", error: err.message });
- *   logger.warn("Rate limit approaching", { ip: "1.2.3.4", remaining: 5 });
- */
+import * as Sentry from "@sentry/nextjs";
+
+// Duck-typed by error.name — avoids importing Prisma in the logger module.
+// These errors mean the DB engine is gone; every subsequent query will fail.
+const FATAL_INFRA_ERRORS = new Set([
+  "PrismaClientRustPanicError",
+  "PrismaClientInitializationError",
+]);
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
@@ -161,9 +155,6 @@ export const logger: Logger = {
     }
   },
 
-  /**
-   * Log an error with stack trace
-   */
   exception(message: string, error: Error, context?: LogContext): void {
     if (shouldLog("error")) {
       outputLog(
@@ -176,6 +167,10 @@ export const logger: Logger = {
         })
       );
     }
+    Sentry.captureException(error, {
+      level: FATAL_INFRA_ERRORS.has(error.name) ? "fatal" : "error",
+      extra: { logMessage: message, ...context },
+    });
   },
 
   /**
