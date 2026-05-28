@@ -46,6 +46,7 @@ import { useAthlete } from "@/hooks/use-athletes";
 import { useFeatures } from "@/components/feature-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarUpload } from "@/components/avatar-upload";
+import { CanSkateRibbonsCard } from "@/components/athletes/canskate-ribbons-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -646,6 +647,9 @@ export default function AthleteProfilePage() {
                 </Card>
               );
             })()}
+
+            {/* CanSkate Ribbons */}
+            <CanSkateRibbonsCard athleteId={athlete.id} />
 
             {/* Medical + Memberships + Waivers row */}
             <div className="grid gap-6 lg:grid-cols-3">

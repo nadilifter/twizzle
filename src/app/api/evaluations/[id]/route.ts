@@ -7,6 +7,7 @@ import { z } from "zod";
 import type { SkillAttemptStatus, ScoringType } from "@prisma/client";
 import { athleteDisplayName } from "@/lib/athlete-name";
 import { checkAndAwardAchievements } from "@/lib/services/achievement";
+import { getCanSkateRibbonMeta } from "@/lib/canskate-ribbons";
 
 const skillAttemptStatusEnum = z.enum(["NOT_ATTEMPTED", "ATTEMPTED", "SUCCEEDED"]);
 const evaluationStatusEnum = z.enum([
@@ -223,7 +224,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     if (
       !session.user.permissions.includes("*") &&
-      !session.user.permissions.includes("training.update")
+      !session.user.permissions.includes("training.update") &&
+      !session.user.permissions.includes("coaching.evaluations")
     ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -509,9 +511,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           },
         });
 
+        const decoratedAwards = awardedAchievements.map((a) => ({
+          ...a,
+          ribbonMeta: getCanSkateRibbonMeta({
+            id: a.achievementId,
+            name: a.achievementName,
+          }),
+        }));
+
         return NextResponse.json({
           ...updatedEvaluation,
-          newAchievements: awardedAchievements,
+          newAchievements: decoratedAwards,
         });
       }
     }

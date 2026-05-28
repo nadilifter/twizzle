@@ -173,6 +173,14 @@ export interface EvaluationTemplateWithSkills extends EvaluationTemplate {
   skills: EvaluationTemplateSkill[];
   programTemplates?: ProgramEvaluationTemplate[];
   achievements?: Achievement[];
+  /** Set when this template is a CanSkate ribbon (Balance/Control/Agility/Pre-CanSkate). */
+  ribbonMeta?: {
+    isRibbon: true;
+    stage: number;
+    dimension: "Balance" | "Control" | "Agility" | "Achievement";
+    label: string;
+    shortLabel: string;
+  } | null;
   _count?: {
     evaluations: number;
   };

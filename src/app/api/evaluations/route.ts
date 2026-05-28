@@ -6,6 +6,7 @@ import { checkFeatureGate } from "@/lib/feature-resolver";
 import { z } from "zod";
 import type { SkillAttemptStatus, ScoringType } from "@prisma/client";
 import { checkAndAwardAchievements } from "@/lib/services/achievement";
+import { getCanSkateRibbonMeta } from "@/lib/canskate-ribbons";
 
 const skillAttemptStatusEnum = z.enum(["NOT_ATTEMPTED", "ATTEMPTED", "SUCCEEDED"]);
 const evaluationStatusEnum = z.enum([
@@ -527,9 +528,19 @@ export async function POST(request: NextRequest) {
             },
           });
 
+          // Decorate awarded achievements with ribbon metadata so the UI
+          // can render a ribbon-aware toast instead of a generic message.
+          const decoratedAwards = awardedAchievements.map((a) => ({
+            ...a,
+            ribbonMeta: getCanSkateRibbonMeta({
+              id: a.achievementId,
+              name: a.achievementName,
+            }),
+          }));
+
           return NextResponse.json({
             ...updatedEvaluation,
-            newAchievements: awardedAchievements,
+            newAchievements: decoratedAwards,
           });
         }
       }

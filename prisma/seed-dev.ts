@@ -1935,7 +1935,11 @@ async function main() {
       status: "ACTIVE",
     },
   });
-  // Maria Rodriguez coaches at both Sunrise and Metro
+  // Maria Rodriguez coaches at both Sunrise (Gold plan — Training enabled)
+  // and Metro (Starter plan — Training disabled). This demonstrates the
+  // multi-org coach flow; the coach sidebar org switcher lets her flip
+  // between them. If the default-pick at login lands on Metro, Evaluations
+  // is hidden until she switches to Sunrise via the switcher.
   const org2MariaCoachMember = await prisma.organizationMember.upsert({
     where: { organizationId_userId: { organizationId: ORG2_ID, userId: org1Coach1.id } },
     update: { role: "COACH", status: "ACTIVE" },
@@ -2074,7 +2078,7 @@ async function main() {
     { memberId: org2CoachMember.id, permission: "coaching.assign" },
     { memberId: org2CoachMember.id, permission: "coaching.attendance" },
     { memberId: org2CoachMember.id, permission: "coaching.evaluations" },
-    // Maria Rodriguez at Metro (multi-org coach)
+    // Maria Rodriguez at Metro (multi-org coach demo)
     { memberId: org2MariaCoachMember.id, permission: "dashboard.view" },
     { memberId: org2MariaCoachMember.id, permission: "athletes.view" },
     { memberId: org2MariaCoachMember.id, permission: "athletes.edit" },
@@ -2206,7 +2210,7 @@ async function main() {
     {
       id: `${ORG1_ID}-space-2`,
       facilityId: org1Facility1.id,
-      name: "Vault Runway",
+      name: "Practice Ice B",
       capacity: 15,
       status: "OPEN" as const,
     },
@@ -2242,7 +2246,7 @@ async function main() {
     {
       id: `${ORG1_ID}-space-7`,
       facilityId: org1Facility2.id,
-      name: "Recreational Floor",
+      name: "Recreational Ice",
       capacity: 25,
       status: "OPEN" as const,
     },
@@ -2307,7 +2311,7 @@ async function main() {
       closeTime: "21:00",
     })),
     { spaceId: `${ORG1_ID}-space-1`, dayOfWeek: 6, openTime: "08:00", closeTime: "17:00" },
-    // Vault Runway: Mon-Fri 8am-8pm
+    // Practice Ice B: Mon-Fri 8am-8pm
     ...[1, 2, 3, 4, 5].map((day) => ({
       spaceId: `${ORG1_ID}-space-2`,
       dayOfWeek: day,
@@ -2335,7 +2339,7 @@ async function main() {
       openTime: "08:00",
       closeTime: "16:00",
     })),
-    // Recreational Floor: Mon-Sat 7am-9pm
+    // Recreational Ice: Mon-Sat 7am-9pm
     ...[1, 2, 3, 4, 5, 6].map((day) => ({
       spaceId: `${ORG1_ID}-space-7`,
       dayOfWeek: day,
@@ -3534,7 +3538,7 @@ async function main() {
       update: {},
       create: {
         id: `${ORG1_ID}-prog-rec-bronze`,
-        name: "Recreational Bronze",
+        name: "Learn to Skate Bronze",
         description: "Introduction to figure skating for beginners ages 5-7",
         status: "ACTIVE",
         registrationStatus: "OPEN",
@@ -3565,7 +3569,7 @@ async function main() {
       update: {},
       create: {
         id: `${ORG1_ID}-prog-rec-silver`,
-        name: "Recreational Silver",
+        name: "Learn to Skate Silver",
         description: "Intermediate recreational program for ages 7-10",
         status: "ACTIVE",
         registrationStatus: "OPEN",
@@ -3596,7 +3600,7 @@ async function main() {
       update: {},
       create: {
         id: `${ORG1_ID}-prog-rec-gold`,
-        name: "Recreational Gold",
+        name: "Learn to Skate Gold",
         description: "Advanced recreational program for ages 10+",
         status: "ACTIVE",
         registrationStatus: "OPEN",
@@ -3620,7 +3624,7 @@ async function main() {
       update: {},
       create: {
         id: `${ORG1_ID}-prog-jo`,
-        name: "Junior Olympics Team",
+        name: "STARSkate Competitive Team",
         description: "Competitive figure skating program - Pre-Juvenile through Senior",
         status: "ACTIVE",
         registrationStatus: "OPEN",
@@ -3653,7 +3657,7 @@ async function main() {
       update: {},
       create: {
         id: `${ORG1_ID}-prog-preschool`,
-        name: "Tiny Tumblers",
+        name: "Snowplow Sam",
         description: "Parent-child Snowplow Sam classes for ages 2-4",
         status: "ACTIVE",
         registrationStatus: "OPEN",
@@ -3832,7 +3836,7 @@ async function main() {
     });
   });
 
-  // Tiny Tumblers - Saturday 9:30 AM (per-instance drop-in)
+  // Snowplow Sam - Saturday 9:30 AM (per-instance drop-in)
   const tinyTumblersDates = generateWeeklyDates(daysAgo(7), daysFromNow(60), [6]); // Saturday
   tinyTumblersDates.forEach((date, i) => {
     programInstanceData.push({
@@ -3915,7 +3919,7 @@ async function main() {
   // Add sample instance registrations for drop-in programs
   console.log("  📝 Creating sample instance registrations...");
 
-  // Get upcoming Tiny Tumblers and Kids Fitness instances
+  // Get upcoming Snowplow Sam and Kids Fitness instances
   const upcomingTinyTumblers = programInstanceData
     .filter((i) => i.programId === `${ORG1_ID}-prog-preschool` && i.status === "SCHEDULED")
     .slice(0, 3);
@@ -3950,7 +3954,7 @@ async function main() {
     status: string;
   }> = [];
 
-  // Add registrations for Tiny Tumblers
+  // Add registrations for Snowplow Sam
   upcomingTinyTumblers.forEach((instance, idx) => {
     // 3-5 athletes per session
     const numAthletes = 3 + (idx % 3);
@@ -4028,7 +4032,7 @@ async function main() {
         levelId: `${ORG1_ID}-level-bronze`,
       },
     });
-    // JO Team requires multiple levels (any of Gold, Platinum, or Competitive)
+    // STARSkate Team requires multiple levels (any of Gold, Platinum, or Competitive)
     await Promise.all([
       prisma.programLevelRequirement.upsert({
         where: {
@@ -4427,7 +4431,7 @@ async function main() {
       update: {},
       create: {
         id: `${ORG1_ID}-evt-3`,
-        title: "JO Team Practice",
+        title: "STARSkate Team Practice",
         color: "#8b5cf6",
         date: today,
         startTime: "18:30",
@@ -4444,7 +4448,7 @@ async function main() {
       update: {},
       create: {
         id: `${ORG1_ID}-evt-4`,
-        title: "JO Team Tryouts",
+        title: "STARSkate Team Tryouts",
         color: "#d946ef",
         date: daysFromNow(45),
         startTime: "08:00",
@@ -4587,7 +4591,7 @@ async function main() {
       },
       {
         id: `${ORG1_ID}-evt-hist-jo-${week}`,
-        title: "JO Team Practice - Historical",
+        title: "STARSkate Team Practice - Historical",
         date: weekDate,
         startTime: "18:30",
         endTime: "21:00",
@@ -4735,7 +4739,7 @@ async function main() {
     });
   }
 
-  // Historical attendance - ORG1 (JO Team - Athlete 3) - Perfect attendance
+  // Historical attendance - ORG1 (STARSkate Team - Athlete 3) - Perfect attendance
   for (let week = 1; week <= 4; week++) {
     const weekDate = daysAgo(week * 7);
     attendanceData.push({
@@ -4834,7 +4838,7 @@ async function main() {
     });
   }
 
-  // Historical attendance - ORG1 (JO Team - Athlete 5, Mia, Gold level)
+  // Historical attendance - ORG1 (STARSkate Team - Athlete 5, Mia, Gold level)
   for (let week = 1; week <= 4; week++) {
     const weekDate = daysAgo(week * 7);
     const status = week === 2 ? "LATE" : "PRESENT";
@@ -4914,7 +4918,7 @@ async function main() {
       lineItems: {
         create: [
           {
-            description: "JO Team Monthly - Olivia",
+            description: "STARSkate Team Monthly - Olivia",
             quantity: 1,
             unitPrice: 200,
             total: 200,
@@ -6997,7 +7001,7 @@ async function main() {
     },
     {
       id: `${ORG1_ID}-ann-2`,
-      title: "JO Team Meeting",
+      title: "STARSkate Team Meeting",
       content:
         "<p>Mandatory parent meeting for all <strong>JO team families</strong>.</p><ul><li>Date: This Saturday</li><li>Time: 10:00 AM</li><li>Location: Main Gym</li></ul>",
       priority: "NORMAL" as const,
@@ -7689,7 +7693,7 @@ async function main() {
       id: `${ORG1_ID}-media-4`,
       url: "/defaults/hero-default.ico",
       type: "IMAGE" as const,
-      title: "JO Team Practice",
+      title: "STARSkate Team Practice",
       description: "Level 4 athletes during beam practice",
       athleteId: `${ORG1_ID}-ath-3`,
       eventId: `${ORG1_ID}-evt-3`,
@@ -7749,7 +7753,7 @@ async function main() {
       memberId: `${ORG1_ID}-staff-2`,
       data: {
         employmentType: "FULL_TIME" as const,
-        title: "JO Team Coach",
+        title: "STARSkate Team Coach",
         hourlyRate: 32.0,
         hireDate: daysAgo(180),
         phone: "(555) 111-4444",
@@ -8387,7 +8391,7 @@ async function main() {
       eventId: `${ORG1_ID}-evt-3`,
       memberId: `${ORG1_ID}-staff-2`,
       role: "LEAD" as const,
-      notes: "JO Team practice lead",
+      notes: "STARSkate Team practice lead",
     },
     {
       id: `${ORG1_ID}-es-4`,
@@ -8493,7 +8497,7 @@ async function main() {
       memberId: `${ORG1_ID}-staff-2`,
       role: "LEAD_COACH" as const,
       isPrimary: true,
-      notes: "JO Team Head Coach",
+      notes: "STARSkate Team Head Coach",
     },
     {
       id: `${ORG1_ID}-ps-6`,
@@ -8566,7 +8570,7 @@ async function main() {
   // PROGRAM REQUIREMENTS (Membership Requirements)
   // ============================================
   console.log("\n📋 Setting program membership requirements...");
-  // JO Team requires the annual club membership
+  // STARSkate Team requires the annual club membership
   await prisma.program.update({
     where: { id: `${ORG1_ID}-prog-jo` },
     data: {
@@ -10109,6 +10113,46 @@ See you at Metro Sports!
   console.log(
     `  ✓ Created ${SKATE_SEED_COUNTS.categories} categories, ${SKATE_SEED_COUNTS.levels} levels, ${SKATE_SEED_COUNTS.skills} skills, ${SKATE_SEED_COUNTS.testTemplates} test templates per org`
   );
+
+  // --- Sample earned CanSkate ribbons for demo ---
+  // ath-1 has earned Pre-CanSkate + Stage 1 (all 3 ribbons). ath-5 has earned
+  // Pre-CanSkate + Stages 1-3 (9 ribbons + Pre-CanSkate). Other Sunrise
+  // athletes are left blank to demonstrate the unearned state.
+  const sampleRibbonAwards: Array<{ athleteId: string; ribbonKey: string; daysAgoEarned: number }> =
+    [
+      { athleteId: `${ORG1_ID}-ath-1`, ribbonKey: "pre-canskate-achievement", daysAgoEarned: 120 },
+      { athleteId: `${ORG1_ID}-ath-1`, ribbonKey: "canskate-stage-1-balance", daysAgoEarned: 90 },
+      { athleteId: `${ORG1_ID}-ath-1`, ribbonKey: "canskate-stage-1-control", daysAgoEarned: 75 },
+      { athleteId: `${ORG1_ID}-ath-1`, ribbonKey: "canskate-stage-1-agility", daysAgoEarned: 60 },
+      { athleteId: `${ORG1_ID}-ath-5`, ribbonKey: "pre-canskate-achievement", daysAgoEarned: 365 },
+      { athleteId: `${ORG1_ID}-ath-5`, ribbonKey: "canskate-stage-1-balance", daysAgoEarned: 300 },
+      { athleteId: `${ORG1_ID}-ath-5`, ribbonKey: "canskate-stage-1-control", daysAgoEarned: 290 },
+      { athleteId: `${ORG1_ID}-ath-5`, ribbonKey: "canskate-stage-1-agility", daysAgoEarned: 280 },
+      { athleteId: `${ORG1_ID}-ath-5`, ribbonKey: "canskate-stage-2-balance", daysAgoEarned: 200 },
+      { athleteId: `${ORG1_ID}-ath-5`, ribbonKey: "canskate-stage-2-control", daysAgoEarned: 195 },
+      { athleteId: `${ORG1_ID}-ath-5`, ribbonKey: "canskate-stage-2-agility", daysAgoEarned: 180 },
+      { athleteId: `${ORG1_ID}-ath-5`, ribbonKey: "canskate-stage-3-balance", daysAgoEarned: 90 },
+      { athleteId: `${ORG1_ID}-ath-5`, ribbonKey: "canskate-stage-3-control", daysAgoEarned: 60 },
+      { athleteId: `${ORG1_ID}-ath-5`, ribbonKey: "canskate-stage-3-agility", daysAgoEarned: 30 },
+    ];
+  for (const award of sampleRibbonAwards) {
+    const achievementId = `${ORG1_ID}-canskate-ach-${award.ribbonKey}`;
+    await prisma.athleteAchievement.upsert({
+      where: {
+        athleteId_achievementId: {
+          athleteId: award.athleteId,
+          achievementId,
+        },
+      },
+      update: {},
+      create: {
+        athleteId: award.athleteId,
+        achievementId,
+        earnedAt: daysAgo(award.daysAgoEarned),
+      },
+    });
+  }
+  console.log(`  ✓ Awarded ${sampleRibbonAwards.length} sample CanSkate ribbons`);
 
   // --- Metro Sports: Regional Athletics Meet (COMPLETED) ---
   const tfCompetition = await prisma.competition.upsert({

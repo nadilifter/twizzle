@@ -14,10 +14,14 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RIBBON_DIMENSION_STYLE } from "@/lib/canskate-ribbons";
 import {
   Sheet,
   SheetContent,
@@ -49,6 +53,7 @@ import {
   XCircle,
   ClipboardList,
   Eye,
+  Award,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -323,12 +328,28 @@ function CoachEvaluationsContent() {
         }
       );
 
-      // Check for newly awarded achievements
+      // Check for newly awarded achievements (ribbons get special treatment)
+      type AwardedAchievement = {
+        achievementName: string;
+        ribbonMeta?: {
+          isRibbon: true;
+          stage: number;
+          dimension: string;
+          label: string;
+        } | null;
+      };
       if (response.newAchievements && response.newAchievements.length > 0) {
-        response.newAchievements.forEach((achievement: { achievementName: string }) => {
-          toast.success(`Achievement unlocked: ${achievement.achievementName}!`, {
-            duration: 5000,
-          });
+        (response.newAchievements as AwardedAchievement[]).forEach((a) => {
+          if (a.ribbonMeta) {
+            toast.success(`🎀 Ribbon earned: ${a.ribbonMeta.label}!`, {
+              description: "Auto-awarded — passing every required goal earns the ribbon.",
+              duration: 7500,
+            });
+          } else {
+            toast.success(`Achievement unlocked: ${a.achievementName}!`, {
+              duration: 5000,
+            });
+          }
         });
       }
 
@@ -615,11 +636,73 @@ function CoachEvaluationsContent() {
                       No templates found
                     </SelectItem>
                   ) : (
-                    templates.map((template) => (
-                      <SelectItem key={template.id} value={template.id}>
-                        {template.name} ({template.skills.length} skills)
-                      </SelectItem>
-                    ))
+                    (() => {
+                      const ribbonTemplates = templates.filter((t) => t.ribbonMeta);
+                      const regularTemplates = templates.filter((t) => !t.ribbonMeta);
+                      // Ribbon templates sorted by stage then dimension
+                      const dimOrder: Record<string, number> = {
+                        Balance: 0,
+                        Control: 1,
+                        Agility: 2,
+                        Achievement: 0,
+                      };
+                      const sortedRibbons = [...ribbonTemplates].sort((a, b) => {
+                        const sa = a.ribbonMeta!.stage;
+                        const sb = b.ribbonMeta!.stage;
+                        if (sa !== sb) return sa - sb;
+                        return (
+                          (dimOrder[a.ribbonMeta!.dimension] ?? 99) -
+                          (dimOrder[b.ribbonMeta!.dimension] ?? 99)
+                        );
+                      });
+                      return (
+                        <>
+                          {sortedRibbons.length > 0 && (
+                            <SelectGroup>
+                              <SelectLabel className="flex items-center gap-1.5">
+                                <Award className="h-3.5 w-3.5" />
+                                CanSkate Ribbons ({sortedRibbons.length})
+                              </SelectLabel>
+                              {sortedRibbons.map((template) => {
+                                const meta = template.ribbonMeta!;
+                                const style = RIBBON_DIMENSION_STYLE[meta.dimension];
+                                return (
+                                  <SelectItem key={template.id} value={template.id}>
+                                    <span className="flex items-center gap-2">
+                                      <span
+                                        className={cn(
+                                          "inline-block h-2 w-2 rounded-full shrink-0",
+                                          style.dot
+                                        )}
+                                      />
+                                      <span className="font-medium">{meta.label}</span>
+                                      <span className="text-muted-foreground text-xs">
+                                        ({template.skills.length} goals)
+                                      </span>
+                                    </span>
+                                  </SelectItem>
+                                );
+                              })}
+                            </SelectGroup>
+                          )}
+                          {sortedRibbons.length > 0 && regularTemplates.length > 0 && (
+                            <SelectSeparator />
+                          )}
+                          {regularTemplates.length > 0 && (
+                            <SelectGroup>
+                              {sortedRibbons.length > 0 && (
+                                <SelectLabel>Other templates</SelectLabel>
+                              )}
+                              {regularTemplates.map((template) => (
+                                <SelectItem key={template.id} value={template.id}>
+                                  {template.name} ({template.skills.length} skills)
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          )}
+                        </>
+                      );
+                    })()
                   )}
                 </SelectContent>
               </Select>
@@ -654,20 +737,45 @@ function CoachEvaluationsContent() {
               </Popover>
             </div>
 
-            {selectedTemplateId && (
-              <div className="space-y-2">
-                <Label>Skills in this template:</Label>
-                <div className="border rounded-lg p-3 max-h-48 overflow-y-auto">
-                  {templates
-                    .find((t) => t.id === selectedTemplateId)
-                    ?.skills.map((ts) => (
-                      <div key={ts.id} className="text-sm py-1">
-                        {ts.skill.name}
+            {selectedTemplateId &&
+              (() => {
+                const tmpl = templates.find((t) => t.id === selectedTemplateId);
+                if (!tmpl) return null;
+                const meta = tmpl.ribbonMeta;
+                return (
+                  <>
+                    {meta && (
+                      <div
+                        className={cn(
+                          "rounded-lg border p-3 flex items-center gap-3",
+                          RIBBON_DIMENSION_STYLE[meta.dimension].banner
+                        )}
+                      >
+                        <Award className="h-5 w-5 shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold">{meta.label} Ribbon</p>
+                          <p className="text-xs opacity-80">
+                            Skate Canada test sheet — passing every goal will award the{" "}
+                            <strong>{meta.label}</strong> ribbon.
+                          </p>
+                        </div>
                       </div>
-                    ))}
-                </div>
-              </div>
-            )}
+                    )}
+                    <div className="space-y-2">
+                      <Label>
+                        {meta ? "Goals on this test sheet:" : "Skills in this template:"}
+                      </Label>
+                      <div className="border rounded-lg p-3 max-h-48 overflow-y-auto">
+                        {tmpl.skills.map((ts) => (
+                          <div key={ts.id} className="text-sm py-1">
+                            {ts.skill.name}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
           </div>
 
           <SheetFooter>
@@ -695,6 +803,29 @@ function CoachEvaluationsContent() {
 
           <ScrollArea className="h-[calc(100vh-200px)] pr-4">
             <div className="space-y-6 py-4">
+              {/* Ribbon banner (only for CanSkate ribbon templates) */}
+              {selectedEvaluation?.template &&
+                (() => {
+                  const ribbon = templates.find(
+                    (t) => t.id === selectedEvaluation.template?.id
+                  )?.ribbonMeta;
+                  if (!ribbon) return null;
+                  const style = RIBBON_DIMENSION_STYLE[ribbon.dimension];
+                  return (
+                    <div
+                      className={cn("rounded-lg border p-3 flex items-center gap-3", style.banner)}
+                    >
+                      <Award className="h-5 w-5 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold">{ribbon.label} Ribbon</p>
+                        <p className="text-xs opacity-80">
+                          Pass every goal below to award the ribbon automatically.
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
+
               {/* Scoring Type Info */}
               {selectedEvaluation?.template && (
                 <div className="bg-muted/50 rounded-lg p-3">

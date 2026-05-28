@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   MessageSquare,
   UserCheck,
+  Users,
   Star,
   Camera,
   CalendarDays,
@@ -16,6 +17,7 @@ import {
 import { useSession } from "next-auth/react";
 
 import { NavUser } from "@/components/nav-user";
+import { CoachOrgSwitcher } from "@/components/coach-org-switcher";
 import { useFeatures } from "@/components/feature-context";
 import type { FeatureKey } from "@/lib/feature-toggles";
 import {
@@ -88,6 +90,11 @@ const navItems: {
     icon: MessageSquare,
   },
   {
+    title: "Athletes",
+    url: "/coach/athletes",
+    icon: Users,
+  },
+  {
     title: "Programs",
     url: "/coach/programs",
     icon: GraduationCap,
@@ -153,9 +160,9 @@ export function CoachSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <UserCheck className="h-4 w-4" />
           </div>
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-0">
             <span className="text-sm font-semibold">Coach Portal</span>
-            <span className="text-xs text-muted-foreground">Uplifter</span>
+            <CoachOrgSwitcher />
           </div>
         </div>
       </SidebarHeader>

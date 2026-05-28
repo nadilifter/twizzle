@@ -22,6 +22,9 @@
  */
 
 import { PrismaClient } from "@prisma/client";
+import { seedCanSkateRibbons } from "./canskate-ribbons";
+
+export { seedCanSkateRibbons } from "./canskate-ribbons";
 
 const CATEGORIES = [
   {
@@ -710,6 +713,11 @@ export async function seedSkatingTaxonomy(
       },
     });
   }
+
+  // Official Skate Canada CanSkate ribbon catalog (Balance/Control/Agility
+  // ribbons × Stages 1-6, plus Pre-CanSkate). Imported from the Uplifter
+  // ecosystem CSVs in prisma/canskate-ribbons/.
+  await seedCanSkateRibbons(prisma, organizationId);
 }
 
 export const SKATE_SEED_COUNTS = {

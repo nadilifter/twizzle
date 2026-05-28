@@ -302,3 +302,9 @@ src/app/api/organization/reactivate/route.ts
 # Taxes & Fees: queries Organization/Invoice/Transaction directly by session.user.organizationId
 src/app/api/organization/taxes-and-fees/route.ts
 src/app/api/organization/taxes-and-fees/report/route.ts
+
+# CanSkate ribbons: Achievement query is filtered by organizationId in the where
+# clause; downstream AthleteAchievement / AthleteSkillProgress are scoped by
+# athleteId after a visibility check that requires the athlete to belong to the
+# caller's org (or be linked as a guardian / self-athlete).
+src/app/api/athletes/[id]/canskate-ribbons/route.ts

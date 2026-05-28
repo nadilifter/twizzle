@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { checkFeatureGate } from "@/lib/feature-resolver";
 import { z } from "zod";
 import { syncTemplateSkills } from "@/lib/services/template-sync";
+import { getCanSkateRibbonMeta } from "@/lib/canskate-ribbons";
 
 const scoringTypeEnum = z.enum(["PASS_FAIL", "POINT_SCALE"]);
 const completionTypeEnum = z.enum(["PERCENTAGE", "COUNT", "ALL"]);
@@ -128,8 +129,13 @@ export async function GET(request: NextRequest) {
       db.evaluationTemplate.count({ where }),
     ]);
 
+    const dataWithRibbonMeta = templates.map((t) => ({
+      ...t,
+      ribbonMeta: getCanSkateRibbonMeta({ id: t.id, name: t.name }),
+    }));
+
     return NextResponse.json({
-      data: templates,
+      data: dataWithRibbonMeta,
       total,
       limit,
       offset,
