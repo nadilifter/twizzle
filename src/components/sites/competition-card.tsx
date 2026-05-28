@@ -13,7 +13,6 @@ interface CompetitionCardProps {
   competition: {
     id: string;
     name: string;
-    competitionType: string;
     startDate: string | Date;
     endDate: string | Date;
     startTime: string;

@@ -117,7 +117,6 @@ interface PricingTier {
 interface CompetitionData {
   id: string;
   name: string;
-  competitionType: string;
   startDate: string;
   endDate: string;
   startTime: string;

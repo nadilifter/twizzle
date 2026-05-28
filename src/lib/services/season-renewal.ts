@@ -224,7 +224,6 @@ async function rolloverCompetitions(
         organizationId,
         name: competition.name,
         color: competition.color,
-        competitionType: competition.competitionType,
         status: "DRAFT",
         facilityId: competition.facilityId,
         country: competition.country,

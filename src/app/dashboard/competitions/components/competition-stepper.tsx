@@ -84,11 +84,6 @@ interface OrgSport {
   slug: string;
 }
 
-/** Convert a sport slug like "track-and-field" to a competition type string like "TRACK_AND_FIELD" */
-function sportSlugToCompetitionType(slug: string): string {
-  return slug.toUpperCase().replace(/-/g, "_");
-}
-
 type PublishStatus = "LIVE" | "DRAFT" | "SCHEDULED";
 
 interface Level {
@@ -189,7 +184,6 @@ interface CompetitionFormData {
   // Step 1: General
   name: string;
   color: string;
-  competitionType: string | null;
   facilityId: string | null;
   country: string;
   stateProvince: string;
@@ -326,7 +320,6 @@ export function CompetitionStepper({
     // Step 1: General
     name: "",
     color: "#3b82f6",
-    competitionType: null,
     facilityId: null,
     country: "",
     stateProvince: "",
@@ -458,7 +451,6 @@ export function CompetitionStepper({
       setFormData((prev) => ({
         ...prev,
         color: data.color || "#3b82f6",
-        competitionType: data.competitionType || null,
         facilityId: data.facilityId || null,
         country: data.country || "",
         stateProvince: data.stateProvince || "",
@@ -592,7 +584,6 @@ export function CompetitionStepper({
           seasonId: data.seasonId || null,
           name: data.name || "",
           color: data.color || "#3b82f6",
-          competitionType: data.competitionType || null,
           facilityId: data.facilityId || null,
           country: data.country || "",
           stateProvince: data.stateProvince || "",
@@ -722,14 +713,6 @@ export function CompetitionStepper({
         if (response.ok) {
           const data: OrgSport[] = await response.json();
           setOrgSports(data);
-
-          // If org has exactly one sport, auto-select it as the competition type
-          if (data.length === 1) {
-            setFormData((prev) => ({
-              ...prev,
-              competitionType: sportSlugToCompetitionType(data[0].slug),
-            }));
-          }
         }
       } catch (error) {
         console.error("Failed to fetch org sports:", error);
@@ -738,18 +721,13 @@ export function CompetitionStepper({
     fetchOrgSports();
   }, []);
 
-  // Fetch sport-specific structured data for the categories step
+  // Fetch sport-specific structured data for the categories step.
+  // Twizzle is skating-only, so we always use the org's first sport (typically
+  // Figure Skating) — the previous competitionType-keyed lookup was deleted
+  // along with the Competition.competitionType column.
   const fetchSportData = React.useCallback(async () => {
-    if (!formData.competitionType || orgSports.length === 0) return;
-
-    // Find the sport matching this competition type
-    const matchingSport = orgSports.find(
-      (s) => sportSlugToCompetitionType(s.slug) === formData.competitionType
-    );
-    if (!matchingSport) {
-      setHasSportSpecificData(false);
-      return;
-    }
+    if (orgSports.length === 0) return;
+    const matchingSport = orgSports[0];
 
     setLoadingSportData(true);
     try {
@@ -806,7 +784,7 @@ export function CompetitionStepper({
     } finally {
       setLoadingSportData(false);
     }
-  }, [formData.competitionType, orgSports]);
+  }, [orgSports]);
 
   // Handle facility selection to auto-fill address
   const handleFacilityChange = (facilityId: string) => {
@@ -856,10 +834,6 @@ export function CompetitionStepper({
       case "general":
         if (!formData.name.trim()) {
           toast.error("Please enter a competition name");
-          return false;
-        }
-        if (!formData.competitionType) {
-          toast.error("Please select a competition type");
           return false;
         }
         if (!formData.startDate) {
@@ -1052,7 +1026,6 @@ export function CompetitionStepper({
       const payload = {
         name: formData.name,
         color: formData.color,
-        competitionType: formData.competitionType,
         facilityId: formData.facilityId,
         country: formData.country,
         stateProvince: formData.stateProvince,
@@ -1368,85 +1341,6 @@ export function CompetitionStepper({
                   </Select>
                 </div>
               )}
-
-              {/* Competition Type */}
-              {(() => {
-                // Build available types from the organization's selected sports
-                const availableTypes = orgSports.map((sport) => ({
-                  value: sportSlugToCompetitionType(sport.slug),
-                  label: sport.name,
-                }));
-
-                // If only one type available and it's already auto-selected, just show info
-                if (
-                  availableTypes.length === 1 &&
-                  formData.competitionType === availableTypes[0].value
-                ) {
-                  return (
-                    <div className="space-y-2">
-                      <Label className="text-base font-medium">Competition Type</Label>
-                      <div className="flex items-center gap-2 rounded-lg border p-4 bg-muted/30">
-                        <Trophy className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{availableTypes[0].label}</span>
-                        <Badge variant="secondary" className="ml-auto text-xs">
-                          Auto-selected
-                        </Badge>
-                      </div>
-                    </div>
-                  );
-                }
-
-                if (availableTypes.length === 0) {
-                  return (
-                    <div className="space-y-2">
-                      <Label className="text-base font-medium">Competition Type *</Label>
-                      <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-                        No sports configured. Please add sports in your{" "}
-                        <a
-                          href="/dashboard/organization/overview"
-                          className="underline text-primary"
-                        >
-                          organization settings
-                        </a>
-                        .
-                      </div>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div className="space-y-4">
-                    <Label className="text-base font-medium">Competition Type *</Label>
-                    <RadioGroup
-                      value={formData.competitionType || ""}
-                      onValueChange={(value: string) =>
-                        setFormData((prev) => ({ ...prev, competitionType: value }))
-                      }
-                      className="grid grid-cols-1 md:grid-cols-2 gap-4"
-                    >
-                      {availableTypes.map((type) => (
-                        <label
-                          key={type.value}
-                          className={cn(
-                            "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
-                            formData.competitionType === type.value
-                              ? "border-primary bg-primary/5"
-                              : "hover:bg-muted/50"
-                          )}
-                        >
-                          <RadioGroupItem value={type.value} className="mt-1" />
-                          <div className="flex-1 space-y-1">
-                            <div className="flex items-center gap-2">
-                              <Trophy className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium">{type.label}</span>
-                            </div>
-                          </div>
-                        </label>
-                      ))}
-                    </RadioGroup>
-                  </div>
-                );
-              })()}
 
               {/* Location */}
               <div className="space-y-4">

@@ -85,7 +85,6 @@ const createCompetitionSchema = z.object({
     .string()
     .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color")
     .optional(),
-  competitionType: z.string().min(1, "Competition type is required"),
 
   // Location
   facilityId: z.string().nullable().optional(),
@@ -275,7 +274,6 @@ export async function POST(request: NextRequest) {
         organizationId,
         name: data.name,
         color: data.color,
-        competitionType: data.competitionType,
         status,
 
         // Location

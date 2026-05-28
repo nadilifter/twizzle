@@ -4512,7 +4512,6 @@ model Competition {
   organizationId  String
   name            String
   color           String            @default("#3b82f6")
-  competitionType String // e.g. "GYMNASTICS", "TRACK_AND_FIELD"
   status          CompetitionStatus @default(DRAFT)
 
   // Location

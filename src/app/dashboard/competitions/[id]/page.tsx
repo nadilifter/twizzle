@@ -51,7 +51,7 @@ import { LatestRegistrationsCard } from "@/components/latest-registrations-card"
 import { formatPrice } from "@/lib/format-utils";
 import { CompetitionConfiguration } from "../competition-configuration";
 import { CssExportDialog } from "./css-export-dialog";
-import { COMPETITION_TYPE_LABELS, getStatusLabel, getStatusStyle } from "../lib/competition-status";
+import { getStatusLabel, getStatusStyle } from "../lib/competition-status";
 import { AthletesTab } from "./athletes-tab";
 import { EventsTab, getCategoryLabel } from "./events-tab";
 import { TransactionsTab } from "./transactions-tab";
@@ -104,7 +104,6 @@ interface CompetitionLineItem {
 interface CompetitionDetail {
   id: string;
   name: string;
-  competitionType: string;
   status: string;
   publishStatus: string | null;
   scheduledGoLiveDate: string | null;
@@ -483,12 +482,10 @@ export default function CompetitionProfilePage() {
           </Badge>
         </div>
         <div className="flex items-center gap-2">
-          {competition.competitionType === "FIGURE_SKATING" && (
-            <Button variant="outline" onClick={() => setIsCssExportOpen(true)}>
-              <Download className="mr-2 h-4 w-4" />
-              Export to CSS
-            </Button>
-          )}
+          <Button variant="outline" onClick={() => setIsCssExportOpen(true)}>
+            <Download className="mr-2 h-4 w-4" />
+            Export to CSS
+          </Button>
           <Button onClick={() => setIsEditOpen(true)}>
             <Settings className="mr-2 h-4 w-4" />
             Settings
@@ -564,13 +561,6 @@ export default function CompetitionProfilePage() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Trophy className="h-3.5 w-3.5 shrink-0" />
-                      <span>
-                        {COMPETITION_TYPE_LABELS[competition.competitionType] ||
-                          competition.competitionType}
-                      </span>
-                    </div>
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <DollarSign className="h-3.5 w-3.5 shrink-0" />
                       <span>

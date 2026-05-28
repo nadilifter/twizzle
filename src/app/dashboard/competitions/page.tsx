@@ -47,7 +47,7 @@ import { useFeatures } from "@/components/feature-context";
 import { useSeasons } from "@/hooks/use-seasons";
 import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import { CompetitionConfiguration } from "./competition-configuration";
-import { COMPETITION_TYPE_LABELS, getStatusLabel, getStatusStyle } from "./lib/competition-status";
+import { getStatusLabel, getStatusStyle } from "./lib/competition-status";
 import { formatTime12h } from "@/lib/date-utils";
 
 function formatPrice(price: number | string | null | undefined): string {
@@ -66,7 +66,6 @@ interface Competition {
   id: string;
   name: string;
   color: string;
-  competitionType: string;
   status: string;
   startDate: string;
   endDate: string;
@@ -159,7 +158,6 @@ export default function CompetitionsPage() {
     return competitions.filter(
       (c) =>
         c.name.toLowerCase().includes(term) ||
-        c.competitionType.toLowerCase().includes(term) ||
         c.city?.toLowerCase().includes(term) ||
         c.facility?.name.toLowerCase().includes(term)
     );
@@ -284,11 +282,7 @@ export default function CompetitionsPage() {
                   <CardHeader className="pb-3 pt-4 px-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="space-y-1 min-w-0 w-full">
-                        <div className="flex items-center justify-between gap-2 w-full">
-                          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                            {COMPETITION_TYPE_LABELS[competition.competitionType] ||
-                              competition.competitionType}
-                          </span>
+                        <div className="flex items-center justify-end gap-2 w-full">
                           <Badge
                             variant="outline"
                             className={cn(

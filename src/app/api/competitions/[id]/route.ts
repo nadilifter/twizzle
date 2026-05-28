@@ -153,7 +153,6 @@ const updateCompetitionSchema = z.object({
     .string()
     .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color")
     .optional(),
-  competitionType: z.string().optional(),
   status: z
     .enum([
       "DRAFT",
@@ -290,7 +289,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const updateData: Record<string, unknown> = {};
     if (data.name !== undefined) updateData.name = data.name;
     if (data.color !== undefined) updateData.color = data.color;
-    if (data.competitionType !== undefined) updateData.competitionType = data.competitionType;
     if (data.status !== undefined) updateData.status = data.status;
     if (data.facilityId !== undefined) updateData.facilityId = data.facilityId;
     if (data.country !== undefined) updateData.country = data.country;

@@ -90,7 +90,6 @@ export default async function CompetitionDetailPage({
   const serializedCompetition = {
     id: competition.id,
     name: competition.name,
-    competitionType: competition.competitionType,
     startDate: competition.startDate.toISOString(),
     endDate: competition.endDate.toISOString(),
     startTime: competition.startTime,

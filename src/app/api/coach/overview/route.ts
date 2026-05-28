@@ -127,7 +127,6 @@ export async function GET(request: NextRequest) {
         select: {
           id: true,
           name: true,
-          competitionType: true,
           status: true,
           startDate: true,
           endDate: true,
@@ -196,7 +195,6 @@ export async function GET(request: NextRequest) {
       upcomingCompetitions: upcomingCompetitions.map((c) => ({
         id: c.id,
         name: c.name,
-        competitionType: c.competitionType,
         status: c.status,
         startDate: c.startDate,
         endDate: c.endDate,

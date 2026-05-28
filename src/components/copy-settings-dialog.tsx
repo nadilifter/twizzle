@@ -89,7 +89,6 @@ function normalizeItems(entityType: EntityType, data: any): EntityItem[] {
     id: c.id,
     name: c.name,
     status: c.status,
-    type: c.competitionType?.replace(/_/g, " "),
     startDate: c.startDate?.slice?.(0, 10) || undefined,
     endDate: c.endDate?.slice?.(0, 10) || undefined,
     facilityName: c.facility?.name || null,

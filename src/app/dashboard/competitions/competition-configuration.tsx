@@ -66,10 +66,6 @@ interface OrgSport {
   slug: string;
 }
 
-function sportSlugToCompetitionType(slug: string): string {
-  return slug.toUpperCase().replace(/-/g, "_");
-}
-
 type PublishStatus = "LIVE" | "DRAFT" | "SCHEDULED" | "CLOSED" | "COMPLETED";
 
 interface Level {
@@ -163,7 +159,6 @@ interface CompetitionFormData {
   // Step 1: General
   name: string;
   color: string;
-  competitionType: string | null;
   facilityId: string | null;
   country: string;
   stateProvince: string;
@@ -254,7 +249,6 @@ export function CompetitionConfiguration({
   const [formData, setFormData] = useState<CompetitionFormData>({
     name: "",
     color: "#3b82f6",
-    competitionType: null,
     facilityId: null,
     country: "",
     stateProvince: "",
@@ -391,7 +385,6 @@ export function CompetitionConfiguration({
         setFormData({
           name: compData.name || "",
           color: compData.color || "#3b82f6",
-          competitionType: compData.competitionType || null,
           facilityId: compData.facilityId || null,
           country: compData.country || "",
           stateProvince: compData.stateProvince || "",
@@ -463,15 +456,9 @@ export function CompetitionConfiguration({
   // -- Helpers --
 
   const fetchSportData = useCallback(async () => {
-    if (!formData.competitionType || orgSports.length === 0) return;
-
-    const matchingSport = orgSports.find(
-      (s) => sportSlugToCompetitionType(s.slug) === formData.competitionType
-    );
-    if (!matchingSport) {
-      setHasSportSpecificData(false);
-      return;
-    }
+    if (orgSports.length === 0) return;
+    // Twizzle is skating-only; the previous competitionType lookup was deleted.
+    const matchingSport = orgSports[0];
 
     setLoadingSportData(true);
     try {
@@ -526,19 +513,14 @@ export function CompetitionConfiguration({
     } finally {
       setLoadingSportData(false);
     }
-  }, [formData.competitionType, orgSports]);
+  }, [orgSports]);
 
   // Eagerly load sport data so we can resolve labels
   useEffect(() => {
-    if (
-      formData.competitionType &&
-      orgSports.length > 0 &&
-      !hasSportSpecificData &&
-      !loadingSportData
-    ) {
+    if (orgSports.length > 0 && !hasSportSpecificData && !loadingSportData) {
       fetchSportData();
     }
-  }, [formData.competitionType, orgSports, hasSportSpecificData, loadingSportData, fetchSportData]);
+  }, [orgSports, hasSportSpecificData, loadingSportData, fetchSportData]);
 
   // Update labels when sport data is available
   useEffect(() => {
@@ -650,7 +632,6 @@ export function CompetitionConfiguration({
       const payload = {
         name: formData.name,
         color: formData.color,
-        competitionType: formData.competitionType,
         facilityId: formData.facilityId,
         country: formData.country,
         stateProvince: formData.stateProvince,

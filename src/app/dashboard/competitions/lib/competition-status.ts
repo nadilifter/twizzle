@@ -7,11 +7,6 @@ export interface CompetitionStatusFields {
   publishStatus?: string | null;
 }
 
-export const COMPETITION_TYPE_LABELS: Record<string, string> = {
-  FIGURE_SKATING: "Figure Skating",
-  TRACK_AND_FIELD: "Track & Field",
-};
-
 export const PUBLISH_STATUS_LABELS: Record<string, string> = {
   LIVE: "Live",
   DRAFT: "Draft",

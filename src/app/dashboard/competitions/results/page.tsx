@@ -42,7 +42,6 @@ import { DemoDataBanner } from "@/components/demo-data-banner";
 interface Competition {
   id: string;
   name: string;
-  competitionType: string;
   status: string;
   startDate: string;
   endDate: string;
@@ -389,7 +388,6 @@ export default function ResultsPage() {
 
             {selectedComp && (
               <div className="flex items-center gap-2 pt-5">
-                <Badge variant="outline">{selectedComp.competitionType}</Badge>
                 <Badge variant="secondary">{selectedComp.status}</Badge>
                 <span className="text-xs text-muted-foreground">
                   {selectedComp._count.entries} entries &middot; {selectedComp._count.results}{" "}

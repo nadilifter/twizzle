@@ -34,7 +34,6 @@ const getCachedCompetitions = unstable_cache(
     return competitions.map((c) => ({
       id: c.id,
       name: c.name,
-      competitionType: c.competitionType,
       startDate: c.startDate.toISOString(),
       endDate: c.endDate.toISOString(),
       startTime: c.startTime,

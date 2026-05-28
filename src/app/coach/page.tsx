@@ -48,7 +48,6 @@ interface OverviewProgram {
 interface OverviewCompetition {
   id: string;
   name: string;
-  competitionType: string;
   status: string;
   startDate: string;
   endDate: string;
@@ -417,7 +416,6 @@ export default function CoachDashboard() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-semibold truncate">{comp.name}</h3>
-                        <Badge variant="outline">{comp.competitionType}</Badge>
                       </div>
                       <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">

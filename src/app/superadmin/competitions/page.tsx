@@ -99,7 +99,6 @@ interface Organization {
 interface Competition {
   id: string;
   name: string;
-  competitionType: string;
   status: string;
   startDate: string;
   endDate: string;
@@ -278,7 +277,6 @@ export default function SuperadminCompetitionsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Dates</TableHead>
                     <TableHead>Entries</TableHead>
@@ -290,9 +288,6 @@ export default function SuperadminCompetitionsPage() {
                   {competitions.map((competition) => (
                     <TableRow key={competition.id}>
                       <TableCell className="font-medium">{competition.name}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {competition.competitionType}
-                      </TableCell>
                       <TableCell>
                         <Badge variant={getStatusVariant(competition)} className="text-xs">
                           {getStatusLabel(competition)}
