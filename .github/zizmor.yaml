@@ -1,0 +1,11 @@
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        actions/*: ref-pin
+        aws-actions/*: ref-pin
+        docker/*: ref-pin
+        pnpm/*: ref-pin
+  dangerous-triggers:
+    ignore:
+      - linear-dev-merge-to-main.yml

@@ -11,6 +11,8 @@ env:
 jobs:
   initialize-workspace:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       image_tag: ${{ steps.create_image_tag.outputs.IMAGE_TAG }}
       short_sha: ${{ steps.create_image_tag.outputs.SHORT_SHA }}
@@ -20,6 +22,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Create image tag
         id: create_image_tag
@@ -52,6 +55,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
@@ -61,7 +65,7 @@ jobs:
 
       # secret-ids needs to be variablized
       - name: Fetch secrets
-        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        uses: aws-actions/aws-secretsmanager-get-secrets@v3
         with:
           secret-ids: |
             ,gymnastics-dev
