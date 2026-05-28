@@ -372,133 +372,136 @@ export async function attemptWaitlistCharge(params: {
 export async function promoteFromWaitlist(
   programId: string
 ): Promise<{ promoted: boolean; athleteId?: string }> {
-  const txResult: PromotionTxResult = await db.$transaction(async (tx) => {
-    await tx.$queryRaw(Prisma.sql`SELECT id FROM "Program" WHERE id = ${programId} FOR UPDATE`);
+  const txResult: PromotionTxResult = await db.$transaction(
+    async (tx) => {
+      await tx.$queryRaw(Prisma.sql`SELECT id FROM "Program" WHERE id = ${programId} FOR UPDATE`);
 
-    const program = await tx.program.findUnique({
-      where: { id: programId },
-      select: {
-        name: true,
-        organizationId: true,
-        waitlistEnabled: true,
-        waitlistAutoPromote: true,
-        capacity: true,
-        hasCapacityRestriction: true,
-        basePrice: true,
-        perSessionPrice: true,
-        pricingModel: true,
-      },
-    });
-
-    if (!program?.waitlistEnabled || !program.waitlistAutoPromote) {
-      return { promoted: false };
-    }
-
-    if (program.hasCapacityRestriction && program.capacity != null) {
-      const occupiedCount = await tx.enrollment.count({
-        where: { programId, status: { in: ["ACTIVE", "WAITLIST_PAYMENT_PENDING"] } },
+      const program = await tx.program.findUnique({
+        where: { id: programId },
+        select: {
+          name: true,
+          organizationId: true,
+          waitlistEnabled: true,
+          waitlistAutoPromote: true,
+          capacity: true,
+          hasCapacityRestriction: true,
+          basePrice: true,
+          perSessionPrice: true,
+          pricingModel: true,
+        },
       });
-      if (occupiedCount >= program.capacity) {
+
+      if (!program?.waitlistEnabled || !program.waitlistAutoPromote) {
         return { promoted: false };
       }
-    }
 
-    const nextWaitlisted = await tx.enrollment.findFirst({
-      where: { programId, status: "WAITLISTED", waitlistPaymentDeadline: null },
-      orderBy: { createdAt: "asc" },
-    });
+      if (program.hasCapacityRestriction && program.capacity != null) {
+        const occupiedCount = await tx.enrollment.count({
+          where: { programId, status: { in: ["ACTIVE", "WAITLIST_PAYMENT_PENDING"] } },
+        });
+        if (occupiedCount >= program.capacity) {
+          return { promoted: false };
+        }
+      }
 
-    if (!nextWaitlisted) {
-      return { promoted: false };
-    }
+      const nextWaitlisted = await tx.enrollment.findFirst({
+        where: { programId, status: "WAITLISTED", waitlistPaymentDeadline: null },
+        orderBy: { createdAt: "asc" },
+      });
 
-    // Reserve the spot — stays WAITLIST_PAYMENT_PENDING until charge resolves
-    await tx.enrollment.update({
-      where: { id: nextWaitlisted.id },
-      data: { status: "WAITLIST_PAYMENT_PENDING" },
-    });
+      if (!nextWaitlisted) {
+        return { promoted: false };
+      }
 
-    const instances = await tx.programInstance.findMany({
-      where: { programId, status: { not: "CANCELLED" } },
-      select: { id: true },
-    });
+      // Reserve the spot — stays WAITLIST_PAYMENT_PENDING until charge resolves
+      await tx.enrollment.update({
+        where: { id: nextWaitlisted.id },
+        data: { status: "WAITLIST_PAYMENT_PENDING" },
+      });
 
-    await Promise.all(
-      instances.map((inst) =>
-        tx.instanceRegistration.upsert({
-          where: {
-            programInstanceId_athleteId: {
+      const instances = await tx.programInstance.findMany({
+        where: { programId, status: { not: "CANCELLED" } },
+        select: { id: true },
+      });
+
+      await Promise.all(
+        instances.map((inst) =>
+          tx.instanceRegistration.upsert({
+            where: {
+              programInstanceId_athleteId: {
+                programInstanceId: inst.id,
+                athleteId: nextWaitlisted.athleteId,
+              },
+            },
+            update: { status: "REGISTERED" },
+            create: {
               programInstanceId: inst.id,
               athleteId: nextWaitlisted.athleteId,
+              userId: nextWaitlisted.userId || undefined,
+              status: "REGISTERED",
             },
-          },
-          update: { status: "REGISTERED" },
-          create: {
-            programInstanceId: inst.id,
-            athleteId: nextWaitlisted.athleteId,
-            userId: nextWaitlisted.userId || undefined,
-            status: "REGISTERED",
-          },
-        })
-      )
-    );
-
-    const rawPrice =
-      program.pricingModel === "PER_SESSION" ? program.perSessionPrice : program.basePrice;
-
-    if (rawPrice === null || rawPrice === undefined) {
-      // Price fields missing on a program — log and promote to ACTIVE without charging
-      console.error(
-        `promoteFromWaitlist: program ${programId} has no price configured — promoting without charge`
+          })
+        )
       );
+
+      const rawPrice =
+        program.pricingModel === "PER_SESSION" ? program.perSessionPrice : program.basePrice;
+
+      if (rawPrice === null || rawPrice === undefined) {
+        // Price fields missing on a program — log and promote to ACTIVE without charging
+        console.error(
+          `promoteFromWaitlist: program ${programId} has no price configured — promoting without charge`
+        );
+        await tx.enrollment.update({
+          where: { id: nextWaitlisted.id },
+          data: { status: "ACTIVE" },
+        });
+        return {
+          promoted: true,
+          athleteId: nextWaitlisted.athleteId,
+          notifyCtx: {
+            organizationId: program.organizationId,
+            athleteId: nextWaitlisted.athleteId,
+            programName: program.name,
+            userId: nextWaitlisted.userId ?? undefined,
+          },
+        };
+      }
+
+      const programPrice = Number(rawPrice);
+      const notifyCtx = {
+        organizationId: program.organizationId,
+        athleteId: nextWaitlisted.athleteId,
+        programName: program.name,
+        userId: nextWaitlisted.userId ?? undefined,
+      };
+
+      if (programPrice > 0 && nextWaitlisted.userId) {
+        return {
+          promoted: true,
+          athleteId: nextWaitlisted.athleteId,
+          notifyCtx,
+          chargeCtx: {
+            organizationId: program.organizationId,
+            userId: nextWaitlisted.userId,
+            enrollmentId: nextWaitlisted.id,
+            amount: programPrice,
+            programName: program.name,
+            athleteId: nextWaitlisted.athleteId,
+          },
+        };
+      }
+
+      // Free program — promote straight to ACTIVE inside the transaction
       await tx.enrollment.update({
         where: { id: nextWaitlisted.id },
         data: { status: "ACTIVE" },
       });
-      return {
-        promoted: true,
-        athleteId: nextWaitlisted.athleteId,
-        notifyCtx: {
-          organizationId: program.organizationId,
-          athleteId: nextWaitlisted.athleteId,
-          programName: program.name,
-          userId: nextWaitlisted.userId ?? undefined,
-        },
-      };
-    }
 
-    const programPrice = Number(rawPrice);
-    const notifyCtx = {
-      organizationId: program.organizationId,
-      athleteId: nextWaitlisted.athleteId,
-      programName: program.name,
-      userId: nextWaitlisted.userId ?? undefined,
-    };
-
-    if (programPrice > 0 && nextWaitlisted.userId) {
-      return {
-        promoted: true,
-        athleteId: nextWaitlisted.athleteId,
-        notifyCtx,
-        chargeCtx: {
-          organizationId: program.organizationId,
-          userId: nextWaitlisted.userId,
-          enrollmentId: nextWaitlisted.id,
-          amount: programPrice,
-          programName: program.name,
-          athleteId: nextWaitlisted.athleteId,
-        },
-      };
-    }
-
-    // Free program — promote straight to ACTIVE inside the transaction
-    await tx.enrollment.update({
-      where: { id: nextWaitlisted.id },
-      data: { status: "ACTIVE" },
-    });
-
-    return { promoted: true, athleteId: nextWaitlisted.athleteId, notifyCtx };
-  });
+      return { promoted: true, athleteId: nextWaitlisted.athleteId, notifyCtx };
+    },
+    { timeout: 15000 }
+  );
 
   if (!txResult.promoted) {
     return { promoted: false };
