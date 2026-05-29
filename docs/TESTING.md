@@ -67,6 +67,33 @@ auth — MailHog at http://localhost:8025 catches the link locally).
 
 ### 2026-05-29
 
+#### Login page refresh — video background, glass card, purple titles
+
+- Open `http://login.uplifter.localhost:3000/login`. Browser-tab title
+  is **"Twizzle"** (not "Uplifter").
+- The page background is a looping video (the figure-skater clip in
+  `public/twizzle_login_background.mp4`). On first load it fades in
+  over ~800 ms.
+- Watch the video through one or two loops — the seam between
+  iterations is invisible: opacity gently dips just before the clip
+  ends and rises again right after it restarts. No hard cut.
+- The Card containing the sign-in form is **glassy** — the moving
+  video shows through. Verify in light theme; toggle dark theme
+  (top-right toggle) → still glassy, video still visible through.
+- All headings on the page ("Verify your identity", "Sign in with
+  email", "Check your email") render in the **purple** primary color,
+  not black/foreground.
+- macOS Accessibility → Display → enable **Reduce motion** → reload.
+  Video still plays (it's content, not pure decoration), but the
+  per-loop opacity fade is disabled (constant opacity instead).
+- Inspect the logo image (right-click → Inspect): `alt` attribute is
+  `"Twizzle"`.
+- Navigate to a different auth page like `/forgot-password` — that one
+  still uses the original gradient (not the video), confirming the
+  video is login-only.
+
+---
+
 #### Fix: Federation Membership Requirement toggle on ProgramStepper
 
 - Open `/dashboard/registrations/programs/new` (new-program wizard) →

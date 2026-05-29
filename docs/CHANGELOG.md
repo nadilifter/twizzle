@@ -8,6 +8,31 @@ Manual verification steps for each entry live in
 
 ## 2026-05-29
 
+### Login page refresh — video background, glass card, purple titles, Twizzle name
+
+Four-point reskin of the `/login` page:
+
+- **Browser title** in the root `<head>` is now **"Twizzle"** (was
+  "Uplifter"); description is "Skating club management for figure
+  skaters". Logo image's `alt` text is also "Twizzle".
+- **Headings** ("Verify your identity", "Sign in with email", etc.)
+  switch from default foreground to `text-primary` — the purple theme
+  color (HSL `240 81% 63%`).
+- **Background** uses a new `<VideoBackground>` component that plays
+  `/public/twizzle_login_background.mp4` on a loop with a gentle
+  fade-in on mount and an opacity dip at every loop boundary so the
+  seam between repeats is invisible. Respects `prefers-reduced-motion`
+  (still plays the video, but skips the per-loop opacity dance).
+  Positioned `fixed inset-0` so it covers the auth layout's
+  `GradientBackground` only on `/login` — the other auth pages
+  (accept-invitation, forgot-password, etc.) keep the gradient.
+- **Login card** turns into glass: `bg-card/40 backdrop-blur-xl
+border-white/20 dark:border-white/10 shadow-2xl`. The page's
+  gradient + video now shows through the modal in both light and
+  dark themes.
+
+---
+
 ### Fix: Federation Membership Requirement toggle missing from ProgramStepper
 
 Phase 1.2 added the `hasFederationMembershipRestriction` toggle to the

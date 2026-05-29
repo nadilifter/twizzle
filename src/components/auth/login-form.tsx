@@ -566,11 +566,11 @@ export function LoginForm() {
   // ── MFA Verification Screen ──────────────────────────────────────────
   if (loginMode === "mfa-verify") {
     return (
-      <Card className="relative overflow-hidden w-full max-w-[400px]">
+      <Card className="relative overflow-hidden w-full max-w-[400px] bg-card/40 backdrop-blur-xl border-white/20 dark:border-white/10 shadow-2xl">
         <ShineBorder shineColor={["#5655ED", "#A07CFE"]} className="text-center" />
         <CardHeader className="items-center pb-2">
           <UplifterLogo width={180} height={36} className="h-9 mb-2" />
-          <h1 className="text-2xl font-bold">Verify your identity</h1>
+          <h1 className="text-2xl font-bold text-primary">Verify your identity</h1>
           <p className="text-sm text-muted-foreground">
             We sent a verification code to your email. Enter it below or click the link in the
             email.
@@ -635,11 +635,11 @@ export function LoginForm() {
   // ── Email Code Login Screen ──────────────────────────────────────────
   if (loginMode === "email-code") {
     return (
-      <Card className="relative overflow-hidden w-full max-w-[400px]">
+      <Card className="relative overflow-hidden w-full max-w-[400px] bg-card/40 backdrop-blur-xl border-white/20 dark:border-white/10 shadow-2xl">
         <ShineBorder shineColor={["#5655ED", "#A07CFE"]} className="text-center" />
         <CardHeader className="items-center pb-2">
           <UplifterLogo width={180} height={36} className="h-9 mb-2" />
-          <h1 className="text-2xl font-bold">
+          <h1 className="text-2xl font-bold text-primary">
             {emailCodeSent ? "Check your email" : "Sign in with email"}
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -768,7 +768,7 @@ export function LoginForm() {
         <input type="hidden" name="callbackUrl" value={callbackUrl} />
       </form>
 
-      <Card className="relative overflow-hidden w-full max-w-[400px]">
+      <Card className="relative overflow-hidden w-full max-w-[400px] bg-card/40 backdrop-blur-xl border-white/20 dark:border-white/10 shadow-2xl">
         <ShineBorder shineColor={["#5655ED", "#A07CFE"]} className="text-center" />
         <CardHeader className="items-center pb-2">
           <UplifterLogo width={180} height={36} className="h-9 mb-4" />

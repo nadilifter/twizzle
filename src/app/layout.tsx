@@ -21,8 +21,8 @@ const geistMono = localFont({
 const isProduction = process.env.APP_ENVIRONMENT === "production";
 
 export const metadata: Metadata = {
-  title: "Uplifter",
-  description: "Sports management platform for figure skaters",
+  title: "Twizzle",
+  description: "Skating club management for figure skaters",
   icons: {
     icon: "/favicon.ico",
   },

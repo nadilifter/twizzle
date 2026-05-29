@@ -34,7 +34,7 @@ export function UplifterLogo({
   return (
     <Image
       src={src}
-      alt="Uplifter"
+      alt="Twizzle"
       width={width}
       height={height}
       className={cn("w-auto", className)}
