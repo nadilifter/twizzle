@@ -8,6 +8,21 @@ Manual verification steps for each entry live in
 
 ## 2026-05-29
 
+### Fix: command palette cross-subdomain routing
+
+The palette was calling `router.push()` (same-origin only) for every
+nav item. A coach who landed on the admin subdomain and picked any
+`/coach/*` item would 404 against `admin.uplifter.localhost:3000/coach`.
+
+Fix: a small `portalSubdomainForPath` helper maps `/dashboard` →
+`admin`, `/coach` → `coach`, `/superadmin` → `superadmin`. When the
+target subdomain differs from the current one, the palette now
+`window.location.assign`s to the absolute URL on the right subdomain.
+Same-subdomain navigations keep using `router.push` for the snappy
+client-side transition.
+
+---
+
 ### Phase 0.1 — Global Cmd+K command palette
 
 Keyboard-first launcher that puts every page, athlete, program, and

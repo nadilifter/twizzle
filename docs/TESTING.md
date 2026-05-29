@@ -67,6 +67,23 @@ auth — MailHog at http://localhost:8025 catches the link locally).
 
 ### 2026-05-29
 
+#### Fix: command palette cross-subdomain routing
+
+- Log in as a coach who has admin permissions too (e.g. a superadmin)
+  and land on `http://admin.uplifter.localhost:3000/dashboard`.
+- Open Cmd+K → pick **Coach Overview**. Verify the URL becomes
+  `http://coach.uplifter.localhost:3000/coach` (full-page nav across
+  subdomains) and the coach overview renders. Previously: 404 at
+  `admin.uplifter.localhost:3000/coach`.
+- Reverse case: on the coach subdomain, open Cmd+K → pick **Dashboard**.
+  URL becomes `http://admin.uplifter.localhost:3000/dashboard`.
+- Same-subdomain navigation still uses client-side routing: on
+  `admin.uplifter.localhost:3000/dashboard`, open Cmd+K → pick
+  **Athletes**. Should be an instant client transition (no full reload
+  flash), URL becomes `/dashboard/athletes`.
+
+---
+
 #### Phase 0.1 — Global Cmd+K command palette
 
 - From any admin or coach page, press `Cmd+K` (or `Ctrl+K` on Windows/Linux)
