@@ -8,6 +8,39 @@ Manual verification steps for each entry live in
 
 ## 2026-05-29
 
+### Phase 0.8 — Power-user keyboard shortcuts
+
+Global shortcuts mounted alongside `CommandPaletteProvider` in the admin and
+coach layouts via a new `KeyboardShortcutsProvider` client component:
+
+- **`?`** — opens a `Dialog` listing every shortcut grouped by Navigate / List
+  page / Misc.
+- **`g` → letter** — vim-style sequenced navigation (1.5 s window): `g a`
+  athletes, `g p` programs, `g c` competitions (admin only), `g s` settings.
+  Uses the same subdomain-routing pattern as the command palette.
+- **`Escape`** — Radix `Dialog`, `Sheet`, and `Popover` already dismiss on
+  Escape; no custom handling needed.
+
+List-page shortcuts (`/dashboard/athletes`, `/coach/athletes`,
+`/dashboard/registrations/programs`, `/coach/programs`):
+
+- **`j` / `k`** — move a highlighted ring down / up through the visible rows or
+  cards. Defaults to the first item.
+- **`Enter`** — navigates to the highlighted row's detail page.
+- **`e`** — opens the row's edit sheet (admin athletes) or quick-configure
+  panel (admin programs); no-op on coach-only pages that lack edit affordances.
+- **`d`** — opens the row's delete confirmation (admin athletes only).
+
+All shortcuts are guarded: no-op when an `input`, `textarea`, `select`,
+`contentEditable`, or any Radix dialog/sheet has focus. No animated
+transitions beyond the existing ring from Phase 0.5.
+
+New files: `src/hooks/use-global-shortcuts.ts`,
+`src/hooks/use-list-keyboard-shortcuts.ts`,
+`src/components/keyboard-shortcuts-provider.tsx`.
+
+---
+
 ### Phase 4.1 — ISU element catalog seed
 
 New static data module `prisma/isu-elements.ts` — a typed, zero-DB-write

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,6 +8,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { GraduationCap, Users, CalendarDays, Star, User } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { sanitizeHtml } from "@/lib/sanitize";
+import { cn } from "@/lib/utils";
+import { useListKeyboardShortcuts } from "@/hooks/use-list-keyboard-shortcuts";
 
 interface ProgramStaff {
   id: string;
@@ -69,6 +71,9 @@ export default function CoachProgramsPage() {
 
     fetchPrograms();
   }, []);
+
+  const listItems = useMemo(() => programs.map((p) => ({ id: p.id })), [programs]);
+  const { highlightedIndex } = useListKeyboardShortcuts(listItems);
 
   if (isLoading) {
     return (
@@ -136,8 +141,14 @@ export default function CoachProgramsPage() {
         </Card>
       ) : (
         <div className="grid gap-4">
-          {programs.map((program) => (
-            <Card key={program.id} className="hover:bg-accent/5 transition-colors">
+          {programs.map((program, i) => (
+            <Card
+              key={program.id}
+              className={cn(
+                "hover:bg-accent/5 transition-colors",
+                i === highlightedIndex && "ring-2 ring-ring"
+              )}
+            >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">

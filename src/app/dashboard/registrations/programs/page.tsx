@@ -49,6 +49,11 @@ import { useLevels } from "@/hooks/use-levels";
 import { useCategories } from "@/hooks/use-categories";
 import { useStaff } from "@/hooks/use-staff";
 import { useFeatures } from "@/components/feature-context";
+import {
+  useListKeyboardShortcuts,
+  type ListShortcutItem,
+} from "@/hooks/use-list-keyboard-shortcuts";
+import { cn } from "@/lib/utils";
 import { formatRRuleDays } from "@/lib/rrule-utils";
 import { formatTime12h } from "@/lib/date-utils";
 import { ProgramConfiguration } from "./program-configuration";
@@ -254,6 +259,21 @@ export default function ProgramsPage() {
     setIsConfigOpen(true);
   };
 
+  const listItems = React.useMemo<ListShortcutItem[]>(
+    () =>
+      filteredPrograms.map((program) => ({
+        id: program.id,
+        detailUrl:
+          program.status === "DRAFT"
+            ? `/dashboard/registrations/programs/${program.id}/edit`
+            : `/dashboard/registrations/programs/${program.id}`,
+        onEdit: () => handleQuickConfigure(program),
+      })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filteredPrograms]
+  );
+  const { highlightedIndex } = useListKeyboardShortcuts(listItems);
+
   const resultLabel = `${filteredPrograms.length} of ${programs.length} program${programs.length !== 1 ? "s" : ""}`;
 
   return (
@@ -406,7 +426,7 @@ export default function ProgramsPage() {
         <>
           {filteredPrograms.length > 0 ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {filteredPrograms.map((program) => {
+              {filteredPrograms.map((program, i) => {
                 const p = program as any;
                 const isRecurring =
                   p.billingInterval &&
@@ -437,7 +457,10 @@ export default function ProgramsPage() {
                   : null;
 
                 return (
-                  <Card key={program.id} className="flex flex-col">
+                  <Card
+                    key={program.id}
+                    className={cn("flex flex-col", i === highlightedIndex && "ring-2 ring-ring")}
+                  >
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="space-y-1.5 min-w-0">
