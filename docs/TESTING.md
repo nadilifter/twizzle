@@ -12,9 +12,11 @@ can follow without re-deriving the intent.
 ## Smoke test — current top of `main`
 
 Run after any large merge to catch regressions early. Start at
-**http://login.uplifter.localhost:3000** and log in as an admin (the
+**http://login.twizzle.localhost:3000** and log in as an admin (the
 seed creates `admin@sunrise-skating.com`; users have email-magic-link
 auth — MailHog at http://localhost:8025 catches the link locally).
+(Note: the local base domain switched from `uplifter.localhost` to
+`twizzle.localhost` — old bookmarks 404.)
 
 ### Phase 0.1 — Cmd+K command palette
 
