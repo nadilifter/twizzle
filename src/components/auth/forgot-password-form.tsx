@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ShineBorder } from "@/components/ui/shine-border";
-import { ChevronLeft, Loader2, CheckCircle2, Mail } from "lucide-react";
+import { ChevronLeft, Loader2, Mail } from "lucide-react";
+import { AnimatedCheckmark } from "@/components/ui/animated-checkmark";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { UplifterLogo } from "@/components/uplifter-logo";
@@ -61,7 +62,7 @@ export function ForgotPasswordForm() {
         <CardHeader className="items-center pb-2">
           <UplifterLogo width={180} height={36} className="h-9 mb-2" />
           <div className="flex items-center justify-center w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 mb-4">
-            <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
+            <AnimatedCheckmark size={24} className="text-green-600 dark:text-green-400" />
           </div>
           <h1 className="text-2xl font-bold">Check Your Email</h1>
           <p className="text-sm text-muted-foreground">

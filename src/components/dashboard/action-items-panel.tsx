@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import {
-  CheckCircle2,
   ArrowRight,
   X,
   PartyPopper,
@@ -16,6 +15,7 @@ import {
   FileCheck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { AnimatedCheckmark } from "@/components/ui/animated-checkmark";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -123,7 +123,7 @@ export function ActionItemsPanel({
                   }`}
                 >
                   {item.isComplete ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    <AnimatedCheckmark size={16} className="text-green-600 dark:text-green-400" />
                   ) : (
                     (() => {
                       const Icon = ICON_MAP[item.icon] ?? Calendar;

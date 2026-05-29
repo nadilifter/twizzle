@@ -2,7 +2,8 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
-import { CheckCircle2, ArrowRight, ChevronRight, Users, Calendar, CreditCard } from "lucide-react";
+import { ArrowRight, ChevronRight, Users, Calendar, CreditCard } from "lucide-react";
+import { AnimatedCheckmark } from "@/components/ui/animated-checkmark";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,7 +58,7 @@ function SuccessContent() {
       {/* Success Icon */}
       <div className="mb-6 flex justify-center">
         <div className="h-20 w-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-          <CheckCircle2 className="h-12 w-12 text-green-600 dark:text-green-400" />
+          <AnimatedCheckmark size={48} className="text-green-600 dark:text-green-400" />
         </div>
       </div>
 

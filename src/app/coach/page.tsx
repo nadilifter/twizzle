@@ -22,6 +22,7 @@ import Link from "next/link";
 import { api } from "@/lib/api-client";
 import { format } from "date-fns";
 import { formatTime12h } from "@/lib/date-utils";
+import { CountUp } from "@/components/ui/count-up";
 
 interface OverviewEvent {
   id: string;
@@ -155,7 +156,9 @@ export default function CoachDashboard() {
                   <CalendarDays className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
-                  <div className="text-2xl font-bold">{data?.todayEventCount ?? 0}</div>
+                  <div className="text-2xl font-bold">
+                    <CountUp value={data?.todayEventCount ?? 0} />
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     event{data?.todayEventCount !== 1 ? "s" : ""} today
                   </p>
@@ -171,7 +174,7 @@ export default function CoachDashboard() {
                   <div
                     className={`text-2xl font-bold ${(data?.pendingAttendanceCount ?? 0) > 0 ? "text-destructive" : ""}`}
                   >
-                    {data?.pendingAttendanceCount ?? 0}
+                    <CountUp value={data?.pendingAttendanceCount ?? 0} />
                   </div>
                   <p className="text-xs text-muted-foreground">pending today</p>
                 </CardContent>
@@ -183,7 +186,9 @@ export default function CoachDashboard() {
                   <GraduationCap className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
-                  <div className="text-2xl font-bold">{data?.programCount ?? 0}</div>
+                  <div className="text-2xl font-bold">
+                    <CountUp value={data?.programCount ?? 0} />
+                  </div>
                   <p className="text-xs text-muted-foreground">active</p>
                 </CardContent>
               </Card>
@@ -194,7 +199,9 @@ export default function CoachDashboard() {
                   <Trophy className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
-                  <div className="text-2xl font-bold">{data?.competitionCount ?? 0}</div>
+                  <div className="text-2xl font-bold">
+                    <CountUp value={data?.competitionCount ?? 0} />
+                  </div>
                   <p className="text-xs text-muted-foreground">upcoming</p>
                 </CardContent>
               </Card>

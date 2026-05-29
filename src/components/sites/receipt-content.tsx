@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { CheckCircle2, AlertCircle, Loader2, Clock } from "lucide-react";
+import { AlertCircle, Loader2, Clock } from "lucide-react";
+import { AnimatedCheckmark } from "@/components/ui/animated-checkmark";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -195,7 +196,7 @@ export function ReceiptContent({
     <div className="container mx-auto px-4 py-16 flex flex-col items-center">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
+          <AnimatedCheckmark size={64} className="text-green-500 mx-auto mb-4 block" />
           <h1 className="text-3xl font-bold">Order Confirmed</h1>
           <p className="text-muted-foreground mt-2">Thank you!</p>
           <p className="text-sm text-muted-foreground">

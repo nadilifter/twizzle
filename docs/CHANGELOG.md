@@ -5,6 +5,24 @@ each. Newest first.
 
 ---
 
+## 2026-05-29
+
+### Phase 0.5 — Micro-animations on standard interactions
+
+Added subtle, consistent animations to design-system primitives so every page inherits them without per-page edits.
+
+**Test:**
+
+- [ ] Click any button — it scales down to 96% on press and springs back
+- [ ] Tab to a button or input — focus ring appears with a 200ms fade-in transition
+- [ ] Navigate between dashboard pages — content fades in from y+8 over 200ms
+- [ ] Save/complete an action that shows a checkmark — checkmark draws in with path animation
+- [ ] Load a KPI dashboard — numbers count up from 0 to their value over ~1s
+- [ ] Load any skeleton placeholder — shimmer gradient sweeps across it
+- [ ] Enable "Reduce motion" in OS settings — all animations are disabled
+
+---
+
 ## 2026-05-28
 
 ### Skating-only scope cleanup — `Competition.competitionType` dropped
