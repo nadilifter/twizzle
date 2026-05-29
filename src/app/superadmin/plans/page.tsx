@@ -336,26 +336,30 @@ export default function PlansPage() {
     }
   };
 
-  const handleDelete = async (plan: SubscriptionPlan) => {
-    if (!confirm(`Are you sure you want to delete "${plan.name}"? This cannot be undone.`)) {
-      return;
-    }
+  const handleDelete = (plan: SubscriptionPlan) => {
+    toast(`Delete "${plan.name}"? This cannot be undone.`, {
+      action: {
+        label: "Delete",
+        onClick: async () => {
+          try {
+            const response = await fetch(`/api/superadmin/plans/${plan.id}`, {
+              method: "DELETE",
+            });
 
-    try {
-      const response = await fetch(`/api/superadmin/plans/${plan.id}`, {
-        method: "DELETE",
-      });
+            if (!response.ok) {
+              const error = await response.json();
+              throw new Error(error.error || "Failed to delete plan");
+            }
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to delete plan");
-      }
-
-      toast.success("Plan deleted");
-      fetchPlans();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete plan");
-    }
+            toast.success("Plan deleted");
+            fetchPlans();
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Failed to delete plan");
+          }
+        },
+      },
+      cancel: { label: "Cancel", onClick: () => {} },
+    });
   };
 
   const handleToggleActive = async (plan: SubscriptionPlan) => {

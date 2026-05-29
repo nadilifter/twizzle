@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface DeletePaymentMethodButtonProps {
   organizationId: string;
@@ -19,34 +20,34 @@ export function DeletePaymentMethodButton({
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleDelete = async () => {
-    if (
-      !confirm(
-        `Remove payment method ${label}? This will disable it in Adyen and mark it inactive.`
-      )
-    ) {
-      return;
-    }
+  const handleDelete = () => {
+    toast(`Remove payment method ${label}? This will disable it in Adyen and mark it inactive.`, {
+      action: {
+        label: "Remove",
+        onClick: async () => {
+          setIsDeleting(true);
+          try {
+            const res = await fetch(
+              `/api/superadmin/organizations/${organizationId}/payment-methods/${paymentMethodId}`,
+              { method: "DELETE" }
+            );
+            const data = await res.json();
 
-    setIsDeleting(true);
-    try {
-      const res = await fetch(
-        `/api/superadmin/organizations/${organizationId}/payment-methods/${paymentMethodId}`,
-        { method: "DELETE" }
-      );
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        alert(data.message || "Payment method removed.");
-        router.refresh();
-      } else {
-        alert(data.error || "Failed to remove payment method.");
-      }
-    } catch {
-      alert("An error occurred while removing the payment method.");
-    } finally {
-      setIsDeleting(false);
-    }
+            if (res.ok && data.success) {
+              toast.success(data.message || "Payment method removed.");
+              router.refresh();
+            } else {
+              toast.error(data.error || "Failed to remove payment method.");
+            }
+          } catch {
+            toast.error("An error occurred while removing the payment method.");
+          } finally {
+            setIsDeleting(false);
+          }
+        },
+      },
+      cancel: { label: "Cancel", onClick: () => {} },
+    });
   };
 
   return (

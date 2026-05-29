@@ -3481,19 +3481,28 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                 type="button"
                 variant="destructive"
                 disabled={isSaving}
-                onClick={async () => {
-                  if (!confirm("Delete this draft program? This cannot be undone.")) return;
-                  setIsSaving(true);
-                  try {
-                    const res = await fetch(`/api/programs/${program.id}`, { method: "DELETE" });
-                    if (!res.ok) throw new Error("Failed to delete");
-                    toast.success("Draft deleted");
-                    router.push("/dashboard/registrations/programs");
-                  } catch {
-                    toast.error("Failed to delete draft");
-                  } finally {
-                    setIsSaving(false);
-                  }
+                onClick={() => {
+                  toast("Delete this draft program? This cannot be undone.", {
+                    action: {
+                      label: "Delete",
+                      onClick: async () => {
+                        setIsSaving(true);
+                        try {
+                          const res = await fetch(`/api/programs/${program.id}`, {
+                            method: "DELETE",
+                          });
+                          if (!res.ok) throw new Error("Failed to delete");
+                          toast.success("Draft deleted");
+                          router.push("/dashboard/registrations/programs");
+                        } catch {
+                          toast.error("Failed to delete draft");
+                        } finally {
+                          setIsSaving(false);
+                        }
+                      },
+                    },
+                    cancel: { label: "Cancel", onClick: () => {} },
+                  });
                 }}
               >
                 Delete Draft

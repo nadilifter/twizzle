@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -83,14 +84,14 @@ export function InvoiceActions({
       const data = await res.json();
 
       if (res.ok && data.success !== false) {
-        alert(data.message || "Action completed successfully.");
+        toast.success(data.message || "Action completed successfully.");
         resetForm();
         router.refresh();
       } else {
-        alert(data.error || data.message || "Action failed.");
+        toast.error(data.error || data.message || "Action failed.");
       }
     } catch {
-      alert("An error occurred.");
+      toast.error("An error occurred.");
     } finally {
       setIsSubmitting(false);
     }

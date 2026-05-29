@@ -264,27 +264,31 @@ export default function StaffPage() {
     }
   };
 
-  const handleRemoveUser = async (user: User) => {
-    if (!confirm(`Are you sure you want to remove ${user.name}? This action cannot be undone.`)) {
-      return;
-    }
+  const handleRemoveUser = (user: User) => {
+    toast(`Remove ${user.name}? This cannot be undone.`, {
+      action: {
+        label: "Remove",
+        onClick: async () => {
+          try {
+            const response = await fetch(`/api/users/${user.id}`, {
+              method: "DELETE",
+            });
 
-    try {
-      const response = await fetch(`/api/users/${user.id}`, {
-        method: "DELETE",
-      });
+            if (!response.ok) {
+              const error = await response.json();
+              throw new Error(error.error || "Failed to remove staff member");
+            }
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to remove staff member");
-      }
+            setUsers(users.filter((u) => u.id !== user.id));
 
-      setUsers(users.filter((u) => u.id !== user.id));
-
-      toast.success(`${user.name} has been removed from the organization.`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to remove staff member");
-    }
+            toast.success(`${user.name} has been removed from the organization.`);
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Failed to remove staff member");
+          }
+        },
+      },
+      cancel: { label: "Cancel", onClick: () => {} },
+    });
   };
 
   const handleSendPasswordReset = async (user: User) => {

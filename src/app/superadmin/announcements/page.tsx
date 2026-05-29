@@ -224,23 +224,29 @@ export default function SuperadminAnnouncementsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this announcement?")) return;
+  const handleDelete = (id: string) => {
+    toast("Delete this announcement?", {
+      action: {
+        label: "Delete",
+        onClick: async () => {
+          try {
+            const response = await fetch(`/api/superadmin/announcements/${id}`, {
+              method: "DELETE",
+            });
 
-    try {
-      const response = await fetch(`/api/superadmin/announcements/${id}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        toast.success("Announcement deleted successfully");
-        fetchAnnouncements();
-      } else {
-        throw new Error("Failed to delete announcement");
-      }
-    } catch (error) {
-      toast.error("Failed to delete announcement");
-    }
+            if (response.ok) {
+              toast.success("Announcement deleted successfully");
+              fetchAnnouncements();
+            } else {
+              throw new Error("Failed to delete announcement");
+            }
+          } catch (error) {
+            toast.error("Failed to delete announcement");
+          }
+        },
+      },
+      cancel: { label: "Cancel", onClick: () => {} },
+    });
   };
 
   const handlePublish = async (id: string) => {

@@ -83,17 +83,22 @@ export default function SeasonsPage() {
   } = useSeasons();
   const [createDialogOpen, setCreateDialogOpen] = React.useState(false);
 
-  const handleDelete = async (id: string) => {
-    if (
-      confirm(
-        "Are you sure? This will unlink all associated programs, memberships, and competitions."
-      )
-    ) {
-      const success = await deleteSeason(id);
-      if (success) {
-        toast.success("Season deleted");
+  const handleDelete = (id: string) => {
+    toast(
+      "Delete season? This will unlink all associated programs, memberships, and competitions.",
+      {
+        action: {
+          label: "Delete",
+          onClick: async () => {
+            const success = await deleteSeason(id);
+            if (success) {
+              toast.success("Season deleted");
+            }
+          },
+        },
+        cancel: { label: "Cancel", onClick: () => {} },
       }
-    }
+    );
   };
 
   return (

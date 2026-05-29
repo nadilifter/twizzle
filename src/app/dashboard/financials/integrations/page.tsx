@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -723,20 +724,22 @@ function ConnectedCard({
     }
   }
 
-  async function handleDisconnect() {
-    if (
-      !confirm(
-        `Are you sure you want to disconnect ${config.label}? All sync mappings will be removed.`
-      )
-    )
-      return;
-    setDisconnecting(true);
-    try {
-      await fetch(`/api/integrations/${provider}/disconnect`, { method: "POST" });
-      onDisconnect();
-    } finally {
-      setDisconnecting(false);
-    }
+  function handleDisconnect() {
+    toast(`Disconnect ${config.label}? All sync mappings will be removed.`, {
+      action: {
+        label: "Disconnect",
+        onClick: async () => {
+          setDisconnecting(true);
+          try {
+            await fetch(`/api/integrations/${provider}/disconnect`, { method: "POST" });
+            onDisconnect();
+          } finally {
+            setDisconnecting(false);
+          }
+        },
+      },
+      cancel: { label: "Cancel", onClick: () => {} },
+    });
   }
 
   return (

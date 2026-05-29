@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 
 interface EngagementData {
   kpis: {
@@ -108,7 +109,6 @@ function formatMonth(yyyymm: string): string {
 export function EngagementTab() {
   const [data, setData] = React.useState<EngagementData | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
   const [trendRange, setTrendRange] = React.useState("12");
 
   React.useEffect(() => {
@@ -121,7 +121,7 @@ export function EngagementTab() {
         }
         setData(await res.json());
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load engagement data");
+        toast.error(err instanceof Error ? err.message : "Failed to load engagement data");
       } finally {
         setLoading(false);
       }
@@ -153,12 +153,6 @@ export function EngagementTab() {
 
   return (
     <>
-      {error && (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">{error}</CardContent>
-        </Card>
-      )}
-
       {/* KPI Cards */}
       {loading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

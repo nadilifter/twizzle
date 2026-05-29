@@ -36,6 +36,7 @@ import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { ResponsiveTabsList } from "@/components/ui/responsive-tabs";
 import { DashboardPageHeader } from "@/components/dashboard-page-header";
 import { FeatureGate } from "@/components/feature-gate";
+import { toast } from "sonner";
 import { RetentionTab } from "./retention-tab";
 import { RevenueTab } from "./revenue-tab";
 import { EngagementTab } from "./engagement-tab";
@@ -144,7 +145,6 @@ function formatMonth(yyyymm: string): string {
 export default function AnalyticsPage() {
   const [data, setData] = React.useState<AnalyticsData | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
   const [trendRange, setTrendRange] = React.useState("12");
   const [activeTab, setActiveTab] = React.useState("overview");
 
@@ -158,7 +158,7 @@ export default function AnalyticsPage() {
         }
         setData(await res.json());
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load analytics");
+        toast.error(err instanceof Error ? err.message : "Failed to load analytics");
       } finally {
         setLoading(false);
       }
@@ -238,14 +238,6 @@ export default function AnalyticsPage() {
           </ResponsiveTabsList>
 
           <TabsContent value="overview" className="space-y-6 mt-6">
-            {error && (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  {error}
-                </CardContent>
-              </Card>
-            )}
-
             {/* KPI Cards */}
             {loading ? (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

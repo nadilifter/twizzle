@@ -89,13 +89,19 @@ export default function MembershipsPage() {
     }
   }, [seasonFilter, fetchMemberships]);
 
-  const handleDeleteGroup = async (id: string) => {
-    if (confirm("Are you sure? This will delete all instances within this group.")) {
-      const success = await deleteMembershipGroup(id);
-      if (success) {
-        toast.success("Membership Group deleted");
-      }
-    }
+  const handleDeleteGroup = (id: string) => {
+    toast("Delete membership group? This will delete all instances within it.", {
+      action: {
+        label: "Delete",
+        onClick: async () => {
+          const success = await deleteMembershipGroup(id);
+          if (success) {
+            toast.success("Membership Group deleted");
+          }
+        },
+      },
+      cancel: { label: "Cancel", onClick: () => {} },
+    });
   };
 
   return (
@@ -354,13 +360,19 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
     }
   };
 
-  const handleDeleteInstance = async (instanceId: string) => {
-    if (confirm("Are you sure you want to delete this instance?")) {
-      const success = await deleteInstance(groupId, instanceId);
-      if (success) {
-        toast.success("Instance deleted");
-      }
-    }
+  const handleDeleteInstance = (instanceId: string) => {
+    toast("Delete this membership instance?", {
+      action: {
+        label: "Delete",
+        onClick: async () => {
+          const success = await deleteInstance(groupId, instanceId);
+          if (success) {
+            toast.success("Instance deleted");
+          }
+        },
+      },
+      cancel: { label: "Cancel", onClick: () => {} },
+    });
   };
 
   const handleUpdateRestrictions = async (data: Record<string, unknown>) => {

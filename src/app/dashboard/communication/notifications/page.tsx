@@ -557,25 +557,31 @@ export default function NotificationsPage() {
     }
   };
 
-  const handleDeleteRule = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this rule?")) return;
+  const handleDeleteRule = (id: string) => {
+    toast("Delete this notification rule?", {
+      action: {
+        label: "Delete",
+        onClick: async () => {
+          try {
+            const res = await fetch(`/api/notifications/rules/${id}`, {
+              method: "DELETE",
+            });
 
-    try {
-      const res = await fetch(`/api/notifications/rules/${id}`, {
-        method: "DELETE",
-      });
+            if (!res.ok) {
+              const error = await res.json();
+              throw new Error(error.error || "Failed to delete rule");
+            }
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to delete rule");
-      }
+            toast.success("Rule deleted successfully");
 
-      toast.success("Rule deleted successfully");
-
-      fetchRules();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete rule");
-    }
+            fetchRules();
+          } catch (error: any) {
+            toast.error(error.message || "Failed to delete rule");
+          }
+        },
+      },
+      cancel: { label: "Cancel", onClick: () => {} },
+    });
   };
 
   const handleToggleActive = async (rule: NotificationRule) => {

@@ -26,7 +26,6 @@ import {
   MapPin,
   Trophy,
   Loader2,
-  AlertCircle,
   Users,
   Trash2,
   Radio,
@@ -95,7 +94,6 @@ export default function CompetitionsPage() {
   const { seasons } = useSeasons({ autoFetch: seasonsEnabled });
   const [competitions, setCompetitions] = React.useState<Competition[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [seasonFilter, setSeasonFilter] = React.useState<string>("all");
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
@@ -105,7 +103,6 @@ export default function CompetitionsPage() {
   const fetchCompetitions = React.useCallback(async (seasonId?: string) => {
     try {
       setIsLoading(true);
-      setError(null);
       const url = new URL("/api/competitions", window.location.origin);
       if (seasonId) url.searchParams.set("seasonId", seasonId);
       const response = await fetch(url.toString());
@@ -117,7 +114,7 @@ export default function CompetitionsPage() {
       setCompetitions(data);
     } catch (err) {
       console.error("Failed to fetch competitions:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch competitions");
+      toast.error(err instanceof Error ? err.message : "Failed to fetch competitions");
     } finally {
       setIsLoading(false);
     }
@@ -216,13 +213,6 @@ export default function CompetitionsPage() {
           </div>
         )}
 
-        {error && (
-          <div className="flex items-center justify-center h-64 text-destructive">
-            <AlertCircle className="mr-2 h-6 w-6" />
-            <p>{error}</p>
-          </div>
-        )}
-
         <Sheet
           open={isEditOpen}
           onOpenChange={(open) => {
@@ -252,7 +242,7 @@ export default function CompetitionsPage() {
           </SheetContent>
         </Sheet>
 
-        {!isLoading && !error && (
+        {!isLoading && (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filtered.map((competition) => {
               const location = competition.facility

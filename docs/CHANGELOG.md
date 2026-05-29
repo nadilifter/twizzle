@@ -7,6 +7,42 @@ each. Newest first.
 
 ## 2026-05-29
 
+### Phase 0.6 — Sonner toasts + unified skeletons
+
+Adopted Sonner as the single toast layer and unified all loading states
+behind the canonical `<Skeleton>` primitive.
+
+- **Toaster:** `<Toaster />` wired in root layout with `position="bottom-right"`,
+  `expand`, `closeButton`, `richColors`; theme from `next-themes`.
+- **`alert()` replaced:** all remaining browser `alert()` calls (5 call sites
+  across `invoice-actions.tsx`, `grace-period-manager.tsx`) replaced with
+  `toast.success` / `toast.error`.
+- **`confirm()` replaced:** 17 browser `confirm()` calls across 15 files
+  replaced with `toast(message, { action, cancel })` — destructive action moves
+  into the action callback; cancel is a no-op. No business logic changed.
+- **Inline error banners replaced:** `{error && <Card>…</Card>}` state patterns
+  in `competitions/page.tsx` and all four analytics tabs removed; errors now
+  surface via `toast.error()` in the catch block.
+- **Skeleton:** `src/components/ui/skeleton.tsx` now accepts `width`, `height`,
+  and `rounded` props alongside `className`.
+- **Loading states:** added `loading.tsx` for all 15 superadmin sub-routes
+  that were missing one; all top-level coach and dashboard routes already had
+  loading files in place.
+
+**Test:**
+
+- Submit any form → Sonner toast bottom-right, auto-dismisses after ~4 s,
+  manually dismissable via × button.
+- Trigger an API error → red toast with the API error message.
+- Click a delete button (e.g. Superadmin › Plans, Staff › Remove) →
+  confirmation toast with "Delete"/"Cancel" appears; "Delete" proceeds,
+  "Cancel" is a no-op.
+- Navigate to `/superadmin/plans` on a slow connection → skeleton table
+  renders within 100 ms before data loads.
+- Toggle dark mode → Toaster theme updates immediately.
+
+---
+
 ### Delete Metro Sports demo org from seed-dev.ts (Commit A)
 
 Removed all Metro Sports Complex seed data from `prisma/seed-dev.ts` as
