@@ -8,6 +8,26 @@ Manual verification steps for each entry live in
 
 ## 2026-05-29
 
+### Phase 4.1 — ISU element catalog seed
+
+New static data module `prisma/isu-elements.ts` — a typed, zero-DB-write
+catalog of 116 canonical ISU figure-skating elements.
+
+- **Jumps (24):** all 6 types (T, S, Lo, F, Lz, A) × 4 rotations
+  (single through quadruple), including 4A.
+- **Spins (50):** 10 families (USp, SSp, LSp, CSp, CoSp + flying
+  variants FUSp, FSSp, FLSp, FCSp, FCoSp) × 5 levels (B / 1-4).
+- **Step sequences (6):** StSqB–StSq4 plus ChSq1.
+- **Death spirals (20):** all 4 entry directions (FoI, FoO, BoI, BoO)
+  × 5 levels.
+- **Lifts (10) + Throw jumps (6):** representative pairs sample;
+  additional groups wired in Phase 4.3.
+
+Exports `IsuElement` interface and `ISU_ELEMENTS` constant. No Prisma
+schema changes. Phase 4.3 (planned-program builder) will persist rows.
+
+---
+
 ### Shorthand search on the Evaluations page + searchable Level dropdown
 
 The evaluations templates list (`/dashboard/training/evaluations`)

@@ -69,6 +69,58 @@ auth — MailHog at http://localhost:8025 catches the link locally).
 
 ### 2026-05-29
 
+#### Phase 4.1 — ISU element catalog seed
+
+Static verification only — no DB or UI required.
+
+**Row counts (run from repo root):**
+
+```bash
+# Total element rows
+grep -c '^  {' prisma/isu-elements.ts
+# expected: 116
+
+# By kind
+grep -c 'kind: "jump"'         prisma/isu-elements.ts  # 24
+grep -c 'kind: "spin"'         prisma/isu-elements.ts  # 50
+grep -c 'kind: "stepSequence"' prisma/isu-elements.ts  # 5
+grep -c 'kind: "chorSequence"' prisma/isu-elements.ts  # 1
+grep -c 'kind: "deathSpiral"'  prisma/isu-elements.ts  # 20
+grep -c 'kind: "lift"'         prisma/isu-elements.ts  # 10
+grep -c 'kind: "throw"'        prisma/isu-elements.ts  # 6
+```
+
+**Schema shape spot-check:**
+
+```bash
+node -e "
+const { ISU_ELEMENTS } = require('./prisma/isu-elements');
+// jump row
+const t3 = ISU_ELEMENTS.find(e => e.code === '3T');
+console.assert(t3.kind === 'jump' && t3.baseValue === 4.2 && t3.turns === 3 && t3.jumpType === 'T');
+// spin row
+const s4 = ISU_ELEMENTS.find(e => e.code === 'FSSp4');
+console.assert(s4.kind === 'spin' && s4.level === 4 && s4.spinFamily === 'FSSp');
+// step sequence
+const sq3 = ISU_ELEMENTS.find(e => e.code === 'StSq3');
+console.assert(sq3.kind === 'stepSequence' && sq3.baseValue === 4.2);
+// death spiral
+const ds = ISU_ELEMENTS.find(e => e.code === 'BoDs4');
+console.assert(ds.kind === 'deathSpiral' && ds.entry === 'BoO' && ds.level === 4);
+console.log('all assertions passed');
+"
+```
+
+**Typecheck + lint:**
+
+```bash
+pnpm typecheck   # must exit 0
+pnpm lint        # must show "No ESLint warnings or errors"
+pnpm format:check prisma/isu-elements.ts  # must show "All matched files use Prettier code style"
+```
+
+---
+
 #### Shorthand search on the Evaluations page + searchable Level dropdown
 
 Setup: `pnpm db:reset && pnpm db:seed` so the full STAR + CanSkate
