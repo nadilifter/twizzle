@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardPageHeader } from "@/components/dashboard-page-header";
@@ -62,6 +62,8 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { athleteDisplayName } from "@/lib/athlete-name";
 import { api } from "@/lib/api-client";
+import { LevelCombobox } from "@/components/evaluations/level-combobox";
+import { matchesQuery, templateSearchKeywords } from "@/lib/evaluation-search";
 import type {
   Skill,
   Level,
@@ -176,17 +178,16 @@ export default function EvaluationsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Fetch templates
+  // Fetch templates. We pull the full set and filter client-side so the
+  // search input can do shorthand matching (`cs3`, `star5`) against ribbon
+  // metadata that the server-side `?search=` substring doesn't know about.
   const fetchTemplates = useCallback(async () => {
     setIsLoadingTemplates(true);
     try {
-      const params: Record<string, string> = {};
-      if (templateSearch) params.search = templateSearch;
-
       const response = await api.get<{
         data: EvaluationTemplateWithSkills[];
         total: number;
-      }>("/api/evaluation-templates", params);
+      }>("/api/evaluation-templates", {});
 
       setTemplates(response.data);
     } catch (error) {
@@ -195,7 +196,7 @@ export default function EvaluationsPage() {
     } finally {
       setIsLoadingTemplates(false);
     }
-  }, [templateSearch]);
+  }, []);
 
   // Fetch evaluations
   const fetchEvaluations = useCallback(async () => {
@@ -247,14 +248,18 @@ export default function EvaluationsPage() {
 
   useEffect(() => {
     if (activeTab === "templates") {
-      const debounce = setTimeout(() => {
-        fetchTemplates();
-      }, 300);
-      return () => clearTimeout(debounce);
+      fetchTemplates();
     } else {
       fetchEvaluations();
     }
   }, [activeTab, fetchTemplates, fetchEvaluations]);
+
+  // Client-side filter using the shared evaluation-search keyword set
+  // (ribbon shorthand + STAR shorthand + literal name/description match).
+  const filteredTemplates = useMemo(() => {
+    if (!templateSearch.trim()) return templates;
+    return templates.filter((t) => matchesQuery(templateSearchKeywords(t), templateSearch));
+  }, [templates, templateSearch]);
 
   // Handle create template
   const handleCreate = async () => {
@@ -537,9 +542,19 @@ export default function EvaluationsPage() {
                 New Template
               </Button>
             </div>
+          ) : filteredTemplates.length === 0 ? (
+            <div className="text-center py-12">
+              <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="font-semibold mb-2">No matches</h3>
+              <p className="text-muted-foreground">
+                Nothing matches &quot;{templateSearch}&quot;. Try a different keyword (e.g.{" "}
+                <code className="font-mono">cs3</code>, <code className="font-mono">star5</code>, or
+                part of the template name).
+              </p>
+            </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {templates.map((template) => (
+              {filteredTemplates.map((template) => (
                 <Card key={template.id} className="relative">
                   <CardHeader>
                     <div className="flex items-start justify-between">
@@ -720,24 +735,12 @@ export default function EvaluationsPage() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="difficulty">Level</Label>
-              <Select
-                value={formData.levelId || "none"}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, levelId: value === "none" ? "" : value })
-                }
-              >
-                <SelectTrigger id="difficulty">
-                  <SelectValue placeholder="Select a level" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No level</SelectItem>
-                  {levels.map((level) => (
-                    <SelectItem key={level.id} value={level.id}>
-                      {level.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <LevelCombobox
+                id="difficulty"
+                levels={levels}
+                value={formData.levelId}
+                onValueChange={(levelId) => setFormData({ ...formData, levelId })}
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
@@ -1051,24 +1054,12 @@ export default function EvaluationsPage() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-difficulty">Level</Label>
-              <Select
-                value={formData.levelId || "none"}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, levelId: value === "none" ? "" : value })
-                }
-              >
-                <SelectTrigger id="edit-difficulty">
-                  <SelectValue placeholder="Select a level" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No level</SelectItem>
-                  {levels.map((level) => (
-                    <SelectItem key={level.id} value={level.id}>
-                      {level.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <LevelCombobox
+                id="edit-difficulty"
+                levels={levels}
+                value={formData.levelId}
+                onValueChange={(levelId) => setFormData({ ...formData, levelId })}
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">

@@ -69,6 +69,43 @@ auth — MailHog at http://localhost:8025 catches the link locally).
 
 ### 2026-05-29
 
+#### Shorthand search on the Evaluations page + searchable Level dropdown
+
+Setup: `pnpm db:reset && pnpm db:seed` so the full STAR + CanSkate
+catalog is in the DB (~95 templates per org).
+
+**Page search shorthand** (`/dashboard/training/evaluations`):
+
+- Type `cs3` in the **Templates** tab search → filters down to the
+  three CanSkate Stage 3 ribbons (Balance / Control / Agility).
+- Type `cs3 balance` → narrows to just CanSkate 3 — Balance.
+- Type `star5` → STAR 5 templates across all disciplines surface
+  (Freeskate Elements, Freeskate Program, Skills).
+- Type `s5 dance` → STAR 5 Dance Step Elements.
+- Type `precs` → Pre-CanSkate ribbon.
+- Type a literal word like `silver` → matches Pattern Dance silver
+  variants.
+- Clear the search → all templates re-appear.
+- DevTools Network tab during typing: **no** `/api/evaluation-templates?search=…`
+  requests fire — filtering is purely client-side now.
+
+**Searchable Level dropdown** (Create / Edit template sheet):
+
+- Click **New Template**. The **Level** field is now a combobox
+  (chevron icon on the right) instead of the old plain dropdown.
+- Click it → a search input appears at the top of the list.
+- Type `cs3` → list narrows to "CanSkate Stage 3". Enter selects it.
+- Type `star` → all STAR levels surface.
+- Type `precs` → "Pre-CanSkate".
+- The first item is always "No level" (for the empty-string state).
+- Edit an existing template (pencil icon) → the same searchable
+  combobox, pre-populated with the template's current level.
+- With <8 levels seeded, the combobox falls back to a plain Select
+  (search adds no value at that size — verify by manually trimming
+  the levels list, optional).
+
+---
+
 #### Fix: UplifterIcon overflowing the login card
 
 - Open `http://login.twizzle.localhost:3000/login`. The Card stays

@@ -8,6 +8,32 @@ Manual verification steps for each entry live in
 
 ## 2026-05-29
 
+### Shorthand search on the Evaluations page + searchable Level dropdown
+
+The evaluations templates list (`/dashboard/training/evaluations`)
+search input now matches CanSkate ribbon and STAR shortcuts (`cs3`,
+`star5`, `precs`) the same way the New-evaluation template picker
+does. The same shorthand vocabulary now also powers a new searchable
+Level dropdown in the Create / Edit template sheets — previously a
+plain Select with no search.
+
+- New shared helpers in `src/lib/evaluation-search.ts`:
+  `levelSearchKeywords(name)`, `templateSearchKeywords(template)`,
+  `matchesQuery(keywords, query)`. AND-tokenized substring match
+  across name + ribbon meta + STAR-pattern derivation. Same matching
+  semantics as `TemplatePicker`.
+- Evaluations page: stopped sending `?search=` to the API. Fetches
+  the full template set once and filters client-side via
+  `matchesQuery(templateSearchKeywords(t), query)`. Drops the 300 ms
+  debounce — search is instant now. New "no matches" empty state
+  hints at `cs3` / `star5` style keywords.
+- New `<LevelCombobox>` (`src/components/evaluations/level-combobox.tsx`)
+  — below 8 options falls back to a plain Select; above, it's a
+  Popover + cmdk Command with the same shorthand-aware filter.
+  Replaces the Level Select in both Create and Edit sheets.
+
+---
+
 ### Fix: UplifterIcon overflowing the login card
 
 `<UplifterIcon>` was rendered with `width="auto"`, which isn't a valid
