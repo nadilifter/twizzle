@@ -11,6 +11,47 @@ can follow without re-deriving the intent.
 
 ## 2026-05-29
 
+### Phase 2.1 — Bulk achievement CSV import
+
+#### Setup
+
+1. Log in as an ADMIN user.
+2. Navigate to **Training → Import Achievements**
+   (`/dashboard/training/import-achievements`).
+
+#### Sample CSV (paste into a file named `test-import.csv`)
+
+```csv
+athlete_id,skill_name,date_earned,notes
+REPLACE_WITH_REAL_ATHLETE_ID,CanSkate Stage 1,2025-09-01,Imported via bulk upload
+REPLACE_WITH_REAL_ATHLETE_ID,CanSkate Stage 2,2025-10-15,
+invalid-athlete-id,CanSkate Stage 1,2025-09-01,Should be skipped
+REPLACE_WITH_REAL_ATHLETE_ID,Unknown Template XYZ,2025-09-01,Should be skipped
+REPLACE_WITH_REAL_ATHLETE_ID,CanSkate Stage 1,not-a-date,Should be skipped
+```
+
+#### Verification steps
+
+1. Replace `REPLACE_WITH_REAL_ATHLETE_ID` with actual cuid values from the
+   Athletes page and `CanSkate Stage 1` / `CanSkate Stage 2` with real
+   EvaluationTemplate names from your org.
+2. Select `test-import.csv` using the file picker and click **Import**.
+3. A toast notification appears: "Import complete: 2 record(s) created".
+4. The summary card shows 2 created and 3 skipped rows with reasons
+   `athlete_not_found`, `skill_not_found`, `invalid_date`.
+5. Confirm the new Evaluation records appear on the Evaluations page with
+   status **Pass** and the correct date and notes.
+6. Re-upload the same file. The same 2 rows succeed again (no unique
+   constraint on `Evaluation`), confirming idempotent uploads are handled by
+   the caller, not the API.
+
+#### Error cases
+
+- Upload a file missing the `athlete_id` header → expect a `400` error toast.
+- Upload as a non-ADMIN user → expect a `403` error toast.
+
+---
+
 ### Phase 5.4 — SkateCanadaSeason data model
 
 No UI exists yet (admin UI is a separate task). Verify the data layer only.
