@@ -335,6 +335,10 @@ const data = {
           title: "Levels",
           url: "/dashboard/training/levels",
         },
+        {
+          title: "Import achievements",
+          url: "/dashboard/training/import-achievements",
+        },
       ],
     },
     {

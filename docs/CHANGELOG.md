@@ -8,6 +8,30 @@ Manual verification steps for each entry live in
 
 ## 2026-05-29
 
+### Phase 2.1 — Bulk achievement CSV import
+
+New page at `/dashboard/training/import-achievements` and API route
+`POST /api/training/import-achievements` allowing ADMIN users to upload a CSV
+file and bulk-create `Evaluation` records for their athletes.
+
+CSV format (four required headers, any column order):
+
+```
+athlete_id,skill_name,date_earned,notes
+```
+
+Each valid row creates one `Evaluation` linked to the athlete and the matching
+`EvaluationTemplate` (matched by name, case-insensitive). Rows with an unknown
+athlete ID, unknown template name, or invalid date are skipped and returned with
+a reason in the API response. The page shows a summary card with created count
+and the first 10 skipped rows after each import.
+
+Defaults applied to every imported row: `status: "PASS"`,
+`overallScore: 0`, `coachId: <importer's user id>`. Sidebar nav link
+to the new page is wired up in this commit.
+
+---
+
 ### Fix: Skills page first-render default categories
 
 `/dashboard/training/skills` briefly flashed gymnastics apparatus
