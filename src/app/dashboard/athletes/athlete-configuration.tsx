@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { athleteDisplayName } from "@/lib/athlete-name";
+import { validateFederationMemberNumber } from "@/lib/federation-member-number";
 
 interface AthleteData {
   id: string;
@@ -84,6 +85,11 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
     return configuredLevels.find((l) => l.name === formData.level)?.color ?? null;
   }, [configuredLevels, formData.level]);
 
+  const federationMemberNumberError = useMemo(
+    () => validateFederationMemberNumber(formData.federationName, formData.federationMemberNumber),
+    [formData.federationName, formData.federationMemberNumber]
+  );
+
   const handleSave = async () => {
     if (!formData.firstName.trim()) {
       toast.error("Athlete first name is required");
@@ -91,6 +97,10 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
     }
     if (!formData.level) {
       toast.error("Level is required");
+      return;
+    }
+    if (federationMemberNumberError) {
+      toast.error(federationMemberNumberError);
       return;
     }
 
@@ -342,9 +352,19 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
                       federationMemberNumber: e.target.value,
                     }))
                   }
-                  placeholder="e.g. 12345678"
+                  placeholder={
+                    formData.federationName === "SKATE_CANADA"
+                      ? "e.g. SC-12345678"
+                      : formData.federationName === "USFS"
+                        ? "e.g. USFS-123456"
+                        : "e.g. 12345678"
+                  }
                   disabled={!formData.federationName}
+                  aria-invalid={Boolean(federationMemberNumberError)}
                 />
+                {federationMemberNumberError && formData.federationMemberNumber.trim() && (
+                  <p className="text-xs text-destructive">{federationMemberNumberError}</p>
+                )}
               </div>
             </div>
             <div className="space-y-2">

@@ -5,6 +5,40 @@ each. Newest first.
 
 ---
 
+## 2026-05-29
+
+### Phase 1.1 — Skate Canada / USFS / ISU member-number format validation
+
+Added a local-only regex validator for `federationMemberNumber`. Runs
+both client-side (inline error below the form input) and server-side
+(Zod `superRefine` on the athlete PATCH route). Federation-aware:
+
+- `SKATE_CANADA` → `SC-` + 6-10 digits (e.g. `SC-12345678`)
+- `USFS` → `USFS-` + 4-10 digits (e.g. `USFS-123456`)
+- `ISU` → permissive `[A-Z0-9-]{4,32}` until we have a stricter spec
+- Unknown federations → accept any non-empty string (forward-compat)
+
+Empty member number is always accepted (the field is optional). Providing
+a member number without picking a federation surfaces "Select a federation
+before entering a member number". Phase 6.2 will replace the regex with
+a live Skate Canada CRM lookup; this stays as a pre-flight.
+
+**Test:**
+
+- `pnpm test src/lib/__tests__/federation-member-number.test.ts` (10 cases
+  covering each federation, empty input, whitespace trimming, missing
+  federation, and unknown federation).
+- Manual (form): open the athlete edit sheet (`/dashboard/athletes` →
+  click any athlete → **Edit**), set Federation to "Skate Canada", type
+  `bogus` in Member Number → inline red error appears below the input;
+  Save shows the same message in a Sonner toast and stays open. Change
+  to `SC-12345678` → error clears, Save succeeds.
+- Manual (API): `PATCH /api/athletes/<id>` with body
+  `{ "federationName": "SKATE_CANADA", "federationMemberNumber": "bogus" }`
+  → 400 with the federation hint in `error`.
+
+---
+
 ## 2026-05-28
 
 ### Skating-only scope cleanup — `Competition.competitionType` dropped

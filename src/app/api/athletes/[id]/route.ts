@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
+import { validateFederationMemberNumber } from "@/lib/federation-member-number";
 import { z } from "zod";
 
 function getCategoryLabel(category: {
@@ -25,19 +26,30 @@ function getCategoryLabel(category: {
   return "Event";
 }
 
-const updateAthleteSchema = z.object({
-  firstName: z.string().min(1).optional(),
-  lastName: z.string().min(1).optional(),
-  email: z.string().email().optional().nullable(),
-  level: z.string().min(1).optional(),
-  status: z.enum(["ACTIVE", "INACTIVE", "TRIAL", "GRADUATED"]).optional(),
-  birthDate: z.string().optional().nullable(),
-  gender: z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]).optional().nullable(),
-  guardianUserId: z.string().optional(),
-  federationName: z.string().max(64).optional().nullable(),
-  federationMemberNumber: z.string().max(64).optional().nullable(),
-  federationMemberExpiresAt: z.string().optional().nullable(),
-});
+const updateAthleteSchema = z
+  .object({
+    firstName: z.string().min(1).optional(),
+    lastName: z.string().min(1).optional(),
+    email: z.string().email().optional().nullable(),
+    level: z.string().min(1).optional(),
+    status: z.enum(["ACTIVE", "INACTIVE", "TRIAL", "GRADUATED"]).optional(),
+    birthDate: z.string().optional().nullable(),
+    gender: z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]).optional().nullable(),
+    guardianUserId: z.string().optional(),
+    federationName: z.string().max(64).optional().nullable(),
+    federationMemberNumber: z.string().max(64).optional().nullable(),
+    federationMemberExpiresAt: z.string().optional().nullable(),
+  })
+  .superRefine((data, ctx) => {
+    const error = validateFederationMemberNumber(data.federationName, data.federationMemberNumber);
+    if (error) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: error,
+        path: ["federationMemberNumber"],
+      });
+    }
+  });
 
 const STAFF_ONLY_FIELDS = [
   "level",
