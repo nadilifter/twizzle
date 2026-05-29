@@ -5,6 +5,7 @@ import { UserImpersonationBanner } from "@/components/user-impersonation-banner"
 import { getAuthSession } from "@/lib/auth";
 import { getCoachingMemberships } from "@/lib/impersonation";
 import { redirect } from "next/navigation";
+import { PageTransition } from "@/components/ui/page-transition";
 
 export default async function CoachLayout({ children }: { children: React.ReactNode }) {
   const session = await getAuthSession();
@@ -26,7 +27,9 @@ export default async function CoachLayout({ children }: { children: React.ReactN
       <SidebarInset>
         <UserImpersonationBanner exitUrl="/coach/admin/view-as-user" />
         <SiteHeader />
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
+        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+          <PageTransition>{children}</PageTransition>
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );

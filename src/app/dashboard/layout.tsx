@@ -10,6 +10,7 @@ import { BillingGracePeriodBanner } from "@/components/billing-grace-period-bann
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getSubdomainUrl } from "@/lib/env-domains";
+import { PageTransition } from "@/components/ui/page-transition";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -21,7 +22,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Suspense fallback={null}>
             <DeactivationGuard />
           </Suspense>
-          <div className="flex flex-1 flex-col">{children}</div>
+          <div className="flex flex-1 flex-col">
+            <PageTransition>{children}</PageTransition>
+          </div>
           <DemoDataBanner />
         </SidebarInset>
       </SidebarProvider>

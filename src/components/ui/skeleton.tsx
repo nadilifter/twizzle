@@ -20,7 +20,13 @@ const roundedMap: Record<NonNullable<SkeletonProps["rounded"]>, string> = {
 function Skeleton({ className, width, height, rounded = "md", ...props }: SkeletonProps) {
   return (
     <div
-      className={cn("animate-pulse bg-primary/10", roundedMap[rounded], width, height, className)}
+      className={cn(
+        "skeleton-shimmer bg-primary/10",
+        roundedMap[rounded],
+        width,
+        height,
+        className
+      )}
       {...props}
     />
   );

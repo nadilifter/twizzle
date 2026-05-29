@@ -7,6 +7,31 @@ each. Newest first.
 
 ## 2026-05-29
 
+### Phase 0.5 — Micro-animations on standard interactions
+
+Added subtle, consistent animations to design-system primitives so every
+page inherits them without per-page edits.
+
+- **Button press** — buttons scale to 96% on press (Tailwind `active:`)
+- **Focus ring** — 200ms fade-in transition on `:focus-visible`
+- **Page transitions** — content fades in from y+8 over 200ms in dashboard / coach / superadmin layouts (`motion.main`)
+- **`<AnimatedCheckmark/>`** — SVG path-length draw-in for success states
+- **`<CountUp value={n}/>`** — number counter using framer-motion's `useMotionValue` + `useTransform` + `useSpring`
+- **Skeleton shimmer** — CSS keyframe gradient sweep on the `<Skeleton>` primitive
+- All animations respect `prefers-reduced-motion: reduce`
+
+**Test:**
+
+- Click any button — scales down to 96% on press and springs back.
+- Tab to a button or input — focus ring fades in over ~200ms.
+- Navigate between dashboard pages — content fades in from y+8.
+- Save/complete an action that shows a checkmark — path draws in.
+- Load a KPI dashboard — numbers count up from 0.
+- Any `<Skeleton>` — shimmer gradient sweeps.
+- Enable "Reduce motion" in OS settings — all animations are disabled.
+
+---
+
 ### Phase 0.6 — Sonner toasts + unified skeletons
 
 Adopted Sonner as the single toast layer and unified all loading states

@@ -4,6 +4,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { BreadcrumbOverrideProvider } from "@/components/breadcrumb-context";
 import { getAuthSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { PageTransition } from "@/components/ui/page-transition";
 
 export default async function SuperadminLayout({ children }: { children: React.ReactNode }) {
   const session = await getAuthSession();
@@ -18,7 +19,9 @@ export default async function SuperadminLayout({ children }: { children: React.R
         <SuperadminSidebar />
         <SidebarInset>
           <SiteHeader />
-          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
+          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+            <PageTransition>{children}</PageTransition>
+          </div>
         </SidebarInset>
       </SidebarProvider>
     </BreadcrumbOverrideProvider>
