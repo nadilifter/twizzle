@@ -1056,6 +1056,9 @@ model Program {
   // Season
   seasonId String?
 
+  // Skate Canada Season (Phase 5.4 — populated by admin; scSeasonGuid synced in Phase 6.4)
+  skateCanadaSeasonId String?
+
   // Category
   categoryId String?
 
@@ -1064,6 +1067,7 @@ model Program {
   facility            Facility?                   @relation(fields: [facilityId], references: [id], onDelete: SetNull)
   glCode              GLCode?                     @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
   season              Season?                     @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  skateCanadaSeason   SkateCanadaSeason?          @relation(fields: [skateCanadaSeasonId], references: [id])
   category            Category?                   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   events              Event[]
   lessonPlans         LessonPlan[]
@@ -1090,6 +1094,7 @@ model Program {
   @@index([facilityId])
   @@index([glCodeId])
   @@index([seasonId])
+  @@index([skateCanadaSeasonId])
   @@index([categoryId])
 }
 
@@ -1198,6 +1203,9 @@ model MembershipGroup {
   // Season
   seasonId String?
 
+  // Skate Canada Season (Phase 5.4 — populated by admin; scSeasonGuid synced in Phase 6.4)
+  skateCanadaSeasonId String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1205,6 +1213,7 @@ model MembershipGroup {
   organization       Organization                       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   glCode             GLCode?                            @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
   season             Season?                            @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  skateCanadaSeason  SkateCanadaSeason?                 @relation(fields: [skateCanadaSeasonId], references: [id])
   instances          MembershipInstance[]
   levelRequirements  MembershipGroupLevelRequirement[]
   waiverRequirements MembershipGroupWaiverRequirement[]
@@ -1212,6 +1221,7 @@ model MembershipGroup {
   @@index([organizationId])
   @@index([glCodeId])
   @@index([seasonId])
+  @@index([skateCanadaSeasonId])
 }
 
 model MembershipInstance {
@@ -1374,6 +1384,40 @@ enum SeasonStatus {
   CLOSED
   EXPIRED
   CANCELLED
+}
+
+// ── Skate Canada Seasons ─────────────────────────────────────────────────────
+// Phase 5.4: Global (non-org-scoped) Skate Canada season registry.
+// Phase 6.4 will populate scSeasonGuid via the Skate Canada CRM API.
+
+model SkateCanadaSeason {
+  id        String   @id @default(cuid())
+
+  // Human-readable season name, e.g. '2026-2027' or '2026-27'
+  name      String   @unique
+
+  // Season bounds. Skate Canada seasons run roughly Sept 1 → Aug 31 of the following year.
+  startDate DateTime
+  endDate   DateTime
+
+  // Whether this is the currently-active season for new registrations. Exactly one season
+  // should be active at a time, but the schema doesn't enforce that — admin UI / app code will.
+  isActive  Boolean  @default(false)
+
+  // Phase 6.4 will populate this from the Skate Canada CRM API. Nullable for now —
+  // surfaces in admin UI as 'not yet synced'.
+  scSeasonGuid String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Inverse relations
+  competitions   Competition[]
+  programs       Program[]
+  membershipGroups MembershipGroup[]
+
+  @@index([isActive])
+  @@index([startDate, endDate])
 }
 
 model Enrollment {
@@ -4595,6 +4639,9 @@ model Competition {
   // Season
   seasonId String?
 
+  // Skate Canada Season (Phase 5.4 — populated by admin; scSeasonGuid synced in Phase 6.4)
+  skateCanadaSeasonId String?
+
   // Category
   categoryId String?
 
@@ -4607,11 +4654,12 @@ model Competition {
   updatedAt DateTime @updatedAt
 
   // Relations
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  facility        Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
-  glCode          GLCode?      @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
-  season          Season?      @relation(fields: [seasonId], references: [id], onDelete: SetNull)
-  programCategory Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  facility          Facility?          @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  glCode            GLCode?            @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
+  season            Season?            @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  skateCanadaSeason SkateCanadaSeason? @relation(fields: [skateCanadaSeasonId], references: [id])
+  programCategory   Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   categories        CompetitionCategory[]
   entries           CompetitionEntry[]
@@ -4625,6 +4673,7 @@ model Competition {
   @@index([status])
   @@index([glCodeId])
   @@index([seasonId])
+  @@index([skateCanadaSeasonId])
   @@index([categoryId])
 }
 

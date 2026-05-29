@@ -8,6 +8,31 @@ Manual verification steps for each entry live in
 
 ## 2026-05-29
 
+### Phase 5.4 — SkateCanadaSeason data model
+
+New global `SkateCanadaSeason` Prisma model for tracking Skate Canada's annual
+seasons (roughly Sept 1 → Aug 31). Added to `prisma/schema.prisma` and
+migrated in `20260529190000_add_skate_canada_season`.
+
+Key fields:
+
+- `name` — unique human-readable label (e.g. `'2026-2027'`)
+- `startDate` / `endDate` — official season window
+- `isActive` — flag for the current registration season (at-most-one enforced by app code)
+- `scSeasonGuid` — nullable; Phase 6.4 will sync from Skate Canada CRM API
+
+Foreign-key references (`skateCanadaSeasonId String?`) added to:
+
+- `Competition` — every competition belongs to a Skate Canada season
+- `Program` — programs are season-scoped for registration / fee rules
+- `MembershipGroup` — membership groups align to a season for eligibility
+
+All FKs are nullable (no backfill required; existing rows remain unassigned).
+Dev seed: `seedSkateCanadaSeasons()` in `prisma/skate-seed.ts` upserts the
+`2026-2027` season with `isActive: true` and `scSeasonGuid: null`.
+
+---
+
 ### Phase 5.1 — FederationSubmission model
 
 Adds the `FederationSubmission` Prisma model (and join table `FederationSubmissionAthlete`) tracking the full lifecycle of an org's athlete-data submission to a skating federation.
