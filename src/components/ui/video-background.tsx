@@ -12,7 +12,7 @@ interface VideoBackgroundProps {
   className?: string;
   /** Fade-in duration on mount, in ms. Default 2000. */
   fadeInMs?: number;
-  /** Fade-out duration applied at the tail of each loop, in ms. Default 2000.
+  /** Fade-out duration applied at the tail of each loop, in ms. Default 4000.
    *  Triggered via timeupdate vs. duration so the loop boundary doesn't pop. */
   loopFadeMs?: number;
 }
@@ -32,7 +32,7 @@ export function VideoBackground({
   type = "video/mp4",
   className,
   fadeInMs = 2000,
-  loopFadeMs = 2000,
+  loopFadeMs = 4000,
 }: VideoBackgroundProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [mounted, setMounted] = useState(false);

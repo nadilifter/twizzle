@@ -67,6 +67,27 @@ auth — MailHog at http://localhost:8025 catches the link locally).
 
 ### 2026-05-29
 
+#### Login refresh round 3 — slower video fade, capital-T wordmark + icon, 1.5s theme switch
+
+- Open `http://login.twizzle.localhost:3000/login` and watch a couple
+  of loop boundaries on the background video. The opacity dip lasts
+  roughly **4 seconds** total now (was 2 s) — noticeably more leisurely.
+- The brand mark above each Card variant shows the legacy **purple
+  balloon icon** followed by the word **"Twizzle"** (capital T). Both
+  in primary purple.
+- Inspect the icon (right-click → Inspect): it's an inline `<svg>`
+  with two `<path>` elements and `fill="currentColor"`, scoped via
+  the parent's text color. No extra image asset shipped.
+- Click the theme toggle (top-right of any auth page or top-bar of
+  the app). The clip-path reveal sweeping from the button across the
+  viewport now takes about **1.5 seconds** (was 0.4 s). `Reduce
+motion` users still skip the reveal entirely via the View
+  Transitions native respect for `prefers-reduced-motion`.
+- Toggle theme multiple times in a row — the animation queues
+  cleanly; no flicker between toggles.
+
+---
+
 #### Login refresh round 2 — slower fades, soft buttons, wordmark, twizzle.localhost
 
 - Open **http://login.twizzle.localhost:3000/login** (note the new

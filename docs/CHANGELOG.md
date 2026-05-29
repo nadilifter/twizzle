@@ -8,6 +8,27 @@ Manual verification steps for each entry live in
 
 ## 2026-05-29
 
+### Login refresh round 3 — even slower video fade, capital-T wordmark + icon, 1.5s theme switch
+
+Three small polish passes after round 2:
+
+- **Video loop fade-out** bumped 2000 ms → **4000 ms** (default
+  `loopFadeMs` on `<VideoBackground>`). The dip at the loop boundary
+  is now obviously slower — useful when the source clip has
+  noticeable motion at its start/end frames.
+- **TwizzleWordmark** now renders **"Twizzle"** (capital T, was
+  lowercase) and prepends the legacy purple Uplifter icon — the
+  balloon/heart symbol extracted from `/public/uplifter-logo.svg`
+  into a new `<UplifterIcon>` primitive. Both pieces share
+  `text-primary` so they stay in sync with the theme.
+- **`AnimatedThemeToggler`** default `duration` raised from 400 ms →
+  **1500 ms**. The clip-path reveal that fires when you toggle
+  light/dark now sweeps across the screen at a noticeably more
+  cinematic pace. Every callsite that didn't override the prop
+  picks this up automatically.
+
+---
+
 ### Login refresh round 2 — slower fades, no grid, soft buttons, wordmark, twizzle.localhost
 
 Follow-ups to the earlier login-page reskin per design feedback:
