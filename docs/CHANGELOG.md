@@ -8,6 +8,20 @@ Manual verification steps for each entry live in
 
 ## 2026-05-29
 
+### Phase 4.2 — ISU shorthand abbreviation generator
+
+New pure-function library `src/lib/isu-shorthand.ts` that converts
+structured element descriptions into standard ISU program-sheet codes.
+Covers jumps (`3T`, `4Lz`, `2A`), jump combos (`3T+2T`, `3F+2T+2Lo`),
+all ten spin families with levels B–4 (`FSSp4`, `CoSpB`), step sequences
+(`StSq3`), choreographic sequence (`ChSq1`), spiral sequence (`SpSq`),
+death spirals (`FoIDS2`), lifts (`4Li3`), and throws (`3ThLo`).
+Exhaustive `switch` with a `never` guard ensures TypeScript catches any
+future unhandled element kind. 64 vitest cases in
+`src/lib/__tests__/isu-shorthand.test.ts`.
+
+---
+
 ### Fix: UplifterIcon overflowing the login card
 
 `<UplifterIcon>` was rendered with `width="auto"`, which isn't a valid

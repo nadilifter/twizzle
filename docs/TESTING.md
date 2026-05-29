@@ -69,6 +69,66 @@ auth — MailHog at http://localhost:8025 catches the link locally).
 
 ### 2026-05-29
 
+#### Phase 4.2 — ISU shorthand abbreviation generator
+
+Unit-tested via vitest — run `pnpm test src/lib/__tests__/isu-shorthand.test.ts`
+and confirm **64 tests passed**.
+
+Import and call `generateIsuShorthand` from `src/lib/isu-shorthand.ts` to
+verify representative outputs:
+
+```ts
+import { generateIsuShorthand } from "@/lib/isu-shorthand";
+
+// Jumps
+generateIsuShorthand({ kind: "jump", turns: 3, type: "T" }) === "3T";
+generateIsuShorthand({ kind: "jump", turns: 4, type: "Lz" }) === "4Lz";
+generateIsuShorthand({ kind: "jump", turns: 2, type: "A" }) === "2A";
+
+// Jump combos
+generateIsuShorthand({
+  kind: "jumpCombo",
+  elements: [
+    { turns: 3, type: "T" },
+    { turns: 2, type: "T" },
+  ],
+}) === "3T+2T";
+generateIsuShorthand({
+  kind: "jumpCombo",
+  elements: [
+    { turns: 3, type: "F" },
+    { turns: 2, type: "T" },
+    { turns: 2, type: "Lo" },
+  ],
+}) === "3F+2T+2Lo";
+generateIsuShorthand({ kind: "jumpCombo", elements: [] }); // throws "jumpCombo requires at least one element"
+
+// Spins
+generateIsuShorthand({ kind: "spin", family: "FSSp", level: 4 }) === "FSSp4";
+generateIsuShorthand({ kind: "spin", family: "CoSp", level: "B" }) === "CoSpB";
+generateIsuShorthand({ kind: "spin", family: "CSp", level: 3 }) === "CSp3";
+
+// Step and sequence elements
+generateIsuShorthand({ kind: "stepSequence", level: 3 }) === "StSq3";
+generateIsuShorthand({ kind: "stepSequence", level: "B" }) === "StSqB";
+generateIsuShorthand({ kind: "chorSequence" }) === "ChSq1";
+generateIsuShorthand({ kind: "spiralSequence" }) === "SpSq";
+
+// Death spirals
+generateIsuShorthand({ kind: "deathSpiral", type: "FoI", level: 2 }) === "FoIDS2";
+generateIsuShorthand({ kind: "deathSpiral", type: "BoO", level: 4 }) === "BoODS4";
+
+// Lifts
+generateIsuShorthand({ kind: "lift", family: "4Li", level: 3 }) === "4Li3";
+generateIsuShorthand({ kind: "lift", family: "StLi", level: "B" }) === "StLiB";
+
+// Throws
+generateIsuShorthand({ kind: "throw", turns: 3, type: "Lo" }) === "3ThLo";
+generateIsuShorthand({ kind: "throw", turns: 2, type: "F" }) === "2ThF";
+```
+
+---
+
 #### Fix: UplifterIcon overflowing the login card
 
 - Open `http://login.twizzle.localhost:3000/login`. The Card stays
