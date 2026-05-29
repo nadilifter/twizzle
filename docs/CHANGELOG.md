@@ -8,6 +8,57 @@ Manual verification steps for each entry live in
 
 ## 2026-05-29
 
+### Phase 5.3 — Submission audit log (append-only events)
+
+Adds a full append-only audit log to `FederationSubmission`. Every meaningful
+change to a submission writes one immutable row; rows are never updated or
+deleted.
+
+**New Prisma model — `FederationSubmissionEvent`**
+
+- `eventType` (`FederationSubmissionEventType` enum) — one of `CREATED`,
+  `PAYLOAD_UPDATED`, `ATHLETE_ADDED`, `ATHLETE_REMOVED`, `STATUS_TRANSITIONED`,
+  `EXTERNAL_REF_SET`, `RESOLUTION_NOTE_SET`, `NOTE_ADDED`.
+- `data Json?` — optional structured payload. `STATUS_TRANSITIONED` events
+  carry `{ previousStatus, nextStatus }`; payload edits carry a diff.
+- `note String?` — optional free-text comment from the actor (e.g. rejection
+  reason).
+- `actorId String?` — nullable so system-generated events are representable.
+- `createdAt DateTime` — insert-only timestamp; no `updatedAt`.
+- Composite index on `(submissionId, createdAt)` for efficient timeline fetches.
+- Single index on `eventType` for analytics queries.
+- `onDelete: Cascade` from `FederationSubmission` so events clean up
+  automatically when a submission is deleted.
+- Inverse relations wired on `FederationSubmission` (`events`) and `User`
+  (`federationSubmissionEvents @relation("FederationSubmissionEventActor")`).
+
+**Migration** — `prisma/migrations/20260529200000_add_federation_submission_event/migration.sql`
+
+**Write helper — `src/lib/federation-submission-audit.ts`**
+
+Exports `logFederationSubmissionEvent({ submissionId, eventType, data, note,
+actorId, prismaClient? })`. Accepts an optional `Prisma.TransactionClient` so
+callers can batch the audit row into their own transaction.
+
+**API endpoint — `GET /api/federation-submissions/[id]/events`**
+
+ADMIN-only, org-scoped (verifies the submission belongs to the requesting
+admin's org). Returns events ordered by `createdAt DESC` with actor
+`{ id, name, email, avatar }` included.
+
+**Component — `src/components/federation-submissions/audit-log.tsx`**
+
+`<FederationSubmissionAuditLog submissionId={…} />` (client component). Fetches
+from the new endpoint, renders a vertical timeline with actor avatar, friendly
+event label, `date-fns` relative time, optional note block, and `old → new`
+status annotation for `STATUS_TRANSITIONED` events. Loading state uses
+`<Skeleton>` strips; empty state shows "No events yet."
+
+Phase 5.2 (admin submission queue page) will wire this component into the
+submission detail view after both routines land.
+
+---
+
 ### Phase 2.1 — Bulk achievement CSV import
 
 New page at `/dashboard/training/import-achievements` and API route
