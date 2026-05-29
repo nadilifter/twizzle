@@ -8,6 +8,21 @@ Manual verification steps for each entry live in
 
 ## 2026-05-29
 
+### Phase 5.1 — FederationSubmission model
+
+Adds the `FederationSubmission` Prisma model (and join table `FederationSubmissionAthlete`) tracking the full lifecycle of an org's athlete-data submission to a skating federation.
+
+- **New enum `Federation`:** `SKATE_CANADA | USFS | ISU` — identifies the target federation.
+- **New enum `FederationSubmissionStatus`:** `DRAFT | SUBMITTED | ACCEPTED | REJECTED` — lifecycle states.
+- **`FederationSubmission` model:** org-scoped, stores a flexible `Json` payload (federation-specific shape defined per integration), lifecycle timestamps (`submittedAt`, `resolvedAt`), optional `externalRef` and `resolutionNote`, and three actor FKs (`createdById`, `submittedById`, `resolvedById`).
+- **`FederationSubmissionAthlete` join table:** composite PK `(submissionId, athleteId)` — many-to-many between submissions and athletes.
+- **Inverse relations** wired on `Organization` (`federationSubmissions`), `User` (`createdSubmissions`, `submittedSubmissions`, `resolvedSubmissions`), and `Athlete` (`federationSubmissions`).
+- **Migration:** `prisma/migrations/20260529180000_add_federation_submission/migration.sql`.
+
+No UI or API routes in this phase — see Phase 5.2 (queue page) and 5.3 (audit log). Verification steps in [TESTING.md](./TESTING.md).
+
+---
+
 ### Phase 0.8 — Power-user keyboard shortcuts
 
 Global shortcuts mounted alongside `CommandPaletteProvider` in the admin and
