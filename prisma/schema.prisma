@@ -159,9 +159,6 @@ model Organization {
   // Feature Overrides (superadmin per-org overrides)
   featureOverride OrganizationFeatureOverride?
 
-  // Sports
-  sports OrganizationSport[]
-
   // Competition Categories (org-level custom templates)
   competitionCategoryTemplates CompetitionCategoryTemplate[]
 
@@ -4281,108 +4278,6 @@ model WaiverAcceptance {
   @@index([userId])
   @@index([athleteId])
   @@index([userId, waiverId])
-}
-
-// ============================================
-// SPORTS
-// ============================================
-
-model Sport {
-  id           String   @id @default(cuid())
-  name         String   @unique
-  slug         String   @unique
-  description  String?
-  icon         String?
-  isActive     Boolean  @default(true)
-  displayOrder Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  organizations OrganizationSport[]
-
-  // Competition category templates for this sport (legacy generic system)
-  competitionCategoryTemplates CompetitionCategoryTemplate[]
-
-  // Sport-specific structured data
-  events        SportEvent[]
-  ageCategories SportAgeCategory[]
-}
-
-model OrganizationSport {
-  id             String   @id @default(cuid())
-  organizationId String
-  sportId        String
-  createdAt      DateTime @default(now())
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  sport        Sport        @relation(fields: [sportId], references: [id], onDelete: Cascade)
-
-  @@unique([organizationId, sportId])
-  @@index([sportId])
-}
-
-// ============================================
-// SPORT-SPECIFIC EVENT & AGE CATEGORY MODELS
-// ============================================
-
-// Known events for a sport (e.g. 100m, Shot Put, High Jump for Athletics)
-model SportEvent {
-  id               String        @id @default(cuid())
-  sportId          String
-  code             String // e.g. "100M", "HJ", "SP"
-  name             String // e.g. "100m", "High Jump", "Shot Put"
-  eventGroup       String // e.g. "sprints", "jumps", "throws"
-  eventType        String // e.g. "track", "field", "relay", "combined", "road", "racewalk"
-  resultType       ResultType // TIME, DISTANCE, HEIGHT, SCORE
-  sortDirection    SortDirection // ASC (lower-is-better) or DESC (higher-is-better)
-  defaultPrecision Int           @default(3) // decimal places for display
-  isActive         Boolean       @default(true)
-  displayOrder     Int           @default(0)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-
-  sport                 Sport                   @relation(fields: [sportId], references: [id], onDelete: Cascade)
-  eligibility           SportEventEligibility[]
-  competitionCategories CompetitionCategory[]
-
-  @@unique([sportId, code])
-  @@index([sportId])
-}
-
-// Age divisions for a sport (e.g. U10, U12, SEN for Athletics)
-model SportAgeCategory {
-  id           String   @id @default(cuid())
-  sportId      String
-  code         String // e.g. "U10", "SEN", "MAS"
-  name         String // e.g. "Under 10", "Senior", "Masters"
-  minAge       Int
-  maxAge       Int? // null = no upper limit (e.g. Masters 35+)
-  isActive     Boolean  @default(true)
-  displayOrder Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  sport                 Sport                   @relation(fields: [sportId], references: [id], onDelete: Cascade)
-  eligibility           SportEventEligibility[]
-  competitionCategories CompetitionCategory[]
-
-  @@unique([sportId, code])
-  @@index([sportId])
-}
-
-// Eligibility matrix: which event+age category combos are allowed
-model SportEventEligibility {
-  id            String  @id @default(cuid())
-  sportEventId  String
-  ageCategoryId String
-  isEnabled     Boolean @default(true)
-
-  sportEvent  SportEvent       @relation(fields: [sportEventId], references: [id], onDelete: Cascade)
-  ageCategory SportAgeCategory @relation(fields: [ageCategoryId], references: [id], onDelete: Cascade)
-
-  @@unique([sportEventId, ageCategoryId])
-  @@index([sportEventId])
-  @@index([ageCategoryId])
 }
 
 // ============================================
