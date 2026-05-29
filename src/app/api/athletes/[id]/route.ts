@@ -39,6 +39,9 @@ const updateAthleteSchema = z
     federationName: z.string().max(64).optional().nullable(),
     federationMemberNumber: z.string().max(64).optional().nullable(),
     federationMemberExpiresAt: z.string().optional().nullable(),
+    disciplines: z
+      .array(z.enum(["SINGLES", "PAIRS", "ICE_DANCE", "SYNCHRO", "SPECIAL_OLYMPICS"]))
+      .optional(),
   })
   .superRefine((data, ctx) => {
     const error = validateFederationMemberNumber(data.federationName, data.federationMemberNumber);
@@ -629,6 +632,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       federationName,
       federationMemberNumber,
       federationMemberExpiresAt,
+      disciplines,
       ...otherData
     } = validatedData;
 
@@ -636,6 +640,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (firstName !== undefined) nameUpdate.firstName = firstName;
     if (lastName !== undefined) nameUpdate.lastName = lastName;
     if (gender !== undefined) nameUpdate.gender = gender;
+    if (disciplines !== undefined) nameUpdate.disciplines = disciplines;
 
     // Update org-specific fields on OrganizationAthlete (staff only)
     if (!isGuardianAccess) {

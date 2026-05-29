@@ -7,6 +7,41 @@ each. Newest first.
 
 ## 2026-05-29
 
+### Phase 1.3 — Athlete discipline taxonomy
+
+Skaters can now be tagged with one or more figure-skating disciplines:
+**Singles, Pairs, Ice Dance, Synchronized, Special Olympics**. Stored as a
+Postgres enum array on the global `Athlete` model (not org-scoped — a
+skater's discipline is a property of them, not the club).
+
+Surfaces:
+
+- **Admin athlete edit sheet** — new "Disciplines" section with a
+  multi-select `ToggleGroup`. Multiple selections allowed.
+- **Admin athlete detail header** — disciplines render as small `Badge`
+  pills under the athlete's name/federation row when any are set.
+- **PATCH `/api/athletes/[id]`** — accepts `disciplines: Discipline[]`,
+  rejects any value not in the enum.
+
+The filter UI on the athletes list (mentioned in the roadmap task) is
+deferred to a follow-up — the schema + edit + display foundation lands
+first so the data is captured before filtering becomes useful.
+
+**Test:**
+
+- Open the athlete edit sheet (`/dashboard/athletes/<id>` → **Edit**).
+  Click two discipline pills (e.g. _Singles_ + _Ice Dance_), Save. The
+  athlete detail header shows both as badges; reopen the sheet and the
+  same pills are pressed.
+- DB: `SELECT id, "firstName", disciplines FROM "Athlete" LIMIT 5;` —
+  existing athletes have empty arrays; updated ones show the chosen
+  enum values.
+- API: `PATCH /api/athletes/<id>` with
+  `{ "disciplines": ["SINGLES", "ICE_DANCE"] }` → 200, response carries
+  the same array. Sending `["BANANA"]` → 400 (Zod enum reject).
+
+---
+
 ### Phase 1.2 — Federation membership prerequisite gate at enrollment
 
 Programs now opt in to a federation-membership requirement via a new

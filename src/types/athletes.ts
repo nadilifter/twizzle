@@ -4,6 +4,24 @@ export type AthleteStatus = "ACTIVE" | "INACTIVE" | "TRIAL" | "GRADUATED";
 
 export type GenderDeclaration = "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY";
 
+export type Discipline = "SINGLES" | "PAIRS" | "ICE_DANCE" | "SYNCHRO" | "SPECIAL_OLYMPICS";
+
+export const DISCIPLINE_LABELS: Record<Discipline, string> = {
+  SINGLES: "Singles",
+  PAIRS: "Pairs",
+  ICE_DANCE: "Ice Dance",
+  SYNCHRO: "Synchronized",
+  SPECIAL_OLYMPICS: "Special Olympics",
+};
+
+export const DISCIPLINE_VALUES: Discipline[] = [
+  "SINGLES",
+  "PAIRS",
+  "ICE_DANCE",
+  "SYNCHRO",
+  "SPECIAL_OLYMPICS",
+];
+
 // Base athlete type from database (global fields)
 // level, status, customId come from OrganizationAthlete but are flattened into API responses
 export interface Athlete {
@@ -16,6 +34,7 @@ export interface Athlete {
   avatar: string | null;
   birthDate: string | null;
   gender: GenderDeclaration | null;
+  disciplines: Discipline[];
   customId: string | null;
   federationName: string | null;
   federationMemberNumber: string | null;
@@ -321,6 +340,7 @@ export interface UpdateAthletePayload {
   federationName?: string | null;
   federationMemberNumber?: string | null;
   federationMemberExpiresAt?: string | null;
+  disciplines?: Discipline[];
 }
 
 // Query parameters for filtering athletes

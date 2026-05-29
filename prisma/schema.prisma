@@ -499,6 +499,10 @@ model Athlete {
   birthDate  DateTime?
   gender     GenderDeclaration?
 
+  // Phase 1.3: figure-skating disciplines. Multiple values allowed —
+  // skaters often compete in more than one.
+  disciplines Discipline[]
+
   // Guardian/Ward system
   userId              String? @unique // Self-athlete: the User who IS this athlete
   allowGuardianClaims Boolean @default(false) // Whether other guardians can claim this athlete
@@ -665,6 +669,18 @@ enum GenderDeclaration {
   FEMALE
   OTHER
   PREFER_NOT_TO_SAY
+}
+
+// Phase 1.3: figure-skating disciplines. An athlete can hold multiple — a
+// Senior skater might do Singles + Ice Dance in the same season. Stored as
+// a global property of the Athlete (not org-scoped) since discipline is a
+// property of the skater, not the club.
+enum Discipline {
+  SINGLES
+  PAIRS
+  ICE_DANCE
+  SYNCHRO
+  SPECIAL_OLYMPICS
 }
 
 // ============================================

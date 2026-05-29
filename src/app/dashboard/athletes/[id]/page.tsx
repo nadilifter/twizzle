@@ -43,6 +43,7 @@ import {
 import { calculateAge } from "@/lib/age-utils";
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
 import { useAthlete } from "@/hooks/use-athletes";
+import { DISCIPLINE_LABELS, type Discipline } from "@/types/athletes";
 import { useFeatures } from "@/components/feature-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarUpload } from "@/components/avatar-upload";
@@ -424,6 +425,15 @@ export default function AthleteProfilePage() {
                 </>
               ) : null}
             </div>
+            {((athlete as any).disciplines ?? []).length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {((athlete as any).disciplines as Discipline[]).map((d) => (
+                  <Badge key={d} variant="secondary" className="text-xs">
+                    {DISCIPLINE_LABELS[d]}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         <Button size="sm" onClick={() => setIsEditOpen(true)} className="shrink-0">
@@ -454,6 +464,7 @@ export default function AthleteProfilePage() {
               federationName: (athlete as any).federationName ?? null,
               federationMemberNumber: (athlete as any).federationMemberNumber ?? null,
               federationMemberExpiresAt: (athlete as any).federationMemberExpiresAt ?? null,
+              disciplines: (athlete as any).disciplines ?? [],
             }}
             onClose={() => setIsEditOpen(false)}
             onUpdated={async (data) => {

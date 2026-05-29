@@ -23,6 +23,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { athleteDisplayName } from "@/lib/athlete-name";
 import { validateFederationMemberNumber } from "@/lib/federation-member-number";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { DISCIPLINE_LABELS, DISCIPLINE_VALUES, type Discipline } from "@/types/athletes";
 
 interface AthleteData {
   id: string;
@@ -33,6 +35,7 @@ interface AthleteData {
   status: AthleteStatus;
   birthDate: string | null;
   gender: string | null;
+  disciplines?: Discipline[] | null;
   guardian?: { id: string; name: string | null; email: string } | null;
   federationName?: string | null;
   federationMemberNumber?: string | null;
@@ -79,6 +82,7 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
     federationMemberExpiresAt: athlete.federationMemberExpiresAt
       ? new Date(athlete.federationMemberExpiresAt).toISOString().split("T")[0]
       : "",
+    disciplines: (athlete.disciplines ?? []) as Discipline[],
   }));
 
   const levelColor = useMemo(() => {
@@ -117,6 +121,7 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
         federationName: formData.federationName || null,
         federationMemberNumber: formData.federationMemberNumber.trim() || null,
         federationMemberExpiresAt: formData.federationMemberExpiresAt || null,
+        disciplines: formData.disciplines,
       };
 
       if (onUpdated) {
@@ -305,6 +310,32 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Disciplines */}
+          <div className="space-y-3 pt-2 border-t">
+            <div className="space-y-1">
+              <h3 className="text-sm font-medium">Disciplines</h3>
+              <p className="text-xs text-muted-foreground">
+                The figure-skating disciplines this athlete trains or competes in. Multiple
+                selections allowed.
+              </p>
+            </div>
+            <ToggleGroup
+              type="multiple"
+              value={formData.disciplines}
+              onValueChange={(value) =>
+                setFormData((prev) => ({ ...prev, disciplines: value as Discipline[] }))
+              }
+              className="flex-wrap justify-start gap-2"
+              variant="outline"
+            >
+              {DISCIPLINE_VALUES.map((d) => (
+                <ToggleGroupItem key={d} value={d} aria-label={DISCIPLINE_LABELS[d]}>
+                  {DISCIPLINE_LABELS[d]}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
           </div>
 
           {/* Federation Membership */}
