@@ -228,6 +228,27 @@ Once a local DB is available (Phase 5.2+):
 
 ### 2026-05-29
 
+#### Fix: Skills page first-render default categories
+
+1. Sign in as an org admin (so you have a populated catalog) and visit
+   `http://admin.twizzle.localhost:3000/dashboard/training/skills`.
+2. On first load, before the table populates, glance at the **Category**
+   tabs row near the top and at the **Category \*** dropdown in the
+   "Create skill" sheet. You should NOT see `Floor`, `Bars`, `Beam`,
+   `Vault`, or `Trampoline` even for a split second.
+3. Expected default categories (only visible if the org has zero
+   skills): Skating Skills, Jumps, Spins, Step Sequences, Choreography,
+   Off-Ice, General.
+4. Once the API responds with the org's actual categories, those
+   replace the defaults — typical orgs will see CanSkate / STAR-style
+   buckets instead.
+
+To verify the empty-state path explicitly: open in an incognito session
+or sign in as an admin of an org that has no skills seeded yet. The
+default skating-aligned categories should be what you see.
+
+---
+
 #### Phase 4.1 — ISU element catalog seed
 
 Static verification only — no DB or UI required.

@@ -67,7 +67,15 @@ interface OrgSport {
   slug: string;
 }
 
-const DEFAULT_CATEGORIES = ["Floor", "Bars", "Beam", "Vault", "Trampoline", "General"];
+const DEFAULT_CATEGORIES = [
+  "Skating Skills",
+  "Jumps",
+  "Spins",
+  "Step Sequences",
+  "Choreography",
+  "Off-Ice",
+  "General",
+];
 
 interface SkillFormData {
   name: string;

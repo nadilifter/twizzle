@@ -8,6 +8,21 @@ Manual verification steps for each entry live in
 
 ## 2026-05-29
 
+### Fix: Skills page first-render default categories
+
+`/dashboard/training/skills` briefly flashed gymnastics apparatus
+categories (Floor / Bars / Beam / Vault / Trampoline / General) before
+the `/api/skills` response replaced them with the org's actual
+categories. The flash was a leftover from the pre-2026-05-27 multi-sport
+codebase.
+
+Replaced the `DEFAULT_CATEGORIES` constant with a skating-aligned list:
+Skating Skills, Jumps, Spins, Step Sequences, Choreography, Off-Ice,
+General. Matches Skate Canada's StarSkate skill-area structure and acts
+as a placeholder until the API returns the org's persisted categories.
+
+---
+
 ### Phase 5.4 — SkateCanadaSeason data model
 
 New global `SkateCanadaSeason` Prisma model for tracking Skate Canada's annual
