@@ -7,6 +7,50 @@ each. Newest first.
 
 ## 2026-05-29
 
+### Delete Metro Sports demo org from seed-dev.ts (Commit A)
+
+Removed all Metro Sports Complex seed data from `prisma/seed-dev.ts` as
+part of the skating-only rebrand (Appendix A, Commit A). Metro was a
+multi-sport demo org that no longer fits the product's skating-club focus.
+
+**What was removed:**
+
+- Metro Sports organization, Adyen account, org features, sport associations
+- Metro admin/coach/volunteer users and all OrganizationMember rows
+- Metro facility, spaces, equipment, facility assignments/hours/notes
+- Metro parents (4), athletes (6), guardian links, payment methods
+- Metro levels, categories, programs, program instances, registrations
+- Metro discounts, membership group/instances, athlete memberships
+- Metro enrollments, events (historical + current), attendance records
+- Metro invoices, payments, GL codes, ledger entries
+- Metro skills, evaluation templates, evaluations, achievements, skill progress
+- Metro announcements, website config, POS products, stock movements, media
+- Metro staff employment, certifications, availability, shifts, template
+- Metro medical form config, custom questions, athlete medical info
+- Metro email usage, email campaigns, notification rules
+- Metro waiver (2 pages) and program waiver requirement
+- Metro competition (Regional Athletics Meet) with tiers, categories, entries, results
+- `ORG2_ID` constant declaration
+
+**Counts after deletion:**
+
+| Metric             | Before  | After  |
+| ------------------ | ------- | ------ |
+| `grep -c ORG2_ID`  | 539     | 0      |
+| `grep -c ORG1_ID`  | 834     | 834    |
+| `grep -ci "metro"` | ~540    | 0      |
+| File lines         | ~10,479 | ~7,576 |
+
+**Test:**
+
+- `pnpm typecheck` → passes
+- `pnpm lint` → no warnings or errors
+- `pnpm format:check` → all files use Prettier code style
+- `grep -c ORG2_ID prisma/seed-dev.ts` → 0
+- After merge: `pnpm db:reset && pnpm db:seed` (the routine could not).
+
+---
+
 ### Phase 1.3 — Athlete discipline taxonomy
 
 Skaters can now be tagged with one or more figure-skating disciplines:
