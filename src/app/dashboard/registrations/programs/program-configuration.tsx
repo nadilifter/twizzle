@@ -233,6 +233,8 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
       []) as string[],
     hasMedicalRequirement: (program as any).hasMedicalRequirement || false,
     hasFileRequirement: (program as any).hasFileRequirement || false,
+    hasFederationMembershipRestriction:
+      (program as any).hasFederationMembershipRestriction || false,
     fileRequirementConfig: ((program as any).fileRequirementConfig ||
       null) as FileRequirementConfig | null,
 
@@ -610,6 +612,7 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
         waiverRequirementIds: formData.hasWaiverRestriction ? formData.waiverRequirementIds : [],
         hasMedicalRequirement: formData.hasMedicalRequirement,
         hasFileRequirement: formData.hasFileRequirement,
+        hasFederationMembershipRestriction: formData.hasFederationMembershipRestriction,
         fileRequirementConfig: formData.hasFileRequirement ? formData.fileRequirementConfig : null,
         hasSpaceRestriction: formData.hasSpaceRestriction,
         spaceCapacityMode: formData.spaceCapacityMode,
@@ -2105,6 +2108,27 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                 />
               </div>
             )}
+
+            {/* Federation Membership Requirement */}
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <Label className="text-base font-medium">Federation Membership Requirement</Label>
+                <p className="text-sm text-muted-foreground">
+                  Require athletes to hold a valid Skate Canada (or other federation) membership
+                  before enrolling. Checked against the athlete&apos;s recorded member number and
+                  expiry date at enrollment time.
+                </p>
+              </div>
+              <Switch
+                checked={formData.hasFederationMembershipRestriction}
+                onCheckedChange={(checked) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    hasFederationMembershipRestriction: checked,
+                  }))
+                }
+              />
+            </div>
           </TabsContent>
 
           {/* ============================================= */}

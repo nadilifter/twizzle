@@ -151,6 +151,7 @@ export interface Program {
   hasPassRestriction: boolean;
   hasWaiverRestriction: boolean;
   hasMedicalRequirement: boolean;
+  hasFederationMembershipRestriction: boolean;
 
   // Gender restriction values
   allowedGenders: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[];
@@ -335,6 +336,7 @@ export interface CreateProgramPayload {
   hasWaiverRestriction?: boolean;
   hasMedicalRequirement?: boolean;
   hasFileRequirement?: boolean;
+  hasFederationMembershipRestriction?: boolean;
   fileRequirementConfig?: unknown;
   hasSpaceRestriction?: boolean;
   spaceCapacityMode?: SpaceCapacityMode;
@@ -400,6 +402,7 @@ export interface UpdateProgramPayload {
   hasWaiverRestriction?: boolean;
   hasMedicalRequirement?: boolean;
   hasFileRequirement?: boolean;
+  hasFederationMembershipRestriction?: boolean;
   fileRequirementConfig?: unknown;
   hasSpaceRestriction?: boolean;
   spaceCapacityMode?: SpaceCapacityMode;

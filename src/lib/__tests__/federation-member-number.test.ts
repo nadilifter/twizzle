@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { validateFederationMemberNumber } from "../federation-member-number";
+import {
+  getFederationMembershipBlockReason,
+  validateFederationMemberNumber,
+} from "../federation-member-number";
 
 describe("validateFederationMemberNumber", () => {
   it("accepts an empty / null number regardless of federation (field is optional)", () => {
@@ -52,5 +55,71 @@ describe("validateFederationMemberNumber", () => {
 
   it("trims whitespace before validating", () => {
     expect(validateFederationMemberNumber("SKATE_CANADA", "  SC-12345678  ")).toBeNull();
+  });
+});
+
+describe("getFederationMembershipBlockReason", () => {
+  const futureDate = new Date("2027-06-01");
+  const pastDate = new Date("2025-01-01");
+  const enrollmentDate = new Date("2026-09-01");
+
+  it("blocks when the member number is missing", () => {
+    expect(
+      getFederationMembershipBlockReason({
+        federationMemberNumber: null,
+        federationMemberExpiresAt: futureDate,
+        effectiveDate: enrollmentDate,
+      })
+    ).toMatch(/valid federation membership/i);
+  });
+
+  it("blocks when the member number is empty/whitespace", () => {
+    expect(
+      getFederationMembershipBlockReason({
+        federationMemberNumber: "   ",
+        federationMemberExpiresAt: futureDate,
+        effectiveDate: enrollmentDate,
+      })
+    ).toMatch(/valid federation membership/i);
+  });
+
+  it("blocks when the membership expired before the enrollment start", () => {
+    const reason = getFederationMembershipBlockReason({
+      federationMemberNumber: "SC-12345678",
+      federationMemberExpiresAt: pastDate,
+      effectiveDate: enrollmentDate,
+    });
+    expect(reason).toMatch(/expired/i);
+    expect(reason).toContain("2025-01-01");
+  });
+
+  it("allows when the membership is valid through the enrollment start date", () => {
+    expect(
+      getFederationMembershipBlockReason({
+        federationMemberNumber: "SC-12345678",
+        federationMemberExpiresAt: futureDate,
+        effectiveDate: enrollmentDate,
+      })
+    ).toBeNull();
+  });
+
+  it("allows when expiry exactly equals the enrollment date (boundary)", () => {
+    expect(
+      getFederationMembershipBlockReason({
+        federationMemberNumber: "SC-12345678",
+        federationMemberExpiresAt: enrollmentDate,
+        effectiveDate: enrollmentDate,
+      })
+    ).toBeNull();
+  });
+
+  it("fails open when the expiry is null but the number is set", () => {
+    expect(
+      getFederationMembershipBlockReason({
+        federationMemberNumber: "SC-12345678",
+        federationMemberExpiresAt: null,
+        effectiveDate: enrollmentDate,
+      })
+    ).toBeNull();
   });
 });

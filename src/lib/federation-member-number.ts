@@ -37,3 +37,30 @@ export function validateFederationMemberNumber(
   }
   return null;
 }
+
+// Phase 1.2 enrollment-time gate. Returns the human-readable reason the
+// enrollment should be blocked, or null if the athlete's federation
+// membership is good for the given effective date.
+//
+// `effectiveDate` is the enrollment's startDate — the athlete must hold a
+// valid membership at the moment they begin the program. Mid-program expiry
+// is a separate concern handled by ongoing-renewal monitoring (not here).
+//
+// If `memberExpiresAt` is null but a number is set, we fail open — the
+// federation may issue lifetime memberships, and the per-org admin can
+// always renew the date manually if a strict check is needed.
+export function getFederationMembershipBlockReason(args: {
+  federationMemberNumber: string | null | undefined;
+  federationMemberExpiresAt: Date | null | undefined;
+  effectiveDate: Date;
+}): string | null {
+  const memberNumber = args.federationMemberNumber?.trim() ?? "";
+  if (!memberNumber) {
+    return "Athlete needs a valid federation membership before enrolling in this program";
+  }
+  if (args.federationMemberExpiresAt && args.federationMemberExpiresAt < args.effectiveDate) {
+    const expDate = args.federationMemberExpiresAt.toISOString().split("T")[0];
+    return `Federation membership expired on ${expDate} — renew before enrolling`;
+  }
+  return null;
+}

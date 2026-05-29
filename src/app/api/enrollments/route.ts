@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
+import { getFederationMembershipBlockReason } from "@/lib/federation-member-number";
 import { executeNotificationByTrigger } from "@/lib/notification-service";
 import { z } from "zod";
 import { athleteDisplayName } from "@/lib/athlete-name";
@@ -130,6 +131,29 @@ export async function POST(request: NextRequest) {
 
     if (!program) {
       return NextResponse.json({ error: "Program not found" }, { status: 404 });
+    }
+
+    // Federation membership prerequisite (Phase 1.2). Programs opt in via the
+    // `hasFederationMembershipRestriction` flag; for those, the athlete must
+    // hold a non-empty federationMemberNumber AND, if an expiry is recorded,
+    // it must cover the enrollment's start date.
+    if (program.hasFederationMembershipRestriction) {
+      const orgAthlete = await db.organizationAthlete.findFirst({
+        where: {
+          athleteId: validatedData.athleteId,
+          organizationId: session.user.organizationId,
+        },
+        select: { federationMemberNumber: true, federationMemberExpiresAt: true },
+      });
+      const effectiveDate = parseDateOnly(validatedData.startDate) ?? new Date();
+      const blockReason = getFederationMembershipBlockReason({
+        federationMemberNumber: orgAthlete?.federationMemberNumber ?? null,
+        federationMemberExpiresAt: orgAthlete?.federationMemberExpiresAt ?? null,
+        effectiveDate,
+      });
+      if (blockReason) {
+        return NextResponse.json({ error: blockReason }, { status: 400 });
+      }
     }
 
     // Check for existing active enrollment

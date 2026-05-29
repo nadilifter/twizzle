@@ -7,6 +7,46 @@ each. Newest first.
 
 ## 2026-05-29
 
+### Phase 1.2 — Federation membership prerequisite gate at enrollment
+
+Programs now opt in to a federation-membership requirement via a new
+`hasFederationMembershipRestriction` Boolean flag on `Program`. When the
+flag is set, enrollment is blocked if the athlete's
+`federationMemberNumber` is empty, or if their `federationMemberExpiresAt`
+is before the enrollment's effective date.
+
+The check fires in two places:
+
+1. **Admin POST `/api/enrollments`** — returns `400` with the block
+   reason before the enrollment row is created.
+2. **Public/guardian checkout** (`/api/sites/[slug]/checkout/session`)
+   — fails fast with an athlete-named error so the registrant can fix
+   it before being charged.
+
+The flag exposes as a Switch in the Program configuration sheet
+(_Requirements_ tab). Phase 6.2 will replace the local membership check
+with a live Skate Canada CRM lookup; this stays as a pre-flight.
+
+**Test:**
+
+- `pnpm test src/lib/__tests__/federation-member-number.test.ts` (now 16
+  cases — adds 6 for the enrollment-time gate covering missing number,
+  expired before enrollment, valid through, boundary-equal expiry, null
+  expiry fail-open, whitespace-only number).
+- Manual (admin): open a program, toggle **Federation Membership
+  Requirement** on, save. Try to add an athlete without a federation
+  number via `POST /api/enrollments` — `400` with "Athlete needs a valid
+  federation membership…". Set the athlete's `federationMemberExpiresAt`
+  to a past date and retry — `400` with "Federation membership expired
+  on …".
+- Manual (checkout): same program above; complete a guest checkout for
+  an unfederated athlete — fails at session-create with the
+  athlete-named error, no Adyen charge.
+- DB: `SELECT \"hasFederationMembershipRestriction\" FROM \"Program\" LIMIT 5;`
+  → existing programs default `false`; new programs respect the toggle.
+
+---
+
 ### Phase 1.1 — Skate Canada / USFS / ISU member-number format validation
 
 Added a local-only regex validator for `federationMemberNumber`. Runs

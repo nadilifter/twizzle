@@ -50,6 +50,7 @@ const updateProgramSchema = z.object({
   hasWaiverRestriction: z.boolean().optional(),
   hasMedicalRequirement: z.boolean().optional(),
   hasFileRequirement: z.boolean().optional(),
+  hasFederationMembershipRestriction: z.boolean().optional(),
   fileRequirementConfig: z.any().optional().nullable(),
   // Gender restriction values
   allowedGenders: z.array(z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"])).optional(),
@@ -476,6 +477,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         updateData.hasMedicalRequirement = validatedData.hasMedicalRequirement;
       if (validatedData.hasFileRequirement !== undefined)
         updateData.hasFileRequirement = validatedData.hasFileRequirement;
+      if (validatedData.hasFederationMembershipRestriction !== undefined)
+        updateData.hasFederationMembershipRestriction =
+          validatedData.hasFederationMembershipRestriction;
       if (validatedData.fileRequirementConfig !== undefined)
         updateData.fileRequirementConfig = validatedData.fileRequirementConfig;
       if (validatedData.hasSpaceRestriction !== undefined)

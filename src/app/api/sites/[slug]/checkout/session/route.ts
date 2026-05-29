@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { createPaymentSession, type AdyenLineItem } from "@/lib/adyen";
 import { calculateAge, isAgeEligible } from "@/lib/age-utils";
+import { getFederationMembershipBlockReason } from "@/lib/federation-member-number";
 import { subDays } from "date-fns";
 import { getAuthSession } from "@/lib/auth";
 import { resolveOrProvisionCheckoutUser } from "@/lib/checkout-user-provisioning";
@@ -331,6 +332,7 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
         programsWithMembership,
         programsForRegCheck,
         programsWithGender,
+        programsWithFederation,
       ] = await Promise.all([
         db.program.findMany({
           where: { id: { in: programIds }, organizationId, hasMedicalRequirement: true },
@@ -357,6 +359,14 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
         db.program.findMany({
           where: { id: { in: programIds }, organizationId, hasGenderRestriction: true },
           select: { id: true, name: true, allowedGenders: true },
+        }),
+        db.program.findMany({
+          where: {
+            id: { in: programIds },
+            organizationId,
+            hasFederationMembershipRestriction: true,
+          },
+          select: { id: true, name: true, startDate: true },
         }),
       ]);
 
@@ -489,6 +499,62 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
               return NextResponse.json(
                 {
                   error: `A required file upload is missing for ${pair.athleteName || "an athlete"}. Please complete the file upload step before proceeding.`,
+                },
+                { status: 400 }
+              );
+            }
+          }
+        }
+      }
+
+      // Federation membership requirement check (Phase 1.2). For programs that
+      // opted in via hasFederationMembershipRestriction, the athlete needs a
+      // non-empty federationMemberNumber on their OrganizationAthlete row, and
+      // any recorded federationMemberExpiresAt must cover the program's start
+      // date (falls back to "now" when the program has no startDate).
+      if (programsWithFederation.length > 0) {
+        const federationProgramMap = new Map(programsWithFederation.map((p) => [p.id, p]));
+        const federationCheckPairs: {
+          programId: string;
+          athleteId: string;
+          athleteName: string | undefined;
+        }[] = [];
+        for (const item of programItems) {
+          const pid = item.details?.programId || item.referenceId;
+          const athleteId = item.athleteId || item.details?.athleteId;
+          if (!pid || !athleteId || !federationProgramMap.has(pid)) continue;
+          federationCheckPairs.push({
+            programId: pid,
+            athleteId,
+            athleteName: item.athleteName ?? undefined,
+          });
+        }
+
+        if (federationCheckPairs.length > 0) {
+          const athleteIds = [...new Set(federationCheckPairs.map((p) => p.athleteId))];
+          const orgAthletes = await db.organizationAthlete.findMany({
+            where: { athleteId: { in: athleteIds }, organizationId },
+            select: {
+              athleteId: true,
+              federationMemberNumber: true,
+              federationMemberExpiresAt: true,
+            },
+          });
+          const federationAthleteMap = new Map(orgAthletes.map((oa) => [oa.athleteId, oa]));
+
+          for (const pair of federationCheckPairs) {
+            const prog = federationProgramMap.get(pair.programId)!;
+            const orgAthlete = federationAthleteMap.get(pair.athleteId);
+            const effectiveDate = prog.startDate ?? new Date();
+            const blockReason = getFederationMembershipBlockReason({
+              federationMemberNumber: orgAthlete?.federationMemberNumber ?? null,
+              federationMemberExpiresAt: orgAthlete?.federationMemberExpiresAt ?? null,
+              effectiveDate,
+            });
+            if (blockReason) {
+              return NextResponse.json(
+                {
+                  error: `${pair.athleteName || "An athlete"} cannot register for "${prog.name}": ${blockReason}`,
                 },
                 { status: 400 }
               );

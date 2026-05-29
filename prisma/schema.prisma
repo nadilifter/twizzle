@@ -1000,16 +1000,17 @@ model Program {
   spaceCapacityMode   SpaceCapacityMode @default(MINIMUM)
 
   // Restriction Flags (for UI toggle state)
-  hasGenderRestriction     Boolean @default(false)
-  hasLevelRestriction      Boolean @default(false)
-  hasCapacityRestriction   Boolean @default(false)
-  hasAgeRestriction        Boolean @default(false)
-  hasMembershipRestriction Boolean @default(false)
-  hasPassRestriction       Boolean @default(false)
-  hasWaiverRestriction     Boolean @default(false)
-  hasMedicalRequirement    Boolean @default(false)
-  hasFileRequirement       Boolean @default(false)
-  fileRequirementConfig    Json?
+  hasGenderRestriction               Boolean @default(false)
+  hasLevelRestriction                Boolean @default(false)
+  hasCapacityRestriction             Boolean @default(false)
+  hasAgeRestriction                  Boolean @default(false)
+  hasMembershipRestriction           Boolean @default(false)
+  hasPassRestriction                 Boolean @default(false)
+  hasWaiverRestriction               Boolean @default(false)
+  hasMedicalRequirement              Boolean @default(false)
+  hasFileRequirement                 Boolean @default(false)
+  hasFederationMembershipRestriction Boolean @default(false)
+  fileRequirementConfig              Json?
 
   // Gender Restriction Values
   allowedGenders GenderDeclaration[] // empty = unrestricted
