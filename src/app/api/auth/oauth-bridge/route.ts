@@ -16,7 +16,7 @@ import { logger } from "@/lib/logger";
  * LOCAL DEVELOPMENT ONLY:
  * This endpoint is called after Google OAuth completes on localhost:3000.
  * It creates a bridge token from the session and redirects to the session-bridge
- * endpoint on uplifter.localhost to set the cookie with the correct domain.
+ * endpoint on twizzle.localhost to set the cookie with the correct domain.
  *
  * PRODUCTION/STAGING:
  * This bridge is NOT needed in production/staging because cookies are properly
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
   }
 
   // LOCAL DEVELOPMENT: Bridge is needed because cookies can't be shared
-  // across localhost:3000 and *.uplifter.localhost:3000
+  // across localhost:3000 and *.twizzle.localhost:3000
   try {
     // Get the JWT token from the session that was just created
     const token = await getToken({

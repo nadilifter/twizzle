@@ -74,9 +74,9 @@ function portalSubdomainForPath(url: string): string | null {
 function extractCurrentSubdomain(hostname: string): string | null {
   if (!hostname) return null;
   const parts = hostname.split(".");
-  // Local: <sub>.uplifter.localhost  → first part is the subdomain
+  // Local: <sub>.twizzle.localhost  → first part is the subdomain
   // Prod: <sub>.uplifter.app         → same
-  // Apex: uplifter.localhost / uplifter.app → no subdomain
+  // Apex: twizzle.localhost / uplifter.app → no subdomain
   if (parts.length < 3) return null;
   return parts[0];
 }
@@ -93,7 +93,7 @@ function buildSubdomainUrl(subdomain: string, path: string): string | null {
   const baseParts = parts.length >= 3 ? parts.slice(1) : parts;
   const baseHost = baseParts.join(".");
   const portSuffix = port ? `:${port}` : "";
-  // hostname already includes the port on uplifter.localhost — guard against
+  // hostname already includes the port on twizzle.localhost — guard against
   // doubling it up.
   const hostWithPort = hostname.includes(":") ? "" : portSuffix;
   return `${protocol}//${subdomain}.${baseHost}${hostWithPort}${path}`;

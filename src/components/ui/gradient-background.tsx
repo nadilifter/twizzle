@@ -15,16 +15,6 @@ export const GradientBackground = React.memo(({ className }: { className?: strin
       <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-radial from-indigo-500/15 via-indigo-500/5 to-transparent rounded-full blur-3xl" />
       <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-radial from-purple-500/15 via-purple-500/5 to-transparent rounded-full blur-3xl" />
 
-      {/* Subtle grid pattern overlay */}
-      <div
-        className="absolute inset-0 opacity-[0.02] dark:opacity-[0.05]"
-        style={{
-          backgroundImage: `linear-gradient(to right, currentColor 1px, transparent 1px),
-                            linear-gradient(to bottom, currentColor 1px, transparent 1px)`,
-          backgroundSize: "60px 60px",
-        }}
-      />
-
       {/* Vignette effect */}
       <div className="absolute inset-0 bg-gradient-radial from-transparent via-transparent to-background/50" />
     </div>

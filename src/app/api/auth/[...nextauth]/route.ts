@@ -42,7 +42,7 @@ function logAuthDebug(phase: string, details: Record<string, unknown>) {
 
 /**
  * Add CORS headers to response for cross-origin requests
- * This is critical for local development where login.uplifter.localhost:3000
+ * This is critical for local development where login.twizzle.localhost:3000
  * needs to fetch CSRF tokens from localhost:3000 for Google OAuth
  */
 function addCorsHeaders(request: NextRequest, response: Response): Response {

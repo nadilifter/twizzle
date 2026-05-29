@@ -150,7 +150,7 @@ function getAccessPointUrl(subdomain: string, organizationId?: string): string {
 
   const { hostname, port, protocol } = window.location;
 
-  // Extract base domain (e.g., from "admin.uplifter.localhost" get "uplifter.localhost")
+  // Extract base domain (e.g., from "admin.twizzle.localhost" get "twizzle.localhost")
   const parts = hostname.split(".");
   if (parts.length >= 3) {
     // Replace the first subdomain with the new one

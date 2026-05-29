@@ -53,7 +53,7 @@ export const ENV_CONFIG: Record<Environment, EnvironmentConfig> = {
     corsOrigins: ["https://upliftergymnastics-dev.com", "https://*.upliftergymnastics-dev.com"],
   },
   local: {
-    baseDomain: "uplifter.localhost:3000",
+    baseDomain: "twizzle.localhost:3000",
     cookieDomain: "localhost",
     s3Bucket: "local-assets",
     s3DocumentsBucket: "local-documents",
@@ -62,8 +62,8 @@ export const ENV_CONFIG: Record<Environment, EnvironmentConfig> = {
     corsOrigins: [
       "http://localhost:3000",
       "http://*.localhost:3000",
-      "http://uplifter.localhost:3000",
-      "http://*.uplifter.localhost:3000",
+      "http://twizzle.localhost:3000",
+      "http://*.twizzle.localhost:3000",
     ],
   },
 };
@@ -143,7 +143,7 @@ export function getLoginUrlForHost(hostHeader: string | null): string {
   const protocol = useHttps ? "https" : "http";
   let baseDomain: string;
   if (hostname.includes("localhost")) {
-    baseDomain = parts.length >= 2 ? parts.slice(-2).join(".") : "uplifter.localhost";
+    baseDomain = parts.length >= 2 ? parts.slice(-2).join(".") : "twizzle.localhost";
     if (port) baseDomain += `:${port}`;
   } else {
     baseDomain = parts.length >= 2 ? parts.slice(-2).join(".") : "uplifter.app";
@@ -208,7 +208,7 @@ export function isAllowedOrigin(origin: string | null): boolean {
   // Local environment allows localhost variations
   if (currentEnv === "local") {
     if (origin.includes("localhost")) return true;
-    if (origin.includes("uplifter.localhost")) return true;
+    if (origin.includes("twizzle.localhost")) return true;
   }
 
   // Check against the current environment's domain

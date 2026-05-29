@@ -67,6 +67,32 @@ auth — MailHog at http://localhost:8025 catches the link locally).
 
 ### 2026-05-29
 
+#### Login refresh round 2 — slower fades, soft buttons, wordmark, twizzle.localhost
+
+- Open **http://login.twizzle.localhost:3000/login** (note the new
+  domain — the old `login.uplifter.localhost:3000` now 404s).
+- The video background fades in over **~2 seconds** on first load
+  (was ~800 ms). Watch a full loop boundary — the opacity dip lasts
+  ~2 s so the loop seam is invisible.
+- No subtle grid lines on the gradient backdrop anymore — the page
+  is pure gradient + video.
+- The Microsoft / Google / Email Code buttons row uses a glassy
+  background (`bg-card/30 backdrop-blur-md`), not the stark
+  outline. Icons are noticeably **larger** (h-7 w-7).
+- The "Or continue with" divider has **no horizontal rule and no
+  background pill** — just a centered bold uppercase line.
+- The brand mark above each Card heading is the word **"twizzle"**
+  rendered in purple (`text-primary`), not the Uplifter image
+  logo.
+- Bookmarks pointing at the old `uplifter.localhost` subdomain
+  return 404. Visit `twizzle.localhost` instead for every route
+  (e.g. `admin.twizzle.localhost:3000/dashboard`,
+  `coach.twizzle.localhost:3000/coach`).
+- Old session cookies on `.uplifter.localhost` are gone — sign in
+  fresh on `twizzle.localhost` to get a new session.
+
+---
+
 #### Login page refresh — video background, glass card, purple titles
 
 - Open `http://login.uplifter.localhost:3000/login`. Browser-tab title

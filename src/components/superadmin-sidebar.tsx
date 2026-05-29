@@ -52,12 +52,12 @@ function getSubdomainUrl(subdomain: string | null): string {
   // Parse current hostname to extract base domain
   const parts = hostname.split(".");
 
-  // Handle local development (e.g., superadmin.uplifter.localhost:3000)
+  // Handle local development (e.g., superadmin.twizzle.localhost:3000)
   if (hostname.includes("localhost")) {
-    // Find the base domain pattern (e.g., uplifter.localhost)
+    // Find the base domain pattern (e.g., twizzle.localhost)
     const localhostIndex = parts.findIndex((p) => p.includes("localhost"));
     if (localhostIndex > 0) {
-      // Has subdomain structure like subdomain.uplifter.localhost
+      // Has subdomain structure like subdomain.twizzle.localhost
       const baseParts = parts.slice(1); // Remove current subdomain
       if (subdomain) {
         return `${protocol}//${subdomain}.${baseParts.join(".")}${port && !hostname.includes(":") ? ":" + port : ""}`;

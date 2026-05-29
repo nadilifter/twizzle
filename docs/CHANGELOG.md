@@ -8,6 +8,42 @@ Manual verification steps for each entry live in
 
 ## 2026-05-29
 
+### Login refresh round 2 — slower fades, no grid, soft buttons, wordmark, twizzle.localhost
+
+Follow-ups to the earlier login-page reskin per design feedback:
+
+- **Video fade timing** bumped 800 ms → **2000 ms** on both the
+  mount fade-in and the per-loop opacity dip. The seam between
+  loops is now imperceptible at the cost of a slightly longer
+  initial reveal.
+- **Subtle grid pattern** removed from `GradientBackground` (was
+  rendering through the glass card). Affects every auth page — the
+  base gradient + orbs still ship.
+- **Provider buttons** (Microsoft / Google / Email Code) move from
+  the stark `variant="outline"` to a glassy `bg-card/30
+backdrop-blur-md border-white/{20,10}` matching the card. Icon
+  size bumped from `h-5 w-5` → `h-7 w-7`.
+- **"Or continue with" divider** loses its background pill and the
+  horizontal rule. Now a plain centered uppercase line: `text-xs
+font-bold tracking-wider text-foreground`.
+- **New `<TwizzleWordmark>`** primitive replaces `<UplifterLogo>` on
+  all three login Card variants (MFA, email-code, credentials).
+  Pure CSS text rendering — "twizzle" in `text-primary`, tight
+  letter-spacing, scales via a `height` prop. No image asset.
+  `UplifterLogo` itself stays in place for other auth pages
+  (accept-invitation, organization-deactivated) for now.
+- **Local base domain** changed from `uplifter.localhost:3000` →
+  `twizzle.localhost:3000`. Hits `src/lib/env-domains.ts` plus 8
+  hardcoded runtime references (cookie domains in 3 auth bridge
+  routes + `auth-cookies.ts`, fallback strings, middleware
+  comments). Production / staging / dev DNS unchanged — those are
+  external records. **Cookie impact:** existing `uplifter.localhost`
+  sessions are no longer reachable; you'll need to sign in fresh on
+  `twizzle.localhost`. Bookmarks pointing at the old subdomain
+  return 404.
+
+---
+
 ### Login page refresh — video background, glass card, purple titles, Twizzle name
 
 Four-point reskin of the `/login` page:

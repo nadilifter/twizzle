@@ -10,7 +10,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { signIn, getCsrfToken, getSession, useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { UplifterLogo } from "@/components/uplifter-logo";
+import { TwizzleWordmark } from "@/components/ui/twizzle-wordmark";
 import { getClientSubdomainUrl } from "@/lib/client-domains";
 import { Mail, Search, Rocket } from "lucide-react";
 
@@ -22,7 +22,7 @@ function isLocalSubdomain(): boolean {
 }
 
 /**
- * KNOWN ISSUE: Google OAuth on local subdomains (e.g., login.uplifter.localhost:3000)
+ * KNOWN ISSUE: Google OAuth on local subdomains (e.g., login.twizzle.localhost:3000)
  *
  * STATUS: Not fully working in local development. Works in production.
  * See git history for full context on this limitation.
@@ -569,7 +569,7 @@ export function LoginForm() {
       <Card className="relative overflow-hidden w-full max-w-[400px] bg-card/40 backdrop-blur-xl border-white/20 dark:border-white/10 shadow-2xl">
         <ShineBorder shineColor={["#5655ED", "#A07CFE"]} className="text-center" />
         <CardHeader className="items-center pb-2">
-          <UplifterLogo width={180} height={36} className="h-9 mb-2" />
+          <TwizzleWordmark height={36} className="mb-2" />
           <h1 className="text-2xl font-bold text-primary">Verify your identity</h1>
           <p className="text-sm text-muted-foreground">
             We sent a verification code to your email. Enter it below or click the link in the
@@ -638,7 +638,7 @@ export function LoginForm() {
       <Card className="relative overflow-hidden w-full max-w-[400px] bg-card/40 backdrop-blur-xl border-white/20 dark:border-white/10 shadow-2xl">
         <ShineBorder shineColor={["#5655ED", "#A07CFE"]} className="text-center" />
         <CardHeader className="items-center pb-2">
-          <UplifterLogo width={180} height={36} className="h-9 mb-2" />
+          <TwizzleWordmark height={36} className="mb-4" />
           <h1 className="text-2xl font-bold text-primary">
             {emailCodeSent ? "Check your email" : "Sign in with email"}
           </h1>
@@ -771,7 +771,7 @@ export function LoginForm() {
       <Card className="relative overflow-hidden w-full max-w-[400px] bg-card/40 backdrop-blur-xl border-white/20 dark:border-white/10 shadow-2xl">
         <ShineBorder shineColor={["#5655ED", "#A07CFE"]} className="text-center" />
         <CardHeader className="items-center pb-2">
-          <UplifterLogo width={180} height={36} className="h-9 mb-4" />
+          <TwizzleWordmark height={36} className="mb-4" />
         </CardHeader>
 
         <CardContent className="grid gap-4">
@@ -780,11 +780,11 @@ export function LoginForm() {
               <Button
                 type="button"
                 variant="outline"
-                className="w-full flex-col gap-1.5 h-auto py-3"
+                className="w-full flex-col gap-1.5 h-auto py-3 bg-card/30 backdrop-blur-md border-white/20 dark:border-white/10 hover:bg-card/50"
                 onClick={handleMicrosoftSignIn}
                 disabled={isLoading || !microsoftCsrfToken}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" className="h-5 w-5">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" className="h-7 w-7">
                   <rect x="1" y="1" width="9" height="9" fill="#f25022" />
                   <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
                   <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
@@ -795,11 +795,11 @@ export function LoginForm() {
               <Button
                 type="button"
                 variant="outline"
-                className="w-full flex-col gap-1.5 h-auto py-3"
+                className="w-full flex-col gap-1.5 h-auto py-3 bg-card/30 backdrop-blur-md border-white/20 dark:border-white/10 hover:bg-card/50"
                 onClick={handleGoogleSignIn}
                 disabled={isLoading || !googleCsrfToken}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-5 w-5">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-7 w-7">
                   <path
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
                     fill="#4285F4"
@@ -822,24 +822,19 @@ export function LoginForm() {
               <Button
                 type="button"
                 variant="outline"
-                className="w-full flex-col gap-1.5 h-auto py-3"
+                className="w-full flex-col gap-1.5 h-auto py-3 bg-card/30 backdrop-blur-md border-white/20 dark:border-white/10 hover:bg-card/50"
                 onClick={() => {
                   setLoginMode("email-code");
                   setError(null);
                 }}
                 disabled={isLoading}
               >
-                <Mail className="h-5 w-5" />
+                <Mail className="h-7 w-7" />
                 <span className="text-xs">Email Code</span>
               </Button>
             </div>
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-              </div>
+            <div className="text-center text-xs font-bold uppercase tracking-wider text-foreground">
+              Or continue with
             </div>
             <div className="grid gap-2 text-left">
               <Label htmlFor="email">Email</Label>

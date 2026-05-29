@@ -25,13 +25,13 @@ export function getBaseDomainFromHostname(): { baseDomain: string; protocol: str
 
   // Local development
   if (hostname.includes("localhost")) {
-    // Extract the base domain pattern (e.g., "uplifter.localhost" from "startup.uplifter.localhost")
+    // Extract the base domain pattern (e.g., "twizzle.localhost" from "startup.twizzle.localhost")
     const parts = hostname.split(".");
     if (parts.length >= 2 && parts[parts.length - 1] === "localhost") {
       const port = window.location.port ? `:${window.location.port}` : "";
       return { baseDomain: `${parts[parts.length - 2]}.localhost${port}`, protocol: "http" };
     }
-    return { baseDomain: "uplifter.localhost:3000", protocol: "http" };
+    return { baseDomain: "twizzle.localhost:3000", protocol: "http" };
   }
 
   // Production/staging/dev domains - extract base domain from hostname

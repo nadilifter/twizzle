@@ -45,16 +45,16 @@ export function getAuthCookies(): CookiesOptions {
   // Session cookie domain: ALWAYS use the shared parent domain so the cookie
   // is visible across all subdomains (login, admin, athletes, etc.).
   //
-  // In local dev this is ".uplifter.localhost". Credentials login happens
-  // on login.uplifter.localhost which is a subdomain of uplifter.localhost,
+  // In local dev this is ".twizzle.localhost". Credentials login happens
+  // on login.twizzle.localhost which is a subdomain of twizzle.localhost,
   // so the browser accepts the domain attribute. For OAuth through localhost:3000,
   // the browser rejects this domain (different TLD), but that's fine — session-bridge
   // sets the real cookie from the correct domain afterward.
-  const sessionDomain = env === "local" ? ".uplifter.localhost" : cloudDomain;
+  const sessionDomain = env === "local" ? ".twizzle.localhost" : cloudDomain;
 
   // Other cookies (CSRF, callback-url, state, PKCE, nonce) stay hostname-scoped
   // in local dev. OAuth flows go through localhost:3000, which can't set cookies
-  // on .uplifter.localhost. These cookies are only needed during the auth
+  // on .twizzle.localhost. These cookies are only needed during the auth
   // handshake on the same hostname, so hostname-scoping is correct.
   const defaultOptions = {
     httpOnly: true,
