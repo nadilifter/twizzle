@@ -49,6 +49,56 @@ export function useCommandPalette(): CommandPaletteContextValue {
   return useContext(CommandPaletteContext);
 }
 
+// ─── Subdomain routing ────────────────────────────────────────────────────────
+//
+// The product is split across subdomains: admin (/dashboard), coach (/coach),
+// superadmin (/superadmin). router.push() is same-origin only, so navigations
+// that change portals have to go through window.location with a full URL.
+
+/**
+ * Map a path to the subdomain that serves it. Returns null when the path is
+ * not portal-specific (e.g. /login, /sites/...) — caller should fall through
+ * to client-side router.push().
+ */
+function portalSubdomainForPath(url: string): string | null {
+  if (url.startsWith("/dashboard")) return "admin";
+  if (url.startsWith("/coach")) return "coach";
+  if (url.startsWith("/superadmin")) return "superadmin";
+  return null;
+}
+
+/**
+ * Extract the current subdomain from `window.location.hostname`. Returns
+ * null when on the apex (no subdomain).
+ */
+function extractCurrentSubdomain(hostname: string): string | null {
+  if (!hostname) return null;
+  const parts = hostname.split(".");
+  // Local: <sub>.uplifter.localhost  → first part is the subdomain
+  // Prod: <sub>.uplifter.app         → same
+  // Apex: uplifter.localhost / uplifter.app → no subdomain
+  if (parts.length < 3) return null;
+  return parts[0];
+}
+
+/**
+ * Build an absolute URL on a different subdomain, preserving the current
+ * protocol + port. Returns null when called server-side.
+ */
+function buildSubdomainUrl(subdomain: string, path: string): string | null {
+  if (typeof window === "undefined") return null;
+  const { hostname, port, protocol } = window.location;
+  const parts = hostname.split(".");
+  // Drop the current subdomain (first part) to get the base domain.
+  const baseParts = parts.length >= 3 ? parts.slice(1) : parts;
+  const baseHost = baseParts.join(".");
+  const portSuffix = port ? `:${port}` : "";
+  // hostname already includes the port on uplifter.localhost — guard against
+  // doubling it up.
+  const hostWithPort = hostname.includes(":") ? "" : portSuffix;
+  return `${protocol}//${subdomain}.${baseHost}${hostWithPort}${path}`;
+}
+
 // ─── Nav items ────────────────────────────────────────────────────────────────
 
 interface NavItem {
@@ -228,6 +278,20 @@ function CommandPaletteDialog({ isOpen, onClose }: { isOpen: boolean; onClose: (
   const navigate = useCallback(
     (url: string) => {
       onClose();
+      // Cross-subdomain routing: /dashboard lives on admin., /coach on coach.,
+      // /superadmin on superadmin. router.push() is same-origin only, so when
+      // the target portal differs from the current host we have to do a full
+      // navigation. Otherwise we'd hit 404 on the wrong subdomain.
+      const targetSubdomain = portalSubdomainForPath(url);
+      const currentSubdomain =
+        typeof window !== "undefined" ? extractCurrentSubdomain(window.location.hostname) : null;
+      if (targetSubdomain && targetSubdomain !== currentSubdomain) {
+        const absolute = buildSubdomainUrl(targetSubdomain, url);
+        if (absolute) {
+          window.location.assign(absolute);
+          return;
+        }
+      }
       router.push(url);
     },
     [onClose, router]
