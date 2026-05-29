@@ -192,6 +192,85 @@ auth — MailHog at http://localhost:8025 catches the link locally).
 - DB: `SELECT column_name FROM information_schema.columns WHERE
 table_name='Competition';` → no `competitionType` column.
 
+#### Full STAR catalog + searchable template picker
+
+- `pnpm db:reset && pnpm db:seed` → seed completes without error.
+- DB: `SELECT COUNT(*) FROM "EvaluationTemplate" WHERE "organizationId" = '<sunrise-org-id>';`
+  → at least **71** STAR templates (Pre-CanSkate + CanSkate adds more).
+- `/dashboard/training/evaluations` → click **New evaluation** → picker
+  opens with templates grouped by discipline.
+- Type `star 5` → results narrow to STAR 5 templates across all
+  disciplines (Freeskate, Skills, Pattern Dance, Artistic).
+- Type `silver` → Pattern Dance silver test sheets surface.
+- Keyboard: ↑↓ moves selection, **Enter** picks, **Esc** closes.
+- Pick a STAR template, mark all required skills passed, Save →
+  achievement auto-awarded (toast appears).
+
+#### Skate Canada CSS competition export
+
+- Org settings → set `federationSection` (e.g. `ON`).
+- Seed an athlete with `federationMemberNumber` + future
+  `federationMemberExpiresAt` + birthDate + gender.
+- Add the athlete to a competition entry.
+- Competition detail page → **Export to CSS** button visible; click
+  → CSV downloads.
+- Open in a text editor: CRLF line endings; 14 columns; header row
+  matches CSS's expected order (`EventCode,CatEventType,Category,
+Discipline,RegistNo,First Name,Last Name,Gender,Age,Birthdate,
+Club,Section Representing,Country,EOR`). Birthdate `MM/DD/YYYY`.
+  `Section Representing` = `ON` (Ontario magic).
+- Add an unfederated athlete or one with `WITHDRAWN` status to the
+  competition → click Export → blocked-rows warning lists them
+  inline; CSV omits them.
+- Validate the file in Skate Canada CSS (manual): import accepts it
+  without errors.
+
+#### CanSkate ribbon catalog + coach evaluation surface
+
+- `pnpm db:reset && pnpm db:seed` → seed runs `seedCanSkateRibbons`.
+- DB:
+  ```sql
+  SELECT COUNT(*) FROM "Skill"
+   WHERE name LIKE '%Balance%'
+      OR name LIKE '%Control%'
+      OR name LIKE '%Agility%'
+      OR name LIKE '%Pre-CanSkate%';
+  ```
+  → **136** CanSkate skill rows.
+- DB:
+  ```sql
+  SELECT COUNT(*) FROM "EvaluationTemplate"
+   WHERE name LIKE 'CanSkate%' OR name = 'Pre-CanSkate';
+  ```
+  → **19** templates (Stage 1–6 × Balance/Control/Agility +
+  Pre-CanSkate).
+- `/api/evaluation-templates` → response items have `ribbonMeta` for
+  each CanSkate template.
+- Open a CanSkate template in the evaluation flow → ribbon-dimension
+  badges render with the right Tailwind tokens.
+- Mark every required skill passed, Save → toast surfaces with
+  ribbon icon + dimension color.
+- `pnpm lint` → no shadowed-import errors for `Ribbon` (local
+  interface renamed to `RibbonItem`).
+
+#### Track Skate Canada / USFS federation membership on athletes
+
+- DB: `\d "OrganizationAthlete"` → columns include
+  `federationName`, `federationMemberNumber` (indexed),
+  `federationMemberExpiresAt`.
+- `/dashboard/athletes/<id>` → **Edit**. Federation dropdown shows
+  Skate Canada / U.S. Figure Skating / ISU. Number + expiry inputs
+  are disabled until a federation is picked.
+- Pick Skate Canada, enter `SC-12345678` and a future expiry, Save.
+- Athlete detail header now shows `SC# 12345678` inline.
+- Athlete detail Overview tab → Federation Membership card with
+  full details + green **Active** badge.
+- Set the expiry to a past date, Save → header badge shows
+  `SC# 12345678 (expired)` in red, Overview card shows red
+  **Expired** badge.
+- As a guardian, `PATCH /api/athletes/<id>` with a federation field
+  → 403 (these are in `STAFF_ONLY_FIELDS`).
+
 #### Batch 1 — USC-150 `getScopedDb` upsert tenant-reassignment guard
 
 - `pnpm test src/lib/__tests__/tenant-isolation.test.ts` (covers the
@@ -281,3 +360,81 @@ $CRON_SECRET" http://localhost:3000/api/cron/cleanup`.
   with `?offset=<pageIndex*pageSize>`.
 - Empty result set → Prev is disabled (guard against stray `pageIndex
   > 0`).
+
+### 2026-05-27
+
+#### Figure-skating rebrand + drop Rotation models
+
+- `pnpm prisma migrate status` → migration
+  `20260527213526_drop_rotation_models` applied.
+- DB: `\d "Rotation"` → relation does not exist.
+- `pnpm db:reset && pnpm db:seed` → completes; new orgs are **Sunrise
+  Skating Club** and **Demo Skating Club** (not Gymnastics).
+- `/dashboard/training/skills` → skills grouped by **Edges /
+  Footwork / Jumps / Spins / Field Moves / Conditioning** (not
+  Apparatus / Beam / Floor / etc.).
+- `/dashboard/training/rotations` → 404 (route deleted).
+- Lesson plan UI → references "Session Blocks", not "Rotations".
+- Facility seed → "Rink A" / "Harness #2" instead of "Balance Beam
+  Area" / "Beam #3".
+- View-source on any marketing page → SEO keywords reference
+  figure-skating.
+
+#### Rebrand leapfrog/uplifter → twizzle (local infra)
+
+- `cat package.json | jq -r '.name'` → `twizzle`.
+- `cat docker-compose.yml | grep container_name` → `twizzle-*`
+  containers, not `leapfrog-*` or `uplifter-*`.
+- `cat .env | grep DATABASE_URL` → connects to a `twizzle` database
+  (port `5434` unchanged).
+- `cat .github/CODEOWNERS` → no `@uplifterinc/*` owners.
+- `.idea/` excluded from `git status` even if present locally.
+
+### 2026-05-19 / 2026-05-20
+
+#### Speed up sidebar navigation (Turbopack + sync layout + prefetch)
+
+- `pnpm dev` → log line says `Next.js 14.x.x (turbo)` and `Ready in
+~2-3 s`. (`pnpm dev:webpack` still works as a fallback.)
+- Open `/dashboard` cold — skeleton renders inside ~100 ms while
+  `DeactivationGuard` resolves behind it (it lives in a Suspense
+  fallback now).
+- Throttle network to "Slow 3G", click any sidebar item — the route
+  swaps without a network waterfall because the chunk + RSC payload
+  are pre-fetched on mount.
+- DevTools → Performance → first click to a collapsed-section route
+  uses the pre-fetched chunk (no fresh `_next/` request for it).
+
+#### Cache list/detail fetches + add route-level skeletons
+
+- Open `/dashboard/athletes` for the first time on a throttled network
+  → `<Skeleton>` table renders within ~100 ms, replaced with data when
+  the fetch lands.
+- Navigate away, then back to `/dashboard/athletes` → renders **instantly**
+  with cached data; DevTools Network shows a background refresh
+  request firing after.
+- Add an athlete via POST `/api/athletes` → return to list → new athlete
+  appears immediately (cache invalidation worked).
+- Repeat for `/dashboard/registrations/programs`, `/dashboard/reports`,
+  and an athlete detail page — each has a route-level `loading.tsx`
+  shaped to its content.
+
+#### Collapse admin sidebar sections by default (accordion)
+
+- Open `/dashboard` → no sidebar sections expanded (all chevrons
+  closed).
+- Click a section header → it opens; click a second section → first
+  one auto-closes (only one open at a time).
+- Use the sidebar search input → all sections containing matches
+  auto-open; clear the search → they collapse back.
+
+#### Fix: skip fail-closed rate limiting in dev when Redis is unconfigured
+
+- Unset `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` in
+  `.env`, restart dev server.
+- Visit `/login` → magic-link email submits without a 429.
+- Source check: `src/lib/rate-limit.ts:checkRateLimit` gates the
+  fail-closed branch on `!isDev`.
+- Set the Upstash env vars on staging / production → rate limiting
+  applies and the route returns 429 on flood (regression check —
+  prod path unchanged).

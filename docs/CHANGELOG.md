@@ -200,6 +200,105 @@ skating-only; the field served only an extra wizard step.
 
 ---
 
+### Full STAR catalog + searchable template picker
+
+Added Skate Canada's official STAR 1–Gold assessment catalog and a
+search-aware template picker so coaches can navigate the ~96-template
+default seed without scrolling.
+
+- **STAR catalog** (`prisma/star-assessments.ts`): ~94 skating elements
+  - **71 EvaluationTemplate test sheets per org** across five
+    disciplines — Freeskate Elements (STAR 1–10), Freeskate Program
+    (STAR 2–Gold), Skills (STAR 1–Gold), Dance Step Elements (STAR 1 /
+    3B / 5B), Pattern Dances (STAR 2a–Gold C + Diamond), Artistic
+    Program (STAR 5/7/9/Gold), Synchro (STAR 2/3/4).
+- Each template encodes the Skate Canada passing rule
+  (`completionType=COUNT/ALL` + threshold) and pairs with an
+  Achievement that the existing auto-award service fires on completed
+  evaluations.
+- **Template picker** (`/dashboard/training/evaluations` → New): cmdk
+  fuzzy search over name + discipline + level. Empty query shows the
+  default-pinned templates first.
+
+---
+
+### Skate Canada CSS competition export
+
+Download-only CSV export matching Skate Canada's Competition Software
+(CSS) import format, modeled after Uplifter's
+`programParticipantsSCCSS` report. Clubs generate the CSV from a
+Twizzle competition and upload it in CSS to register entries.
+
+- **Schema:** `Organization.federationSection: String?` (section code:
+  ON, BC, AB, …). Migration `20260528205158`.
+- **Pure builder** (`src/lib/css-export.ts`): validates each entry
+  (federation # present, membership not expired, birth date, gender
+  mapped to M/F, name complete, status not WITHDRAWN/SCRATCHED) and
+  returns `{rows, blocked[]}`. 14-column MVP set: EventCode,
+  CatEventType, Category, Discipline, RegistNo, First Name, Last
+  Name, Gender, Age, Birthdate, Club, Section Representing, Country,
+  EOR.
+- **Serializer:** `serializeCssCsv()` produces CRLF-delimited CSV
+  with proper escaping. Birthdate `MM/DD/YYYY` (CSS's expected US
+  format); Ontario section magic (WO/EO/NO/CO → ON) mirrored from
+  Uplifter.
+- **UI:** "Export to CSS" button on the competition detail page.
+  Pre-validation pass surfaces blocked athletes inline before
+  download.
+
+---
+
+### CanSkate ribbon catalog + coach evaluation surface
+
+Brings Skate Canada's official ribbon progression into Twizzle and
+makes the coach evaluation flow ribbon-aware end-to-end.
+
+- **Catalog seeder** (`prisma/canskate-ribbons.ts`): imports the 4
+  official Skate Canada CSV catalogs (Balance, Control, Agility,
+  Pre-CanSkate) verbatim. Idempotent `seedCanSkateRibbons(prisma,
+orgId)` creates the Pre-CanSkate Level, **136 deduped Skill rows,
+  19 EvaluationTemplate test sheets** (6 stages × 3 ribbons +
+  Pre-CanSkate), 19 Achievement rows, and 145 EvaluationTemplateSkill
+  links per org. Wired into `skate-seed.ts`.
+- **Auto-awarding** already worked via the existing
+  `lib/services/achievement.ts:checkAndAwardAchievements()`; ribbons
+  earn automatically when an evaluation passes every required goal.
+- **Shared helper** (`src/lib/canskate-ribbons.ts`):
+  `getCanSkateRibbonMeta()` + Tailwind ribbon-dimension color tokens
+  used by both server and client.
+- **API:** `/api/evaluation-templates` returns `ribbonMeta` per
+  template; `POST/PUT /api/evaluations` decorate
+  `newAchievements[]` with `ribbonMeta` for the toast UI.
+- Renames local `Ribbon` interface to `RibbonItem` to avoid an
+  ESLint shadow of `lucide-react`'s `Ribbon` icon.
+
+---
+
+### Track Skate Canada / USFS federation membership on athletes
+
+Per-organization federation membership tracking on `OrganizationAthlete`
+so clubs can record skater registration with Skate Canada, U.S. Figure
+Skating, or ISU — a prerequisite for competition entry, insurance, and
+the CSS export above.
+
+- **Schema** (migration `20260527232645`):
+  - `federationName: String?` — e.g. `"SKATE_CANADA"`, `"USFS"`, `"ISU"`.
+  - `federationMemberNumber: String?` (indexed for lookup).
+  - `federationMemberExpiresAt: DateTime?`
+- **API:** GET / POST / PATCH `/api/athletes` surface and accept the
+  new fields. Added to `STAFF_ONLY_FIELDS` so guardians can't
+  self-assign.
+- **UI:**
+  - Athlete edit form: new **Federation Membership** section
+    (federation dropdown, member-number input, expiry date picker).
+    Number/date inputs disabled until a federation is selected.
+  - Athlete detail header: inline `SC# XXX` badge with a red
+    `(expired)` marker when past expiry.
+  - Athlete detail Overview tab: dedicated Federation Membership
+    card with full member details + Active/Expired badge.
+
+---
+
 ### Roadmap doc (`docs/ROADMAP.md`)
 
 Six-phase plan for closing Uplifter parity on Skate Canada integration
@@ -306,9 +405,107 @@ client-side pagination path is unchanged for existing callers.
 
 ---
 
-## Earlier work (pre-changelog)
+## 2026-05-27
 
-- See git log for the figure-skating rebrand, Skate Canada CSS export,
-  CanSkate ribbon catalog, STAR test sheet catalog, federation
-  membership tracking, and searchable template picker. These predate
-  this changelog file.
+### Figure-skating rebrand + drop Rotation models
+
+Adapted the project for figure skating, replacing the gymnastics-centric
+data model and UI.
+
+- **Schema:** drops `Rotation` / `RotationSkill` Prisma models (no
+  skating equivalent). Migration `20260527213526_drop_rotation_models`.
+- **New seed** (`prisma/skate-seed.ts`): canonical
+  CanSkate / STARSkate / Adult / Synchro taxonomy — 4 categories, 17
+  levels (CanSkate Stage 1–6, STAR 1–10, Gold), 39 ISU-aligned skills
+  grouped by element type (Edges, Footwork, Jumps, Spins, Field Moves,
+  Conditioning), and 5 representative test-sheet templates.
+- **Seed rewrite** (`seed-dev.ts`): _Sunrise Gymnastics_ → _Sunrise
+  Skating Club_; _Demo Gymnastics_ → _Demo Skating Club_; JO/USAG →
+  Pre-Juvenile/PSA; gymnastics skill IDs preserved so evaluation
+  templates still resolve; competition template Age × Apparatus →
+  Age × Discipline.
+- **UI sweep:** rotation labels → **Session Blocks** in lesson plan
+  UI; facility placeholders updated (Balance Beam Area → Rink A,
+  Beam #3 → Harness #2); SEO / keywords / structured-data
+  figure-skating themed; campaign-wizard examples skating-themed;
+  competitionType label `GYMNASTICS` → `FIGURE_SKATING`.
+- Removes the demo `/dashboard/training/rotations` page and its
+  feature-status entry.
+- Docs (`README`, `SEEDING.md`, `platform-architecture.md`) updated.
+
+---
+
+### Rebrand leapfrog/uplifter → twizzle (local infra only)
+
+Renames local infra (docker container names, Postgres DB,
+`DATABASE_URL`), package name, deploy workflow target, and VS Code
+SQL connection from the legacy _leapfrog_/_uplifter_ naming to
+_twizzle_. Removes the inherited uplifter `CODEOWNERS` entry. Adds
+`.idea/` to `.gitignore`.
+
+Adyen merchant account IDs (`KirraCapital_Leapfrog_*`) and the
+LeapFrog toy-company trademark reserved-slug pattern are intentionally
+left in place — those reference external identifiers.
+
+---
+
+## 2026-05-19 / 2026-05-20
+
+### Speed up sidebar navigation (Turbopack + sync layout + prefetch)
+
+Three changes that together make sidebar nav feel responsive.
+
+- **Turbopack:** dev server switched to `next dev --turbo`. Cold-compile
+  of a route drops from ~10-15 s to ~2-3 s in this codebase. The
+  `dev:webpack` script is preserved as a fallback. Sentry SDK warns
+  Turbopack source-map upload needs Next 15.4.1+; runtime tracing still
+  works on 14.
+- **Sync dashboard layout:** previously
+  `dashboard/layout.tsx` ran `getAuthSession()` +
+  `db.organization.findUnique()` on every navigation, blocking
+  `loading.tsx` from streaming. The auth/org check now lives in a
+  `Suspense`'d `DeactivationGuard` child so the layout and route-level
+  skeleton stream immediately.
+- **Eager sidebar prefetch:** the accordion-by-default sidebar leaves
+  `<Link>`s unmounted in collapsed sections, so Next's viewport-
+  triggered prefetch never fires. Sidebar now calls `router.prefetch`
+  for every sub-item on mount.
+
+---
+
+### Cache list/detail fetches + add route-level skeletons
+
+Module-level stale-while-revalidate cache (60 s TTL) on 25 legacy
+data-fetching hooks so revisiting a page renders cached data instantly
+while a background refresh updates it.
+
+- Pages now show a `<Skeleton>` table or card-grid in place of the
+  full-page `Loader2` spinner on first load.
+- Four new `loading.tsx` files cover the dashboard route tree (generic
+  table) plus tailored shapes for programs, reports, and athlete
+  detail.
+- **Public API of each hook is unchanged.** Mutations invalidate the
+  cache so create/update/delete still see fresh data.
+
+---
+
+### Collapse admin sidebar sections by default (accordion)
+
+Sidebar sections previously rendered as uncontrolled `Collapsible`s
+with `defaultOpen=true` on desktop — every section expanded at all
+times. Switch to a controlled `openSection` state so all sections
+start collapsed and only one can be open at a time — opening a new
+section closes the previous one. Search behavior is unchanged: an
+active query still force-opens all matching sections so results stay
+visible.
+
+---
+
+### Fix: skip fail-closed rate limiting in dev when Redis is unconfigured
+
+`checkRateLimit` previously conflated "Redis errored mid-call" with
+"Redis not configured at all" and returned 429 for both when
+`failClosed` was set. Made local sign-in impossible on machines without
+Upstash credentials, since the NextAuth route uses `checkAuthRateLimit`
+with `failClosed: true`. Gates the fail-closed branch on `!isDev` so
+production behavior is unchanged.
