@@ -69,6 +69,18 @@ auth — MailHog at http://localhost:8025 catches the link locally).
 
 ### 2026-05-29
 
+#### Fix: UplifterIcon overflowing the login card
+
+- Open `http://login.twizzle.localhost:3000/login`. The Card stays
+  inside its 400 px frame; the `[icon] Twizzle` brand mark sits
+  comfortably centered with no horizontal overflow.
+- Inspect the SVG (right-click → Inspect): it has explicit `width="47"`
+  and `height="36"` attributes — not `width="auto"`.
+- Resize the browser viewport down to 320 px wide → the Card scales
+  down but the brand mark still fits inside it.
+
+---
+
 #### Login refresh round 3 — slower video fade, capital-T wordmark + icon, 1.5s theme switch
 
 - Open `http://login.twizzle.localhost:3000/login` and watch a couple

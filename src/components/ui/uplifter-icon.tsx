@@ -18,12 +18,21 @@ interface UplifterIconProps {
  * Renders in `currentColor` by default so the parent's text color flows
  * through (works in both light and dark themes).
  */
+// Intrinsic aspect ratio of the icon SVG (viewBox width / height).
+// 186 / 141 ≈ 1.319.
+const ICON_ASPECT = 186 / 141;
+
 export function UplifterIcon({ height = 36, className, color }: UplifterIconProps) {
+  // Compute width explicitly. `width="auto"` is not a valid SVG attribute —
+  // browsers fall back to the viewBox width (186 px) which overflows the
+  // login card. Setting an explicit numeric width keeps the element sized
+  // proportionally regardless of the SVG attribute parsing.
+  const width = Math.round(height * ICON_ASPECT);
   return (
     <svg
       viewBox="20 15 186 141"
+      width={width}
       height={height}
-      width="auto"
       fill={color ?? "currentColor"}
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"

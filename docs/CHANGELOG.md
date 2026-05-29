@@ -8,6 +8,20 @@ Manual verification steps for each entry live in
 
 ## 2026-05-29
 
+### Fix: UplifterIcon overflowing the login card
+
+`<UplifterIcon>` was rendered with `width="auto"`, which isn't a valid
+SVG attribute. Browsers fell back to the viewBox width (186 px), so
+the icon claimed ~186 px instead of the ~48 px it should at
+`height={36}`. Combined with `shrink-0` it couldn't compress, and
+pushed "Twizzle" past the Card's 400 px boundary.
+
+Fix: compute the width explicitly from the icon's intrinsic aspect
+ratio (`186 / 141 ≈ 1.319`) and pass it as a numeric `width` prop.
+At `height={36}` the SVG is now a definite 47 px wide.
+
+---
+
 ### Login refresh round 3 — even slower video fade, capital-T wordmark + icon, 1.5s theme switch
 
 Three small polish passes after round 2:
