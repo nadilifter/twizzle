@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -60,14 +61,14 @@ export function GracePeriodManager({
       const data = await res.json();
 
       if (res.ok && data.success) {
-        alert(data.message);
+        toast.success(data.message);
         resetForm();
         router.refresh();
       } else {
-        alert(data.error || "Action failed.");
+        toast.error(data.error || "Action failed.");
       }
     } catch {
-      alert("An error occurred.");
+      toast.error("An error occurred.");
     } finally {
       setIsSubmitting(false);
     }

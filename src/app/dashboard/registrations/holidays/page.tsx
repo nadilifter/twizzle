@@ -145,13 +145,19 @@ export default function HolidaysPage() {
     setIsToggling(null);
   };
 
-  const handleDelete = async (holiday: OrganizationHoliday) => {
-    if (!confirm(`Delete "${holiday.name}"? This cannot be undone.`)) return;
-
-    const success = await deleteHoliday(holiday.id);
-    if (success) {
-      toast.success(`"${holiday.name}" deleted`);
-    }
+  const handleDelete = (holiday: OrganizationHoliday) => {
+    toast(`Delete "${holiday.name}"? This cannot be undone.`, {
+      action: {
+        label: "Delete",
+        onClick: async () => {
+          const success = await deleteHoliday(holiday.id);
+          if (success) {
+            toast.success(`"${holiday.name}" deleted`);
+          }
+        },
+      },
+      cancel: { label: "Cancel", onClick: () => {} },
+    });
   };
 
   const handleCustomCreated = () => {

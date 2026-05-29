@@ -185,14 +185,20 @@ export default function PassesPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Are you sure? This will remove this pass and all athlete enrollments.")) {
-      const success = await deletePass(id);
-      if (success) {
-        toast.success("Pass deleted");
-        if (selectedPassId === id) setSelectedPassId(null);
-      }
-    }
+  const handleDelete = (id: string) => {
+    toast("Delete pass? This will remove all athlete enrollments.", {
+      action: {
+        label: "Delete",
+        onClick: async () => {
+          const success = await deletePass(id);
+          if (success) {
+            toast.success("Pass deleted");
+            if (selectedPassId === id) setSelectedPassId(null);
+          }
+        },
+      },
+      cancel: { label: "Cancel", onClick: () => {} },
+    });
   };
 
   if (!passesEnabled) {
@@ -1011,16 +1017,21 @@ function PassManagerSheet({
                             variant="ghost"
                             size="sm"
                             className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                            onClick={async () => {
-                              if (
-                                ap.athlete &&
-                                confirm(
-                                  `Remove ${ap.athlete.firstName} ${ap.athlete.lastName} from this pass?`
-                                )
-                              ) {
-                                const success = await removeAthlete(ap.athleteId);
-                                if (success) toast.success("Athlete removed from pass");
-                              }
+                            onClick={() => {
+                              if (!ap.athlete) return;
+                              toast(
+                                `Remove ${ap.athlete.firstName} ${ap.athlete.lastName} from this pass?`,
+                                {
+                                  action: {
+                                    label: "Remove",
+                                    onClick: async () => {
+                                      const success = await removeAthlete(ap.athleteId);
+                                      if (success) toast.success("Athlete removed from pass");
+                                    },
+                                  },
+                                  cancel: { label: "Cancel", onClick: () => {} },
+                                }
+                              );
                             }}
                           >
                             <Trash2 className="h-3.5 w-3.5" />

@@ -85,16 +85,22 @@ export default function QueuesPage() {
     setIsEditOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to delete this queue configuration?")) {
-      const success = await deleteConfig(id);
-      if (success) {
-        toast.success("Queue configuration deleted");
-        setIsEditOpen(false);
-      } else {
-        toast.error("Failed to delete queue configuration");
-      }
-    }
+  const handleDelete = (id: string) => {
+    toast("Delete this queue configuration?", {
+      action: {
+        label: "Delete",
+        onClick: async () => {
+          const success = await deleteConfig(id);
+          if (success) {
+            toast.success("Queue configuration deleted");
+            setIsEditOpen(false);
+          } else {
+            toast.error("Failed to delete queue configuration");
+          }
+        },
+      },
+      cancel: { label: "Cancel", onClick: () => {} },
+    });
   };
 
   const getActivationLabel = (type: string) => {

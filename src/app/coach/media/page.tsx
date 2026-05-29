@@ -108,15 +108,21 @@ export default function CoachMediaPage() {
   };
 
   // Handle delete
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this media?")) return;
-
-    const success = await deleteMedia(id);
-    if (success) {
-      toast.success("Media deleted successfully");
-    } else {
-      toast.error("Failed to delete media");
-    }
+  const handleDelete = (id: string) => {
+    toast("Delete this media?", {
+      action: {
+        label: "Delete",
+        onClick: async () => {
+          const success = await deleteMedia(id);
+          if (success) {
+            toast.success("Media deleted successfully");
+          } else {
+            toast.error("Failed to delete media");
+          }
+        },
+      },
+      cancel: { label: "Cancel", onClick: () => {} },
+    });
   };
 
   // Open edit dialog

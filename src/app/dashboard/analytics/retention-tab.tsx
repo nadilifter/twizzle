@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 
 interface RetentionData {
   kpis: {
@@ -122,7 +123,6 @@ function formatTenure(days: number): string {
 export function RetentionTab() {
   const [data, setData] = React.useState<RetentionData | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
   const [flowRange, setFlowRange] = React.useState("12");
 
   React.useEffect(() => {
@@ -135,7 +135,7 @@ export function RetentionTab() {
         }
         setData(await res.json());
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load retention data");
+        toast.error(err instanceof Error ? err.message : "Failed to load retention data");
       } finally {
         setLoading(false);
       }
@@ -167,12 +167,6 @@ export function RetentionTab() {
 
   return (
     <>
-      {error && (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">{error}</CardContent>
-        </Card>
-      )}
-
       {/* KPI Cards */}
       {loading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

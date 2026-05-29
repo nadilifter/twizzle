@@ -396,25 +396,30 @@ export default function SuperadminFeedbackPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this feature? This action cannot be undone."))
-      return;
+  const handleDelete = (id: string) => {
+    toast("Delete this feature? This cannot be undone.", {
+      action: {
+        label: "Delete",
+        onClick: async () => {
+          try {
+            const response = await fetch(`/api/superadmin/feedback/${id}`, {
+              method: "DELETE",
+            });
 
-    try {
-      const response = await fetch(`/api/superadmin/feedback/${id}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        toast.success("Feature deleted successfully");
-        fetchFeatures(activeTab);
-        fetchCounts();
-      } else {
-        throw new Error("Failed to delete feature");
-      }
-    } catch (error) {
-      toast.error("Failed to delete feature");
-    }
+            if (response.ok) {
+              toast.success("Feature deleted successfully");
+              fetchFeatures(activeTab);
+              fetchCounts();
+            } else {
+              throw new Error("Failed to delete feature");
+            }
+          } catch (error) {
+            toast.error("Failed to delete feature");
+          }
+        },
+      },
+      cancel: { label: "Cancel", onClick: () => {} },
+    });
   };
 
   const toggleCategory = (category: string) => {

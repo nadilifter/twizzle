@@ -5,6 +5,45 @@ each. Newest first.
 
 ---
 
+## 2026-05-29
+
+### Phase 0.6 — Sonner toasts + unified skeletons
+
+Adopted Sonner as the single toast layer and unified all loading states
+behind the canonical `<Skeleton>` primitive.
+
+- **Toaster:** `<Toaster />` already mounted in the root layout with
+  `position="bottom-right"`, `expand`, `closeButton`, and `richColors`;
+  theme flows from `next-themes`. No change needed — verified wired.
+- **Notifications:** replaced all remaining `alert()` browser dialogs in
+  `superadmin/organizations/[slug]` (2 files × 3 call sites) with
+  `toast.success` / `toast.error`. Replaced inline `{error && <div>…</div>}`
+  state-banners in `competitions/page.tsx` and all four analytics tabs with
+  `toast.error()` fired in the catch block, removing the `error` state variable.
+  `delete-payment-method-button.tsx` confirm dialog replaced with a Sonner
+  toast action (auto-converted to action+cancel pattern by the linter).
+- **Skeleton:** `src/components/ui/skeleton.tsx` is the canonical primitive
+  with `width`, `height`, and `rounded` props — no changes needed to the
+  component itself; confirmed it is already imported across all list pages.
+- **Loading states:** added `loading.tsx` for all top-level admin and coach
+  routes that were missing one (7 coach routes + 10 dashboard routes = 17
+  new files), each with an appropriate skeleton layout matching the page
+  content type (table, card grid, calendar, chat, etc.).
+
+**Test:**
+
+- Trigger a fetch error on `/dashboard/competitions` (e.g. disconnect
+  network briefly) → red Sonner toast appears bottom-right instead of the
+  previous inline red banner.
+- Click "Remove" on a superadmin payment method → Sonner toast with action
+  buttons appears (replaces native `alert()`/`confirm()`).
+- Navigate to `/dashboard/competitions`, `/dashboard/analytics`,
+  `/coach/athletes`, or any other newly-covered route on a slow connection →
+  skeleton shimmer renders within 100 ms before data loads.
+- Toggle dark mode → Toaster respects the theme immediately.
+
+---
+
 ## 2026-05-28
 
 ### Skating-only scope cleanup — `Competition.competitionType` dropped
