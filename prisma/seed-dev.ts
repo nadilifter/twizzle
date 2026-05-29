@@ -12,9 +12,8 @@
  *
  * Organizations:
  * 1. Sunrise Skating Club - Youth figure skating club (comprehensive data)
- * 2. Metro Sports Complex - Multi-sport community facility (comprehensive data)
- * 3. Demo Skating Club - Demo/testing organization
- * 4. Uplifter - Platform owner organization
+ * 2. Demo Skating Club - Demo/testing organization
+ * 3. Uplifter - Platform owner organization
  *
  * Scope boundary — what belongs in this file:
  *   ✓ Realistic fixture data for every model in schema.prisma
@@ -63,7 +62,6 @@ const redis =
 // ============================================
 
 const ORG1_ID = "seed-org-sunrise";
-const ORG2_ID = "seed-org-metro";
 const ORG_DEMO_ID = "seed-org-demo-gym";
 const ORG_UPLIFTER_ID = "seed-org-uplifter";
 // Plan IDs will be dynamically assigned from the upsert results
@@ -627,24 +625,7 @@ async function main() {
       federationSection: "ON",
     },
   });
-  const org2 = await prisma.organization.upsert({
-    where: { id: ORG2_ID },
-    update: {},
-    create: {
-      id: ORG2_ID,
-      name: "Metro Sports Complex",
-      slug: "metro-sports",
-      email: "hello@metrosports.com",
-      phone: "+15559876543",
-      street: "250 Metro Way",
-      city: "Denver",
-      stateProvince: "CO",
-      postalCode: "80202",
-      country: "US",
-    },
-  });
   console.log(`  ✓ Created: ${org1.name}`);
-  console.log(`  ✓ Created: ${org2.name}`);
 
   // Demo Skating and Uplifter (from original seed.ts)
   const orgDemo = await prisma.organization.upsert({
@@ -755,79 +736,12 @@ async function main() {
     create: { organizationId: ORG1_ID, ...sunriseAdyenData },
   });
 
-  const metroAdyenData = {
-    legalEntityId: "LE3295Z223227J5P8Z5ZF8SD6",
-    businessLineId: "SE3295Z223227J5P8Z5ZF8SHS",
-    accountHolderId: "AH3292V22322BK5P8Z5ZF4DWF",
-    balanceAccountId: "BA3297R22322BK5P8Z5ZG2LCQ",
-    storeId: "ST3299M223229T5P7KV9K3SHW",
-    storeReference: "store-metro-sports",
-    splitConfigurationId: "SCNF42CQT223225K5P95MZD88D6H28",
-    sweepId: "SWPC4292W22322435P8Z6KZCSK2V2K",
-    transferInstrumentId: "SE3295Z223227J5P8Z6J695MW",
-    onboardingStatus: "VERIFIED" as const,
-    verificationStatus: "All capabilities verified",
-    verifiedAt: new Date(),
-    legalNameConfirmedAt: new Date(),
-    platformFeeAcknowledgedAt: new Date(),
-    platformAgreementAcceptedAt: new Date(),
-    payoutSchedule: "daily",
-    capabilities: {
-      receivePayments: {
-        requested: true,
-        allowed: true,
-        enabled: true,
-        verificationStatus: "valid",
-      },
-      sendToBalanceAccount: {
-        requested: true,
-        allowed: true,
-        enabled: true,
-        verificationStatus: "valid",
-      },
-      sendToTransferInstrument: {
-        requested: true,
-        allowed: true,
-        enabled: true,
-        verificationStatus: "valid",
-        transferInstruments: [
-          {
-            id: "SE3295Z223227J5P8Z6J695MW",
-            allowed: true,
-            enabled: true,
-            requested: true,
-            verificationStatus: "valid",
-          },
-        ],
-      },
-      receiveFromBalanceAccount: {
-        requested: true,
-        allowed: true,
-        enabled: true,
-        verificationStatus: "valid",
-      },
-      receiveFromPlatformPayments: {
-        requested: true,
-        allowed: true,
-        enabled: true,
-        verificationStatus: "valid",
-      },
-    },
-  };
-
-  await prisma.adyenPlatformAccount.upsert({
-    where: { organizationId: ORG2_ID },
-    update: metroAdyenData,
-    create: { organizationId: ORG2_ID, ...metroAdyenData },
-  });
-
   // Demo Skating and Uplifter: no Adyen accounts
   await prisma.adyenPlatformAccount.deleteMany({
     where: { organizationId: { in: [ORG_DEMO_ID, ORG_UPLIFTER_ID] } },
   });
 
   console.log("  ✓ Sunrise Skating: VERIFIED (AH3292V22322BK5P8Z8364KJM, weekly sweep)");
-  console.log("  ✓ Metro Sports: VERIFIED (AH3292V22322BK5P8Z5ZF4DWF, daily sweep)");
   console.log("  ✓ Demo Skating / Uplifter: no account");
 
   // ============================================
@@ -848,12 +762,6 @@ async function main() {
         balanceAccountId: "BA3292V22322BK5P8Z8374KKP",
         sweepId: "SWPC4299322322445P8Z8GSFFB4BNG",
         label: "Sunrise",
-      },
-      {
-        orgId: ORG2_ID,
-        balanceAccountId: "BA3297R22322BK5P8Z5ZG2LCQ",
-        sweepId: "SWPC4292W22322435P8Z6KZCSK2V2K",
-        label: "Metro",
       },
     ] as const;
 
@@ -895,18 +803,6 @@ async function main() {
         billingCycle: "YEARLY",
         currentPeriodStart: daysAgo(30),
         currentPeriodEnd: daysFromNow(335),
-      },
-    }),
-    prisma.organizationSubscription.upsert({
-      where: { organizationId: ORG2_ID },
-      update: {},
-      create: {
-        organizationId: ORG2_ID,
-        planId: starterPlan.id,
-        status: "ACTIVE",
-        billingCycle: "MONTHLY",
-        currentPeriodStart: daysAgo(15),
-        currentPeriodEnd: daysFromNow(15),
       },
     }),
     prisma.organizationSubscription.upsert({
@@ -1008,9 +904,6 @@ async function main() {
   console.log("\n🔗 Associating sports with organizations...");
   const orgSportAssociations = [
     { organizationId: ORG1_ID, sportId: sports["figure-skating"].id },
-    { organizationId: ORG2_ID, sportId: sports["basketball"].id },
-    { organizationId: ORG2_ID, sportId: sports["swimming"].id },
-    { organizationId: ORG2_ID, sportId: sports["athletics"].id },
     { organizationId: ORG_DEMO_ID, sportId: sports["figure-skating"].id },
   ];
 
@@ -1754,40 +1647,6 @@ async function main() {
       status: "ACTIVE",
     },
   });
-  const org2Admin = await prisma.user.upsert({
-    where: { email: "admin@metro-sports.com" },
-    update: {},
-    create: {
-      email: "admin@metro-sports.com",
-      name: "Michael Thompson",
-      passwordHash: null,
-      role: "ADMIN",
-      status: "ACTIVE",
-    },
-  });
-  const org2Coach = await prisma.user.upsert({
-    where: { email: "coach.sarah@metro-sports.com" },
-    update: {},
-    create: {
-      email: "coach.sarah@metro-sports.com",
-      name: "Sarah Martinez",
-      passwordHash: null,
-      role: "COACH",
-      status: "ACTIVE",
-    },
-  });
-  const org2Volunteer = await prisma.user.upsert({
-    where: { email: "volunteer@metro-sports.com" },
-    update: {},
-    create: {
-      email: "volunteer@metro-sports.com",
-      name: "David Lee",
-      passwordHash: null,
-      role: "VOLUNTEER",
-      status: "ACTIVE",
-    },
-  });
-
   // Demo Skating and Uplifter users (from original seed.ts)
   const andrewUser = await prisma.user.upsert({
     where: { email: "andrewkarzel@uplifterinc.com" },
@@ -1847,7 +1706,7 @@ async function main() {
       status: "ACTIVE",
     },
   });
-  console.log("  ✓ Created 13 users across all organizations");
+  console.log("  ✓ Created 10 users across all organizations");
 
   // ============================================
   // ORGANIZATION MEMBERS
@@ -1904,55 +1763,6 @@ async function main() {
       id: `${ORG1_ID}-staff-4`,
       organizationId: ORG1_ID,
       userId: org1Coach3.id,
-      role: "COACH",
-      status: "ACTIVE",
-    },
-  });
-  const org2AdminMember = await prisma.organizationMember.upsert({
-    where: { organizationId_userId: { organizationId: ORG2_ID, userId: org2Admin.id } },
-    update: { role: "ADMIN", status: "ACTIVE" },
-    create: {
-      id: `${ORG2_ID}-member-admin`,
-      organizationId: ORG2_ID,
-      userId: org2Admin.id,
-      role: "ADMIN",
-      status: "ACTIVE",
-    },
-  });
-  const org2CoachMember = await prisma.organizationMember.upsert({
-    where: { organizationId_userId: { organizationId: ORG2_ID, userId: org2Coach.id } },
-    update: { role: "COACH", status: "ACTIVE" },
-    create: {
-      id: `${ORG2_ID}-staff-1`,
-      organizationId: ORG2_ID,
-      userId: org2Coach.id,
-      role: "COACH",
-      status: "ACTIVE",
-    },
-  });
-  const org2VolunteerMember = await prisma.organizationMember.upsert({
-    where: { organizationId_userId: { organizationId: ORG2_ID, userId: org2Volunteer.id } },
-    update: { role: "VOLUNTEER", status: "ACTIVE" },
-    create: {
-      id: `${ORG2_ID}-staff-2`,
-      organizationId: ORG2_ID,
-      userId: org2Volunteer.id,
-      role: "VOLUNTEER",
-      status: "ACTIVE",
-    },
-  });
-  // Maria Rodriguez coaches at both Sunrise (Gold plan — Training enabled)
-  // and Metro (Starter plan — Training disabled). This demonstrates the
-  // multi-org coach flow; the coach sidebar org switcher lets her flip
-  // between them. If the default-pick at login lands on Metro, Evaluations
-  // is hidden until she switches to Sunrise via the switcher.
-  const org2MariaCoachMember = await prisma.organizationMember.upsert({
-    where: { organizationId_userId: { organizationId: ORG2_ID, userId: org1Coach1.id } },
-    update: { role: "COACH", status: "ACTIVE" },
-    create: {
-      id: `${ORG2_ID}-member-maria`,
-      organizationId: ORG2_ID,
-      userId: org1Coach1.id,
       role: "COACH",
       status: "ACTIVE",
     },
@@ -2046,7 +1856,7 @@ async function main() {
       status: "ACTIVE",
     },
   });
-  console.log("  ✓ Created 16 organization memberships");
+  console.log("  ✓ Created 12 organization memberships");
 
   // ============================================
   // MEMBER PERMISSIONS
@@ -2054,7 +1864,6 @@ async function main() {
   console.log("\n🔐 Creating member permissions...");
   const permissionData = [
     { memberId: org1AdminMember.id, permission: "*" },
-    { memberId: org2AdminMember.id, permission: "*" },
     { memberId: org1Coach1Member.id, permission: "dashboard.view" },
     { memberId: org1Coach1Member.id, permission: "athletes.view" },
     { memberId: org1Coach1Member.id, permission: "athletes.edit" },
@@ -2077,29 +1886,11 @@ async function main() {
     { memberId: org1Coach3Member.id, permission: "coaching.portal" },
     { memberId: org1Coach3Member.id, permission: "coaching.assign" },
     { memberId: org1Coach3Member.id, permission: "coaching.attendance" },
-    { memberId: org2CoachMember.id, permission: "dashboard.view" },
-    { memberId: org2CoachMember.id, permission: "athletes.view" },
-    { memberId: org2CoachMember.id, permission: "events.view" },
-    { memberId: org2CoachMember.id, permission: "coaching.portal" },
-    { memberId: org2CoachMember.id, permission: "coaching.assign" },
-    { memberId: org2CoachMember.id, permission: "coaching.attendance" },
-    { memberId: org2CoachMember.id, permission: "coaching.evaluations" },
-    // Maria Rodriguez at Metro (multi-org coach demo)
-    { memberId: org2MariaCoachMember.id, permission: "dashboard.view" },
-    { memberId: org2MariaCoachMember.id, permission: "athletes.view" },
-    { memberId: org2MariaCoachMember.id, permission: "athletes.edit" },
-    { memberId: org2MariaCoachMember.id, permission: "events.view" },
-    { memberId: org2MariaCoachMember.id, permission: "coaching.portal" },
-    { memberId: org2MariaCoachMember.id, permission: "coaching.assign" },
-    { memberId: org2MariaCoachMember.id, permission: "coaching.attendance" },
-    { memberId: org2MariaCoachMember.id, permission: "coaching.evaluations" },
     { memberId: org1AccountantMember.id, permission: "dashboard.view" },
     { memberId: org1AccountantMember.id, permission: "financials.view" },
     { memberId: org1AccountantMember.id, permission: "financials.edit" },
     { memberId: org1AccountantMember.id, permission: "invoices.view" },
     { memberId: org1AccountantMember.id, permission: "invoices.create" },
-    { memberId: org2VolunteerMember.id, permission: "dashboard.view" },
-    { memberId: org2VolunteerMember.id, permission: "events.view" },
     // Demo Skating and Uplifter permissions
     { memberId: uplifterAndrewMember.id, permission: "*" },
     { memberId: demoAndrewMember.id, permission: "*" },
@@ -2177,28 +1968,7 @@ async function main() {
       description: "Smaller studio for preschool and recreational classes",
     },
   });
-  const org2Facility = await prisma.facility.upsert({
-    where: { id: `${ORG2_ID}-facility-main` },
-    update: {},
-    create: {
-      id: `${ORG2_ID}-facility-main`,
-      organizationId: ORG2_ID,
-      name: "Metro Sports Complex",
-      street: "789 Sports Center Blvd",
-      city: "San Jose",
-      stateProvince: "CA",
-      postalCode: "95110",
-      country: "USA",
-      phone: "(555) 200-1000",
-      email: "info@metro-sports.com",
-      status: "ACTIVE",
-      isDefault: true,
-      squareFootage: 25000,
-      maxCapacity: 400,
-      description: "Multi-sport community facility with various courts and fields",
-    },
-  });
-  console.log("  ✓ Created 3 facilities");
+  console.log("  ✓ Created 2 facilities");
 
   // ============================================
   // SPACES
@@ -2255,42 +2025,6 @@ async function main() {
       name: "Recreational Ice",
       capacity: 25,
       status: "OPEN" as const,
-    },
-    // Org2 Main Facility
-    {
-      id: `${ORG2_ID}-space-1`,
-      facilityId: org2Facility.id,
-      name: "Basketball Court A",
-      capacity: 30,
-      status: "OPEN" as const,
-    },
-    {
-      id: `${ORG2_ID}-space-2`,
-      facilityId: org2Facility.id,
-      name: "Basketball Court B",
-      capacity: 30,
-      status: "OPEN" as const,
-    },
-    {
-      id: `${ORG2_ID}-space-3`,
-      facilityId: org2Facility.id,
-      name: "Soccer Field",
-      capacity: 50,
-      status: "OPEN" as const,
-    },
-    {
-      id: `${ORG2_ID}-space-4`,
-      facilityId: org2Facility.id,
-      name: "Swimming Pool",
-      capacity: 40,
-      status: "OPEN" as const,
-    },
-    {
-      id: `${ORG2_ID}-space-5`,
-      facilityId: org2Facility.id,
-      name: "Fitness Room",
-      capacity: 25,
-      status: "MAINTENANCE" as const,
     },
   ];
   await Promise.all(
@@ -2350,34 +2084,6 @@ async function main() {
       spaceId: `${ORG1_ID}-space-7`,
       dayOfWeek: day,
       openTime: "07:00",
-      closeTime: "21:00",
-    })),
-    // Org2 - Basketball Court A: Mon-Sun 6am-10pm
-    ...[0, 1, 2, 3, 4, 5, 6].map((day) => ({
-      spaceId: `${ORG2_ID}-space-1`,
-      dayOfWeek: day,
-      openTime: "06:00",
-      closeTime: "22:00",
-    })),
-    // Basketball Court B: Mon-Sun 6am-10pm
-    ...[0, 1, 2, 3, 4, 5, 6].map((day) => ({
-      spaceId: `${ORG2_ID}-space-2`,
-      dayOfWeek: day,
-      openTime: "06:00",
-      closeTime: "22:00",
-    })),
-    // Soccer Field: Mon-Sun 7am-8pm
-    ...[0, 1, 2, 3, 4, 5, 6].map((day) => ({
-      spaceId: `${ORG2_ID}-space-3`,
-      dayOfWeek: day,
-      openTime: "07:00",
-      closeTime: "20:00",
-    })),
-    // Swimming Pool: Mon-Sat 6am-9pm
-    ...[1, 2, 3, 4, 5, 6].map((day) => ({
-      spaceId: `${ORG2_ID}-space-4`,
-      dayOfWeek: day,
-      openTime: "06:00",
       closeTime: "21:00",
     })),
   ];
@@ -2502,57 +2208,6 @@ async function main() {
       status: "ACTIVE" as const,
       lastInspectionDate: daysAgo(35),
     },
-    // Org2 Equipment
-    {
-      id: `${ORG2_ID}-equip-1`,
-      organizationId: ORG2_ID,
-      facilityId: org2Facility.id,
-      spaceId: `${ORG2_ID}-space-1`,
-      name: "Basketball Hoop A",
-      condition: "GOOD" as const,
-      status: "ACTIVE" as const,
-      lastInspectionDate: daysAgo(20),
-    },
-    {
-      id: `${ORG2_ID}-equip-2`,
-      organizationId: ORG2_ID,
-      facilityId: org2Facility.id,
-      spaceId: `${ORG2_ID}-space-2`,
-      name: "Basketball Hoop B",
-      condition: "GOOD" as const,
-      status: "ACTIVE" as const,
-      lastInspectionDate: daysAgo(20),
-    },
-    {
-      id: `${ORG2_ID}-equip-3`,
-      organizationId: ORG2_ID,
-      facilityId: org2Facility.id,
-      spaceId: `${ORG2_ID}-space-3`,
-      name: "Soccer Goals (Pair)",
-      condition: "EXCELLENT" as const,
-      status: "ACTIVE" as const,
-      lastInspectionDate: daysAgo(7),
-    },
-    {
-      id: `${ORG2_ID}-equip-4`,
-      organizationId: ORG2_ID,
-      facilityId: org2Facility.id,
-      spaceId: `${ORG2_ID}-space-4`,
-      name: "Lane Dividers",
-      condition: "GOOD" as const,
-      status: "ACTIVE" as const,
-      lastInspectionDate: daysAgo(14),
-    },
-    {
-      id: `${ORG2_ID}-equip-5`,
-      organizationId: ORG2_ID,
-      facilityId: org2Facility.id,
-      spaceId: `${ORG2_ID}-space-5`,
-      name: "Treadmills (Set of 5)",
-      condition: "FAIR" as const,
-      status: "MAINTENANCE" as const,
-      lastInspectionDate: daysAgo(60),
-    },
   ];
   await Promise.all(
     equipmentData.map((e) =>
@@ -2587,18 +2242,6 @@ async function main() {
       facilityId: org1Facility2.id,
       userId: org1Coach1.id,
       isPrimary: false,
-    },
-    {
-      id: `${ORG2_ID}-assign-1`,
-      facilityId: org2Facility.id,
-      userId: org2Coach.id,
-      isPrimary: true,
-    },
-    {
-      id: `${ORG2_ID}-assign-2`,
-      facilityId: org2Facility.id,
-      userId: org2Volunteer.id,
-      isPrimary: true,
     },
   ];
   await Promise.all(
@@ -2656,21 +2299,6 @@ async function main() {
       openTime: "09:00",
       closeTime: "14:00",
     },
-    // Org2 Main: Mon-Sat 7:00-22:00, Sun 10:00-18:00
-    ...[1, 2, 3, 4, 5, 6].map((day, i) => ({
-      id: `${ORG2_ID}-hours-main-${i}`,
-      facilityId: org2Facility.id,
-      dayOfWeek: day,
-      openTime: "07:00",
-      closeTime: "22:00",
-    })),
-    {
-      id: `${ORG2_ID}-hours-main-sun`,
-      facilityId: org2Facility.id,
-      dayOfWeek: 0,
-      openTime: "10:00",
-      closeTime: "18:00",
-    },
   ];
   await Promise.all(
     operatingHoursData.map((h) =>
@@ -2723,28 +2351,6 @@ async function main() {
       content:
         "Parking lot repaving scheduled for the first weekend of next month. Classes will need to use the rear entrance.",
       createdAt: daysAgo(5),
-    },
-    {
-      id: `${ORG2_ID}-fnote-1`,
-      facilityId: org2Facility.id,
-      authorId: org2Admin.id,
-      content: "Pool chemical balance checked and adjusted. Chlorine levels back to normal.",
-      createdAt: daysAgo(10),
-    },
-    {
-      id: `${ORG2_ID}-fnote-2`,
-      facilityId: org2Facility.id,
-      authorId: org2Coach.id,
-      content:
-        "Basketball Court A floor refinished. Looks great — no slipping issues reported since.",
-      createdAt: daysAgo(4),
-    },
-    {
-      id: `${ORG2_ID}-fnote-3`,
-      facilityId: org2Facility.id,
-      authorId: org2Admin.id,
-      content: "Emergency exit signs replaced with LED versions across the entire facility.",
-      createdAt: daysAgo(1),
     },
   ];
   await Promise.all(
@@ -2832,63 +2438,7 @@ async function main() {
       balance: 75.5,
     },
   });
-  const org2Parent1 = await prisma.user.upsert({
-    where: { email: "karen.foster@email.com" },
-    update: {},
-    create: {
-      id: `${ORG2_ID}-parent-1`,
-      email: "karen.foster@email.com",
-      name: "Karen Foster",
-      passwordHash: null,
-      phone: "(555) 201-2001",
-      role: "PARENT",
-      status: "ACTIVE",
-      balance: 0,
-    },
-  });
-  const org2Parent2 = await prisma.user.upsert({
-    where: { email: "carlos.garcia@email.com" },
-    update: {},
-    create: {
-      id: `${ORG2_ID}-parent-2`,
-      email: "carlos.garcia@email.com",
-      name: "Carlos Garcia",
-      passwordHash: null,
-      phone: "(555) 202-2002",
-      role: "PARENT",
-      status: "ACTIVE",
-      balance: 200.0,
-    },
-  });
-  const org2Parent3 = await prisma.user.upsert({
-    where: { email: "patricia.harris@email.com" },
-    update: {},
-    create: {
-      id: `${ORG2_ID}-parent-3`,
-      email: "patricia.harris@email.com",
-      name: "Patricia Harris",
-      passwordHash: null,
-      phone: "(555) 203-2003",
-      role: "PARENT",
-      status: "ACTIVE",
-      balance: 0,
-    },
-  });
-  const org2Parent4 = await prisma.user.upsert({
-    where: { email: "john.irving@email.com" },
-    update: {},
-    create: {
-      id: `${ORG2_ID}-parent-4`,
-      email: "john.irving@email.com",
-      name: "John Irving",
-      passwordHash: null,
-      phone: "(555) 204-2004",
-      role: "PARENT",
-      status: "ACTIVE",
-      balance: -50.0,
-    },
-  });
-  console.log("  ✓ Created 9 guardian users");
+  console.log("  ✓ Created 5 guardian users");
 
   // ============================================
   // ATHLETES
@@ -2985,75 +2535,8 @@ async function main() {
         gender: "FEMALE",
       },
     }),
-    prisma.athlete.upsert({
-      where: { id: `${ORG2_ID}-ath-1` },
-      update: {},
-      create: {
-        id: `${ORG2_ID}-ath-1`,
-        firstName: "Jake",
-        lastName: "Foster",
-        email: "jake.f@email.com",
-        birthDate: noonUTC("2014-04-18"),
-        gender: "MALE",
-      },
-    }),
-    prisma.athlete.upsert({
-      where: { id: `${ORG2_ID}-ath-2` },
-      update: {},
-      create: {
-        id: `${ORG2_ID}-ath-2`,
-        firstName: "Ethan",
-        lastName: "Foster",
-        birthDate: noonUTC("2010-10-25"),
-        gender: "MALE",
-      },
-    }),
-    prisma.athlete.upsert({
-      where: { id: `${ORG2_ID}-ath-3` },
-      update: {},
-      create: {
-        id: `${ORG2_ID}-ath-3`,
-        firstName: "Sofia",
-        lastName: "Garcia",
-        birthDate: noonUTC("2016-06-12"),
-        gender: "FEMALE",
-      },
-    }),
-    prisma.athlete.upsert({
-      where: { id: `${ORG2_ID}-ath-4` },
-      update: {},
-      create: {
-        id: `${ORG2_ID}-ath-4`,
-        firstName: "Lucas",
-        lastName: "Garcia",
-        birthDate: noonUTC("2011-02-28"),
-        gender: "MALE",
-      },
-    }),
-    prisma.athlete.upsert({
-      where: { id: `${ORG2_ID}-ath-5` },
-      update: {},
-      create: {
-        id: `${ORG2_ID}-ath-5`,
-        firstName: "Chloe",
-        lastName: "Harris",
-        birthDate: noonUTC("2015-09-07"),
-        gender: "FEMALE",
-      },
-    }),
-    prisma.athlete.upsert({
-      where: { id: `${ORG2_ID}-ath-6` },
-      update: {},
-      create: {
-        id: `${ORG2_ID}-ath-6`,
-        firstName: "Noah",
-        lastName: "Irving",
-        birthDate: noonUTC("2012-11-19"),
-        gender: "MALE",
-      },
-    }),
   ]);
-  console.log("  ✓ Created 14 athletes");
+  console.log("  ✓ Created 8 athletes");
 
   // ============================================
   // ORGANIZATION-ATHLETE LINKS (with org-specific level, status, customId)
@@ -3134,48 +2617,6 @@ async function main() {
       status: "ACTIVE" as const,
       customId: "SGA-008",
     },
-    {
-      organizationId: ORG2_ID,
-      athleteId: `${ORG2_ID}-ath-1`,
-      level: "Beginner",
-      status: "ACTIVE" as const,
-      customId: "MSC-001",
-    },
-    {
-      organizationId: ORG2_ID,
-      athleteId: `${ORG2_ID}-ath-2`,
-      level: "Intermediate",
-      status: "ACTIVE" as const,
-      customId: "MSC-002",
-    },
-    {
-      organizationId: ORG2_ID,
-      athleteId: `${ORG2_ID}-ath-3`,
-      level: "Beginner",
-      status: "ACTIVE" as const,
-      customId: "MSC-003",
-    },
-    {
-      organizationId: ORG2_ID,
-      athleteId: `${ORG2_ID}-ath-4`,
-      level: "Advanced",
-      status: "ACTIVE" as const,
-      customId: "MSC-004",
-    },
-    {
-      organizationId: ORG2_ID,
-      athleteId: `${ORG2_ID}-ath-5`,
-      level: "Beginner",
-      status: "INACTIVE" as const,
-      customId: "MSC-005",
-    },
-    {
-      organizationId: ORG2_ID,
-      athleteId: `${ORG2_ID}-ath-6`,
-      level: "Intermediate",
-      status: "ACTIVE" as const,
-      customId: "MSC-006",
-    },
   ];
   for (const oa of orgAthleteData) {
     await prisma.organizationAthlete.upsert({
@@ -3241,42 +2682,6 @@ async function main() {
       relationship: "Parent",
       isPrimary: true,
     },
-    {
-      athleteId: `${ORG2_ID}-ath-1`,
-      userId: org2Parent1.id,
-      relationship: "Parent",
-      isPrimary: true,
-    },
-    {
-      athleteId: `${ORG2_ID}-ath-2`,
-      userId: org2Parent1.id,
-      relationship: "Parent",
-      isPrimary: true,
-    },
-    {
-      athleteId: `${ORG2_ID}-ath-3`,
-      userId: org2Parent2.id,
-      relationship: "Parent",
-      isPrimary: true,
-    },
-    {
-      athleteId: `${ORG2_ID}-ath-4`,
-      userId: org2Parent2.id,
-      relationship: "Parent",
-      isPrimary: true,
-    },
-    {
-      athleteId: `${ORG2_ID}-ath-5`,
-      userId: org2Parent3.id,
-      relationship: "Parent",
-      isPrimary: true,
-    },
-    {
-      athleteId: `${ORG2_ID}-ath-6`,
-      userId: org2Parent4.id,
-      relationship: "Guardian",
-      isPrimary: true,
-    },
   ];
   for (const g of guardianData) {
     await prisma.athleteGuardian.upsert({
@@ -3326,24 +2731,6 @@ async function main() {
       last4: "1234",
       expiry: "03/28",
       brand: "Amex",
-      isDefault: true,
-    },
-    {
-      id: `${ORG2_ID}-pm-1`,
-      userId: org2Parent1.id,
-      type: "CARD" as const,
-      last4: "9876",
-      expiry: "06/27",
-      brand: "Visa",
-      isDefault: true,
-    },
-    {
-      id: `${ORG2_ID}-pm-2`,
-      userId: org2Parent2.id,
-      type: "CARD" as const,
-      last4: "3456",
-      expiry: "11/26",
-      brand: "Discover",
       isDefault: true,
     },
   ];
@@ -3403,43 +2790,6 @@ async function main() {
       color: "#8b5cf6",
       isDefault: false,
     },
-    // Org2 Levels (Multi-sport)
-    {
-      id: `${ORG2_ID}-level-beginner`,
-      organizationId: ORG2_ID,
-      name: "Beginner",
-      description: "New to the sport",
-      order: 0,
-      color: "#22c55e",
-      isDefault: true,
-    },
-    {
-      id: `${ORG2_ID}-level-intermediate`,
-      organizationId: ORG2_ID,
-      name: "Intermediate",
-      description: "Some experience required",
-      order: 1,
-      color: "#3b82f6",
-      isDefault: false,
-    },
-    {
-      id: `${ORG2_ID}-level-advanced`,
-      organizationId: ORG2_ID,
-      name: "Advanced",
-      description: "Experienced athletes",
-      order: 2,
-      color: "#8b5cf6",
-      isDefault: false,
-    },
-    {
-      id: `${ORG2_ID}-level-competitive`,
-      organizationId: ORG2_ID,
-      name: "Competitive",
-      description: "Competition level",
-      order: 3,
-      color: "#ef4444",
-      isDefault: false,
-    },
   ];
   for (const level of levelData) {
     await prisma.level.upsert({ where: { id: level.id }, update: {}, create: level });
@@ -3489,46 +2839,6 @@ async function main() {
         name: "Preschool & Toddler",
         description: "Age-appropriate movement classes for our youngest athletes",
         organizationId: ORG1_ID,
-      },
-    }),
-    prisma.category.upsert({
-      where: { id: `${ORG2_ID}-cat-fitness` },
-      update: {},
-      create: {
-        id: `${ORG2_ID}-cat-fitness`,
-        name: "Group Fitness",
-        description: "High-energy group fitness classes for all levels",
-        organizationId: ORG2_ID,
-      },
-    }),
-    prisma.category.upsert({
-      where: { id: `${ORG2_ID}-cat-training` },
-      update: {},
-      create: {
-        id: `${ORG2_ID}-cat-training`,
-        name: "Personal Training",
-        description: "One-on-one and small group training sessions",
-        organizationId: ORG2_ID,
-      },
-    }),
-    prisma.category.upsert({
-      where: { id: `${ORG2_ID}-cat-youth` },
-      update: {},
-      create: {
-        id: `${ORG2_ID}-cat-youth`,
-        name: "Youth Sports",
-        description: "Sports programs designed for kids and teens",
-        organizationId: ORG2_ID,
-      },
-    }),
-    prisma.category.upsert({
-      where: { id: `${ORG2_ID}-cat-aquatics` },
-      update: {},
-      create: {
-        id: `${ORG2_ID}-cat-aquatics`,
-        name: "Aquatics",
-        description: "Swimming and water sports programs",
-        organizationId: ORG2_ID,
       },
     }),
   ]);
@@ -3683,108 +2993,8 @@ async function main() {
         rrule: "FREQ=WEEKLY;BYDAY=SA",
       },
     }),
-    // Metro Sports programs
-    prisma.program.upsert({
-      where: { id: `${ORG2_ID}-prog-soccer` },
-      update: {},
-      create: {
-        id: `${ORG2_ID}-prog-soccer`,
-        name: "Youth Soccer League",
-        description: "Recreational soccer for ages 6-14",
-        status: "ACTIVE",
-        registrationStatus: "OPEN",
-        organizationId: ORG2_ID,
-        color: "#22c55e",
-        categoryId: `${ORG2_ID}-cat-youth`,
-        pricingModel: "FLAT_RATE",
-        basePrice: 175,
-        showCoachOnSite: true,
-        startDate: daysAgo(15),
-        endDate: daysFromNow(90),
-        registrationType: "ALL_INSTANCES",
-        startTime: "10:00",
-        duration: 90,
-        facilityId: `${ORG2_ID}-facility-main`,
-        rrule: "FREQ=WEEKLY;BYDAY=SA",
-      },
-    }),
-    prisma.program.upsert({
-      where: { id: `${ORG2_ID}-prog-basketball` },
-      update: {},
-      create: {
-        id: `${ORG2_ID}-prog-basketball`,
-        name: "Teen Basketball",
-        description: "Basketball skills and games for ages 12-18",
-        status: "ACTIVE",
-        registrationStatus: "OPEN",
-        organizationId: ORG2_ID,
-        color: "#f97316",
-        categoryId: `${ORG2_ID}-cat-youth`,
-        pricingModel: "FLAT_RATE",
-        basePrice: 95,
-        showCoachOnSite: true,
-        startDate: daysAgo(30),
-        endDate: daysFromNow(60),
-        registrationType: "ALL_INSTANCES",
-        startTime: "18:00",
-        duration: 90,
-        facilityId: `${ORG2_ID}-facility-main`,
-        rrule: "FREQ=WEEKLY;BYDAY=TU,TH",
-      },
-    }),
-    prisma.program.upsert({
-      where: { id: `${ORG2_ID}-prog-swim` },
-      update: {},
-      create: {
-        id: `${ORG2_ID}-prog-swim`,
-        name: "Swim Team",
-        description: "Competitive swimming for all ages",
-        status: "ACTIVE",
-        registrationStatus: "OPEN",
-        organizationId: ORG2_ID,
-        color: "#06b6d4",
-        categoryId: `${ORG2_ID}-cat-aquatics`,
-        pricingModel: "FLAT_RATE",
-        basePrice: 1200,
-        showCoachOnSite: true,
-        startDate: daysAgo(60),
-        endDate: daysFromNow(305),
-        capacity: 40,
-        registrationType: "ALL_INSTANCES",
-        startTime: "06:00",
-        duration: 120,
-        facilityId: `${ORG2_ID}-facility-main`,
-        rrule: "FREQ=WEEKLY;BYDAY=MO,WE,FR,SA",
-      },
-    }),
-    // Drop-in fitness with per-instance registration
-    prisma.program.upsert({
-      where: { id: `${ORG2_ID}-prog-fitness` },
-      update: {},
-      create: {
-        id: `${ORG2_ID}-prog-fitness`,
-        name: "Kids Fitness",
-        description: "General fitness and movement for ages 5-10",
-        status: "ACTIVE",
-        registrationStatus: "OPEN",
-        organizationId: ORG2_ID,
-        color: "#ef4444",
-        categoryId: `${ORG2_ID}-cat-fitness`,
-        pricingModel: "PER_SESSION",
-        perSessionPrice: 15,
-        showCoachOnSite: false,
-        capacity: 20,
-        startDate: daysAgo(7),
-        endDate: daysFromNow(60),
-        registrationType: "PER_INSTANCE",
-        startTime: "14:00",
-        duration: 45,
-        facilityId: `${ORG2_ID}-facility-main`,
-        rrule: "FREQ=WEEKLY;BYDAY=MO,WE,FR",
-      },
-    }),
   ]);
-  console.log("  ✓ Created 9 base programs");
+  console.log("  ✓ Created 5 base programs");
 
   // ============================================
   // PROGRAM INSTANCES
@@ -3858,54 +3068,6 @@ async function main() {
     });
   });
 
-  // Kids Fitness - Mon/Wed/Fri 2:00 PM (per-instance drop-in)
-  const fitnessDates = generateWeeklyDates(daysAgo(7), daysFromNow(30), [1, 3, 5]); // Mon, Wed, Fri
-  fitnessDates.forEach((date, i) => {
-    programInstanceData.push({
-      id: `${ORG2_ID}-prog-fitness-inst-${i}`,
-      programId: `${ORG2_ID}-prog-fitness`,
-      organizationId: ORG2_ID,
-      date,
-      startTime: "14:00",
-      endTime: calculateEndTime("14:00", 45),
-      facilityId: `${ORG2_ID}-facility-main`,
-      capacity: 20,
-      status: date < new Date() ? "COMPLETED" : "SCHEDULED",
-    });
-  });
-
-  // Youth Soccer - Saturday 10:00 AM
-  const soccerDates = generateWeeklyDates(daysAgo(14), daysFromNow(60), [6]); // Saturday
-  soccerDates.forEach((date, i) => {
-    programInstanceData.push({
-      id: `${ORG2_ID}-prog-soccer-inst-${i}`,
-      programId: `${ORG2_ID}-prog-soccer`,
-      organizationId: ORG2_ID,
-      date,
-      startTime: "10:00",
-      endTime: calculateEndTime("10:00", 90),
-      facilityId: `${ORG2_ID}-facility-main`,
-      capacity: null,
-      status: date < new Date() ? "COMPLETED" : "SCHEDULED",
-    });
-  });
-
-  // Swim Team - Mon/Wed/Fri/Sat 6:00 AM, 120 min
-  const swimDates = generateWeeklyDates(daysAgo(60), daysFromNow(90), [1, 3, 5, 6]); // Mon, Wed, Fri, Sat
-  swimDates.forEach((date, i) => {
-    programInstanceData.push({
-      id: `${ORG2_ID}-prog-swim-inst-${i}`,
-      programId: `${ORG2_ID}-prog-swim`,
-      organizationId: ORG2_ID,
-      date,
-      startTime: "06:00",
-      endTime: calculateEndTime("06:00", 120),
-      facilityId: `${ORG2_ID}-facility-main`,
-      capacity: null,
-      status: date < new Date() ? "COMPLETED" : "SCHEDULED",
-    });
-  });
-
   // Create all instances (using createMany for efficiency, but handling potential duplicates)
   let instancesCreated = 0;
   for (const instance of programInstanceData) {
@@ -3930,10 +3092,6 @@ async function main() {
     .filter((i) => i.programId === `${ORG1_ID}-prog-preschool` && i.status === "SCHEDULED")
     .slice(0, 3);
 
-  const upcomingFitness = programInstanceData
-    .filter((i) => i.programId === `${ORG2_ID}-prog-fitness` && i.status === "SCHEDULED")
-    .slice(0, 5);
-
   const org1ParentIds = [
     org1Parent1.id,
     org1Parent1.id,
@@ -3943,14 +3101,6 @@ async function main() {
     org1Parent4.id,
     org1Parent5.id,
     org1Parent5.id,
-  ];
-  const org2ParentIds = [
-    org2Parent1.id,
-    org2Parent1.id,
-    org2Parent2.id,
-    org2Parent2.id,
-    org2Parent3.id,
-    org2Parent4.id,
   ];
   const instanceRegistrations: Array<{
     id: string;
@@ -3976,22 +3126,6 @@ async function main() {
     }
   });
 
-  // Add registrations for Kids Fitness
-  upcomingFitness.forEach((instance, idx) => {
-    // 5-10 athletes per session
-    const numAthletes = 5 + (idx % 6);
-    for (let a = 0; a < numAthletes; a++) {
-      const athleteIndex = a + 1;
-      instanceRegistrations.push({
-        id: `${instance.id}-reg-${a}`,
-        programInstanceId: instance.id,
-        athleteId: `${ORG2_ID}-ath-${athleteIndex}`,
-        userId: org2ParentIds[athleteIndex - 1] ?? org2Parent1.id,
-        status: "REGISTERED",
-      });
-    }
-  });
-
   let regsCreated = 0;
   for (const reg of instanceRegistrations) {
     try {
@@ -4008,7 +3142,7 @@ async function main() {
   console.log(`  ✓ Created ${regsCreated} instance registrations`);
 
   await Promise.all(
-    [ORG1_ID, ORG2_ID, ORG_DEMO_ID].map((orgId) =>
+    [ORG1_ID, ORG_DEMO_ID].map((orgId) =>
       prisma.cacheVersion.upsert({
         where: { organizationId_entityType: { organizationId: orgId, entityType: "programs" } },
         update: { version: { increment: 1 } },
@@ -4127,34 +3261,6 @@ async function main() {
       discountValue: 15,
       description: "10-class pack 15% off",
     },
-    // Org2 multi-session discounts
-    {
-      id: `${ORG2_ID}-discount-1`,
-      programId: `${ORG2_ID}-prog-fitness`,
-      type: "MULTI_SESSION" as const,
-      minQuantity: 5,
-      discountType: "FIXED_AMOUNT" as const,
-      discountValue: 10,
-      description: "5-session: $10 off",
-    },
-    {
-      id: `${ORG2_ID}-discount-2`,
-      programId: `${ORG2_ID}-prog-fitness`,
-      type: "MULTI_SESSION" as const,
-      minQuantity: 10,
-      discountType: "FIXED_AMOUNT" as const,
-      discountValue: 25,
-      description: "10-session: $25 off",
-    },
-    {
-      id: `${ORG2_ID}-discount-3`,
-      programId: `${ORG2_ID}-prog-soccer`,
-      type: "FAMILY_SIBLING" as const,
-      minQuantity: 2,
-      discountType: "FIXED_AMOUNT" as const,
-      discountValue: 25,
-      description: "2nd child $25 off",
-    },
   ];
   for (const discount of bulkDiscountData) {
     await prisma.programBulkDiscount.upsert({
@@ -4191,22 +3297,6 @@ async function main() {
       hasCapacityRestriction: false,
     },
   });
-  // Org2: Non-recurring one-time membership (auto-instance created by API, but seed manually for deterministic IDs)
-  const org2MembershipGroup = await prisma.membershipGroup.upsert({
-    where: { id: `${ORG2_ID}-mg-seasonal` },
-    update: {},
-    create: {
-      id: `${ORG2_ID}-mg-seasonal`,
-      organizationId: ORG2_ID,
-      name: "Seasonal Pass",
-      description: "Access to all programs for one season. Purchase once per season.",
-      isRecurring: true,
-      allowAutoRenew: false,
-      defaultPrice: 150,
-      defaultBillingInterval: "SESSION",
-      purchaseWindowDays: 30,
-    },
-  });
   await Promise.all([
     prisma.membershipInstance.upsert({
       where: { id: `${ORG1_ID}-mi-2026` },
@@ -4224,38 +3314,8 @@ async function main() {
         isAutoGenerated: false,
       },
     }),
-    prisma.membershipInstance.upsert({
-      where: { id: `${ORG2_ID}-mi-winter26` },
-      update: {},
-      create: {
-        id: `${ORG2_ID}-mi-winter26`,
-        membershipGroupId: org2MembershipGroup.id,
-        name: "Winter 2026",
-        price: 150,
-        billingInterval: "SESSION",
-        startDate: noonUTC("2026-01-01"),
-        endDate: noonUTC("2026-03-31"),
-        status: "ACTIVE",
-        isAutoGenerated: false,
-      },
-    }),
-    prisma.membershipInstance.upsert({
-      where: { id: `${ORG2_ID}-mi-spring26` },
-      update: {},
-      create: {
-        id: `${ORG2_ID}-mi-spring26`,
-        membershipGroupId: org2MembershipGroup.id,
-        name: "Spring 2026",
-        price: 150,
-        billingInterval: "SESSION",
-        startDate: noonUTC("2026-04-01"),
-        endDate: noonUTC("2026-06-30"),
-        status: "DRAFT",
-        isAutoGenerated: true,
-      },
-    }),
   ]);
-  console.log("  ✓ Created 2 membership groups and 3 instances (1 draft)");
+  console.log("  ✓ Created 1 membership group and 1 instance");
 
   // ============================================
   // ATHLETE MEMBERSHIPS
@@ -4293,30 +3353,6 @@ async function main() {
       startDate: noonUTC("2025-09-15"),
       status: "ACTIVE" as const,
       autoRenew: true,
-    },
-    {
-      id: `${ORG2_ID}-am-1`,
-      athleteId: `${ORG2_ID}-ath-1`,
-      membershipInstanceId: `${ORG2_ID}-mi-winter26`,
-      startDate: noonUTC("2026-01-01"),
-      status: "ACTIVE" as const,
-      autoRenew: false,
-    },
-    {
-      id: `${ORG2_ID}-am-2`,
-      athleteId: `${ORG2_ID}-ath-2`,
-      membershipInstanceId: `${ORG2_ID}-mi-winter26`,
-      startDate: noonUTC("2026-01-01"),
-      status: "ACTIVE" as const,
-      autoRenew: false,
-    },
-    {
-      id: `${ORG2_ID}-am-3`,
-      athleteId: `${ORG2_ID}-ath-3`,
-      membershipInstanceId: `${ORG2_ID}-mi-winter26`,
-      startDate: noonUTC("2026-01-15"),
-      status: "ACTIVE" as const,
-      autoRenew: false,
     },
   ];
   for (const am of athleteMembershipData) {
@@ -4359,30 +3395,6 @@ async function main() {
       programId: `${ORG1_ID}-prog-rec-bronze`,
       userId: org1Parent3.id,
       startDate: daysAgo(30),
-      status: "ACTIVE" as const,
-    },
-    {
-      id: `${ORG2_ID}-enr-1`,
-      athleteId: `${ORG2_ID}-ath-1`,
-      programId: `${ORG2_ID}-prog-soccer`,
-      userId: org2Parent1.id,
-      startDate: daysAgo(30),
-      status: "ACTIVE" as const,
-    },
-    {
-      id: `${ORG2_ID}-enr-2`,
-      athleteId: `${ORG2_ID}-ath-2`,
-      programId: `${ORG2_ID}-prog-basketball`,
-      userId: org2Parent1.id,
-      startDate: daysAgo(60),
-      status: "ACTIVE" as const,
-    },
-    {
-      id: `${ORG2_ID}-enr-3`,
-      athleteId: `${ORG2_ID}-ath-4`,
-      programId: `${ORG2_ID}-prog-swim`,
-      userId: org2Parent2.id,
-      startDate: daysAgo(90),
       status: "ACTIVE" as const,
     },
   ];
@@ -4483,72 +3495,8 @@ async function main() {
         categoryId: `${ORG1_ID}-cat-camps`,
       },
     }),
-    prisma.event.upsert({
-      where: { id: `${ORG2_ID}-evt-1` },
-      update: {},
-      create: {
-        id: `${ORG2_ID}-evt-1`,
-        title: "Youth Soccer Practice",
-        color: "#22c55e",
-        date: today,
-        startTime: "16:00",
-        endTime: "17:30",
-        type: "CLASS",
-        programId: `${ORG2_ID}-prog-soccer`,
-        coachId: org2Coach.id,
-        organizationId: ORG2_ID,
-        capacity: 24,
-      },
-    }),
-    prisma.event.upsert({
-      where: { id: `${ORG2_ID}-evt-2` },
-      update: {},
-      create: {
-        id: `${ORG2_ID}-evt-2`,
-        title: "Basketball Game Night",
-        color: "#f97316",
-        date: daysFromNow(2),
-        startTime: "18:00",
-        endTime: "20:00",
-        type: "CLASS",
-        programId: `${ORG2_ID}-prog-basketball`,
-        organizationId: ORG2_ID,
-        capacity: 20,
-      },
-    }),
-    prisma.event.upsert({
-      where: { id: `${ORG2_ID}-evt-3` },
-      update: {},
-      create: {
-        id: `${ORG2_ID}-evt-3`,
-        title: "Swim Team Tryouts",
-        color: "#06b6d4",
-        date: daysFromNow(14),
-        startTime: "07:00",
-        endTime: "11:00",
-        type: "TRYOUT",
-        programId: `${ORG2_ID}-prog-swim`,
-        organizationId: ORG2_ID,
-        capacity: 50,
-      },
-    }),
-    prisma.event.upsert({
-      where: { id: `${ORG2_ID}-evt-4` },
-      update: {},
-      create: {
-        id: `${ORG2_ID}-evt-4`,
-        title: "Birthday Party - Johnson",
-        color: "#eab308",
-        date: daysFromNow(10),
-        startTime: "14:00",
-        endTime: "16:00",
-        type: "PARTY",
-        organizationId: ORG2_ID,
-        capacity: 20,
-      },
-    }),
   ]);
-  console.log("  ✓ Created 9 events");
+  console.log("  ✓ Created 5 events");
 
   // ============================================
   // HISTORICAL EVENTS (for attendance metrics)
@@ -4610,49 +3558,6 @@ async function main() {
     );
   }
 
-  // Create 4 weeks of historical events for ORG2
-  for (let week = 1; week <= 4; week++) {
-    const weekDate = daysAgo(week * 7);
-    historicalEvents.push(
-      {
-        id: `${ORG2_ID}-evt-hist-soccer-${week}`,
-        title: "Soccer Practice - Historical",
-        date: weekDate,
-        startTime: "16:00",
-        endTime: "17:30",
-        type: "CLASS",
-        programId: `${ORG2_ID}-prog-soccer`,
-        coachId: org2Coach.id,
-        organizationId: ORG2_ID,
-        capacity: 24,
-      },
-      {
-        id: `${ORG2_ID}-evt-hist-basketball-${week}`,
-        title: "Basketball Practice - Historical",
-        date: weekDate,
-        startTime: "18:00",
-        endTime: "20:00",
-        type: "CLASS",
-        programId: `${ORG2_ID}-prog-basketball`,
-        coachId: org2Coach.id,
-        organizationId: ORG2_ID,
-        capacity: 20,
-      },
-      {
-        id: `${ORG2_ID}-evt-hist-swim-${week}`,
-        title: "Swim Practice - Historical",
-        date: weekDate,
-        startTime: "06:00",
-        endTime: "07:30",
-        type: "CLASS",
-        programId: `${ORG2_ID}-prog-swim`,
-        coachId: org2Coach.id,
-        organizationId: ORG2_ID,
-        capacity: 30,
-      }
-    );
-  }
-
   for (const evt of historicalEvents) {
     await prisma.event.upsert({ where: { id: evt.id }, update: {}, create: evt });
   }
@@ -4697,15 +3602,7 @@ async function main() {
       status: "PRESENT",
       checkedIn: today,
     },
-    { athleteId: `${ORG1_ID}-ath-3`, eventId: `${ORG1_ID}-evt-4`, status: "REGISTERED" },
-    {
-      athleteId: `${ORG2_ID}-ath-1`,
-      eventId: `${ORG2_ID}-evt-1`,
-      status: "PRESENT",
-      checkedIn: today,
-    },
-    { athleteId: `${ORG2_ID}-ath-2`, eventId: `${ORG2_ID}-evt-2`, status: "REGISTERED" },
-    { athleteId: `${ORG2_ID}-ath-4`, eventId: `${ORG2_ID}-evt-3`, status: "REGISTERED" }
+    { athleteId: `${ORG1_ID}-ath-3`, eventId: `${ORG1_ID}-evt-4`, status: "REGISTERED" }
   );
 
   // Historical attendance - ORG1 (Bronze class - Athlete 1 and 4)
@@ -4753,81 +3650,6 @@ async function main() {
       eventId: `${ORG1_ID}-evt-hist-jo-${week}`,
       status: "PRESENT",
       checkedIn: weekDate,
-    });
-  }
-
-  // Historical attendance - ORG2 (Soccer - Athlete 1)
-  for (let week = 1; week <= 4; week++) {
-    const weekDate = daysAgo(week * 7);
-    const status = week === 2 ? "LATE" : week === 4 ? "ABSENT" : "PRESENT";
-    attendanceData.push({
-      athleteId: `${ORG2_ID}-ath-1`,
-      eventId: `${ORG2_ID}-evt-hist-soccer-${week}`,
-      status,
-      checkedIn: status !== "ABSENT" ? weekDate : undefined,
-    });
-  }
-
-  // Historical attendance - ORG2 (Basketball - Athlete 2)
-  for (let week = 1; week <= 4; week++) {
-    const weekDate = daysAgo(week * 7);
-    const status = week === 1 ? "EXCUSED" : "PRESENT";
-    attendanceData.push({
-      athleteId: `${ORG2_ID}-ath-2`,
-      eventId: `${ORG2_ID}-evt-hist-basketball-${week}`,
-      status,
-      checkedIn: status === "PRESENT" ? weekDate : undefined,
-      notes: status === "EXCUSED" ? "Doctor appointment" : undefined,
-    });
-  }
-
-  // Historical attendance - ORG2 (Athlete 4 in swim events - add to some soccer events too)
-  for (let week = 1; week <= 4; week++) {
-    const weekDate = daysAgo(week * 7);
-    attendanceData.push({
-      athleteId: `${ORG2_ID}-ath-4`,
-      eventId: `${ORG2_ID}-evt-hist-soccer-${week}`,
-      status: week % 2 === 0 ? "PRESENT" : "ABSENT",
-      checkedIn: week % 2 === 0 ? weekDate : undefined,
-    });
-  }
-
-  // Historical attendance - ORG2 (Swim - Athlete 4, Lucas) - mostly present
-  for (let week = 1; week <= 4; week++) {
-    const weekDate = daysAgo(week * 7);
-    const status = week === 3 ? "LATE" : "PRESENT";
-    attendanceData.push({
-      athleteId: `${ORG2_ID}-ath-4`,
-      eventId: `${ORG2_ID}-evt-hist-swim-${week}`,
-      status,
-      checkedIn: weekDate,
-      notes: status === "LATE" ? "Traffic delay" : undefined,
-    });
-  }
-
-  // Historical attendance - ORG2 (Soccer - Athlete 3, Sofia) - new beginner, inconsistent
-  for (let week = 1; week <= 4; week++) {
-    const weekDate = daysAgo(week * 7);
-    const status = week === 1 ? "ABSENT" : week === 3 ? "LATE" : "PRESENT";
-    attendanceData.push({
-      athleteId: `${ORG2_ID}-ath-3`,
-      eventId: `${ORG2_ID}-evt-hist-soccer-${week}`,
-      status,
-      checkedIn: status !== "ABSENT" ? weekDate : undefined,
-      notes: status === "ABSENT" ? "Schedule conflict" : undefined,
-    });
-  }
-
-  // Historical attendance - ORG2 (Basketball - Athlete 6, Noah) - good attendance
-  for (let week = 1; week <= 4; week++) {
-    const weekDate = daysAgo(week * 7);
-    const status = week === 4 ? "EXCUSED" : "PRESENT";
-    attendanceData.push({
-      athleteId: `${ORG2_ID}-ath-6`,
-      eventId: `${ORG2_ID}-evt-hist-basketball-${week}`,
-      status,
-      checkedIn: status === "PRESENT" ? weekDate : undefined,
-      notes: status === "EXCUSED" ? "School field trip" : undefined,
     });
   }
 
@@ -4962,69 +3784,7 @@ async function main() {
       },
     },
   });
-  await prisma.invoice.upsert({
-    where: { id: `${ORG2_ID}-inv-1` },
-    update: {},
-    create: {
-      id: `${ORG2_ID}-inv-1`,
-      reference: "MSC-2026-0001",
-      userId: org2Parent1.id,
-      status: "PAID",
-      dueDate: daysAgo(5),
-      subtotal: 270,
-      tax: 24.3,
-      total: 294.3,
-      organizationId: ORG2_ID,
-      lineItems: {
-        create: [
-          {
-            description: "Soccer Season - Jake",
-            quantity: 1,
-            unitPrice: 175,
-            total: 175,
-            programId: `${ORG2_ID}-prog-soccer`,
-            athleteId: `${ORG2_ID}-ath-1`,
-          },
-          {
-            description: "Basketball Monthly - Ethan",
-            quantity: 1,
-            unitPrice: 95,
-            total: 95,
-            programId: `${ORG2_ID}-prog-basketball`,
-            athleteId: `${ORG2_ID}-ath-2`,
-          },
-        ],
-      },
-    },
-  });
-  await prisma.invoice.upsert({
-    where: { id: `${ORG2_ID}-inv-2` },
-    update: {},
-    create: {
-      id: `${ORG2_ID}-inv-2`,
-      reference: "MSC-2026-0002",
-      userId: org2Parent2.id,
-      status: "PARTIAL",
-      dueDate: daysAgo(2),
-      subtotal: 1200,
-      tax: 108,
-      total: 1308,
-      organizationId: ORG2_ID,
-      lineItems: {
-        create: [
-          {
-            description: "Swim Team Annual - Lucas",
-            quantity: 1,
-            unitPrice: 1200,
-            total: 1200,
-            programId: `${ORG2_ID}-prog-swim`,
-            athleteId: `${ORG2_ID}-ath-4`,
-          },
-        ],
-      },
-    },
-  });
-  console.log("  ✓ Created 5 invoices with line items");
+  console.log("  ✓ Created 3 invoices with line items");
 
   // ============================================
   // PAYMENTS
@@ -5039,24 +3799,6 @@ async function main() {
       method: "CARD" as const,
       status: "COMPLETED" as const,
       processedAt: daysAgo(20),
-    },
-    {
-      id: `${ORG2_ID}-pay-1`,
-      invoiceId: `${ORG2_ID}-inv-1`,
-      userId: org2Parent1.id,
-      amount: 294.3,
-      method: "CARD" as const,
-      status: "COMPLETED" as const,
-      processedAt: daysAgo(7),
-    },
-    {
-      id: `${ORG2_ID}-pay-2`,
-      invoiceId: `${ORG2_ID}-inv-2`,
-      userId: org2Parent2.id,
-      amount: 600,
-      method: "BANK" as const,
-      status: "COMPLETED" as const,
-      processedAt: daysAgo(3),
     },
   ];
   for (const pay of paymentData) {
@@ -5093,18 +3835,6 @@ async function main() {
       productScope: "MEMBERSHIP" as const,
       status: "ACTIVE" as const,
       organizationId: ORG1_ID,
-    },
-    {
-      id: `${ORG2_ID}-disc-1`,
-      name: "Multi-Sport Bundle",
-      code: "MULTISPORT20",
-      type: "PERCENTAGE" as const,
-      amount: 20,
-      validFrom: daysAgo(60),
-      userScope: "MEMBERS" as const,
-      productScope: "MEMBERSHIP" as const,
-      status: "ACTIVE" as const,
-      organizationId: ORG2_ID,
     },
   ];
   for (const disc of discountData) {
@@ -5212,93 +3942,6 @@ async function main() {
       status: "ACTIVE" as const,
       organizationId: ORG1_ID,
     },
-    // Org2 defaults
-    {
-      id: `${ORG2_ID}-gl-def-prog`,
-      code: "4100",
-      description: "Program Revenue",
-      type: "REVENUE" as const,
-      status: "ACTIVE" as const,
-      isDefault: true,
-      defaultForType: "PROGRAM" as const,
-      organizationId: ORG2_ID,
-    },
-    {
-      id: `${ORG2_ID}-gl-def-event`,
-      code: "4200",
-      description: "Event Revenue",
-      type: "REVENUE" as const,
-      status: "ACTIVE" as const,
-      isDefault: true,
-      defaultForType: "EVENT" as const,
-      organizationId: ORG2_ID,
-    },
-    {
-      id: `${ORG2_ID}-gl-def-comp`,
-      code: "4300",
-      description: "Competition Revenue",
-      type: "REVENUE" as const,
-      status: "ACTIVE" as const,
-      isDefault: true,
-      defaultForType: "COMPETITION" as const,
-      organizationId: ORG2_ID,
-    },
-    {
-      id: `${ORG2_ID}-gl-def-memb`,
-      code: "4400",
-      description: "Membership Revenue",
-      type: "REVENUE" as const,
-      status: "ACTIVE" as const,
-      isDefault: true,
-      defaultForType: "MEMBERSHIP" as const,
-      organizationId: ORG2_ID,
-    },
-    {
-      id: `${ORG2_ID}-gl-def-pass`,
-      code: "4500",
-      description: "Pass Revenue",
-      type: "REVENUE" as const,
-      status: "ACTIVE" as const,
-      isDefault: true,
-      defaultForType: "PASS" as const,
-      organizationId: ORG2_ID,
-    },
-    {
-      id: `${ORG2_ID}-gl-def-prod`,
-      code: "4600",
-      description: "Product Revenue",
-      type: "REVENUE" as const,
-      status: "ACTIVE" as const,
-      isDefault: true,
-      defaultForType: "PRODUCT" as const,
-      organizationId: ORG2_ID,
-    },
-    {
-      id: `${ORG2_ID}-gl-def-tax`,
-      code: "2100",
-      description: "Sales Tax Collected",
-      type: "LIABILITY" as const,
-      status: "ACTIVE" as const,
-      isDefault: true,
-      organizationId: ORG2_ID,
-    },
-    // Org2 custom codes
-    {
-      id: `${ORG2_ID}-gl-1`,
-      code: "MSC-4100",
-      description: "Program Revenue",
-      type: "REVENUE" as const,
-      status: "ACTIVE" as const,
-      organizationId: ORG2_ID,
-    },
-    {
-      id: `${ORG2_ID}-gl-2`,
-      code: "MSC-5100",
-      description: "Staff Wages",
-      type: "EXPENSE" as const,
-      status: "ACTIVE" as const,
-      organizationId: ORG2_ID,
-    },
   ];
   for (const gl of glCodeData) {
     await prisma.gLCode.upsert({
@@ -5332,16 +3975,6 @@ async function main() {
       debit: 3500,
       status: "POSTED" as const,
       organizationId: ORG1_ID,
-    },
-    {
-      id: `${ORG2_ID}-le-1`,
-      date: daysAgo(7),
-      description: "Karen Foster - Program fees",
-      glCodeId: `${ORG2_ID}-gl-1`,
-      reference: "MSC-2026-0001",
-      credit: 294.3,
-      status: "POSTED" as const,
-      organizationId: ORG2_ID,
     },
   ];
   for (const le of ledgerData) {
@@ -5637,73 +4270,7 @@ async function main() {
     });
   }
 
-  // Org2 - Multi-sport skills
-  const org2SkillsData = [
-    {
-      id: `${ORG2_ID}-skill-1`,
-      name: "Dribbling",
-      category: "Soccer",
-      minAge: 5,
-      maxAge: 14,
-      description:
-        "Basic ball control while moving. Key points: soft touches, use both feet, keep ball close.",
-    },
-    {
-      id: `${ORG2_ID}-skill-2`,
-      name: "Passing",
-      category: "Soccer",
-      minAge: 5,
-      maxAge: 14,
-      description:
-        "Accurate short passes with inside of foot. Key points: plant foot beside ball, follow through toward target.",
-    },
-    {
-      id: `${ORG2_ID}-skill-3`,
-      name: "Layup",
-      category: "Basketball",
-      minAge: 7,
-      maxAge: 18,
-      description:
-        "Basic layup from both sides of the basket. Key points: two-step approach, knee up, soft touch on backboard.",
-    },
-    {
-      id: `${ORG2_ID}-skill-4`,
-      name: "Freestyle Stroke",
-      category: "Swimming",
-      minAge: 5,
-      maxAge: 18,
-      description:
-        "Proper freestyle technique with rhythmic breathing. Key points: high elbow recovery, bilateral breathing, flutter kick.",
-    },
-    {
-      id: `${ORG2_ID}-skill-5`,
-      name: "Shooting Form",
-      category: "Basketball",
-      minAge: 8,
-      maxAge: 18,
-      description:
-        "Proper shooting mechanics from mid-range. Key points: BEEF - Balance, Eyes, Elbow, Follow-through.",
-    },
-    {
-      id: `${ORG2_ID}-skill-6`,
-      name: "Backstroke",
-      category: "Swimming",
-      minAge: 6,
-      maxAge: 18,
-      description:
-        "Proper backstroke technique with rotation. Key points: pinky first entry, hip rotation, steady kick.",
-    },
-  ];
-
-  for (const skill of org2SkillsData) {
-    await prisma.skill.upsert({
-      where: { id: skill.id },
-      update: {},
-      create: { ...skill, organizationId: ORG2_ID },
-    });
-  }
-
-  console.log(`  ✓ Created ${org1SkillsData.length + org2SkillsData.length} skills`);
+  console.log(`  ✓ Created ${org1SkillsData.length} skills`);
 
   // ============================================
   // EVALUATION TEMPLATES
@@ -5877,67 +4444,6 @@ async function main() {
       completionThreshold: 10, // Must pass at least 10 skills
       skillIds: [] as string[], // Will be populated by auto-sync
     },
-    // Org2 - Metro Sports evaluation templates
-    {
-      id: `${ORG2_ID}-template-soccer-skills`,
-      name: "Soccer Skills Assessment",
-      description:
-        "Fundamental soccer skills evaluation covering dribbling and passing for beginner-level players.",
-      levelId: `${ORG2_ID}-level-beginner`,
-      minAge: 5,
-      maxAge: 14,
-      organizationId: ORG2_ID,
-      autoSyncEnabled: false,
-      autoSyncLevels: [] as string[],
-      autoSyncCategories: [] as string[],
-      scoringType: "PASS_FAIL" as const,
-      pointScaleMin: 1,
-      pointScaleMax: 10,
-      pointScalePassThreshold: 7,
-      completionType: "PERCENTAGE" as const,
-      completionThreshold: 75,
-      skillIds: [`${ORG2_ID}-skill-1`, `${ORG2_ID}-skill-2`],
-    },
-    {
-      id: `${ORG2_ID}-template-basketball-skills`,
-      name: "Basketball Skills Assessment",
-      description:
-        "Basketball fundamentals evaluation covering layups and shooting form for intermediate players.",
-      levelId: `${ORG2_ID}-level-intermediate`,
-      minAge: 8,
-      maxAge: 18,
-      organizationId: ORG2_ID,
-      autoSyncEnabled: false,
-      autoSyncLevels: [] as string[],
-      autoSyncCategories: [] as string[],
-      scoringType: "POINT_SCALE" as const,
-      pointScaleMin: 1,
-      pointScaleMax: 10,
-      pointScalePassThreshold: 7,
-      completionType: "PERCENTAGE" as const,
-      completionThreshold: 80,
-      skillIds: [`${ORG2_ID}-skill-3`, `${ORG2_ID}-skill-5`],
-    },
-    {
-      id: `${ORG2_ID}-template-swim-skills`,
-      name: "Swim Skills Assessment",
-      description:
-        "Swimming technique evaluation covering freestyle and backstroke for advancing swimmers.",
-      levelId: `${ORG2_ID}-level-advanced`,
-      minAge: 6,
-      maxAge: 18,
-      organizationId: ORG2_ID,
-      autoSyncEnabled: false,
-      autoSyncLevels: [] as string[],
-      autoSyncCategories: [] as string[],
-      scoringType: "PASS_FAIL" as const,
-      pointScaleMin: 1,
-      pointScaleMax: 10,
-      pointScalePassThreshold: 7,
-      completionType: "ALL" as const,
-      completionThreshold: 100,
-      skillIds: [`${ORG2_ID}-skill-4`, `${ORG2_ID}-skill-6`],
-    },
   ];
 
   for (const template of evaluationTemplatesData) {
@@ -6024,34 +4530,6 @@ async function main() {
       badgeImageUrl: null,
       organizationId: ORG1_ID,
     },
-    // Org2 - Metro Sports achievements
-    {
-      id: `${ORG2_ID}-achievement-soccer`,
-      templateId: `${ORG2_ID}-template-soccer-skills`,
-      name: "Soccer Skills Star",
-      description:
-        "Demonstrated solid soccer fundamentals in dribbling and passing. Ready for the next level!",
-      badgeImageUrl: null,
-      organizationId: ORG2_ID,
-    },
-    {
-      id: `${ORG2_ID}-achievement-basketball`,
-      templateId: `${ORG2_ID}-template-basketball-skills`,
-      name: "Basketball Rising Star",
-      description:
-        "Showed excellent basketball skills with strong shooting form and layup technique.",
-      badgeImageUrl: null,
-      organizationId: ORG2_ID,
-    },
-    {
-      id: `${ORG2_ID}-achievement-swim`,
-      templateId: `${ORG2_ID}-template-swim-skills`,
-      name: "Swim Team Ready",
-      description:
-        "Passed the swim skills assessment with proficiency in freestyle and backstroke. Ready for competitive swimming!",
-      badgeImageUrl: null,
-      organizationId: ORG2_ID,
-    },
   ];
 
   for (const achievement of achievementsData) {
@@ -6106,28 +4584,6 @@ async function main() {
       id: `${ORG1_ID}-pet-preschool`,
       programId: `${ORG1_ID}-prog-preschool`,
       templateId: `${ORG1_ID}-template-preschool`,
-      isRequired: true,
-      dueDate: null,
-    },
-    // Org2 - Metro Sports program-template assignments
-    {
-      id: `${ORG2_ID}-pet-soccer`,
-      programId: `${ORG2_ID}-prog-soccer`,
-      templateId: `${ORG2_ID}-template-soccer-skills`,
-      isRequired: true,
-      dueDate: null,
-    },
-    {
-      id: `${ORG2_ID}-pet-basketball`,
-      programId: `${ORG2_ID}-prog-basketball`,
-      templateId: `${ORG2_ID}-template-basketball-skills`,
-      isRequired: true,
-      dueDate: null,
-    },
-    {
-      id: `${ORG2_ID}-pet-swim`,
-      programId: `${ORG2_ID}-prog-swim`,
-      templateId: `${ORG2_ID}-template-swim-skills`,
       isRequired: true,
       dueDate: null,
     },
@@ -6512,161 +4968,7 @@ async function main() {
     });
   }
 
-  // Evaluation 6 - Jake (Metro, Soccer) - Completed Soccer Skills Assessment
-  const eval6 = await prisma.evaluation.upsert({
-    where: { id: `${ORG2_ID}-eval-1` },
-    update: { programId: `${ORG2_ID}-prog-soccer` },
-    create: {
-      id: `${ORG2_ID}-eval-1`,
-      athleteId: `${ORG2_ID}-ath-1`,
-      coachId: org2Coach.id,
-      templateId: `${ORG2_ID}-template-soccer-skills`,
-      programId: `${ORG2_ID}-prog-soccer`,
-      date: daysAgo(10),
-      levelId: `${ORG2_ID}-level-beginner`,
-      overallScore: 7.0,
-      status: "PASS",
-      notes:
-        "Jake shows great footwork for his age. Dribbling is solid, passing accuracy improving.",
-    },
-  });
-
-  const eval6Skills = [
-    {
-      skillId: `${ORG2_ID}-skill-1`,
-      attemptStatus: "SUCCEEDED" as const,
-      passed: true,
-      comment: "Good close control, uses both feet",
-    },
-    {
-      skillId: `${ORG2_ID}-skill-2`,
-      attemptStatus: "SUCCEEDED" as const,
-      passed: true,
-      comment: "Accurate short passes, needs work on long balls",
-    },
-  ];
-
-  for (const skill of eval6Skills) {
-    await prisma.evaluationSkill.upsert({
-      where: { evaluationId_skillId: { evaluationId: eval6.id, skillId: skill.skillId } },
-      update: { passed: skill.passed },
-      create: { evaluationId: eval6.id, ...skill },
-    });
-  }
-
-  // Evaluation 7 - Ethan (Metro, Basketball) - Completed Basketball Skills (Point Scale)
-  const eval7 = await prisma.evaluation.upsert({
-    where: { id: `${ORG2_ID}-eval-2` },
-    update: { programId: `${ORG2_ID}-prog-basketball` },
-    create: {
-      id: `${ORG2_ID}-eval-2`,
-      athleteId: `${ORG2_ID}-ath-2`,
-      coachId: org2Coach.id,
-      templateId: `${ORG2_ID}-template-basketball-skills`,
-      programId: `${ORG2_ID}-prog-basketball`,
-      date: daysAgo(18),
-      levelId: `${ORG2_ID}-level-intermediate`,
-      overallScore: 8.5,
-      status: "EXCELLENT",
-      notes:
-        "Ethan has excellent court awareness. Layups are consistent and shooting form is textbook.",
-    },
-  });
-
-  const eval7Skills = [
-    {
-      skillId: `${ORG2_ID}-skill-3`,
-      attemptStatus: "SUCCEEDED" as const,
-      pointScore: 9,
-      passed: true,
-      comment: "Smooth layups from both sides",
-    },
-    {
-      skillId: `${ORG2_ID}-skill-5`,
-      attemptStatus: "SUCCEEDED" as const,
-      pointScore: 8,
-      passed: true,
-      comment: "Great BEEF form, consistent from mid-range",
-    },
-  ];
-
-  for (const skill of eval7Skills) {
-    await prisma.evaluationSkill.upsert({
-      where: { evaluationId_skillId: { evaluationId: eval7.id, skillId: skill.skillId } },
-      update: { passed: skill.passed, pointScore: skill.pointScore },
-      create: { evaluationId: eval7.id, ...skill },
-    });
-  }
-
-  // Evaluation 8 - Lucas (Metro, Swim) - Completed Swim Skills Assessment
-  const eval8 = await prisma.evaluation.upsert({
-    where: { id: `${ORG2_ID}-eval-3` },
-    update: { programId: `${ORG2_ID}-prog-swim` },
-    create: {
-      id: `${ORG2_ID}-eval-3`,
-      athleteId: `${ORG2_ID}-ath-4`,
-      coachId: org2Coach.id,
-      templateId: `${ORG2_ID}-template-swim-skills`,
-      programId: `${ORG2_ID}-prog-swim`,
-      date: daysAgo(25),
-      levelId: `${ORG2_ID}-level-advanced`,
-      overallScore: 8.0,
-      status: "PASS",
-      notes: "Lucas has strong stroke technique. Ready for competitive meets.",
-    },
-  });
-
-  const eval8Skills = [
-    {
-      skillId: `${ORG2_ID}-skill-4`,
-      attemptStatus: "SUCCEEDED" as const,
-      passed: true,
-      comment: "Excellent bilateral breathing and high elbow recovery",
-    },
-    {
-      skillId: `${ORG2_ID}-skill-6`,
-      attemptStatus: "SUCCEEDED" as const,
-      passed: true,
-      comment: "Good hip rotation and steady kick",
-    },
-  ];
-
-  for (const skill of eval8Skills) {
-    await prisma.evaluationSkill.upsert({
-      where: { evaluationId_skillId: { evaluationId: eval8.id, skillId: skill.skillId } },
-      update: { passed: skill.passed },
-      create: { evaluationId: eval8.id, ...skill },
-    });
-  }
-
-  // Evaluation 9 - Noah (Metro, Basketball) - Pending Basketball Skills Assessment
-  const eval9 = await prisma.evaluation.upsert({
-    where: { id: `${ORG2_ID}-eval-4` },
-    update: { programId: `${ORG2_ID}-prog-basketball` },
-    create: {
-      id: `${ORG2_ID}-eval-4`,
-      athleteId: `${ORG2_ID}-ath-6`,
-      coachId: org2Coach.id,
-      templateId: `${ORG2_ID}-template-basketball-skills`,
-      programId: `${ORG2_ID}-prog-basketball`,
-      date: daysFromNow(5),
-      levelId: `${ORG2_ID}-level-intermediate`,
-      overallScore: 0,
-      status: "PENDING",
-      notes: null,
-    },
-  });
-
-  const eval9SkillIds = [`${ORG2_ID}-skill-3`, `${ORG2_ID}-skill-5`];
-  for (const skillId of eval9SkillIds) {
-    await prisma.evaluationSkill.upsert({
-      where: { evaluationId_skillId: { evaluationId: eval9.id, skillId } },
-      update: { passed: false },
-      create: { evaluationId: eval9.id, skillId, attemptStatus: "NOT_ATTEMPTED", passed: false },
-    });
-  }
-
-  console.log("  ✓ Created 9 evaluations with skill ratings (5 Sunrise + 4 Metro)");
+  console.log("  ✓ Created 5 evaluations with skill ratings");
 
   // ============================================
   // ATHLETE ACHIEVEMENTS (Earned from completed evaluations)
@@ -6713,34 +5015,6 @@ async function main() {
       earnedAt: daysAgo(7),
       bestResultsByCategory: { Floor: 66, Beam: 100, Flexibility: 100 },
       overallScore: 6.0,
-    },
-    // Metro Sports athlete achievements
-    {
-      id: `${ORG2_ID}-athlete-ach-1`,
-      athleteId: `${ORG2_ID}-ath-1`,
-      achievementId: `${ORG2_ID}-achievement-soccer`,
-      evaluationId: eval6.id,
-      earnedAt: daysAgo(10),
-      bestResultsByCategory: { Soccer: 100 },
-      overallScore: 7.0,
-    },
-    {
-      id: `${ORG2_ID}-athlete-ach-2`,
-      athleteId: `${ORG2_ID}-ath-2`,
-      achievementId: `${ORG2_ID}-achievement-basketball`,
-      evaluationId: eval7.id,
-      earnedAt: daysAgo(18),
-      bestResultsByCategory: { Basketball: 8.5 },
-      overallScore: 8.5,
-    },
-    {
-      id: `${ORG2_ID}-athlete-ach-3`,
-      athleteId: `${ORG2_ID}-ath-4`,
-      achievementId: `${ORG2_ID}-achievement-swim`,
-      evaluationId: eval8.id,
-      earnedAt: daysAgo(25),
-      bestResultsByCategory: { Swimming: 100 },
-      overallScore: 8.0,
     },
   ];
 
@@ -6890,104 +5164,8 @@ async function main() {
     });
   }
 
-  // Jake's skill progress (Metro - Soccer)
-  const jakeProgress = [
-    {
-      athleteId: `${ORG2_ID}-ath-1`,
-      skillId: `${ORG2_ID}-skill-1`,
-      bestStatus: "SUCCEEDED" as const,
-      attemptCount: 3,
-      successCount: 2,
-      firstAttemptedAt: daysAgo(40),
-      firstSucceededAt: daysAgo(20),
-      lastEvaluatedAt: daysAgo(10),
-    },
-    {
-      athleteId: `${ORG2_ID}-ath-1`,
-      skillId: `${ORG2_ID}-skill-2`,
-      bestStatus: "SUCCEEDED" as const,
-      attemptCount: 4,
-      successCount: 2,
-      firstAttemptedAt: daysAgo(35),
-      firstSucceededAt: daysAgo(10),
-      lastEvaluatedAt: daysAgo(10),
-    },
-  ];
-
-  for (const progress of jakeProgress) {
-    await prisma.athleteSkillProgress.upsert({
-      where: { athleteId_skillId: { athleteId: progress.athleteId, skillId: progress.skillId } },
-      update: {},
-      create: { id: `${progress.athleteId}-progress-${progress.skillId}`, ...progress },
-    });
-  }
-
-  // Ethan's skill progress (Metro - Basketball)
-  const ethanProgress = [
-    {
-      athleteId: `${ORG2_ID}-ath-2`,
-      skillId: `${ORG2_ID}-skill-3`,
-      bestStatus: "SUCCEEDED" as const,
-      attemptCount: 5,
-      successCount: 4,
-      firstAttemptedAt: daysAgo(60),
-      firstSucceededAt: daysAgo(30),
-      lastEvaluatedAt: daysAgo(18),
-    },
-    {
-      athleteId: `${ORG2_ID}-ath-2`,
-      skillId: `${ORG2_ID}-skill-5`,
-      bestStatus: "SUCCEEDED" as const,
-      attemptCount: 6,
-      successCount: 3,
-      firstAttemptedAt: daysAgo(55),
-      firstSucceededAt: daysAgo(18),
-      lastEvaluatedAt: daysAgo(18),
-    },
-  ];
-
-  for (const progress of ethanProgress) {
-    await prisma.athleteSkillProgress.upsert({
-      where: { athleteId_skillId: { athleteId: progress.athleteId, skillId: progress.skillId } },
-      update: {},
-      create: { id: `${progress.athleteId}-progress-${progress.skillId}`, ...progress },
-    });
-  }
-
-  // Lucas's skill progress (Metro - Swimming)
-  const lucasProgress = [
-    {
-      athleteId: `${ORG2_ID}-ath-4`,
-      skillId: `${ORG2_ID}-skill-4`,
-      bestStatus: "SUCCEEDED" as const,
-      attemptCount: 4,
-      successCount: 3,
-      firstAttemptedAt: daysAgo(80),
-      firstSucceededAt: daysAgo(40),
-      lastEvaluatedAt: daysAgo(25),
-    },
-    {
-      athleteId: `${ORG2_ID}-ath-4`,
-      skillId: `${ORG2_ID}-skill-6`,
-      bestStatus: "SUCCEEDED" as const,
-      attemptCount: 5,
-      successCount: 3,
-      firstAttemptedAt: daysAgo(70),
-      firstSucceededAt: daysAgo(25),
-      lastEvaluatedAt: daysAgo(25),
-    },
-  ];
-
-  for (const progress of lucasProgress) {
-    await prisma.athleteSkillProgress.upsert({
-      where: { athleteId_skillId: { athleteId: progress.athleteId, skillId: progress.skillId } },
-      update: {},
-      create: { id: `${progress.athleteId}-progress-${progress.skillId}`, ...progress },
-    });
-  }
-
   console.log(
-    `  ✓ Created ${emilyProgress.length + sophieProgress.length + jakeProgress.length + ethanProgress.length + lucasProgress.length} athlete skill progress records`
+    `  ✓ Created ${emilyProgress.length + sophieProgress.length} athlete skill progress records`
   );
 
   // ============================================
@@ -7025,27 +5203,6 @@ async function main() {
       status: "PUBLISHED" as const,
       publishedAt: daysAgo(0),
       organizationId: ORG1_ID,
-    },
-    {
-      id: `${ORG2_ID}-ann-1`,
-      title: "Swim Meet Carpool",
-      content:
-        "<p>We're organizing carpools for the upcoming swim meet.</p><p>Please sign up at the front desk if interested.</p>",
-      priority: "NORMAL" as const,
-      targetProgramId: `${ORG2_ID}-prog-swim`,
-      status: "PUBLISHED" as const,
-      publishedAt: daysAgo(2),
-      organizationId: ORG2_ID,
-    },
-    {
-      id: `${ORG2_ID}-ann-2`,
-      title: "Summer Camp Early Bird Registration",
-      content:
-        "<p>Summer camp registration opens next week!</p><p><em>Early bird discounts available through March 15th.</em></p>",
-      priority: "LOW" as const,
-      status: "PUBLISHED" as const,
-      publishedAt: daysAgo(5),
-      organizationId: ORG2_ID,
     },
   ];
   for (const ann of announcementData) {
@@ -7148,31 +5305,6 @@ async function main() {
         showRegistration: true,
         showContact: true,
         showTeam: true,
-        isPublished: true,
-        infoBox1Title: defaultInfoBox1Title,
-        infoBox1Content: defaultInfoBox1Content,
-        infoBox2Title: defaultInfoBox2Title,
-        infoBox2Content: defaultInfoBox2Content,
-        infoBox3Title: defaultInfoBox3Title,
-        infoBox3Content: defaultInfoBox3Content,
-      },
-    }),
-    prisma.websiteConfig.upsert({
-      where: { organizationId: ORG2_ID },
-      update: {},
-      create: {
-        organizationId: ORG2_ID,
-        subdomain: "metro-sports",
-        primaryColor: "#2D5A27",
-        secondaryColor: "#F5A623",
-        heroHeadline: "Play. Compete. Thrive.",
-        heroSubheadline: "Your community sports destination",
-        heroAgeRange: "All Ages Welcome",
-        heroProgramPeriods: "Seasonal Programs",
-        heroLocation: "San Jose, CA",
-        showCalendar: true,
-        showRegistration: true,
-        showContact: true,
         isPublished: true,
         infoBox1Title: defaultInfoBox1Title,
         infoBox1Content: defaultInfoBox1Content,
@@ -7371,59 +5503,8 @@ async function main() {
         pickupFacilityId: org1Facility1.id,
       },
     }),
-    prisma.product.upsert({
-      where: { id: `${ORG2_ID}-prod-1` },
-      update: { fulfillmentType: "PICKUP_ONLY", pickupFacilityId: org2Facility.id },
-      create: {
-        id: `${ORG2_ID}-prod-1`,
-        organizationId: ORG2_ID,
-        name: "Soccer Jersey",
-        sku: "JERSEY-SOC-001",
-        category: "Apparel",
-        price: 35.0,
-        maxInventory: 80,
-        currentInventory: 52,
-        isActive: true,
-        fulfillmentType: "PICKUP_ONLY",
-        pickupFacilityId: org2Facility.id,
-      },
-    }),
-    prisma.product.upsert({
-      where: { id: `${ORG2_ID}-prod-2` },
-      update: { fulfillmentType: "PICKUP_ONLY", pickupFacilityId: org2Facility.id },
-      create: {
-        id: `${ORG2_ID}-prod-2`,
-        organizationId: ORG2_ID,
-        name: "Swim Cap",
-        sku: "CAP-SWIM-001",
-        category: "Equipment",
-        price: 15.0,
-        maxInventory: 100,
-        currentInventory: 78,
-        isActive: true,
-        fulfillmentType: "PICKUP_ONLY",
-        pickupFacilityId: org2Facility.id,
-      },
-    }),
-    prisma.product.upsert({
-      where: { id: `${ORG2_ID}-prod-3` },
-      update: { fulfillmentType: "PICKUP_ONLY", pickupFacilityId: org2Facility.id },
-      create: {
-        id: `${ORG2_ID}-prod-3`,
-        organizationId: ORG2_ID,
-        name: "Sports Bag",
-        sku: "BAG-001",
-        category: "Accessories",
-        price: 45.0,
-        maxInventory: 30,
-        currentInventory: 22,
-        isActive: true,
-        fulfillmentType: "PICKUP_ONLY",
-        pickupFacilityId: org2Facility.id,
-      },
-    }),
   ]);
-  console.log("  ✓ Created 7 products");
+  console.log("  ✓ Created 4 products");
 
   // ============================================
   // STOCK MOVEMENTS
@@ -7447,24 +5528,6 @@ async function main() {
       previousQty: 50,
       newQty: 35,
       notes: "Competition season sales",
-    },
-    {
-      id: `${ORG2_ID}-sm-1`,
-      productId: `${ORG2_ID}-prod-1`,
-      type: "RESTOCK" as const,
-      quantity: 80,
-      previousQty: 0,
-      newQty: 80,
-      notes: "Season start inventory",
-    },
-    {
-      id: `${ORG2_ID}-sm-2`,
-      productId: `${ORG2_ID}-prod-1`,
-      type: "SALE" as const,
-      quantity: -28,
-      previousQty: 80,
-      newQty: 52,
-      notes: "Team jersey distribution",
     },
   ];
   for (const sm of stockMovementData) {
@@ -7508,7 +5571,7 @@ async function main() {
       categories: ["Athletes", "Scheduling"],
       targetDate: daysFromNow(120), // Q2 2026
       statusChangedAt: daysAgo(7),
-      userId: org2Admin.id,
+      userId: org1Admin.id,
     },
   });
 
@@ -7542,7 +5605,7 @@ async function main() {
       categories: ["Integrations", "Financials"],
       targetDate: daysFromNow(180), // Q3 2026
       statusChangedAt: daysAgo(21),
-      userId: org2Admin.id,
+      userId: org1Admin.id,
     },
   });
 
@@ -7583,15 +5646,11 @@ async function main() {
   const voteData = [
     { id: "vote-1-1", featureRequestId: feature1.id, userId: org1Admin.id },
     { id: "vote-1-2", featureRequestId: feature1.id, userId: org1Coach1.id },
-    { id: "vote-1-3", featureRequestId: feature1.id, userId: org2Admin.id },
     { id: "vote-2-1", featureRequestId: feature2.id, userId: org1Admin.id },
-    { id: "vote-2-2", featureRequestId: feature2.id, userId: org2Admin.id },
     { id: "vote-3-1", featureRequestId: feature3.id, userId: org1Coach1.id },
     { id: "vote-4-1", featureRequestId: feature4.id, userId: org1Admin.id },
-    { id: "vote-4-2", featureRequestId: feature4.id, userId: org2Admin.id },
     { id: "vote-4-3", featureRequestId: feature4.id, userId: org1Coach1.id },
     { id: "vote-5-1", featureRequestId: feature5.id, userId: org1Admin.id },
-    { id: "vote-5-2", featureRequestId: feature5.id, userId: org2Admin.id },
   ];
   for (const vote of voteData) {
     await prisma.featureVote.upsert({ where: { id: vote.id }, update: {}, create: vote });
@@ -7649,12 +5708,12 @@ async function main() {
       id: "fc-5",
       featureRequestId: feature5.id,
       content: "Can you add export to PDF for reports?",
-      userId: org2Admin.id,
+      userId: org1Admin.id,
       isStaffReply: false,
     },
   });
 
-  console.log("  ✓ Created 6 feature requests, 11 votes, and 5 comments");
+  console.log("  ✓ Created 6 feature requests, 7 votes, and 5 comments");
 
   // ============================================
   // MEDIA
@@ -7706,29 +5765,6 @@ async function main() {
       uploadedById: org1Coach1.id,
       organizationId: ORG1_ID,
     },
-    // Metro Sports - Coach uploaded media
-    {
-      id: `${ORG2_ID}-media-1`,
-      url: "/defaults/hero-default.ico",
-      type: "IMAGE" as const,
-      title: "Soccer Drills",
-      description: "Youth soccer team working on passing drills",
-      athleteId: `${ORG2_ID}-ath-1`,
-      eventId: `${ORG2_ID}-evt-1`,
-      uploadedById: org2Coach.id,
-      organizationId: ORG2_ID,
-    },
-    {
-      id: `${ORG2_ID}-media-2`,
-      url: "/defaults/hero-default.ico",
-      type: "IMAGE" as const,
-      title: "Basketball Scrimmage",
-      description: "Teen basketball team during practice game",
-      athleteId: `${ORG2_ID}-ath-2`,
-      eventId: `${ORG2_ID}-evt-2`,
-      uploadedById: org2Coach.id,
-      organizationId: ORG2_ID,
-    },
   ];
   for (const m of mediaData) {
     await prisma.media.upsert({ where: { id: m.id }, update: {}, create: m });
@@ -7777,32 +5813,6 @@ async function main() {
         emergencyContact: Prisma.DbNull,
       },
     },
-    {
-      memberId: `${ORG2_ID}-staff-1`,
-      data: {
-        employmentType: "FULL_TIME" as const,
-        title: "Multi-Sport Coach",
-        hourlyRate: 28.0,
-        hireDate: daysAgo(200),
-        phone: "(555) 222-1111",
-        emergencyContact: {
-          name: "Carlos Martinez",
-          phone: "(555) 222-2222",
-          relationship: "Spouse",
-        },
-      },
-    },
-    {
-      memberId: `${ORG2_ID}-staff-2`,
-      data: {
-        employmentType: "VOLUNTEER" as const,
-        title: "Assistant Coach",
-        hourlyRate: null,
-        hireDate: daysAgo(60),
-        phone: "(555) 222-3333",
-        emergencyContact: Prisma.DbNull,
-      },
-    },
   ];
   for (const emp of employmentUpdates) {
     await prisma.organizationMember.update({ where: { id: emp.memberId }, data: emp.data });
@@ -7839,27 +5849,6 @@ async function main() {
     {
       id: `${ORG1_ID}-cert-bgcheck`,
       orgId: ORG1_ID,
-      name: "Background Check Cleared",
-      criteria: "Pass national background check",
-      renewalPeriodMonths: null,
-    },
-    {
-      id: `${ORG2_ID}-cert-cpr`,
-      orgId: ORG2_ID,
-      name: "CPR / First Aid",
-      criteria: "Complete ARC CPR/First Aid course and pass practical exam",
-      renewalPeriodMonths: 24,
-    },
-    {
-      id: `${ORG2_ID}-cert-safesport`,
-      orgId: ORG2_ID,
-      name: "SafeSport Trained",
-      criteria: "Complete U.S. Center for SafeSport training",
-      renewalPeriodMonths: 12,
-    },
-    {
-      id: `${ORG2_ID}-cert-bgcheck`,
-      orgId: ORG2_ID,
       name: "Background Check Cleared",
       criteria: "Pass national background check",
       renewalPeriodMonths: null,
@@ -7923,26 +5912,6 @@ async function main() {
       certId: `${ORG1_ID}-cert-bgcheck`,
       memberId: `${ORG1_ID}-staff-3`,
       grantedAt: daysAgo(90),
-      expiresAt: null,
-    },
-    // Org2 staff-1 (Multi-Sport Coach): CPR, SafeSport
-    {
-      certId: `${ORG2_ID}-cert-cpr`,
-      memberId: `${ORG2_ID}-staff-1`,
-      grantedAt: daysAgo(60),
-      expiresAt: daysFromNow(200),
-    },
-    {
-      certId: `${ORG2_ID}-cert-safesport`,
-      memberId: `${ORG2_ID}-staff-1`,
-      grantedAt: daysAgo(60),
-      expiresAt: daysFromNow(400),
-    },
-    // Org2 staff-2 (Assistant Coach): Background Check (no expiry)
-    {
-      certId: `${ORG2_ID}-cert-bgcheck`,
-      memberId: `${ORG2_ID}-staff-2`,
-      grantedAt: daysAgo(60),
       expiresAt: null,
     },
   ];
@@ -8046,49 +6015,6 @@ async function main() {
       endTime: "14:00",
       isAvailable: true,
     },
-    // Org2 Coach - Full availability
-    {
-      memberId: `${ORG2_ID}-staff-1`,
-      dayOfWeek: 1,
-      startTime: "09:00",
-      endTime: "17:00",
-      isAvailable: true,
-    },
-    {
-      memberId: `${ORG2_ID}-staff-1`,
-      dayOfWeek: 2,
-      startTime: "09:00",
-      endTime: "17:00",
-      isAvailable: true,
-    },
-    {
-      memberId: `${ORG2_ID}-staff-1`,
-      dayOfWeek: 3,
-      startTime: "09:00",
-      endTime: "17:00",
-      isAvailable: true,
-    },
-    {
-      memberId: `${ORG2_ID}-staff-1`,
-      dayOfWeek: 4,
-      startTime: "09:00",
-      endTime: "17:00",
-      isAvailable: true,
-    },
-    {
-      memberId: `${ORG2_ID}-staff-1`,
-      dayOfWeek: 5,
-      startTime: "09:00",
-      endTime: "17:00",
-      isAvailable: true,
-    },
-    {
-      memberId: `${ORG2_ID}-staff-1`,
-      dayOfWeek: 6,
-      startTime: "10:00",
-      endTime: "15:00",
-      isAvailable: true,
-    },
   ];
   for (const avail of availabilityData) {
     await prisma.memberAvailability.upsert({
@@ -8183,40 +6109,6 @@ async function main() {
       shiftType: "Closing Manager",
       status: "COMPLETED" as const,
     },
-    // Org2 shifts
-    {
-      id: `${ORG2_ID}-shift-1`,
-      organizationId: ORG2_ID,
-      memberId: `${ORG2_ID}-staff-1`,
-      facilityId: org2Facility.id,
-      date: today,
-      startTime: "09:00",
-      endTime: "17:00",
-      shiftType: "Head Coach",
-      status: "IN_PROGRESS" as const,
-    },
-    {
-      id: `${ORG2_ID}-shift-2`,
-      organizationId: ORG2_ID,
-      memberId: `${ORG2_ID}-staff-2`,
-      facilityId: org2Facility.id,
-      date: today,
-      startTime: "14:00",
-      endTime: "18:00",
-      shiftType: "Assistant Coach",
-      status: "SCHEDULED" as const,
-    },
-    {
-      id: `${ORG2_ID}-shift-3`,
-      organizationId: ORG2_ID,
-      memberId: `${ORG2_ID}-staff-1`,
-      facilityId: org2Facility.id,
-      date: daysFromNow(1),
-      startTime: "09:00",
-      endTime: "17:00",
-      shiftType: "Head Coach",
-      status: "SCHEDULED" as const,
-    },
   ];
   for (const shift of shiftData) {
     await prisma.shift.upsert({ where: { id: shift.id }, update: {}, create: shift });
@@ -8237,17 +6129,6 @@ async function main() {
       isActive: true,
     },
   });
-  const template2 = await prisma.scheduleTemplate.upsert({
-    where: { id: `${ORG2_ID}-template-1` },
-    update: {},
-    create: {
-      id: `${ORG2_ID}-template-1`,
-      organizationId: ORG2_ID,
-      name: "Regular Schedule",
-      isActive: true,
-    },
-  });
-
   // Template entries
   const templateEntryData = [
     // Org1 Standard Week - Mon-Fri
@@ -8311,57 +6192,6 @@ async function main() {
       memberId: `${ORG1_ID}-staff-2`,
       facilityId: org1Facility1.id,
     },
-    // Org2 Regular Schedule
-    {
-      id: `${ORG2_ID}-tentry-1`,
-      templateId: template2.id,
-      dayOfWeek: 1,
-      startTime: "09:00",
-      endTime: "17:00",
-      shiftType: "Head Coach",
-      memberId: `${ORG2_ID}-staff-1`,
-      facilityId: org2Facility.id,
-    },
-    {
-      id: `${ORG2_ID}-tentry-2`,
-      templateId: template2.id,
-      dayOfWeek: 2,
-      startTime: "09:00",
-      endTime: "17:00",
-      shiftType: "Head Coach",
-      memberId: `${ORG2_ID}-staff-1`,
-      facilityId: org2Facility.id,
-    },
-    {
-      id: `${ORG2_ID}-tentry-3`,
-      templateId: template2.id,
-      dayOfWeek: 3,
-      startTime: "09:00",
-      endTime: "17:00",
-      shiftType: "Head Coach",
-      memberId: `${ORG2_ID}-staff-1`,
-      facilityId: org2Facility.id,
-    },
-    {
-      id: `${ORG2_ID}-tentry-4`,
-      templateId: template2.id,
-      dayOfWeek: 4,
-      startTime: "09:00",
-      endTime: "17:00",
-      shiftType: "Head Coach",
-      memberId: `${ORG2_ID}-staff-1`,
-      facilityId: org2Facility.id,
-    },
-    {
-      id: `${ORG2_ID}-tentry-5`,
-      templateId: template2.id,
-      dayOfWeek: 5,
-      startTime: "09:00",
-      endTime: "17:00",
-      shiftType: "Head Coach",
-      memberId: `${ORG2_ID}-staff-1`,
-      facilityId: org2Facility.id,
-    },
   ];
   for (const entry of templateEntryData) {
     await prisma.scheduleTemplateEntry.upsert({
@@ -8419,35 +6249,6 @@ async function main() {
       memberId: `${ORG1_ID}-staff-2`,
       role: "ASSISTANT" as const,
       notes: null,
-    },
-    // Org2 Event Staff
-    {
-      id: `${ORG2_ID}-es-1`,
-      eventId: `${ORG2_ID}-evt-1`,
-      memberId: `${ORG2_ID}-staff-1`,
-      role: "LEAD" as const,
-      notes: null,
-    },
-    {
-      id: `${ORG2_ID}-es-2`,
-      eventId: `${ORG2_ID}-evt-1`,
-      memberId: `${ORG2_ID}-staff-2`,
-      role: "VOLUNTEER" as const,
-      notes: "Equipment setup",
-    },
-    {
-      id: `${ORG2_ID}-es-3`,
-      eventId: `${ORG2_ID}-evt-2`,
-      memberId: `${ORG2_ID}-staff-1`,
-      role: "LEAD" as const,
-      notes: null,
-    },
-    {
-      id: `${ORG2_ID}-es-4`,
-      eventId: `${ORG2_ID}-evt-3`,
-      memberId: `${ORG2_ID}-staff-1`,
-      role: "LEAD" as const,
-      notes: "Meet coordinator",
     },
   ];
   for (const es of eventStaffData) {
@@ -8521,47 +6322,6 @@ async function main() {
       isPrimary: true,
       notes: null,
     },
-    // Org2 Program Staff
-    {
-      id: `${ORG2_ID}-ps-1`,
-      programId: `${ORG2_ID}-prog-soccer`,
-      memberId: `${ORG2_ID}-staff-1`,
-      role: "LEAD_COACH" as const,
-      isPrimary: true,
-      notes: "Soccer program lead",
-    },
-    {
-      id: `${ORG2_ID}-ps-2`,
-      programId: `${ORG2_ID}-prog-soccer`,
-      memberId: `${ORG2_ID}-staff-2`,
-      role: "VOLUNTEER" as const,
-      isPrimary: false,
-      notes: "Volunteer assistant",
-    },
-    {
-      id: `${ORG2_ID}-ps-3`,
-      programId: `${ORG2_ID}-prog-basketball`,
-      memberId: `${ORG2_ID}-staff-1`,
-      role: "LEAD_COACH" as const,
-      isPrimary: true,
-      notes: null,
-    },
-    {
-      id: `${ORG2_ID}-ps-4`,
-      programId: `${ORG2_ID}-prog-swim`,
-      memberId: `${ORG2_ID}-staff-1`,
-      role: "LEAD_COACH" as const,
-      isPrimary: true,
-      notes: "Swim team head coach",
-    },
-    {
-      id: `${ORG2_ID}-ps-5`,
-      programId: `${ORG2_ID}-prog-fitness`,
-      memberId: `${ORG2_ID}-staff-2`,
-      role: "LEAD_COACH" as const,
-      isPrimary: true,
-      notes: "Kids fitness leader",
-    },
   ];
   for (const ps of programStaffData) {
     await prisma.programStaff.upsert({
@@ -8594,16 +6354,7 @@ async function main() {
       },
     },
   });
-  // Org2 swim team requires seasonal pass
-  await prisma.program.update({
-    where: { id: `${ORG2_ID}-prog-swim` },
-    data: {
-      requiredMemberships: {
-        connect: [{ id: `${ORG2_ID}-mi-winter26` }],
-      },
-    },
-  });
-  console.log("  ✓ Set membership requirements for 3 programs");
+  console.log("  ✓ Set membership requirements for 2 programs");
 
   // ============================================
   // VISITOR ANALYTICS (Redis)
@@ -8723,22 +6474,9 @@ async function main() {
         collectInsuranceInfo: false,
       },
     }),
-    prisma.medicalFormConfig.upsert({
-      where: { organizationId: ORG2_ID },
-      update: {},
-      create: {
-        organizationId: ORG2_ID,
-        collectAllergies: true,
-        collectMedications: true,
-        collectConditions: true,
-        collectEmergencyContact: true,
-        collectDietaryRestrictions: false,
-        collectInsuranceInfo: true,
-      },
-    }),
   ]);
 
-  console.log("  ✓ Created medical form configs for both organizations");
+  console.log("  ✓ Created medical form config for Sunrise organization");
 
   // Custom Medical Questions
   console.log("📝 Creating custom medical questions...");
@@ -8788,37 +6526,9 @@ async function main() {
         isActive: true,
       },
     }),
-    // Metro Sports custom questions
-    prisma.customMedicalQuestion.upsert({
-      where: { id: `${ORG2_ID}-mq-1` },
-      update: {},
-      create: {
-        id: `${ORG2_ID}-mq-1`,
-        organizationId: ORG2_ID,
-        questionText: "Does your child require an EpiPen?",
-        questionType: "YES_NO",
-        required: true,
-        displayOrder: 1,
-        isActive: true,
-      },
-    }),
-    prisma.customMedicalQuestion.upsert({
-      where: { id: `${ORG2_ID}-mq-2` },
-      update: {},
-      create: {
-        id: `${ORG2_ID}-mq-2`,
-        organizationId: ORG2_ID,
-        questionText: "Which sports has your child participated in previously?",
-        questionType: "CHECKBOX",
-        options: ["Soccer", "Basketball", "Swimming", "Figure Skating", "Track & Field", "None"],
-        required: false,
-        displayOrder: 2,
-        isActive: true,
-      },
-    }),
   ]);
 
-  console.log("  ✓ Created 5 custom medical questions");
+  console.log("  ✓ Created 3 custom medical questions");
 
   // Athlete Medical Info
   console.log("🏥 Creating athlete medical info...");
@@ -8900,23 +6610,6 @@ async function main() {
         emergencyContactName: "Priya Patel",
         emergencyContactPhone: "(555) 104-1004",
         emergencyContactRelation: "Mother",
-      },
-    }),
-    // Metro Sports athlete - Michael Chen
-    prisma.athleteMedicalInfo.upsert({
-      where: { athleteId: `${ORG2_ID}-ath-1` },
-      update: {},
-      create: {
-        athleteId: `${ORG2_ID}-ath-1`,
-        allergies: ["Shellfish"],
-        medications: [],
-        conditions: [],
-        dietaryRestrictions: [],
-        emergencyContactName: "David Chen",
-        emergencyContactPhone: "(555) 401-4001",
-        emergencyContactRelation: "Father",
-        insuranceProvider: "Blue Cross Blue Shield",
-        insurancePolicyNumber: "BCBS-12345678",
       },
     }),
   ]);
@@ -9131,31 +6824,6 @@ async function main() {
     },
   });
 
-  await prisma.emailUsage.upsert({
-    where: {
-      organizationId_periodStart: {
-        organizationId: ORG2_ID,
-        periodStart: periodStart,
-      },
-    },
-    update: {},
-    create: {
-      organizationId: ORG2_ID,
-      periodStart: periodStart,
-      periodEnd: periodEnd,
-      emailsSent: 87,
-      emailsDelivered: 85,
-      emailsOpened: 52,
-      emailsClicked: 18,
-      emailsBounced: 1,
-      emailsComplained: 0,
-      emailsFailed: 1,
-      includedEmails: 500,
-      overageEmails: 0,
-      overageCost: 0,
-    },
-  });
-
   // Sample email campaigns for Sunrise Skating
   const sunriseCampaigns = [
     {
@@ -9289,78 +6957,6 @@ async function main() {
     });
   }
   console.log(`  ✓ Created ${sunriseCampaigns.length} email campaigns for Sunrise Skating`);
-
-  // Sample email campaigns for Metro Sports
-  const metroCampaigns = [
-    {
-      id: "seed-email-campaign-5",
-      organizationId: ORG2_ID,
-      name: "February Programs",
-      subject: "New Programs Starting in February",
-      htmlBody: `<h2>Exciting New Programs at Metro Sports!</h2>
-<p>Check out what's new this February:</p>
-<ul>
-<li><strong>Youth Basketball League</strong> - Saturdays 9am-12pm</li>
-<li><strong>Adult Fitness Bootcamp</strong> - Mon/Wed/Fri 6am</li>
-<li><strong>Family Swim Nights</strong> - Fridays 6-8pm</li>
-</ul>
-<p>Early bird pricing available through January 31st!</p>`,
-      textBody:
-        "New programs starting in February at Metro Sports. Youth Basketball, Adult Fitness, Family Swim Nights.",
-      classification: "NEWSLETTER" as const,
-      status: "COMPLETED" as const,
-      totalRecipients: 67,
-      sentCount: 67,
-      deliveredCount: 65,
-      openedCount: 38,
-      clickedCount: 12,
-      bouncedCount: 1,
-      complainedCount: 0,
-      failedCount: 1,
-      startedAt: daysAgo(10),
-      completedAt: daysAgo(10),
-      createdAt: daysAgo(11),
-    },
-    {
-      id: "seed-email-campaign-6",
-      organizationId: ORG2_ID,
-      name: "Swim Team Practice Update",
-      subject: "Updated Practice Schedule - Swim Team",
-      htmlBody: `<h2>Swim Team Practice Schedule Update</h2>
-<p>Starting next week, we're adjusting practice times:</p>
-<ul>
-<li><strong>Monday/Wednesday:</strong> 4:00 PM - 5:30 PM (was 4:30 PM)</li>
-<li><strong>Friday:</strong> 3:30 PM - 5:00 PM (no change)</li>
-<li><strong>Saturday:</strong> 8:00 AM - 10:00 AM (no change)</li>
-</ul>
-<p>Please update your calendars accordingly. See you at the pool!</p>`,
-      textBody:
-        "Updated swim team practice times starting next week. Monday/Wednesday now 4:00 PM - 5:30 PM.",
-      classification: "PROGRAM_UPDATE" as const,
-      targetProgramId: `${ORG2_ID}-prog-swim`, // Swim Team
-      status: "COMPLETED" as const,
-      totalRecipients: 20,
-      sentCount: 20,
-      deliveredCount: 20,
-      openedCount: 14,
-      clickedCount: 6,
-      bouncedCount: 0,
-      complainedCount: 0,
-      failedCount: 0,
-      startedAt: daysAgo(3),
-      completedAt: daysAgo(3),
-      createdAt: daysAgo(4),
-    },
-  ];
-
-  for (const campaign of metroCampaigns) {
-    await prisma.emailCampaign.upsert({
-      where: { id: campaign.id },
-      update: {},
-      create: campaign,
-    });
-  }
-  console.log(`  ✓ Created ${metroCampaigns.length} email campaigns for Metro Sports`);
 
   // ============================================
   // NOTIFICATION RULES
@@ -9611,172 +7207,10 @@ The Sunrise Skating Team
     `  ✓ Created ${sunriseNotificationRules.length} notification rules for Sunrise Skating`
   );
 
-  // System notification rules for Metro Sports
-  const metroNotificationRules = [
-    {
-      id: `${ORG2_ID}-notif-payment-reminder`,
-      organizationId: ORG2_ID,
-      name: "Payment Reminder",
-      description: "Reminder sent 3 days before payment is due",
-      triggerType: "PAYMENT_DUE",
-      timingValue: 3,
-      timingUnit: "DAYS",
-      timingDirection: "BEFORE",
-      actionType: "EMAIL",
-      isSystem: true,
-      subject: "Payment Reminder - {{invoiceReference}}",
-      body: `Dear {{guardianName}},
-
-This is a friendly reminder that payment of {{invoiceAmount}} is due on {{dueDate}}.
-
-Invoice Reference: {{invoiceReference}}
-Amount Due: {{invoiceAmount}}
-Due Date: {{dueDate}}
-
-Pay online at: {{paymentUrl}}
-
-Questions? Contact us at {{organizationEmail}}.
-
-Thanks,
-{{organizationName}}`,
-      smsBody: `Metro Sports: Payment of {{invoiceAmount}} due {{dueDate}}. Pay now: {{paymentUrl}}`,
-      recipientType: "GUARDIANS",
-    },
-    {
-      id: `${ORG2_ID}-notif-payment-urgent`,
-      organizationId: ORG2_ID,
-      name: "Payment Reminder Urgent",
-      description: "Urgent reminder sent 1 day after payment is overdue",
-      triggerType: "PAYMENT_OVERDUE",
-      timingValue: 1,
-      timingUnit: "DAYS",
-      timingDirection: "AFTER",
-      actionType: "SMS",
-      isSystem: true,
-      subject: "URGENT: Payment Overdue",
-      body: `Dear {{guardianName}},
-
-Your payment of {{invoiceAmount}} is now overdue. Please pay immediately to continue participating in programs.
-
-Pay now: {{paymentUrl}}
-
-Contact {{organizationEmail}} for questions.
-
-{{organizationName}}`,
-      smsBody: `URGENT Metro Sports: Payment of {{invoiceAmount}} overdue. Pay now to avoid service interruption: {{paymentUrl}}`,
-      recipientType: "GUARDIANS",
-    },
-    {
-      id: `${ORG2_ID}-notif-membership-warning`,
-      organizationId: ORG2_ID,
-      name: "Membership Expiry Warning",
-      description: "Warning sent 7 days before membership expires",
-      triggerType: "MEMBERSHIP_EXPIRY",
-      timingValue: 7,
-      timingUnit: "DAYS",
-      timingDirection: "BEFORE",
-      actionType: "EMAIL",
-      isSystem: true,
-      subject: "Membership Expiring - {{athleteName}}",
-      body: `Hi {{guardianFirstName}},
-
-{{athleteName}}'s membership at Metro Sports is expiring on {{membershipEndDate}}.
-
-Membership: {{membershipName}}
-Days Remaining: {{membershipDaysRemaining}}
-
-Renew now to continue enjoying our facilities and programs!
-
-Best,
-{{organizationName}}`,
-      smsBody: `Metro Sports: {{athleteName}}'s membership expires {{membershipEndDate}}. Renew now!`,
-      recipientType: "MEMBERSHIP_HOLDERS",
-    },
-    {
-      id: `${ORG2_ID}-notif-membership-urgent`,
-      organizationId: ORG2_ID,
-      name: "Membership Expiry Urgent",
-      description: "Urgent notice sent 1 day after membership expires",
-      triggerType: "MEMBERSHIP_EXPIRED",
-      timingValue: 1,
-      timingUnit: "DAYS",
-      timingDirection: "AFTER",
-      actionType: "SMS",
-      isSystem: true,
-      subject: "Membership Expired - Action Required",
-      body: `Hi {{guardianFirstName}},
-
-{{athleteName}}'s membership has expired. Please renew to continue participation.
-
-Contact us at {{organizationEmail}}.
-
-{{organizationName}}`,
-      smsBody: `Metro Sports: {{athleteName}}'s membership EXPIRED. Renew immediately at {{organizationEmail}}`,
-      recipientType: "MEMBERSHIP_HOLDERS",
-    },
-    {
-      id: `${ORG2_ID}-notif-program-reminder`,
-      organizationId: ORG2_ID,
-      name: "Program Reminder",
-      description: "Reminder sent 1 day before class/event",
-      triggerType: "PROGRAM_REMINDER",
-      timingValue: 1,
-      timingUnit: "DAYS",
-      timingDirection: "BEFORE",
-      actionType: "SMS",
-      isSystem: true,
-      subject: "{{programName}} Tomorrow",
-      body: `Hi {{guardianFirstName}},
-
-Reminder: {{athleteFirstName}} has {{programName}} tomorrow at {{eventTime}}.
-
-Location: {{eventLocation}}
-
-See you there!
-{{organizationName}}`,
-      smsBody: `Metro Sports: {{athleteFirstName}} has {{programName}} tomorrow at {{eventTime}} - {{eventLocation}}`,
-      recipientType: "GUARDIANS",
-    },
-    // Custom notification for Metro Sports
-    {
-      id: `${ORG2_ID}-notif-registration-open`,
-      organizationId: ORG2_ID,
-      name: "Registration Opening",
-      description: "Notification when registration opens for a new season",
-      triggerType: "EVENT_REGISTRATION_OPEN",
-      timingValue: 2,
-      timingUnit: "DAYS",
-      timingDirection: "BEFORE",
-      actionType: "EMAIL",
-      isSystem: false,
-      subject: "Registration Opens Soon: {{eventName}}",
-      body: `Dear {{guardianName}},
-
-We're excited to announce that registration for {{eventName}} opens in 2 days!
-
-Event: {{eventName}}
-Registration Opens: {{eventDate}}
-
-Mark your calendar and register early - spots fill up fast!
-
-Visit {{websiteUrl}} to register.
-
-See you at Metro Sports!
-{{organizationName}}`,
-      smsBody: `Metro Sports: {{eventName}} registration opens {{eventDate}}! Register early at {{websiteUrl}}`,
-      recipientType: "GUARDIANS",
-    },
-  ];
-
-  for (const rule of metroNotificationRules) {
-    await createNotificationRule(rule);
-  }
-  console.log(`  ✓ Created ${metroNotificationRules.length} notification rules for Metro Sports`);
-
   // Ensure all seeded orgs have the full set of system rules (including payout
   // trigger types added after initial seed data was written). Safe to re-run —
   // createSystemRulesForOrganization skips rules that already exist.
-  for (const orgId of [ORG1_ID, ORG2_ID, ORG_DEMO_ID]) {
+  for (const orgId of [ORG1_ID, ORG_DEMO_ID]) {
     const result = await createSystemRulesForOrganization(orgId);
     if (result.created > 0) {
       console.log(`  ✓ Created ${result.created} missing system rules for ${orgId}`);
@@ -9878,65 +7312,6 @@ See you at Metro Sports!
     },
   });
 
-  // Metro Sports Complex - Participant Waiver & Release of Liability (2 pages)
-  await prisma.waiver.upsert({
-    where: { id: `${ORG2_ID}-waiver-participant` },
-    update: {},
-    create: {
-      id: `${ORG2_ID}-waiver-participant`,
-      organizationId: ORG2_ID,
-      title: "Participant Waiver & Release of Liability",
-      status: "ACTIVE",
-    },
-  });
-
-  await prisma.waiverPage.upsert({
-    where: { id: `${ORG2_ID}-waiver-participant-p1` },
-    update: {},
-    create: {
-      id: `${ORG2_ID}-waiver-participant-p1`,
-      waiverId: `${ORG2_ID}-waiver-participant`,
-      pageNumber: 1,
-      title: "Assumption of Risk & Hold-Harmless Agreement",
-      content: `<h2>Assumption of Risk & Hold-Harmless Agreement</h2>
-<p>I, the undersigned participant (or parent/legal guardian of a minor participant), acknowledge the following in connection with participation in programs and activities offered by Metro Sports Complex:</p>
-<h3>1. Acknowledgment of Risk</h3>
-<p>I understand that participation in sports and recreational activities, including but not limited to soccer, basketball, swimming, fitness classes, and general facility use, carries inherent risks of physical injury. These risks include but are not limited to muscle strains, ligament tears, broken bones, concussions, drowning, heat-related illness, and other injuries that may result from the physical nature of these activities.</p>
-<h3>2. Voluntary Participation</h3>
-<p>I voluntarily choose to participate (or allow my child to participate) in programs at Metro Sports Complex with full knowledge and understanding of the associated risks. I accept personal responsibility for any injury that may occur.</p>
-<h3>3. Hold-Harmless Agreement</h3>
-<p>I agree to release, hold harmless, and indemnify Metro Sports Complex, its owners, managers, employees, coaches, trainers, volunteers, and affiliated organizations from any and all claims, liabilities, damages, costs, or expenses arising from participation in programs or use of facilities.</p>
-<p><strong>I have read this Assumption of Risk & Hold-Harmless Agreement, fully understand its terms, and sign it freely and voluntarily.</strong></p>`,
-    },
-  });
-
-  await prisma.waiverPage.upsert({
-    where: { id: `${ORG2_ID}-waiver-participant-p2` },
-    update: {},
-    create: {
-      id: `${ORG2_ID}-waiver-participant-p2`,
-      waiverId: `${ORG2_ID}-waiver-participant`,
-      pageNumber: 2,
-      title: "Facility Rules & Emergency Medical Authorization",
-      content: `<h2>Acknowledgement of Facility Rules & Emergency Medical Authorization</h2>
-<h3>4. Facility Rules</h3>
-<p>I acknowledge that I have been informed of and agree to abide by all rules and regulations of Metro Sports Complex, including but not limited to:</p>
-<ul>
-<li>Following all posted safety signs and instructions from staff.</li>
-<li>Using equipment only as intended and under appropriate supervision.</li>
-<li>Reporting any unsafe conditions or injuries to staff immediately.</li>
-<li>Wearing appropriate athletic attire and footwear for each activity.</li>
-<li>Not participating while under the influence of alcohol or drugs.</li>
-</ul>
-<p>Failure to comply with facility rules may result in removal from programs without refund.</p>
-<h3>5. Emergency Medical Authorization</h3>
-<p>In the event of an injury or medical emergency, I authorize Metro Sports Complex staff to administer first aid and/or call emergency medical services (911). I understand that I (or my insurance) will be responsible for any medical costs incurred. I consent to being transported to the nearest medical facility if deemed necessary by emergency personnel.</p>
-<h3>6. Communication Consent</h3>
-<p>I consent to receiving communications from Metro Sports Complex regarding schedules, cancellations, and safety updates via email, phone, or text message at the contact information provided during registration.</p>
-<p><strong>I have read this Acknowledgement of Facility Rules & Emergency Medical Authorization, fully understand its terms, and sign it freely and voluntarily.</strong></p>`,
-    },
-  });
-
   // Attach waivers as program requirements
   // Sunrise: General Liability Waiver on the Bronze program
   await prisma.programWaiverRequirement.upsert({
@@ -9959,28 +7334,8 @@ See you at Metro Sports!
     data: { hasWaiverRestriction: true },
   });
 
-  // Metro: Participant Waiver on the soccer program
-  await prisma.programWaiverRequirement.upsert({
-    where: {
-      programId_waiverId: {
-        programId: `${ORG2_ID}-prog-soccer`,
-        waiverId: `${ORG2_ID}-waiver-participant`,
-      },
-    },
-    update: {},
-    create: {
-      programId: `${ORG2_ID}-prog-soccer`,
-      waiverId: `${ORG2_ID}-waiver-participant`,
-    },
-  });
-
-  await prisma.program.update({
-    where: { id: `${ORG2_ID}-prog-soccer` },
-    data: { hasWaiverRestriction: true },
-  });
-
-  console.log("  ✓ Created 3 waivers (2 Sunrise, 1 Metro) with pages");
-  console.log("  ✓ Attached waiver requirements to Bronze Learn to Skate and Youth Soccer");
+  console.log("  ✓ Created 2 Sunrise waivers with pages");
+  console.log("  ✓ Attached waiver requirements to Bronze Learn to Skate");
 
   // ============================================
   // COMPETITIONS (Full examples with entries and results)
@@ -10159,261 +7514,6 @@ See you at Metro Sports!
   }
   console.log(`  ✓ Awarded ${sampleRibbonAwards.length} sample CanSkate ribbons`);
 
-  // --- Metro Sports: Regional Athletics Meet (COMPLETED) ---
-  const tfCompetition = await prisma.competition.upsert({
-    where: { id: `${ORG2_ID}-comp-regional-track` },
-    update: {},
-    create: {
-      id: `${ORG2_ID}-comp-regional-track`,
-      organizationId: ORG2_ID,
-      name: "Regional Athletics Meet 2026",
-      color: "#6366f1",
-      categoryId: `${ORG2_ID}-cat-youth`,
-      status: "COMPLETED",
-      facilityId: `${ORG2_ID}-facility-main`,
-      country: "US",
-      stateProvince: "CA",
-      city: "Oakland",
-      streetAddress: "200 Stadium Drive",
-      startDate: daysAgo(14),
-      endDate: daysAgo(14),
-      startTime: "08:00",
-      endTime: "17:00",
-      categoryMode: "SPECIFIC",
-      pricingMode: "TIERED",
-      publishStatus: "LIVE",
-    },
-  });
-
-  // Pricing tiers for tiered mode
-  const tfPricingTiers = [
-    {
-      id: `${ORG2_ID}-tier-1`,
-      competitionId: tfCompetition.id,
-      minEvents: 1,
-      maxEvents: 2,
-      pricePerEvent: 25.0,
-      displayOrder: 0,
-    },
-    {
-      id: `${ORG2_ID}-tier-2`,
-      competitionId: tfCompetition.id,
-      minEvents: 3,
-      maxEvents: 5,
-      pricePerEvent: 20.0,
-      displayOrder: 1,
-    },
-    {
-      id: `${ORG2_ID}-tier-3`,
-      competitionId: tfCompetition.id,
-      minEvents: 6,
-      maxEvents: null,
-      pricePerEvent: 15.0,
-      displayOrder: 2,
-    },
-  ];
-  for (const tier of tfPricingTiers) {
-    await prisma.competitionPricingTier.upsert({
-      where: { id: tier.id },
-      update: {},
-      create: tier,
-    });
-  }
-  console.log(`  ✓ Created ${tfPricingTiers.length} pricing tiers for Regional Athletics Meet`);
-
-  // Competition categories using sport-specific refs: 100m (U10), Long Jump (U12), 4x100 Relay (U10, team)
-  const tfCompCats = [
-    {
-      id: `${ORG2_ID}-compcat-100m-u10`,
-      competitionId: tfCompetition.id,
-      sportEventId: "athl-evt-100M",
-      ageCategoryId: "athl-age-U10",
-      resultType: "TIME" as const,
-      sortDirection: "ASC" as const,
-      precision: 3,
-      seedMarkRequired: true,
-      submissionMode: "VERIFIED_RESULT" as const,
-      qualifyingMark: 16000,
-      displayOrder: 0,
-    },
-    {
-      id: `${ORG2_ID}-compcat-longjump-u12`,
-      competitionId: tfCompetition.id,
-      sportEventId: "athl-evt-LJ",
-      ageCategoryId: "athl-age-U12",
-      resultType: "DISTANCE" as const,
-      sortDirection: "DESC" as const,
-      precision: 2,
-      seedMarkRequired: false,
-      submissionMode: "NONE" as const,
-      displayOrder: 1,
-    },
-    {
-      id: `${ORG2_ID}-compcat-4x100-relay`,
-      competitionId: tfCompetition.id,
-      sportEventId: "athl-evt-4X100",
-      ageCategoryId: "athl-age-U10",
-      resultType: "TIME" as const,
-      sortDirection: "ASC" as const,
-      precision: 3,
-      isTeamEvent: true,
-      teamSize: 4,
-      seedMarkRequired: false,
-      submissionMode: "NONE" as const,
-      displayOrder: 2,
-    },
-  ];
-
-  for (const cat of tfCompCats) {
-    await prisma.competitionCategory.upsert({
-      where: { id: cat.id },
-      update: {},
-      create: cat,
-    });
-  }
-
-  // Team for the relay
-  await prisma.competitionTeam.upsert({
-    where: { id: `${ORG2_ID}-team-relay-1` },
-    update: {},
-    create: {
-      id: `${ORG2_ID}-team-relay-1`,
-      competitionId: tfCompetition.id,
-      competitionCategoryId: `${ORG2_ID}-compcat-4x100-relay`,
-      name: "Metro A Team",
-      organizationId: ORG2_ID,
-    },
-  });
-
-  // Entries for track meet
-  const tfCompEntries = [
-    {
-      id: `${ORG2_ID}-compentry-1`,
-      competitionId: tfCompetition.id,
-      competitionCategoryId: `${ORG2_ID}-compcat-100m-u10`,
-      athleteId: `${ORG2_ID}-ath-1`,
-      status: "APPROVED" as const,
-      seedHours: 0,
-      seedMinutes: 0,
-      seedSeconds: 14,
-      seedMs: 500,
-      seedHandTimed: false,
-      seedMarkSubmittedAt: daysAgo(30),
-      seedMarkStatus: "APPROVED" as const,
-    },
-    {
-      id: `${ORG2_ID}-compentry-2`,
-      competitionId: tfCompetition.id,
-      competitionCategoryId: `${ORG2_ID}-compcat-100m-u10`,
-      athleteId: `${ORG2_ID}-ath-2`,
-      status: "APPROVED" as const,
-      seedHours: 0,
-      seedMinutes: 0,
-      seedSeconds: 15,
-      seedMs: 200,
-      seedHandTimed: true,
-      seedMarkSubmittedAt: daysAgo(28),
-      seedMarkStatus: "APPROVED" as const,
-    },
-    {
-      id: `${ORG2_ID}-compentry-3`,
-      competitionId: tfCompetition.id,
-      competitionCategoryId: `${ORG2_ID}-compcat-longjump-u12`,
-      athleteId: `${ORG2_ID}-ath-3`,
-      status: "APPROVED" as const,
-    },
-    {
-      id: `${ORG2_ID}-compentry-4`,
-      competitionId: tfCompetition.id,
-      competitionCategoryId: `${ORG2_ID}-compcat-4x100-relay`,
-      athleteId: `${ORG2_ID}-ath-1`,
-      teamId: `${ORG2_ID}-team-relay-1`,
-      status: "APPROVED" as const,
-    },
-    {
-      id: `${ORG2_ID}-compentry-5`,
-      competitionId: tfCompetition.id,
-      competitionCategoryId: `${ORG2_ID}-compcat-4x100-relay`,
-      athleteId: `${ORG2_ID}-ath-2`,
-      teamId: `${ORG2_ID}-team-relay-1`,
-      status: "APPROVED" as const,
-    },
-  ];
-
-  for (const entry of tfCompEntries) {
-    await prisma.competitionEntry.upsert({
-      where: { id: entry.id },
-      update: {},
-      create: entry,
-    });
-  }
-
-  // Results for completed track meet
-  const tfResults = [
-    {
-      id: `${ORG2_ID}-result-1`,
-      competitionId: tfCompetition.id,
-      competitionCategoryId: `${ORG2_ID}-compcat-100m-u10`,
-      athleteId: `${ORG2_ID}-ath-1`,
-      value: 13850,
-      displayValue: "13.85",
-      placement: 1,
-      heat: 1,
-      isHandTimed: false,
-      isPersonalBest: true,
-    },
-    {
-      id: `${ORG2_ID}-result-2`,
-      competitionId: tfCompetition.id,
-      competitionCategoryId: `${ORG2_ID}-compcat-100m-u10`,
-      athleteId: `${ORG2_ID}-ath-2`,
-      value: 14300,
-      displayValue: "14.3h",
-      placement: 2,
-      heat: 1,
-      isHandTimed: true,
-      isPersonalBest: true,
-    },
-    {
-      id: `${ORG2_ID}-result-3`,
-      competitionId: tfCompetition.id,
-      competitionCategoryId: `${ORG2_ID}-compcat-longjump-u12`,
-      athleteId: `${ORG2_ID}-ath-3`,
-      value: 3750,
-      displayValue: "3.75m",
-      placement: 1,
-      isPersonalBest: false,
-    },
-    {
-      id: `${ORG2_ID}-result-4`,
-      competitionId: tfCompetition.id,
-      competitionCategoryId: `${ORG2_ID}-compcat-longjump-u12`,
-      athleteId: `${ORG2_ID}-ath-3`,
-      value: 3500,
-      displayValue: "3.50m",
-      attemptNumber: 2,
-      isBestAttempt: false,
-    },
-    {
-      id: `${ORG2_ID}-result-5`,
-      competitionId: tfCompetition.id,
-      competitionCategoryId: `${ORG2_ID}-compcat-4x100-relay`,
-      teamId: `${ORG2_ID}-team-relay-1`,
-      value: 58200,
-      displayValue: "58.200s",
-      placement: 1,
-    },
-  ];
-
-  for (const result of tfResults) {
-    await prisma.competitionResult.upsert({
-      where: { id: result.id },
-      update: {},
-      create: result,
-    });
-  }
-  console.log("  ✓ Created Metro Sports 'Regional Athletics Meet 2026' (COMPLETED)");
-
   // ============================================
   // COMPLETE
   // ============================================
@@ -10421,7 +7521,7 @@ See you at Metro Sports!
   console.log("🎉 Development seed completed successfully!");
   console.log("=".repeat(50));
   console.log("\nCreated data summary:");
-  console.log("  • 4 organizations (Sunrise Skating, Metro Sports, Demo Skating, Uplifter)");
+  console.log("  • 3 organizations (Sunrise Skating, Demo Skating, Uplifter)");
   console.log("  • 4 subscription plans");
   console.log("  • 7 sports with organization associations");
   console.log("  • 32 athletics events, 8 age categories, ~210 eligibility entries");
@@ -10436,8 +7536,8 @@ See you at Metro Sports!
   console.log("  • Adyen transactions + payouts synced from live TEST environment (if configured)");
   console.log("  • 7 recurring charges");
   console.log("  • 34 figure skating skills with difficulty levels and age ranges");
-  console.log("  • 9 evaluation templates with skill groupings (6 Sunrise + 3 Metro)");
-  console.log("  • 9 evaluations with skill attempt statuses (5 Sunrise + 4 Metro)");
+  console.log("  • 6 evaluation templates with skill groupings");
+  console.log("  • 5 evaluations with skill attempt statuses");
   console.log("  • 17 athlete skill progress records");
   console.log("  • Lesson plans");
   console.log("  • 7 POS products with stock movements");
@@ -10449,19 +7549,16 @@ See you at Metro Sports!
   console.log("  • 2 medical form configs with custom questions");
   console.log("  • 6 athlete medical info records with responses");
   console.log("  • 14 reserved domains");
-  console.log("  • 6 email campaigns (newsletters, program updates, scheduled)");
-  console.log("  • Email usage tracking for both organizations");
-  console.log("  • 12 notification rules (system + custom for both orgs)");
-  console.log("  • 3 waivers with pages (2 Sunrise, 1 Metro) + program requirements");
-  console.log("  • 2 competitions (1 figure skating REGISTRATION_OPEN, 1 athletics COMPLETED)");
-  console.log("  • 6 competition categories with result type/seed mark config");
-  console.log("  • 9 competition entries (approved, pending review, pending seed)");
-  console.log("  • 5 competition results with placements and personal bests");
-  console.log("  • 1 relay team with team results");
+  console.log("  • 4 email campaigns (newsletters, program updates, scheduled)");
+  console.log("  • Email usage tracking for Sunrise Skating");
+  console.log("  • 6 notification rules (system + custom for Sunrise)");
+  console.log("  • 2 waivers with pages (Sunrise) + program requirements");
+  console.log("  • 1 competition (figure skating REGISTRATION_OPEN)");
+  console.log("  • 3 competition categories with result type/seed mark config");
+  console.log("  • 4 competition entries (approved, pending review, pending seed)");
   console.log("  • 90 days of visitor analytics (if Redis configured)");
   console.log("\nTest accounts (use email-based login — no passwords set):");
   console.log("  Sunrise Skating Admin: admin@sunrise-skating.com");
-  console.log("  Metro Sports Admin: admin@metro-sports.com");
   console.log("  Demo Skating Admin: admin@demo.com");
   console.log("  Demo Skating Coach: coach@demo.com");
   console.log("  Superadmin: andrewkarzel@uplifterinc.com");
