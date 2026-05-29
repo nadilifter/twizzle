@@ -686,3 +686,21 @@ export const SKATE_SEED_COUNTS = {
   starSkills: STAR_ASSESSMENT_COUNTS.skills,
   starTemplates: STAR_ASSESSMENT_COUNTS.templates,
 };
+
+// ── Skate Canada Season seed ─────────────────────────────────────────────────
+// Phase 5.4: Upserts the canonical 2026-2027 development season.
+// scSeasonGuid is left null — Phase 6.4 will populate it via the CRM API.
+
+export async function seedSkateCanadaSeasons(prisma: PrismaClient): Promise<void> {
+  await prisma.skateCanadaSeason.upsert({
+    where: { name: "2026-2027" },
+    update: {},
+    create: {
+      name: "2026-2027",
+      startDate: new Date("2026-09-01T00:00:00.000Z"),
+      endDate: new Date("2027-08-31T00:00:00.000Z"),
+      isActive: true,
+      scSeasonGuid: null,
+    },
+  });
+}

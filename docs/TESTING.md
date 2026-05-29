@@ -9,6 +9,44 @@ can follow without re-deriving the intent.
 
 ---
 
+## 2026-05-29
+
+### Phase 5.4 — SkateCanadaSeason data model
+
+No UI exists yet (admin UI is a separate task). Verify the data layer only.
+
+#### Schema validation
+
+1. Run `DATABASE_URL=postgresql://dummy:dummy@localhost/dummy pnpm prisma validate`
+   → should print `The schema at prisma/schema.prisma is valid 🚀`
+
+#### Typecheck
+
+2. Run `pnpm typecheck` — must pass with zero errors.
+
+#### Seed spot-check (requires a live dev DB)
+
+3. Start the dev stack (`docker compose -f docker-compose.dev.yml up -d`).
+4. Apply migrations: `pnpm prisma migrate deploy`.
+5. Run `pnpm tsx prisma/skate-seed.ts` or call `seedSkateCanadaSeasons(prisma)`
+   from `prisma/seed.ts` / `seed-dev.ts`.
+6. In Prisma Studio (`pnpm prisma studio`) or via `psql`, confirm one row in
+   `SkateCanadaSeason`:
+   - `name = '2026-2027'`
+   - `startDate = 2026-09-01`, `endDate = 2027-08-31`
+   - `isActive = true`
+   - `scSeasonGuid = NULL`
+7. Create a Competition in the admin UI and confirm the `skateCanadaSeasonId`
+   column accepts a valid season ID (foreign key resolves) and allows NULL.
+8. Repeat step 7 for a Program and a MembershipGroup.
+
+#### Idempotency
+
+9. Re-run `seedSkateCanadaSeasons(prisma)` — row count stays at 1, no
+   duplicate-key error.
+
+---
+
 ## Smoke test — current top of `main`
 
 Run after any large merge to catch regressions early. Start at
