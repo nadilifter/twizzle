@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useListKeyboardShortcuts } from "@/hooks/use-list-keyboard-shortcuts";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, Users, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useCoachAthletes } from "@/hooks/use-coach-athletes";
 import { athleteDisplayName } from "@/lib/athlete-name";
 
@@ -29,6 +31,12 @@ export default function CoachAthletesPage() {
     const needle = search.toLowerCase();
     return athletes.filter((a) => `${a.firstName} ${a.lastName}`.toLowerCase().includes(needle));
   }, [athletes, search]);
+
+  const listItems = useMemo(
+    () => filtered.map((a) => ({ id: a.id, detailUrl: `/coach/athletes/${a.id}` })),
+    [filtered]
+  );
+  const { highlightedIndex } = useListKeyboardShortcuts(listItems);
 
   return (
     <div className="flex flex-col gap-6 p-6 max-w-5xl mx-auto w-full">
@@ -80,14 +88,17 @@ export default function CoachAthletesPage() {
         </Card>
       ) : (
         <div className="grid gap-2">
-          {filtered.map((a) => {
+          {filtered.map((a, i) => {
             const fullName = athleteDisplayName(a) || a.email || "Unnamed athlete";
             const programNames = a.programs.map((p) => p.name).join(" · ");
             return (
               <Link
                 key={a.id}
                 href={`/coach/athletes/${a.id}`}
-                className="block rounded-lg border bg-card hover:bg-accent transition-colors"
+                className={cn(
+                  "block rounded-lg border bg-card hover:bg-accent transition-colors",
+                  i === highlightedIndex && "ring-2 ring-inset ring-ring"
+                )}
               >
                 <div className="flex items-center gap-4 p-3">
                   <Avatar className="h-10 w-10 shrink-0">

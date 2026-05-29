@@ -18,6 +18,70 @@ auth — MailHog at http://localhost:8025 catches the link locally).
 (Note: the local base domain switched from `uplifter.localhost` to
 `twizzle.localhost` — old bookmarks 404.)
 
+### Phase 0.8 — Power-user keyboard shortcuts
+
+#### Global shortcuts (any admin or coach page)
+
+1. Navigate to `/dashboard/athletes`. Click somewhere outside any input so
+   no element has focus. Press **?** → a "Keyboard shortcuts" dialog opens
+   listing three sections: **Navigate**, **List page**, **Misc**. Press **Esc**
+   to close it.
+2. From the same page press **g** then **a** within 1.5 s → browser
+   stays on (or navigates to) `/dashboard/athletes`.
+3. Press **g** then **p** → navigates to `/dashboard/registrations/programs`.
+4. Press **g** then **c** → navigates to `/dashboard/competitions`.
+5. Press **g** then **s** → navigates to `/dashboard/organization/features`.
+6. Press **g**, then wait > 1.5 s, then press **a** → nothing happens (timeout
+   aborted the sequence).
+7. Focus a search input on any page. Press **?** → dialog does **not** open
+   (input guard active).
+8. Sign in as a coach (`coach.maria@sunrise-skating.com`). Press **g s** →
+   navigates to `/coach` (no settings page for coaches). Press **g c** →
+   nothing happens (competitions shortcut is admin-only).
+
+#### List-page shortcuts — admin athletes (`/dashboard/athletes`)
+
+1. Navigate to `/dashboard/athletes`. Ensure at least 3 athletes are visible.
+2. Click the page background (no input focused). The **first row** has a
+   ring/border highlight indicating it is selected.
+3. Press **j** → highlight moves to the second row. Press **j** again →
+   third row. Press **k** → back to second row.
+4. Press **j** twice more (now on the fourth row if it exists, or stays at
+   the last row). Press **Enter** → browser navigates to
+   `/dashboard/athletes/<id>` for that athlete.
+5. Return to the list. Press **j j j** to reach the third row. Press **e**
+   → the athlete's edit sheet opens.
+6. Close the sheet (press **Esc**). Press **j j** (second row highlighted).
+   Press **d** → the delete confirmation dialog opens. Press **Cancel** to
+   dismiss.
+7. Focus the search input (click it). Press **j** → highlight does **not**
+   move (input guard). Press **Esc** to blur the input.
+8. Verify **Cmd+K** still opens the command palette (not broken).
+
+#### List-page shortcuts — coach athletes (`/coach/athletes`)
+
+1. Sign in as `coach.maria@sunrise-skating.com`, navigate to `/coach/athletes`.
+2. Click the page background. First card has the ring highlight.
+3. Press **j** / **k** → highlight moves between athlete cards.
+4. Press **Enter** → navigates to `/coach/athletes/<id>`.
+
+#### List-page shortcuts — admin programs (`/dashboard/registrations/programs`)
+
+1. Navigate to `/dashboard/registrations/programs` as admin. First program card
+   has the ring highlight.
+2. Press **j** / **k** → highlight moves between cards.
+3. Press **Enter** → navigates to the program's detail (or edit) page.
+4. Return, press **j** to move to a non-DRAFT program, press **e** → the
+   quick-configure sheet opens.
+
+#### List-page shortcuts — coach programs (`/coach/programs`)
+
+1. Navigate to `/coach/programs` as a coach. First program card has the ring
+   highlight.
+2. Press **j** / **k** → highlight moves between cards.
+
+---
+
 ### Phase 0.1 — Cmd+K command palette
 
 1. From any `/dashboard/*` page, press **⌘K** (Mac) or **Ctrl+K**. Palette opens in ≤ 100 ms.

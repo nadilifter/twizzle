@@ -84,6 +84,10 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 import { useFeatures } from "@/components/feature-context";
+import {
+  useListKeyboardShortcuts,
+  type ListShortcutItem,
+} from "@/hooks/use-list-keyboard-shortcuts";
 import { AthleteConfiguration } from "./athlete-configuration";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
@@ -585,6 +589,21 @@ export default function AthletesPage() {
     );
   }, [athletes]);
 
+  // List keyboard shortcuts (j/k/Enter/e/d)
+  const tableRows = table.getRowModel().rows;
+  const listItems = React.useMemo<ListShortcutItem[]>(
+    () =>
+      tableRows.map((row) => ({
+        id: row.original.id,
+        detailUrl: `/dashboard/athletes/${row.original.id}`,
+        onEdit: () => handleEditClick(row.original),
+        onDelete: () => handleDeleteClick(row.original),
+      })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tableRows, handleEditClick, handleDeleteClick]
+  );
+  const { highlightedIndex } = useListKeyboardShortcuts(listItems);
+
   // Helper to handle checkbox changes for filters
   const handleFilterChange = (columnId: string, value: string, checked: boolean) => {
     const column = table.getColumn(columnId);
@@ -1031,8 +1050,12 @@ export default function AthletesPage() {
               </TableHeader>
               <TableBody>
                 {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                  table.getRowModel().rows.map((row, i) => (
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() && "selected"}
+                      className={cn(i === highlightedIndex && "ring-2 ring-inset ring-ring")}
+                    >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id}>
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
