@@ -8,6 +8,56 @@ Manual verification steps for each entry live in
 
 ## 2026-05-29
 
+### Phase 0.3 — Bento-grid dashboard (Coach)
+
+The Coach dashboard "Overview" section is no longer a row of four equal
+stat cards. It's now a Bento grid: a large hero "Today" tile (2×2)
+flanked by four small KPI tiles (Attendance, Programs, Competitions,
+This week). Each tile lifts on hover (2px) and most are clickable
+links to their respective sections.
+
+- **New primitive:** `src/components/ui/bento.tsx` exporting
+  `<BentoGrid>` (responsive 2/3/4/6-col grid, fixed 10rem auto-rows on
+  md+) and `<BentoTile>` (CSS `col-span` / `row-span` props, hover lift
+  via `motion-safe:hover:-translate-y-0.5 hover:shadow-md`,
+  `asChild` via Radix `Slot` so tiles can render as `<Link>` while
+  keeping their shadow + lift styling on the outer element).
+- **Coach dashboard rewrite** (`src/app/coach/page.tsx`): "Overview"
+  block now renders `<BentoGrid cols={4}>` with a `colSpan=2 rowSpan=2`
+  hero tile + four `colSpan=1` KPI tiles. The redundant bottom
+  "This week summary" card was removed (its data lives in the bento KPI now).
+- **Out of scope for this drop:** Admin dashboard (already a thoughtful
+  2-col layout with ActionItemsPanel + ProgramCalendar — no "equal
+  cards" problem to solve) and athlete-profile bento (108KB page with
+  internal tab structure, separate sprint).
+
+### Phase 0.4 — FLIP layout transitions on the Athletes list
+
+The Athletes list (`/dashboard/athletes`) gained a table ↔ card-grid
+view toggle. Switching modes morphs each athlete's avatar+name pair
+along a curved path from its table-row position to its card position
+(and back), using Framer Motion's `layoutId` shared between the two
+renders.
+
+- **Toggle:** `<ToggleGroup>` with `List` / `LayoutGrid` lucide icons,
+  placed next to `DataTableViewOptions` in the table toolbar. View mode
+  is local component state (resets on page reload — fine for now).
+- **FLIP plumbing:** both views wrap each athlete's avatar+name region
+  in `<motion.div layoutId={`athlete-${id}`} layout="position">`. A
+  single `<LayoutGroup>` wraps both branches so layout IDs cross the
+  view-mode boundary. `transition={{ duration: 0.3, ease: "easeOut" }}`.
+- **Accessibility:** `useReducedMotion()` flips `layout` to `false`
+  when the user's OS prefers reduced motion, skipping the animation
+  entirely.
+- **Filtering/sorting/pagination still apply** in grid mode — the grid
+  iterates `table.getRowModel().rows` exactly like the table body did.
+- **Out of scope for this drop:** Programs list (would duplicate the
+  same pattern) and the list-row → detail-page header morph (Next.js
+  route navigation breaks `layoutId` continuity — needs View
+  Transitions API + cross-route shared-element work).
+
+---
+
 ### Phase 4.2 — ISU shorthand abbreviation generator
 
 New pure-function library `src/lib/isu-shorthand.ts` that converts

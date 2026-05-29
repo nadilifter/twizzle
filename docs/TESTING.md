@@ -69,6 +69,49 @@ auth — MailHog at http://localhost:8025 catches the link locally).
 
 ### 2026-05-29
 
+#### Phase 0.3 — Bento-grid Coach dashboard
+
+1. Sign in as a coach and visit `http://coach.twizzle.localhost:3000/`.
+2. Under the **Overview** heading you should see a 4-column Bento grid:
+   - Large hero tile **Today** on the left (spans 2 columns × 2 rows) with
+     a big event-count number and a "View today's schedule →" link.
+   - Four small KPI tiles on the right: **Attendance** (pending today),
+     **Programs** (active), **Competitions** (upcoming), **This week** (event count).
+3. Hover any non-flat tile — it should lift ~2px with a softer shadow.
+4. Click the hero tile → routes to `/coach/schedule`.
+5. Click each clickable KPI → routes to its section (Attendance,
+   Programs, This week → Schedule). The Competitions tile is currently
+   non-clickable (`flat`) because it doesn't have a dedicated subpage.
+6. Confirm the standalone "X events this week / View schedule" summary
+   card at the bottom of the page is **gone** (its data now lives in
+   the bento "This week" KPI).
+7. Responsiveness: shrink the window — at `<md` breakpoints the grid
+   collapses to a single column. Hero tile becomes a normal-height tile
+   (col/row spans only apply at `md:`).
+
+#### Phase 0.4 — FLIP table ↔ grid toggle on Athletes list
+
+1. Visit `http://admin.twizzle.localhost:3000/dashboard/athletes` as an
+   org admin with at least 3 athletes.
+2. In the table toolbar (right side, next to the Refresh button) you
+   should see a new `<ToggleGroup>` with two icon buttons: list icon
+   (table view, default) and grid icon (card view).
+3. Click the grid icon. The view morphs into a responsive card grid
+   (1/2/3/4 cols at sm/md/lg/xl). Each athlete's **avatar + name pair
+   should travel along a curved path** from its row position to the
+   card position — not pop in. The animation lasts ~300 ms.
+4. Click the list icon. The avatars travel back. The first/last name
+   text remains continuous through the morph (no flash).
+5. Existing filters/sorting work in both views — set a status filter
+   like "Active only" and toggle modes; the same subset is rendered.
+6. Pagination still works in grid mode (the page-size and page-nav
+   controls render below the grid same as the table).
+7. **Reduced motion test:** open System Preferences → Accessibility →
+   Display → "Reduce motion" (macOS), reload, toggle views again — the
+   avatars should snap to position with no animation.
+
+---
+
 #### Phase 4.2 — ISU shorthand abbreviation generator
 
 Run the unit suite:

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BentoGrid, BentoTile } from "@/components/ui/bento";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -86,18 +87,23 @@ const EVENT_TYPE_STYLES: Record<string, string> = {
   OTHER: "bg-muted text-muted-foreground",
 };
 
-function StatCardSkeleton() {
+function StatTileSkeleton() {
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
-        <Skeleton className="h-4 w-20" />
-        <Skeleton className="h-4 w-4 rounded" />
-      </CardHeader>
-      <CardContent className="p-4 pt-0">
-        <Skeleton className="h-8 w-12 mb-1" />
-        <Skeleton className="h-3 w-16" />
-      </CardContent>
-    </Card>
+    <BentoTile flat className="p-4">
+      <Skeleton className="h-4 w-20" />
+      <Skeleton className="mt-3 h-8 w-12" />
+      <Skeleton className="mt-2 h-3 w-16" />
+    </BentoTile>
+  );
+}
+
+function HeroTileSkeleton() {
+  return (
+    <BentoTile flat colSpan={2} rowSpan={2} className="p-6">
+      <Skeleton className="h-5 w-32" />
+      <Skeleton className="mt-4 h-12 w-20" />
+      <Skeleton className="mt-3 h-4 w-40" />
+    </BentoTile>
   );
 }
 
@@ -137,77 +143,118 @@ export default function CoachDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Stat Cards */}
+      {/* Overview — bento grid: hero "Today" tile + 4 KPI tiles */}
       <div>
         <h2 className="text-lg font-semibold mb-2">Overview</h2>
-        <div className="grid gap-4 grid-cols-2">
+        <BentoGrid cols={4}>
           {isLoading ? (
             <>
-              <StatCardSkeleton />
-              <StatCardSkeleton />
-              <StatCardSkeleton />
-              <StatCardSkeleton />
+              <HeroTileSkeleton />
+              <StatTileSkeleton />
+              <StatTileSkeleton />
+              <StatTileSkeleton />
+              <StatTileSkeleton />
             </>
           ) : (
             <>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
-                  <CardTitle className="text-sm font-medium">Today</CardTitle>
-                  <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <div className="text-2xl font-bold">
-                    <CountUp value={data?.todayEventCount ?? 0} />
+              <BentoTile asChild colSpan={2} rowSpan={2}>
+                <Link
+                  href="/coach/schedule"
+                  className="flex flex-col justify-between p-6 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Today</p>
+                      <p className="mt-2 text-5xl font-bold tracking-tight">
+                        <CountUp value={data?.todayEventCount ?? 0} />
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        event{data?.todayEventCount !== 1 ? "s" : ""} on the schedule
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                      <CalendarDays className="h-5 w-5" />
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    event{data?.todayEventCount !== 1 ? "s" : ""} today
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
-                  <CardTitle className="text-sm font-medium">Attendance</CardTitle>
-                  <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <div
-                    className={`text-2xl font-bold ${(data?.pendingAttendanceCount ?? 0) > 0 ? "text-destructive" : ""}`}
-                  >
-                    <CountUp value={data?.pendingAttendanceCount ?? 0} />
+                  <div className="flex items-center gap-1 text-sm text-primary group-hover:underline">
+                    View today&apos;s schedule <ArrowRight className="h-3.5 w-3.5" />
                   </div>
-                  <p className="text-xs text-muted-foreground">pending today</p>
-                </CardContent>
-              </Card>
+                </Link>
+              </BentoTile>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
-                  <CardTitle className="text-sm font-medium">Programs</CardTitle>
-                  <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <div className="text-2xl font-bold">
-                    <CountUp value={data?.programCount ?? 0} />
+              <BentoTile asChild>
+                <Link
+                  href="/coach/attendance"
+                  className="flex flex-col justify-between p-4 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Attendance</span>
+                    <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
                   </div>
-                  <p className="text-xs text-muted-foreground">active</p>
-                </CardContent>
-              </Card>
+                  <div>
+                    <p
+                      className={`text-2xl font-bold ${(data?.pendingAttendanceCount ?? 0) > 0 ? "text-destructive" : ""}`}
+                    >
+                      <CountUp value={data?.pendingAttendanceCount ?? 0} />
+                    </p>
+                    <p className="text-xs text-muted-foreground">pending today</p>
+                  </div>
+                </Link>
+              </BentoTile>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
-                  <CardTitle className="text-sm font-medium">Competitions</CardTitle>
+              <BentoTile asChild>
+                <Link
+                  href="/coach/programs"
+                  className="flex flex-col justify-between p-4 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Programs</span>
+                    <GraduationCap className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">
+                      <CountUp value={data?.programCount ?? 0} />
+                    </p>
+                    <p className="text-xs text-muted-foreground">active</p>
+                  </div>
+                </Link>
+              </BentoTile>
+
+              <BentoTile flat className="p-4 flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Competitions</span>
                   <Trophy className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <div className="text-2xl font-bold">
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">
                     <CountUp value={data?.competitionCount ?? 0} />
-                  </div>
+                  </p>
                   <p className="text-xs text-muted-foreground">upcoming</p>
-                </CardContent>
-              </Card>
+                </div>
+              </BentoTile>
+
+              <BentoTile asChild>
+                <Link
+                  href="/coach/schedule"
+                  className="flex flex-col justify-between p-4 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">This week</span>
+                    <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">
+                      <CountUp value={data?.weekEventCount ?? 0} />
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      event{data?.weekEventCount !== 1 ? "s" : ""} scheduled
+                    </p>
+                  </div>
+                </Link>
+              </BentoTile>
             </>
           )}
-        </div>
+        </BentoGrid>
       </div>
 
       {/* Quick Actions */}
@@ -454,23 +501,6 @@ export default function CoachDashboard() {
           </div>
         )}
       </div>
-
-      {/* This Week Summary */}
-      {!isLoading && data && (
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>
-                {data.weekEventCount} event
-                {data.weekEventCount !== 1 ? "s" : ""} this week
-              </span>
-              <Link href="/coach/schedule" className="text-primary hover:underline">
-                View schedule
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

@@ -75,7 +75,11 @@ import {
   Pencil,
   Calendar,
   User,
+  LayoutGrid,
+  List as ListIcon,
 } from "lucide-react";
+import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
@@ -131,6 +135,8 @@ export default function AthletesPage() {
     membershipGroupIds: false,
   });
   const [rowSelection, setRowSelection] = React.useState({});
+  const [viewMode, setViewMode] = React.useState<"table" | "grid">("table");
+  const shouldReduceMotion = useReducedMotion();
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
   const [isEditOpen, setIsEditOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
@@ -961,6 +967,23 @@ export default function AthletesPage() {
               </div>
             </PopoverContent>
           </Popover>
+          <ToggleGroup
+            type="single"
+            value={viewMode}
+            onValueChange={(v) => {
+              if (v === "table" || v === "grid") setViewMode(v);
+            }}
+            size="sm"
+            variant="outline"
+            aria-label="Toggle view"
+          >
+            <ToggleGroupItem value="table" aria-label="Table view">
+              <ListIcon className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="grid" aria-label="Grid view">
+              <LayoutGrid className="h-4 w-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
           <DataTableViewOptions table={table} />
           <Button variant="outline" onClick={() => fetchAthletes()} disabled={isLoading}>
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refresh"}
@@ -1009,47 +1032,147 @@ export default function AthletesPage() {
         </div>
       )}
 
-      {/* Table */}
+      {/* Table / Grid — FLIP layout transitions on view-mode toggle */}
       {(!isLoading || athletes.length > 0) && !error && (
         <>
-          <div className="overflow-hidden rounded-md border">
-            <Table>
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => {
-                      return (
-                        <TableHead key={header.id}>
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(header.column.columnDef.header, header.getContext())}
-                        </TableHead>
-                      );
-                    })}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          <LayoutGroup>
+            {viewMode === "table" ? (
+              <div className="overflow-hidden rounded-md border">
+                <Table>
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => {
+                          return (
+                            <TableHead key={header.id}>
+                              {header.isPlaceholder
+                                ? null
+                                : flexRender(header.column.columnDef.header, header.getContext())}
+                            </TableHead>
+                          );
+                        })}
+                      </TableRow>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows?.length ? (
+                      table.getRowModel().rows.map((row) => (
+                        <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                          {row.getVisibleCells().map((cell) =>
+                            cell.column.id === "name" ? (
+                              <TableCell key={cell.id}>
+                                <motion.div
+                                  layoutId={`athlete-${row.original.id}`}
+                                  layout={shouldReduceMotion ? false : "position"}
+                                  transition={{ duration: 0.3, ease: "easeOut" }}
+                                >
+                                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                </motion.div>
+                              </TableCell>
+                            ) : (
+                              <TableCell key={cell.id}>
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              </TableCell>
+                            )
+                          )}
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={columns.length} className="h-24 text-center">
+                          No results.
                         </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              // Grid view — cards arrange in a responsive grid, FLIP morphs
+              // each athlete's avatar+name from the table row to the card.
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => {
+                    const a = row.original;
+                    const displayName = athleteDisplayName(a);
+                    const initials = [a.firstName, a.lastName]
+                      .filter(Boolean)
+                      .map((n) => n[0])
+                      .join("");
+                    const levelColor = levelColorMap.get(a.level);
+                    return (
+                      <motion.div
+                        key={row.id}
+                        layoutId={`athlete-${a.id}`}
+                        layout={shouldReduceMotion ? false : "position"}
+                        transition={{ duration: 0.3, ease: "easeOut" }}
+                        className="group rounded-xl border bg-card text-card-foreground shadow transition-shadow hover:shadow-md"
+                      >
+                        <Link
+                          href={`/dashboard/athletes/${a.id}`}
+                          className="flex h-full flex-col gap-3 p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-12 w-12">
+                              <AvatarImage
+                                src={a.avatar ?? undefined}
+                                alt={displayName}
+                                crop={(a as any).avatarCrop ?? undefined}
+                              />
+                              <AvatarFallback>{initials || "?"}</AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium truncate group-hover:underline">
+                                {displayName}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {a.email ?? "No email"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-auto">
+                            {levelColor ? (
+                              <Badge
+                                variant="outline"
+                                style={{
+                                  borderColor: levelColor,
+                                  color: levelColor,
+                                  backgroundColor: `${levelColor}15`,
+                                }}
+                              >
+                                {a.level}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline">{a.level}</Badge>
+                            )}
+                            <Badge variant={getStatusVariant(a.status)}>
+                              {formatStatus(a.status)}
+                            </Badge>
+                            {a.federationMemberNumber && (
+                              <Badge variant="secondary" className="font-mono text-xs">
+                                {a.federationName === "SKATE_CANADA"
+                                  ? "SC"
+                                  : a.federationName === "USFS"
+                                    ? "USFS"
+                                    : a.federationName === "ISU"
+                                      ? "ISU"
+                                      : "ID"}{" "}
+                                {a.federationMemberNumber}
+                              </Badge>
+                            )}
+                          </div>
+                        </Link>
+                      </motion.div>
+                    );
+                  })
                 ) : (
-                  <TableRow>
-                    <TableCell colSpan={columns.length} className="h-24 text-center">
-                      No results.
-                    </TableCell>
-                  </TableRow>
+                  <div className="col-span-full flex h-24 items-center justify-center text-sm text-muted-foreground">
+                    No results.
+                  </div>
                 )}
-              </TableBody>
-            </Table>
-          </div>
+              </div>
+            )}
+          </LayoutGroup>
 
           <DataTablePagination table={table} pageSizeOptions={[10, 20, 30, 50]} />
         </>
