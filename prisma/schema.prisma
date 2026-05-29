@@ -194,6 +194,9 @@ model Organization {
   referralCode      String?    @unique
   referralsMade     Referral[] @relation("ReferralsMade")
   referralsReceived Referral[] @relation("ReferralsReceived")
+
+  // Federation Submissions (Phase 5.1)
+  federationSubmissions FederationSubmission[]
 }
 
 model OrganizationMember {
@@ -345,6 +348,11 @@ model User {
 
   // Custom information responses
   customInfoResponses CustomInfoResponse[] @relation("UserCustomInfoResponses")
+
+  // Federation Submissions (Phase 5.1)
+  createdSubmissions   FederationSubmission[] @relation("FederationSubmissionCreator")
+  submittedSubmissions FederationSubmission[] @relation("FederationSubmissionSubmitter")
+  resolvedSubmissions  FederationSubmission[] @relation("FederationSubmissionResolver")
 }
 
 model Session {
@@ -548,6 +556,9 @@ model Athlete {
 
   // Organization-Athlete junction (which orgs can see this athlete)
   organizationAthletes OrganizationAthlete[]
+
+  // Federation Submissions (Phase 5.1)
+  federationSubmissions FederationSubmissionAthlete[]
 }
 
 model AthleteGuardian {
@@ -5272,6 +5283,74 @@ model ReferralCreditApplication {
   subscriptionInvoice SubscriptionInvoice @relation(fields: [subscriptionInvoiceId], references: [id], onDelete: Cascade)
 
   @@index([referralId])
+}
+
+// ============================================================
+// PHASE 5.1: Federation Submissions
+// Tracks the lifecycle of an org's athlete-data submission to
+// a skating federation (DRAFT → SUBMITTED → ACCEPTED/REJECTED).
+// ============================================================
+
+enum Federation {
+  SKATE_CANADA
+  USFS
+  ISU
+}
+
+enum FederationSubmissionStatus {
+  DRAFT
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+}
+
+model FederationSubmission {
+  id             String                     @id @default(cuid())
+  organizationId String
+  organization   Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Target federation for this submission.
+  federation     Federation
+
+  // Lifecycle status and timestamps.
+  status         FederationSubmissionStatus @default(DRAFT)
+  submittedAt    DateTime? // set on DRAFT → SUBMITTED transition
+  resolvedAt     DateTime? // set on SUBMITTED → ACCEPTED/REJECTED transition
+  resolutionNote String?   // optional federation response or rejection reason
+
+  // Flexible JSON payload; shape is federation-specific and documented
+  // per-integration (e.g. Skate Canada CRM fields in Phase 6).
+  payload        Json
+
+  // External reference returned by the federation on acceptance (e.g. case number).
+  externalRef    String?
+
+  // Who acted on this submission.
+  createdById   String
+  createdBy     User    @relation("FederationSubmissionCreator", fields: [createdById], references: [id])
+  submittedById String?
+  submittedBy   User?   @relation("FederationSubmissionSubmitter", fields: [submittedById], references: [id])
+  resolvedById  String?
+  resolvedBy    User?   @relation("FederationSubmissionResolver", fields: [resolvedById], references: [id])
+
+  // Athletes included in this submission.
+  athletes FederationSubmissionAthlete[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, status])
+  @@index([federation, status])
+}
+
+model FederationSubmissionAthlete {
+  submissionId String
+  submission   FederationSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  athleteId    String
+  athlete      Athlete              @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+
+  @@id([submissionId, athleteId])
+  @@index([athleteId])
 }
 
 model CacheVersion {

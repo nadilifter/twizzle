@@ -18,6 +18,63 @@ auth — MailHog at http://localhost:8025 catches the link locally).
 (Note: the local base domain switched from `uplifter.localhost` to
 `twizzle.localhost` — old bookmarks 404.)
 
+### Phase 5.1 — FederationSubmission model
+
+Schema-only change; no UI. Verification is static (no running DB required).
+
+#### Schema validation
+
+1. From the repo root run:
+
+   ```bash
+   DATABASE_URL="postgresql://user:pass@localhost:5432/db" npx prisma validate
+   ```
+
+   Expected: `The schema at prisma/schema.prisma is valid 🚀`
+
+2. Run `pnpm typecheck` (or `tsc --noEmit`). Expected: exits 0, no errors.
+
+#### Migration SQL spot-check
+
+Inspect `prisma/migrations/20260529180000_add_federation_submission/migration.sql`:
+
+- Two `CREATE TYPE` statements for `Federation` and `FederationSubmissionStatus` enums.
+- `CREATE TABLE "FederationSubmission"` with columns: `id`, `organizationId`, `federation`,
+  `status` defaulting to `'DRAFT'`, `submittedAt`, `resolvedAt`, `resolutionNote`,
+  `payload JSONB`, `externalRef`, `createdById`, `submittedById`, `resolvedById`,
+  `createdAt`, `updatedAt`.
+- `CREATE TABLE "FederationSubmissionAthlete"` with composite PK
+  `("submissionId","athleteId")`.
+- Two composite indexes on `FederationSubmission`: `(organizationId, status)` and
+  `(federation, status)`.
+- One index on `FederationSubmissionAthlete`: `(athleteId)`.
+- Six `ADD CONSTRAINT … FOREIGN KEY` statements wiring org, three users, and both
+  sides of the join table. `onDelete: CASCADE` on org + submissionId side; `SET NULL`
+  on optional user FKs.
+
+#### Prisma Client type spot-check (after `prisma generate`)
+
+In any TypeScript file or REPL:
+
+```typescript
+import { Federation, FederationSubmissionStatus } from "@prisma/client";
+// Both enum types must be available — TS will error if generation failed.
+const f: Federation = Federation.SKATE_CANADA;
+const s: FederationSubmissionStatus = FederationSubmissionStatus.DRAFT;
+```
+
+#### DB smoke test (requires local Postgres)
+
+Once a local DB is available (Phase 5.2+):
+
+1. Run `pnpm db:migrate` — migration should apply cleanly.
+2. In `psql`: `\d "FederationSubmission"` — confirm all columns and constraints.
+3. Create a DRAFT submission via Prisma Studio or a seed script, then update
+   `status` to `SUBMITTED` and verify `submittedAt` can be set. Repeat for
+   `ACCEPTED`/`REJECTED` with `resolvedAt` + `resolutionNote`.
+
+---
+
 ### Phase 0.8 — Power-user keyboard shortcuts
 
 #### Global shortcuts (any admin or coach page)
