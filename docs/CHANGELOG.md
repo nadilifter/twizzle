@@ -7,6 +7,52 @@ each. Newest first.
 
 ## 2026-05-29
 
+### Phase 0.1 — Global Cmd+K command palette
+
+Keyboard-first launcher that puts every page, athlete, program, and
+action one shortcut away. Mounted in both the admin (`/dashboard`) and
+coach (`/coach`) authenticated layouts; invisible on unauthenticated
+routes.
+
+- **Shortcut:** `Cmd+K` (macOS) / `Ctrl+K` (others) toggles the palette.
+  Escape closes it. The existing sidebar `⌘K` hint is now a clickable
+  button that also opens the palette.
+- **Discovery button:** "Search ⌘K" button added to the top-bar
+  (`SiteHeaderActions`) in both layouts.
+- **Sections:** Navigate (role-filtered admin + coach routes), Athletes
+  (debounced 250 ms search against `/api/athletes?search=`), Programs
+  (same pattern against `/api/programs?search=`), Actions (New athlete,
+  New program, New evaluation, Switch organization, Log out), Recent
+  (last 5 pages from `localStorage`).
+- **Performance:** global `keydown` listener is registered eagerly;
+  dialog content is already in the bundle (no lazy-load overhead on
+  first open). Search debounced at 250 ms.
+- **Accessibility:** respects `prefers-reduced-motion` via a global CSS
+  rule in `globals.css`.
+
+**Test:**
+
+- From any admin or coach page, press `Cmd+K` (or `Ctrl+K` on Windows/Linux)
+  → palette opens within ≤ 100 ms.
+- Click the "Search ⌘K" button in the top-bar → same palette opens.
+- Click the `⌘K` / `Ctrl+K` badge in the sidebar search input → palette
+  opens (sidebar search input itself is unaffected).
+- Arrow keys move selection; `Enter` navigates to the highlighted item;
+  `Escape` closes the palette.
+- As an ADMIN user, type 3+ characters → Athletes and Programs sections
+  appear after ~250 ms (verify with Network tab: exactly one request
+  per debounce window, not one per keystroke).
+- Select an athlete result → navigates to `/dashboard/athletes/<id>`.
+- As a COACH user, the Navigate section shows only coach routes
+  (`/coach/…`); athlete results navigate to `/coach/athletes/<id>`.
+- Navigate to several pages, then reopen the palette → "Recent" section
+  shows the last ≤ 5 visited paths.
+- "Log out" action → calls `signOut` and redirects to `/login`.
+- With `prefers-reduced-motion: reduce` set in OS/browser →
+  palette appears instantly (no fade/zoom animation).
+
+---
+
 ### Phase 0.5 — Micro-animations on standard interactions
 
 Added subtle, consistent animations to design-system primitives so every
