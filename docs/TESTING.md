@@ -11,6 +11,62 @@ can follow without re-deriving the intent.
 
 ## 2026-05-29
 
+### Phase 5.2 — Admin submission queue page
+
+#### Prerequisites
+
+- At least one `FederationSubmission` row in the database with `status = 'DRAFT'`
+  linked to the test org. (Insert via Prisma Studio or a seed script if none exist.)
+- Logged in as an ADMIN user.
+
+#### List page — `GET /dashboard/federation-submissions`
+
+1. Navigate to **Federation → Submissions** in the sidebar, or search
+   "Federation Submissions" in the command palette (Cmd+K).
+2. Confirm the table renders with columns: Federation, Status, Athletes,
+   Created by, Submitted at, Resolved at, External ref, Actions.
+3. DRAFT row: actions column shows "Mark Submitted" and "Edit" buttons.
+4. Click **Mark Submitted** → confirm dialog appears → click **Confirm**.
+   Toast: "Submission marked as submitted". Row status badge updates to
+   **Submitted**.
+5. SUBMITTED row: actions column shows "Mark Accepted" and "Mark Rejected".
+6. Click **Mark Accepted** → confirm dialog → optionally enter a resolution
+   note → click **Confirm**. Toast: "Submission marked as accepted". Row
+   status badge updates to **Accepted**.
+7. Click **Mark Rejected** on another SUBMITTED row → dialog renders the
+   resolution note textarea → confirm. Toast: "Submission marked as rejected".
+   Status badge updates to **Rejected**.
+8. ACCEPTED/REJECTED rows: no action buttons visible.
+9. Status filter (popover): check "DRAFT" only → only DRAFT rows visible.
+   Clear filters → all rows visible.
+10. Federation filter (select): choose "Skate Canada" → only SKATE_CANADA
+    rows visible. Reset to "All Federations".
+11. Empty state: with no rows matching filters, table shows "No federation
+    submissions yet" with a "Create your first submission" CTA.
+
+#### Detail page — `GET /dashboard/federation-submissions/[id]`
+
+1. From the list page, click **Edit** on a DRAFT row → navigates to the
+   detail page.
+2. Confirm status badge, federation badge, lifecycle dates, Created by label,
+   and payload JSON block render correctly.
+3. Athletes section lists linked athletes with name and level badge.
+4. Transition actions visible for DRAFT/SUBMITTED rows (same as list page).
+5. After a transition, the page re-fetches: status badge and dates update.
+6. Resolution note section appears after ACCEPTED/REJECTED transitions if a
+   note was provided.
+7. "Audit log (Phase 5.3)" stub block is visible at the bottom.
+
+#### API error cases
+
+- `POST /api/federation-submissions/[id]/transitions` with `to: 'ACCEPTED'`
+  when submission is in DRAFT state → `400` with message "Cannot transition
+  from DRAFT to ACCEPTED".
+- Same endpoint as a non-ADMIN user → `403 Admin access required`.
+- `GET /api/federation-submissions/nonexistent-id` → `404 Not found`.
+
+---
+
 ### Phase 2.1 — Bulk achievement CSV import
 
 #### Setup

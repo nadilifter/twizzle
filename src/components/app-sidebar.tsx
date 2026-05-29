@@ -268,6 +268,16 @@ const data = {
       ],
     },
     {
+      title: "Federation",
+      url: "/dashboard/federation-submissions",
+      items: [
+        {
+          title: "Submissions",
+          url: "/dashboard/federation-submissions",
+        },
+      ],
+    },
+    {
       title: "Registrations",
       url: "/dashboard/registrations",
       items: [

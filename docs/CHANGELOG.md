@@ -8,6 +8,37 @@ Manual verification steps for each entry live in
 
 ## 2026-05-29
 
+### Phase 5.2 — Admin submission queue page
+
+New ADMIN-only pages and API routes for managing `FederationSubmission` rows
+(created in Phase 5.1).
+
+**List page** at `/dashboard/federation-submissions`: TanStack-table view of all
+submissions for the current org. Columns: Federation badge, Status badge,
+Athletes count, Created by, Submitted at, Resolved at, External ref, and
+Actions. Supports multi-select Status filter and single-select Federation filter.
+Action buttons are role-aware: DRAFT rows show "Mark Submitted" + "Edit"; SUBMITTED
+rows show "Mark Accepted" + "Mark Rejected" (each opens a confirmation dialog with
+an optional `resolutionNote` field). ACCEPTED/REJECTED rows are read-only.
+
+**Detail page** at `/dashboard/federation-submissions/[id]`: shows status badge,
+lifecycle timestamps with actor names, linked athletes (name + level badge),
+raw `payload` JSON viewer, `resolutionNote` if present, and a stub audit-log
+section (Phase 5.3). Same transition actions as the list page.
+
+**API routes** under `src/app/api/federation-submissions/`:
+
+- `GET /` — list submissions, filterable by `status` and `federation`.
+- `GET /[id]` — single submission with athletes and actor relations.
+- `POST /[id]/transitions` — enforce valid transitions (DRAFT→SUBMITTED,
+  SUBMITTED→ACCEPTED|REJECTED). Sets `submittedAt`/`resolvedAt` and the
+  corresponding actor ID. Returns 400 on invalid transition.
+
+All routes are ADMIN-only. Nav wired in sidebar (Federation → Submissions) and
+command palette (Federation Submissions).
+
+---
+
 ### Phase 2.1 — Bulk achievement CSV import
 
 New page at `/dashboard/training/import-achievements` and API route
