@@ -8,6 +8,31 @@ Manual verification steps for each entry live in
 
 ## 2026-05-29
 
+### Fix: route users to their actual portal at login + sidebar cross-links
+
+Three connected fixes so a coach logging in lands on the coach portal
+(not on the admin portal with the admin sidebar) and so the cross-links
+between portals only appear for users who can actually use them.
+
+- **`handlePostLoginRedirect`** (the credentials-flow redirect in
+  `src/components/auth/login-form.tsx`) used to hardcode the admin
+  subdomain for every successful sign-in. It now fetches the freshly
+  signed-in session and routes via a new role-aware
+  `getPortalUrlForRole(role, permissions)`:
+  - `ADMIN` / `SUPERADMIN` / `*` perm → `admin.<base>/`
+  - `COACH` / `coaching.portal` perm → `coach.<base>/`
+  - else → `athletes.<base>/`
+- **Admin sidebar's "Coach Portal" cross-link** is now gated on the
+  caller having `coaching.portal` (or `*`) — pure admins no longer see
+  a link that would 403 them.
+- **Coach sidebar** gains a new "Other Portals" section with an
+  **Admin Dashboard** link, gated on the user actually having admin
+  access (`role === ADMIN/SUPERADMIN` or `*` perm). Pure coaches don't
+  see it; admins-who-also-coach can hop back without `cmd+L`-typing
+  the admin subdomain.
+
+---
+
 ### Fix: command palette cross-subdomain routing
 
 The palette was calling `router.push()` (same-origin only) for every

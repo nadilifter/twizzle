@@ -19,6 +19,7 @@ import { useSession } from "next-auth/react";
 import { NavUser } from "@/components/nav-user";
 import { CoachOrgSwitcher } from "@/components/coach-org-switcher";
 import { useFeatures } from "@/components/feature-context";
+import { getClientSubdomainUrl } from "@/lib/client-domains";
 import type { FeatureKey } from "@/lib/feature-toggles";
 import {
   Sidebar,
@@ -137,6 +138,18 @@ export function CoachSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
 
   const isSuperAdmin = session?.user?.isSuperAdmin === true;
 
+  // Cross-link back to the admin portal — only show when the user is
+  // actually an admin (or superadmin). Pure coaches don't have admin
+  // access and shouldn't see a link that takes them to a 403.
+  const permissions = session?.user?.permissions ?? [];
+  const role = session?.user?.role;
+  const hasAdminAccess =
+    isSuperAdmin || role === "ADMIN" || role === "SUPERADMIN" || permissions.includes("*");
+  const adminPortalUrl = React.useMemo(
+    () => (hasAdminAccess ? `${getClientSubdomainUrl("admin")}/dashboard` : null),
+    [hasAdminAccess]
+  );
+
   const filteredNavItems = navItems.filter(
     (item) => !item.requiredFeature || isFeatureEnabled(item.requiredFeature)
   );
@@ -191,8 +204,26 @@ export function CoachSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {adminPortalUrl && (
+          <SidebarGroup className={isSuperAdmin ? "" : "mt-auto"}>
+            <SidebarGroupLabel>Other Portals</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <a href={adminPortalUrl}>
+                      <LayoutDashboard className="h-4 w-4" />
+                      <span>Admin Dashboard</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
         {isSuperAdmin && (
-          <SidebarGroup className="mt-auto">
+          <SidebarGroup className={adminPortalUrl ? "" : "mt-auto"}>
             <SidebarGroupLabel>Admin Tools</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>

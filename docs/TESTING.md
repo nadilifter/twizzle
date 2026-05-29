@@ -67,6 +67,37 @@ auth — MailHog at http://localhost:8025 catches the link locally).
 
 ### 2026-05-29
 
+#### Fix: portal-aware login redirect + sidebar cross-links
+
+- **Coach login lands on coach portal:** log in as
+  `coach.maria@sunrise-skating.com` (or any user whose role is `COACH`).
+  Expected: URL after sign-in is
+  `http://coach.uplifter.localhost:3000/coach`, not `admin.…/dashboard`.
+- **Admin login still lands on admin portal:** log in as
+  `admin@sunrise-skating.com`. Expected: URL is
+  `http://admin.uplifter.localhost:3000/dashboard`.
+- **Pure coach doesn't see admin cross-link:** while signed in as the
+  coach above, expand the coach sidebar. There should be **no** "Other
+  Portals → Admin Dashboard" entry (they don't have admin access).
+- **Admin doesn't see "Coach Portal" cross-link unless they coach:**
+  while signed in as `admin@sunrise-skating.com`, expand the
+  Access Points section in the admin sidebar — the **Coach Portal**
+  link should be **absent** (admin has no `coaching.portal` perm).
+  Add `coaching.portal` to the admin seed and reload → the link
+  appears.
+- **Hybrid users see both links:** for a user with both admin and
+  coach perms (a superadmin, or a custom-perm admin who also has
+  `coaching.portal`):
+  - Admin sidebar shows the **Coach Portal** Access Point.
+  - Coach sidebar shows **Other Portals → Admin Dashboard**.
+- **`?callbackUrl=` still wins:** open
+  `http://login.uplifter.localhost:3000/login?callbackUrl=/dashboard/athletes`,
+  log in as a coach → the explicit callback URL is honored (lands on
+  admin/athletes, not coach overview). The role-aware default only
+  applies when no callback is supplied.
+
+---
+
 #### Fix: command palette cross-subdomain routing
 
 - Log in as a coach who has admin permissions too (e.g. a superadmin)

@@ -960,10 +960,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
   };
 
-  const filteredAccessPoints = React.useMemo(
-    () => filterAccessPointsByFeatures(data.navSecondaryAccessPoints, features),
-    [features]
-  );
+  const filteredAccessPoints = React.useMemo(() => {
+    const featureFiltered = filterAccessPointsByFeatures(data.navSecondaryAccessPoints, features);
+    // Permission-gate the Coach Portal cross-link: only users who actually
+    // have access to /coach should see this. Pure admins (no coaching.portal
+    // perm) would land on a 403 anyway.
+    const permissions = session?.user?.permissions ?? [];
+    const hasCoachAccess =
+      session?.user?.role === "COACH" ||
+      permissions.includes("*") ||
+      permissions.includes("coaching.portal");
+    return featureFiltered.filter((item) => item.title !== "Coach Portal" || hasCoachAccess);
+  }, [features, session?.user?.role, session?.user?.permissions]);
 
   // Track website subdomain as reactive state so the Marketing Site link hides immediately
   // when the website is unpublished (e.g. on Adyen verification regression).

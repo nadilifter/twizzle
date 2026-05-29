@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ShineBorder } from "@/components/ui/shine-border";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { signIn, getCsrfToken, useSession } from "next-auth/react";
+import { signIn, getCsrfToken, getSession, useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { UplifterLogo } from "@/components/uplifter-logo";
 import { getClientSubdomainUrl } from "@/lib/client-domains";
@@ -28,12 +28,21 @@ function isLocalSubdomain(): boolean {
  * See git history for full context on this limitation.
  */
 
-function getPortalUrlForPermissions(permissions?: string[]): string {
+// Pick the landing portal based on the user's role first (canonical) and
+// permissions as a fallback. Coaches land on /coach, admins on /dashboard,
+// guardians on /athletes. Users with overlapping access (e.g. a head coach
+// who also has admin perms) default to admin since the cross-links in the
+// sidebars let them jump between portals.
+function getPortalUrlForRole(role?: string, permissions?: string[]): string {
   if (typeof window === "undefined") return "/";
-  const hasAdminAccess = permissions && permissions.length > 0;
-  return hasAdminAccess
-    ? `${getClientSubdomainUrl("admin")}/`
-    : `${getClientSubdomainUrl("athletes")}/`;
+  const perms = permissions ?? [];
+  if (role === "ADMIN" || role === "SUPERADMIN" || perms.includes("*")) {
+    return `${getClientSubdomainUrl("admin")}/`;
+  }
+  if (role === "COACH" || perms.includes("coaching.portal")) {
+    return `${getClientSubdomainUrl("coach")}/`;
+  }
+  return `${getClientSubdomainUrl("athletes")}/`;
 }
 
 function getDefaultCallbackUrl(): string {
@@ -81,7 +90,8 @@ export function LoginForm() {
   const { data: session, status: sessionStatus } = useSession();
   useEffect(() => {
     if (sessionStatus !== "authenticated" || !session?.user) return;
-    const destination = urlCallbackParam || getPortalUrlForPermissions(session.user.permissions);
+    const destination =
+      urlCallbackParam || getPortalUrlForRole(session.user.role, session.user.permissions);
     window.location.href = destination;
   }, [sessionStatus, session, urlCallbackParam]);
 
@@ -176,21 +186,31 @@ export function LoginForm() {
   };
   const [error, setError] = useState<string | null>(getInitialError());
 
-  const handlePostLoginRedirect = useCallback(() => {
+  const handlePostLoginRedirect = useCallback(async () => {
     const hostname = window.location.hostname;
     const isLocalEnv = hostname.includes("localhost");
 
+    // Resolve the landing portal from the freshly-signed-in session. The
+    // useSession() hook hasn't refetched yet at this point, so call
+    // getSession() directly. Falls back to whatever callbackUrl was supplied
+    // (the ?callbackUrl param on the URL takes priority).
+    const session = await getSession();
+    const portalUrl = getPortalUrlForRole(session?.user?.role, session?.user?.permissions);
+
     if (isLocalEnv) {
-      const destination = callbackUrl.startsWith("http")
-        ? callbackUrl
-        : `http://admin.uplifter.localhost:3000${callbackUrl}`;
+      const customCallback = urlCallbackParam && urlCallbackParam !== "/" ? urlCallbackParam : null;
+      const destination = customCallback
+        ? customCallback.startsWith("http")
+          ? customCallback
+          : `${portalUrl.replace(/\/$/, "")}${customCallback}`
+        : portalUrl;
       window.location.href = `/api/auth/credentials-bridge?callbackUrl=${encodeURIComponent(destination)}`;
     } else {
       const destination =
-        callbackUrl && callbackUrl !== "/" ? callbackUrl : getDefaultCallbackUrl();
+        urlCallbackParam && urlCallbackParam !== "/" ? urlCallbackParam : portalUrl;
       window.location.href = destination;
     }
-  }, [callbackUrl]);
+  }, [urlCallbackParam]);
 
   // Handle magic link auto-sign-in for email-code login
   useEffect(() => {
