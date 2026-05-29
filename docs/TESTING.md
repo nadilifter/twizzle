@@ -9,6 +9,79 @@ can follow without re-deriving the intent.
 
 ---
 
+## Per-feature tests
+
+### 2026-05-29
+
+#### Phase 4.2 — ISU shorthand abbreviation generator
+
+Run the unit suite:
+
+```
+pnpm test src/lib/__tests__/isu-shorthand.test.ts
+```
+
+Expected: **63 passed**.
+
+Representative API assertions (all from the test file):
+
+```ts
+// Jumps
+generateIsuShorthand({ kind: "jump", turns: 3, type: "T" }) === "3T";
+generateIsuShorthand({ kind: "jump", turns: 4, type: "Lz" }) === "4Lz";
+generateIsuShorthand({ kind: "jump", turns: 2, type: "A" }) === "2A";
+generateIsuShorthand({ kind: "jump", turns: 4, type: "A" }) === "4A";
+
+// Jump combinations
+generateIsuShorthand({
+  kind: "jumpCombo",
+  elements: [
+    { turns: 3, type: "T" },
+    { turns: 2, type: "T" },
+  ],
+}) === "3T+2T";
+generateIsuShorthand({
+  kind: "jumpCombo",
+  elements: [
+    { turns: 3, type: "F" },
+    { turns: 2, type: "T" },
+    { turns: 2, type: "Lo" },
+  ],
+}) === "3F+2T+2Lo";
+generateIsuShorthand({ kind: "jumpCombo", elements: [] }) === ""; // empty → "" (documented)
+
+// Spins
+generateIsuShorthand({ kind: "spin", family: "FSSp", level: 4 }) === "FSSp4";
+generateIsuShorthand({ kind: "spin", family: "CoSp", level: 3 }) === "CoSp3";
+generateIsuShorthand({ kind: "spin", family: "LSp", level: "B" }) === "LSpB";
+generateIsuShorthand({ kind: "spin", family: "CSp", level: 4 }) === "CSp4";
+
+// Step + choreographic + spiral sequences
+generateIsuShorthand({ kind: "stepSequence", level: 3 }) === "StSq3";
+generateIsuShorthand({ kind: "stepSequence", level: "B" }) === "StSqB";
+generateIsuShorthand({ kind: "chorSequence" }) === "ChSq1";
+generateIsuShorthand({ kind: "spiralSequence" }) === "SpSq";
+
+// Death spirals
+generateIsuShorthand({ kind: "deathSpiral", type: "FoI", level: 1 }) === "FoIDS1";
+generateIsuShorthand({ kind: "deathSpiral", type: "BoO", level: 4 }) === "BoODS4";
+
+// Lifts
+generateIsuShorthand({ kind: "lift", family: "4Li", level: 4 }) === "4Li4";
+generateIsuShorthand({ kind: "lift", family: "CuLi", level: 2 }) === "CuLi2";
+generateIsuShorthand({ kind: "lift", family: "5ALi", level: "B" }) === "5ALiB";
+
+// Throws
+generateIsuShorthand({ kind: "throw", turns: 3, type: "Lo" }) === "3ThLo";
+generateIsuShorthand({ kind: "throw", turns: 3, type: "Lz" }) === "3ThLz";
+generateIsuShorthand({ kind: "throw", turns: 4, type: "A" }) === "4ThA";
+```
+
+TypeScript verification — adding a new variant to `IsuElementInput` without a switch arm
+should produce a compile error on the `never` guard in `generateIsuShorthand`.
+
+---
+
 ## Smoke test — current top of `main`
 
 Run after any large merge to catch regressions early. Start at

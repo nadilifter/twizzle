@@ -8,6 +8,29 @@ Manual verification steps for each entry live in
 
 ## 2026-05-29
 
+### Phase 4.2 — ISU shorthand abbreviation generator
+
+New pure-function library `src/lib/isu-shorthand.ts` that converts
+structured element inputs into canonical ISU/Skate Canada shorthand
+codes. No Prisma, no React — safe on both client and server. Intended
+as the encoding layer for the Phase 4.3 planned-program builder.
+
+- **`generateIsuShorthand(input: IsuElementInput): string`** — exhaustive
+  discriminated-union switch with a TypeScript `never` guard so missing
+  cases are caught at compile time.
+- **Element kinds covered:** single jumps, jump combinations, all 10 ISU
+  spin families (USp / SSp / LSp / CoSp / FSSp / FCoSp / FUSp / FLSp /
+  FCSp / CSp), step sequences, choreographic sequence (`ChSq1` fixed),
+  spiral sequence (`SpSq` fixed), death spirals (4 entry-edge variants),
+  10 lift families (Pairs + Ice Dance), and throw jumps.
+- **Levels:** B (basic) and 1–4 on every levelled element.
+- **Jump combinations:** `+`-separated, e.g. `3F+2T+2Lo`. Empty elements
+  array returns `""` (documented; callers must guard if an error is needed).
+- **63 vitest cases** in `src/lib/__tests__/isu-shorthand.test.ts` covering
+  every element kind, level, and the empty-combo edge case.
+
+---
+
 ### Fix: UplifterIcon overflowing the login card
 
 `<UplifterIcon>` was rendered with `width="auto"`, which isn't a valid
