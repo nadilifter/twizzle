@@ -292,3 +292,14 @@
     }
   }
 }
+
+/* Disable command-palette open/close animations for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  [data-state="open"][role="dialog"],
+  [data-state="closed"][role="dialog"],
+  [data-state="open"] > [role="dialog"],
+  [data-state="closed"] > [role="dialog"] {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -23,6 +23,7 @@ import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
 import { ReferAndSaveDialog } from "@/components/refer-and-save-dialog";
 import { OrganizationSwitcher } from "@/components/organization-switcher";
+import { useCommandPalette } from "@/components/command-palette";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Sidebar,
@@ -813,6 +814,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { isMobile } = useSidebar();
   const { data: session, status } = useSession();
   const { features, isLoaded: isFeaturesLoaded } = useFeatures();
+  const { open: openCommandPalette } = useCommandPalette();
 
   // Get user data from session
   const user = session?.user
@@ -836,16 +838,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { results: entityResults, isLoading: isEntitySearchLoading } =
     useSidebarSearch(searchQuery);
 
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  // Cmd+K is handled globally by CommandPaletteProvider; clicking the
+  // kbd hint in the sidebar search also opens the palette for discoverability.
+  const handleSearchKbdClick = React.useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      openCommandPalette();
+    },
+    [openCommandPalette]
+  );
 
   const [isMac, setIsMac] = React.useState<boolean | null>(null);
   React.useEffect(() => {
@@ -1090,15 +1091,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </button>
                 ) : (
                   isMac !== null && (
-                    <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 hidden h-5 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline-flex">
-                      {isMac ? (
-                        <>
-                          <span className="text-[9px]">⌘</span>K
-                        </>
-                      ) : (
-                        "Ctrl+K"
-                      )}
-                    </kbd>
+                    <button
+                      type="button"
+                      onClick={handleSearchKbdClick}
+                      aria-label="Open command palette"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 hidden sm:inline-flex"
+                    >
+                      <kbd className="flex h-5 cursor-pointer select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground hover:bg-accent">
+                        {isMac ? (
+                          <>
+                            <span className="text-[9px]">⌘</span>K
+                          </>
+                        ) : (
+                          "Ctrl+K"
+                        )}
+                      </kbd>
+                    </button>
                   )
                 )}
               </>
