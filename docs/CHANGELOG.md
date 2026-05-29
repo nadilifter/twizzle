@@ -8,6 +8,18 @@ Manual verification steps for each entry live in
 
 ## 2026-05-29
 
+### Fix: Federation Membership Requirement toggle missing from ProgramStepper
+
+Phase 1.2 added the `hasFederationMembershipRestriction` toggle to the
+Settings sheet (`ProgramConfiguration`) but missed the parallel
+multi-step wizard (`ProgramStepper`) used by the **Edit** flow at
+`/dashboard/registrations/programs/[id]/edit` and the new-program
+wizard. Mirrors the same four-point wiring — formData type, form
+state init, API restore, save payload — and adds the matching Switch
+to Step 3 (Requirements) right after File Upload Requirement.
+
+---
+
 ### Fix: route users to their actual portal at login + sidebar cross-links
 
 Three connected fixes so a coach logging in lands on the coach portal

@@ -67,6 +67,26 @@ auth — MailHog at http://localhost:8025 catches the link locally).
 
 ### 2026-05-29
 
+#### Fix: Federation Membership Requirement toggle on ProgramStepper
+
+- Open `/dashboard/registrations/programs/new` (new-program wizard) →
+  step **3. Requirements** → scroll past File Upload Requirement → see
+  **Federation Membership Requirement** with description "Require
+  athletes to hold a valid Skate Canada (or other federation)
+  membership…". Toggle on, complete the wizard, save.
+- DB: `SELECT "hasFederationMembershipRestriction" FROM "Program" WHERE id = '<new-program-id>';`
+  → `true`.
+- Open the same program at `/dashboard/registrations/programs/<id>/edit`
+  → step 3 Requirements → toggle is **already on** (state restored from
+  the API on load). Flip it off, save.
+- DB query again → `false`.
+- Sanity: the same toggle in the Settings sheet
+  (`/dashboard/registrations/programs/<id>` → **Settings** button →
+  Requirements tab) also reflects the same `false` after the stepper
+  save (both edit surfaces write to the same field).
+
+---
+
 #### Fix: portal-aware login redirect + sidebar cross-links
 
 - **Coach login lands on coach portal:** log in as

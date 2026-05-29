@@ -201,6 +201,7 @@ interface ProgramFormData {
   waiverRequirementIds: string[];
   hasMedicalRequirement: boolean;
   hasFileRequirement: boolean;
+  hasFederationMembershipRestriction: boolean;
   fileRequirementConfig: FileRequirementConfig | null;
 
   // Waitlist
@@ -373,6 +374,8 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     waiverRequirementIds: (program as any)?.waiverRequirements?.map((wr: any) => wr.waiverId) || [],
     hasMedicalRequirement: program?.hasMedicalRequirement || false,
     hasFileRequirement: (program as any)?.hasFileRequirement || false,
+    hasFederationMembershipRestriction:
+      (program as any)?.hasFederationMembershipRestriction || false,
     fileRequirementConfig: (program as any)?.fileRequirementConfig || null,
 
     // Waitlist
@@ -523,6 +526,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
           waiverRequirementIds: data.waiverRequirements?.map((wr: any) => wr.waiverId) || [],
           hasMedicalRequirement: data.hasMedicalRequirement || false,
           hasFileRequirement: data.hasFileRequirement || false,
+          hasFederationMembershipRestriction: data.hasFederationMembershipRestriction || false,
           fileRequirementConfig: data.fileRequirementConfig || null,
           waitlistEnabled: data.waitlistEnabled || false,
           waitlistAutoPromote: data.waitlistAutoPromote || false,
@@ -988,6 +992,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         hasWaiverRestriction: formData.hasWaiverRestriction,
         hasMedicalRequirement: formData.hasMedicalRequirement,
         hasFileRequirement: formData.hasFileRequirement,
+        hasFederationMembershipRestriction: formData.hasFederationMembershipRestriction,
         fileRequirementConfig: formData.hasFileRequirement ? formData.fileRequirementConfig : null,
         hasSpaceRestriction: formData.hasSpaceRestriction,
         spaceCapacityMode: formData.spaceCapacityMode,
@@ -2783,6 +2788,27 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                   />
                 </div>
               )}
+
+              {/* Federation Membership Requirement */}
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label className="text-base">Federation Membership Requirement</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Require athletes to hold a valid Skate Canada (or other federation) membership
+                    before enrolling. Checked against the athlete&apos;s recorded member number and
+                    expiry date at enrollment time.
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.hasFederationMembershipRestriction}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      hasFederationMembershipRestriction: checked,
+                    }))
+                  }
+                />
+              </div>
             </CardContent>
           </Card>
         )}
