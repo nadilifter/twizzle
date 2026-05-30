@@ -8,6 +8,16 @@ Manual verification steps for each entry live in
 
 ## 2026-05-30
 
+### chore: Remove OrgSport dead code from Skills page
+
+Commit B (Sport-model deletion) deleted the `OrganizationSport` model and the
+`/api/organization/sports` endpoint but left behind client-side references in
+the Skills page that caused a silent 404 on every page load. Removed the
+`OrgSport` interface, `orgSports` state, `loadOrgSports` fetch + `useEffect`
+call, and the sport-badge strip rendered in the page header description.
+
+---
+
 ### Phase 0.7 (partial) — Empty-state component + 4 list pages
 
 New reusable `EmptyState` component (`src/components/ui/empty-state.tsx`) with
