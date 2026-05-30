@@ -8,6 +8,38 @@ Manual verification steps for each entry live in
 
 ## 2026-05-30
 
+### Phase 5.4 UI — SkateCanadaSeason admin UI
+
+SUPERADMIN-only management UI for global `SkateCanadaSeason` records (model
+added in Phase 5.4 schema work).
+
+**New page — `src/app/superadmin/skate-canada-seasons/page.tsx`**
+
+- Table listing all seasons ordered by start date (newest first), with columns:
+  Name, Start date, End date, Active badge (green / muted), CRM GUID (truncated
+  or "— not synced"), and Actions.
+- **New season** button + Edit button open a Sheet with a create/edit form
+  (name, start date, end date, isActive switch, scSeasonGuid).
+- **Set as active** button (inactive seasons only) calls the activate endpoint
+  atomically (deactivates all others in a `$transaction`).
+- `EmptyState` with `Calendar` icon when no seasons exist.
+
+**New API routes — `src/app/api/superadmin/skate-canada-seasons/`**
+
+- `GET /` — list all seasons ordered by `startDate DESC`.
+- `POST /` — create season; atomic deactivate-all + create when `isActive: true`.
+- `PATCH /[id]` — update season; atomic switcheroo when flipping `isActive` true.
+- `POST /[id]/activate` — dedicated activate endpoint used by the "Set as active" button.
+
+**Nav / command palette**
+
+- `SuperadminSidebar` (`src/components/superadmin-sidebar.tsx`): "Skate Canada
+  Seasons" entry added above "Competition Categories".
+- Command palette (`src/components/command-palette.tsx`): `SUPERADMIN_NAV`
+  array added (visible to `isSuperAdmin` users); includes the seasons page.
+
+---
+
 ### Phase 0.7 (partial) — Empty-state component + 4 list pages
 
 New reusable `EmptyState` component (`src/components/ui/empty-state.tsx`) with
