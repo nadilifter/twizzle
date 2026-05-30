@@ -45,7 +45,6 @@ const individualEntrySchema = z.object({
 });
 
 const createTemplateSchema = z.object({
-  sportId: z.string().min(1, "Sport is required"),
   name: z.string().min(1, "Name is required"),
   description: z.string().optional().nullable(),
   type: z.enum(["COMBINATION", "INDIVIDUAL"]),
@@ -68,18 +67,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const sportId = searchParams.get("sportId");
-
-    const where: Record<string, unknown> = {
-      sportId: sportId ? sportId : { not: null },
-      organizationId: null,
-    };
-
     const templates = await db.competitionCategoryTemplate.findMany({
-      where,
+      where: {
+        organizationId: null,
+      },
       include: {
-        sport: { select: { id: true, name: true, slug: true } },
         axisValues: { orderBy: { displayOrder: "asc" } },
         combinationEntries: true,
         individualEntries: { orderBy: { displayOrder: "asc" } },
@@ -87,14 +79,7 @@ export async function GET(request: NextRequest) {
       orderBy: { displayOrder: "asc" },
     });
 
-    // Check if the sport has sport-specific structured data
-    let hasSportSpecificData = false;
-    if (sportId) {
-      const eventCount = await db.sportEvent.count({ where: { sportId } });
-      hasSportSpecificData = eventCount > 0;
-    }
-
-    return NextResponse.json({ templates, hasSportSpecificData });
+    return NextResponse.json({ templates });
   } catch (error) {
     console.error("Error fetching competition category templates:", error);
     return NextResponse.json({ error: "Failed to fetch templates" }, { status: 500 });
@@ -111,12 +96,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const data = createTemplateSchema.parse(body);
 
-    // Verify sport exists
-    const sport = await db.sport.findUnique({ where: { id: data.sportId } });
-    if (!sport) {
-      return NextResponse.json({ error: "Sport not found" }, { status: 404 });
-    }
-
     if (data.type === "COMBINATION") {
       // Create template with axis values and combination entries
       const rowValues = data.axisValues.filter((v) => v.axis === "ROW");
@@ -124,7 +103,6 @@ export async function POST(request: NextRequest) {
 
       const template = await db.competitionCategoryTemplate.create({
         data: {
-          sportId: data.sportId,
           name: data.name,
           description: data.description,
           type: "COMBINATION",
@@ -184,7 +162,6 @@ export async function POST(request: NextRequest) {
       const fullTemplate = await db.competitionCategoryTemplate.findUnique({
         where: { id: template.id },
         include: {
-          sport: { select: { id: true, name: true, slug: true } },
           axisValues: { orderBy: { displayOrder: "asc" } },
           combinationEntries: true,
           individualEntries: { orderBy: { displayOrder: "asc" } },
@@ -196,7 +173,6 @@ export async function POST(request: NextRequest) {
       // INDIVIDUAL template
       const template = await db.competitionCategoryTemplate.create({
         data: {
-          sportId: data.sportId,
           name: data.name,
           description: data.description,
           type: "INDIVIDUAL",
@@ -220,7 +196,6 @@ export async function POST(request: NextRequest) {
           },
         },
         include: {
-          sport: { select: { id: true, name: true, slug: true } },
           axisValues: { orderBy: { displayOrder: "asc" } },
           combinationEntries: true,
           individualEntries: { orderBy: { displayOrder: "asc" } },

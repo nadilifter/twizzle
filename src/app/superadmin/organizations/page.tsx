@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LayoutDashboard } from "lucide-react";
 import { getSubdomainUrl } from "@/lib/env-domains";
-import { SportFilter } from "./sport-filter";
 
 function getAdminDashboardSwitchUrl(orgId: string, orgName: string): string {
   const adminBase = getSubdomainUrl("admin");
@@ -23,11 +22,11 @@ function getAdminDashboardSwitchUrl(orgId: string, orgName: string): string {
 import { StatusFilter } from "./status-filter";
 
 interface Props {
-  searchParams: Promise<{ sport?: string; status?: string }>;
+  searchParams: Promise<{ status?: string }>;
 }
 
 export default async function AdminOrganizationsPage({ searchParams }: Props) {
-  const { sport: sportFilter, status: statusFilter } = await searchParams;
+  const { status: statusFilter } = await searchParams;
 
   const statusWhere =
     statusFilter === "active"
@@ -36,33 +35,17 @@ export default async function AdminOrganizationsPage({ searchParams }: Props) {
         ? { isActive: false }
         : undefined;
 
-  const [organizations, allSports] = await Promise.all([
-    db.organization.findMany({
-      where: {
-        ...(sportFilter ? { sports: { some: { sport: { slug: sportFilter } } } } : undefined),
-        ...statusWhere,
+  const organizations = await db.organization.findMany({
+    where: {
+      ...statusWhere,
+    },
+    include: {
+      _count: {
+        select: { members: true, invoices: true },
       },
-      include: {
-        _count: {
-          select: { members: true, invoices: true },
-        },
-        sports: {
-          include: {
-            sport: {
-              select: { id: true, name: true, slug: true },
-            },
-          },
-          orderBy: { sport: { displayOrder: "asc" } },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    }),
-    db.sport.findMany({
-      where: { isActive: true },
-      orderBy: { displayOrder: "asc" },
-      select: { id: true, name: true, slug: true },
-    }),
-  ]);
+    },
+    orderBy: { createdAt: "desc" },
+  });
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -70,16 +53,11 @@ export default async function AdminOrganizationsPage({ searchParams }: Props) {
         <h1 className="text-2xl font-bold">Organizations</h1>
         <div className="flex items-center gap-2">
           <StatusFilter currentStatus={statusFilter} />
-          <SportFilter sports={allSports} currentSport={sportFilter} />
         </div>
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>
-            {sportFilter
-              ? `Organizations — ${allSports.find((s) => s.slug === sportFilter)?.name || sportFilter}`
-              : "All Organizations"}
-          </CardTitle>
+          <CardTitle>All Organizations</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -88,7 +66,6 @@ export default async function AdminOrganizationsPage({ searchParams }: Props) {
                 <TableHead>Name</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Slug (Domain)</TableHead>
-                <TableHead>Sports</TableHead>
                 <TableHead>Members</TableHead>
                 <TableHead>Invoices</TableHead>
                 <TableHead>Created At</TableHead>
@@ -98,10 +75,8 @@ export default async function AdminOrganizationsPage({ searchParams }: Props) {
             <TableBody>
               {organizations.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                    {sportFilter
-                      ? "No organizations found for this sport."
-                      : "No organizations yet."}
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    No organizations yet.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -121,30 +96,6 @@ export default async function AdminOrganizationsPage({ searchParams }: Props) {
                       </Badge>
                     </TableCell>
                     <TableCell>{org.slug}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {org.sports.length === 0 ? (
-                          <span className="text-sm text-muted-foreground">—</span>
-                        ) : org.sports.length <= 3 ? (
-                          org.sports.map((os) => (
-                            <Badge key={os.sport.id} variant="secondary" className="text-xs">
-                              {os.sport.name}
-                            </Badge>
-                          ))
-                        ) : (
-                          <>
-                            {org.sports.slice(0, 2).map((os) => (
-                              <Badge key={os.sport.id} variant="secondary" className="text-xs">
-                                {os.sport.name}
-                              </Badge>
-                            ))}
-                            <Badge variant="outline" className="text-xs">
-                              +{org.sports.length - 2} more
-                            </Badge>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
                     <TableCell>
                       <Link
                         href={`/superadmin/organizations/${org.slug}/members`}

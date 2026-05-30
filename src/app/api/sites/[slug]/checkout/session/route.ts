@@ -877,7 +877,6 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
             categories: {
               where: { id: { in: categoryIds }, isActive: true },
               include: {
-                ageCategory: { select: { minAge: true, maxAge: true } },
                 individualEntry: { select: { hasGenderRestriction: true, allowedGenders: true } },
                 combinationEntry: {
                   select: {
@@ -1098,19 +1097,8 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
           }
         }
 
-        // Category-level age + gender eligibility
+        // Category-level gender eligibility
         for (const cat of competition.categories) {
-          if (cat.ageCategory) {
-            if (!isAgeEligible(age, cat.ageCategory.minAge, cat.ageCategory.maxAge)) {
-              return NextResponse.json(
-                {
-                  error: `Athlete "${athleteLabel}" is not eligible for one of the selected events in "${competition.name}".`,
-                },
-                { status: 400 }
-              );
-            }
-          }
-
           // Gender check from individual entry template
           if (
             cat.individualEntry?.hasGenderRestriction &&

@@ -274,8 +274,6 @@ async function rolloverCompetitions(
           competitionId: newCompetition.id,
           combinationEntryId: cat.combinationEntryId,
           individualEntryId: cat.individualEntryId,
-          sportEventId: cat.sportEventId,
-          ageCategoryId: cat.ageCategoryId,
           resultType: cat.resultType,
           sortDirection: cat.sortDirection,
           precision: cat.precision,

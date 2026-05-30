@@ -55,8 +55,6 @@ export async function fetchCssExportInput(
                 },
               },
               individualEntry: { select: { name: true } },
-              sportEvent: { select: { name: true, code: true } },
-              ageCategory: { select: { name: true, code: true } },
             },
           },
         },
@@ -67,14 +65,12 @@ export async function fetchCssExportInput(
 
   const entries: CssExportEntry[] = competition.entries.map((entry) => {
     const oa = entry.athlete.organizationAthletes[0];
-    const ageCat =
-      entry.category.combinationEntry?.rowValue?.name ?? entry.category.ageCategory?.name ?? null;
+    const ageCat = entry.category.combinationEntry?.rowValue?.name ?? null;
     const disc =
       entry.category.combinationEntry?.colValue?.name ??
-      entry.category.sportEvent?.name ??
       entry.category.individualEntry?.name ??
       null;
-    const code = entry.category.sportEvent?.code ?? entry.category.ageCategory?.code ?? null;
+    const code: string | null = null;
 
     return {
       id: entry.id,

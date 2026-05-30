@@ -41,14 +41,6 @@ export default async function CompetitionDetailPage({
       },
       categories: {
         where: { isActive: true },
-        include: {
-          sportEvent: {
-            select: { id: true, name: true, code: true, eventGroup: true },
-          },
-          ageCategory: {
-            select: { id: true, name: true, code: true, minAge: true, maxAge: true },
-          },
-        },
         orderBy: { displayOrder: "asc" },
       },
       pricingTiers: {
@@ -121,23 +113,6 @@ export default async function CompetitionDetailPage({
     organizationId: competition.organizationId,
     categories: competition.categories.map((cat) => ({
       id: cat.id,
-      sportEvent: cat.sportEvent
-        ? {
-            id: cat.sportEvent.id,
-            name: cat.sportEvent.name,
-            code: cat.sportEvent.code,
-            eventGroup: cat.sportEvent.eventGroup,
-          }
-        : null,
-      ageCategory: cat.ageCategory
-        ? {
-            id: cat.ageCategory.id,
-            name: cat.ageCategory.name,
-            code: cat.ageCategory.code,
-            minAge: cat.ageCategory.minAge,
-            maxAge: cat.ageCategory.maxAge,
-          }
-        : null,
       isTeamEvent: cat.isTeamEvent,
       price: cat.price ? Number(cat.price) : null,
       displayOrder: cat.displayOrder,

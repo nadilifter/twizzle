@@ -3,8 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UplifterLogo } from "@/components/uplifter-logo";
 import { ShineBorder } from "@/components/ui/shine-border";
@@ -17,7 +15,6 @@ type Organization = {
   logo: string | null;
   city: string | null;
   stateProvince: string | null;
-  sports: { sport: { id: string; name: string; slug: string } }[];
   websiteConfig: {
     subdomain: string | null;
     logo: string | null;
@@ -26,34 +23,16 @@ type Organization = {
   } | null;
 };
 
-type Sport = {
-  id: string;
-  name: string;
-  slug: string;
-};
-
-export function FindYourClub({
-  organizations,
-  sports,
-}: {
-  organizations: Organization[];
-  sports: Sport[];
-}) {
-  const [selectedSport, setSelectedSport] = useState<string | null>(null);
+export function FindYourClub({ organizations }: { organizations: Organization[] }) {
   const [search, setSearch] = useState("");
 
-  const sportsWithOrgs = sports.filter((sport) =>
-    organizations.some((org) => org.sports.some((os) => os.sport.id === sport.id))
-  );
-
   const filtered = organizations.filter((org) => {
-    const matchesSport = !selectedSport || org.sports.some((os) => os.sport.id === selectedSport);
     const matchesSearch =
       !search ||
       org.name.toLowerCase().includes(search.toLowerCase()) ||
       org.city?.toLowerCase().includes(search.toLowerCase()) ||
       org.stateProvince?.toLowerCase().includes(search.toLowerCase());
-    return matchesSport && matchesSearch;
+    return matchesSearch;
   });
 
   return (
@@ -64,30 +43,8 @@ export function FindYourClub({
           <UplifterLogo width={180} height={36} className="h-9" />
           <h1 className="text-2xl font-bold">Find your club</h1>
           <p className="text-sm text-muted-foreground max-w-md">
-            Pick a sport to browse clubs, or search by name or location.
+            Search by name or location to find your club.
           </p>
-
-          <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
-            <Button
-              variant={selectedSport === null ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedSport(null)}
-              className="rounded-full"
-            >
-              All
-            </Button>
-            {sportsWithOrgs.map((sport) => (
-              <Button
-                key={sport.id}
-                variant={selectedSport === sport.id ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedSport(selectedSport === sport.id ? null : sport.id)}
-                className="rounded-full"
-              >
-                {sport.name}
-              </Button>
-            ))}
-          </div>
 
           <div className="relative w-full max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -151,19 +108,6 @@ export function FindYourClub({
                             )}
                           </div>
                         </div>
-                        {org.sports.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {org.sports.map((os) => (
-                              <Badge
-                                key={os.sport.id}
-                                variant="secondary"
-                                className="text-[10px] px-1.5 py-0"
-                              >
-                                {os.sport.name}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
                       </div>
                     </Card>
                   </a>

@@ -78,12 +78,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { format } from "date-fns";
 import { COUNTRIES, getRegionsForCountry, isValidPostalCode } from "@/lib/location-data";
 
-interface OrgSport {
-  id: string;
-  name: string;
-  slug: string;
-}
-
 type PublishStatus = "LIVE" | "DRAFT" | "SCHEDULED";
 
 interface Level {
@@ -117,8 +111,6 @@ type SubMode = "NONE" | "VERIFIED_RESULT" | "MANUAL_ENTRY";
 interface CategoryResultConfig {
   combinationEntryId: string | null;
   individualEntryId: string | null;
-  sportEventId: string | null;
-  ageCategoryId: string | null;
   label: string;
   resultType: ResultType;
   sortDirection: SortDir;
@@ -130,49 +122,6 @@ interface CategoryResultConfig {
   teamSize: number | null;
   collectResults: boolean;
 }
-
-interface SportEventEntry {
-  id: string;
-  code: string;
-  name: string;
-  eventGroup: string;
-  eventType: string;
-  resultType: ResultType;
-  sortDirection: SortDir;
-  defaultPrecision: number;
-  isActive: boolean;
-  displayOrder: number;
-  eligibility?: Array<{
-    id: string;
-    sportEventId: string;
-    ageCategoryId: string;
-    isEnabled: boolean;
-    ageCategory: { id: string; code: string; name: string };
-  }>;
-}
-
-interface SportAgeCategoryEntry {
-  id: string;
-  code: string;
-  name: string;
-  minAge: number;
-  maxAge: number | null;
-  isActive: boolean;
-  displayOrder: number;
-}
-
-const EVENT_GROUP_LABELS: Record<string, string> = {
-  sprints: "Sprints",
-  hurdles: "Hurdles",
-  middle_distance: "Middle Distance",
-  distance: "Distance",
-  relays: "Relays",
-  jumps: "Jumps",
-  throws: "Throws",
-  combined: "Combined Events",
-  racewalk: "Race Walk",
-  road: "Road",
-};
 
 interface CompetitionFormData {
   // Season (optional first step)
@@ -292,19 +241,6 @@ export function CompetitionStepper({
   >([]);
   const [loadingWaivers, setLoadingWaivers] = React.useState(true);
 
-  // Organization sports state
-  const [orgSports, setOrgSports] = React.useState<OrgSport[]>([]);
-
-  // Sport-specific structured data for categories step
-  const [sportEvents, setSportEvents] = React.useState<SportEventEntry[]>([]);
-  const [sportAgeCategories, setSportAgeCategories] = React.useState<SportAgeCategoryEntry[]>([]);
-  const [eligibilitySet, setEligibilitySet] = React.useState<Set<string>>(new Set());
-  const [loadingSportData, setLoadingSportData] = React.useState(false);
-  const [hasSportSpecificData, setHasSportSpecificData] = React.useState(false);
-
-  // selectedCombos: Set of "eventId:ageCategoryId" keys the user picked
-  const [selectedCombos, setSelectedCombos] = React.useState<Set<string>>(new Set());
-
   // Location field validation errors
   const [locationErrors, setLocationErrors] = React.useState<Record<string, string>>({});
   const [stateProvinceOpen, setStateProvinceOpen] = React.useState(false);
@@ -400,9 +336,7 @@ export function CompetitionStepper({
       const categoryResults: CategoryResultConfig[] = (data.categories || []).map((cat: any) => ({
         combinationEntryId: cat.combinationEntryId || null,
         individualEntryId: cat.individualEntryId || null,
-        sportEventId: cat.sportEventId || null,
-        ageCategoryId: cat.ageCategoryId || null,
-        label: [cat.sportEvent?.name, cat.ageCategory?.code].filter(Boolean).join(" - ") || cat.id,
+        label: cat.id,
         resultType: cat.resultType || "TIME",
         sortDirection: cat.sortDirection || "ASC",
         precision: cat.precision ?? 3,
@@ -413,14 +347,6 @@ export function CompetitionStepper({
         teamSize: cat.teamSize ?? null,
         collectResults: true,
       }));
-
-      const combos = new Set<string>();
-      for (const cat of data.categories || []) {
-        if (cat.sportEventId && cat.ageCategoryId) {
-          combos.add(`${cat.sportEventId}:${cat.ageCategoryId}`);
-        }
-      }
-      setSelectedCombos(combos);
 
       const pricingTiers =
         (data.pricingTiers || []).length > 0
@@ -438,10 +364,7 @@ export function CompetitionStepper({
       const categoryPrices: Record<string, number> = {};
       for (const cat of data.categories || []) {
         if (cat.price != null) {
-          const key =
-            cat.sportEventId && cat.ageCategoryId
-              ? `${cat.sportEventId}:${cat.ageCategoryId}`
-              : cat.combinationEntryId || cat.individualEntryId || "";
+          const key = cat.combinationEntryId || cat.individualEntryId || "";
           if (key) {
             categoryPrices[key] = typeof cat.price === "string" ? parseFloat(cat.price) : cat.price;
           }
@@ -525,10 +448,7 @@ export function CompetitionStepper({
         const categoryResults: CategoryResultConfig[] = (data.categories || []).map((cat: any) => ({
           combinationEntryId: cat.combinationEntryId || null,
           individualEntryId: cat.individualEntryId || null,
-          sportEventId: cat.sportEventId || null,
-          ageCategoryId: cat.ageCategoryId || null,
-          label:
-            [cat.sportEvent?.name, cat.ageCategory?.code].filter(Boolean).join(" - ") || cat.id,
+          label: cat.id,
           resultType: cat.resultType || "TIME",
           sortDirection: cat.sortDirection || "ASC",
           precision: cat.precision ?? 3,
@@ -539,15 +459,6 @@ export function CompetitionStepper({
           teamSize: cat.teamSize ?? null,
           collectResults: true,
         }));
-
-        // Rebuild selectedCombos from categories
-        const combos = new Set<string>();
-        for (const cat of data.categories || []) {
-          if (cat.sportEventId && cat.ageCategoryId) {
-            combos.add(`${cat.sportEventId}:${cat.ageCategoryId}`);
-          }
-        }
-        setSelectedCombos(combos);
 
         // Build pricing tiers
         const pricingTiers =
@@ -569,10 +480,7 @@ export function CompetitionStepper({
         const categoryPrices: Record<string, number> = {};
         for (const cat of data.categories || []) {
           if (cat.price != null) {
-            const key =
-              cat.sportEventId && cat.ageCategoryId
-                ? `${cat.sportEventId}:${cat.ageCategoryId}`
-                : cat.combinationEntryId || cat.individualEntryId || "";
+            const key = cat.combinationEntryId || cat.individualEntryId || "";
             if (key) {
               categoryPrices[key] =
                 typeof cat.price === "string" ? parseFloat(cat.price) : cat.price;
@@ -704,87 +612,6 @@ export function CompetitionStepper({
     };
     fetchWaivers();
   }, []);
-
-  // Fetch organization sports
-  React.useEffect(() => {
-    const fetchOrgSports = async () => {
-      try {
-        const response = await fetch("/api/organization/sports");
-        if (response.ok) {
-          const data: OrgSport[] = await response.json();
-          setOrgSports(data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch org sports:", error);
-      }
-    };
-    fetchOrgSports();
-  }, []);
-
-  // Fetch sport-specific structured data for the categories step.
-  // Twizzle is skating-only, so we always use the org's first sport (typically
-  // Figure Skating) — the previous competitionType-keyed lookup was deleted
-  // along with the Competition.competitionType column.
-  const fetchSportData = React.useCallback(async () => {
-    if (orgSports.length === 0) return;
-    const matchingSport = orgSports[0];
-
-    setLoadingSportData(true);
-    try {
-      const res = await fetch(`/api/sports/${matchingSport.id}/events`);
-      if (!res.ok) {
-        setHasSportSpecificData(false);
-        return;
-      }
-      const data = await res.json();
-      const events: SportEventEntry[] = data.events || [];
-
-      if (events.length === 0) {
-        setHasSportSpecificData(false);
-        return;
-      }
-
-      setSportEvents(events);
-      setHasSportSpecificData(true);
-
-      // Extract age categories from eligibility data
-      const ageCatMap = new Map<string, SportAgeCategoryEntry>();
-      const eligKeys = new Set<string>();
-      for (const evt of events) {
-        for (const elig of evt.eligibility || []) {
-          if (elig.isEnabled !== false) {
-            eligKeys.add(`${evt.id}:${elig.ageCategory.id}`);
-            if (!ageCatMap.has(elig.ageCategory.id)) {
-              ageCatMap.set(elig.ageCategory.id, {
-                id: elig.ageCategory.id,
-                code: elig.ageCategory.code,
-                name: elig.ageCategory.name,
-                minAge: 0,
-                maxAge: null,
-                isActive: true,
-                displayOrder: 0,
-              });
-            }
-          }
-        }
-      }
-      setEligibilitySet(eligKeys);
-
-      // Also fetch age categories with full data
-      const ageCatRes = await fetch(`/api/sports/${matchingSport.id}/age-categories`);
-      if (ageCatRes.ok) {
-        const ageCatData = await ageCatRes.json();
-        setSportAgeCategories(ageCatData.ageCategories || []);
-      } else {
-        setSportAgeCategories(Array.from(ageCatMap.values()));
-      }
-    } catch (error) {
-      console.error("Failed to fetch sport data:", error);
-      setHasSportSpecificData(false);
-    } finally {
-      setLoadingSportData(false);
-    }
-  }, [orgSports]);
 
   // Handle facility selection to auto-fill address
   const handleFacilityChange = (facilityId: string) => {
@@ -943,57 +770,6 @@ export function CompetitionStepper({
       const nextStepId =
         nextStepIndex < stepper.state.all.length ? stepper.state.all[nextStepIndex].id : null;
 
-      // Fetch sport-specific data when entering the categories step
-      if (nextStepId === "categories" && sportEvents.length === 0) {
-        fetchSportData();
-      }
-
-      // Build categoryResults from selection when leaving the categories step
-      if (currentStepId === "categories" && hasSportSpecificData) {
-        const combos = formData.categoryMode === "ALL" ? eligibilitySet : selectedCombos;
-        const comboKeys = Array.from(combos);
-        const results: CategoryResultConfig[] = [];
-        for (const key of comboKeys) {
-          const [eventId, ageCatId] = key.split(":");
-          const evt = sportEvents.find((e) => e.id === eventId);
-          const ageCat = sportAgeCategories.find((c) => c.id === ageCatId);
-          if (!evt || !ageCat) continue;
-
-          const existing = formData.categoryResults.find(
-            (c) => c.sportEventId === eventId && c.ageCategoryId === ageCatId
-          );
-
-          results.push({
-            combinationEntryId: null,
-            individualEntryId: null,
-            sportEventId: eventId,
-            ageCategoryId: ageCatId,
-            label: `${evt.name} - ${ageCat.code}`,
-            resultType: evt.resultType,
-            sortDirection: evt.sortDirection,
-            precision: evt.defaultPrecision,
-            seedMarkRequired: existing?.seedMarkRequired ?? false,
-            submissionMode: existing?.submissionMode ?? "NONE",
-            qualifyingMark: existing?.qualifyingMark ?? null,
-            isTeamEvent: evt.eventType === "relay",
-            teamSize: evt.eventType === "relay" ? 4 : null,
-            collectResults: existing?.collectResults ?? true,
-          });
-        }
-
-        results.sort((a, b) => {
-          const evtA = sportEvents.find((e) => e.id === a.sportEventId);
-          const evtB = sportEvents.find((e) => e.id === b.sportEventId);
-          const ageCatA = sportAgeCategories.find((c) => c.id === a.ageCategoryId);
-          const ageCatB = sportAgeCategories.find((c) => c.id === b.ageCategoryId);
-          const evtOrder = (evtA?.displayOrder ?? 0) - (evtB?.displayOrder ?? 0);
-          if (evtOrder !== 0) return evtOrder;
-          return (ageCatA?.displayOrder ?? 0) - (ageCatB?.displayOrder ?? 0);
-        });
-
-        setFormData((prev) => ({ ...prev, categoryResults: results }));
-      }
-
       const nextVisibleIndex = currentVisibleIndex + 1;
       if (nextVisibleIndex < visibleSteps.length) {
         stepper.navigation.goTo(visibleSteps[nextVisibleIndex].id);
@@ -1055,8 +831,6 @@ export function CompetitionStepper({
         categoryResults: formData.categoryResults.map((c, i) => ({
           combinationEntryId: c.combinationEntryId,
           individualEntryId: c.individualEntryId,
-          sportEventId: c.sportEventId,
-          ageCategoryId: c.ageCategoryId,
           resultType: c.resultType,
           sortDirection: c.sortDirection,
           precision: c.precision,
@@ -1681,10 +1455,6 @@ export function CompetitionStepper({
                     categoryMode: value,
                     selectedCategoryIds: value === "ALL" ? [] : prev.selectedCategoryIds,
                   }));
-                  if (value === "ALL" && hasSportSpecificData) {
-                    // Select all eligible combos
-                    setSelectedCombos(new Set(eligibilitySet));
-                  }
                 }}
                 className="space-y-4"
               >
@@ -1723,171 +1493,8 @@ export function CompetitionStepper({
                 </label>
               </RadioGroup>
 
-              {/* Sport-specific category picker */}
-              {hasSportSpecificData && formData.categoryMode === "SPECIFIC" && (
-                <>
-                  {loadingSportData ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm text-muted-foreground">
-                          {selectedCombos.size} of {eligibilitySet.size} categories selected
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setSelectedCombos(new Set(eligibilitySet))}
-                          >
-                            Select All
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setSelectedCombos(new Set())}
-                          >
-                            Clear All
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="overflow-x-auto rounded-lg border">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b bg-muted/50">
-                              <th className="text-left py-2.5 px-3 font-medium min-w-[180px] sticky left-0 bg-muted/50 z-10">
-                                Event
-                              </th>
-                              {sportAgeCategories.map((cat) => (
-                                <th
-                                  key={cat.id}
-                                  className="text-center py-2.5 px-1 font-medium min-w-[60px]"
-                                >
-                                  <div className="flex flex-col items-center gap-0.5">
-                                    <span className="text-xs font-semibold">{cat.code}</span>
-                                    <span className="text-[10px] font-normal text-muted-foreground">
-                                      {cat.minAge}-{cat.maxAge ?? "∞"}
-                                    </span>
-                                  </div>
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {(() => {
-                              const grouped = sportEvents.reduce<Record<string, SportEventEntry[]>>(
-                                (acc, evt) => {
-                                  if (!acc[evt.eventGroup]) acc[evt.eventGroup] = [];
-                                  acc[evt.eventGroup].push(evt);
-                                  return acc;
-                                },
-                                {}
-                              );
-
-                              return Object.entries(grouped).map(([group, events]) => (
-                                <React.Fragment key={group}>
-                                  {/* Group header with select all for this group */}
-                                  <tr className="bg-muted/30">
-                                    <td
-                                      colSpan={1 + sportAgeCategories.length}
-                                      className="py-1.5 px-3"
-                                    >
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                          {EVENT_GROUP_LABELS[group] || group}
-                                        </span>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-5 text-[10px] px-2"
-                                          onClick={() => {
-                                            const groupKeys = events.flatMap((evt) =>
-                                              sportAgeCategories
-                                                .filter((cat) =>
-                                                  eligibilitySet.has(`${evt.id}:${cat.id}`)
-                                                )
-                                                .map((cat) => `${evt.id}:${cat.id}`)
-                                            );
-                                            const allSelected = groupKeys.every((k) =>
-                                              selectedCombos.has(k)
-                                            );
-                                            setSelectedCombos((prev) => {
-                                              const next = new Set(prev);
-                                              for (const k of groupKeys) {
-                                                if (allSelected) next.delete(k);
-                                                else next.add(k);
-                                              }
-                                              return next;
-                                            });
-                                          }}
-                                        >
-                                          Toggle group
-                                        </Button>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                  {events.map((evt) => (
-                                    <tr
-                                      key={evt.id}
-                                      className="border-b border-border/40 hover:bg-muted/20"
-                                    >
-                                      <td className="py-1.5 px-3 sticky left-0 bg-background z-10">
-                                        <div className="flex items-center gap-2">
-                                          <span className="font-medium text-sm">{evt.name}</span>
-                                          <Badge
-                                            variant="outline"
-                                            className="text-[10px] px-1.5 py-0 shrink-0"
-                                          >
-                                            {evt.resultType}
-                                          </Badge>
-                                        </div>
-                                      </td>
-                                      {sportAgeCategories.map((cat) => {
-                                        const key = `${evt.id}:${cat.id}`;
-                                        const eligible = eligibilitySet.has(key);
-                                        const selected = selectedCombos.has(key);
-                                        return (
-                                          <td key={cat.id} className="py-1.5 px-1">
-                                            <div className="flex items-center justify-center">
-                                              {eligible ? (
-                                                <Checkbox
-                                                  checked={selected}
-                                                  onCheckedChange={(checked) => {
-                                                    setSelectedCombos((prev) => {
-                                                      const next = new Set(prev);
-                                                      if (checked) next.add(key);
-                                                      else next.delete(key);
-                                                      return next;
-                                                    });
-                                                  }}
-                                                />
-                                              ) : (
-                                                <span className="text-muted-foreground/20 text-xs">
-                                                  &mdash;
-                                                </span>
-                                              )}
-                                            </div>
-                                          </td>
-                                        );
-                                      })}
-                                    </tr>
-                                  ))}
-                                </React.Fragment>
-                              ));
-                            })()}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* Non-sport-specific fallback */}
-              {!hasSportSpecificData && formData.categoryMode === "SPECIFIC" && (
+              {/* Category picker info */}
+              {formData.categoryMode === "SPECIFIC" && (
                 <div className="rounded-lg border border-dashed p-6 text-center">
                   <Info className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
                   <p className="text-sm text-muted-foreground">
@@ -2820,12 +2427,8 @@ export function CompetitionStepper({
                               const val = parseFloat(e.target.value);
                               if (isNaN(val)) return;
                               const prices: Record<string, number> = {};
-                              for (const cat of formData.categoryResults) {
-                                const key =
-                                  cat.sportEventId && cat.ageCategoryId
-                                    ? `${cat.sportEventId}:${cat.ageCategoryId}`
-                                    : "";
-                                if (key) prices[key] = val;
+                              for (let i = 0; i < formData.categoryResults.length; i++) {
+                                prices[`cat-${i}`] = val;
                               }
                               setFormData((prev) => ({ ...prev, categoryPrices: prices }));
                             }}
@@ -2842,10 +2445,7 @@ export function CompetitionStepper({
                   ) : (
                     <div className="rounded-lg border divide-y max-h-[400px] overflow-y-auto">
                       {formData.categoryResults.map((cat, index) => {
-                        const key =
-                          cat.sportEventId && cat.ageCategoryId
-                            ? `${cat.sportEventId}:${cat.ageCategoryId}`
-                            : `cat-${index}`;
+                        const key = `cat-${index}`;
                         return (
                           <div key={key} className="flex items-center gap-3 px-3 py-2">
                             <span className="text-sm flex-1">{cat.label}</span>

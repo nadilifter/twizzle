@@ -67,20 +67,6 @@ export async function GET() {
             },
           },
         },
-        sports: {
-          include: {
-            sport: {
-              select: {
-                id: true,
-                name: true,
-                slug: true,
-                description: true,
-                icon: true,
-              },
-            },
-          },
-          orderBy: { sport: { displayOrder: "asc" } },
-        },
       },
     });
 

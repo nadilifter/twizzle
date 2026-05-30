@@ -9,6 +9,40 @@ can follow without re-deriving the intent.
 
 ---
 
+## 2026-05-30
+
+### Appendix A Commit B — drop Sport models
+
+No new UI to exercise; verify nothing is broken.
+
+#### Pre-merge DB verification (run locally — remote env has no Postgres)
+
+```bash
+pnpm db:reset && pnpm db:seed
+```
+
+Confirm:
+
+1. Seed completes without errors (no references to deleted sport tables).
+2. `prisma migrate status` shows all migrations applied.
+
+#### Superadmin smoke test
+
+1. Log in as SUPERADMIN.
+2. Navigate to `/superadmin/competition-categories` — page loads, shows
+   templates without a sport selector.
+3. Navigate to `/superadmin/organizations` — no sport filter column visible.
+4. Confirm `/superadmin/sports` returns 404 (page deleted).
+
+#### Competition flow smoke test
+
+1. Log in as ADMIN, open any competition in draft state.
+2. Open the category step in the stepper — no sport-event / age-category
+   grid visible; standard category picker functions normally.
+3. Save and reopen — no regressions on existing categories.
+
+---
+
 ## 2026-05-29
 
 ### Phase 5.3 — Submission audit log

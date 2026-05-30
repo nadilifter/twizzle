@@ -217,7 +217,6 @@ const TENANT_MODELS = [
   "CompetitionTeam",
   "RegistrationFile",
   "Certification",
-  "OrganizationSport",
   "OrganizationCategoryPreference",
   "Order",
   "TeamMemberHighlight",

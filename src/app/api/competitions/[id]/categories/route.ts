@@ -56,8 +56,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             template: { select: { id: true, name: true, type: true } },
           },
         },
-        sportEvent: true,
-        ageCategory: true,
         _count: {
           select: { entries: true, results: true, teams: true },
         },

@@ -77,25 +77,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 
 // ---------- Types ----------
 
-interface SportEvent {
-  id: string;
-  name: string;
-  code: string;
-  eventGroup: string | null;
-}
-
-interface AgeCategory {
-  id: string;
-  name: string;
-  code: string;
-  minAge: number;
-  maxAge: number | null;
-}
-
 interface CompetitionCategory {
   id: string;
-  sportEvent: SportEvent | null;
-  ageCategory: AgeCategory | null;
   isTeamEvent: boolean;
   price: number | null;
   displayOrder: number;
@@ -229,10 +212,7 @@ function formatPrice(price: number): string {
 }
 
 function getCategoryLabel(cat: CompetitionCategory): string {
-  const parts: string[] = [];
-  if (cat.sportEvent) parts.push(cat.sportEvent.name);
-  if (cat.ageCategory) parts.push(cat.ageCategory.name);
-  return parts.join(" – ") || `Category ${cat.displayOrder + 1}`;
+  return `Category ${cat.displayOrder + 1}`;
 }
 
 type SeedMarkValue =
@@ -618,7 +598,7 @@ export function CompetitionRegistrationFlow({
   const categoriesByGroup = useMemo(() => {
     const groups = new Map<string, CompetitionCategory[]>();
     for (const cat of eligibleCategories) {
-      const group = cat.sportEvent?.eventGroup || "Other";
+      const group = "Other";
       if (!groups.has(group)) {
         groups.set(group, []);
       }

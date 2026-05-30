@@ -79,8 +79,6 @@ interface CompetitionCategory {
     name: string;
     template: { id: string; name: string };
   } | null;
-  sportEvent: { id: string; name: string; code: string } | null;
-  ageCategory: { id: string; name: string; code: string } | null;
   _count: { entries: number; results: number };
 }
 

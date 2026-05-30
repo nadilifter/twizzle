@@ -104,7 +104,6 @@ interface IndividualEntry {
 
 interface Template {
   id: string;
-  sportId: string | null;
   organizationId: string | null;
   name: string;
   description: string | null;
@@ -114,17 +113,10 @@ interface Template {
   rowAxisLabel: string | null;
   columnAxisLabel: string | null;
   restrictionAxis: "ROW" | "COLUMN" | null;
-  sport: { id: string; name: string; slug: string } | null;
   axisValues: (AxisValue & { id: string })[];
   combinationEntries: (CombinationEntry & { id: string })[];
   individualEntries: (IndividualEntry & { id: string })[];
   isDisabledByOrg?: boolean;
-}
-
-interface OrgSport {
-  id: string;
-  name: string;
-  slug: string;
 }
 
 interface FormData {
@@ -257,12 +249,6 @@ function PresetTemplateCard({
             </>
           ) : (
             <span>{entryCount} entries</span>
-          )}
-          {template.sport && (
-            <>
-              <span>&middot;</span>
-              <span>{template.sport.name}</span>
-            </>
           )}
         </div>
       </CardHeader>
@@ -507,48 +493,9 @@ function CustomTemplateCard({
 // Main Page
 // ============================================
 
-interface SportSpecificData {
-  sport: { id: string; name: string; slug: string };
-  events: Array<{
-    id: string;
-    code: string;
-    name: string;
-    eventGroup: string;
-    eventType: string;
-    resultType: string;
-    sortDirection: string;
-    defaultPrecision: number;
-    isActive: boolean;
-  }>;
-  ageCategories: Array<{
-    id: string;
-    code: string;
-    name: string;
-    minAge: number;
-    maxAge: number | null;
-    isActive: boolean;
-  }>;
-  eligibility: Array<{ sportEventId: string; ageCategoryId: string }>;
-}
-
-const EVENT_GROUP_LABELS: Record<string, string> = {
-  sprints: "Sprints",
-  hurdles: "Hurdles",
-  middle_distance: "Middle Distance",
-  distance: "Distance",
-  relays: "Relays",
-  jumps: "Jumps",
-  throws: "Throws",
-  combined: "Combined Events",
-  racewalk: "Race Walk",
-  road: "Road",
-};
-
 export default function CategoriesPage() {
-  const [orgSports, setOrgSports] = React.useState<OrgSport[]>([]);
   const [presets, setPresets] = React.useState<Template[]>([]);
   const [custom, setCustom] = React.useState<Template[]>([]);
-  const [sportSpecific, setSportSpecific] = React.useState<Record<string, SportSpecificData>>({});
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [togglingPresetId, setTogglingPresetId] = React.useState<string | null>(null);
@@ -570,20 +517,12 @@ export default function CategoriesPage() {
   // Fetch data
   const fetchData = React.useCallback(async () => {
     try {
-      const [sportsRes, categoriesRes] = await Promise.all([
-        fetch("/api/organization/sports"),
-        fetch("/api/competition-categories"),
-      ]);
-
-      if (sportsRes.ok) {
-        setOrgSports(await sportsRes.json());
-      }
+      const categoriesRes = await fetch("/api/competition-categories");
 
       if (categoriesRes.ok) {
         const data = await categoriesRes.json();
         setPresets(data.presets || []);
         setCustom(data.custom || []);
-        setSportSpecific(data.sportSpecific || {});
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -977,22 +916,7 @@ export default function CategoriesPage() {
     <div className="flex flex-col gap-6 p-6">
       <DashboardPageHeader
         title="Categories"
-        description={
-          <>
-            Manage competition categories for your organization. Toggle sport presets on or off, and
-            create your own custom categories.
-            {orgSports.length > 0 && (
-              <span className="mt-1 flex flex-wrap items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">Sports:</span>
-                {orgSports.map((sport) => (
-                  <Badge key={sport.id} variant="secondary" className="text-xs">
-                    {sport.name}
-                  </Badge>
-                ))}
-              </span>
-            )}
-          </>
-        }
+        description="Manage competition categories for your organization. Toggle presets on or off, and create your own custom categories."
         actions={
           <Button onClick={handleOpenCreate}>
             <Plus className="mr-2 h-4 w-4" />
@@ -1001,113 +925,10 @@ export default function CategoriesPage() {
         }
       />
 
-      {/* Sport-Specific Events Section */}
-      {Object.keys(sportSpecific).length > 0 && (
-        <div className="space-y-4">
-          {Object.entries(sportSpecific).map(([sportId, data]) => {
-            const groupedEvents = data.events.reduce<Record<string, typeof data.events>>(
-              (groups, evt) => {
-                if (!groups[evt.eventGroup]) groups[evt.eventGroup] = [];
-                groups[evt.eventGroup].push(evt);
-                return groups;
-              },
-              {}
-            );
-            const eligSet = new Set(
-              data.eligibility.map((e) => `${e.sportEventId}:${e.ageCategoryId}`)
-            );
-            const enabledCount = data.eligibility.length;
-
-            return (
-              <Card key={sportId}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{data.sport.name} Events</CardTitle>
-                      <CardDescription>
-                        {data.events.length} events across {data.ageCategories.length} age
-                        categories ({enabledCount} eligible combinations)
-                      </CardDescription>
-                    </div>
-                    <Badge variant="secondary">Sport-Specific</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left py-2 pr-4 font-medium min-w-[180px]">Event</th>
-                          <th className="text-center py-2 px-2 font-medium w-[70px]">Type</th>
-                          {data.ageCategories.map((cat) => (
-                            <th
-                              key={cat.id}
-                              className="text-center py-2 px-1 font-medium min-w-[55px]"
-                            >
-                              <div className="flex flex-col items-center">
-                                <span className="text-xs">{cat.code}</span>
-                                <span className="text-[10px] text-muted-foreground font-normal">
-                                  {cat.minAge}-{cat.maxAge ?? "∞"}
-                                </span>
-                              </div>
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {Object.entries(groupedEvents).map(([group, events]) => (
-                          <React.Fragment key={group}>
-                            <tr>
-                              <td
-                                colSpan={2 + data.ageCategories.length}
-                                className="py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30"
-                              >
-                                {EVENT_GROUP_LABELS[group] || group}
-                              </td>
-                            </tr>
-                            {events.map((evt) => (
-                              <tr key={evt.id} className="border-b border-border/50">
-                                <td className="py-1.5 pr-4">
-                                  <span className="font-medium">{evt.name}</span>
-                                </td>
-                                <td className="py-1.5 px-2 text-center">
-                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                                    {evt.resultType}
-                                  </Badge>
-                                </td>
-                                {data.ageCategories.map((cat) => (
-                                  <td key={cat.id} className="py-1.5 px-1 text-center align-middle">
-                                    {eligSet.has(`${evt.id}:${cat.id}`) ? (
-                                      <div className="flex items-center justify-center">
-                                        <div className="h-5 w-5 rounded-sm bg-primary text-primary-foreground flex items-center justify-center shadow-sm">
-                                          <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <span className="text-muted-foreground/30 text-xs">
-                                        &mdash;
-                                      </span>
-                                    )}
-                                  </td>
-                                ))}
-                              </tr>
-                            ))}
-                          </React.Fragment>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Sport Presets Section */}
+      {/* Presets Section */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Sport Presets</h2>
+          <h2 className="text-lg font-semibold">Presets</h2>
           <span className="text-xs text-muted-foreground">
             {enabledPresetsCount} of {presets.length} enabled
           </span>
@@ -1119,9 +940,7 @@ export default function CategoriesPage() {
                 <Info className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p className="font-medium">No Presets Available</p>
                 <p className="text-sm mt-1">
-                  {orgSports.length === 0
-                    ? "Your organization has no sports configured. Add sports in organization settings."
-                    : "No category templates have been configured for your sport yet. Contact your administrator."}
+                  No category templates have been configured yet. Contact your administrator.
                 </p>
               </div>
             </CardContent>

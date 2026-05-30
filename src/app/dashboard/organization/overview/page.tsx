@@ -5,12 +5,9 @@ import {
   Building2,
   Calendar,
   CreditCard,
-  Loader2,
   Mail,
   MapPin,
-  Check,
   Phone,
-  Trophy,
   Users,
   BookOpen,
   Pencil,
@@ -20,8 +17,7 @@ import { toast } from "sonner";
 import { formatPhoneNumberIntl } from "react-phone-number-input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sheet,
@@ -73,18 +69,7 @@ interface OrgDetails {
       name: string;
     };
   } | null;
-  sports: {
-    sport: Sport;
-  }[];
   facilities: FacilityLocation[];
-}
-
-interface Sport {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  icon: string | null;
 }
 
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
@@ -145,34 +130,16 @@ function formatAddress(org: OrgDetails): string {
 
 export default function OrganizationOverviewPage() {
   const [orgDetails, setOrgDetails] = useState<OrgDetails | null>(null);
-  const [allSports, setAllSports] = useState<Sport[]>([]);
-  const [selectedSportIds, setSelectedSportIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [savingSports, setSavingSports] = useState(false);
-  const [sportsChanged, setSportsChanged] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
-      const [orgRes, sportsRes, allSportsRes] = await Promise.all([
-        fetch("/api/organization/details"),
-        fetch("/api/organization/sports"),
-        fetch("/api/sports"),
-      ]);
+      const orgRes = await fetch("/api/organization/details");
 
       if (orgRes.ok) {
         const org = await orgRes.json();
         setOrgDetails(org);
-      }
-
-      if (sportsRes.ok) {
-        const orgSports: Sport[] = await sportsRes.json();
-        setSelectedSportIds(orgSports.map((s) => s.id));
-      }
-
-      if (allSportsRes.ok) {
-        const sports: Sport[] = await allSportsRes.json();
-        setAllSports(sports);
       }
     } catch (error) {
       toast.error("Failed to load organization details");
@@ -184,39 +151,6 @@ export default function OrganizationOverviewPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  const handleSportToggle = (sportId: string, checked: boolean) => {
-    setSelectedSportIds((prev) => {
-      const updated = checked ? [...prev, sportId] : prev.filter((id) => id !== sportId);
-      return updated;
-    });
-    setSportsChanged(true);
-  };
-
-  const handleSaveSports = async () => {
-    setSavingSports(true);
-    try {
-      const response = await fetch("/api/organization/sports", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sportIds: selectedSportIds }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to update sports");
-      }
-
-      const updatedSports: Sport[] = await response.json();
-      setSelectedSportIds(updatedSports.map((s) => s.id));
-      setSportsChanged(false);
-      toast.success("Sports updated successfully");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update sports");
-    } finally {
-      setSavingSports(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -430,66 +364,6 @@ export default function OrganizationOverviewPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Sports Selection */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-primary" />
-              <CardTitle>Sports Offered</CardTitle>
-            </div>
-            {sportsChanged && (
-              <Button onClick={handleSaveSports} disabled={savingSports} size="sm">
-                {savingSports ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Check className="mr-2 h-4 w-4" />
-                )}
-                Save Changes
-              </Button>
-            )}
-          </div>
-          <CardDescription>
-            Select the sports your organization offers. This helps tailor the platform experience
-            for your needs.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {allSports.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No sports have been configured by the platform yet.
-            </p>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {allSports.map((sport) => {
-                const isSelected = selectedSportIds.includes(sport.id);
-                return (
-                  <label
-                    key={sport.id}
-                    className={cn(
-                      "flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
-                      isSelected ? "border-primary bg-primary/5" : "hover:bg-muted/50"
-                    )}
-                  >
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={(checked) => handleSportToggle(sport.id, !!checked)}
-                      className="mt-0.5"
-                    />
-                    <div className="flex-1 space-y-0.5">
-                      <span className="font-medium text-sm">{sport.name}</span>
-                      {sport.description && (
-                        <p className="text-xs text-muted-foreground">{sport.description}</p>
-                      )}
-                    </div>
-                  </label>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Edit Contact Info Sheet */}
       <Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
