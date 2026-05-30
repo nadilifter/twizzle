@@ -8,6 +8,25 @@ Manual verification steps for each entry live in
 
 ## 2026-05-30
 
+### Phase 0.7 (partial) — Empty-state component + 4 list pages
+
+New reusable `EmptyState` component (`src/components/ui/empty-state.tsx`) with
+icon halo, title, optional description, and optional action button/link. Replaces
+bare "No results" text on four list pages:
+
+- **Athletes** (`/dashboard/athletes`) — table view and grid view; action opens
+  the Add Athlete dialog.
+- **Programs** (`/dashboard/registrations/programs`) — zero-programs state; action
+  links to `/dashboard/registrations/programs/new`.
+- **Evaluation templates** (`/dashboard/training/evaluations`) — Templates tab
+  zero-state; action opens the New Template sheet.
+- **Federation submissions** (`/dashboard/federation-submissions`) — replaces the
+  Phase 5.2 placeholder; action links to `/dashboard/federation-submissions/new`.
+
+Inline-edit affordances are out of scope for this commit (separate task).
+
+---
+
 ### Appendix A Commit B — drop Sport / SportEvent / SportAgeCategory / OrganizationSport / SportEventEligibility
 
 Skating-only rebrand cleanup (pre-authorized 2026-05-27). Removes all

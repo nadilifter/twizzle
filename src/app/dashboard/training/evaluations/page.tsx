@@ -16,6 +16,7 @@ import {
   CheckCircle,
   XCircle,
   Clock,
+  Star,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { ResponsiveTabsList } from "@/components/ui/responsive-tabs";
@@ -64,6 +65,7 @@ import { athleteDisplayName } from "@/lib/athlete-name";
 import { api } from "@/lib/api-client";
 import { LevelCombobox } from "@/components/evaluations/level-combobox";
 import { matchesQuery, templateSearchKeywords } from "@/lib/evaluation-search";
+import { EmptyState } from "@/components/ui/empty-state";
 import type {
   Skill,
   Level,
@@ -531,17 +533,12 @@ export default function EvaluationsPage() {
               ))}
             </div>
           ) : templates.length === 0 ? (
-            <div className="text-center py-12">
-              <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="font-semibold mb-2">No Evaluation Templates</h3>
-              <p className="text-muted-foreground mb-4">
-                Create your first evaluation template to get started.
-              </p>
-              <Button onClick={openCreate}>
-                <Plus className="mr-2 h-4 w-4" />
-                New Template
-              </Button>
-            </div>
+            <EmptyState
+              icon={Star}
+              title="No evaluation templates yet"
+              description="Create a template to score athletes against ribbon stages or STAR levels."
+              action={{ label: "New template", onClick: openCreate }}
+            />
           ) : filteredTemplates.length === 0 ? (
             <div className="text-center py-12">
               <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
