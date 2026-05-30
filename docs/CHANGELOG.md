@@ -8,6 +8,24 @@ Manual verification steps for each entry live in
 
 ## 2026-05-30
 
+### Phase 0.2 — Optimistic UI on athlete + evaluation template edits (partial)
+
+Applies the snapshot → optimistic-update → reconcile → rollback pattern to two
+high-frequency mutations:
+
+- **Athlete edit save** (`src/hooks/use-athletes.ts`): `updateAthlete()` now
+  applies scalar fields immediately to the list, awaits the PATCH in the
+  background, then reconciles with the server response. On network failure the
+  list reverts to the pre-edit snapshot.
+- **Evaluation template save** (`src/app/dashboard/training/evaluations/page.tsx`):
+  `handleUpdate()` applies flat field changes to the cards immediately, closes
+  the Sheet, then awaits `PUT /api/evaluation-templates/:id`. On failure the
+  card list reverts and a toast error is shown.
+
+No new dependencies or shared abstractions introduced.
+
+---
+
 ### Appendix A Commit B — drop Sport / SportEvent / SportAgeCategory / OrganizationSport / SportEventEligibility
 
 Skating-only rebrand cleanup (pre-authorized 2026-05-27). Removes all

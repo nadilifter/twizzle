@@ -11,6 +11,47 @@ can follow without re-deriving the intent.
 
 ## 2026-05-30
 
+### Phase 0.2 — Optimistic UI: athlete edit + evaluation template edit
+
+#### Happy path — athlete edit
+
+1. Go to `/dashboard/athletes`.
+2. Click the ⋯ menu on any athlete → **Edit Details**.
+3. Change the athlete's level or status and click **Save Changes**.
+4. The row in the table should update **before** the Sheet closes (instant).
+5. Confirm the sheet closes and a "Athlete updated successfully" toast appears.
+6. Refresh — the change should persist.
+
+#### Rollback path — athlete edit
+
+1. Open DevTools → **Network** tab → right-click the PATCH `/api/athletes/:id`
+   request pattern and choose **Block request URL**.
+2. Open an athlete's edit sheet, make a change, and save.
+3. The row should update optimistically, then **revert** when the blocked request
+   fails, and a toast error should appear.
+4. Remove the network block afterwards.
+
+#### Happy path — evaluation template edit
+
+1. Go to `/dashboard/training/evaluations` → **Templates** tab.
+2. Click **Edit** on any template card.
+3. Change the template name or toggle **Active**, then click **Save Changes**.
+4. The Sheet should close immediately and the card in the grid should reflect
+   the new values **before** the server round-trip completes.
+5. The "Evaluation template updated successfully" toast should appear once the
+   PUT resolves.
+
+#### Rollback path — evaluation template edit
+
+1. Open DevTools → **Network** tab → block the PUT `/api/evaluation-templates/:id`
+   request URL.
+2. Edit a template and save.
+3. The card should update optimistically, then **revert** to its original values
+   when the blocked request fails; a toast error should appear.
+4. Remove the network block afterwards.
+
+---
+
 ### Appendix A Commit B — drop Sport models
 
 No new UI to exercise; verify nothing is broken.

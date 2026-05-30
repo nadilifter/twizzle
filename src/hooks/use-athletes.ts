@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { api, ApiError } from "@/lib/api-client";
 import type {
   AthleteWithRelations,
@@ -82,6 +82,10 @@ export function useAthletes(options: UseAthletesOptions = {}): UseAthletesReturn
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Ref so that stable callbacks always read the latest athletes value for rollback.
+  const athletesRef = useRef(athletes);
+  athletesRef.current = athletes;
+
   // Fetch athletes list. If cached data exists, skip the loading state and refresh in background.
   const fetchAthletes = useCallback(
     async (params?: AthletesQueryParams) => {
@@ -140,18 +144,29 @@ export function useAthletes(options: UseAthletesOptions = {}): UseAthletesReturn
   // Update athlete
   const updateAthlete = useCallback(
     async (id: string, data: UpdateAthletePayload): Promise<AthleteWithRelations | null> => {
+      // 1. Snapshot for rollback
+      const snapshot = athletesRef.current;
+
+      // 2. Optimistic update — exclude guardianUserId which has no direct field on the list type
+      const { guardianUserId: _guardianUserId, ...athleteFields } = data;
+      const patch = Object.fromEntries(
+        Object.entries(athleteFields).filter(([, v]) => v !== undefined)
+      ) as Partial<AthleteWithRelations>;
+      setAthletes((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a)));
+
       setIsUpdating(true);
       setError(null);
 
       try {
+        // 3. Reconcile with server response
         const updatedAthlete = await api.patch<AthleteWithRelations>(`/api/athletes/${id}`, data);
-        setAthletes((prev) =>
-          prev.map((athlete) => (athlete.id === id ? updatedAthlete : athlete))
-        );
+        setAthletes((prev) => prev.map((a) => (a.id === id ? updatedAthlete : a)));
         invalidateLists();
         invalidateDetail(id);
         return updatedAthlete;
       } catch (err) {
+        // 4. Rollback
+        setAthletes(snapshot);
         const message = err instanceof ApiError ? err.message : "Failed to update athlete";
         setError(message);
         console.error("Error updating athlete:", err);
