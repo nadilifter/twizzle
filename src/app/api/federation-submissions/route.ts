@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
+import { logFederationSubmissionEvent } from "@/lib/federation-submission-audit";
 
 // GET /api/federation-submissions
 export async function GET(request: NextRequest) {
@@ -127,6 +129,14 @@ export async function POST(request: NextRequest) {
           submissionId: created.id,
           athleteId,
         })),
+      });
+
+      await logFederationSubmissionEvent({
+        submissionId: created.id,
+        eventType: "CREATED",
+        data: { federation, athleteCount: athleteIds.length },
+        actorId: session.user.id,
+        prismaClient: tx as unknown as Prisma.TransactionClient,
       });
 
       return created;

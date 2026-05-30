@@ -8,6 +8,16 @@ Manual verification steps for each entry live in
 
 ## 2026-05-30
 
+### Wire CREATED audit event on federation submission create
+
+The `POST /api/federation-submissions` handler now calls `logFederationSubmissionEvent`
+with `eventType: "CREATED"` inside the existing `$transaction`, immediately after the
+`FederationSubmission` row and its athlete links are inserted. The event records the
+federation name and athlete count, and is attributed to the creating user. The audit log
+timeline on the submission detail page will now show a CREATED entry as the oldest event.
+
+---
+
 ### Phase 0.7 (partial) — Empty-state component + 4 list pages
 
 New reusable `EmptyState` component (`src/components/ui/empty-state.tsx`) with

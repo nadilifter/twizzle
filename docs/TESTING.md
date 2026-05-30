@@ -11,6 +11,15 @@ can follow without re-deriving the intent.
 
 ## 2026-05-30
 
+### Wire CREATED audit event on federation submission create
+
+Create a new submission via `/dashboard/federation-submissions/new` → navigate to the
+submission detail page → the audit log timeline should show a CREATED event at the top
+(oldest entry), attributed to the logged-in user, with the federation name and athlete
+count recorded in the event data.
+
+---
+
 ### Phase 0.7 (partial) — Empty-state component
 
 #### Athletes empty state
