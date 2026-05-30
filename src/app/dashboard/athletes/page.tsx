@@ -75,6 +75,7 @@ import {
   Pencil,
   Calendar,
   User,
+  Users,
   LayoutGrid,
   List as ListIcon,
 } from "lucide-react";
@@ -96,6 +97,7 @@ import { AthleteConfiguration } from "./athlete-configuration";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
+import { EmptyState } from "@/components/ui/empty-state";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAthletes } from "@/hooks/use-athletes";
@@ -1102,8 +1104,16 @@ export default function AthletesPage() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={columns.length} className="h-24 text-center">
-                          No results.
+                        <TableCell colSpan={columns.length} className="h-64 text-center">
+                          <EmptyState
+                            icon={Users}
+                            title="No athletes yet"
+                            description="Add your first athlete to get started."
+                            action={{
+                              label: "Add athlete",
+                              onClick: () => setIsAddDialogOpen(true),
+                            }}
+                          />
                         </TableCell>
                       </TableRow>
                     )}
@@ -1192,8 +1202,13 @@ export default function AthletesPage() {
                     );
                   })
                 ) : (
-                  <div className="col-span-full flex h-24 items-center justify-center text-sm text-muted-foreground">
-                    No results.
+                  <div className="col-span-full">
+                    <EmptyState
+                      icon={Users}
+                      title="No athletes yet"
+                      description="Add your first athlete to get started."
+                      action={{ label: "Add athlete", onClick: () => setIsAddDialogOpen(true) }}
+                    />
                   </div>
                 )}
               </div>

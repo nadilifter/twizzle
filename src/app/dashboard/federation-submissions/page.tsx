@@ -44,7 +44,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { AlertCircle, Filter, Loader2, Plus } from "lucide-react";
+import { AlertCircle, Filter, Loader2, Plus, Send } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -54,6 +54,7 @@ import { DataTableColumnHeader } from "@/components/data-table/data-table-column
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 
 type FederationSubmission = {
   id: string;
@@ -457,16 +458,16 @@ export default function FederationSubmissionsPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={columns.length} className="h-40 text-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <p className="text-muted-foreground">No federation submissions yet</p>
-                        <Button variant="outline" size="sm" asChild>
-                          <Link href="/dashboard/federation-submissions/new">
-                            <Plus className="mr-2 h-4 w-4" />
-                            Create your first submission
-                          </Link>
-                        </Button>
-                      </div>
+                    <TableCell colSpan={columns.length} className="h-64 text-center">
+                      <EmptyState
+                        icon={Send}
+                        title="No federation submissions yet"
+                        description="Submit athletes to a federation for membership renewals or competition entries."
+                        action={{
+                          label: "New submission",
+                          href: "/dashboard/federation-submissions/new",
+                        }}
+                      />
                     </TableCell>
                   </TableRow>
                 )}

@@ -31,6 +31,7 @@ import {
   Filter,
   SearchX,
   X,
+  GraduationCap,
 } from "lucide-react";
 import {
   Sheet,
@@ -42,6 +43,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { EmptyState } from "@/components/ui/empty-state";
 import { usePrograms } from "@/hooks/use-programs";
 import { useSeasons } from "@/hooks/use-seasons";
 import { useFacilities } from "@/hooks/use-facilities";
@@ -693,9 +695,12 @@ export default function ProgramsPage() {
               </Button>
             </div>
           ) : (
-            <div className="col-span-full text-center py-12 text-muted-foreground">
-              No programs found. Create one to get started.
-            </div>
+            <EmptyState
+              icon={GraduationCap}
+              title="No programs yet"
+              description="Create your first program for athletes to enroll in."
+              action={{ label: "New program", href: "/dashboard/registrations/programs/new" }}
+            />
           )}
         </>
       )}

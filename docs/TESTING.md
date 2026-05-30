@@ -11,6 +11,45 @@ can follow without re-deriving the intent.
 
 ## 2026-05-30
 
+### Phase 0.7 (partial) — Empty-state component
+
+#### Athletes empty state
+
+1. Log in as ADMIN.
+2. Delete all athletes (or temporarily filter so none remain), or use a fresh
+   tenant with no athletes.
+3. Navigate to `/dashboard/athletes`.
+4. Verify the table view shows the `EmptyState` component: Users icon in a
+   rounded halo, "No athletes yet" heading, description, and an "Add athlete"
+   button.
+5. Switch to grid view (toggle in the header) — same empty state appears.
+6. Click "Add athlete" — the Add Athlete dialog opens.
+
+#### Programs empty state
+
+1. Navigate to `/dashboard/registrations/programs` on a tenant with no programs.
+2. Verify the `EmptyState` shows: GraduationCap icon, "No programs yet" heading,
+   description, and a "New program" button linking to `/dashboard/registrations/programs/new`.
+3. Click "New program" — navigates to the new-program form.
+
+#### Evaluation templates empty state
+
+1. Navigate to `/dashboard/training/evaluations` on a tenant with no templates
+   (or delete all templates).
+2. The Templates tab should show: Star icon, "No evaluation templates yet" heading,
+   description, and a "New template" button.
+3. Click "New template" — the Create Template sheet opens.
+
+#### Federation submissions empty state
+
+1. Navigate to `/dashboard/federation-submissions` on a tenant with no submissions.
+2. Verify the table shows: Send icon, "No federation submissions yet" heading,
+   description, and a "New submission" button linking to
+   `/dashboard/federation-submissions/new`.
+3. Click "New submission" — navigates to the new-submission form.
+
+---
+
 ### Phase 0.2 — Optimistic UI: athlete edit + evaluation template edit
 
 #### Happy path — athlete edit
