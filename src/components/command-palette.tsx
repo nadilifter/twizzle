@@ -19,6 +19,7 @@ import {
   LogOut,
   MessageSquare,
   Plus,
+  Send,
   Settings,
   Star,
   Users,
@@ -426,6 +427,13 @@ function CommandPaletteDialog({ isOpen, onClose }: { isOpen: boolean; onClose: (
               >
                 <Plus className="mr-2 h-4 w-4 shrink-0" />
                 New evaluation
+              </CommandItem>
+              <CommandItem
+                value="action new submission"
+                onSelect={() => navigate("/dashboard/federation-submissions/new")}
+              >
+                <Send className="mr-2 h-4 w-4 shrink-0" />
+                New federation submission
               </CommandItem>
             </>
           )}

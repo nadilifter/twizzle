@@ -8,6 +8,38 @@ Manual verification steps for each entry live in
 
 ## 2026-05-30
 
+### New federation-submission form page
+
+Adds the missing "create" entry-point for `FederationSubmission` rows. The
+queue page's empty-state CTA and header button both link to this page.
+
+**New page — `src/app/dashboard/federation-submissions/new/page.tsx`**
+
+- ADMIN-only client component (enforced server-side by the POST route).
+- **Federation selector** — shadcn `Select` defaulting to `SKATE_CANADA`.
+- **Athletes multi-select** — `Command`/`Popover` combobox pre-fetching all org
+  athletes on mount. Selected athletes shown as removable `Badge`s below the
+  trigger.
+- **Payload editor** — monospace `Textarea` (12 rows) pre-filled with `{}\n`.
+  Inline validation error shown if the value is not valid JSON on submit.
+- **Create draft** button disabled until ≥1 athlete selected and payload is
+  valid JSON. On success: sonner toast + redirect to the new submission detail
+  page.
+
+**New handler — `POST /api/federation-submissions`**
+
+- Validates body with zod: `federation`, `athleteIds` (min 1), `payload`.
+- Verifies all athleteIds belong to the admin's org via `OrganizationAthlete`;
+  returns `400` on mismatch.
+- Creates `FederationSubmission` (`status: DRAFT`) + `FederationSubmissionAthlete`
+  join rows inside a `$transaction`.
+- Returns `201` with the created submission object.
+
+**Command palette** — "New federation submission" action added to the Actions
+group (ADMIN-only), navigates to `/dashboard/federation-submissions/new`.
+
+---
+
 ### Phase 5.2 + 5.3 integration — audit log wired into submission detail page and transitions
 
 The Phase 5.3 `FederationSubmissionAuditLog` component now renders on the Phase 5.2
