@@ -8,6 +8,17 @@ Manual verification steps for each entry live in
 
 ## 2026-05-30
 
+### Phase 5.2 + 5.3 integration — audit log wired into submission detail page and transitions
+
+The Phase 5.3 `FederationSubmissionAuditLog` component now renders on the Phase 5.2
+submission detail page, replacing the placeholder stub. The Phase 5.2 transitions endpoint
+wraps its `federationSubmission.update` call in a `$transaction` and calls
+`logFederationSubmissionEvent` with `STATUS_TRANSITIONED` inside the same transaction,
+making the status update and audit row atomic. No schema changes; both phases were
+already on main.
+
+---
+
 ### Appendix A Commit B — drop Sport / SportEvent / SportAgeCategory / OrganizationSport / SportEventEligibility
 
 Skating-only rebrand cleanup (pre-authorized 2026-05-27). Removes all

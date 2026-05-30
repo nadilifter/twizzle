@@ -23,6 +23,7 @@ import { format } from "date-fns";
 import Link from "next/link";
 
 import { DashboardPageHeader } from "@/components/dashboard-page-header";
+import { FederationSubmissionAuditLog } from "@/components/federation-submissions/audit-log";
 
 type OrgAthlete = { level: string };
 
@@ -318,12 +319,10 @@ export default function FederationSubmissionDetailPage() {
         </pre>
       </div>
 
-      {/* Audit log stub — Phase 5.3 */}
+      {/* Audit log */}
       <div className="space-y-3">
         <h2 className="text-lg font-semibold">Audit Log</h2>
-        <div className="rounded-md border p-4 text-sm text-muted-foreground">
-          Audit log (Phase 5.3)
-        </div>
+        <FederationSubmissionAuditLog submissionId={submission.id} />
       </div>
 
       {/* Transition confirmation dialog */}
