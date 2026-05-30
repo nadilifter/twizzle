@@ -11,6 +11,12 @@ can follow without re-deriving the intent.
 
 ## 2026-05-30
 
+### Phase 5.2 + 5.3 integration — audit log on submission detail page
+
+Transition a DRAFT submission → reload detail page → verify a STATUS_TRANSITIONED event appears in the audit log timeline.
+
+---
+
 ### Appendix A Commit B — drop Sport models
 
 No new UI to exercise; verify nothing is broken.

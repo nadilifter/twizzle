@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
+import { logFederationSubmissionEvent } from "@/lib/federation-submission-audit";
 import { z } from "zod";
 
 const transitionSchema = z.object({
@@ -76,15 +77,30 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
     }
 
-    const updated = await db.federationSubmission.update({
-      where: { id, organizationId },
-      data: updateData,
-      include: {
-        createdBy: { select: { name: true, email: true } },
-        submittedBy: { select: { name: true, email: true } },
-        resolvedBy: { select: { name: true, email: true } },
-        _count: { select: { athletes: true } },
-      },
+    const previousStatus = existing.status;
+
+    const updated = await db.$transaction(async (tx) => {
+      const result = await tx.federationSubmission.update({
+        where: { id, organizationId },
+        data: updateData,
+        include: {
+          createdBy: { select: { name: true, email: true } },
+          submittedBy: { select: { name: true, email: true } },
+          resolvedBy: { select: { name: true, email: true } },
+          _count: { select: { athletes: true } },
+        },
+      });
+
+      await logFederationSubmissionEvent({
+        submissionId: id,
+        eventType: "STATUS_TRANSITIONED",
+        data: { previousStatus, nextStatus: to },
+        note: resolutionNote ?? null,
+        actorId: session.user.id,
+        prismaClient: tx,
+      });
+
+      return result;
     });
 
     return NextResponse.json(updated);
