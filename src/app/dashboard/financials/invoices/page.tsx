@@ -27,7 +27,9 @@ import {
   Search,
   Loader2,
   ExternalLinkIcon,
+  Receipt,
 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { CreateInvoiceSheet } from "@/components/invoices/create-invoice-sheet";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -230,9 +232,11 @@ export default function InvoicesPage() {
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : invoices.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No invoices found. Create your first invoice to get started.
-            </div>
+            <EmptyState
+              icon={Receipt}
+              title="No invoices yet"
+              description="Invoices will appear here once athletes enroll in paid programs."
+            />
           ) : (
             <Table>
               <TableHeader>

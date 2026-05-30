@@ -31,6 +31,7 @@ import {
   Radio,
   Settings,
 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { format, formatDistanceToNow, isFuture } from "date-fns";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -476,21 +477,21 @@ export default function CompetitionsPage() {
               );
             })}
             {filtered.length === 0 && (
-              <div className="col-span-full flex flex-col items-center justify-center py-12 border rounded-lg border-dashed">
-                <Trophy className="h-10 w-10 text-muted-foreground mb-3" />
-                <p className="text-muted-foreground mb-4">
-                  {searchTerm
-                    ? "No competitions match your search."
-                    : "No competitions yet. Create one to get started."}
-                </p>
-                {!searchTerm && (
-                  <Button variant="outline" asChild>
-                    <Link href="/dashboard/competitions/new">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create your first competition
-                    </Link>
-                  </Button>
-                )}
+              <div className="col-span-full">
+                <EmptyState
+                  icon={Trophy}
+                  title={searchTerm ? "No competitions match your search" : "No competitions yet"}
+                  description={
+                    !searchTerm
+                      ? "Create a competition to manage entries, categories, and results."
+                      : undefined
+                  }
+                  action={
+                    !searchTerm
+                      ? { label: "New competition", href: "/dashboard/competitions/new" }
+                      : undefined
+                  }
+                />
               </div>
             )}
           </div>

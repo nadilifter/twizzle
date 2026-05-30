@@ -11,6 +11,28 @@ can follow without re-deriving the intent.
 
 ## 2026-05-30
 
+### Phase 0.7 (batch 2) — Empty states on 3 more list pages
+
+#### Competitions empty state
+
+1. Navigate to `/dashboard/competitions` on a tenant with no competitions (or one where search returns nothing).
+2. With no search: verify Trophy icon halo, "No competitions yet" heading, description, and "New competition" button linking to `/dashboard/competitions/new`.
+3. Type a search term that returns no results: verify Trophy icon, "No competitions match your search" heading — no action button shown.
+
+#### Invoices empty state
+
+1. Navigate to `/dashboard/financials/invoices` on a tenant with no invoices.
+2. Verify Receipt icon halo, "No invoices yet" heading, and description — no action button.
+
+#### Announcements empty state
+
+1. Navigate to `/dashboard/communication/announcements` on a tenant with no announcements.
+2. With no filters: verify Megaphone icon halo, "No announcements yet" heading, description, and "New announcement" button.
+3. Click "New announcement" — the Create Announcement dialog opens.
+4. Apply a status filter or search that returns nothing: verify no action button is shown.
+
+---
+
 ### Wire CREATED audit event on federation submission create
 
 Create a new submission via `/dashboard/federation-submissions/new` → navigate to the

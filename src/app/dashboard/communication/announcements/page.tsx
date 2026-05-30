@@ -54,7 +54,9 @@ import {
   AlignRight,
   Loader2,
   Archive,
+  Megaphone,
 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -619,18 +621,24 @@ export default function AnnouncementsPage() {
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : announcements.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <p className="font-medium text-sm text-muted-foreground">
-                {searchQuery || statusFilter !== "all"
-                  ? "No announcements match your filters."
-                  : "No announcements yet."}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {!searchQuery &&
-                  statusFilter === "all" &&
-                  "Create your first announcement to get started."}
-              </p>
-            </div>
+            <EmptyState
+              icon={Megaphone}
+              title={
+                searchQuery || statusFilter !== "all"
+                  ? "No announcements match your filters"
+                  : "No announcements yet"
+              }
+              description={
+                !searchQuery && statusFilter === "all"
+                  ? "Post announcements to keep parents and coaches informed."
+                  : undefined
+              }
+              action={
+                !searchQuery && statusFilter === "all"
+                  ? { label: "New announcement", onClick: () => handleOpenDialog() }
+                  : undefined
+              }
+            />
           ) : (
             <Table>
               <TableHeader>

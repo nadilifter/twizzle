@@ -8,6 +8,18 @@ Manual verification steps for each entry live in
 
 ## 2026-05-30
 
+### Phase 0.7 (batch 2) — Empty states on 3 more list pages
+
+Replaces bare plain-text empty branches with `<EmptyState>` on:
+
+- **Competitions** (`/dashboard/competitions`) — Trophy icon; action links to `/dashboard/competitions/new`; search-filtered state shown without action.
+- **Invoices** (`/dashboard/financials/invoices`) — Receipt icon; no action (invoices are system-generated).
+- **Announcements** (`/dashboard/communication/announcements`) — Megaphone icon; action opens the New Announcement dialog; filtered state shown without action.
+
+Skipped (paths not present in repo): `registrations/memberships`, `registrations/queue`.
+
+---
+
 ### Wire CREATED audit event on federation submission create
 
 The `POST /api/federation-submissions` handler now calls `logFederationSubmissionEvent`
