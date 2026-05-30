@@ -6,19 +6,12 @@ import { validateFederationMemberNumber } from "@/lib/federation-member-number";
 import { z } from "zod";
 
 function getCategoryLabel(category: {
-  sportEvent?: { name: string; code: string } | null;
-  ageCategory?: { name: string; code: string } | null;
   individualEntry?: { name: string } | null;
   combinationEntry?: {
     rowValue: { name: string };
     colValue: { name: string };
   } | null;
 }): string {
-  if (category.ageCategory && category.sportEvent) {
-    return `${category.ageCategory.code} ${category.sportEvent.name}`;
-  }
-  if (category.sportEvent) return category.sportEvent.name;
-  if (category.ageCategory) return category.ageCategory.name;
   if (category.individualEntry?.name) return category.individualEntry.name;
   if (category.combinationEntry) {
     return `${category.combinationEntry.rowValue.name} - ${category.combinationEntry.colValue.name}`;
@@ -301,8 +294,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           include: {
             combinationEntry: { include: { rowValue: true, colValue: true } },
             individualEntry: true,
-            sportEvent: { select: { name: true, code: true } },
-            ageCategory: { select: { name: true, code: true } },
           },
         },
       },

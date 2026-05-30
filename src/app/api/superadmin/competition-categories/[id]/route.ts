@@ -68,7 +68,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const template = await db.competitionCategoryTemplate.findUnique({
       where: { id },
       include: {
-        sport: { select: { id: true, name: true, slug: true } },
         axisValues: { orderBy: { displayOrder: "asc" } },
         combinationEntries: true,
         individualEntries: { orderBy: { displayOrder: "asc" } },
@@ -108,14 +107,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     if (!existing) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
-    }
-
-    // Ensure this is a sport-level template
-    if (!existing.sportId) {
-      return NextResponse.json(
-        { error: "Cannot edit org-level templates via superadmin API" },
-        { status: 400 }
-      );
     }
 
     // Update base template fields
@@ -267,7 +258,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const updated = await db.competitionCategoryTemplate.findUnique({
       where: { id },
       include: {
-        sport: { select: { id: true, name: true, slug: true } },
         axisValues: { orderBy: { displayOrder: "asc" } },
         combinationEntries: true,
         individualEntries: { orderBy: { displayOrder: "asc" } },
@@ -302,13 +292,6 @@ export async function DELETE(
 
     if (!template) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
-    }
-
-    if (!template.sportId) {
-      return NextResponse.json(
-        { error: "Cannot delete org-level templates via superadmin API" },
-        { status: 400 }
-      );
     }
 
     await db.competitionCategoryTemplate.delete({ where: { id } });

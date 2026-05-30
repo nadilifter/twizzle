@@ -6,6 +6,35 @@ Manual verification steps for each entry live in
 
 ---
 
+## 2026-05-30
+
+### Appendix A Commit B — drop Sport / SportEvent / SportAgeCategory / OrganizationSport / SportEventEligibility
+
+Skating-only rebrand cleanup (pre-authorized 2026-05-27). Removes all
+multi-sport scaffolding from schema and source.
+
+**Schema:** deleted 5 models (`Sport`, `OrganizationSport`, `SportEvent`,
+`SportAgeCategory`, `SportEventEligibility`), removed `Organization.sports`
+inverse relation, dropped `sportId` FK from `CompetitionCategoryTemplate`,
+dropped `sportEventId`/`ageCategoryId` FKs from `CompetitionCategory`.
+
+**API routes deleted:** `POST/GET /api/organization/sports`,
+`/api/sports/[sportId]/*`, `/api/superadmin/sports/**` (6 routes).
+
+**Pages deleted:** `/superadmin/sports`, `sport-filter.tsx`.
+
+**Pages refactored:** `/superadmin/competition-categories` (sport selector
+removed; templates now managed without sport grouping),
+`/superadmin/organizations/[slug]` (sports card removed),
+`/dashboard/organization/overview` (sports card removed),
+competition stepper + categories/events/results pages (sport-specific
+event/age-category combinator removed).
+
+**Seed:** removed athletics sports block, org-sport associations, and
+sport-specific event/age-category/eligibility seed data from `seed-dev.ts`.
+
+---
+
 ## 2026-05-29
 
 ### Phase 2.1 — Bulk achievement CSV import

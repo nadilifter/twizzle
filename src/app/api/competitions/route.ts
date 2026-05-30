@@ -17,8 +17,6 @@ const competitionInclude = {
         },
       },
       individualEntry: true,
-      sportEvent: true,
-      ageCategory: true,
     },
     orderBy: { displayOrder: "asc" as const },
   },
@@ -127,10 +125,7 @@ const createCompetitionSchema = z.object({
         // Legacy template refs
         combinationEntryId: z.string().nullable().optional(),
         individualEntryId: z.string().nullable().optional(),
-        // Sport-specific refs
-        sportEventId: z.string().nullable().optional(),
-        ageCategoryId: z.string().nullable().optional(),
-        // Result config (can be auto-derived from sportEvent if sport-specific)
+        // Result config
         resultType: z.enum(["TIME", "DISTANCE", "HEIGHT", "SCORE", "PLACEMENT"]).optional(),
         sortDirection: z.enum(["ASC", "DESC"]).default("ASC"),
         precision: z.number().int().min(0).max(6).optional(),
@@ -358,27 +353,12 @@ export async function POST(request: NextRequest) {
         categories: {
           create: await Promise.all(
             data.categoryResults.map(async (cat, index) => {
-              let resultType = cat.resultType;
-              let sortDirection = cat.sortDirection;
-              let precision = cat.precision;
-
-              // Auto-derive result config from sport event if using sport-specific refs
-              if (cat.sportEventId && !resultType) {
-                const sportEvent = await db.sportEvent.findUnique({
-                  where: { id: cat.sportEventId },
-                });
-                if (sportEvent) {
-                  resultType = sportEvent.resultType;
-                  sortDirection = sportEvent.sortDirection;
-                  precision = precision ?? sportEvent.defaultPrecision;
-                }
-              }
+              const resultType = cat.resultType;
+              const sortDirection = cat.sortDirection;
+              const precision = cat.precision;
 
               // Look up per-category price if PER_CATEGORY pricing
-              const catKey =
-                cat.sportEventId && cat.ageCategoryId
-                  ? `${cat.sportEventId}:${cat.ageCategoryId}`
-                  : cat.combinationEntryId || cat.individualEntryId || "";
+              const catKey = cat.combinationEntryId || cat.individualEntryId || "";
               const categoryPrice =
                 data.pricingMode === "PER_CATEGORY" && data.categoryPrices[catKey] !== undefined
                   ? data.categoryPrices[catKey]
@@ -387,8 +367,6 @@ export async function POST(request: NextRequest) {
               return {
                 combinationEntryId: cat.combinationEntryId || null,
                 individualEntryId: cat.individualEntryId || null,
-                sportEventId: cat.sportEventId || null,
-                ageCategoryId: cat.ageCategoryId || null,
                 resultType: resultType || "TIME",
                 sortDirection,
                 precision: precision ?? 3,

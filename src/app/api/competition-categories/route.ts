@@ -4,7 +4,6 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 
 const templateInclude = {
-  sport: { select: { id: true, name: true, slug: true } },
   axisValues: { orderBy: { displayOrder: "asc" as const } },
   combinationEntries: true,
   individualEntries: { orderBy: { displayOrder: "asc" as const } },
@@ -79,85 +78,16 @@ export async function GET() {
       return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
-    // Get the org's sport IDs
-    const orgSports = await db.organizationSport.findMany({
-      where: { organizationId },
-      select: { sportId: true },
-    });
-    const sportIds = orgSports.map((os) => os.sportId);
-
-    // Fetch sport-level presets for the org's sports
-    const presets = await db.competitionCategoryTemplate.findMany({
-      where: {
-        sportId: { in: sportIds },
-        organizationId: null,
-        isActive: true,
-      },
-      include: templateInclude,
-      orderBy: { displayOrder: "asc" },
-    });
-
-    // Fetch org-level preferences (disabled overrides for presets)
-    const preferences = await db.organizationCategoryPreference.findMany({
-      where: { organizationId },
-      select: { templateId: true, isDisabled: true },
-    });
-    const disabledSet = new Set(preferences.filter((p) => p.isDisabled).map((p) => p.templateId));
-
-    // Annotate presets with disabled status
-    const presetsWithStatus = presets.map((p) => ({
-      ...p,
-      isDisabledByOrg: disabledSet.has(p.id),
-    }));
-
     // Fetch org-level custom templates
     const custom = await db.competitionCategoryTemplate.findMany({
       where: {
         organizationId,
-        sportId: null,
       },
       include: templateInclude,
       orderBy: { displayOrder: "asc" },
     });
 
-    // Fetch sport-specific events for the org's sports (new structured system)
-    const sportSpecific: Record<
-      string,
-      {
-        sport: { id: string; name: string; slug: string };
-        events: Awaited<ReturnType<typeof db.sportEvent.findMany>>;
-        ageCategories: Awaited<ReturnType<typeof db.sportAgeCategory.findMany>>;
-        eligibility: Awaited<ReturnType<typeof db.sportEventEligibility.findMany>>;
-      }
-    > = {};
-
-    for (const sportId of sportIds) {
-      const events = await db.sportEvent.findMany({
-        where: { sportId, isActive: true },
-        orderBy: { displayOrder: "asc" },
-      });
-      if (events.length > 0) {
-        const sport = await db.sport.findUnique({
-          where: { id: sportId },
-          select: { id: true, name: true, slug: true },
-        });
-        const ageCategories = await db.sportAgeCategory.findMany({
-          where: { sportId, isActive: true },
-          orderBy: { displayOrder: "asc" },
-        });
-        const eligibility = await db.sportEventEligibility.findMany({
-          where: {
-            sportEvent: { sportId },
-            isEnabled: true,
-          },
-        });
-        if (sport) {
-          sportSpecific[sportId] = { sport, events, ageCategories, eligibility };
-        }
-      }
-    }
-
-    return NextResponse.json({ presets: presetsWithStatus, custom, sportSpecific });
+    return NextResponse.json({ presets: [], custom, sportSpecific: {} });
   } catch (error) {
     console.error("Error fetching competition categories:", error);
     return NextResponse.json({ error: "Failed to fetch categories" }, { status: 500 });

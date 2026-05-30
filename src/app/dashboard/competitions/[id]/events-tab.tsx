@@ -56,8 +56,6 @@ export interface EventCategory {
     name: string;
     template: { id: string; name: string };
   } | null;
-  sportEvent: { id: string; name: string; code: string } | null;
-  ageCategory: { id: string; name: string; code: string } | null;
   _count: { entries: number; results: number };
 }
 
@@ -68,11 +66,6 @@ interface EventsTabProps {
 }
 
 export function getCategoryLabel(category: EventCategory): string {
-  if (category.ageCategory && category.sportEvent) {
-    return `${category.ageCategory.code} ${category.sportEvent.name}`;
-  }
-  if (category.sportEvent) return category.sportEvent.name;
-  if (category.ageCategory) return category.ageCategory.name;
   if (category.individualEntry?.name) return category.individualEntry.name;
   if (category.combinationEntry) {
     return `${category.combinationEntry.rowValue.name} - ${category.combinationEntry.colValue.name}`;

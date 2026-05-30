@@ -4350,10 +4350,9 @@ enum CategoryAxis {
   COLUMN
 }
 
-// Unified template for sport-level presets (sportId set) and org-level custom (organizationId set)
+// Unified template for org-level custom (organizationId set)
 model CompetitionCategoryTemplate {
   id             String               @id @default(cuid())
-  sportId        String? // Non-null = sport-level preset (superadmin)
   organizationId String? // Non-null = org-level custom (dashboard)
   name           String
   description    String?
@@ -4369,7 +4368,6 @@ model CompetitionCategoryTemplate {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sport        Sport?        @relation(fields: [sportId], references: [id], onDelete: Cascade)
   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   axisValues              CategoryAxisValue[]
@@ -4377,7 +4375,6 @@ model CompetitionCategoryTemplate {
   individualEntries       CategoryIndividualEntry[]
   organizationPreferences OrganizationCategoryPreference[]
 
-  @@index([sportId])
   @@index([organizationId])
 }
 
@@ -4581,10 +4578,6 @@ model CompetitionCategory {
   combinationEntryId String? // For COMBINATION templates
   individualEntryId  String? // For INDIVIDUAL templates
 
-  // Sport-specific references (new structured system - used instead of legacy refs)
-  sportEventId  String? // Reference to SportEvent
-  ageCategoryId String? // Reference to SportAgeCategory
-
   // Result configuration
   resultType    ResultType
   sortDirection SortDirection @default(ASC)
@@ -4612,8 +4605,6 @@ model CompetitionCategory {
   competition      Competition               @relation(fields: [competitionId], references: [id], onDelete: Cascade)
   combinationEntry CategoryCombinationEntry? @relation(fields: [combinationEntryId], references: [id], onDelete: SetNull)
   individualEntry  CategoryIndividualEntry?  @relation(fields: [individualEntryId], references: [id], onDelete: SetNull)
-  sportEvent       SportEvent?               @relation(fields: [sportEventId], references: [id], onDelete: SetNull)
-  ageCategory      SportAgeCategory?         @relation(fields: [ageCategoryId], references: [id], onDelete: SetNull)
 
   entries   CompetitionEntry[]
   results   CompetitionResult[]
@@ -4621,8 +4612,6 @@ model CompetitionCategory {
   lineItems LineItem[]
 
   @@index([competitionId])
-  @@index([sportEventId])
-  @@index([ageCategoryId])
 }
 
 // Pricing tiers for TIERED pricing mode (discounts for multiple events)

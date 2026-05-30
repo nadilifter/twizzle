@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useFeatures } from "@/components/feature-context";
 import { Button } from "@/components/ui/button";
@@ -60,12 +60,6 @@ interface CompetitionConfigurationProps {
 
 // -- Types copied/adapted from CompetitionStepper --
 
-interface OrgSport {
-  id: string;
-  name: string;
-  slug: string;
-}
-
 type PublishStatus = "LIVE" | "DRAFT" | "SCHEDULED" | "CLOSED" | "COMPLETED";
 
 interface Level {
@@ -98,8 +92,6 @@ type SubMode = "NONE" | "VERIFIED_RESULT" | "MANUAL_ENTRY";
 interface CategoryResultConfig {
   combinationEntryId: string | null;
   individualEntryId: string | null;
-  sportEventId: string | null;
-  ageCategoryId: string | null;
   label: string;
   resultType: ResultType;
   sortDirection: SortDir;
@@ -111,49 +103,6 @@ interface CategoryResultConfig {
   teamSize: number | null;
   collectResults: boolean;
 }
-
-interface SportEventEntry {
-  id: string;
-  code: string;
-  name: string;
-  eventGroup: string;
-  eventType: string;
-  resultType: ResultType;
-  sortDirection: SortDir;
-  defaultPrecision: number;
-  isActive: boolean;
-  displayOrder: number;
-  eligibility?: Array<{
-    id: string;
-    sportEventId: string;
-    ageCategoryId: string;
-    isEnabled: boolean;
-    ageCategory: { id: string; code: string; name: string };
-  }>;
-}
-
-interface SportAgeCategoryEntry {
-  id: string;
-  code: string;
-  name: string;
-  minAge: number;
-  maxAge: number | null;
-  isActive: boolean;
-  displayOrder: number;
-}
-
-const EVENT_GROUP_LABELS: Record<string, string> = {
-  sprints: "Sprints",
-  hurdles: "Hurdles",
-  middle_distance: "Middle Distance",
-  distance: "Distance",
-  relays: "Relays",
-  jumps: "Jumps",
-  throws: "Throws",
-  combined: "Combined Events",
-  racewalk: "Race Walk",
-  road: "Road",
-};
 
 interface CompetitionFormData {
   // Step 1: General
@@ -235,16 +184,6 @@ export function CompetitionConfiguration({
   const [loadingFacilities, setLoadingFacilities] = useState(true);
   const [waivers, setWaivers] = useState<Array<{ id: string; title: string; status: string }>>([]);
   const [loadingWaivers, setLoadingWaivers] = useState(true);
-  const [orgSports, setOrgSports] = useState<OrgSport[]>([]);
-
-  // Sport-specific data
-  const [sportEvents, setSportEvents] = useState<SportEventEntry[]>([]);
-  const [sportAgeCategories, setSportAgeCategories] = useState<SportAgeCategoryEntry[]>([]);
-  const [eligibilitySet, setEligibilitySet] = useState<Set<string>>(new Set());
-  const [loadingSportData, setLoadingSportData] = useState(false);
-  const [hasSportSpecificData, setHasSportSpecificData] = useState(false);
-  const [selectedCombos, setSelectedCombos] = useState<Set<string>>(new Set());
-
   // Form state
   const [formData, setFormData] = useState<CompetitionFormData>({
     name: "",
@@ -299,12 +238,11 @@ export function CompetitionConfiguration({
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const [compRes, levelsRes, facilitiesRes, waiversRes, sportsRes] = await Promise.all([
+        const [compRes, levelsRes, facilitiesRes, waiversRes] = await Promise.all([
           fetch(`/api/competitions/${competitionId}`),
           trainingEnabled ? fetch("/api/levels") : Promise.resolve({ ok: true, json: () => [] }),
           fetch("/api/organization/facilities"),
           fetch("/api/waivers?status=ACTIVE"),
-          fetch("/api/organization/sports"),
         ]);
 
         if (!compRes.ok) throw new Error("Failed to load competition");
@@ -319,17 +257,13 @@ export function CompetitionConfiguration({
           const wavData = await waiversRes.json();
           setWaivers(wavData.data || []);
         }
-        if (sportsRes.ok) setOrgSports(await sportsRes.json());
 
         // Reconstruct form data
         const categoryResults: CategoryResultConfig[] = (compData.categories || []).map(
           (cat: any) => ({
             combinationEntryId: cat.combinationEntryId || null,
             individualEntryId: cat.individualEntryId || null,
-            sportEventId: cat.sportEventId || null,
-            ageCategoryId: cat.ageCategoryId || null,
-            label:
-              [cat.sportEvent?.name, cat.ageCategory?.code].filter(Boolean).join(" - ") || cat.id,
+            label: cat.id,
             resultType: cat.resultType || "TIME",
             sortDirection: cat.sortDirection || "ASC",
             precision: cat.precision ?? 3,
@@ -341,14 +275,6 @@ export function CompetitionConfiguration({
             collectResults: true,
           })
         );
-
-        const combos = new Set<string>();
-        for (const cat of compData.categories || []) {
-          if (cat.sportEventId && cat.ageCategoryId) {
-            combos.add(`${cat.sportEventId}:${cat.ageCategoryId}`);
-          }
-        }
-        setSelectedCombos(combos);
 
         const pricingTiers =
           (compData.pricingTiers || []).length > 0
@@ -368,10 +294,7 @@ export function CompetitionConfiguration({
         const categoryPrices: Record<string, number> = {};
         for (const cat of compData.categories || []) {
           if (cat.price != null) {
-            const key =
-              cat.sportEventId && cat.ageCategoryId
-                ? `${cat.sportEventId}:${cat.ageCategoryId}`
-                : cat.combinationEntryId || cat.individualEntryId || "";
+            const key = cat.combinationEntryId || cat.individualEntryId || "";
             if (key) {
               categoryPrices[key] =
                 typeof cat.price === "string" ? parseFloat(cat.price) : cat.price;
@@ -455,100 +378,6 @@ export function CompetitionConfiguration({
 
   // -- Helpers --
 
-  const fetchSportData = useCallback(async () => {
-    if (orgSports.length === 0) return;
-    // Twizzle is skating-only; the previous competitionType lookup was deleted.
-    const matchingSport = orgSports[0];
-
-    setLoadingSportData(true);
-    try {
-      const res = await fetch(`/api/sports/${matchingSport.id}/events`);
-      if (!res.ok) {
-        setHasSportSpecificData(false);
-        return;
-      }
-      const data = await res.json();
-      const events: SportEventEntry[] = data.events || [];
-
-      if (events.length === 0) {
-        setHasSportSpecificData(false);
-        return;
-      }
-
-      setSportEvents(events);
-      setHasSportSpecificData(true);
-
-      const ageCatMap = new Map<string, SportAgeCategoryEntry>();
-      const eligKeys = new Set<string>();
-      for (const evt of events) {
-        for (const elig of evt.eligibility || []) {
-          if (elig.isEnabled !== false) {
-            eligKeys.add(`${evt.id}:${elig.ageCategory.id}`);
-            if (!ageCatMap.has(elig.ageCategory.id)) {
-              ageCatMap.set(elig.ageCategory.id, {
-                id: elig.ageCategory.id,
-                code: elig.ageCategory.code,
-                name: elig.ageCategory.name,
-                minAge: 0,
-                maxAge: null,
-                isActive: true,
-                displayOrder: 0,
-              });
-            }
-          }
-        }
-      }
-      setEligibilitySet(eligKeys);
-
-      const ageCatRes = await fetch(`/api/sports/${matchingSport.id}/age-categories`);
-      if (ageCatRes.ok) {
-        const ageCatData = await ageCatRes.json();
-        setSportAgeCategories(ageCatData.ageCategories || []);
-      } else {
-        setSportAgeCategories(Array.from(ageCatMap.values()));
-      }
-    } catch (error) {
-      console.error("Failed to fetch sport data:", error);
-      setHasSportSpecificData(false);
-    } finally {
-      setLoadingSportData(false);
-    }
-  }, [orgSports]);
-
-  // Eagerly load sport data so we can resolve labels
-  useEffect(() => {
-    if (orgSports.length > 0 && !hasSportSpecificData && !loadingSportData) {
-      fetchSportData();
-    }
-  }, [orgSports, hasSportSpecificData, loadingSportData, fetchSportData]);
-
-  // Update labels when sport data is available
-  useEffect(() => {
-    if (sportEvents.length > 0 && sportAgeCategories.length > 0) {
-      setFormData((prev) => {
-        const newResults = prev.categoryResults.map((cat) => {
-          // Try to find matching event and age category
-          if (cat.sportEventId && cat.ageCategoryId) {
-            const evt = sportEvents.find((e) => e.id === cat.sportEventId);
-            const ageCat = sportAgeCategories.find((c) => c.id === cat.ageCategoryId);
-            if (evt && ageCat) {
-              const newLabel = `${evt.name} - ${ageCat.code}`;
-              if (cat.label !== newLabel) {
-                return { ...cat, label: newLabel };
-              }
-            }
-          }
-          return cat;
-        });
-
-        // Simple check to avoid deep equality overhead if not needed,
-        // but here we just check if any label changed by comparing objects
-        const changed = newResults.some((r, i) => r.label !== prev.categoryResults[i].label);
-        return changed ? { ...prev, categoryResults: newResults } : prev;
-      });
-    }
-  }, [sportEvents, sportAgeCategories]);
-
   const handleFacilityChange = (facilityId: string) => {
     if (facilityId === "__manual__") {
       setFormData((prev) => ({
@@ -589,43 +418,7 @@ export function CompetitionConfiguration({
   // -- Save Logic --
 
   const saveChanges = async (sectionName: string) => {
-    // Before saving categories, rebuild categoryResults if needed
-    let categoryResultsToSave = formData.categoryResults;
-    if (hasSportSpecificData) {
-      const combos = formData.categoryMode === "ALL" ? eligibilitySet : selectedCombos;
-      const comboKeys = Array.from(combos);
-      const results: CategoryResultConfig[] = [];
-      for (const key of comboKeys) {
-        const [eventId, ageCatId] = key.split(":");
-        const evt = sportEvents.find((e) => e.id === eventId);
-        const ageCat = sportAgeCategories.find((c) => c.id === ageCatId);
-        if (!evt || !ageCat) continue;
-
-        const existing = formData.categoryResults.find(
-          (c) => c.sportEventId === eventId && c.ageCategoryId === ageCatId
-        );
-
-        results.push({
-          combinationEntryId: null,
-          individualEntryId: null,
-          sportEventId: eventId,
-          ageCategoryId: ageCatId,
-          label: `${evt.name} - ${ageCat.code}`,
-          resultType: evt.resultType,
-          sortDirection: evt.sortDirection,
-          precision: evt.defaultPrecision,
-          seedMarkRequired: existing?.seedMarkRequired ?? false,
-          submissionMode: existing?.submissionMode ?? "NONE",
-          qualifyingMark: existing?.qualifyingMark ?? null,
-          isTeamEvent: evt.eventType === "relay",
-          teamSize: evt.eventType === "relay" ? 4 : null,
-          collectResults: existing?.collectResults ?? true,
-        });
-      }
-      categoryResultsToSave = results;
-      // update local state too
-      setFormData((prev) => ({ ...prev, categoryResults: results }));
-    }
+    const categoryResultsToSave = formData.categoryResults;
 
     setIsSaving(true);
     try {
@@ -660,8 +453,6 @@ export function CompetitionConfiguration({
         categoryResults: categoryResultsToSave.map((c, i) => ({
           combinationEntryId: c.combinationEntryId,
           individualEntryId: c.individualEntryId,
-          sportEventId: c.sportEventId,
-          ageCategoryId: c.ageCategoryId,
           resultType: c.resultType,
           sortDirection: c.sortDirection,
           precision: c.precision,
@@ -851,9 +642,6 @@ export function CompetitionConfiguration({
                   categoryMode: value,
                   selectedCategoryIds: value === "ALL" ? [] : prev.selectedCategoryIds,
                 }));
-                if (value === "ALL" && hasSportSpecificData) {
-                  setSelectedCombos(new Set(eligibilitySet));
-                }
               }}
               className="space-y-4"
             >
@@ -869,7 +657,7 @@ export function CompetitionConfiguration({
                 <div className="flex-1 space-y-1">
                   <span className="font-medium">All Eligible Categories</span>
                   <p className="text-sm text-muted-foreground">
-                    Include all event/age combinations available for this sport
+                    Include all event/age combinations available for this competition
                   </p>
                 </div>
               </label>
@@ -890,76 +678,6 @@ export function CompetitionConfiguration({
                 </div>
               </label>
             </RadioGroup>
-
-            {hasSportSpecificData && formData.categoryMode === "SPECIFIC" && (
-              <div className="space-y-4 border rounded-lg p-4">
-                {loadingSportData ? (
-                  <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                ) : (
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">{selectedCombos.size} selected</span>
-                      <div className="space-x-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setSelectedCombos(new Set(eligibilitySet))}
-                        >
-                          Select All
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setSelectedCombos(new Set())}
-                        >
-                          Clear
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="max-h-[400px] overflow-y-auto border rounded-md">
-                      <table className="w-full text-sm">
-                        <thead className="bg-muted/50 sticky top-0">
-                          <tr>
-                            <th className="text-left p-2">Event</th>
-                            {sportAgeCategories.map((c) => (
-                              <th key={c.id} className="p-2 text-center whitespace-nowrap">
-                                {c.code}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {sportEvents.map((evt) => (
-                            <tr key={evt.id} className="border-t">
-                              <td className="p-2 font-medium">{evt.name}</td>
-                              {sportAgeCategories.map((cat) => {
-                                const key = `${evt.id}:${cat.id}`;
-                                const eligible = eligibilitySet.has(key);
-                                return (
-                                  <td key={cat.id} className="p-2 text-center">
-                                    {eligible && (
-                                      <Checkbox
-                                        checked={selectedCombos.has(key)}
-                                        onCheckedChange={(checked) => {
-                                          const next = new Set(selectedCombos);
-                                          if (checked) next.add(key);
-                                          else next.delete(key);
-                                          setSelectedCombos(next);
-                                        }}
-                                      />
-                                    )}
-                                  </td>
-                                );
-                              })}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
           </TabsContent>
 
           {/* RESTRICTIONS TAB */}
@@ -1463,10 +1181,7 @@ export function CompetitionConfiguration({
             {formData.pricingMode === "PER_CATEGORY" && (
               <div className="space-y-2 border rounded-lg p-4 max-h-[300px] overflow-y-auto">
                 {formData.categoryResults.map((cat, idx) => {
-                  const key =
-                    cat.sportEventId && cat.ageCategoryId
-                      ? `${cat.sportEventId}:${cat.ageCategoryId}`
-                      : `cat-${idx}`;
+                  const key = `cat-${idx}`;
                   return (
                     <div key={key} className="flex justify-between items-center text-sm">
                       <span>{cat.label}</span>

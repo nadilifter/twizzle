@@ -4,7 +4,6 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 
 const templateInclude = {
-  sport: { select: { id: true, name: true, slug: true } },
   axisValues: { orderBy: { displayOrder: "asc" as const } },
   combinationEntries: true,
   individualEntries: { orderBy: { displayOrder: "asc" as const } },
@@ -350,10 +349,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     if (!template) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
-    }
-
-    if (!template.sportId) {
-      return NextResponse.json({ error: "Can only toggle preset templates" }, { status: 400 });
     }
 
     // Upsert the preference

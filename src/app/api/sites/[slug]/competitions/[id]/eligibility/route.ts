@@ -47,10 +47,6 @@ export async function POST(
         categories: {
           where: { isActive: true },
           include: {
-            sportEvent: { select: { id: true, name: true, code: true } },
-            ageCategory: {
-              select: { id: true, name: true, code: true, minAge: true, maxAge: true },
-            },
             individualEntry: { select: { hasGenderRestriction: true, allowedGenders: true } },
             combinationEntry: {
               select: {
@@ -213,12 +209,6 @@ export async function POST(
     const eligibleCategoryIds: string[] = [];
 
     for (const category of competition.categories) {
-      if (category.ageCategory) {
-        if (!isAgeEligible(age, category.ageCategory.minAge, category.ageCategory.maxAge)) {
-          continue;
-        }
-      }
-
       // Gender check from individual entry template
       if (
         category.individualEntry?.hasGenderRestriction &&

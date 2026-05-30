@@ -11,13 +11,7 @@ import {
   Grid3x3,
   List,
   X,
-  Timer,
-  Ruler,
-  ArrowUpDown,
-  Trophy,
-  CheckCircle2,
 } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -43,13 +37,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -74,13 +61,6 @@ import { cn } from "@/lib/utils";
 // ============================================
 // Types
 // ============================================
-
-interface Sport {
-  id: string;
-  name: string;
-  slug: string;
-  isActive: boolean;
-}
 
 interface AxisValue {
   id?: string;
@@ -116,7 +96,6 @@ interface IndividualEntry {
 
 interface Template {
   id: string;
-  sportId: string | null;
   name: string;
   description: string | null;
   type: "COMBINATION" | "INDIVIDUAL";
@@ -125,7 +104,6 @@ interface Template {
   rowAxisLabel: string | null;
   columnAxisLabel: string | null;
   restrictionAxis: "ROW" | "COLUMN" | null;
-  sport: { id: string; name: string; slug: string } | null;
   axisValues: (AxisValue & { id: string })[];
   combinationEntries: (CombinationEntry & { id: string })[];
   individualEntries: (IndividualEntry & { id: string })[];
@@ -144,57 +122,6 @@ interface TemplateFormData {
   disabledCombinations: Set<string>;
   individualEntries: IndividualEntry[];
 }
-
-// Sport-specific types
-interface SportEventData {
-  id: string;
-  code: string;
-  name: string;
-  eventGroup: string;
-  eventType: string;
-  resultType: "TIME" | "DISTANCE" | "HEIGHT" | "SCORE";
-  sortDirection: "ASC" | "DESC";
-  defaultPrecision: number;
-  isActive: boolean;
-  displayOrder: number;
-  eligibility: Array<{
-    id: string;
-    sportEventId: string;
-    ageCategoryId: string;
-    isEnabled: boolean;
-    ageCategory: { id: string; code: string; name: string };
-  }>;
-}
-
-interface AgeCategoryData {
-  id: string;
-  code: string;
-  name: string;
-  minAge: number;
-  maxAge: number | null;
-  isActive: boolean;
-  displayOrder: number;
-}
-
-const EVENT_GROUP_LABELS: Record<string, string> = {
-  sprints: "Sprints",
-  hurdles: "Hurdles",
-  middle_distance: "Middle Distance",
-  distance: "Distance",
-  relays: "Relays",
-  jumps: "Jumps",
-  throws: "Throws",
-  combined: "Combined Events",
-  racewalk: "Race Walk",
-  road: "Road",
-};
-
-const RESULT_TYPE_ICON: Record<string, React.ReactNode> = {
-  TIME: <Timer className="h-3 w-3" />,
-  DISTANCE: <Ruler className="h-3 w-3" />,
-  HEIGHT: <ArrowUpDown className="h-3 w-3" />,
-  SCORE: <Trophy className="h-3 w-3" />,
-};
 
 const initialFormData: TemplateFormData = {
   name: "",
@@ -215,18 +142,9 @@ const initialFormData: TemplateFormData = {
 // ============================================
 
 export default function SuperadminCompetitionCategoriesPage() {
-  const [sports, setSports] = React.useState<Sport[]>([]);
-  const [selectedSportId, setSelectedSportId] = React.useState<string>("");
   const [templates, setTemplates] = React.useState<Template[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [loadingTemplates, setLoadingTemplates] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
-
-  // Sport-specific structured data state
-  const [hasSportSpecificData, setHasSportSpecificData] = React.useState(false);
-  const [sportEvents, setSportEvents] = React.useState<SportEventData[]>([]);
-  const [ageCategories, setAgeCategories] = React.useState<AgeCategoryData[]>([]);
-  const [savingEligibility, setSavingEligibility] = React.useState(false);
 
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editingTemplate, setEditingTemplate] = React.useState<Template | null>(null);
@@ -240,117 +158,23 @@ export default function SuperadminCompetitionCategoriesPage() {
   const [newColValue, setNewColValue] = React.useState("");
   const [newIndividualName, setNewIndividualName] = React.useState("");
 
-  // Fetch sports
-  React.useEffect(() => {
-    const fetchSports = async () => {
-      try {
-        const response = await fetch("/api/superadmin/sports");
-        if (!response.ok) throw new Error("Failed to fetch sports");
-        const data = await response.json();
-        setSports(data.filter((s: Sport) => s.isActive));
-      } catch (error) {
-        toast.error("Failed to load sports");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSports();
-  }, []);
-
-  // Fetch templates and sport-specific data when sport is selected
-  const fetchTemplates = React.useCallback(async (sportId: string) => {
-    if (!sportId) return;
-    setLoadingTemplates(true);
+  // Fetch templates
+  const fetchTemplates = React.useCallback(async () => {
     try {
-      const response = await fetch(`/api/superadmin/competition-categories?sportId=${sportId}`);
+      const response = await fetch("/api/superadmin/competition-categories");
       if (!response.ok) throw new Error("Failed to fetch templates");
       const data = await response.json();
       setTemplates(data.templates || data);
-      setHasSportSpecificData(data.hasSportSpecificData || false);
-
-      // If sport has structured data, also fetch events & age categories
-      if (data.hasSportSpecificData) {
-        const eventsRes = await fetch(`/api/superadmin/sports/${sportId}/events`);
-        if (eventsRes.ok) {
-          const eventsData = await eventsRes.json();
-          setSportEvents(eventsData.events || []);
-          setAgeCategories(eventsData.ageCategories || []);
-        }
-      } else {
-        setSportEvents([]);
-        setAgeCategories([]);
-      }
     } catch (error) {
       toast.error("Failed to load templates");
     } finally {
-      setLoadingTemplates(false);
+      setLoading(false);
     }
   }, []);
 
   React.useEffect(() => {
-    if (selectedSportId) {
-      fetchTemplates(selectedSportId);
-    } else {
-      setTemplates([]);
-      setSportEvents([]);
-      setAgeCategories([]);
-      setHasSportSpecificData(false);
-    }
-  }, [selectedSportId, fetchTemplates]);
-
-  // Toggle eligibility for sport-specific events
-  const handleToggleEligibility = React.useCallback(
-    async (sportEventId: string, ageCategoryId: string, currentlyEnabled: boolean) => {
-      setSavingEligibility(true);
-      try {
-        const response = await fetch(`/api/superadmin/sports/${selectedSportId}/eligibility`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            updates: [{ sportEventId, ageCategoryId, isEnabled: !currentlyEnabled }],
-          }),
-        });
-        if (!response.ok) throw new Error("Failed to update eligibility");
-
-        // Update local state
-        setSportEvents((prev) =>
-          prev.map((evt) => {
-            if (evt.id !== sportEventId) return evt;
-            const existingElig = evt.eligibility.find((e) => e.ageCategoryId === ageCategoryId);
-            if (existingElig) {
-              return {
-                ...evt,
-                eligibility: evt.eligibility.map((e) =>
-                  e.ageCategoryId === ageCategoryId ? { ...e, isEnabled: !currentlyEnabled } : e
-                ),
-              };
-            }
-            const ageCat = ageCategories.find((c) => c.id === ageCategoryId);
-            return {
-              ...evt,
-              eligibility: [
-                ...evt.eligibility,
-                {
-                  id: `new-${sportEventId}-${ageCategoryId}`,
-                  sportEventId,
-                  ageCategoryId,
-                  isEnabled: true,
-                  ageCategory: ageCat
-                    ? { id: ageCat.id, code: ageCat.code, name: ageCat.name }
-                    : { id: ageCategoryId, code: "", name: "" },
-                },
-              ],
-            };
-          })
-        );
-      } catch (error) {
-        toast.error("Failed to update eligibility");
-      } finally {
-        setSavingEligibility(false);
-      }
-    },
-    [selectedSportId, ageCategories]
-  );
+    fetchTemplates();
+  }, [fetchTemplates]);
 
   // Handlers
   const handleOpenCreate = () => {
@@ -623,7 +447,6 @@ export default function SuperadminCompetitionCategoriesPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            sportId: selectedSportId,
             name: formData.name,
             description: formData.description || null,
             type: formData.type,
@@ -648,7 +471,7 @@ export default function SuperadminCompetitionCategoriesPage() {
       }
 
       setDialogOpen(false);
-      fetchTemplates(selectedSportId);
+      fetchTemplates();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save template");
     } finally {
@@ -675,7 +498,7 @@ export default function SuperadminCompetitionCategoriesPage() {
       toast.success("Template deleted");
       setDeleteDialogOpen(false);
       setDeletingTemplate(null);
-      fetchTemplates(selectedSportId);
+      fetchTemplates();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to delete template");
     }
@@ -733,357 +556,160 @@ export default function SuperadminCompetitionCategoriesPage() {
         <div>
           <h1 className="text-2xl font-bold">Competition Categories</h1>
           <p className="text-muted-foreground">
-            Configure category templates for each sport. Organizations will use these as presets.
+            Configure category templates for organizations to use as presets.
           </p>
         </div>
+        <Button onClick={handleOpenCreate}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Template
+        </Button>
       </div>
 
-      {/* Sport Selector */}
-      <div className="flex items-center gap-4">
-        <div className="w-[300px]">
-          <Select value={selectedSportId} onValueChange={setSelectedSportId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select a sport to configure..." />
-            </SelectTrigger>
-            <SelectContent>
-              {sports.map((sport) => (
-                <SelectItem key={sport.id} value={sport.id}>
-                  {sport.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        {selectedSportId && !hasSportSpecificData && (
-          <Button onClick={handleOpenCreate}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Template
-          </Button>
-        )}
-      </div>
-
-      {!selectedSportId && (
+      {/* Stats */}
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
-          <CardContent className="py-12">
-            <div className="text-center text-muted-foreground">
-              <Layers className="h-10 w-10 mx-auto mb-3 opacity-50" />
-              <p className="font-medium">Select a Sport</p>
-              <p className="text-sm mt-1">
-                Choose a sport above to view and configure its category templates.
-              </p>
-            </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Templates</CardTitle>
+            <Layers className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{templates.length}</div>
+            <p className="text-xs text-muted-foreground">
+              {templates.filter((t) => t.isActive).length} active
+            </p>
           </CardContent>
         </Card>
-      )}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Combination</CardTitle>
+            <Grid3x3 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{combinationCount}</div>
+            <p className="text-xs text-muted-foreground">Grid-based templates</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Individual</CardTitle>
+            <List className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{individualCount}</div>
+            <p className="text-xs text-muted-foreground">Standalone entries</p>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Sport-Specific Structured View (Events + Age Categories + Eligibility) */}
-      {selectedSportId && hasSportSpecificData && (
-        <>
-          {loadingTemplates ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <>
-              {/* Stats Row */}
-              <div className="grid gap-4 md:grid-cols-3">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Events</CardTitle>
-                    <Layers className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{sportEvents.length}</div>
-                    <p className="text-xs text-muted-foreground">
-                      {sportEvents.filter((e) => e.isActive).length} active
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Age Categories</CardTitle>
-                    <Grid3x3 className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{ageCategories.length}</div>
-                    <p className="text-xs text-muted-foreground">
-                      {ageCategories.filter((c) => c.isActive).length} active
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Eligible Combos</CardTitle>
-                    <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {sportEvents.reduce(
-                        (sum, evt) => sum + evt.eligibility.filter((e) => e.isEnabled).length,
-                        0
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      of {sportEvents.length * ageCategories.length} possible
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Eligibility Grid */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Event / Age Category Eligibility</CardTitle>
-                  <CardDescription>
-                    Toggle which event and age category combinations are available for competitions.
-                    Result types are derived automatically from the event definition.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="min-w-[200px] sticky left-0 bg-background z-10">
-                            Event
-                          </TableHead>
-                          <TableHead className="text-center w-[80px]">Type</TableHead>
-                          {ageCategories.map((cat) => (
-                            <TableHead key={cat.id} className="min-w-[70px] px-0">
-                              <div className="flex flex-col items-center justify-center gap-0.5 w-full">
-                                <span className="font-medium">{cat.code}</span>
-                                <span className="text-[10px] font-normal text-muted-foreground">
-                                  {cat.minAge}-{cat.maxAge ?? "∞"}
-                                </span>
-                              </div>
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {Object.entries(
-                          sportEvents.reduce<Record<string, SportEventData[]>>((groups, evt) => {
-                            if (!groups[evt.eventGroup]) groups[evt.eventGroup] = [];
-                            groups[evt.eventGroup].push(evt);
-                            return groups;
-                          }, {})
-                        ).map(([group, events]) => (
-                          <React.Fragment key={group}>
-                            <TableRow className="bg-muted/50">
-                              <TableCell
-                                colSpan={2 + ageCategories.length}
-                                className="font-semibold text-xs uppercase tracking-wider py-2"
-                              >
-                                {EVENT_GROUP_LABELS[group] || group}
-                              </TableCell>
-                            </TableRow>
-                            {events.map((evt) => (
-                              <TableRow key={evt.id} className={cn(!evt.isActive && "opacity-50")}>
-                                <TableCell className="sticky left-0 bg-background z-10">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium text-sm">{evt.name}</span>
-                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                                      {evt.code}
-                                    </Badge>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="text-center">
-                                  <Badge variant="secondary" className="text-[10px] gap-1">
-                                    {RESULT_TYPE_ICON[evt.resultType]}
-                                    {evt.resultType}
-                                  </Badge>
-                                </TableCell>
-                                {ageCategories.map((cat) => {
-                                  const elig = evt.eligibility.find(
-                                    (e) => e.ageCategoryId === cat.id
-                                  );
-                                  const isEnabled = elig?.isEnabled ?? false;
-                                  return (
-                                    <TableCell key={cat.id} className="px-0">
-                                      <div className="flex items-center justify-center w-full">
-                                        <Checkbox
-                                          checked={isEnabled}
-                                          disabled={savingEligibility}
-                                          onCheckedChange={() =>
-                                            handleToggleEligibility(evt.id, cat.id, isEnabled)
-                                          }
-                                        />
-                                      </div>
-                                    </TableCell>
-                                  );
-                                })}
-                              </TableRow>
-                            ))}
-                          </React.Fragment>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
-        </>
-      )}
-
-      {selectedSportId && !hasSportSpecificData && (
-        <>
-          {/* Stats */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Templates</CardTitle>
-                <Layers className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{templates.length}</div>
-                <p className="text-xs text-muted-foreground">
-                  {templates.filter((t) => t.isActive).length} active
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Combination</CardTitle>
-                <Grid3x3 className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{combinationCount}</div>
-                <p className="text-xs text-muted-foreground">Grid-based templates</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Individual</CardTitle>
-                <List className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{individualCount}</div>
-                <p className="text-xs text-muted-foreground">Standalone entries</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Templates Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Category Templates</CardTitle>
-              <CardDescription>
-                {templates.length} template{templates.length !== 1 ? "s" : ""} for{" "}
-                {sports.find((s) => s.id === selectedSportId)?.name || "this sport"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loadingTemplates ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
+      {/* Templates Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Category Templates</CardTitle>
+          <CardDescription>
+            {templates.length} template{templates.length !== 1 ? "s" : ""}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead className="text-center">Entries</TableHead>
+                <TableHead className="text-center">Status</TableHead>
+                <TableHead className="w-[70px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {templates.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                    No templates configured yet. Add your first template to get started.
+                  </TableCell>
+                </TableRow>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead className="text-center">Entries</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
-                      <TableHead className="w-[70px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {templates.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                          No templates configured yet. Add your first template to get started.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      templates.map((template) => {
-                        const entryCount =
-                          template.type === "COMBINATION"
-                            ? template.combinationEntries.filter((e) => e.isActive).length
-                            : template.individualEntries.length;
-                        const totalCount =
-                          template.type === "COMBINATION"
-                            ? template.combinationEntries.length
-                            : template.individualEntries.length;
+                templates.map((template) => {
+                  const entryCount =
+                    template.type === "COMBINATION"
+                      ? template.combinationEntries.filter((e) => e.isActive).length
+                      : template.individualEntries.length;
+                  const totalCount =
+                    template.type === "COMBINATION"
+                      ? template.combinationEntries.length
+                      : template.individualEntries.length;
 
-                        return (
-                          <TableRow key={template.id}>
-                            <TableCell>
-                              <div>
-                                <span className="font-medium">{template.name}</span>
-                                {template.description && (
-                                  <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[250px]">
-                                    {template.description}
-                                  </p>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={template.type === "COMBINATION" ? "default" : "secondary"}
-                              >
-                                {template.type === "COMBINATION" ? (
-                                  <>
-                                    <Grid3x3 className="mr-1 h-3 w-3" /> Combination
-                                  </>
-                                ) : (
-                                  <>
-                                    <List className="mr-1 h-3 w-3" /> Individual
-                                  </>
-                                )}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              {template.type === "COMBINATION" ? (
-                                <span className="text-sm">
-                                  {entryCount}/{totalCount}
-                                </span>
-                              ) : (
-                                <span className="text-sm">{entryCount}</span>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Badge variant={template.isActive ? "default" : "secondary"}>
-                                {template.isActive ? "Active" : "Inactive"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleOpenEdit(template)}>
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    className="text-destructive"
-                                    onClick={() => {
-                                      setDeletingTemplate(template);
-                                      setDeleteDialogOpen(true);
-                                    }}
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
+                  return (
+                    <TableRow key={template.id}>
+                      <TableCell>
+                        <div>
+                          <span className="font-medium">{template.name}</span>
+                          {template.description && (
+                            <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[250px]">
+                              {template.description}
+                            </p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={template.type === "COMBINATION" ? "default" : "secondary"}>
+                          {template.type === "COMBINATION" ? (
+                            <>
+                              <Grid3x3 className="mr-1 h-3 w-3" /> Combination
+                            </>
+                          ) : (
+                            <>
+                              <List className="mr-1 h-3 w-3" /> Individual
+                            </>
+                          )}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {template.type === "COMBINATION" ? (
+                          <span className="text-sm">
+                            {entryCount}/{totalCount}
+                          </span>
+                        ) : (
+                          <span className="text-sm">{entryCount}</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={template.isActive ? "default" : "secondary"}>
+                          {template.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleOpenEdit(template)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => {
+                                setDeletingTemplate(template);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
-            </CardContent>
-          </Card>
-        </>
-      )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -1093,7 +719,7 @@ export default function SuperadminCompetitionCategoriesPage() {
             <DialogDescription>
               {editingTemplate
                 ? "Update the category template details."
-                : "Create a new category template for this sport."}
+                : "Create a new category template."}
             </DialogDescription>
           </DialogHeader>
 
