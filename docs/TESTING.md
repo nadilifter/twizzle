@@ -11,6 +11,15 @@ can follow without re-deriving the intent.
 
 ## 2026-05-30
 
+### Wire CREATED audit event on federation submission create
+
+Create a new submission via `/dashboard/federation-submissions/new` → navigate to the
+submission detail page → the audit log timeline should show a CREATED event at the top
+(oldest entry), attributed to the logged-in user, with the federation name and athlete
+count recorded in the event data.
+
+---
+
 ### chore: Remove OrgSport dead code from Skills page
 
 1. Navigate to `/dashboard/training/skills` and open the browser DevTools
