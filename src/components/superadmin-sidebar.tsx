@@ -172,6 +172,11 @@ const navItems = [
     icon: Trophy,
   },
   {
+    title: "Skate Canada Seasons",
+    url: "/superadmin/skate-canada-seasons",
+    icon: Calendar,
+  },
+  {
     title: "Competition Categories",
     url: "/superadmin/competition-categories",
     icon: Layers,

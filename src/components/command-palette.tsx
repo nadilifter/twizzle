@@ -6,6 +6,7 @@ import { signOut, useSession } from "next-auth/react";
 import {
   BarChart3,
   Building2,
+  Calendar,
   CalendarCheck,
   CalendarDays,
   ClipboardCheck,
@@ -133,6 +134,14 @@ const ADMIN_NAV: NavItem[] = [
   { title: "Organization", url: "/dashboard/organization/overview", icon: Building2 },
   { title: "Staff", url: "/dashboard/organization/staff", icon: Users },
   { title: "Settings", url: "/dashboard/organization/features", icon: Settings },
+];
+
+const SUPERADMIN_NAV: NavItem[] = [
+  { title: "Superadmin Overview", url: "/superadmin", icon: LayoutDashboard },
+  { title: "Organizations", url: "/superadmin/organizations", icon: Building2 },
+  { title: "Skate Canada Seasons", url: "/superadmin/skate-canada-seasons", icon: Calendar },
+  { title: "Plans", url: "/superadmin/plans", icon: Star },
+  { title: "Users", url: "/superadmin/users", icon: Users },
 ];
 
 const COACH_NAV: NavItem[] = [
@@ -309,7 +318,11 @@ function CommandPaletteDialog({ isOpen, onClose }: { isOpen: boolean; onClose: (
   const athleteBase = isAdmin ? "/dashboard/athletes" : "/coach/athletes";
   const programBase = isAdmin ? "/dashboard/registrations/programs" : "/coach/programs";
 
-  const visibleNav = [...(isAdmin ? ADMIN_NAV : []), ...(isCoach ? COACH_NAV : [])];
+  const visibleNav = [
+    ...(isAdmin ? ADMIN_NAV : []),
+    ...(isCoach ? COACH_NAV : []),
+    ...(isSuperAdmin ? SUPERADMIN_NAV : []),
+  ];
 
   const showAthletes = canViewAthletes && search.athletes.length > 0;
   const showPrograms = search.programs.length > 0;

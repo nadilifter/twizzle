@@ -11,6 +11,75 @@ can follow without re-deriving the intent.
 
 ## 2026-05-30
 
+### Phase 5.4 UI — SkateCanadaSeason admin UI
+
+#### Prerequisites
+
+- Log in as a SUPERADMIN user on `superadmin.twizzle.localhost`.
+- Navigate to `/superadmin/skate-canada-seasons`.
+
+#### Empty state
+
+1. If no seasons exist, verify the `EmptyState` renders: Calendar icon halo,
+   "No seasons yet" heading, and a "New season" button.
+2. Click "New season" — the create Sheet slides in.
+
+#### Create a season (happy path)
+
+1. Click **New season**.
+2. Fill in: Name `2024-2025`, Start date `2024-09-01`, End date `2025-08-31`,
+   leave Active **off**, CRM GUID blank.
+3. Click **Create season**.
+4. Toast "Season created" appears; Sheet closes; row appears in the table.
+5. Verify the row shows: Name `2024-2025`, formatted dates, "Inactive" badge,
+   "— not synced" GUID, Edit button, **Set as active** button.
+
+#### Create a second active season
+
+1. Click **New season** again.
+2. Fill in: Name `2025-2026`, start/end dates one year later, toggle Active **on**.
+3. Click **Create season**.
+4. Verify the new row shows "Active" badge (green).
+5. Verify the `2024-2025` row still shows "Inactive" (only one active allowed).
+
+#### Set as active
+
+1. On the `2024-2025` row, click **Set as active**.
+2. Toast `"2024-2025" is now the active season` appears.
+3. Verify `2024-2025` now shows green "Active" badge and `2025-2026` shows
+   "Inactive" — the switcheroo was atomic.
+
+#### Edit a season
+
+1. Click the **Edit** (pencil) button on any row.
+2. Sheet opens pre-filled with that season's values.
+3. Change the Name to add a space/note, toggle a field, click **Save changes**.
+4. Toast "Season updated" appears; table row reflects the change.
+
+#### Duplicate name validation
+
+1. Try creating a season with the same name as an existing one.
+2. API returns 400; toast shows "A season with this name already exists".
+
+#### Sidebar and command palette
+
+1. Verify "Skate Canada Seasons" appears in the superadmin sidebar under
+   "Platform Management".
+2. Press **Cmd+K** (or Ctrl+K) to open the command palette.
+3. Type "Skate" — "Skate Canada Seasons" entry appears in the Navigate group
+   with a Calendar icon.
+4. Select it — navigates to `/superadmin/skate-canada-seasons`.
+
+#### Static checks
+
+```bash
+pnpm typecheck   # must exit 0
+pnpm lint        # no errors
+pnpm format:check
+```
+
+---
+
 ### Phase 0.7 (batch 2) — Empty states on 3 more list pages
 
 #### Competitions empty state
