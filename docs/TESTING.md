@@ -11,6 +11,99 @@ can follow without re-deriving the intent.
 
 ## 2026-05-29
 
+### Phase 5.3 — Submission audit log
+
+Schema-only + library change; the admin UI wiring is in Phase 5.2.
+
+#### Static checks (no running DB required)
+
+1. Run `DATABASE_URL=postgresql://dummy:dummy@localhost/dummy pnpm prisma validate`
+   → `The schema at prisma/schema.prisma is valid 🚀`
+
+2. Run `pnpm typecheck` — must exit 0, zero errors.
+
+3. Run `pnpm lint` — "No ESLint warnings or errors".
+
+4. Run `pnpm format:check` — "All matched files use Prettier code style".
+
+5. Run `pnpm lint:tenant` — "No tenant-isolation issues found."
+
+#### Migration SQL spot-check
+
+Inspect `prisma/migrations/20260529200000_add_federation_submission_event/migration.sql`:
+
+- `CREATE TYPE "FederationSubmissionEventType" AS ENUM (…)` with all eight values:
+  `CREATED`, `PAYLOAD_UPDATED`, `ATHLETE_ADDED`, `ATHLETE_REMOVED`,
+  `STATUS_TRANSITIONED`, `EXTERNAL_REF_SET`, `RESOLUTION_NOTE_SET`, `NOTE_ADDED`.
+- `CREATE TABLE "FederationSubmissionEvent"` with columns: `id`, `submissionId`,
+  `eventType`, `data JSONB` (nullable), `note TEXT` (nullable), `actorId TEXT`
+  (nullable), `createdAt TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP`. No `updatedAt`.
+- `CREATE INDEX … ON "FederationSubmissionEvent"("submissionId", "createdAt")`.
+- `CREATE INDEX … ON "FederationSubmissionEvent"("eventType")`.
+- `ADD CONSTRAINT … FOREIGN KEY ("submissionId") … ON DELETE CASCADE`.
+- `ADD CONSTRAINT … FOREIGN KEY ("actorId") … ON DELETE SET NULL`.
+
+#### Prisma Client type spot-check (after `pnpm prisma generate`)
+
+In any TypeScript file or REPL:
+
+```typescript
+import { FederationSubmissionEventType } from "@prisma/client";
+
+const t: FederationSubmissionEventType = FederationSubmissionEventType.STATUS_TRANSITIONED;
+```
+
+Both the enum and the `FederationSubmissionEvent` model type must be available —
+TS errors at compile time if generation failed.
+
+#### API endpoint smoke test (requires a local DB)
+
+1. Apply migrations: `pnpm prisma migrate deploy`.
+2. Create a `FederationSubmission` row via Prisma Studio.
+3. Manually insert a `FederationSubmissionEvent` row for that submission.
+4. As an ADMIN, call `GET /api/federation-submissions/<id>/events` →
+   `200` with `{ events: [ { id, eventType, data, note, actor, createdAt } ] }`.
+5. As a non-ADMIN (e.g. COACH role), call the same endpoint → `403`.
+6. Call the endpoint with a submission ID belonging to a different org → `403`.
+7. Call with a non-existent ID → `404`.
+
+#### Audit log component smoke test (requires a running dev server)
+
+1. `pnpm dev`, navigate to any page that renders
+   `<FederationSubmissionAuditLog submissionId="…" />`.
+2. While the fetch is in flight, three skeleton rows (avatar circle + two
+   lines) render.
+3. If no events exist, "No events yet." appears.
+4. For a `STATUS_TRANSITIONED` event, the timeline entry shows
+   `DRAFT → SUBMITTED` (old → new) beneath the label.
+5. For an event with a `note`, the note appears in a muted block below the
+   label line.
+6. For a system event (`actorId = null`), the avatar fallback shows "SY" and
+   the actor name is "System".
+
+#### Write helper smoke test
+
+```typescript
+import { logFederationSubmissionEvent } from "@/lib/federation-submission-audit";
+
+// Within a transaction:
+await db.$transaction(async (tx) => {
+  await db.federationSubmission.update({ where: { id }, data: { status: "SUBMITTED" } });
+  await logFederationSubmissionEvent({
+    submissionId: id,
+    eventType: "STATUS_TRANSITIONED",
+    data: { previousStatus: "DRAFT", nextStatus: "SUBMITTED" },
+    actorId: session.user.id,
+    prismaClient: tx,
+  });
+});
+```
+
+Confirm one `FederationSubmissionEvent` row appears in the DB after the
+transaction commits, with the correct `submissionId` and `data` payload.
+
+---
+
 ### Phase 5.2 — Admin submission queue page
 
 #### Prerequisites

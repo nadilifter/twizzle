@@ -353,6 +353,9 @@ model User {
   createdSubmissions   FederationSubmission[] @relation("FederationSubmissionCreator")
   submittedSubmissions FederationSubmission[] @relation("FederationSubmissionSubmitter")
   resolvedSubmissions  FederationSubmission[] @relation("FederationSubmissionResolver")
+
+  // Federation Submission Events (Phase 5.3)
+  federationSubmissionEvents FederationSubmissionEvent[] @relation("FederationSubmissionEventActor")
 }
 
 model Session {
@@ -5385,6 +5388,9 @@ model FederationSubmission {
   // Athletes included in this submission.
   athletes FederationSubmissionAthlete[]
 
+  // Phase 5.3: append-only audit log events.
+  events FederationSubmissionEvent[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -5400,6 +5406,45 @@ model FederationSubmissionAthlete {
 
   @@id([submissionId, athleteId])
   @@index([athleteId])
+}
+
+// Phase 5.3: append-only audit log for FederationSubmission lifecycle events.
+// Rows are never updated or deleted — each meaningful change writes one row.
+
+enum FederationSubmissionEventType {
+  CREATED
+  PAYLOAD_UPDATED
+  ATHLETE_ADDED
+  ATHLETE_REMOVED
+  STATUS_TRANSITIONED
+  EXTERNAL_REF_SET
+  RESOLUTION_NOTE_SET
+  NOTE_ADDED
+}
+
+model FederationSubmissionEvent {
+  id           String               @id @default(cuid())
+  submissionId String
+  submission   FederationSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  eventType FederationSubmissionEventType
+
+  // Optional structured payload depending on eventType.
+  // STATUS_TRANSITIONED: { previousStatus, nextStatus }
+  // PAYLOAD_UPDATED:     { diff } (shape TBD per integration)
+  data Json?
+
+  // Optional free-text comment from the actor (e.g. rejection note).
+  note String?
+
+  // Who triggered it. Nullable for system-generated events.
+  actorId String?
+  actor   User?   @relation("FederationSubmissionEventActor", fields: [actorId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([submissionId, createdAt])
+  @@index([eventType])
 }
 
 model CacheVersion {
