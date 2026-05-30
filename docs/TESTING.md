@@ -11,6 +11,17 @@ can follow without re-deriving the intent.
 
 ## 2026-05-30
 
+### chore: Remove OrgSport dead code from Skills page
+
+1. Navigate to `/dashboard/training/skills` and open the browser DevTools
+   Network tab.
+2. Verify no request to `/api/organization/sports` is made, and no related
+   404 appears in the console.
+3. Confirm the sport-badge strip is absent from the page header description
+   (only "Library of skills, drills, and progressions." is shown).
+
+---
+
 ### Phase 0.7 (partial) — Empty-state component
 
 #### Athletes empty state

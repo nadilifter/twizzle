@@ -61,12 +61,6 @@ import { toast } from "sonner";
 import { api } from "@/lib/api-client";
 import type { Skill, Level } from "@/types/evaluations";
 
-interface OrgSport {
-  id: string;
-  name: string;
-  slug: string;
-}
-
 const DEFAULT_CATEGORIES = [
   "Skating Skills",
   "Jumps",
@@ -146,10 +140,7 @@ export default function SkillsPage() {
     }
   }, [search, selectedCategory, levelFilter]);
 
-  // Organization sports context
-  const [orgSports, setOrgSports] = useState<OrgSport[]>([]);
-
-  // Fetch levels and org sports
+  // Fetch levels
   useEffect(() => {
     async function loadLevels() {
       try {
@@ -159,18 +150,7 @@ export default function SkillsPage() {
         console.error("Error fetching levels:", error);
       }
     }
-    async function loadOrgSports() {
-      try {
-        const response = await fetch("/api/organization/sports");
-        if (response.ok) {
-          setOrgSports(await response.json());
-        }
-      } catch (error) {
-        console.error("Error fetching org sports:", error);
-      }
-    }
     loadLevels();
-    loadOrgSports();
   }, []);
 
   useEffect(() => {
@@ -313,21 +293,7 @@ export default function SkillsPage() {
     <div className="flex flex-col gap-6 p-6">
       <DashboardPageHeader
         title="Skills Database"
-        description={
-          <>
-            Library of skills, drills, and progressions.
-            {orgSports.length > 0 && (
-              <span className="mt-1 flex flex-wrap items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">Sports:</span>
-                {orgSports.map((sport) => (
-                  <Badge key={sport.id} variant="secondary" className="text-xs">
-                    {sport.name}
-                  </Badge>
-                ))}
-              </span>
-            )}
-          </>
-        }
+        description={<>Library of skills, drills, and progressions.</>}
         actions={
           <Button
             onClick={() => {
