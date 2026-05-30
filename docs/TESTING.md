@@ -11,6 +11,49 @@ can follow without re-deriving the intent.
 
 ## 2026-05-30
 
+### Phase 5.2↔5.3 — New federation-submission form page
+
+#### Static checks
+
+```bash
+pnpm typecheck   # must exit 0
+pnpm lint        # no errors
+pnpm format:check
+```
+
+#### Happy path (requires running app + seeded org with athletes)
+
+1. Log in as ADMIN.
+2. Navigate to `/dashboard/federation-submissions`. Click **New Submission**
+   (header button) → lands on `/dashboard/federation-submissions/new`.
+3. **Federation selector** defaults to "Skate Canada". Change to "USFS".
+4. **Athletes combobox** — click "Select athletes…". Type a partial name;
+   matching athletes appear. Select two athletes. Both appear as removable
+   badges below. Click ✕ on one — it is removed.
+5. **Payload editor** shows `{}`. Clear it and type `{"key": "val"}`.
+6. **Create draft** button becomes enabled (≥1 athlete + valid JSON).
+7. Click **Create draft** → spinner appears → toast "Submission created" →
+   redirect to `/dashboard/federation-submissions/<new-id>` detail page.
+8. Navigate back to queue; new DRAFT row appears in the table.
+
+#### Validation error paths
+
+- **No athletes selected:** "Create draft" button is disabled.
+- **Invalid JSON payload:** Button is disabled while field is invalid. If user
+  manipulates the DOM to submit anyway, the route returns a 400 and shows a
+  toast error.
+- **Athlete not in org (tampered request):** `POST /api/federation-submissions`
+  returns `400 { error: "Some athletes are not in your organization" }`.
+- **Non-ADMIN:** `POST /api/federation-submissions` returns `403`.
+
+#### Command palette
+
+1. Press `Cmd/Ctrl+K` to open the palette.
+2. Type "submission" → "New federation submission" action appears.
+3. Select it → navigates to `/dashboard/federation-submissions/new`.
+
+---
+
 ### Appendix A Commit B — drop Sport models
 
 No new UI to exercise; verify nothing is broken.
