@@ -328,43 +328,85 @@ export default function EvaluationsPage() {
       return;
     }
 
-    setIsSaving(true);
-    try {
-      await api.put(`/api/evaluation-templates/${selectedTemplate.id}`, {
-        name: formData.name,
-        description: formData.description || null,
-        levelId: formData.levelId || null,
-        minAge: formData.minAge ? parseInt(formData.minAge) : null,
-        maxAge: formData.maxAge ? parseInt(formData.maxAge) : null,
-        isActive: formData.isActive,
-        // Auto-sync
-        autoSyncEnabled: formData.autoSyncEnabled,
-        autoSyncLevels: formData.autoSyncLevels,
-        autoSyncCategories: formData.autoSyncCategories,
-        // Scoring
-        scoringType: formData.scoringType,
-        pointScaleMin: formData.pointScaleMin ? parseInt(formData.pointScaleMin) : 1,
-        pointScaleMax: formData.pointScaleMax ? parseInt(formData.pointScaleMax) : 10,
-        pointScalePassThreshold: formData.pointScalePassThreshold
-          ? parseInt(formData.pointScalePassThreshold)
-          : 7,
-        // Completion
-        completionType: formData.completionType,
-        completionThreshold: formData.completionThreshold
-          ? parseFloat(formData.completionThreshold)
-          : 80,
-        // Skills (only if not auto-syncing)
-        skillIds: formData.autoSyncEnabled ? undefined : formData.skillIds,
-      });
+    // 1. Snapshot for rollback
+    const snapshot = templates;
 
+    // 2. Optimistic update — apply flat scalar fields immediately; relations (skills, level)
+    //    will be reconciled from the server response in step 3.
+    const templateId = selectedTemplate.id;
+    setTemplates((prev) =>
+      prev.map((t) =>
+        t.id === templateId
+          ? {
+              ...t,
+              name: formData.name,
+              description: formData.description || null,
+              levelId: formData.levelId || null,
+              minAge: formData.minAge ? parseInt(formData.minAge) : null,
+              maxAge: formData.maxAge ? parseInt(formData.maxAge) : null,
+              isActive: formData.isActive,
+              autoSyncEnabled: formData.autoSyncEnabled,
+              autoSyncLevels: formData.autoSyncLevels,
+              autoSyncCategories: formData.autoSyncCategories,
+              scoringType: formData.scoringType,
+              pointScaleMin: formData.pointScaleMin ? parseInt(formData.pointScaleMin) : 1,
+              pointScaleMax: formData.pointScaleMax ? parseInt(formData.pointScaleMax) : 10,
+              pointScalePassThreshold: formData.pointScalePassThreshold
+                ? parseInt(formData.pointScalePassThreshold)
+                : 7,
+              completionType: formData.completionType,
+              completionThreshold: formData.completionThreshold
+                ? parseFloat(formData.completionThreshold)
+                : 80,
+            }
+          : t
+      )
+    );
+
+    setIsSaving(true);
+    // Close the sheet immediately so the user sees the optimistic list update
+    setIsEditOpen(false);
+    setSelectedTemplate(null);
+    setFormData(initialFormData);
+
+    try {
+      // 3. Reconcile with server response
+      const updated = await api.put<EvaluationTemplateWithSkills>(
+        `/api/evaluation-templates/${templateId}`,
+        {
+          name: formData.name,
+          description: formData.description || null,
+          levelId: formData.levelId || null,
+          minAge: formData.minAge ? parseInt(formData.minAge) : null,
+          maxAge: formData.maxAge ? parseInt(formData.maxAge) : null,
+          isActive: formData.isActive,
+          // Auto-sync
+          autoSyncEnabled: formData.autoSyncEnabled,
+          autoSyncLevels: formData.autoSyncLevels,
+          autoSyncCategories: formData.autoSyncCategories,
+          // Scoring
+          scoringType: formData.scoringType,
+          pointScaleMin: formData.pointScaleMin ? parseInt(formData.pointScaleMin) : 1,
+          pointScaleMax: formData.pointScaleMax ? parseInt(formData.pointScaleMax) : 10,
+          pointScalePassThreshold: formData.pointScalePassThreshold
+            ? parseInt(formData.pointScalePassThreshold)
+            : 7,
+          // Completion
+          completionType: formData.completionType,
+          completionThreshold: formData.completionThreshold
+            ? parseFloat(formData.completionThreshold)
+            : 80,
+          // Skills (only if not auto-syncing)
+          skillIds: formData.autoSyncEnabled ? undefined : formData.skillIds,
+        }
+      );
+      setTemplates((prev) => prev.map((t) => (t.id === templateId ? updated : t)));
       toast.success("Evaluation template updated successfully");
-      setIsEditOpen(false);
-      setSelectedTemplate(null);
-      setFormData(initialFormData);
-      fetchTemplates();
     } catch (error) {
+      // 4. Rollback
+      setTemplates(snapshot);
       console.error("Error updating template:", error);
-      toast.error("Failed to update evaluation template");
+      toast.error(error instanceof Error ? error.message : "Failed to update evaluation template");
     } finally {
       setIsSaving(false);
     }
