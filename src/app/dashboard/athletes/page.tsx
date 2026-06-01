@@ -1153,109 +1153,131 @@ export default function AthletesPage() {
             ) : (
               // Grid view — cards arrange in a responsive grid, FLIP morphs
               // each athlete's avatar+name from the table row to the card.
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row, i) => {
-                    const a = row.original;
-                    const displayName = athleteDisplayName(a);
-                    const initials = [a.firstName, a.lastName]
-                      .filter(Boolean)
-                      .map((n) => n[0])
-                      .join("");
-                    const levelColor = levelColorMap.get(a.level);
-                    return (
-                      <motion.div
-                        key={row.id}
-                        layoutId={`athlete-${a.id}`}
-                        layout={shouldReduceMotion ? false : "position"}
-                        transition={{ duration: 0.3, ease: "easeOut" }}
-                        className={cn(
-                          "group relative rounded-xl border bg-card text-card-foreground shadow transition-shadow hover:shadow-md",
-                          i === highlightedIndex && "ring-2 ring-inset ring-ring",
-                          row.getIsSelected() && "ring-2 ring-inset ring-primary"
-                        )}
-                      >
-                        {/* Selection checkbox — sits on top of the Link so the
+              <div className="space-y-3">
+                {/* Select-all affordance — mirrors the table view's header
+                    checkbox. Hidden when the grid is empty. */}
+                {table.getRowModel().rows.length > 0 && (
+                  <label className="flex items-center gap-2 text-sm cursor-pointer w-fit">
+                    <Checkbox
+                      checked={
+                        table.getIsAllPageRowsSelected() ||
+                        (table.getIsSomePageRowsSelected() && "indeterminate")
+                      }
+                      onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                      aria-label="Select all athletes on this page"
+                    />
+                    <span>Select all</span>
+                    {table.getSelectedRowModel().rows.length > 0 && (
+                      <span className="text-muted-foreground">
+                        ({table.getSelectedRowModel().rows.length} selected)
+                      </span>
+                    )}
+                  </label>
+                )}
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {table.getRowModel().rows?.length ? (
+                    table.getRowModel().rows.map((row, i) => {
+                      const a = row.original;
+                      const displayName = athleteDisplayName(a);
+                      const initials = [a.firstName, a.lastName]
+                        .filter(Boolean)
+                        .map((n) => n[0])
+                        .join("");
+                      const levelColor = levelColorMap.get(a.level);
+                      return (
+                        <motion.div
+                          key={row.id}
+                          layoutId={`athlete-${a.id}`}
+                          layout={shouldReduceMotion ? false : "position"}
+                          transition={{ duration: 0.3, ease: "easeOut" }}
+                          className={cn(
+                            "group relative rounded-xl border bg-card text-card-foreground shadow transition-shadow hover:shadow-md",
+                            i === highlightedIndex && "ring-2 ring-inset ring-ring",
+                            row.getIsSelected() && "ring-2 ring-inset ring-primary"
+                          )}
+                        >
+                          {/* Selection checkbox — sits on top of the Link so the
                             user can multi-select for actions like merge. The
                             stopPropagation prevents the Link from firing when
                             the user clicks the checkbox. */}
-                        <div
-                          className="absolute top-2 left-2 z-10 rounded-md bg-background/80 backdrop-blur-sm p-0.5"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Checkbox
-                            checked={row.getIsSelected()}
-                            onCheckedChange={(value) => row.toggleSelected(!!value)}
-                            aria-label="Select athlete"
-                          />
-                        </div>
-                        <Link
-                          href={`/dashboard/athletes/${a.id}`}
-                          className="flex h-full flex-col gap-3 p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl"
-                        >
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-12 w-12">
-                              <AvatarImage
-                                src={a.avatar ?? undefined}
-                                alt={displayName}
-                                crop={(a as any).avatarCrop ?? undefined}
-                              />
-                              <AvatarFallback>{initials || "?"}</AvatarFallback>
-                            </Avatar>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-medium truncate group-hover:underline">
-                                {displayName}
-                              </p>
-                              <p className="text-xs text-muted-foreground truncate">
-                                {a.email ?? "No email"}
-                              </p>
+                          <div
+                            className="absolute top-2 left-2 z-10 rounded-md bg-background/80 backdrop-blur-sm p-0.5"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Checkbox
+                              checked={row.getIsSelected()}
+                              onCheckedChange={(value) => row.toggleSelected(!!value)}
+                              aria-label="Select athlete"
+                            />
+                          </div>
+                          <Link
+                            href={`/dashboard/athletes/${a.id}`}
+                            className="flex h-full flex-col gap-3 p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl"
+                          >
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-12 w-12">
+                                <AvatarImage
+                                  src={a.avatar ?? undefined}
+                                  alt={displayName}
+                                  crop={(a as any).avatarCrop ?? undefined}
+                                />
+                                <AvatarFallback>{initials || "?"}</AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium truncate group-hover:underline">
+                                  {displayName}
+                                </p>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {a.email ?? "No email"}
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-1.5 mt-auto">
-                            {levelColor ? (
-                              <Badge
-                                variant="outline"
-                                style={{
-                                  borderColor: levelColor,
-                                  color: levelColor,
-                                  backgroundColor: `${levelColor}15`,
-                                }}
-                              >
-                                {a.level}
+                            <div className="flex flex-wrap items-center gap-1.5 mt-auto">
+                              {levelColor ? (
+                                <Badge
+                                  variant="outline"
+                                  style={{
+                                    borderColor: levelColor,
+                                    color: levelColor,
+                                    backgroundColor: `${levelColor}15`,
+                                  }}
+                                >
+                                  {a.level}
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline">{a.level}</Badge>
+                              )}
+                              <Badge variant={getStatusVariant(a.status)}>
+                                {formatStatus(a.status)}
                               </Badge>
-                            ) : (
-                              <Badge variant="outline">{a.level}</Badge>
-                            )}
-                            <Badge variant={getStatusVariant(a.status)}>
-                              {formatStatus(a.status)}
-                            </Badge>
-                            {a.federationMemberNumber && (
-                              <Badge variant="secondary" className="font-mono text-xs">
-                                {a.federationName === "SKATE_CANADA"
-                                  ? "SC"
-                                  : a.federationName === "USFS"
-                                    ? "USFS"
-                                    : a.federationName === "ISU"
-                                      ? "ISU"
-                                      : "ID"}{" "}
-                                {a.federationMemberNumber}
-                              </Badge>
-                            )}
-                          </div>
-                        </Link>
-                      </motion.div>
-                    );
-                  })
-                ) : (
-                  <div className="col-span-full">
-                    <EmptyState
-                      icon={Users}
-                      title="No athletes yet"
-                      description="Add your first athlete to get started."
-                      action={{ label: "Add athlete", onClick: () => setIsAddDialogOpen(true) }}
-                    />
-                  </div>
-                )}
+                              {a.federationMemberNumber && (
+                                <Badge variant="secondary" className="font-mono text-xs">
+                                  {a.federationName === "SKATE_CANADA"
+                                    ? "SC"
+                                    : a.federationName === "USFS"
+                                      ? "USFS"
+                                      : a.federationName === "ISU"
+                                        ? "ISU"
+                                        : "ID"}{" "}
+                                  {a.federationMemberNumber}
+                                </Badge>
+                              )}
+                            </div>
+                          </Link>
+                        </motion.div>
+                      );
+                    })
+                  ) : (
+                    <div className="col-span-full">
+                      <EmptyState
+                        icon={Users}
+                        title="No athletes yet"
+                        description="Add your first athlete to get started."
+                        action={{ label: "Add athlete", onClick: () => setIsAddDialogOpen(true) }}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </LayoutGroup>
