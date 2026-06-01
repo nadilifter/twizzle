@@ -4,12 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
+import { ArrowLeft, ArrowUp, ArrowDown, Loader2, AlertCircle, Trash2 } from "lucide-react";
 import { api, ApiError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ElementPicker } from "@/components/planned-programs/element-picker";
 
 interface Element {
   id: string;
@@ -96,6 +98,65 @@ export default function PlannedProgramViewerPage() {
     }
   };
 
+  // ---- Per-element row actions ----
+
+  const handleRemoveElement = async (elementId: string) => {
+    if (!programId) return;
+    try {
+      await api.delete(`/api/planned-programs/${programId}/elements/${elementId}`);
+      fetchProgram(); // reload to get compacted positions
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to remove element");
+    }
+  };
+
+  // Toggle inSecondHalf optimistically — the row updates immediately, the
+  // server is reconciled in the background.
+  const handleToggleSecondHalf = async (elementId: string, next: boolean) => {
+    if (!programId || !program) return;
+    setProgram({
+      ...program,
+      elements: program.elements.map((e) =>
+        e.id === elementId ? { ...e, inSecondHalf: next } : e
+      ),
+    });
+    try {
+      await api.patch(`/api/planned-programs/${programId}/elements/${elementId}`, {
+        inSecondHalf: next,
+      });
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to update element");
+      fetchProgram(); // revert from server
+    }
+  };
+
+  // Up/down arrows reorder one position at a time. Builds the new
+  // elementIds order and POSTs the full list to the bulk-reorder endpoint.
+  const handleMove = async (elementId: string, direction: "up" | "down") => {
+    if (!programId || !program) return;
+    const idx = program.elements.findIndex((e) => e.id === elementId);
+    if (idx === -1) return;
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= program.elements.length) return;
+
+    const reordered = [...program.elements];
+    [reordered[idx], reordered[swapIdx]] = [reordered[swapIdx], reordered[idx]];
+    // Optimistic local update.
+    setProgram({ ...program, elements: reordered });
+
+    try {
+      await api.patch(`/api/planned-programs/${programId}/elements`, {
+        elementIds: reordered.map((e) => e.id),
+      });
+      // Re-fetch so the position numbers come back as 1, 2, 3 from the
+      // server rather than whatever the optimistic swap left in place.
+      fetchProgram();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to reorder");
+      fetchProgram(); // revert
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col gap-4 p-6">
@@ -174,6 +235,7 @@ export default function PlannedProgramViewerPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <ElementPicker programId={program.id} onAdded={fetchProgram} />
           <Button variant="outline" onClick={handleDelete} disabled={isDeleting}>
             {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete"}
           </Button>
@@ -204,7 +266,7 @@ export default function PlannedProgramViewerPage() {
       {program.elements.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center text-sm text-muted-foreground">
-            No elements yet. The element picker UI lands in Phase 4.3b.
+            No elements yet. Click <strong>Add element</strong> above to start building the program.
           </CardContent>
         </Card>
       ) : (
@@ -217,14 +279,18 @@ export default function PlannedProgramViewerPage() {
                 <th className="px-3 py-2 font-medium">Element</th>
                 <th className="px-3 py-2 font-medium">Kind</th>
                 <th className="px-3 py-2 font-medium text-right">Base</th>
-                <th className="px-3 py-2 font-medium text-right">×</th>
+                <th className="px-3 py-2 font-medium text-center">2nd&nbsp;half</th>
                 <th className="px-3 py-2 font-medium text-right">Total</th>
+                <th className="px-3 py-2 font-medium w-32">Order</th>
+                <th className="px-3 py-2 font-medium w-12"></th>
               </tr>
             </thead>
             <tbody>
-              {program.elements.map((e) => {
+              {program.elements.map((e, i) => {
                 const multiplier = e.inSecondHalf ? 1.1 : 1;
                 const total = e.baseValue * multiplier;
+                const isFirst = i === 0;
+                const isLast = i === program.elements.length - 1;
                 return (
                   <tr key={e.id} className="border-t">
                     <td className="px-3 py-2 text-muted-foreground">{e.position}</td>
@@ -234,11 +300,50 @@ export default function PlannedProgramViewerPage() {
                       {KIND_LABELS[e.elementKind] ?? e.elementKind}
                     </td>
                     <td className="px-3 py-2 text-right font-mono">{e.baseValue.toFixed(2)}</td>
-                    <td className="px-3 py-2 text-right text-xs text-muted-foreground">
-                      {e.inSecondHalf ? "1.10 (2nd half)" : "1.00"}
+                    <td className="px-3 py-2 text-center">
+                      <Checkbox
+                        checked={e.inSecondHalf}
+                        onCheckedChange={(v) => handleToggleSecondHalf(e.id, !!v)}
+                        aria-label="Performed in second half"
+                      />
                     </td>
                     <td className="px-3 py-2 text-right font-mono font-medium">
                       {total.toFixed(2)}
+                    </td>
+                    <td className="px-3 py-2">
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          disabled={isFirst}
+                          onClick={() => handleMove(e.id, "up")}
+                          aria-label="Move up"
+                        >
+                          <ArrowUp className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          disabled={isLast}
+                          onClick={() => handleMove(e.id, "down")}
+                          aria-label="Move down"
+                        >
+                          <ArrowDown className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => handleRemoveElement(e.id)}
+                        aria-label="Remove element"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                     </td>
                   </tr>
                 );
@@ -248,6 +353,7 @@ export default function PlannedProgramViewerPage() {
                   Total
                 </td>
                 <td className="px-3 py-2 text-right font-mono font-medium">{totalBV.toFixed(2)}</td>
+                <td colSpan={2} />
               </tr>
             </tbody>
           </table>

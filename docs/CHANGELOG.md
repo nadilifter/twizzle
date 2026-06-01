@@ -8,6 +8,43 @@ Manual verification steps for each entry live in
 
 ## 2026-06-01
 
+### Phase 4.3b — Planned-program builder UI (element picker + row actions)
+
+Layers the interactive builder on top of the 4.3a foundation. The viewer
+page is now an editor: pick elements from the catalog, toggle the
+second-half flag, reorder, and remove inline.
+
+**New component — `<ElementPicker>`** (`src/components/planned-programs/element-picker.tsx`)
+
+- Side-panel Sheet triggered by an **Add element** button on the program
+  page header.
+- Tabs by element kind: Jumps · Spins · Steps · Chor · Throws · Lifts · DSpirals.
+- Search input filters by code or readable name (case-insensitive
+  substring), so `3T` and `triple toe` both find Triple Toe Loop.
+- Click an element row → `POST /api/planned-programs/[id]/elements`.
+  Toast on success. **Sheet stays open** so the coach can add several
+  elements without re-opening.
+
+**Viewer page upgraded to editor** (`src/app/dashboard/athletes/[id]/programs/[programId]/page.tsx`)
+
+- Element rows gain three actions:
+  - **2nd-half checkbox** — toggles `inSecondHalf`; PATCHes the element
+    and applies optimistically so the total updates instantly.
+  - **Up / down arrows** — single-position reorder. Builds the new
+    `elementIds` order and POSTs the bulk-reorder endpoint; first/last
+    row's buttons are disabled.
+  - **Trash button** — DELETE the element. Server compacts remaining
+    positions; client re-fetches.
+- Total BV recomputes live as the user adds, toggles, or removes elements
+  (with the +10% second-half multiplier).
+
+**Out of scope (4.3c — polish):** drag-and-drop reorder (the up/down
+arrows cover the same need with less complexity for now), copy a
+program from another athlete, ISU constraint validation (max 7 jumps
+in a short program, etc.), print/export.
+
+---
+
 ### Phase 4.3a — Planned-program data model + APIs + viewer
 
 Foundation for the planned-program builder. Schema, full CRUD API, a

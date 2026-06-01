@@ -11,6 +11,50 @@ can follow without re-deriving the intent.
 
 ## 2026-06-01
 
+### Phase 4.3b — Planned-program builder UI
+
+Sign in as ADMIN; open an athlete's detail page → **Planned routines** tab →
+create or click into a program.
+
+#### Add elements via picker
+
+1. On the program viewer page, click **Add element** in the header.
+2. Side sheet slides in. Tabs across the top: Jumps / Spins / Steps / Chor /
+   Throws / Lifts / DSpirals.
+3. **Jumps** tab is selected by default and lists 24 elements (1T … 4A).
+4. Click any element row → toast `"Added 3T — Triple Toe Loop"`. The sheet
+   stays open. Program table updates with the new row at the bottom.
+5. Add 3-4 more elements (mix of jumps and spins). Close the sheet.
+
+#### Search
+
+1. With the sheet open, type `3` in the search box.
+2. Within the Jumps tab, only triples + quads-that-contain-3 are visible.
+3. Switch to **Spins** tab — search is preserved; filters spin codes (e.g. `3` would match all level-3 spins).
+4. Clear search; click **Lifts** tab → list of lift codes appears.
+
+#### Second-half toggle
+
+1. Pick a jump row in the program table. Its 2nd-half checkbox is unchecked.
+2. Check it. The row's Total column immediately updates: base × 1.10
+   (e.g. 4.20 × 1.10 = 4.62).
+3. Bottom-row Total updates accordingly.
+
+#### Reorder
+
+1. With ≥2 elements: click the **down arrow** on the first row.
+2. Row swaps with the second. Position numbers (1, 2, 3…) update.
+3. Click the **up arrow** on the now-second row to put it back at #1.
+4. Up arrow on row #1 is disabled; down arrow on the last row is disabled.
+
+#### Remove
+
+1. Click the trash icon on any row.
+2. Row disappears. Remaining rows compact (positions stay 1, 2, 3…).
+3. Bottom-row Total recomputes.
+
+---
+
 ### Phase 4.3a — Planned-program data model + viewer
 
 Sign in as an ADMIN at `admin.twizzle.localhost:3000`.
