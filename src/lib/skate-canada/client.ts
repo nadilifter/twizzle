@@ -16,7 +16,32 @@
 import { getConfig, type SkateCanadaConfig } from "./config";
 import { executeSoap, parseSoapResponse, stripXmlWhitespace } from "./soap-client";
 import { CrmProtocolError } from "./errors";
-import type { SkateCanadaSeason } from "./types";
+import type { SkateCanadaContact, SkateCanadaSeason } from "./types";
+import {
+  buildBirthdateConditionXml,
+  escapeXml,
+  getGenderCode,
+  type TwizzleGender,
+} from "./helpers";
+
+/**
+ * Inputs accepted by `SkateCanadaClient.getContact`. Either look up by
+ * direct contact GUID (exact match) OR by demographic fields. With the
+ * demographic path, providing `memberNumber` adds it to the OR clause so a
+ * mismatch on demographics is rescued by the member number, and vice versa.
+ */
+export type ContactLookupInput =
+  | { contactGuid: string }
+  | {
+      firstName: string;
+      lastName: string;
+      birthdate: string; // YYYY-MM-DD
+      gender: TwizzleGender;
+      /** Optional. If present, included as a fallback OR clause. */
+      memberNumber?: string | null;
+      /** Optional. Adds postalCode LIKE conditions to the demographic filter. */
+      postalCodes?: string[];
+    };
 
 export interface SkateCanadaClientOptions {
   config?: SkateCanadaConfig;
@@ -80,6 +105,61 @@ export class SkateCanadaClient {
     });
 
     return parseSeasonsResponse(responseXml);
+  }
+
+  /**
+   * Look up a single Skate Canada contact. Returns the first match (CRM
+   * always returns at most one for these filters) or null if nothing
+   * matched. Mirrors PHP SkateCanadaApi::getContact() but is a pure read —
+   * the caller decides whether to sync results back into Twizzle.
+   *
+   * Two lookup modes:
+   *   • `{ contactGuid }` — direct exact match on contactid.
+   *   • Demographic — name + birthdate + gender (+ optional postalCodes)
+   *     OR'd with member number when provided. CRM data has occasional
+   *     month/day swaps, so birthdate matches both interpretations when the
+   *     day-of-month is ≤ 12.
+   */
+  async getContact(input: ContactLookupInput): Promise<SkateCanadaContact | null> {
+    const filterXml = buildContactFilterXml(input);
+
+    const fetchXml = stripXmlWhitespace(`
+      <fetch mapping="logical" count="1" version="1.0">
+        <entity name="contact">
+          <attribute name="firstname"/>
+          <attribute name="lastname"/>
+          <attribute name="birthdate"/>
+          <attribute name="gendercode"/>
+          <attribute name="contactid"/>
+          <attribute name="sc_skatecanadaid"/>
+          <attribute name="address1_postalcode"/>
+          <filter type="and">${filterXml}</filter>
+        </entity>
+      </fetch>
+    `);
+
+    const bodyFragment = `<s:Body>
+      <Execute xmlns="http://schemas.microsoft.com/xrm/2011/Contracts/Services">
+        <request i:type="b:RetrieveMultipleRequest" xmlns:b="http://schemas.microsoft.com/xrm/2011/Contracts" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+          <b:Parameters xmlns:c="http://schemas.datacontract.org/2004/07/System.Collections.Generic">
+            <b:KeyValuePairOfstringanyType>
+              <c:key>Query</c:key>
+              <c:value i:type="b:FetchExpression">
+                <b:Query>${escapeXmlText(fetchXml)}</b:Query>
+              </c:value>
+            </b:KeyValuePairOfstringanyType>
+          </b:Parameters>
+          <b:RequestId i:nil="true"/>
+          <b:RequestName>RetrieveMultiple</b:RequestName>
+        </request>
+      </Execute>
+    </s:Body>`;
+
+    const responseXml = await executeSoap(this.config, bodyFragment, {
+      fetchImpl: this.fetchImpl,
+    });
+
+    return parseFirstContactResponse(responseXml);
   }
 }
 
@@ -207,6 +287,89 @@ function readAttributesMap(entity: XmlObj): Map<string, unknown> {
     map.set(key, kvp.value);
   }
   return map;
+}
+
+/**
+ * Build the `<filter>`-inner XML for a contact lookup.
+ *
+ * GUID mode: just statecode=0 + contactid match.
+ *
+ * Demographic mode (statecode=0 AND (demographicsBlock OR memberNumber)):
+ *   - demographicsBlock: firstname AND lastname AND gendercode AND birthdate-range
+ *     (+ postalCode LIKE conditions if provided)
+ *   - memberNumber: sc_skatecanadaid eq
+ *
+ * The OR clause means a match on EITHER block returns the contact, so a
+ * partial demographic mismatch is rescued by the member number and vice versa.
+ */
+function buildContactFilterXml(input: ContactLookupInput): string {
+  if ("contactGuid" in input) {
+    return (
+      `<condition attribute="statecode" operator="eq" value="0"/>` +
+      `<condition attribute="contactid" operator="eq" value="${escapeXml(input.contactGuid)}"/>`
+    );
+  }
+
+  // Demographic mode.
+  const firstName = escapeXml(input.firstName);
+  const lastName = escapeXml(input.lastName);
+  const genderCode = getGenderCode(input.gender);
+  const birthdateFilter = buildBirthdateConditionXml(input.birthdate);
+
+  const postalCodeConditions = (input.postalCodes ?? [])
+    .map(
+      (pc) =>
+        `<condition attribute="address1_postalcode" operator="like" value="${escapeXml(pc)}"/>`
+    )
+    .join("");
+
+  const demographicsBlock =
+    `<filter type="and">` +
+    `<condition attribute="firstname" operator="eq" value="${firstName}"/>` +
+    `<condition attribute="lastname" operator="eq" value="${lastName}"/>` +
+    `<condition attribute="gendercode" operator="eq" value="${genderCode}"/>` +
+    birthdateFilter +
+    postalCodeConditions +
+    `</filter>`;
+
+  const memberNumberClause = input.memberNumber
+    ? `<condition attribute="sc_skatecanadaid" operator="eq" value="${escapeXml(input.memberNumber)}"/>`
+    : "";
+
+  return (
+    `<condition attribute="statecode" operator="eq" value="0"/>` +
+    `<filter type="or">${demographicsBlock}${memberNumberClause}</filter>`
+  );
+}
+
+/**
+ * Pull a single contact out of a RetrieveMultipleResponse for the contact
+ * entity. Returns null if no entities were returned.
+ */
+export function parseFirstContactResponse(xml: string): SkateCanadaContact | null {
+  const parsed = parseSoapResponse(xml);
+  const entities = pickEntities(parsed);
+  if (!entities.length) return null;
+
+  const entity = entities[0];
+  const attrs = readAttributesMap(entity);
+  const contactId = stringOrNull(attrs.get("contactid")) ?? readEntityId(entity);
+  if (!contactId) return null;
+
+  // CRM stores birthdate as YYYY-MM-DDT12:00:00Z. The PHP also shifted by
+  // +12h to land on the local-time day; we just slice the date portion.
+  const rawBirthdate = stringOrNull(attrs.get("birthdate"));
+  const birthdate = rawBirthdate ? rawBirthdate.slice(0, 10) : null;
+
+  return {
+    contactId,
+    memberNumber: stringOrNull(attrs.get("sc_skatecanadaid")),
+    firstName: stringOrNull(attrs.get("firstname")),
+    lastName: stringOrNull(attrs.get("lastname")),
+    birthdate,
+    genderCode: numberOrUndefined(attrs.get("gendercode")) ?? null,
+    postalCode: stringOrNull(attrs.get("address1_postalcode")),
+  };
 }
 
 function readEntityId(entity: XmlObj): string | null {

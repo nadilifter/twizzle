@@ -25,6 +25,7 @@ import { athleteDisplayName } from "@/lib/athlete-name";
 import { validateFederationMemberNumber } from "@/lib/federation-member-number";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { DISCIPLINE_LABELS, DISCIPLINE_VALUES, type Discipline } from "@/types/athletes";
+import { SkateCanadaLookupButton } from "@/components/athletes/skate-canada-lookup-button";
 
 interface AthleteData {
   id: string;
@@ -398,6 +399,9 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
                 )}
               </div>
             </div>
+            {formData.federationName === "SKATE_CANADA" && (
+              <SkateCanadaLookupButton athleteId={athlete.id} disabled={!formData.federationName} />
+            )}
             <div className="space-y-2">
               <Label>Membership Expires</Label>
               <Popover>

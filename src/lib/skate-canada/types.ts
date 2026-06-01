@@ -21,3 +21,26 @@ export interface SkateCanadaSeason {
   /** 0 = active, 1 = inactive per CRM statecode convention. */
   stateCode?: number;
 }
+
+// A row from the SC CRM `contact` entity. We pull just the fields the
+// admin UI needs to confirm a match (or surface a mismatch). The CRM
+// stores many more fields; we can extend this as more workflows need them.
+//
+// Field mapping:
+//   contactId       ←  contactid (the canonical SC contact GUID)
+//   memberNumber    ←  sc_skatecanadaid (the human-facing member number)
+//   firstName       ←  firstname
+//   lastName        ←  lastname
+//   birthdate       ←  birthdate (stored as YYYY-MM-DDT12:00:00Z; we
+//                    normalize to YYYY-MM-DD)
+//   genderCode      ←  gendercode (raw SC code 1 | 2 | 947960000 | 947960001)
+//   postalCode      ←  address1_postalcode
+export interface SkateCanadaContact {
+  contactId: string;
+  memberNumber: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  birthdate: string | null;
+  genderCode: number | null;
+  postalCode: string | null;
+}

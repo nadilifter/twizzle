@@ -11,6 +11,63 @@ can follow without re-deriving the intent.
 
 ## 2026-06-01
 
+### Phase 6.2 — Live Skate Canada membership lookup
+
+Offline (no live credentials) — UI shows a graceful 503 message.
+With credentials — admin can verify any SC-registered athlete in one click.
+
+#### Static + lint
+
+```bash
+pnpm typecheck    # exit 0
+pnpm lint
+pnpm lint:tenant
+```
+
+#### Endpoint behavior with no env vars set
+
+1. Sign in as ADMIN; open an athlete in the athletes list → Edit.
+2. Set Federation to **Skate Canada** in the form.
+3. The **Look up in Skate Canada** button appears beneath the member-number row.
+4. Click it. Toast or inline error: `"Skate Canada CRM is not configured…"`.
+   Endpoint returns HTTP 503.
+
+#### Endpoint requires birthdate + gender on the athlete
+
+1. Open an athlete missing birthdate or gender. Set Federation to Skate Canada.
+2. Click **Look up in Skate Canada**.
+3. Toast: `"Athlete birthdate is required …"` or `"Athlete gender is required …"`. HTTP 400.
+4. Save those fields first, then re-click — no longer 400 (but will hit the
+   503 or the live path depending on env config).
+
+#### Live smoke (requires `SKATE_CANADA_CRM_APP_SECRET` in .env)
+
+Prereq: see Phase 6.1 testing notes for the secret-rotation steps.
+
+1. Open an athlete with known Skate Canada data (e.g. real-world test
+   account in the SC test tenant; or seed Sunrise athletes if their
+   demographics align with a real SC test contact).
+2. Click **Look up in Skate Canada**.
+3. Expected paths:
+   - **Match found**: a card appears showing First name / Last name /
+     Birthdate / Member number with a green ✓ for fields that match the
+     CRM, amber ✕ for any that differ. SC contact GUID truncated to
+     first 8 chars at the bottom.
+   - **No match**: muted text "No match found. Try saving the form first
+     if you just edited fields."
+
+#### Failure-mode shapes the UI must handle
+
+The API surfaces typed errors from the SC client as HTTP 502 with a
+human-readable message. Cases to verify (sim with stub fetch or by
+temporarily breaking the env):
+
+- Expired Azure secret → `"Skate Canada CRM auth failed: invalid_client: AADSTS7000222: …"` (HTTP 502)
+- SOAP fault from CRM → `"Skate Canada CRM returned a SOAP fault: …"` (HTTP 502)
+- Network unreachable → `"Failed to reach CRM SOAP endpoint"` (HTTP 502)
+
+---
+
 ### Phase 6.1 — Skate Canada CRM client (offline)
 
 This phase ships only library code — no UI, no API route. Verification is

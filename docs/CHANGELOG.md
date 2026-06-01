@@ -8,6 +8,73 @@ Manual verification steps for each entry live in
 
 ## 2026-06-01
 
+### Phase 6.2 — Skate Canada live membership lookup
+
+Adds the first user-visible Skate Canada API call: lookup an athlete's
+contact in the SC CRM and surface a per-field diff against Twizzle's
+local data. Builds on the Phase 6.1 SOAP foundation.
+
+**`SkateCanadaClient.getContact(input)`** (added to `src/lib/skate-canada/client.ts`)
+
+Two lookup modes:
+
+- `{ contactGuid }` — direct GUID lookup.
+- Demographic — `{ firstName, lastName, birthdate, gender, memberNumber?, postalCodes? }`.
+  Builds a Dynamics fetch with an OR clause between the demographic block
+  and the member-number condition so a partial demographic mismatch is
+  rescued by the member number (and vice versa). Birthdate filter
+  preserves the PHP's day/month-swap fallback for ambiguous historical CRM
+  data (day-of-month ≤ 12).
+
+Returns a typed `SkateCanadaContact` (contactId, memberNumber, firstName,
+lastName, birthdate, genderCode, postalCode) or `null`.
+
+**Supporting helpers** (`src/lib/skate-canada/helpers.ts`)
+
+- `getGenderCode(gender)` — Twizzle `GenderDeclaration` → Dynamics
+  `gendercode` option-set integer (1 / 2 / 947960000 / 947960001).
+- `escapeXml(value)` — XML escaping that also strips control characters
+  and broken UTF-16 surrogate halves (CRM rejects them).
+- `buildBirthdateConditionXml(yyyy-mm-dd)` — fetch-filter fragment with the
+  noon-UTC range + flipped-month fallback.
+- `fuzzyMatch(a, b)` — case-insensitive trimmed equality for diffing.
+
+**New API endpoint**
+
+`POST /api/athletes/[id]/skate-canada/lookup` — ADMIN-only, read-only.
+Reads the athlete from Twizzle (requires birthdate + gender), calls
+`getContact()` against the CRM, and returns:
+
+```json
+{
+  "found": true,
+  "contact": { "contactId": "...", "memberNumber": "...", ... },
+  "diff": { "firstName": true, "lastName": true, "birthdate": false, "memberNumber": true }
+}
+```
+
+Each `diff` field is `true` when the local value matches the CRM. Returns
+**HTTP 503** with a clear error if `SKATE_CANADA_CRM_*` env vars aren't
+set (so the UI degrades gracefully). All CRM errors are caught and
+returned as HTTP 502 with the typed error message.
+
+**UI**
+
+New `<SkateCanadaLookupButton>` component, mounted in the Athlete
+configuration sheet when `federationName === "SKATE_CANADA"`. Compact
+result panel underneath shows each field with a green ✓ or amber ✕
+showing what's in sync with the CRM, plus the SC contact GUID (first 8
+chars). Empty state with a hint to save the form first if the user just
+edited fields.
+
+**Out of scope (still 6.2+):**
+
+- Sync-back button (one-click "use SC data" → updates the athlete row).
+- Bulk lookup for multiple athletes (PHP `getSuggestedContacts`).
+- Live smoke test — still requires a fresh `SKATE_CANADA_CRM_APP_SECRET`.
+
+---
+
 ### Phase 6.1 — Skate Canada CRM client (offline port)
 
 TypeScript port of the legacy Uplifter PHP SOAP client + Azure AD auth
