@@ -194,6 +194,7 @@ model Organization {
 
   // Federation Submissions (Phase 5.1)
   federationSubmissions FederationSubmission[]
+  athleteMerges         AthleteMerge[]
 }
 
 model OrganizationMember {
@@ -353,6 +354,7 @@ model User {
 
   // Federation Submission Events (Phase 5.3)
   federationSubmissionEvents FederationSubmissionEvent[] @relation("FederationSubmissionEventActor")
+  athleteMergesPerformed     AthleteMerge[]              @relation("AthleteMergeMerger")
 }
 
 model Session {
@@ -559,6 +561,7 @@ model Athlete {
 
   // Federation Submissions (Phase 5.1)
   federationSubmissions FederationSubmissionAthlete[]
+  athleteMergesAsSurvivor AthleteMerge[] @relation("AthleteMergeSurvivor")
 }
 
 model AthleteGuardian {
@@ -5329,6 +5332,45 @@ model FederationSubmissionEvent {
 
   @@index([submissionId, createdAt])
   @@index([eventType])
+}
+
+// Append-only audit row written whenever two athletes are merged.
+// One row per merge; the duplicate's data is snapshot-serialized so the
+// merge can be inspected after the duplicate Athlete row is gone.
+model AthleteMerge {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // The athlete that absorbed the duplicate's relations.
+  survivorId String
+  survivor   Athlete @relation("AthleteMergeSurvivor", fields: [survivorId], references: [id], onDelete: Cascade)
+
+  // The duplicate's id at time of merge (the row itself is deleted by then).
+  duplicateId String
+
+  // Frozen snapshot of the duplicate's Athlete + OrganizationAthlete fields
+  // at the moment of merge, so the audit row is self-contained.
+  // Shape: { athlete: { id, firstName, lastName, email, birthDate, ... },
+  //          organizationAthlete: { level, status, federationName, federationMemberNumber, federationMemberExpiresAt, ... } }
+  duplicateSnapshot Json
+
+  // Per-table summary of how many rows were rebound vs. deduplicated.
+  // Shape: { Attendance: { rebound: 12, deduplicated: 0 },
+  //          AthleteGuardian: { rebound: 1, deduplicated: 1 }, ... }
+  counts Json
+
+  // Who initiated the merge.
+  mergedById String
+  mergedBy   User   @relation("AthleteMergeMerger", fields: [mergedById], references: [id])
+
+  // Optional free-text reason.
+  reason String?
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([survivorId])
 }
 
 model CacheVersion {

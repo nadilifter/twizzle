@@ -11,6 +11,72 @@ can follow without re-deriving the intent.
 
 ## 2026-06-01
 
+### Phase 3.1a — Athlete merge service
+
+No UI yet. Test via API + DB inspection.
+
+#### Static checks
+
+```bash
+pnpm typecheck            # exits 0
+pnpm lint                 # no errors
+pnpm lint:tenant          # "No tenant-isolation issues found."
+pnpm prisma validate      # "The schema at prisma/schema.prisma is valid"
+```
+
+#### Schema spot-check
+
+```bash
+PGPASSWORD=postgres psql -h localhost -p 5434 -U postgres -d twizzle \
+  -c "\d \"AthleteMerge\""
+```
+
+Expected columns: `id`, `organizationId`, `survivorId`, `duplicateId`,
+`duplicateSnapshot` (jsonb), `counts` (jsonb), `mergedById`, `reason`,
+`createdAt`. FK constraints on `organizationId`, `survivorId`, `mergedById`.
+
+#### Preview endpoint smoke (requires running app + ADMIN session cookie)
+
+```bash
+curl -X POST http://admin.twizzle.localhost:3000/api/athletes/merge/preview \
+  -H "Cookie: <your admin session cookie>" \
+  -H "Content-Type: application/json" \
+  -d '{"survivorId": "<id-a>", "duplicateId": "<id-b>"}'
+```
+
+Expected: JSON with `ok`, `errors[]`, `warnings[]`, `counts{}`,
+`federationDecision`. No mutation.
+
+#### Execute endpoint smoke (DESTRUCTIVE — use on dev DB only)
+
+```bash
+curl -X POST http://admin.twizzle.localhost:3000/api/athletes/merge \
+  -H "Cookie: <your admin session cookie>" \
+  -H "Content-Type: application/json" \
+  -d '{"survivorId": "<id-a>", "duplicateId": "<id-b>", "reason": "test"}'
+```
+
+Expected: `201` with `{ mergeId, counts }`. Verify:
+
+1. Duplicate athlete row is gone (`SELECT * FROM "Athlete" WHERE id = '<id-b>'` → empty).
+2. Survivor's OrganizationAthlete `federationMemberNumber` reflects the rule (older `createdAt` wins).
+3. `AthleteMerge` row exists with `survivorId`, `duplicateId`, `duplicateSnapshot`, `counts`.
+
+#### Validation failures to verify
+
+- Self-merge (`survivorId === duplicateId`): `400` with "Survivor and duplicate must be different athletes."
+- Either athlete in a different org: `400`.
+- Duplicate has a SUBMITTED or ACCEPTED FederationSubmission: `400` with non-DRAFT message.
+- Non-ADMIN session: `403`.
+
+#### Known limitation
+
+`pnpm test src/lib/__tests__/athlete-merge.test.ts` fails locally with
+`Cannot find module '@rolldown/binding-darwin-arm64'` — known vitest 4 +
+rolldown binding bug. The tests parse + typecheck and will run in CI.
+
+---
+
 ### Login page: slower fades + no theme toggle
 
 1. Visit `http://login.twizzle.localhost:3000/login` in a private/incognito

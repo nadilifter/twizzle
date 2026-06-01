@@ -8,6 +8,79 @@ Manual verification steps for each entry live in
 
 ## 2026-06-01
 
+### Phase 3.1a — Athlete merge service (server-side)
+
+Server-side primitives for merging duplicate athlete records within an
+organization. The UI is a follow-up (3.1b); this commit ships the schema,
+service, two API routes, and a unit-test file.
+
+**New Prisma model — `AthleteMerge`**
+
+An append-only audit row, one per merge. Carries the duplicate's snapshot
+(Athlete + OrganizationAthlete fields, serialized as Json) so the merge is
+inspectable even after the duplicate row is gone. Also stores per-table
+`counts` (`{ rebound, deduplicated }`), `survivorId`, `mergedById`, optional
+`reason`, and an `organizationId` scope. Cascades on Organization delete and
+Athlete (survivor) delete. Migration: `20260601185655_add_athlete_merge`.
+
+**Service — `src/lib/athlete-merge.ts`**
+
+- `previewMerge(input)` — returns per-table counts of what would be rebound vs.
+  deduplicated, plus warnings (e.g. both sides have a federation number), plus
+  the federation-number decision (which row's number will survive and why).
+  Doesn't mutate anything.
+- `executeMerge(input)` — runs the merge in a single `db.$transaction`:
+  1. Validate (same org, no cross-org leakage, no non-DRAFT FederationSubmission
+     on the duplicate, both athletes exist).
+  2. Rebind 16 plain-FK tables via `updateMany` (Attendance, Evaluation,
+     CompetitionEntry/Result, RegistrationFile, Media, LineItem,
+     RecurringCharge, GuardianClaimRequest, Enrollment, AthleteMembership,
+     AthletePass, WaiverAcceptance/Signature, InstanceAttendance/Registration).
+  3. Rebind 4 dedup-keyed tables (AthleteGuardian/userId,
+     AthleteSkillProgress/skillId, CustomInfoResponse/questionId,
+     AthleteAchievement/achievementId) — survivor's existing key wins, duplicate's
+     row dropped on conflict, rebound otherwise.
+  4. Handle the 1:1 AthleteMedicalInfo (survivor keeps theirs).
+  5. Handle FederationSubmissionAthlete specially (composite PK; delete +
+     create rather than update).
+  6. Merge the OrganizationAthlete join row — federation fields come from the
+     row with the OLDER `createdAt` (per ROADMAP "preserve the oldest
+     federationMemberNumber"), other fields prefer the survivor's.
+  7. Write the `AthleteMerge` audit row with snapshot + counts.
+  8. Delete the duplicate Athlete row.
+- `MergeValidationError` thrown when preconditions fail; carries an `errors[]`
+  array for the API to surface.
+
+**API routes**
+
+- `POST /api/athletes/merge/preview` — ADMIN-only. Returns the preview result.
+- `POST /api/athletes/merge` — ADMIN-only. Executes; returns `{ mergeId, counts }`
+  on success or `{ error, errors }` with 400 on validation failure.
+
+**Tests — `src/lib/__tests__/athlete-merge.test.ts`**
+
+Unit tests against the auto-mocked Prisma client covering: self-merge refusal,
+missing athletes, cross-org refusal, non-DRAFT submission refusal, federation
+decision rules, audit-row write + duplicate-delete on success.
+
+**Known environment limitation:** vitest 4 + rolldown has a broken native
+binding on darwin-arm64 (`@rolldown/binding-darwin-arm64`). Tests parse and
+typecheck cleanly; they'll run in CI but fail to start locally with the
+current pnpm install. The service was also runtime-verified against the live
+local DB via a one-shot integration script (not committed): two fresh
+athletes were created in the seeded Sunrise org, a Federation rule + Evaluation
+were attached to the duplicate, executeMerge ran successfully, and all
+expected post-conditions held (federation number transferred to survivor,
+evaluation rebound, audit row written, duplicate deleted).
+
+**Out of scope (3.1b — next session):**
+
+- Athletes-list UI multi-select + merge action
+- Confirm dialog rendering the preview output
+- "Merge history" tab on the athlete detail page
+
+---
+
 ### Login page polish: slower fades + no theme toggle
 
 - **Video background fade-in** set to **1500 ms** (`fadeInMs={1500}` on the
