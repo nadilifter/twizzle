@@ -10,8 +10,9 @@ Manual verification steps for each entry live in
 
 ### Login page polish: slower fades + no theme toggle
 
-- **Video background fade-in** bumped 2000 ms → **3000 ms** (`fadeInMs={3000}`
-  on the `<VideoBackground>` instance in `src/app/(auth)/login/page.tsx`).
+- **Video background fade-in** set to **1500 ms** (`fadeInMs={1500}` on the
+  `<VideoBackground>` instance in `src/app/(auth)/login/page.tsx`). Revised
+  down from the initial 3000 ms after a quick visual review.
 - **Video background loop fade-out** bumped 4000 ms → **6000 ms**
   (`loopFadeMs={6000}` on the same instance). The dip at the loop boundary
   is now noticeably gentler.

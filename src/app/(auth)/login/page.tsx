@@ -12,7 +12,7 @@ export default function LoginPage() {
       <VideoBackground
         src="/twizzle_login_background.mp4"
         className="fixed inset-0 z-0 pointer-events-none"
-        fadeInMs={3000}
+        fadeInMs={1500}
         loopFadeMs={6000}
       />
       <Suspense
