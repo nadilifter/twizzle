@@ -326,6 +326,17 @@ export default function AthleteProfilePage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
+      {/* Back to athletes — explicit affordance in addition to the top-bar breadcrumb */}
+      <div>
+        <Link
+          href="/dashboard/athletes"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to athletes
+        </Link>
+      </div>
+
       {/* Page header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-4">
