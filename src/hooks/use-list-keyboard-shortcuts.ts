@@ -27,14 +27,16 @@ export interface ListShortcutItem {
  * j/k/Enter/e/d list-page shortcuts.
  *
  * Returns the currently highlighted index so callers can apply a visual
- * ring/border to that row. Default to index 0 whenever the list is non-empty.
+ * ring/border to that row. Starts at -1 (no visible highlight) until the
+ * user actually presses j or k — the ring is a keyboard-navigation
+ * affordance and shouldn't decorate the first item by default.
  *
  * Guards: same as useGlobalShortcuts — skips when an input, dialog, or
  * contentEditable has focus.
  */
 export function useListKeyboardShortcuts(items: ListShortcutItem[]) {
   const router = useRouter();
-  const [highlightedIndex, setHighlightedIndex] = useState(items.length > 0 ? 0 : -1);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
   // Refs so the stable event listener always sees the latest values.
   const indexRef = useRef(highlightedIndex);
@@ -51,12 +53,12 @@ export function useListKeyboardShortcuts(items: ListShortcutItem[]) {
   }, [router]);
 
   // Keep highlightedIndex in-bounds when the list length changes (e.g. after
-  // filtering). Clamp rather than reset to 0 so the position survives minor
-  // re-renders.
+  // filtering). Don't promote -1 to 0 — the keyboard handlers (j/k) do that
+  // on first press; until then the user sees no highlight.
   useEffect(() => {
     setHighlightedIndex((prev) => {
       if (items.length === 0) return -1;
-      if (prev === -1) return 0;
+      if (prev === -1) return -1;
       return Math.min(prev, items.length - 1);
     });
   }, [items.length]);

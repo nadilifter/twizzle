@@ -1170,10 +1170,25 @@ export default function AthletesPage() {
                         layout={shouldReduceMotion ? false : "position"}
                         transition={{ duration: 0.3, ease: "easeOut" }}
                         className={cn(
-                          "group rounded-xl border bg-card text-card-foreground shadow transition-shadow hover:shadow-md",
-                          i === highlightedIndex && "ring-2 ring-inset ring-ring"
+                          "group relative rounded-xl border bg-card text-card-foreground shadow transition-shadow hover:shadow-md",
+                          i === highlightedIndex && "ring-2 ring-inset ring-ring",
+                          row.getIsSelected() && "ring-2 ring-inset ring-primary"
                         )}
                       >
+                        {/* Selection checkbox — sits on top of the Link so the
+                            user can multi-select for actions like merge. The
+                            stopPropagation prevents the Link from firing when
+                            the user clicks the checkbox. */}
+                        <div
+                          className="absolute top-2 left-2 z-10 rounded-md bg-background/80 backdrop-blur-sm p-0.5"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Checkbox
+                            checked={row.getIsSelected()}
+                            onCheckedChange={(value) => row.toggleSelected(!!value)}
+                            aria-label="Select athlete"
+                          />
+                        </div>
                         <Link
                           href={`/dashboard/athletes/${a.id}`}
                           className="flex h-full flex-col gap-3 p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl"
