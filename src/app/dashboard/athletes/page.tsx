@@ -98,6 +98,10 @@ import { DataTableColumnHeader } from "@/components/data-table/data-table-column
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
 import { EmptyState } from "@/components/ui/empty-state";
+import {
+  MergeAthletesDialog,
+  type MergeAthleteOption,
+} from "@/components/athletes/merge-athletes-dialog";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAthletes } from "@/hooks/use-athletes";
@@ -147,6 +151,10 @@ export default function AthletesPage() {
   const [isEditOpen, setIsEditOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [selectedAthlete, setSelectedAthlete] = React.useState<AthleteWithRelations | null>(null);
+  const [isMergeOpen, setIsMergeOpen] = React.useState(false);
+  const [mergeAthletes, setMergeAthletes] = React.useState<
+    [MergeAthleteOption, MergeAthleteOption] | null
+  >(null);
 
   // Form state for adding new athlete
   const [newAthlete, setNewAthlete] = React.useState({
@@ -1005,6 +1013,28 @@ export default function AthletesPage() {
               <LayoutGrid className="h-4 w-4" />
             </ToggleGroupItem>
           </ToggleGroup>
+          {table.getSelectedRowModel().rows.length === 2 && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                const rows = table.getSelectedRowModel().rows;
+                const toOption = (r: AthleteWithRelations): MergeAthleteOption => ({
+                  id: r.id,
+                  firstName: r.firstName,
+                  lastName: r.lastName,
+                  email: r.email,
+                  level: r.level,
+                  status: r.status,
+                  federationName: r.federationName,
+                  federationMemberNumber: r.federationMemberNumber,
+                });
+                setMergeAthletes([toOption(rows[0].original), toOption(rows[1].original)]);
+                setIsMergeOpen(true);
+              }}
+            >
+              Merge selected
+            </Button>
+          )}
           <DataTableViewOptions table={table} />
           <Button variant="outline" onClick={() => fetchAthletes()} disabled={isLoading}>
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refresh"}
@@ -1288,6 +1318,17 @@ export default function AthletesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <MergeAthletesDialog
+        open={isMergeOpen}
+        onOpenChange={setIsMergeOpen}
+        athletes={mergeAthletes}
+        onMerged={() => {
+          // Clear selection + refetch so the duplicate disappears from the list.
+          setRowSelection({});
+          fetchAthletes();
+        }}
+      />
     </div>
   );
 }

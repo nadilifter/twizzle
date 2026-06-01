@@ -20,6 +20,7 @@ import {
   BookOpen,
   CalendarCheck,
   ClipboardList,
+  ArrowLeftRight,
   History,
   ExternalLink,
   Plus,
@@ -86,6 +87,7 @@ import { type ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { AthleteConfiguration } from "../athlete-configuration";
+import { MergeHistory } from "@/components/athletes/merge-history";
 import { api, ApiError } from "@/lib/api-client";
 import type {
   AthleteWaiverSummary,
@@ -530,6 +532,10 @@ export default function AthleteProfilePage() {
               Evaluations
             </TabsTrigger>
           )}
+          <TabsTrigger value="merge-history" className="gap-2">
+            <ArrowLeftRight className="h-4 w-4" />
+            Merge history
+          </TabsTrigger>
         </ResponsiveTabsList>
 
         {/* ===== OVERVIEW TAB ===== */}
@@ -850,6 +856,10 @@ export default function AthleteProfilePage() {
             <AthleteEvaluationsTab athleteId={athlete.id} />
           </TabsContent>
         )}
+
+        <TabsContent value="merge-history">
+          <MergeHistory athleteId={athlete.id} />
+        </TabsContent>
       </Tabs>
 
       {/* Waiver Viewer Dialog */}

@@ -8,6 +8,48 @@ Manual verification steps for each entry live in
 
 ## 2026-06-01
 
+### Phase 3.1b — Athlete merge UI
+
+Wires the Phase 3.1a server-side merge into the admin UI.
+
+**Athletes list page (`/dashboard/athletes`)**
+
+- When exactly two rows are selected (via the existing select-column
+  checkboxes), a **Merge selected** button appears in the toolbar between
+  the view-mode toggle and the column-visibility menu.
+- Clicking it opens a two-step dialog (`<MergeAthletesDialog>`):
+  - Step 1 — choose survivor: two side-by-side cards with name + email +
+    level/status/federation badges, a radio to pick which one to keep,
+    and an optional free-text reason.
+  - Step 2 — review: calls `POST /api/athletes/merge/preview`, renders the
+    per-table rebound/deduplicated counts, any warnings (e.g. both sides
+    have a federation number), and the federation-number decision.
+  - On confirm: calls `POST /api/athletes/merge`, shows a sonner toast
+    naming the survivor + duplicate, clears row selection, re-fetches
+    the list, and navigates to the survivor's detail page.
+
+**Athlete detail page (`/dashboard/athletes/[id]`)**
+
+- New **Merge history** tab (rightmost) showing every merge in which this
+  athlete was the survivor: who initiated it, when, the optional reason,
+  the duplicate's snapshot (name + level + federation badge), and a
+  per-relation count summary.
+- Data source: new `GET /api/athletes/[id]/merges` route, ADMIN-only.
+
+**New files:**
+
+- `src/components/athletes/merge-athletes-dialog.tsx`
+- `src/components/athletes/merge-history.tsx`
+- `src/app/api/athletes/[id]/merges/route.ts`
+
+**Out of scope (still):**
+
+- Cross-organization merges (the API still refuses these — flagged in 3.1a).
+- Auto-suggest "likely duplicates" by name/email/birthdate match — that's
+  a separate detection feature.
+
+---
+
 ### Phase 3.1a — Athlete merge service (server-side)
 
 Server-side primitives for merging duplicate athlete records within an

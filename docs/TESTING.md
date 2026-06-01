@@ -11,6 +11,52 @@ can follow without re-deriving the intent.
 
 ## 2026-06-01
 
+### Phase 3.1b — Athlete merge UI
+
+Sign in as an ADMIN at `admin.twizzle.localhost:3000`.
+
+#### Happy path
+
+1. Navigate to `/dashboard/athletes`.
+2. Check the select boxes on **exactly two** athletes.
+3. The toolbar above the table should now show a **Merge selected** button.
+   It's hidden when 0, 1, 3+ are selected.
+4. Click it. The dialog opens at step 1 (choose survivor).
+5. Both athletes appear as side-by-side cards. The first selected is the
+   default survivor (highlighted card border + filled radio).
+6. Pick the other card → highlight moves. Add a reason like
+   "Same athlete, registered twice".
+7. Click **Continue**. Spinner briefly, then step 2 renders.
+8. Step 2 should show:
+   - The `[duplicate] → [survivor]` line at the top
+   - A federation-number block IF either side has one (says which one wins and why)
+   - A warnings block IF both sides have a different federation number
+   - A counts table — one row per relation that has rebound or deduplicated rows
+9. Click **Confirm merge**. Spinner, then a toast:
+   `"<survivor name> absorbed <duplicate name>."` and you land on the survivor's
+   detail page.
+10. Go back to the athletes list — the duplicate row is gone, selection
+    is cleared, the survivor is still there.
+
+#### Merge history tab
+
+1. On the survivor's detail page, click the **Merge history** tab (rightmost).
+2. The merge you just did should appear as a card: arrow icon, "Merged
+   {duplicate name} into this athlete", relative time (`a few seconds ago`),
+   actor name, the reason text, the duplicate's level / federation badge,
+   and the per-relation count summary.
+3. If no merges exist: "No merges in this athlete's history."
+
+#### Validation failures (sanity checks)
+
+- Try to merge an athlete with themselves: not possible from the UI (you
+  can only select rows once), but the API rejects with 400.
+- Select two athletes where the duplicate has a SUBMITTED FederationSubmission:
+  step 2 shows a red error block explaining the merge is blocked. The
+  **Confirm merge** button is disabled.
+
+---
+
 ### Phase 3.1a — Athlete merge service
 
 No UI yet. Test via API + DB inspection.
