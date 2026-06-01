@@ -89,6 +89,7 @@
     "dompurify": "^3.3.3",
     "dotted-map": "^2.2.3",
     "emoji-picker-react": "^4.16.1",
+    "fast-xml-parser": "^5.8.0",
     "file-type": "^22.0.0",
     "framer-motion": "^12.23.24",
     "html5-qrcode": "^2.3.8",

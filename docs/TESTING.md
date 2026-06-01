@@ -11,6 +11,91 @@ can follow without re-deriving the intent.
 
 ## 2026-06-01
 
+### Phase 6.1 — Skate Canada CRM client (offline)
+
+This phase ships only library code — no UI, no API route. Verification is
+entirely via static checks + unit tests + (optional) live smoke once a
+fresh test secret is loaded.
+
+#### Static checks
+
+```bash
+pnpm typecheck    # must exit 0
+pnpm lint         # "No ESLint warnings or errors"
+pnpm lint:tenant  # "No tenant-isolation issues found."
+```
+
+#### Tests (CI; broken locally on darwin-arm64)
+
+```bash
+pnpm test src/lib/skate-canada/__tests__/
+```
+
+Expected when the rolldown native-binding bug is fixed (or in CI):
+**all tests pass** across three files:
+
+- `oauth.test.ts` — caching, expiry, Azure error mapping, network error
+  wrapping (6 cases)
+- `soap-client.test.ts` — envelope construction, Fault detection, JSON-
+  error detection, SOAPAction header, namespace stripping (5 cases)
+- `client.test.ts` — `getSeasons` happy path with two entities, empty
+  response, single-entity (fast-xml-parser array collapse) (3 cases)
+
+#### Config-error path (no env vars, no live calls needed)
+
+```ts
+import { getConfig } from "@/lib/skate-canada/config";
+try {
+  getConfig();
+} catch (err) {
+  // CrmConfigError naming the missing vars
+  console.log(err.message);
+}
+```
+
+Expected message:
+`"Skate Canada CRM config missing: SKATE_CANADA_CRM_TENANT_ID, SKATE_CANADA_CRM_APP_ID, SKATE_CANADA_CRM_APP_SECRET, SKATE_CANADA_CRM_HOST"`
+
+#### Live smoke (once a fresh secret is loaded)
+
+Prerequisites:
+
+1. Get a fresh client secret from the Skate Canada CRM app registration
+   in Uplifter's Azure AD tenant. The old test secret expired 2026-04-03.
+2. Twizzle `.env` (or `.env.local`):
+
+   ```
+   SKATE_CANADA_CRM_TENANT_ID=<from uplifter/source/uCode.ini TEST_CRM_TENANT_ID>
+   SKATE_CANADA_CRM_APP_ID=<from uplifter/source/uCode.ini TEST_CRM_APP_ID>
+   SKATE_CANADA_CRM_APP_SECRET=<NEW value from Azure AD>
+   SKATE_CANADA_CRM_HOST=https://<TEST_CRM_TENANT>.api.crm3.dynamics.com
+   ```
+
+3. From the Twizzle repo, run:
+
+   ```bash
+   pnpm tsx -e "
+     import('./src/lib/skate-canada/client').then(async ({ SkateCanadaClient }) => {
+       const client = new SkateCanadaClient();
+       const seasons = await client.getSeasons();
+       console.log('Retrieved seasons:', seasons.length);
+       console.table(seasons.map(s => ({ name: s.name, start: s.startDate, end: s.endDate })));
+     });
+   "
+   ```
+
+Expected: prints a non-zero count and a table of current SC seasons.
+
+Failure modes to recognise:
+
+- `CrmConfigError: Skate Canada CRM config missing: ...` — one or more
+  env vars not loaded by the shell.
+- `CrmAuthError: invalid_client: ...` — secret expired or wrong app/tenant.
+- `CrmFaultError: ...` — the CRM service returned a SOAP fault; message
+  text gives the reason.
+
+---
+
 ### Phase 4.3b — Planned-program builder UI
 
 Sign in as ADMIN; open an athlete's detail page → **Planned routines** tab →

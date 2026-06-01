@@ -8,6 +8,69 @@ Manual verification steps for each entry live in
 
 ## 2026-06-01
 
+### Phase 6.1 — Skate Canada CRM client (offline port)
+
+TypeScript port of the legacy Uplifter PHP SOAP client + Azure AD auth
+flow that talks to Skate Canada's Dynamics CRM. Built entirely offline —
+no live credentials needed to write or unit-test the code. When fresh
+test-tenant credentials are loaded into `.env`, the client is ready to
+make real calls.
+
+**New files** under `src/lib/skate-canada/`:
+
+- **`config.ts`** — reads `SKATE_CANADA_CRM_TENANT_ID`, `_APP_ID`,
+  `_APP_SECRET`, `_HOST` from environment; throws `CrmConfigError` with a
+  specific message listing missing vars. `isConfigured()` lets callers
+  decide whether to register the live-lookup endpoints at boot.
+- **`errors.ts`** — typed error hierarchy: `CrmError` → `CrmConfigError`,
+  `CrmAuthError` (with Azure error code), `CrmFaultError` (with
+  faultCode), `CrmProtocolError`.
+- **`oauth.ts`** — Azure AD `client_credentials` grant against
+  `https://login.microsoftonline.com/{tenantId}/oauth2/token`. In-memory
+  token cache keyed by tenant, expiry from `expires_on` with a 60-second
+  safety margin. Wraps network + Azure errors as typed `CrmAuthError`.
+- **`soap-client.ts`** — builds SOAP 2011 envelopes (template-string
+  approach, same as the PHP), executes via `fetch` with a 90-second
+  timeout (matches PHP). Detects `<s:Fault>` and Dynamics JSON error
+  envelopes; throws the right typed error. Returns raw response XML so
+  operation-specific parsers can extract just what they need.
+- **`xml-helpers.ts` / `types.ts`** — minimal entity shapes; only
+  `SkateCanadaSeason` for 6.1, more added as 6.2-6.5 light up.
+- **`client.ts`** — `SkateCanadaClient` class with `getSeasons(date?)`
+  as the proof-of-life operation (mirrors PHP `SkateCanadaApi::getSeasons`).
+  Hits the `RetrieveMultiple` request with a `sc_season` fetch query
+  filtered to active rows whose `sc_enddate >= date`. Parses the
+  Dynamics `EntityCollection` shape into typed objects.
+
+**Tests** (`__tests__/oauth.test.ts`, `soap-client.test.ts`,
+`client.test.ts`): cover token caching + expiry + Azure errors,
+envelope shape + Fault detection + JSON-error detection, and
+end-to-end `getSeasons` parsing against fixture XML.
+
+**Known limitation** (same as Phase 4.2 + 3.1a): vitest 4 + rolldown
+darwin-arm64 binding is broken locally; tests parse and typecheck
+cleanly, CI exercises them.
+
+**What's NOT in 6.1:**
+
+- High-level operations beyond `getSeasons` — those drop into
+  `client.ts` in phases 6.2 (contact + member-number sync), 6.3
+  (createMemberRegistration), 6.4 (checkParticipantSeasons), 6.5
+  (checkCategories).
+- Live smoke test against the Skate Canada test tenant — requires a
+  fresh `client_secret` (the secret stored in
+  `uplifter/source/uCode.ini` expired 2026-04-03). Operator needs to
+  generate a new secret in Azure AD and drop it into Twizzle's `.env`.
+- Multi-instance token cache (Redis-backed). In-process Map is fine for
+  the single-Node-worker case; sharing across instances is a future
+  task if traffic warrants it.
+
+**Reference:** legacy PHP at
+`uplifter/source/classes/CrmSoap.class.php` +
+`uplifter/source/classes/SkateCanada/SkateCanadaApi.class.php`.
+
+---
+
 ### Phase 4.3b — Planned-program builder UI (element picker + row actions)
 
 Layers the interactive builder on top of the 4.3a foundation. The viewer
