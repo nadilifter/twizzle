@@ -9,6 +9,28 @@ can follow without re-deriving the intent.
 
 ---
 
+## 2026-06-01
+
+### Login page: slower fades + no theme toggle
+
+1. Visit `http://login.twizzle.localhost:3000/login` in a private/incognito
+   window so the video re-renders from the start.
+2. **Fade-in:** the video starts at opacity 0 and ramps to full visibility
+   over **3 seconds** (was 2 s). Time it casually — it should feel notably
+   slower than the prior version.
+3. **Loop fade-out:** wait for the clip to approach its end. The dip should
+   start ~6 s before the loop boundary and run for the full ~6 s (was 4 s).
+4. **No theme toggle:** confirm the top-right corner is empty — no sun/moon
+   icon, no toggle button anywhere on the login screen.
+5. Repeat step 4 on `/forgot-password`, `/reset-password`,
+   `/accept-invitation`, `/switch-organization`, `/find-your-club`, and
+   `/organization-deactivated` — same auth layout, same absence of toggle.
+6. After signing in: also confirm the dashboard, coach, and superadmin
+   surfaces don't have a theme toggle either (they didn't have one
+   pre-change — this matches the documented gap in the CHANGELOG entry).
+
+---
+
 ## 2026-05-30
 
 ### Phase 5.4 UI — SkateCanadaSeason admin UI

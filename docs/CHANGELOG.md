@@ -6,6 +6,30 @@ Manual verification steps for each entry live in
 
 ---
 
+## 2026-06-01
+
+### Login page polish: slower fades + no theme toggle
+
+- **Video background fade-in** bumped 2000 ms → **3000 ms** (`fadeInMs={3000}`
+  on the `<VideoBackground>` instance in `src/app/(auth)/login/page.tsx`).
+- **Video background loop fade-out** bumped 4000 ms → **6000 ms**
+  (`loopFadeMs={6000}` on the same instance). The dip at the loop boundary
+  is now noticeably gentler.
+- **Theme toggle removed from all `(auth)` pages** — login, forgot/reset
+  password, accept-invitation, switch-organization, organization-deactivated,
+  find-your-club. Removed the `<AnimatedThemeToggler />` from
+  `src/app/(auth)/layout.tsx`. Component defaults (2000/4000) are unchanged,
+  so other `<VideoBackground>` usages keep the original timing.
+
+**Caveat:** the toggle was previously _only_ on the auth/pre-login pages +
+some public-facing surfaces (sites layout, org-signup, feedback, POS
+org-select, site-header). It is NOT currently present in the authenticated
+`/dashboard`, `/coach`, or `/superadmin` surfaces. Adding it back into
+the dashboard is a separate follow-up if you want theme-toggling inside
+the app.
+
+---
+
 ## 2026-05-30
 
 ### Phase 5.4 UI — SkateCanadaSeason admin UI
