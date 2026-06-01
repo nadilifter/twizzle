@@ -8,6 +8,44 @@ Manual verification steps for each entry live in
 
 ## 2026-06-01
 
+### Phase 6.4 — Skate Canada season synchronization
+
+Adds a SUPERADMIN-only one-click "Sync from Skate Canada" action on the
+existing `/superadmin/skate-canada-seasons` page. Calls
+`SkateCanadaClient.getSeasons()` (Phase 6.1) and upserts each row into
+the local `SkateCanadaSeason` table (Phase 5.4 model). Match key is
+`scSeasonGuid` first, falling back to unique `name` on first sync. Returns
+a `{ created, updated, skipped, results }` summary; toast names the counts.
+
+**New endpoint:** `POST /api/skate-canada/seasons/sync` — SUPERADMIN only,
+503 if env unset, 502 on CRM errors, otherwise the summary JSON.
+
+Rows that already exist locally and don't appear in the CRM response are
+left alone (they may be historical). The endpoint does NOT auto-flip
+`isActive` — operators choose the active season explicitly via the existing
+"Set as active" action.
+
+### Phase 6.5 — Skate Canada category drift detection
+
+Compares this org's local `CompetitionCategoryTemplate` names against
+SC's canonical category list (CanSkate, STARSkate, PodiumPathway,
+CanPowerSkate, Executive, Official, Program Assistants, N/A — mirrored
+from `SkateCanadaApi::skateCanadaCategories()`). Static check, no CRM
+call needed.
+
+**New constant + helpers** (`src/lib/skate-canada/canonical-categories.ts`):
+`SKATE_CANADA_CANONICAL_CATEGORIES`, `isCanonicalSkateCanadaCategory(name)`,
+`findDriftedCategories(names)`.
+
+**New endpoint:** `GET /api/skate-canada/category-drift` — ADMIN only,
+returns `{ canonical, localCount, driftedCount, drifted, driftedTemplates }`
+so the UI can render either a green "all match" or amber "N drifted"
+state.
+
+**UI:** `<CategoryDriftBanner>` mounted at the top of
+`/dashboard/federation-submissions` so admins see drift before they
+submit. Banner is dismissible; not persisted (resets on reload).
+
 ### Phase 6.2 — Skate Canada live membership lookup
 
 Adds the first user-visible Skate Canada API call: lookup an athlete's

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Calendar, Loader2, Pencil, Plus, Zap } from "lucide-react";
+import { Calendar, Download, Loader2, Pencil, Plus, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +60,7 @@ function toDateInputValue(iso: string) {
 export default function SkateCanadaSeasonsPage() {
   const [seasons, setSeasons] = React.useState<SkateCanadaSeason[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isSyncing, setIsSyncing] = React.useState(false);
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
   const [editingSeason, setEditingSeason] = React.useState<SkateCanadaSeason | null>(null);
   const [isSaving, setIsSaving] = React.useState(false);
@@ -81,6 +82,30 @@ export default function SkateCanadaSeasonsPage() {
       toast.error("Failed to load seasons");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // POST to the Phase 6.4 sync endpoint. Refreshes the local list when done.
+  // Returns 503 when env vars are unset and 502 when CRM is unreachable —
+  // both surface as toast errors. Successful sync prints a created/updated
+  // summary so the operator sees what changed.
+  const handleSync = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch("/api/skate-canada/seasons/sync", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Sync failed");
+        return;
+      }
+      toast.success(
+        `Synced ${data.total} season${data.total === 1 ? "" : "s"} — ${data.created} created, ${data.updated} updated${data.skipped ? `, ${data.skipped} skipped` : ""}.`
+      );
+      fetchSeasons();
+    } catch {
+      toast.error("Failed to sync seasons");
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -171,10 +196,20 @@ export default function SkateCanadaSeasonsPage() {
           <h1 className="text-2xl font-bold">Skate Canada Seasons</h1>
           <p className="text-muted-foreground">Manage global Skate Canada season records</p>
         </div>
-        <Button onClick={handleOpenCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          New season
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleSync} disabled={isSyncing}>
+            {isSyncing ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Download className="h-4 w-4 mr-2" />
+            )}
+            Sync from Skate Canada
+          </Button>
+          <Button onClick={handleOpenCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            New season
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (

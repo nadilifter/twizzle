@@ -50,6 +50,7 @@ import { format } from "date-fns";
 import Link from "next/link";
 
 import { DashboardPageHeader } from "@/components/dashboard-page-header";
+import { CategoryDriftBanner } from "@/components/skate-canada/category-drift-banner";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
@@ -321,6 +322,8 @@ export default function FederationSubmissionsPage() {
           </Button>
         }
       />
+
+      <CategoryDriftBanner />
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
         <div className="flex flex-wrap items-center gap-2">

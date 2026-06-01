@@ -11,6 +11,55 @@ can follow without re-deriving the intent.
 
 ## 2026-06-01
 
+### Phase 6.4 — Skate Canada season sync
+
+#### Without live secret
+
+1. Sign in as SUPERADMIN; visit `/superadmin/skate-canada-seasons`.
+2. Click **Sync from Skate Canada** → toast: "Skate Canada CRM is not
+   configured…". No DB rows change.
+
+#### With live secret (Phase 6.1 testing notes)
+
+1. Make sure the env vars are loaded.
+2. Click **Sync from Skate Canada** → toast: `"Synced N seasons — X created,
+Y updated, Z skipped."`.
+3. Check the table: new rows have the SC GUID populated; existing rows that
+   matched by name get their GUID + dates refreshed.
+4. Re-click → second run shows 0 created, N updated (everything matched by
+   GUID).
+
+### Phase 6.5 — Category drift detection
+
+#### Banner on submissions queue page
+
+1. Sign in as ADMIN; navigate to `/dashboard/federation-submissions`.
+2. Banner just below the page header — three possible states:
+   - **Hidden** while loading.
+   - **Green "All categories match"** if every active local category
+     name is in the canonical list (CanSkate, STARSkate, PodiumPathway,
+     CanPowerSkate, Executive, Official, Program Assistants, N/A).
+   - **Amber "N category names don't match"** with each offending name
+     in a code chip + a link to the categories admin page.
+3. ✕ button dismisses for the current session (re-shows on reload).
+
+#### Adding drift to test
+
+1. Open `/dashboard/competitions/categories` (or the relevant admin
+   page) and create a category with name like `MyCustomCategory`.
+2. Return to `/dashboard/federation-submissions`. Banner now shows
+   `MyCustomCategory` in amber.
+3. Rename the local category to `CanSkate` (or any other canonical) →
+   reload → banner flips back to green.
+
+#### API direct
+
+```bash
+curl -H "Cookie: <admin>" "http://admin.twizzle.localhost:3000/api/skate-canada/category-drift" | jq
+```
+
+Expected JSON shape: `{ canonical, localCount, driftedCount, drifted, driftedTemplates }`.
+
 ### Phase 6.2 — Live Skate Canada membership lookup
 
 Offline (no live credentials) — UI shows a graceful 503 message.
