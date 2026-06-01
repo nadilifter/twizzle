@@ -1201,7 +1201,7 @@ export default function AthletesPage() {
                             stopPropagation prevents the Link from firing when
                             the user clicks the checkbox. */}
                           <div
-                            className="absolute top-2 left-2 z-10 rounded-md bg-background/80 backdrop-blur-sm p-0.5"
+                            className="absolute top-2 right-2 z-10 rounded-md bg-background/80 backdrop-blur-sm p-0.5"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <Checkbox
