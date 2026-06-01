@@ -44,7 +44,7 @@ import {
   isPlatformConfigured,
 } from "@/lib/adyen-platform";
 import { createSystemRulesForOrganization } from "@/lib/notification-service";
-import { seedSkatingTaxonomy, SKATE_SEED_COUNTS } from "./skate-seed";
+import { seedSkateCanadaSeasons, seedSkatingTaxonomy, SKATE_SEED_COUNTS } from "./skate-seed";
 
 const prisma = new PrismaClient();
 
@@ -6924,6 +6924,11 @@ The Sunrise Skating Team
   console.log(
     `  ✓ Created ${SKATE_SEED_COUNTS.categories} categories, ${SKATE_SEED_COUNTS.levels} levels, ${SKATE_SEED_COUNTS.skills} skating skills, ${SKATE_SEED_COUNTS.starSkills} STAR elements, ${SKATE_SEED_COUNTS.starTemplates} STAR test sheets per org`
   );
+
+  // --- Skate Canada season (global, single active season) ---
+  console.log("\n📅  Seeding Skate Canada season (2026-2027)...");
+  await seedSkateCanadaSeasons(prisma);
+  console.log("  ✓ Active SkateCanadaSeason '2026-2027' upserted");
 
   // --- Sample earned CanSkate ribbons for demo ---
   // ath-1 has earned Pre-CanSkate + Stage 1 (all 3 ribbons). ath-5 has earned
