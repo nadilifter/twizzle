@@ -8,6 +8,61 @@ Manual verification steps for each entry live in
 
 ## 2026-06-01
 
+### Phase 4.3a — Planned-program data model + APIs + viewer
+
+Foundation for the planned-program builder. Schema, full CRUD API, a
+minimal viewer page, and a new "Planned routines" tab on the athlete
+detail page. The interactive builder (element picker, drag-drop reorder,
+second-half toggle UI) is the 4.3b follow-up.
+
+**New Prisma models:**
+
+- `PlannedProgram` — org-scoped, athlete-scoped. Fields: `name`,
+  `discipline?`, `category?`, `notes?`, `createdById`, timestamps.
+- `PlannedProgramElement` — ordered child rows. `position` (1-based,
+  unique per program), snapshot of the catalog row (`elementCode`,
+  `elementName`, `elementKind`, `baseValue`), per-element flags
+  (`inSecondHalf`, `notes`). The snapshot keeps a program durable if
+  the static ISU_ELEMENTS catalog (from Phase 4.1) ever drifts.
+
+Migration: `20260601195228_add_planned_program`.
+
+**API routes** (ADMIN-only via the existing org-membership gate):
+
+- `GET /api/athletes/[id]/planned-programs` — list programs for the
+  athlete with each element's kind + baseValue + inSecondHalf for the
+  summary cards.
+- `POST /api/athletes/[id]/planned-programs` — create an empty program.
+- `GET /api/planned-programs/[id]` — full detail with ordered elements,
+  athlete summary, creator.
+- `PATCH /api/planned-programs/[id]` — update name / discipline / category / notes.
+- `DELETE /api/planned-programs/[id]` — cascades to elements.
+- `POST /api/planned-programs/[id]/elements` — append (or insert at
+  position) a new element. Looks up the catalog by `elementCode` and
+  snapshots name/kind/baseValue. Two-pass position shift to avoid the
+  `(programId, position)` unique constraint.
+- `PATCH /api/planned-programs/[id]/elements` — bulk reorder. Body is
+  `{ elementIds: string[] }` in the new desired order; server rejects
+  if the payload doesn't list every element exactly once.
+- `PATCH /api/planned-programs/[id]/elements/[elementId]` — edit
+  per-element `inSecondHalf` / `notes`.
+- `DELETE /api/planned-programs/[id]/elements/[elementId]` — remove +
+  compact remaining positions.
+
+**UI:**
+
+- New tab on the athlete detail page: **Planned routines**. Lists
+  programs as cards with element-kind counts, computed total base
+  value (including the ISU 2nd-half +10% bonus where applicable), and
+  "Updated X ago". "New program" dialog creates an empty program.
+- Viewer page at `/dashboard/athletes/[id]/programs/[programId]` shows
+  the program header, totals strip (BV + per-kind counts), and a
+  read-only elements table with the multiplier and per-row total.
+  Delete + Back navigation. Empty state notes that element-picking
+  arrives in 4.3b.
+
+---
+
 ### Phase 3.1b — Athlete merge UI
 
 Wires the Phase 3.1a server-side merge into the admin UI.

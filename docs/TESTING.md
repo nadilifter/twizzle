@@ -11,6 +11,93 @@ can follow without re-deriving the intent.
 
 ## 2026-06-01
 
+### Phase 4.3a — Planned-program data model + viewer
+
+Sign in as an ADMIN at `admin.twizzle.localhost:3000`.
+
+#### Schema spot-check
+
+```bash
+PGPASSWORD=postgres psql -h localhost -p 5434 -U postgres -d twizzle \
+  -c "\d \"PlannedProgram\"" -c "\d \"PlannedProgramElement\""
+```
+
+Expected: `PlannedProgram` with `id`, `organizationId`, `athleteId`, `name`,
+`discipline?`, `category?`, `notes?`, `createdById`, timestamps. FK on
+Organization, Athlete, User (cascade on Organization + Athlete delete).
+`PlannedProgramElement` with `position` (unique per program), snapshot
+fields (`elementCode`, `elementName`, `elementKind`, `baseValue`),
+`inSecondHalf`, `notes`.
+
+#### Athlete detail page tab
+
+1. Open an athlete's detail page → click the **Planned routines** tab
+   (between Evaluations and Merge history).
+2. Empty state appears: "No planned programs yet" with a "New program"
+   button.
+3. Click **New program** → dialog opens.
+4. Fill in: Name `Short Program 2025-2026`, Discipline `Singles`,
+   Category `Senior`, Notes `2:50 max`.
+5. Click **Create** → toast "Planned program created" → dialog closes →
+   the program appears as a card with "Singles · Senior" subtitle,
+   "No elements yet" badge, and "Total BV: 0.00".
+6. Click the card → routes to the viewer page.
+
+#### Viewer page
+
+1. Header shows program name + athlete name + discipline badge + category.
+2. "Total BV" strip reads `0.00` and per-kind chips are absent (empty program).
+3. Empty-state card reads "No elements yet. The element picker UI lands in Phase 4.3b."
+4. Click **Back to {athlete}** → returns to the Planned routines tab.
+
+#### Add an element via API (until the picker UI lands)
+
+```bash
+# Find a program id from the list
+curl http://admin.twizzle.localhost:3000/api/athletes/<athlete-id>/planned-programs \
+  -H "Cookie: <session>"
+
+# Append a 3T
+curl -X POST http://admin.twizzle.localhost:3000/api/planned-programs/<id>/elements \
+  -H "Cookie: <session>" -H "Content-Type: application/json" \
+  -d '{"elementCode": "3T"}'
+
+# Reload the viewer page → element appears in the table with code 3T,
+# "Triple Toe Loop", "Jump", base 4.20, ×1.00, total 4.20.
+```
+
+#### Reorder via API
+
+```bash
+# Get current element ids in order
+curl http://admin.twizzle.localhost:3000/api/planned-programs/<id> \
+  -H "Cookie: <session>" | jq '.elements[].id'
+
+# Send them in reverse order
+curl -X PATCH http://admin.twizzle.localhost:3000/api/planned-programs/<id>/elements \
+  -H "Cookie: <session>" -H "Content-Type: application/json" \
+  -d '{"elementIds": ["<last>", "<...>", "<first>"]}'
+
+# Reload → positions are reversed.
+```
+
+#### Delete an element via API
+
+```bash
+curl -X DELETE http://admin.twizzle.localhost:3000/api/planned-programs/<id>/elements/<elementId> \
+  -H "Cookie: <session>"
+# Reload → element gone, remaining positions compacted (1, 2, 3...).
+```
+
+#### Validation failures to verify
+
+- Unknown element code (`POST elements` with `elementCode: "BOGUS"`) → 400.
+- Reorder payload missing an element → 400 "must reference every element exactly once."
+- Cross-org access (use an athlete from another org's GUID) → 404.
+- Non-ADMIN session → 401 (no org).
+
+---
+
 ### Phase 3.1b — Athlete merge UI
 
 Sign in as an ADMIN at `admin.twizzle.localhost:3000`.

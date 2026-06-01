@@ -21,6 +21,7 @@ import {
   CalendarCheck,
   ClipboardList,
   ArrowLeftRight,
+  ListMusic,
   History,
   ExternalLink,
   Plus,
@@ -88,6 +89,7 @@ import { DataTable } from "@/components/data-table/data-table";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { AthleteConfiguration } from "../athlete-configuration";
 import { MergeHistory } from "@/components/athletes/merge-history";
+import { PlannedProgramsTab } from "@/components/athletes/planned-programs-tab";
 import { api, ApiError } from "@/lib/api-client";
 import type {
   AthleteWaiverSummary,
@@ -532,6 +534,10 @@ export default function AthleteProfilePage() {
               Evaluations
             </TabsTrigger>
           )}
+          <TabsTrigger value="planned-programs" className="gap-2">
+            <ListMusic className="h-4 w-4" />
+            Planned routines
+          </TabsTrigger>
           <TabsTrigger value="merge-history" className="gap-2">
             <ArrowLeftRight className="h-4 w-4" />
             Merge history
@@ -856,6 +862,10 @@ export default function AthleteProfilePage() {
             <AthleteEvaluationsTab athleteId={athlete.id} />
           </TabsContent>
         )}
+
+        <TabsContent value="planned-programs">
+          <PlannedProgramsTab athleteId={athlete.id} />
+        </TabsContent>
 
         <TabsContent value="merge-history">
           <MergeHistory athleteId={athlete.id} />
